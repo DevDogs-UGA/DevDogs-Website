@@ -1,0 +1,33 @@
+a {
+    text-decoration: none;
+    color: black;
+    padding: 10px;
+}
+
+a:visited {
+    text-decoration: none;
+    color: black;
+}
+
+a:hover {
+    text-decoration: underline;
+    color: black;
+
+}
+
+.navbar {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    text-align: center;
+    margin: 5px;
+}
+
+#title {
+    padding: 10px;
+    font-size: 20px;
+}
+
+.links {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+}
