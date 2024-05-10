@@ -4,6 +4,9 @@ const ResourcePage = () => {
     return (
         <div>
             <NavBar />
+            <div id="resourcestitle">
+                <h1>Resources</h1>
+            </div>
         </div>
     )
 }

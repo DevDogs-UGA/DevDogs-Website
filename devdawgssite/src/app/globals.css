@@ -3,8 +3,8 @@
   background-color: #FBFBFB;
 }
 
-h1 {
-  background-color: lightpink;
+#titleheader {
+  background-color: #ffdde2;
   font-size: 70px;
   padding: 70px 0px;
   text-align: right;
@@ -12,4 +12,32 @@ h1 {
 
 img {
   margin: 10px auto;
+}
+
+#hometitle {
+  height: 300px;
+  background-color: #ffdde2;
+}
+
+#abouttitle, #abouttitle > h1,h3, #devdawgs   {
+  text-align: center;
+  padding: 10px;
+  background-color: #ffdde2;
+}
+
+#devdawgs {
+  color: #CD0029;
+  font-size: 40px;
+}
+
+#eventstitle, #eventstitle > h1   {
+  text-align: center;
+  padding: 10px;
+  background-color: #ffdde2;
+}
+
+#resourcestitle, #resourcestitle > h1   {
+  text-align: center;
+  padding: 10px;
+  background-color: #ffdde2;
 }
