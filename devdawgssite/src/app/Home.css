@@ -1,8 +1,4 @@
 
-.grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-}
 
 .button-grid {
     display: grid;
@@ -12,28 +8,12 @@
 .grid > #description {
     text-align: end;
 }
-
-#red-bold {
-    display: inline;
-    color: #CD0029;
-}
-
-#dark_red-bold {
-    display: inline;
-    color: #BA0C2F;
-}
-
 .section-header {
     font-size: 25px;
 }
 
 .section-subheader {
     font-size: 20px;
-}
-
-.section {
-    background-color: #E3E9E9;
-    padding: 100px;
 }
 
 .header {

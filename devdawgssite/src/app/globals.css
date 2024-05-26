@@ -29,15 +29,34 @@ img {
 #eventstitle, #eventstitle > h1   {
   text-align: center;
   padding: 10px;
-  background-color: #ffdde2;
 }
 
 #resourcestitle, #resourcestitle > h1   {
   text-align: center;
   padding: 10px;
-  background-color: #ffdde2;
 }
 
 .navbar {
   background-color: #FBFBFB;
+}
+
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.section {
+  background-color: #E3E9E9;
+  padding: 100px;
+}
+
+.red-bold {
+  display: inline;
+  color: #CD0029;
+}
+
+.dark_red-bold {
+  display: inline;
+  color: #BA0C2F;
 }
