@@ -1,3 +1,4 @@
+
 a {
     text-decoration: none;
     color: black;
@@ -19,7 +20,8 @@ a:hover {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     text-align: center;
-    margin: 5px;
+    margin: 0px;
+    padding: 5px;
 }
 
 #title {

@@ -1,10 +1,8 @@
 * {
   margin: 0;
-  background-color: #FBFBFB;
 }
 
 #titleheader {
-  background-color: #ffdde2;
   font-size: 70px;
   padding: 70px 0px;
   text-align: right;
@@ -16,13 +14,11 @@ img {
 
 #hometitle {
   height: 300px;
-  background-color: #ffdde2;
 }
 
 #abouttitle, #abouttitle > h1,h3, #devdawgs   {
   text-align: center;
   padding: 10px;
-  background-color: #ffdde2;
 }
 
 #devdawgs {
@@ -40,4 +36,8 @@ img {
   text-align: center;
   padding: 10px;
   background-color: #ffdde2;
+}
+
+.navbar {
+  background-color: #FBFBFB;
 }

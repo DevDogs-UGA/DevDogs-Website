@@ -5,7 +5,7 @@ import Button from "./Button";
 const NavBar = () => {
     return (
         <div className="navbar">
-            <p id="title"><b>DevDawgs</b></p>
+            <p id="title"><b>DevDogs</b></p>
             <div className="links">
                 <Link href="/">
                     <p>Home</p>

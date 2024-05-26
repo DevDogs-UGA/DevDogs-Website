@@ -9,3 +9,9 @@ button {
     background-color: #BA0C2F;
     color: #FBFBFB;
 }
+
+#learnmore {
+    float: right;
+    background-color: #222233;
+    color: #FFFFFF;
+}
