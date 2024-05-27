@@ -91,7 +91,7 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-            - name: Setup Node.js environment
+      - name: Setup Node.js environment
   uses: actions/setup-node@v4.0.2
   with:
     # Set always-auth in npmrc.
