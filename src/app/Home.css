@@ -9,10 +9,14 @@
     text-align: end;
 }
 .section-header {
-    font-size: 25px;
+    font-size: 40px;
 }
 
 .section-subheader {
+    font-size: 30px;
+}
+
+p {
     font-size: 20px;
 }
 

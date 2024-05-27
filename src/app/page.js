@@ -5,7 +5,7 @@ import NavBar from "./components/NavBar";
 import logo from "./images/logo.png";
 import demo from "./images/demo.png";
 import mockup from "./images/mockup.png";
-
+import Image from "next/image";
 
 const Home = () => {
   return (
@@ -13,21 +13,21 @@ const Home = () => {
       <NavBar />
       <div class="section">
         <div id="hometitle" className="grid">
-          <div>
-            <h2>Hello, UGA;</h2>
-            <h1>We are <div class="red-bold">DevDogs</div>,</h1>
+          <div id="title">
+            <h2 id="big">Hello, UGA;</h2>
+            <h1 id="big">We are <div class="red-bold">DevDogs</div>,</h1>
           </div>
-          <img src={logo} alt="DevDogs Logo" />
+          <Image id="mascot" src={logo} alt="DevDogs Logo" width="300" height="300"/>
         </div>
         <br/>
         <div className="grid">
-          <img src={demo} alt="ACM OSP Demo"/>
+          <Image id="demo" src={demo} alt="ACM OSP Demo" width="300" height="150"/>
           <div id="description">
-            <h4>a team of</h4>
-            <h4>passionate</h4>
-            <h1>Student</h1>
-            <h1 class="dark_red-bold">Developers</h1>
-            <p>at UGA.</p>  
+            <h1>a team of</h1>
+            <h1>passionate</h1>
+            <h1 id="big" >Student</h1>
+            <h1 id="big" class="dark_red-bold">Developers</h1>
+            <h2>at UGA.</h2>  
           </div>      
         </div>
         <br/>
@@ -38,11 +38,11 @@ const Home = () => {
             <br/>
             <p>Each year, we work hard to identify needs in Athens and solve them by taking solutions from concept to completion.</p>
           </div>
-          <img src={mockup} alt="ACM OSP Bus App Mockup"/>
+          <Image id="mockup" src={mockup} alt="ACM OSP Bus App Mockup" width="300" height="150"/>
         </div>
 
         <br />
-        <h2 className="header">Sound interesting?</h2>
+        <h1 className="header">Sound interesting?</h1>
         <br />
 
         <div className="button-grid">

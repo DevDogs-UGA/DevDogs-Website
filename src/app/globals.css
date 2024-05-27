@@ -4,16 +4,7 @@
 
 #titleheader {
   font-size: 70px;
-  padding: 70px 0px;
   text-align: right;
-}
-
-img {
-  margin: 10px auto;
-}
-
-#hometitle {
-  height: 300px;
 }
 
 #abouttitle, #abouttitle > h1,h3, #devdawgs   {
@@ -21,10 +12,19 @@ img {
   padding: 10px;
 }
 
+#abouttitle > h1, #devdawgs   {
+  font-size: 50px;
+}
+
 #devdawgs {
   color: #CD0029;
-  font-size: 40px;
+  font-size: 50px;
 }
+
+p {
+  font-size: 20px;
+}
+
 
 #eventstitle, #eventstitle > h1   {
   text-align: center;
@@ -44,11 +44,14 @@ img {
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-items: center;
 }
 
 .section {
   background-color: #E3E9E9;
-  padding: 100px;
+  padding-right: 150px;
+  padding-left: 150px;
+  padding-top: 30px;
 }
 
 .red-bold {
@@ -59,4 +62,28 @@ img {
 .dark_red-bold {
   display: inline;
   color: #BA0C2F;
+}
+
+#name {
+  width:100%;
+  height:100%;
+}
+
+#mockup {
+  width:100%;
+  height:100%;
+}
+
+#demo {
+  width:100%;
+  height:100%;
+}
+
+#mascot {
+  width:100%;
+  height:100%;
+}
+
+#big {
+  font-size: 60px;
 }

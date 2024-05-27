@@ -1,25 +1,25 @@
 import NavBar from "../components/NavBar";
-import logo from "../images/logo.png";
+import Image from "next/image";
 import demo from "../images/demo.png";
 import mockup from "../images/mockup.png";
 import Footer from "../components/Footer";
-
+import name from "../images/mascotword.png"
 const AboutPage = () => {
     return (
         <div>
             <NavBar />
             <div class="section">
                 <div id="abouttitle">
-                    <h3 >System.out.println("Hello UGA!");</h3>
+                    <h2 >System.out.println("Hello UGA!");</h2>
                     <h1>We are <b id="devdawgs">DevDogs</b>!</h1>
                 </div>
 
                 <br />
 
                 <div className="grid">
-                    <img src={demo} alt="ACM OSP Demo" />
+                    <Image id="name" src={name} alt="Mascot and DevDogs" />
                     <div>
-                        <h2 class="dark_red-bold">DevDogs</h2>
+                        <h1 class="dark_red-bold">DevDogs</h1>
                         <p>is a student-run organization at the University of Georgia dedicated to encouraging a community of student developers and promoting interest in open-source project development.</p>
                     </div>
                 </div>
@@ -29,20 +29,20 @@ const AboutPage = () => {
                 <div className="grid">
 
                     <div>
-                        <h2 class="dark_red-bold">Our mission</h2>
+                        <h1 class="dark_red-bold">Our mission</h1>
                         <p>is to present students with a platform to create technological innovations that help the Athens and UGA communities.</p>
                         <br />
                         <p>Students have the opportunity to learn various software development tools and languages while working with others for build meaningful creations.</p>
                     </div>
-                    <img src={demo} alt="ACM OSP Demo" />
+                    <Image id="mockup" src={mockup} alt="ACM OSP Mockup" width="300" height="200" />
                 </div>
 
                 <br />
 
                 <div className="grid">
-                    <img src={demo} alt="ACM OSP Demo" />
+                    <Image id="demo" src={demo} alt="ACM OSP Demo" width="400" height="200" />
                     <div>
-                        <h2 class="dark_red-bold">All students are welcome!</h2>
+                        <h1 class="dark_red-bold">All students are welcome!</h1>
                         <p>Get an amazing experience and a glimpse into what working in the software development industry is like!</p>
                     </div>
                 </div>
