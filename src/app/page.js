@@ -6,6 +6,7 @@ import logo from "./images/logo.png";
 import demo from "./images/demo.png";
 import mockup from "./images/mockup.png";
 import Image from "next/image";
+import Link from "next/link";
 
 const Home = () => {
   return (
@@ -46,9 +47,13 @@ const Home = () => {
         <br />
 
         <div className="button-grid">
-          <Button id="learnmore">Learn More</Button>
+          <Link href="/about">
+            <Button id="learnmore">Learn More</Button>
+          </Link>
           <br/>
-          <Button id="joinus">Join Us!</Button>
+          <Link href="/events">
+            <Button id="joinus">Join Us!</Button>
+          </Link>
         </div>
       </div>
       <Footer />

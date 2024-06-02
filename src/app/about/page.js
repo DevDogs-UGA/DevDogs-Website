@@ -19,8 +19,8 @@ const AboutPage = () => {
                 <div className="grid">
                     <Image id="name" src={name} alt="Mascot and DevDogs" />
                     <div>
-                        <h1 class="dark_red-bold">DevDogs</h1>
-                        <p>is a student-run organization at the University of Georgia dedicated to encouraging a community of student developers and promoting interest in open-source project development.</p>
+                        <h1 class="dark_red-bold">Who We Are</h1>
+                        <p>DevDogs is a student-run club at UGA dedicated to benefiting our community through code. Each year, we work together to develop impactful software from concept to completion, learning real-world skills and industry-standard tech along the way. </p>
                     </div>
                 </div>
 
@@ -29,10 +29,10 @@ const AboutPage = () => {
                 <div className="grid">
 
                     <div>
-                        <h1 class="dark_red-bold">Our mission</h1>
-                        <p>is to present students with a platform to create technological innovations that help the Athens and UGA communities.</p>
+                        <h1 class="dark_red-bold">Our Mission</h1>
+                        <p>Above all, we aim to provide a space for passionate student developers to take ownership of meaningful projects from concept to completion.</p>
                         <br />
-                        <p>Students have the opportunity to learn various software development tools and languages while working with others for build meaningful creations.</p>
+                        <p>In the process, we hope to provide our members the local, personal, and technical tools necessary to incite change of their own, one project at a time.</p>
                     </div>
                     <Image id="mockup" src={mockup} alt="ACM OSP Mockup" width="300" height="200" />
                 </div>

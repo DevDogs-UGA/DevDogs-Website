@@ -87,3 +87,12 @@ p {
 #big {
   font-size: 60px;
 }
+
+iframe {
+  border: 0;
+  width: 800px;
+  height: 600px;
+  display: block;
+  padding: 10px;
+  margin: auto;
+}

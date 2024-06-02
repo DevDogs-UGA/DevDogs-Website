@@ -19,7 +19,7 @@ const EventsPage = () => {
                 <br />
                 <p><b>DevDogs Touch Grass! - [INSERT DATE AND TIME]</b></p>
                 <p>Join us on the Myers Quad to learn more about DevDogs, meet new people, enjoy snacks and games, and touch some grass! </p>
-
+                <iframe src="https://calendar.google.com/calendar/embed?src=en.usa%23holiday%40group.v.calendar.google.com&ctz=America%2FLos_Angeles"></iframe>
             </div>
             <Footer />
         </div>

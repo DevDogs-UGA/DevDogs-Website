@@ -23,7 +23,10 @@ const NavBar = () => {
                     <p>Events</p>
                 </Link>
             </div>
-            <Button id="joinus">Join Us</Button>
+            <Link href="/events">
+                <Button id="joinus">Join Us</Button>
+            </Link>
+            
         </div>
     )
 }
