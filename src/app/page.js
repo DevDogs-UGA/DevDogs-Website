@@ -12,7 +12,7 @@ const Home = () => {
   return (
     <div>
       <NavBar />
-      <div class="section">
+        <div class="section">
         <div id="hometitle" className="grid">
           <div id="title">
             <h2 id="big">Hello, UGA;</h2>
@@ -58,6 +58,7 @@ const Home = () => {
       </div>
       <Footer />
     </div>
+
   )
 }
 

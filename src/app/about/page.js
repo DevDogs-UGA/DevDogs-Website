@@ -8,15 +8,15 @@ const AboutPage = () => {
     return (
         <div>
             <NavBar />
-            <div class="section">
+            <div class="aboutsection">
                 <div id="abouttitle">
                     <h2 >System.out.println("Hello UGA!");</h2>
-                    <h1>We are <b id="devdawgs">DevDogs</b>!</h1>
+                    <h1><b id="devdawgs">DevDogs</b> @ UGA!</h1>
                 </div>
 
                 <br />
 
-                <div className="grid">
+                <div className="grid" id="whoweare">
                     <Image id="name" src={name} alt="Mascot and DevDogs" />
                     <div>
                         <h1 class="dark_red-bold">Who We Are</h1>

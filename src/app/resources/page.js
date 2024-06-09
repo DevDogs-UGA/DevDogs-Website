@@ -5,11 +5,14 @@ const ResourcePage = () => {
     return (
         <div>
             <NavBar />
-            <div class="section">
+            <div class="resourcessection">
 
             
                 <div id="resourcestitle">
-                    <h1>Resources</h1>
+                    <h1><b class="red-bold">Resources</b></h1>
+                </div>
+                <div id="filler">
+                    <h2>Resources coming soon!</h2>
                 </div>
             </div>
             <Footer />

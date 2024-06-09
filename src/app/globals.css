@@ -29,10 +29,12 @@ p {
 #eventstitle, #eventstitle > h1   {
   text-align: center;
   padding: 10px;
+  margin-bottom: 60px;
 }
 
 #resourcestitle, #resourcestitle > h1   {
   text-align: center;
+  
   padding: 10px;
 }
 
@@ -49,6 +51,52 @@ p {
 
 .section {
   background-color: #E3E9E9;
+  background-image: url("images/background.png");
+  background-size: 100% 45%;
+  background-repeat: no-repeat;
+  background-blend-mode: lighten;
+  padding-right: 150px;
+  padding-left: 150px;
+  padding-top: 30px;
+}
+
+#filler {
+  padding-top: 300px;
+  height: 400px;
+}
+#whoweare {
+  margin-top: 100px;
+}
+
+.aboutsection {
+  background-color: #E3E9E9;
+  background-image: url("images/background.png");
+  background-size: 100% 20%;
+  background-repeat: no-repeat;
+  background-blend-mode: lighten;
+  padding-right: 150px;
+  padding-left: 150px;
+  padding-top: 30px;
+}
+
+
+.eventssection {
+  background-color: #E3E9E9;
+  background-image: url("images/background.png");
+  background-size: 100% 20%;
+  background-repeat: no-repeat;
+  background-blend-mode: lighten;
+  padding-right: 150px;
+  padding-left: 150px;
+  padding-top: 30px;
+}
+
+.resourcessection {
+  background-color: #E3E9E9;
+  background-image: url("images/background.png");
+  background-size: 100% 40%;
+  background-repeat: no-repeat;
+  background-blend-mode: lighten;
   padding-right: 150px;
   padding-left: 150px;
   padding-top: 30px;

@@ -1,6 +1,10 @@
 .footer {
     background-color: #E3E9E9;
-    padding-top: 30px;
+    background-image: url("../images/backgroundbottom.png");
+    background-size: 100% 150%;
+    background-repeat: no-repeat;
+    background-blend-mode: lighten;
+    padding-top: 200px;
     padding-left: 30px;
     padding-bottom: 5px;
 }

@@ -5,7 +5,7 @@ const EventsPage = () => {
     return (
         <div>
             <NavBar />
-            <div class="section">
+            <div class="eventssection">
                 <div id="eventstitle">
                     <h1><b class="red-bold">Meetings</b> and <b class="red-bold">Events</b></h1>
                 </div>
