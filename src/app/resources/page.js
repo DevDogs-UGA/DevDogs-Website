@@ -5,7 +5,7 @@ const ResourcePage = () => {
     return (
         <div>
             <NavBar />
-            <div class="resourcessection">
+            <div class="section section-resources">
 
             
                 <div id="resourcestitle">

@@ -8,7 +8,7 @@ const AboutPage = () => {
     return (
         <div>
             <NavBar />
-            <div class="aboutsection">
+            <div class="section section-about">
                 <div id="abouttitle">
                     <h2 >System.out.println("Hello UGA!");</h2>
                     <h1><b id="devdawgs">DevDogs</b> @ UGA!</h1>
