@@ -9,17 +9,25 @@
     text-align: end;
 }
 .section-header {
-    font-size: 40px;
+    font-size: 2.7rem;
 }
 
 .section-subheader {
-    font-size: 30px;
+    font-size: 1.75rem;
+    padding-bottom: 0.4rem;
 }
 
 p {
-    font-size: 20px;
+    font-size: 1.3rem;
 }
 
 .header {
     text-align: center;
 }
+
+.title {
+    color: black;
+    padding: 0.5rem;
+    font-size: 3rem;
+    
+  }

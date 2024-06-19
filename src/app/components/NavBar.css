@@ -1,35 +1,42 @@
 
 a {
     text-decoration: none;
-    color: black;
-    padding: 10px;
+    color: white;
+    padding: 1rem;
+    
 }
 
 a:visited {
     text-decoration: none;
-    color: black;
+    color: white;
 }
 
 a:hover {
     text-decoration: underline;
-    color: black;
+    color: #fff8fc;
 
 }
 
 .navbar {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 40% 60%;
+    align-items: center; 
     text-align: center;
     margin: 0px;
-    padding: 5px;
+    padding: 0.2rem;
+    padding-right: 10rem;
+    
 }
 
-#title {
-    padding: 10px;
-    font-size: 30px;
+#title-nav {
+    color: white;
+    padding: 0.5rem;
+    font-size: 3rem;
+    text-shadow: 0rem 0.3rem 0.1rem black;
 }
-
 .links {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr;
+    justify-items: center;
+    align-items: center;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
 }

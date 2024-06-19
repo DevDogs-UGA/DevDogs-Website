@@ -5,10 +5,11 @@ import Button from "./Button";
 const NavBar = () => {
     return (
         <div className="navbar">
-            <p id="title"><b>DevDogs</b></p>
+            <p id="title-nav"><b>DevDogs</b></p>
             <div className="links">
+                
                 <Link href="/">
-                    <p>Home</p>
+                <p>Home</p>
                 </Link>
 
                 <Link href="/about">
@@ -22,10 +23,13 @@ const NavBar = () => {
                 <Link href="/events">
                     <p>Events</p>
                 </Link>
-            </div>
-            <Link href="/events">
+
+                <Link href="/events">
                 <Button id="joinus">Join Us</Button>
             </Link>
+            </div>
+            
+            
             
         </div>
     )
