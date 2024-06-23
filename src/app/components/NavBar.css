@@ -2,6 +2,7 @@
 a {
     text-decoration: none;
     padding: 1rem;
+    color: black;
 }
 
 a:visited {
@@ -11,7 +12,7 @@ a:visited {
 
 a:hover {
     text-decoration: underline;
-
+    color: black;
 }
 
 .navbar {
