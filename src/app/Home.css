@@ -8,14 +8,6 @@
 .grid > #description {
     text-align: end;
 }
-.section-header {
-    font-size: 2.7rem;
-}
-
-.section-subheader {
-    font-size: 1.75rem;
-    padding-bottom: 0.4rem;
-}
 
 p {
     font-size: 1.3rem;
@@ -23,6 +15,7 @@ p {
 
 .header {
     text-align: center;
+    font-size: 2rem;
 }
 
 .title {

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import "./NavBar.css"
 import Button from "./Button";
+import name from "../images/mascotword.png"
+import Image from "next/image";
 
 const NavBar = () => {
     return (
         <div className="navbar">
-            <p id="title-nav"><b>DevDogs</b></p>
+            <Image id="name" src={name} alt="Mascot and DevDogs" />
             <div className="links">
                 
                 <Link href="/">
@@ -14,6 +16,10 @@ const NavBar = () => {
 
                 <Link href="/about">
                     <p>About</p>
+                </Link>
+
+                <Link href="/our-team">
+                    <p>Our Team</p>
                 </Link>
 
                 <Link href="/resources">

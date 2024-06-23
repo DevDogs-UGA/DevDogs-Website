@@ -1,0 +1,17 @@
+
+#officer-description {
+    background-color: #3A3A3A;
+    color: #FFFFFF;
+    border-radius: 5px;
+    padding: 5px;
+}
+
+#officer-card {
+    background-color: #D9D9D9;
+    border-radius: 5px;
+}
+
+#pic {
+    margin: 10px;
+    border-radius: 5px;
+}
