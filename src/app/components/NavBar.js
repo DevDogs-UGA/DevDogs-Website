@@ -1,13 +1,18 @@
 import Link from "next/link"
 import "./NavBar.css"
-import Button from "./Button";
+import Button from "./Button"
 import name from "../images/mascotword.png"
-import Image from "next/image";
+import name2 from "../images/mascotwordlight.png"
+import Image from "next/image"
 
 const NavBar = () => {
     return (
         <div className="navbar">
-            <Image id="name" src={name} alt="Mascot and DevDogs" />
+            <Image 
+            id="name2" 
+            src={name2} 
+            alt="Mascot and DevDogs" 
+            />
             <div className="links">
                 
                 <Link href="/">
@@ -39,5 +44,6 @@ const NavBar = () => {
         </div>
     )
 }
+//<Image id="name" src={name} alt="Mascot and DevDogs" />
 
 export default NavBar;

@@ -16,6 +16,10 @@
   padding: 10px;
 }
 
+#abouttitle > h1, #devdawgs   {
+  font-size: 3.5rem;
+}
+
 .section-header {
   font-size: 2.7rem;
 }
@@ -23,10 +27,6 @@
 .section-subheader {
   font-size: 1.75rem;
   padding-bottom: 0.4rem;
-}
-
-#abouttitle > h1, #devdawgs   {
-  font-size: 3.5rem;
 }
 
 #teamtitle, #teamtitle > h1,h3, #devdawgs   {
@@ -42,6 +42,11 @@
   font-size: 2.5rem;
 }
 
+#teamtitle, #teamtitle > h1   {
+  text-align: center;
+  
+  padding: 10px;
+}
 
 #devdawgs {
   color: #CD0029;
@@ -66,24 +71,12 @@ p {
   padding: 10px;
 }
 
-#teamtitle, #teamtitle > h1   {
-  text-align: center;
-  
-  padding: 10px;
-}
-
 #grid {
   margin: 10px 40px;
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 100px
 }
-
-.navbar {
-  background-color: #ffffff;
-  border-bottom: solid;
-}
-
 
 .grid {
   display: grid;
@@ -92,12 +85,12 @@ p {
 }
 
 .section {
-  background-color: #E3E9E9;
+  background-color: #fff8fc;
   background-image: url("images/background.png");
   background-position-y: 0rem;
   background-size: 100% 100%;
   background-repeat: no-repeat;
-  background-blend-mode: lighten;
+  background-blend-mode: normal;
   padding-right: 10%;
   padding-left: 10%;
   padding-top: 2rem;
@@ -108,21 +101,18 @@ p {
 }
 
 .section-home {
-  background-size: 100% 45%;
-  background-size: 100% 60%;
-  background-blend-mode: lighten;
+  background-size: 100% 82%;
 }
 
 .section-resources {
   background-size: 100% 90%;
   background-position-y: -3rem;
 }
-  
 
 .section-about {
   background-position-y: -15rem;
   background-size: 100% 75%;
-  background-blend-mode: lighten;
+  background-blend-mode: normal;
 }
 
 .center {
@@ -159,11 +149,6 @@ p {
 .dark_red-bold {
   
   color: #BA0C2F;
-}
-
-#name {
-  width:100%;
-  height:100%;
 }
 
 #mockup {

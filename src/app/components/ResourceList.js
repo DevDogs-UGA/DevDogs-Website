@@ -1,6 +1,4 @@
 import React from "react"
-import {Listbox, ListboxSection, ListboxItem} from "@nextui-org/listbox"
-import {ListboxWrapper} from "./ListboxWrapper"
 import ResourceLinks from "./ResourceLinks"
 import "./ResourceList.css"
 
@@ -13,7 +11,7 @@ function ConstructLinks ({
     linksArr.map((link, index) =>
       <div className="links-list">
         
-        <li>
+        <li className="list-text-size">
           <a href={link} id="link-color">{linkNamesArr[index]}</a>
         </li>
         
@@ -36,7 +34,7 @@ const ResourceList = () => {
           <img src={resource.resourceLogo.src} alt={resource.resourcename} width="100" height="150"></img>
         </div>
         <div className="header-title">
-          <h2>{resource.resourceName}</h2>
+          <h6 className="name-text-size">{resource.resourceName}</h6>
         </div>
         <div className="list">
           <ul id="resourceLinks">
