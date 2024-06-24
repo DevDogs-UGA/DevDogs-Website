@@ -1,13 +1,11 @@
-import NavBar from "../components/NavBar";
-import Image from "next/image";
-import demo from "../images/demo.png";
-import mockup from "../images/mockup.png";
-import Footer from "../components/Footer";
+import Image from "next/image"
+import demo from "../images/demo.png"
+import mockup from "../images/mockup.png"
 import name from "../images/mascotword.png"
+
 const AboutPage = () => {
     return (
-        <div>
-            <NavBar />
+    
             <div class="section section-about">
                 <div id="abouttitle">
                     <h2 >System.out.println("Hello UGA!");</h2>
@@ -47,8 +45,7 @@ const AboutPage = () => {
                     </div>
                 </div>
             </div>
-            <Footer />
-        </div>
+           
     )
 }
 

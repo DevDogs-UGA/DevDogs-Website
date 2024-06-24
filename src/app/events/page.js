@@ -3,8 +3,6 @@ import NavBar from "../components/NavBar";
 
 const EventsPage = () => {
     return (
-        <div>
-            <NavBar />
             <div class="section">
                 <div id="eventstitle">
                     <h1><b class="red-bold">Meetings</b> and <b class="red-bold">Events</b></h1>
@@ -21,8 +19,6 @@ const EventsPage = () => {
                 <p>Join us on the Myers Quad to learn more about DevDogs, meet new people, enjoy snacks and games, and touch some grass! </p>
                 <iframe src="https://calendar.google.com/calendar/embed?src=en.usa%23holiday%40group.v.calendar.google.com&ctz=America%2FLos_Angeles"></iframe>
             </div>
-            <Footer />
-        </div>
     )
 }
 

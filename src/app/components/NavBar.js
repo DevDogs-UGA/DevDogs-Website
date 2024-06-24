@@ -1,6 +1,6 @@
-import Link from "next/link";
+import Link from "next/link"
 import "./NavBar.css"
-import Button from "./Button";
+import Button from "./Button"
 
 const NavBar = () => {
     return (
@@ -23,14 +23,13 @@ const NavBar = () => {
                 <Link href="/events">
                     <p>Events</p>
                 </Link>
-
+              
                 <Link href="/events">
                 <Button id="joinus">Join Us</Button>
             </Link>
+                
             </div>
-            
-            
-            
+ 
         </div>
     )
 }
