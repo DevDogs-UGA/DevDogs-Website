@@ -2,16 +2,59 @@
 #officer-description {
     background-color: #3A3A3A;
     color: #FFFFFF;
-    border-radius: 5px;
-    padding: 5px;
+    border-radius: 0rem 0rem 1rem 1rem;
+    padding: 0.2rem;
 }
 
-#officer-card {
-    background-color: #D9D9D9;
-    border-radius: 5px;
+.officer-card {
+    border-radius: 1rem;
+    margin-top: -3rem;
+
+}
+
+#officer-title-name {
+    padding-top: 0.2rem;
+    font-size: 1.0rem;
+}
+
+#founder {
+    font-size: 1.3rem;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+    font-weight: 500;
 }
 
 #pic {
-    margin: 10px;
-    border-radius: 5px;
+    margin: 0.7rem;
+    border-radius: 0.8rem;
+}
+
+/* Background color options */
+
+#brown-dark {
+    background-color: #8A7D7D;
+}
+
+#brown-light {
+    background-color: #A49595;
+}
+
+#gray {
+    background-color: #E3E9E9;
+}
+
+#pink-light {
+    background-color: #E4BBBB;
+}
+
+#pink {
+    background-color: #E37C7C;
+}
+
+#pink-dark {
+    background-color: #8E5D5D;
+}
+
+#cyan-light {
+    background-color: #daebec;
 }
