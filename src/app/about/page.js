@@ -1,13 +1,11 @@
-import NavBar from "../components/NavBar";
-import Image from "next/image";
-import demo from "../images/demo.png";
-import mockup from "../images/mockup.png";
-import Footer from "../components/Footer";
+import Image from "next/image"
+import demo from "../images/demo.png"
+import mockup from "../images/mockup.png"
 import name from "../images/mascotword.png"
+
 const AboutPage = () => {
     return (
-        <div>
-            <NavBar />
+    
             <div class="section section-about">
                 <div id="abouttitle">
                     <h1 >About Us</h1>
@@ -38,8 +36,7 @@ const AboutPage = () => {
                     <Image id="mockup" src={mockup} alt="ACM OSP Mockup" width="650" height="325" />
                 </div>
             </div>
-            <Footer />
-        </div>
+           
     )
 }
 

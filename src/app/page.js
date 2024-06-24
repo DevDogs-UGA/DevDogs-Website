@@ -1,19 +1,15 @@
 import "./Home.css"
-import Button from "./components/Button";
-import Footer from "./components/Footer";
-import NavBar from "./components/NavBar";
-import logo from "./images/logo.png";
-import demo from "./images/demo.png";
-import background from "./images/background.png";
-import mockup from "./images/mockup.png";
-import Image from "next/image";
-import Link from "next/link";
+import Button from "./components/Button"
+import logo from "./images/logo.png"
+import demo from "./images/demo.png"
+import background from "./images/background.png"
+import mockup from "./images/mockup.png"
+import Image from "next/image"
+import Link from "next/link"
 
 const Home = () => {
   return (
     <section id="base-background">
-      
-      <NavBar />
       
         <div class="section section-home">
         <div id="hometitle" className="grid">
@@ -58,9 +54,6 @@ const Home = () => {
             <Button id="joinus">Join Us!</Button>
           </Link>
         </div>
-      </div>
-      <div class="">
-      <Footer />
       </div>
     </section>
 

@@ -16,8 +16,8 @@ a:hover {
 }
 
 .navbar {
-    display: grid;
-    grid-template-columns: 20% 80%;
+    display: grid; 
+    grid-template-columns: 40% 60%;
     align-items: center; 
     text-align: center;
     margin: 0px;

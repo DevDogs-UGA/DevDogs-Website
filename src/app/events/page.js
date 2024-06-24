@@ -3,9 +3,7 @@ import NavBar from "../components/NavBar";
 
 const EventsPage = () => {
     return (
-        <div>
-            <NavBar />
-            <div class="section section-events">
+            <div class="section">
                 <div id="eventstitle">
                     <h1><b class="red-bold">Join Us</b></h1>
                 </div>
@@ -39,8 +37,6 @@ const EventsPage = () => {
 
                 <iframe src="https://calendar.google.com/calendar/embed?src=en.usa%23holiday%40group.v.calendar.google.com&ctz=America%2FLos_Angeles"></iframe>
             </div>
-            <Footer />
-        </div>
     )
 }
 

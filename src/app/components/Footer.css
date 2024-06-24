@@ -1,4 +1,9 @@
 .footer {
+    display: grid; 
+    grid-template-columns: 20% 60%;
+    align-items: center;
+    text-align: center;
+
     background-color: #fff8fc;
     background-image: url("../images/backgroundbottom.png");
     background-repeat: no-repeat;
@@ -11,13 +16,18 @@
     margin-right: auto;
 }
 
-.footer {
-    background-color: #E3E9E9;
-    background-image: url("../images/backgroundbottom.png");
-    background-size: 100% 120%;
+.new-footer {
+    background-size: auto;
     background-repeat: no-repeat;
-    background-blend-mode: lighten;
-    padding-top: 200px;
-    padding-left: 30px;
-    padding-bottom: 5px;
+    background-blend-mode: normal;
+    
+    max-width: 112rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.bot-text {
+    padding-left: 1rem;
+    padding-bottom: 1rem;
+    margin-top: -0.5rem;
 }
