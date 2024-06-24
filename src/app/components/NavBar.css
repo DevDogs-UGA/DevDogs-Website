@@ -1,20 +1,18 @@
 
 a {
     text-decoration: none;
-    color: white;
     padding: 1rem;
-    
+    color: black;
 }
 
 a:visited {
     text-decoration: none;
-    color: white;
+    color: black;
 }
 
 a:hover {
     text-decoration: underline;
-    color: #fff8fc;
-
+    color: black;
 }
 
 .navbar {
@@ -23,20 +21,12 @@ a:hover {
     align-items: center; 
     text-align: center;
     margin: 0px;
-    padding: 0.2rem;
-    padding-right: 10rem;
-    
+    padding: 0.05rem;    
 }
 
-#title-nav {
-    color: white;
-    padding: 0.5rem;
-    font-size: 3rem;
-    text-shadow: 0rem 0.3rem 0.1rem black;
-}
 .links {
     display: grid;
     justify-items: center;
     align-items: center;
-    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
 }

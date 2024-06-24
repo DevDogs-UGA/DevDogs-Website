@@ -7,14 +7,41 @@
   text-align: right;
 }
 
+#abouttitle   {
+  margin-top: 100px;
+}
+
 #abouttitle, #abouttitle > h1,h3, #devdawgs   {
   text-align: center;
   padding: 10px;
 }
 
+.section-header {
+  font-size: 2.7rem;
+}
+
+.section-subheader {
+  font-size: 1.75rem;
+  padding-bottom: 0.4rem;
+}
+
 #abouttitle > h1, #devdawgs   {
   font-size: 3.5rem;
 }
+
+#teamtitle, #teamtitle > h1,h3, #devdawgs   {
+  text-align: center;
+  padding: 10px;
+}
+
+#teamtitle > h1   {
+  font-size: 3.5rem;
+}
+
+#teamtitle > #officertitle   {
+  font-size: 2.5rem;
+}
+
 
 #devdawgs {
   color: #CD0029;
@@ -29,17 +56,32 @@ p {
 #eventstitle, #eventstitle > h1   {
   text-align: center;
   padding: 10px;
+  font-size: 3.5rem;
   margin-bottom: 60px;
 }
 
 #resourcestitle, #resourcestitle > h1   {
   text-align: center;
+  font-size: 3.5rem;
+  padding: 10px;
+}
+
+#teamtitle, #teamtitle > h1   {
+  text-align: center;
   
   padding: 10px;
 }
 
+#grid {
+  margin: 10px 40px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 100px
+}
+
 .navbar {
-  background-color: #31304b;
+  background-color: #ffffff;
+  border-bottom: solid;
 }
 
 
@@ -50,12 +92,12 @@ p {
 }
 
 .section {
-  background-color: #fff8fc;
+  background-color: #E3E9E9;
   background-image: url("images/background.png");
   background-position-y: 0rem;
   background-size: 100% 100%;
   background-repeat: no-repeat;
-  background-blend-mode: normal;
+  background-blend-mode: lighten;
   padding-right: 10%;
   padding-left: 10%;
   padding-top: 2rem;
@@ -66,7 +108,9 @@ p {
 }
 
 .section-home {
-  background-size: 100% 85%;
+  background-size: 100% 45%;
+  background-size: 100% 60%;
+  background-blend-mode: lighten;
 }
 
 .section-resources {
@@ -77,8 +121,13 @@ p {
 
 .section-about {
   background-position-y: -15rem;
-  background-size: 100% 60%;
-  background-blend-mode: normal;
+  background-size: 100% 75%;
+  background-blend-mode: lighten;
+}
+
+.center {
+  display: block;
+  text-align: center;
 }
 
 .section img {
