@@ -18,8 +18,8 @@
     "@nextui-org/card": "^2.0.31",
     "@nextui-org/listbox": "^2.1.22",
     "next": "14.2.3",
-    "react": "^18",
-    "react-dom": "^18"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "gh-pages": "^6.1.1"
