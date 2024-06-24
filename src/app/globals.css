@@ -111,8 +111,17 @@ p {
 
 .section-about {
   background-position-y: -15rem;
-  background-size: 100% 75%;
-  background-blend-mode: normal;
+  background-size: 100% 40%, 100% 80%;
+  background-blend-mode: normal, saturation;
+  background-image: url("images/background.png"), url("images/background.png");
+  background-position: top, bottom;
+  background-repeat: no-repeat, no-repeat;
+  
+}
+
+#bg-padding {
+  background-color: #BA0C2F;
+  padding-bottom: 10px;
 }
 
 .center {
@@ -166,6 +175,15 @@ p {
   height:100%;
   max-width: 100%;
   max-height: 100%;
+}
+
+#leadership {
+  margin-bottom: 6.5rem;
+  font-size: 1.8rem;
+}
+
+#team-bottom-padding {
+  margin-bottom: 4rem;
 }
 
 #big {

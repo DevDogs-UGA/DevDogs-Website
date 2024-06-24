@@ -1,5 +1,3 @@
-import NavBar from "../components/NavBar";
-import Footer from "../components/Footer";
 import Card from "../components/Card"
 
 import nn from "../images/officers/nn.jpg"
@@ -16,23 +14,28 @@ const OurTeam = () => {
         
         <div class="section section-team">
         
-        <div id="abouttitle">
-            <h1><b class="red-bold">Our Team</b></h1>
-        </div>
+            <div id="abouttitle">
+                <h1><b class="red-bold">Our Team</b></h1>
+            </div>
 
-        <br />
-        
-        <div id="teamtitle">
-            <h1 id="officertitle"><b>Officers</b></h1>
-            <div id="grid">
-                <Card name={'Justin Brand'} title={'President'} image={jb}/>
-                <Card name={'Nivedha Natarajan'} title={'Technical Officer'} image={nn}/>
-                <Card name={'Kelsey Sterner'} title={'Community Relations Officer'} image={ks}/>
-                <Card name={'Avery Marco'} title={'Instructional Officer'} image={am}/>
-                <Card name={'Kade Styron'} title={'Corporate & Career Officer'} image={kds}/>
-                <Card name={'Bryant Monahan'} title={'Campus Initiatives Officer'} image={bm}/>
+            
+            <div id="teamtitle">
+                <h1 id="officertitle"><b>Officers</b></h1>
+                <br />
+                <br />
+                <br />
+                <br />
+                <div id="grid">
+                    <Card name={'Justin Brand'} title={'President'} image={jb} bgcolor="brown-dark"/>
+                    <Card name={'Nivedha Natarajan'} title={'Technical Officer'} image={nn} bgcolor="cyan-light"/>
+                    <Card name={'Kelsey Sterner'} title={'Community Relations Officer'} image={ks} bgcolor="pink-light"/>
+                    <Card name={'Avery Marco'} title={'Instructional Officer'} image={am} bgcolor="pink"/>
+                    <Card name={'Kade Styron'} title={'Corporate & Career Officer'} image={kds} bgcolor="pink-dark"/>
+                    <Card name={'Bryant Monahan'} title={'Campus Initiatives Officer'} image={bm} bgcolor="brown-light"/>
+                    <br />
+                </div>
             </div>
-            </div>
+            
         </div>
     
        
