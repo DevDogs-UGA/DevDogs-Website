@@ -1,7 +1,6 @@
 import Link from "next/link"
 import "./NavBar.css"
 import Button from "./Button"
-import name from "../images/mascotword.png"
 import name2 from "../images/mascotwordlight.png"
 import Image from "next/image"
 
@@ -11,6 +10,10 @@ const NavBar = () => {
             <Image 
             id="name2" 
             src={name2} 
+            style={{
+            height: 90,
+            width: 370,
+          }}
             alt="Mascot and DevDogs" 
             />
             <div className="links">
