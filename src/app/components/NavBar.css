@@ -17,7 +17,7 @@ a:hover {
 
 .navbar {
     display: grid; 
-    grid-template-columns: 38% 62%;
+    grid-template-columns: 27% 62%;
     align-items: center; 
     text-align: center;
     padding: 0.05rem; 
@@ -27,6 +27,7 @@ a:hover {
 }
 
 .links {
+    
     display: grid;
     justify-items: center;
     align-items: center;

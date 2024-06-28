@@ -24,6 +24,12 @@
   font-size: 2.7rem;
 }
 
+.section-header-center {
+  font-size: 2.7rem;
+  text-align: center;
+}
+
+
 .section-subheader {
   font-size: 1.75rem;
   padding-bottom: 0.4rem;
@@ -101,17 +107,27 @@ p {
 }
 
 .section-home {
-  background-size: 100% 82%;
+  background-size: 100% 45%;
 }
 
 .section-resources {
-  background-size: 100% 90%;
+  background-size: 100% 30%;
+  background-position-y: -3rem;
+}
+
+.section-team {
+  background-size: 100% 40%;
+  background-position-y: -3rem;
+}
+
+.section-event {
+  background-size: 100% 40%;
   background-position-y: -3rem;
 }
 
 .section-about {
   background-position-y: -15rem;
-  background-size: 100% 40%, 100% 80%;
+  background-size: 100% 24%;
   background-blend-mode: normal, saturation;
   background-image: url("images/background.png"), url("images/background.png");
   background-position: top, bottom;
@@ -187,7 +203,7 @@ p {
 }
 
 #big {
-  font-size: 3.5rem;
+  font-size: 4.5rem;
 }
 
 .max-img-size {

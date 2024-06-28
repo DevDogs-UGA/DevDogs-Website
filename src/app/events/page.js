@@ -3,7 +3,7 @@ import NavBar from "../components/NavBar";
 
 const EventsPage = () => {
     return (
-            <div class="section">
+            <div class="section section-event">
                 <div id="eventstitle">
                     <h1><b class="red-bold">Join Us</b></h1>
                 </div>

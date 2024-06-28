@@ -2,7 +2,7 @@
 
 .button-grid {
     display: grid;
-    grid-template-columns: 4fr 1fr 4fr;
+    grid-template-columns: 10fr 1fr 10fr;
 }
 
 .grid > #description {

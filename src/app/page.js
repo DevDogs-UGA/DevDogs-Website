@@ -14,7 +14,7 @@ const Home = () => {
         <div class="section section-home">
         <div id="hometitle" className="grid">
           <div id="title">
-            <h2 id="big">Hello, UGA;</h2>
+            <h2 id="big">Hey UGA!</h2>
             <h1 id="big">We are <div class="red-bold">DevDogs</div>,</h1>
           </div>
           <Image id="mascot" src={logo} alt="DevDogs Logo" width="800" height="800"/>
@@ -42,7 +42,7 @@ const Home = () => {
         <br />
         <br />
         <br />
-        <h1 className="header">Sound interesting?</h1>
+        <h1 class="section-header-center">Sound interesting?</h1>
         <br />
 
         <div className="button-grid">
