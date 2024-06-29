@@ -50,7 +50,7 @@ const Home = () => {
             <Button id="learnmore">Learn More</Button>
           </Link>
           <br/>
-          <Link href="/events">
+          <Link href="https://uga.campuslabs.com/engage/organization/devdogs">
             <Button id="joinus">Join Us!</Button>
           </Link>
         </div>

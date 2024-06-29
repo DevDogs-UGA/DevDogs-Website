@@ -3,8 +3,6 @@ import Image from "next/image";
 
 const Card = (props) => {
     return (
-        // id={props.bgcolor}
-        //  <img src={props.image} alt="Officer picture" style="width:100%"></img>
         <div  className="officer-card">
             <Image id="pic" src={props.image} width="400" height="450"/>
             
