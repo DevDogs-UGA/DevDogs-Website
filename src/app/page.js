@@ -15,7 +15,7 @@ const Home = () => {
         <div id="hometitle" className="grid">
           <div id="title">
             <h2 id="big">Hey UGA!</h2>
-            <h1 id="big">We are <div class="red-bold">DevDogs</div>,</h1>
+            <h1 id="big">We're <div class="red-bold">DevDogs</div>,</h1>
           </div>
           <Image id="mascot" src={logo} alt="DevDogs Logo" width="800" height="800"/>
         </div>
