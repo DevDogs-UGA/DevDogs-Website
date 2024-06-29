@@ -152,7 +152,8 @@ p {
 }
 
 #base-background {
-  background-color: #201f32;
+  /*background-color: #201f32;*/
+  background-color: #f1e9ed ;
 }
 
 #filler {
