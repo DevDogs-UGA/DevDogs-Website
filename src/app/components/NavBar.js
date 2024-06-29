@@ -30,9 +30,9 @@ const NavBar = () => {
                     <p>Our Team</p>
                 </Link>
 
-                <Link href="/resources">
+                {/* <Link href="/resources">
                     <p>Resources</p>
-                </Link>
+                </Link> */}
 
                 <Link href="/events">
                     <p>Events</p>
