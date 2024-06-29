@@ -41,3 +41,27 @@ a:hover {
     height:4.5rem;
     object-fit: cover;
 }
+
+@media only screen and (max-width: 600px) {
+    .navbar {
+        display: block; 
+        align-items: center; 
+        text-align: center;
+        padding: 0.05rem; 
+        background-color: #31304b;
+        border-bottom: solid;   
+        border-bottom-color: #201f32;
+    }
+
+    .links {
+        display: flex;
+        flex-direction: row;
+        justify-items: center;
+        align-items: center;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+    }
+    
+    #joinus {
+        display: none;
+    }
+}

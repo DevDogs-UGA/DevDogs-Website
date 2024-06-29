@@ -51,7 +51,7 @@ const AboutPage = () => {
                 <br />
                 <br />
                 
-                <div id="leadership">
+                {/* <div id="leadership">
                     <h1 class="center">Leadership</h1>
                 </div>
 
@@ -66,7 +66,7 @@ const AboutPage = () => {
                     </div>
                     <p id="team-bottom-padding"></p>
                     <br />
-                </div>
+                </div> */}
             </div>
            
     )

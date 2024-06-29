@@ -20,7 +20,7 @@ const OurTeam = () => {
 
             
             <div id="teamtitle">
-                <h1 id="officertitle"><b>Officers</b></h1>
+                <h1 id="officertitle"><b>Leadership</b></h1>
                 <br />
                 <br />
                 <br />

@@ -235,3 +235,24 @@ iframe {
   border: none;
   
 }
+
+@media only screen and (max-width: 600px) {
+  .hometitle {
+      color: black;
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+
+    .grid, #grid {
+      display: flex;
+      flex-direction: column;
+    }
+
+    p, h1, h2, h3 {
+      text-align: center;
+    }
+
+    #demo {
+      display: none;
+    }
+}

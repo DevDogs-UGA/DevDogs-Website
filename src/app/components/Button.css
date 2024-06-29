@@ -5,7 +5,7 @@ button {
     font-size: 1.5rem;
 }
 
-#joinus {
+#joinus, #joinus-si {
     background-color: #BA0C2F;
     color: #FBFBFB;
 }
@@ -14,4 +14,18 @@ button {
     float: right;
     background-color: #222233;
     color: #FFFFFF;
+}
+
+@media only screen and (max-width: 600px) {
+    button {
+        padding: 0.7rem;
+        border-radius: 30px;
+        width: 10rem;
+        font-size: 1.5rem;
+    }
+    
+    #learnmore {
+        background-color: #222233;
+        color: #FFFFFF;
+    }
 }

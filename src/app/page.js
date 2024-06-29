@@ -51,7 +51,7 @@ const Home = () => {
           </Link>
           <br/>
           <Link href="https://uga.campuslabs.com/engage/organization/devdogs">
-            <Button id="joinus">Join Us!</Button>
+            <Button id="joinus-si">Join Us!</Button>
           </Link>
         </div>
       </div>

@@ -70,3 +70,13 @@
 #cyan-light {
     background-color: #daebec;
 }
+
+@media only screen and (max-width: 600px) {
+    .officer-card {
+        box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+        border-radius: 20px 20px 20px 20px;
+        display: grid;
+        grid-template-rows: 2fr 1fr;
+    }
+
+}
