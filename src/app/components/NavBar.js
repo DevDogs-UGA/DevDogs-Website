@@ -38,7 +38,7 @@ const NavBar = () => {
                     <p>Events</p>
                 </Link>
               
-                <Link href="/events">
+                <Link href="https://uga.campuslabs.com/engage/organization/devdogs">
                 <Button id="joinus">Join Us</Button>
             </Link>
                 
