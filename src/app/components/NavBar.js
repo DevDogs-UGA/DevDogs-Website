@@ -1,25 +1,28 @@
+"use client"
+
 import Link from "next/link"
 import "./NavBar.css"
 import Button from "./Button"
 import name2 from "../images/mascotwordlight.png"
 import Image from "next/image"
+import { useState } from "react"
 
 const NavBar = () => {
     return (
         <div className="navbar">
-            <Image 
-            id="name2" 
-            src={name2} 
-            style={{
-            height: 90,
-            width: 370,
-          }}
-            alt="Mascot and DevDogs" 
+            <Image
+                id="name2"
+                src={name2}
+                style={{
+                    height: 90,
+                    width: 370,
+                }}
+                alt="Mascot and DevDogs"
             />
             <div className="links">
-                
+
                 <Link href="/">
-                <p>Home</p>
+                    <p>Home</p>
                 </Link>
 
                 <Link href="/about">
@@ -27,26 +30,23 @@ const NavBar = () => {
                 </Link>
 
                 <Link href="/our-team">
-                    <p>Our Team</p>
+                    <p>Team</p>
                 </Link>
 
                 {/* <Link href="/resources">
-                    <p>Resources</p>
-                </Link> */}
+                        <p>Resources</p>
+                    </Link> */}
 
                 <Link href="/events">
                     <p>Events</p>
                 </Link>
-              
+
                 <Link href="https://uga.campuslabs.com/engage/organization/devdogs">
                     <Button id="joinus">Join Us</Button>
                 </Link>
-                
             </div>
- 
         </div>
     )
 }
-//<Image id="name" src={name} alt="Mascot and DevDogs" />
 
 export default NavBar;

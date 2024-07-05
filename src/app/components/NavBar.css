@@ -47,21 +47,22 @@ a:hover {
         display: block; 
         align-items: center; 
         text-align: center;
-        padding: 0.05rem; 
         background-color: #31304b;
         border-bottom: solid;   
         border-bottom-color: #201f32;
     }
 
     .links {
-        display: flex;
-        flex-direction: row;
-        justify-items: center;
-        align-items: center;
+        display: grid;
         grid-template-columns: 1fr 1fr 1fr 1fr;
     }
     
     #joinus {
         display: none;
+    }
+
+    a:hover {
+        text-decoration: none;
+        color: white;
     }
 }

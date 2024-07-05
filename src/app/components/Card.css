@@ -76,7 +76,32 @@
         box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
         border-radius: 20px 20px 20px 20px;
         display: grid;
-        grid-template-rows: 2fr 1fr;
+        grid-template-rows: 1fr 1fr;
     }
+
+    #pic {
+        object-fit: cover;
+
+    }
+
+    
+#officer-description {
+    color: #FFFFFF;
+    background-color: #3A3A3A;
+    padding: 1px 10px;
+    border-radius: 0 0 20px 20px;
+    
+}
+
+#officer-title-name {
+    padding-top: 0.1rem;
+    padding-bottom: 0.1rem;
+    font-size: 0.7rem;
+}
+
+.officer-name {
+    font-size: 1.0rem;
+}
+
 
 }

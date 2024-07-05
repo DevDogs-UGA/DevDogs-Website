@@ -20,7 +20,7 @@ const AboutPage = () => {
     
             <div class="section section-about">
                 <div id="abouttitle">
-                    <h1>More <b class="dark_red-bold">About Us</b></h1>
+                    <h1>About Us</h1>
                     
                 </div>
 
@@ -46,10 +46,6 @@ const AboutPage = () => {
                     </div>
                     <Image id="mockup" src={mockup} alt="ACM OSP Mockup" width="650" height="325" />
                 </div>
-
-                <br />
-                <br />
-                <br />
                 
                 {/* <div id="leadership">
                     <h1 class="center">Leadership</h1>
