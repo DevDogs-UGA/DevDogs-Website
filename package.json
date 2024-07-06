@@ -1,7 +1,7 @@
 {
   "name": "devdawgssite",
   "version": "0.1.0",
-  "homepage": "https://devdogs.uga.edu/",
+  "homepage": "https://devdogs-uga.github.io/DevDogsWebsite/",
   "private": true,
   "scripts": {
     "predeploy": "npm run build",
