@@ -7,24 +7,25 @@
   text-align: right;
 }
 
-#abouttitle {
+#abouttitle, #eventtitle, #teamstitle {
+  text-align: center;
+  padding: 10px;
   margin-top: 100px;
 }
 
-#abouttitle,
 #abouttitle>h1,
 h3,
-#devdawgs {
+#devdawgs,
+#teamtitle,
+#teamtitle>h1 {
   text-align: center;
   padding: 10px;
 }
 
 #abouttitle>h1,
-#devdawgs {
+#eventtitle > h1 {
   font-size: 3.5rem;
 }
-
-
 
 .section-header {
   font-size: 2.7rem;
@@ -35,33 +36,17 @@ h3,
   text-align: center;
 }
 
-
 .section-subheader {
   font-size: 1.75rem;
   padding-bottom: 0.4rem;
-}
-
-#teamtitle,
-#teamtitle>h1,
-h3,
-#devdawgs {
-  text-align: center;
-  padding: 10px;
 }
 
 #teamtitle>h1 {
   font-size: 3.5rem;
 }
 
-#teamtitle>#officertitle {
+#teamtitle > #officertitle {
   font-size: 2.5rem;
-}
-
-#teamtitle,
-#teamtitle>h1 {
-  text-align: center;
-
-  padding: 10px;
 }
 
 #devdawgs {
@@ -72,7 +57,6 @@ h3,
 p {
   font-size: 1.2rem;
 }
-
 
 #eventstitle,
 #eventstitle>h1 {
@@ -144,7 +128,6 @@ p {
   background-image: url("images/background.png"), url("images/background.png");
   background-position: top, bottom;
   background-repeat: no-repeat, no-repeat;
-
 }
 
 #bg-padding {

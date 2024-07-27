@@ -1,8 +1,4 @@
-import Card from "../components/Border"
 import ResourceList from "../components/ResourceList"
-import ResourceLinks from "../components/ResourceLinks"
-import GitHubLogo from "../images/githublogotransparent.png"
-import HTMLLogo from "../images/htmllogotransparent.png"
 
 const ResourcePage = () => {
     return (

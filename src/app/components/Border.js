@@ -1,11 +1,8 @@
 import React from "react"
 import "./Border.css"
-import {Card, CardHeader, CardBody, CardFooter} from "@nextui-org/card";
+import { Card, CardBody } from "@nextui-org/card";
 
-const Border = ({
-  title,
-  titleColor
-}) => {
+const Border = ({ title }) => {
   return (
     <div className="card-container">
       <Card>

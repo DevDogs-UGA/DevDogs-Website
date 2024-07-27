@@ -4,7 +4,7 @@ import NavBar from "../components/NavBar";
 const EventsPage = () => {
     return (
             <div class="section section-event">
-                <div id="abouttitle">
+                <div id="eventtitle">
                     <h1><b class="red-bold">Meetings</b> and <b class="red-bold">Events</b></h1>
                 </div>
 
@@ -18,32 +18,39 @@ const EventsPage = () => {
 
                 <br />
                 <br />
-                
-                <h1 >General Body <b class="dark_red-bold">Meetings</b></h1>
 
+                <h1> Welcome General Body <b class="dark_red-bold">Meetings</b></h1>
                 
                 <br />
-                {/* <p>Every [INSERT DAY OF THE WEEK] from [INSERT START TIME] to [INSERT END TIME] at [INSERT LOCATION]</p> */}
+                <p>Monday August 28th, 2024 from 5:30 PM to 6:30PM at Boyd 328</p>
+                <p>Monday September 6th, 2024 from 5:30 PM to 6:30PM at Boyd 328</p>
 
-                <p> Meeting details coming soon! </p>
+                <br />
+                
+                <h1 >Dev <b class="dark_red-bold">Sessions</b></h1>
+                
+                <br />
+                
+                <p>Every Monday from 5:30 PM to 6:30PM at Boyd 222*</p>
+                <p><i>*Begins on September 13th, 2024</i></p>
                 
                 <br />
                 <br />
 
                 <h1> <b class="dark_red-bold">Upcoming </b>Events</h1>
+                
                 <br />
-                <p><b>DevDogs: Ready, Steady, Launch! - TBD </b></p>
+                
+                <p><b>DevDogs: Ready, Steady, Launch! - August 28th, 2024 </b></p>
                 <p>Join us to learn more about DevDogs, meet new people, and how you can get involved! </p>
 
                 <br />
                 <br />
                 <br />
 
-                
                 <iframe id="iframe-test" src="https://embed.styledcalendar.com/#IvBYsu9dkaqY2qyAP7tR" title="Styled Calendar" class="styled-calendar-container" data-cy="calendar-embed-iframe"></iframe>
                 <script async type="module" src="https://embed.styledcalendar.com/assets/parent-window.js"></script>
             </div>
-            /* Old calender <iframe src="https://calendar.google.com/calendar/embed?src=en.usa%23holiday%40group.v.calendar.google.com&ctz=America%2FLos_Angeles"></iframe> */
     )
 }
 

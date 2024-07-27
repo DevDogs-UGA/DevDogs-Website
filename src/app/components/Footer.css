@@ -1,25 +1,26 @@
 .footer {
     display: grid; 
     grid-template-columns: 3fr 1fr 1fr;
+    
     align-items: center;
     align-content: space-between;
-    background-size: 100% 125%;
 
+    background-size: 100% 125%;
     background-color: #fff8fc;
     background-image: url("../images/backgroundbottom.png");
     background-repeat: no-repeat;
     background-blend-mode: normal;
+    
     padding-top: 10rem;
     padding-bottom: 1rem;
-    
     padding-right: 10%;
     padding-left: 10%;
     
     max-width: 80rem;
     max-height: 100%;
+
     margin-left: auto;
     margin-right: auto;
-
 }
 
 #UGA-Devdogs {
