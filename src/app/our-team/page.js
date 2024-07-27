@@ -9,9 +9,9 @@ import kds from "../images/officers/kds.jpg"
 
 const OurTeam = () => {
     return (
-        <div class="section section-team">
+        <div className="section section-team">
             <div id="teamstitle">
-                <h1><b class="red-bold">Our Team</b></h1>
+                <h1><b className="red-bold">Our Team</b></h1>
             </div>
 
             <div id="teamtitle">
