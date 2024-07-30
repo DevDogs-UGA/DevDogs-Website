@@ -55,7 +55,7 @@ h3,
 }
 
 p {
-  font-size: 1.2rem;
+  font-size: 1.5rem;
 }
 
 #eventstitle,
@@ -123,7 +123,7 @@ p {
 
 .section-about {
   background-position-y: -15rem;
-  background-size: 100% 24%;
+  background-size: 100% 35%;
   background-blend-mode: normal, saturation;
   background-image: url("images/background.png"), url("images/background.png");
   background-position: top, bottom;
