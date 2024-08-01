@@ -1,10 +1,14 @@
 import Image from "next/image"
-import mockup from "../images/mockup.png"
-import name from "../images/logo.png"
+import mockup from "../images/mockup.png";
+import name from "../images/logo.png";
+import Carousel from "../components/Carousel";
 
 const AboutPage = () => {
+    const images = ["https://www.fisheries.noaa.gov/s3//styles/original/s3/2023-06/750x500-Great-White-iStock.jpg?itok=RWsvCGC6", "https://e3.365dm.com/24/03/1600x900/skynews-francois-langur-monkey_6488923.jpg?20240313102133"];
+
     return (
-        <div className="section section-about">
+        <div>
+            <div className="section section-about">
             <div id="abouttitle">
                 <h1>About Us</h1>
             </div>
@@ -27,6 +31,10 @@ const AboutPage = () => {
                     <p>In the process, we hope to provide our members the local, personal, and technical tools necessary to incite change of their own, one project at a time.</p>
                 </div>
                 <Image id="mockup" src={mockup} alt="ACM OSP Mockup" width="650" height="325" />
+            </div>
+
+            <Carousel images={images} />
+
             </div>
         </div>
     )
