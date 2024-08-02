@@ -1,6 +1,6 @@
 import Image from "next/image"
 import mockup from "../images/mockup.png"
-import name from "../images/demo.png"
+import demo from "../images/demo.png"
 
 const AboutPage = () => {
     return (
@@ -14,7 +14,7 @@ const AboutPage = () => {
                     <h1 id="whoweare"> <b className="dark_red-bold">Who </b>We Are</h1>
                     <p>DevDogs is a student-run club at UGA dedicated to benefiting our community through code. Each year, we work together to develop impactful software from concept to completion, learning real-world skills and industry-standard tech along the way. </p>
                 </div>
-                <Image id="demo" src={name} alt="ACM OSP Demo" />
+                <Image id="demo" src={demo} alt="ACM OSP Demo" />
             </div>
 
             <br />
