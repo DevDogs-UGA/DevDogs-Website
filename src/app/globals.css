@@ -77,7 +77,7 @@ p {
   margin: 10px 40px;
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 100px
+  gap: 7vw;
 }
 
 .grid {
@@ -316,8 +316,8 @@ iframe {
   #grid {
     margin: 10px 0px;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px
+    grid-template-columns: 1fr 1fr;
+    gap: 40px
   }
 
 }
