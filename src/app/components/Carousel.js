@@ -11,6 +11,8 @@ const Carousel = ({ images }) => {
   const sliderRef = useRef(null);
 
   const settings = {
+    className: "center",
+    centerMode: true,
     dots: true,
     infinite: true,
     speed: 500,
@@ -18,7 +20,9 @@ const Carousel = ({ images }) => {
     slidesToScroll: 1,
     autoplay: true, // Enable autoplay
     autoplaySpeed: 3000, // Time between slides in milliseconds
-    afterChange: () => adjustHeight()
+    
+    // afterChange: () => adjustHeight()
+    
   };
 
   const adjustHeight = () => {
@@ -30,11 +34,16 @@ const Carousel = ({ images }) => {
     }
   };
 
+  /* 
   useEffect(() => {
     adjustHeight();
     window.addEventListener('resize', adjustHeight);
     return () => window.removeEventListener('resize', adjustHeight);
   }, []);
+  */
+  
+
+
 
   return (
     <div className="carousel-container" style={{ height: sliderHeight }} ref={sliderRef}>

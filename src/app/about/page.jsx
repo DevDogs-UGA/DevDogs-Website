@@ -4,7 +4,9 @@ import name from "../images/logo.png";
 import Carousel from "../components/Carousel";
 
 const AboutPage = () => {
-    const images = ["https://www.fisheries.noaa.gov/s3//styles/original/s3/2023-06/750x500-Great-White-iStock.jpg?itok=RWsvCGC6", "https://e3.365dm.com/24/03/1600x900/skynews-francois-langur-monkey_6488923.jpg?20240313102133"];
+    const images = ["https://www.fisheries.noaa.gov/s3//styles/original/s3/2023-06/750x500-Great-White-iStock.jpg?itok=RWsvCGC6", 
+        "https://e3.365dm.com/24/03/1600x900/skynews-francois-langur-monkey_6488923.jpg?20240313102133",
+        "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%3Fid%3DOIP.92wIxwnq8FIO9oOg0KaF-QHaEo%26pid%3DApi&f=1&ipt=d37446fb31ea6cefd2805661d9077f514df2695379fdf8c18749d7a910a1718b&ipo=images"];
 
     return (
         <div>
@@ -33,6 +35,9 @@ const AboutPage = () => {
                 <Image id="mockup" src={mockup} alt="ACM OSP Mockup" width="650" height="325" />
             </div>
 
+            <br />
+            <br />
+            <br />
             <Carousel images={images} />
 
             </div>

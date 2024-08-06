@@ -1,6 +1,7 @@
 .carousel-container {
     position: relative;
     width: 100%; /* Make sure the container is full width */
+    height: 100%;
     overflow: hidden; /* Hide any overflow */
 }
   
