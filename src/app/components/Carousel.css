@@ -1,0 +1,12 @@
+.carousel-container {
+    position: relative;
+    width: 100%; /* Make sure the container is full width */
+    height: 100%;
+    overflow: hidden; /* Hide any overflow */
+}
+  
+.carousel-image {
+    width: 100%; /* Scale image to the width of its container */
+    height: auto; /* Maintain aspect ratio */
+    object-fit: cover; /* Ensure the image covers the area without distortion */
+}
