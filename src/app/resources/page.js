@@ -14,7 +14,6 @@ const ResourcePage = () => {
                 <ResourceList />
                 <ResourceList />
             </div>
-            
         </div>
     )
 }

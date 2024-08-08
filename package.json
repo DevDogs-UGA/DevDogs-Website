@@ -17,10 +17,12 @@
     "@nextui-org/button": "^2.0.34",
     "@nextui-org/card": "^2.0.31",
     "@nextui-org/listbox": "^2.1.22",
-    "next": "14.2.3",
+    "next": "^14.2.3",
     "next-optimized-images": "^2.6.2",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-slick": "^0.30.2",
+    "slick-carousel": "^1.8.1"
   },
   "devDependencies": {
     "gh-pages": "^6.1.1"
