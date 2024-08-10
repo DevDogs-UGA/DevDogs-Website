@@ -9,7 +9,7 @@ export const metadata = {
   title: "DevDogs",
   description: "Building software with a purpose at the University of Georgia.",
   // Not sure if this viewport changes anything, doesn't when localhost testing
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
+  //viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
 };
  
 export default function RootLayout({ children }) {
