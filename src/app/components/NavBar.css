@@ -19,14 +19,13 @@ a:hover {
     grid-template-columns: 27% 62%;
     align-items: center;
     text-align: center;
-    padding: 0.05rem;
+    
     background-color: #31304b;
-    border-bottom: solid;
-    border-bottom-color: #201f32;
+    /*border-bottom: solid;
+    border-bottom-color: #201f32;*/
 }
 
 .links {
-
     display: grid;
     justify-items: center;
     align-items: center;
@@ -34,26 +33,26 @@ a:hover {
 }
 
 #name2 {
-    margin-top: 0.2rem;
     margin-bottom: 0.2rem;
-    width: 26rem;
-    height: 4.5rem;
     object-fit: cover;
 }
 
 @media only screen and (max-width: 600px) {
     .navbar {
-        display: block;
-        align-items: center;
-        text-align: center;
+        display: grid;
+        grid-template-columns: 9% auto;
         background-color: #31304b;
-        border-bottom: solid;
-        border-bottom-color: #201f32;
+        /*border-bottom: solid;
+        border-bottom-color: #201f32;*/
     }
 
     .links {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr 1fr;
+    }
+
+    .small {
+        font-size: 5.2vw;
     }
 
     #joinus {
