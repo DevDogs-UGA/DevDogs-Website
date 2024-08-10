@@ -49,7 +49,7 @@ const Carousel = ({ images }) => {
     <div className="carousel-container" style={{ height: sliderHeight }} ref={sliderRef}>
       <Slider {...settings}>
         {images.map((url, index) => (
-          <div key={index}>
+          <div key={index} className='full-width-slide'>
             <img src={url} alt={`Slide ${index + 1}`} className="carousel-image" />
           </div>
         ))}
