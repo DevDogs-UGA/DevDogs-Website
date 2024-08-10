@@ -22,7 +22,7 @@ const EventsPage = () => {
                 <h1> Welcome General Body <b className="dark_red-bold">Meetings</b></h1>
                 
                 <br />
-                <p>Monday August 28th, 2024 from 5:30 PM to 6:30PM at Boyd 328</p>
+                <p>Monday August 26th, 2024 from 5:30 PM to 6:30PM at Boyd 328</p>
                 <p>Monday September 6th, 2024 from 5:30 PM to 6:30PM at Boyd 328</p>
 
                 <br />
@@ -41,7 +41,7 @@ const EventsPage = () => {
                 
                 <br />
                 
-                <p><b>DevDogs: Ready, Steady, Launch! - August 28th, 2024 </b></p>
+                <p><b>DevDogs: Ready, Steady, Launch! - August 26th, 2024 </b></p>
                 <p>Join us to learn more about DevDogs, meet new people, and how you can get involved! </p>
 
                 <br />
