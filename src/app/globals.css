@@ -90,7 +90,7 @@ p {
   background-color: #fff8fc;
   background-image: url("images/background.png");
   background-position-y: 0rem;
-  background-size: 100% 100%;
+  background-size: contain;
   background-repeat: no-repeat;
   background-blend-mode: normal;
   padding-right: 10%;
@@ -102,6 +102,7 @@ p {
   margin-right: auto;
 }
 
+/* Do not uncomment, broken styles, waiting to remove
 .section-home {
   background-size: 100% 45%;
 }
@@ -129,6 +130,7 @@ p {
   background-position: top, bottom;
   background-repeat: no-repeat, no-repeat;
 }
+  */
 
 #bg-padding {
   background-color: #BA0C2F;

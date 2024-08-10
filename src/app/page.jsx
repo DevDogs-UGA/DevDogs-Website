@@ -38,7 +38,7 @@ const Home = () => {
             <p class="section-subheader">And we strive to better our community through code.</p>
             <p>Each year, we work hard to identify needs in Athens and solve them by taking solutions from concept to completion.</p>
           </div>
-          <Image id="mockup-home" src={mockup} alt="ACM OSP Bus App Mockup" width="650" height="325" />
+          <Image id="mockup-home" src={mockup} alt="ACM OSP Bus App Mockup" width="650" height="400" />
         </div>
         <br />
         <br />
