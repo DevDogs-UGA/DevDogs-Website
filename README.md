@@ -12,13 +12,16 @@ To work contribute to this website you must have a general understanding of JS/H
 ## Getting Started
 
 1. Take a look at the Issues tab to see what work the website needs done.
-  - If you have recommendations, post them in our web-development discord channel!
+  * If you have recommendations, post them in our web-development discord channel!
 2. Fork this repository to create a github repository under your account with our code and assign yourself an issue
 3. Use git or Github Desktop to clone your online github repository to a local file on your computer
 4. Complete the issue tasks
 5. Push your local changes to your online github repository (through git or Github Desktop)
 5. Create a pull request on the original repository (this one) as you are requesting **us** to pull **your** completed code.
-  - Use good documentation in your PR and code as well as provide pictures (snipping tool, etc.) of the changes
+  * Use good documentation in your PR and code as well as provide pictures (snipping tool, etc.) of the changes
+
+**Be sure to sync your personal github repository with our original before every code session, and pull the changes to your local machine.**
+![image](https://github.com/user-attachments/assets/3e333d93-2fca-4496-b3c3-4c23c10d170e)
 
 ## How to Local Test
 To run the development server on your local machine (navigate to your project folder in the terminal):
