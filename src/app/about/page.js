@@ -43,6 +43,7 @@ const AboutPage = () => {
             <Carousel images={images} />
 
             </div>
+           
         </div>
     )
 }
