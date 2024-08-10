@@ -9,6 +9,7 @@ const Card = (props) => {
                 <br />
                 <h2 class="officer-name">{props.name}</h2>
                 <p id="officer-title-name">{props.title}</p>
+                <br />
             </div>
         </div>
     )

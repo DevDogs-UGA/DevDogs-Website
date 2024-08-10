@@ -2,6 +2,8 @@ import Image from "next/image"
 import mockup from "../images/mockup.png";
 import name from "../images/logo.png";
 import Carousel from "../components/Carousel";
+import demo from "../images/demo.png"
+
 
 const AboutPage = () => {
     const images = ["https://www.fisheries.noaa.gov/s3//styles/original/s3/2023-06/750x500-Great-White-iStock.jpg?itok=RWsvCGC6", 
