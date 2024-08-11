@@ -23,7 +23,7 @@ const EventsPage = () => {
                 
                 <br />
                 <p>Monday August 26th, 2024 from 5:30 PM to 6:30PM at Boyd 328</p>
-                <p>Monday September 6th, 2024 from 5:30 PM to 6:30PM at Boyd 328</p>
+                <p>Monday September 9th, 2024 from 5:30 PM to 6:30PM at Boyd 328</p>
 
                 <br />
                 
@@ -32,7 +32,7 @@ const EventsPage = () => {
                 <br />
                 
                 <p>Every Monday from 5:30 PM to 6:30PM at Boyd 222*</p>
-                <p><i>*Begins on September 13th, 2024</i></p>
+                <p><i>*Begins on September 16th, 2024</i></p>
                 
                 <br />
                 <br />
