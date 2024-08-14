@@ -1,10 +1,11 @@
-"use client"; //very important line do not remove
+"use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import Slider from 'react-slick';
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import './Carousel.css'; // Import your updated CSS file
+import './Carousel.css';
+import Image from 'next/image';
 
 const Carousel = ({ images }) => {
   const [sliderHeight, setSliderHeight] = useState('auto');
@@ -19,38 +20,15 @@ const Carousel = ({ images }) => {
     slidesToShow: 1,
     slidesToScroll: 1,
     autoplay: true, // Enable autoplay
-    autoplaySpeed: 3000, // Time between slides in milliseconds
-    
-    // afterChange: () => adjustHeight()
-    
+    autoplaySpeed: 3000, // Time between slides in milliseconds 
   };
-
-  const adjustHeight = () => {
-    if (sliderRef.current) {
-      const currentSlide = sliderRef.current.querySelector('.slick-current img');
-      if (currentSlide) {
-        setSliderHeight(currentSlide.clientHeight);
-      }
-    }
-  };
-
-  /* 
-  useEffect(() => {
-    adjustHeight();
-    window.addEventListener('resize', adjustHeight);
-    return () => window.removeEventListener('resize', adjustHeight);
-  }, []);
-  */
-  
-
-
 
   return (
     <div className="carousel-container" style={{ height: sliderHeight }} ref={sliderRef}>
       <Slider {...settings}>
         {images.map((url, index) => (
           <div key={index} className='full-width-slide'>
-            <img src={url} alt={`Slide ${index + 1}`} className="carousel-image" />
+            <Image src={url} alt={`Slide ${index + 1}`} className="carousel-image" width="100" height="100"/>
           </div>
         ))}
       </Slider>
