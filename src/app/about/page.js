@@ -1,6 +1,5 @@
 import Image from "next/image"
 import mockup from "../images/mockup.png";
-import name from "../images/logo.png";
 import Carousel from "../components/Carousel";
 import demo from "../images/demo.png"
 import Button from "../components/Button"
