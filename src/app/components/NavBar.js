@@ -37,6 +37,8 @@ const NavBar = () =>
 
             <div className="flex flex-auto flex-nowrap justify-around items-center text-white font-semibold">
 
+
+                
                 <Link href="/" className=" hover:text-[#BA0C2F] transition ease-in-out delay-150">
                     <p className="text-base md:text-lg lg:text-xl no-underline">Home</p>
                 </Link>
@@ -57,7 +59,7 @@ const NavBar = () =>
                     <p className="text-base md:text-lg lg:text-xl">Events</p>
                 </Link>
                 <MediaQuery minWidth={1224}>
-                    <Link href="https://discord.com/invite/MuyJ4f5xKE" className="text-base md:text-lg rounded-full font-medium m-4 p-0 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:bg-red-200 hover:text-black">
+                    <Link href="https://discord.com/invite/MuyJ4f5xKE" className="text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:bg-black ">
                         <Button className="hover:bg-slate-300 p-1">Join Us</Button>
                     </Link>
                 </MediaQuery>

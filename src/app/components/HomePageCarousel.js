@@ -8,44 +8,37 @@ export default function HomePageCarousel({ roles })
 
  useEffect(() =>
  {
+  const intervalId = setInterval(() =>
+  {
+   setCurrentIndex((prevIndex) => (prevIndex + 1) % roles.length);
+  }, 5000); // Change picture every 3 seconds
+
+  return () => clearInterval(intervalId); // Clear interval on component unmount
+ }, [roles.length]);
+
+ useEffect(() =>
+ {
   const carousel = carouselRef.current;
   if (carousel)
   {
-   carousel.style.transition = "transform 0.5s ease-in-out";
+   carousel.style.transition = "transform 1.5s ease-in-out";
    carousel.style.transform = `translateX(-${currentIndex * 100}%)`;
   }
  }, [currentIndex]);
 
- const handleNext = () =>
- {
-  setCurrentIndex((prevIndex) => (prevIndex + 1) % roles.length);
- };
-
- const handlePrev = () =>
- {
-  setCurrentIndex((prevIndex) => (prevIndex - 1 + roles.length) % roles.length);
- };
-
  return (
-  <div className='w-full overflow-hidden flex flex-nowrap '>
-   <div><button className="" onClick={handlePrev}>
-    &#8249; {/* Left arrow */}
-   </button></div>
-   <div className="w-full" ref={carouselRef}>
+  <div className="relative w-full max-w-4xl mx-auto overflow-hidden">
+   <div className="flex w-full transition-transform duration-500 ease-in-out" ref={carouselRef}>
     {roles.map((role, index) => (
-     <div className="" key={index}>
-      <Image src={role.image} alt={`Slide ${index}`} width={200} height={500} />
-      <div className="">
-       <h3>{role.title}</h3>
-       <p className="">{role.description}</p>
-      </div>
+     <div
+      key={index}
+      className="flex-shrink-0 w-full flex flex-col items-center text-center space-y-4"
+     >
+      <h3 className="text-xl font-semibold">{role.title}</h3>
+      <Image src={role.image} alt={`Slide ${index}`} width={600} height={400} className="object-cover rounded-lg border-[5px] border-black" />
+      <p className="text-lg">{role.description}</p>
      </div>
     ))}
-   </div>
-   <div>
-    <button className="" onClick={handleNext}>
-     &#8250; {/* Right arrow */}
-    </button>
    </div>
   </div>
  );
