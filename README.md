@@ -25,7 +25,7 @@ To work contribute to this website you must have a general understanding of JS/H
 ![image](https://github.com/user-attachments/assets/3e333d93-2fca-4496-b3c3-4c23c10d170e)
 
 ## Important Notes!
-- Refer to the Figma to find what each issue is references to keep consistent styling
+- Refer to the [Figma](https://www.figma.com/design/mJZGzkMqu6JHfIzPl5zCkU/Website-Design?node-id=0-1&t=6ph7juLn0PV5AIhQ-1) to find what each issue is references to keep consistent styling
 - For colors used through the website, reference colors.css
 
 ## How to Local Test
