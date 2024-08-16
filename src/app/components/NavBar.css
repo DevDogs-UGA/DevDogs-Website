@@ -15,21 +15,26 @@ a:hover {
 }
 
 .navbar {
-    display: grid;
-    grid-template-columns: 27% 62%;
+    display: flex;
     align-items: center;
-    text-align: center;
-    
     background-color: #31304b;
     /*border-bottom: solid;
     border-bottom-color: #201f32;*/
 }
 
-.links {
-    display: grid;
-    justify-items: center;
-    align-items: center;
-    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+#links {
+    margin-left: auto;
+    margin-right: auto;
+    display: inline-flex;
+    flex-direction: row;
+}
+
+.link-text {
+    font-size: 2em;
+}
+
+#nav-current {
+    font-weight: bold;
 }
 
 #name2 {
@@ -37,22 +42,9 @@ a:hover {
     object-fit: cover;
 }
 
-@media only screen and (max-width: 600px) {
-    .navbar {
-        display: grid;
-        grid-template-columns: 9% auto;
-        background-color: #31304b;
-        /*border-bottom: solid;
-        border-bottom-color: #201f32;*/
-    }
-
-    .links {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr 1fr;
-    }
-
-    .small {
-        font-size: 5.2vw;
+@media only screen and (max-width: 900px) {
+    .link-text {
+        font-size: 1.5em;
     }
 
     #joinus {

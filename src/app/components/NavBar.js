@@ -6,13 +6,33 @@ import Button from "./Button"
 import name2 from "../images/mascotwordlight.png"
 import logoOnly from "../images/logo.png"
 import Image from "next/image"
-import { useState } from "react"
 import MediaQuery from "react-responsive"
+import { usePathname } from "next/navigation"
+
+const navRoutes = [
+    { name: "Home", path: "/" },
+    { name: "About", path: "/about" },
+    { name: "Team", path: "/our-team" },
+    { name: "Events", path: "/events" },
+];
 
 const NavBar = () => {
+    const pathname = usePathname();
+    const links = [];
+
+    for (const [i, route] of navRoutes.entries()) {
+        let isCurrent = pathname === route.path;
+        let id = isCurrent ? "nav-current" : "";
+        links.push(
+            <Link key={i} href={route.path}>
+                <p className="link-text" id={id}>{route.name}</p>
+            </Link>
+        );
+    }
+
     return (
         <div className="navbar">
-            <MediaQuery minWidth={1224}>
+            <MediaQuery minWidth={900}>
                 <Image
                     id="name2"
                     src={name2}
@@ -34,35 +54,14 @@ const NavBar = () => {
                     alt="Mascot"
                 />
             </MediaQuery>
-            
-            <div className="links">
 
-                <Link href="/">
-                    <p className="small">Home</p>
+            <div id="links">{links}</div>
+
+            <MediaQuery minWidth={900}>
+                <Link href="https://discord.com/invite/MuyJ4f5xKE">
+                    <Button className="link-text" id="joinus">Join Us</Button>
                 </Link>
-
-                <Link href="/about">
-                    <p className="small">About</p>
-                </Link>
-
-                <Link href="/our-team">
-                    <p className="small">Team</p>
-                </Link>
-
-                {/* <Link href="/resources">
-                        <p>Resources</p>
-                    </Link> */}
-
-                <Link href="/events">
-                    <p className="small">Events</p>
-                </Link>
-                <MediaQuery minWidth={1224}>
-                    <Link href="https://discord.com/invite/MuyJ4f5xKE">
-                        <Button id="joinus">Join Us</Button>
-                    </Link>
-                </MediaQuery>
-                
-            </div>
+            </MediaQuery>
         </div>
     )
 }
