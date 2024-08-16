@@ -163,6 +163,11 @@ p {
   font-size: 3rem;
 }
 
+#impact {
+  font-size: 3rem;
+  text-align: center;
+}
+
 .red-bold {
   display: inline;
   color: #CD0029;
@@ -228,6 +233,17 @@ iframe {
   width: 100%;
   border: none;
 
+}
+
+.impact-section {
+  display: block;
+  align-items: center;
+}
+
+.button-grid {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
 }
 
 @media only screen and (max-width: 600px) {
