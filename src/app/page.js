@@ -17,52 +17,60 @@ const Home = () =>
     <section id="base-background">
 
       <div class="section section-home">
-
-        <div id="hometitle" className="grid">
-          <div id="title">
-            <h2 id="big">Hey UGA!</h2>
-            <h1 id="big">We're <div class="red-bold">DevDogs</div>,</h1>
+        <div className="flex flex-wrap items-center justify-center">
+          <div className="md:flex-1">
+            <h2 className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">Hey UGA!</h2>
+            <h1 className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">We're <div class="red-bold">DevDogs</div>,</h1>
           </div>
-          <Image id="mascot" src={logo} alt="DevDogs Logo" width="800" height="800" />
-        </div>
-        <br />
-        <div className="grid">
-          <Image id="demo" src={demo} alt="ACM OSP Demo" width="600" height="300" />
-          <Image id="mockup-mobile" src={mockup} alt="ACM OSP Bus App Mockup" width="650" height="325" />
-
-          <div id="description">
-            <h1>a team of</h1>
-            <h1>passionate</h1>
-            <h1 id="big" >Student</h1>
-            <h1 id="big" class="dark_red-bold">Developers</h1>
-            <h2>at UGA.</h2>
+          
+          <div className="md:flex-1">
+            <Image id="mascot" src={logo} alt="DevDogs Logo" width="800" height="800" />
           </div>
         </div>
-        <br />
-        <div id="who-we-are" className="grid">
-          <div>
-            <p class="section-header"><b><b class="dark_red-bold">We</b> develop some awesome software...</b></p>
-            <p class="section-subheader">And we strive to better our community through code.</p>
-            <p>Each year, we work hard to identify needs in Athens and solve them by taking solutions from concept to completion.</p>
+
+
+        <div className="flex sm:flex-row-reverse flex-wrap items-center justify-center my-[50px]">
+          <div className="sm:flex-1 text-center sm:text-right mb-10 sm:my-0">
+            <h1 className="text-lg md:text-xl">A Team Of</h1>
+            <h1 className="text-lg md:text-xl">Passionate</h1>
+            <h1 className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">Student</h1>
+            <h1 className="font-semibold text-[#BA0C2F] text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">Developers</h1>
+            <h2 className="text-lg md:text-xl">at UGA.</h2>
           </div>
-          <Image id="mockup-home" src={mockup} alt="ACM OSP Bus App Mockup" width="650" height="400" />
+
+          <div className="sm:flex-1">
+            <Image src={demo} alt="ACM OSP Demo" width="600" height="300" />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-center my-[50px]">
+          <div className="md:flex-1">
+            <p className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]"><p className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem] text-[#BA0C2F] inline">We </p>develop some awesome software...</p>
+            <p className="font-semibold mt-[10px] text-[1.5rem]" >And we strive to better our <p className="font-semibold text-[#BA0C2F] text-[1.5rem] inline"> community </p> through code.</p>
+            <p className="mt-[10px]">Each year, we work hard to identify needs in Athens and solve them by taking solutions from concept to completion.</p>
+          </div>
+          <div className="md:flex-1">
+            <Image src={mockup} alt="ACM OSP Bus App Mockup" />
+          </div>
         </div>
 
 
         <HomePageCarousel roles={roles} />
 
 
-        <div class="call-to-action-home">
-          <h1 class="section-header-center">Sound interesting?</h1>
+        <div>
+          <h1 className="font-bold text-center text-[3rem]">Sound Interesting?</h1>
 
 
           <div className="button-grid">
-            <Link href="/about">
-              <Button id="learnmore">Learn More</Button>
+            <Link href="/about" className="text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white bg-black hover:bg-[#BA0C2F] ">
+              {/* <Button id="learnmore">Learn More</Button> */}
+              <Button >Learn More</Button>
             </Link>
-            <br />
-            <Link href="https://discord.com/invite/MuyJ4f5xKE">
-              <Button id="joinus-si">Join Us!</Button>
+
+            <Link href="https://discord.com/invite/MuyJ4f5xKE" className="text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:bg-black ">
+              {/* <Button id="joinus-si">Join Us!</Button> */}
+              <Button >Join Us!</Button>
             </Link>
           </div>
         </div>

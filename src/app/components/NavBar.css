@@ -4,7 +4,7 @@ a {
     color: white;
 }
 
-a:visited {
+/* a:visited {
     text-decoration: none;
     color: white;
 }
@@ -12,7 +12,7 @@ a:visited {
 a:hover {
     text-decoration: underline;
     color: white;
-}
+} */
 
 .navbar {
     display: grid;
@@ -55,9 +55,9 @@ a:hover {
         font-size: 5.2vw;
     }
 
-    #joinus {
+    /* #joinus {
         display: none;
-    }
+    } */
 
     a:hover {
         text-decoration: none;

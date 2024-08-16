@@ -1,4 +1,3 @@
-import "./HomePageCarousel.css";
 import Image from 'next/image';
 import React, { useState, useEffect, useRef } from "react";
 
@@ -28,26 +27,26 @@ export default function HomePageCarousel({ roles })
  };
 
  return (
-  <div className="carousel-container">
-   <button className="carousel-button prev-button" onClick={handlePrev}>
+  <div className='w-full overflow-hidden flex flex-nowrap '>
+   <div><button className="" onClick={handlePrev}>
     &#8249; {/* Left arrow */}
-   </button>
-   <div className="carousel-wrapper">
-    <div className="carousel" ref={carouselRef}>
-     {roles.map((role, index) => (
-      <div className="carousel-item" key={index}>
-       <Image src={role.image} alt={`Slide ${index}`} width={200} height={500} />
-       <div className="carousel-item-content">
-        <h3>{role.title}</h3>
-        <p className="description">{role.description}</p>
-       </div>
+   </button></div>
+   <div className="w-full" ref={carouselRef}>
+    {roles.map((role, index) => (
+     <div className="" key={index}>
+      <Image src={role.image} alt={`Slide ${index}`} width={200} height={500} />
+      <div className="">
+       <h3>{role.title}</h3>
+       <p className="">{role.description}</p>
       </div>
-     ))}
-    </div>
+     </div>
+    ))}
    </div>
-   <button className="carousel-button next-button" onClick={handleNext}>
-    &#8250; {/* Right arrow */}
-   </button>
+   <div>
+    <button className="" onClick={handleNext}>
+     &#8250; {/* Right arrow */}
+    </button>
+   </div>
   </div>
  );
 }
