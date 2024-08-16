@@ -26,7 +26,7 @@ To work contribute to this website you must have a general understanding of JS/H
 
 ## Important Notes!
 - Refer to the [Figma](https://www.figma.com/design/mJZGzkMqu6JHfIzPl5zCkU/Website-Design?node-id=0-1&t=6ph7juLn0PV5AIhQ-1) to find what each issue references to keep consistent styling
-- For colors used through the website, reference colors.css
+- For colors used through the website, reference color.css
 
 ## How to Local Test
 To run the development server on your local machine (navigate to your project folder in the terminal):
