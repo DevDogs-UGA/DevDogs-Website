@@ -288,6 +288,7 @@ iframe {
     font-size: 1.5rem;
     padding-bottom: 0.4rem;
   }
+  
 
   #abouttitle {
     margin-top: 50px;
@@ -321,5 +322,6 @@ iframe {
     grid-template-columns: 1fr 1fr;
     gap: 40px
   }
+
 
 }

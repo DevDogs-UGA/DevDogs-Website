@@ -1,3 +1,4 @@
+"use client"
 import "./Home.css"
 import Button from "./components/Button"
 import logo from "./images/logo.png"
@@ -5,12 +6,18 @@ import demo from "./images/demo.png"
 import mockup from "./images/mockup.png"
 import Image from "next/image"
 import Link from "next/link"
+import React from "react";
+import HomePageCarousel from "./components/HomePageCarousel"
+import { roles } from "./components/HomePageRoles"
 
-const Home = () => {
+const Home = () =>
+{
+
   return (
     <section id="base-background">
 
       <div class="section section-home">
+
         <div id="hometitle" className="grid">
           <div id="title">
             <h2 id="big">Hey UGA!</h2>
@@ -40,20 +47,24 @@ const Home = () => {
           </div>
           <Image id="mockup-home" src={mockup} alt="ACM OSP Bus App Mockup" width="650" height="400" />
         </div>
-        <br />
-        <br />
-        <br />
-        <h1 class="section-header-center">Sound interesting?</h1>
-        <br />
 
-        <div className="button-grid">
-          <Link href="/about">
-            <Button id="learnmore">Learn More</Button>
-          </Link>
-          <br />
-          <Link href="https://discord.com/invite/MuyJ4f5xKE">
-            <Button id="joinus-si">Join Us!</Button>
-          </Link>
+
+        <HomePageCarousel roles={roles} />
+
+
+        <div class="call-to-action-home">
+          <h1 class="section-header-center">Sound interesting?</h1>
+
+
+          <div className="button-grid">
+            <Link href="/about">
+              <Button id="learnmore">Learn More</Button>
+            </Link>
+            <br />
+            <Link href="https://discord.com/invite/MuyJ4f5xKE">
+              <Button id="joinus-si">Join Us!</Button>
+            </Link>
+          </div>
         </div>
       </div>
     </section>
