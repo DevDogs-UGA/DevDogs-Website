@@ -21,21 +21,52 @@ const Page = () =>
    image: TempProjectImage
   }
  ]
+
+
+ const pastProjects = [
+  {
+   image: TempProjectImage,
+   title: "Project Name, 202#",
+   description: "Brief description of project and its impact. Lorem ipsum dolor sit amet."
+  },
+  {
+   image: TempProjectImage,
+   title: "Project Name, 203#",
+   description: "Brief description of project and its impact. Lorem ipsum dolor sit amet."
+  },
+  {
+   image: TempProjectImage,
+   title: "Project Name, 204#",
+   description: "Brief description of project and its impact. Lorem ipsum dolor sit amet."
+  }
+ ]
+
  return (
-  <div className="text-center container mx-auto w-[70%]">
-   <h3 className="font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] inline">Our <h3 className="text-UGA inline">Projects</h3></h3>
-   <p>Each year, DevDogs embarks on a new full-stack software project, collaborating on a concept from idea to implementation. Our software projects are always open-sourced and aligned to benefit the UGA or Athens community. After all, we’re the most familiar with its pain-points, so we’re the best equipped to help our people one project at a time. Take a look at what we’ve done below!</p>
-   <h3 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-UGA inline">Current <h3 className="text-black inline">Project</h3></h3>
+  <div className="text-center container mx-auto w-[70%] ">
+
+   <div className="my-[125px]">
+    <h2 className=" font-bold text-[3.5rem] sm:text-[4.5rem] md:[5.5rem] inline">Our </h2><h2 className="font-bold text-[3.5rem] sm:text-[4.5rem] md:[5.5rem] text-UGA inline">Projects</h2>
+    <p className="mt-[50px]">Each year, DevDogs embarks on a new full-stack software project, collaborating on a concept from idea to implementation. Our software projects are always open-sourced and aligned to benefit the UGA or Athens community. After all, we’re the most familiar with its pain-points, so we’re the best equipped to help our people one project at a time. Take a look at what we’ve done below!</p>
+   </div>
+
+
+
+   <h2 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-UGA inline">Current </h2> <h2 className="font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-black inline">Project</h2>
    {/* Carousel */}
-   <GeneralCarousel slides={currentProjects} />
+   <GeneralCarousel slides={currentProjects} childrenClassName="my-[50px]" banner={false} />
 
    <p>DevDogs is proud to consist of ## UGA students from all tech disciplines and backgrounds. We firmly believe that different perspectives breed the best solutions--and we think our work shows! Take a look at some of the awesome people that have made DevDogs, DevDogs below.</p>
+   <Link target="_blank" href="https://github.com/DevDogs-UGA" className="bg-UGA container transition ease-in-out duration-300 block mx-auto rounded-full max-w-[17rem] font-semibold py-3 my-[75px]  text-white hover:bg-black hover:text-white"><Button className="">View
+   </Button></Link>
 
-   <Button className="bg-UGA container block mx-auto py-1 px-5 text-white hover:bg-black hover:text-black">View
-   </Button>
 
-   <h3 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-UGA inline">Past <h3 className="text-black inline">Projects</h3></h3>
+   <h2 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-UGA inline">Past </h2><h2 className="font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-black inline">Projects</h2>
    {/* Casousel */}
+   <div>
+    <GeneralCarousel slides={pastProjects} childrenClassName="mt-[50px] mb-[125px]" banner={true} />
+
+   </div>
+
 
   </div>
  )
