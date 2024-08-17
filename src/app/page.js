@@ -18,7 +18,7 @@ const Home = () =>
 
       <div class="section section-home">
         <div className="flex flex-wrap items-center justify-center">
-          <div className="md:flex-1 text-center sm:text-left">
+          <div className="md:flex-1">
             <h2 className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">Hey UGA!</h2>
             <h1 className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">We're <div class="red-bold">DevDogs</div>,</h1>
           </div>
@@ -54,7 +54,7 @@ const Home = () =>
           </div>
         </div>
 
-        <p className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem] text-center text-[#BA0C2F]">Roles</p>
+
         <HomePageCarousel roles={roles} />
 
 
@@ -63,12 +63,12 @@ const Home = () =>
 
 
           <div className="button-grid">
-            <Link href="/about" className="text-lg md:text-xl rounded-full font-medium m-4 px-6 py-2 transition ease-in-out delay-150 text-white bg-black hover:bg-white hover:text-black ">
+            <Link target="_blank" href="/about" className="text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white bg-black hover:bg-[#BA0C2F] ">
               {/* <Button id="learnmore">Learn More</Button> */}
               <Button >Learn More</Button>
             </Link>
 
-            <Link href="https://discord.com/invite/MuyJ4f5xKE" className="text-lg md:text-xl rounded-full font-medium m-4 px-6 py-2 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:bg-white hover:text-black ">
+            <Link target="_blank" href="https://discord.com/invite/MuyJ4f5xKE" className="text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:bg-black ">
               {/* <Button id="joinus-si">Join Us!</Button> */}
               <Button >Join Us!</Button>
             </Link>
