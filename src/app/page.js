@@ -17,10 +17,10 @@ const Home = () =>
     <section id="base-background">
 
       <div class="section section-home">
-        <div className="flex flex-wrap items-center justify-center">
-          <div className="md:flex-1">
+        <div className="flex flex-wrap items-center justify-center my-[2rem]">
+          <div className="md:flex-1 text-center sm:text-left">
             <h2 className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">Hey UGA!</h2>
-            <h1 className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">We're <div class="red-bold">DevDogs</div>,</h1>
+            <h1 className="font-extrabold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">We're <div class="font-extrabold text-UGASecondary inline">DevDogs,</div></h1>
           </div>
 
           <div className="md:flex-1">
@@ -29,14 +29,14 @@ const Home = () =>
         </div>
 
 
-        <div className="flex sm:flex-row-reverse flex-wrap items-center justify-center my-[50px]">
+        <div className="flex sm:flex-row-reverse flex-wrap items-center justify-center my-[2rem]">
           <div className="sm:flex-1 text-center sm:text-right mb-10 sm:my-0">
-            <h1 className="text-lg md:text-xl">A Team Of</h1>
-            <h1 className="text-lg md:text-xl">Passionate</h1>
+            <h1 className="text-lg md:text-xl">a team of</h1>
+            <h1 className="text-lg md:text-xl">passionate</h1>
             <h1 className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">Student</h1>
-            
 
-            <RolesHome/>
+
+            <RolesHome />
 
 
 
@@ -51,7 +51,7 @@ const Home = () =>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center my-[50px]">
+        <div className="flex flex-wrap items-center justify-center my-[50px] text-center sm:text-left my=[2rem]" >
           <div className="md:flex-1">
             <p className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]"><p className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem] text-[#BA0C2F] inline">We </p>develop some awesome software...</p>
             <p className="font-semibold mt-[10px] text-[1.5rem]" >And we strive to better our <p className="font-semibold text-[#BA0C2F] text-[1.5rem] inline"> community </p> through code.</p>
@@ -65,7 +65,7 @@ const Home = () =>
 
 
 
-        <div>
+        <div className="py-[2rem]">
           <h1 className="font-bold text-center text-[3rem]">Sound Interesting?</h1>
 
 
