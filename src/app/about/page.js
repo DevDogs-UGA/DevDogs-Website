@@ -62,7 +62,7 @@ const AboutPage = () => {
                         <br />
                         <Link className="bg-UGA rounded-full text-white ml-4 py-3 px-6 transition ease-in-out duration-200 hover:bg-black" href="\our-team">
                             <Button >Our People</Button>
-                        </Link>   
+                        </Link>
                     </div>
                 </div>
             </div>
