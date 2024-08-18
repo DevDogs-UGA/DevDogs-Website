@@ -58,19 +58,17 @@ const AboutPage = () => {
                     <br />
                     <h1 id="impact">More Info</h1>
                     <br />
-                    <div className="button-grid">
-                        <Link href="https://discord.com/invite/MuyJ4f5xKE">
-                            <Button id="all-projects">All Projects</Button>
+                    <div className="flex flex-nowrap items-center justify-center ">
+                        <Link className="bg-NavBarColor rounded-full text-white mr-4 py-3 px-6 transition ease-in-out duration-200 hover:bg-black" target="_blank" href="https://discord.com/invite/MuyJ4f5xKE">
+                            <Button >All Projects</Button>
                         </Link>
                         <br />
-                        <Link href="\our-team">
-                            <Button id="our-people">Our People</Button>
+                        <Link className="bg-UGA rounded-full text-white ml-4 py-3 px-6 transition ease-in-out duration-200 hover:bg-black" href="\our-team">
+                            <Button >Our People</Button>
                         </Link>   
                     </div>
                 </div>
-            
             </div>
-           
         </div>
     )
 }

@@ -13,7 +13,7 @@ const OurTeam = () =>
   <div className="section section-team">
 
    <div className="text-center mt-[2rem]">
-    
+
     <h1 className="font-bold text-[3rem] md:text-[3.5rem] lg:text-[4rem]">Our <div class="red-bold">People</div></h1>
    </div>
 
@@ -35,7 +35,7 @@ const OurTeam = () =>
     <Card name={'Kade Styron'} title={'Corporate & Career Officer'} image={kds} bgcolor="pink-dark" />
     <Card name={'Bryant Monahan'} title={'Campus Initiatives Officer'} image={bm} bgcolor="brown-light" />
    </div>
-
+   <div className="p-4"></div>
   </div>
  )
 }
