@@ -11,11 +11,11 @@ const OurTeam = () =>
 {
  return (
   <div className="section section-team">
-
    <div className="text-center mt-[2rem]">
+    <h1 className="font-bold text-[3rem] md:text-[3.5rem] lg:text-[4rem] inline">Our </h1>
+    <h1 class="text-UGA font-bold text-[3rem] md:text-[3.5rem] lg:text-[4rem] inline">People</h1></div>
 
-    <h1 className="font-bold text-[3rem] md:text-[3.5rem] lg:text-[4rem]">Our <div class="red-bold">People</div></h1>
-   </div>
+
 
 
 
@@ -26,16 +26,19 @@ const OurTeam = () =>
 
 
 
+   <div id="teamtitle">
 
-   <div id="grid">
-    <Card name={'Justin Brand'} title={'President'} image={jb} bgcolor="brown-dark" />
-    <Card name={'Nivedha Natarajan'} title={'Technical Officer'} image={nn} bgcolor="cyan-light" />
-    <Card name={'Kelsey Sterner'} title={'Community Relations Officer'} image={ks} bgcolor="pink-light" />
-    <Card name={'Avery Marco'} title={'Instructional Officer'} image={am} bgcolor="pink" />
-    <Card name={'Kade Styron'} title={'Corporate & Career Officer'} image={kds} bgcolor="pink-dark" />
-    <Card name={'Bryant Monahan'} title={'Campus Initiatives Officer'} image={bm} bgcolor="brown-light" />
+
+    <div id="grid">
+     <Card name={'Justin Brand'} title={'President'} image={jb} bgcolor="brown-dark" />
+     <Card name={'Nivedha Natarajan'} title={'Technical Officer'} image={nn} bgcolor="cyan-light" />
+     <Card name={'Kelsey Sterner'} title={'Community Relations Officer'} image={ks} bgcolor="pink-light" />
+     <Card name={'Avery Marco'} title={'Instructional Officer'} image={am} bgcolor="pink" />
+     <Card name={'Kade Styron'} title={'Corporate & Career Officer'} image={kds} bgcolor="pink-dark" />
+     <Card name={'Bryant Monahan'} title={'Campus Initiatives Officer'} image={bm} bgcolor="brown-light" />
+     <br />
+    </div>
    </div>
-   <div className="p-4"></div>
   </div>
  )
 }
