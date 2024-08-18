@@ -14,7 +14,7 @@ import Link from "next/link"
 
 const AboutPage = () =>
 {
-    
+
     const images = ['/carousel/carousel1.png', '/carousel/carousel2.jpg', '/carousel/carousel3.jpg'];
 
     return (
@@ -56,19 +56,17 @@ const AboutPage = () =>
                     <br />
                     <h1 id="impact">More Info</h1>
                     <br />
-                    <div className="flex flex-nowrap items-center justify-center">
-                        <Link href="https://discord.com/invite/MuyJ4f5xKE" className="bg-UGASecondary rounded-full text-white mx-4 transition ease-in-out duration-150 hover:bg-black hover:text-white px-4 py-2">
+                    <div className="flex flex-nowrap items-center justify-center ">
+                        <Link className="bg-NavBarColor rounded-full text-white mr-4 py-3 px-6 transition ease-in-out duration-200 hover:bg-black" target="_blank" href="https://discord.com/invite/MuyJ4f5xKE">
                             <Button >All Projects</Button>
                         </Link>
                         <br />
-                        <Link href="\our-team" className="bg-[#31304B] text-white rounded-full mx-4 transition ease-in-out duration-150 hover:bg-black px-4 py-2">
+                        <Link className="bg-UGA rounded-full text-white ml-4 py-3 px-6 transition ease-in-out duration-200 hover:bg-black" href="\our-team">
                             <Button >Our People</Button>
                         </Link>
                     </div>
                 </div>
-
             </div>
-
         </div>
     )
 }
