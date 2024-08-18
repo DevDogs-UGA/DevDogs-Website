@@ -27,7 +27,7 @@ const OurTeam = () =>
 
 
 
-   <div id="grid">
+   <div id="grid"> 
     <Card name={'Justin Brand'} title={'President'} image={jb} bgcolor="brown-dark" />
     <Card name={'Nivedha Natarajan'} title={'Technical Officer'} image={nn} bgcolor="cyan-light" />
     <Card name={'Kelsey Sterner'} title={'Community Relations Officer'} image={ks} bgcolor="pink-light" />
@@ -35,7 +35,7 @@ const OurTeam = () =>
     <Card name={'Kade Styron'} title={'Corporate & Career Officer'} image={kds} bgcolor="pink-dark" />
     <Card name={'Bryant Monahan'} title={'Campus Initiatives Officer'} image={bm} bgcolor="brown-light" />
    </div>
-
+   <div className="p-4"></div>
   </div>
  )
 }
