@@ -42,8 +42,8 @@ const Home = () => {
 
                 <div className="flex flex-wrap items-center justify-center my-[50px] text-center sm:text-left my=[2rem]" >
                     <div className="md:flex-1">
-                        <p className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]"><p className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem] text-[#BA0C2F] inline">We </p>develop some awesome software...</p>
-                        <p className="font-semibold mt-[10px] text-[1.5rem]" >And we strive to better our <p className="font-semibold text-[#BA0C2F] text-[1.5rem] inline"> community </p> through code.</p>
+                        <p className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]"><b className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem] text-[#BA0C2F] inline">We </b>develop some awesome software...</p>
+                        <p className="font-semibold mt-[10px] text-[1.5rem]" >And we strive to better our <b className="font-semibold text-[#BA0C2F] text-[1.5rem] inline"> community </b> through code.</p>
                         <p className="mt-[10px]">Each year, we work hard to identify needs in Athens and solve them by taking solutions from concept to completion.</p>
                     </div>
                     <div className="md:flex-1">
