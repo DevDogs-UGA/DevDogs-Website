@@ -14,10 +14,7 @@ import Link from "next/link"
 
 const AboutPage = () =>
 {
-    const imagess = ["https://www.fisheries.noaa.gov/s3//styles/original/s3/2023-06/750x500-Great-White-iStock.jpg?itok=RWsvCGC6",
-        "https://e3.365dm.com/24/03/1600x900/skynews-francois-langur-monkey_6488923.jpg?20240313102133",
-        "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%3Fid%3DOIP.92wIxwnq8FIO9oOg0KaF-QHaEo%26pid%3DApi&f=1&ipt=d37446fb31ea6cefd2805661d9077f514df2695379fdf8c18749d7a910a1718b&ipo=images"];
-
+    
     const images = ['/carousel/carousel1.png', '/carousel/carousel2.jpg', '/carousel/carousel3.jpg'];
 
     return (
