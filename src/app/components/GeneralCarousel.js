@@ -1,3 +1,6 @@
+
+
+// General purpose carousel with out scaling effect, takes in two props and has childrenClass name where you can add your stlying.
 import Image from 'next/image';
 import React, { useState, useEffect, useRef } from "react";
 

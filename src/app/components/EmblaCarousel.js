@@ -6,6 +6,8 @@ import './embla.css';
 
 // Documentation for external library used: https://www.embla-carousel.com/examples/predefined/
 
+// This carousel has a zoom in and zoom out effect on autoplay with the spotlight on the middle slide, majority of the code is from Embla Carousel. The component takes in 3 props, the slides(array of images), banner(boolean to check if you want a banner, and options(which outline the behavious of the carousel. To learn more about the different option go to the documentation at Embla Carousel))
+
 const TWEEN_FACTOR_BASE = 0.52;
 
 const numberWithinRange = (number, min, max) =>
