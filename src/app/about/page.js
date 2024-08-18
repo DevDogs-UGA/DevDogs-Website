@@ -12,8 +12,9 @@ import Link from "next/link"
 // The link for the "All Projects" button goes to the discord because there is not a projects page yet. 
 // The link for the "Our People" buttongoes to the Team page until the our People page is complete.
 
-const AboutPage = () => {
-    const imagess = ["https://www.fisheries.noaa.gov/s3//styles/original/s3/2023-06/750x500-Great-White-iStock.jpg?itok=RWsvCGC6", 
+const AboutPage = () =>
+{
+    const imagess = ["https://www.fisheries.noaa.gov/s3//styles/original/s3/2023-06/750x500-Great-White-iStock.jpg?itok=RWsvCGC6",
         "https://e3.365dm.com/24/03/1600x900/skynews-francois-langur-monkey_6488923.jpg?20240313102133",
         "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%3Fid%3DOIP.92wIxwnq8FIO9oOg0KaF-QHaEo%26pid%3DApi&f=1&ipt=d37446fb31ea6cefd2805661d9077f514df2695379fdf8c18749d7a910a1718b&ipo=images"];
 
@@ -58,19 +59,19 @@ const AboutPage = () => {
                     <br />
                     <h1 id="impact">More Info</h1>
                     <br />
-                    <div className="button-grid">
-                        <Link href="https://discord.com/invite/MuyJ4f5xKE">
-                            <Button id="all-projects">All Projects</Button>
+                    <div className="flex flex-nowrap items-center justify-center">
+                        <Link href="https://discord.com/invite/MuyJ4f5xKE" className="bg-UGASecondary rounded-full text-white mx-4 transition ease-in-out duration-150 hover:bg-black hover:text-white px-4 py-2">
+                            <Button >All Projects</Button>
                         </Link>
                         <br />
-                        <Link href="\our-team">
-                            <Button id="our-people">Our People</Button>
-                        </Link>   
+                        <Link href="\our-team" className="bg-[#31304B] text-white rounded-full mx-4 transition ease-in-out duration-150 hover:bg-black px-4 py-2">
+                            <Button >Our People</Button>
+                        </Link>
                     </div>
                 </div>
-            
+
             </div>
-           
+
         </div>
     )
 }

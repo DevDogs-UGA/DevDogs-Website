@@ -31,8 +31,8 @@ const Home = () =>
 
         <div className="flex sm:flex-row-reverse flex-wrap items-center justify-center my-[50px]">
           <div className="sm:flex-1 text-center sm:text-right mb-10 sm:my-0">
-            <h1 className="text-lg md:text-xl">A Team Of</h1>
-            <h1 className="text-lg md:text-xl">Passionate</h1>
+            <h1 className="text-lg md:text-xl">a team of</h1>
+            <h1 className="text-lg md:text-xl">passionate</h1>
             <h1 className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">Student</h1>
             <h1 className="font-semibold text-[#BA0C2F] text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">Developers</h1>
             <h2 className="text-lg md:text-xl">at UGA.</h2>
@@ -55,7 +55,7 @@ const Home = () =>
         </div>
 
 
-        <HomePageCarousel roles={roles} />
+        {/* <HomePageCarousel roles={roles} /> */}
 
 
         <div>
@@ -63,12 +63,12 @@ const Home = () =>
 
 
           <div className="button-grid">
-            <Link target="_blank" href="/about" className="text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white bg-black hover:bg-[#BA0C2F] ">
+            <Link target="_blank" href="/about" className="text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white bg-black hover:bg-white hover:text-black ">
               {/* <Button id="learnmore">Learn More</Button> */}
               <Button >Learn More</Button>
             </Link>
 
-            <Link target="_blank" href="https://discord.com/invite/MuyJ4f5xKE" className="text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:bg-black ">
+            <Link target="_blank" href="https://discord.com/invite/MuyJ4f5xKE" className="text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:bg-white hover:text-black ">
               {/* <Button id="joinus-si">Join Us!</Button> */}
               <Button >Join Us!</Button>
             </Link>
