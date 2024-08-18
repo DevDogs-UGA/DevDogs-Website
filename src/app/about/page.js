@@ -1,21 +1,34 @@
+"use client"
+
 import Image from "next/image"
 import mockup from "../images/mockup.png";
-import Carousel from "../components/Carousel";
 import demo from "../images/demo.png"
 import Button from "../components/Button"
 import Link from "next/link"
+import EmblaCarousel from "../components/EmblaCarousel";
+import Caoursel1 from "@/app/images/carousel1.png"
+import Caoursel2 from "@/app/images/carousel2.jpg"
+import Caoursel3 from "@/app/images/carousel3.jpg"
 
-//import image1 from "/carousel/carousel1.png"
-//import image2 from "../images/carousel/carousel2.jpg"
-//import image3 from "../images/carousel/carousel3.jpg"
+
 
 // The link for the "All Projects" button goes to the discord because there is not a projects page yet. 
 // The link for the "Our People" buttongoes to the Team page until the our People page is complete.
 
 const AboutPage = () =>
 {
-
-    const images = ['/carousel/carousel1.png', '/carousel/carousel2.jpg', '/carousel/carousel3.jpg'];
+    const OPTIONS = { loop: true };
+    const imagesForCarousel = [
+        {
+            image: Caoursel1,
+        },
+        {
+            image: Caoursel2,
+        },
+        {
+            image: Caoursel3,
+        },
+    ];
 
     return (
         <div>
@@ -51,7 +64,13 @@ const AboutPage = () =>
                 <div className="impact-section">
                     <h1 id="impact">Our <b className="dark_red-bold">Impact</b></h1>
                     <br />
-                    <Carousel images={images} />
+
+                    
+                        <EmblaCarousel slides={imagesForCarousel} banner={false} options={OPTIONS} />
+                    
+
+
+
                     <br />
                     <br />
                     <h1 id="impact">More Info</h1>
@@ -61,7 +80,7 @@ const AboutPage = () =>
                             <Button >All Projects</Button>
                         </Link>
                         <br />
-                        <Link className="bg-UGA rounded-full text-white ml-4 py-3 px-6 transition ease-in-out duration-200 hover:bg-black" href="\our-team">
+                        <Link className="bg-UGA rounded-full text-white ml-4 py-3 px-6 transition ease-in-out duration-200 hover:bg-black" href="/about/people">
                             <Button >Our People</Button>
                         </Link>
                     </div>
