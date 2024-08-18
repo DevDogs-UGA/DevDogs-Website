@@ -136,15 +136,15 @@ const EmblaCarousel = (props) =>
         <Image
          src={slide.image}
          alt={`Slide ${index + 1}`}
-         className="object-cover rounded-[1rem]"
+         className="object-cover rounded-[.75rem] mb-10 sm:mb-0"
         />
         {(slide.title || slide.description) && (
-         <div className="absolute inset-x-0 bottom-8 sm:bottom-0 bg-[#3a3a3a] text-white rounded-b-[1rem] sm:p-4">
+         <div className="absolute inset-x-0 bottom-[2rem] sm:bottom-0 bg-[#3a3a3a] text-white rounded-b-[.75rem]">
           {slide.title && (
-           <h3 className="text-[.77rem] sm:text-lg font-bold pt-4">{slide.title}</h3>
+           <h3 className="text-[1rem] p-1 sm:p-3 sm:text-[1.2rem] font-bold">{slide.title}</h3>
           )}
           {slide.description && (
-           <p className="text-[.45rem] sm:text-[.65rem] px-2 pb-2">{slide.description}</p>
+           <p className="text-[.6rem] p-3 sm:text-[.8rem]">{slide.description}</p>
           )}
          </div>
         )}
