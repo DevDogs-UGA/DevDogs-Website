@@ -1,9 +1,7 @@
 .footer {
-    display: grid; 
-    grid-template-columns: 3fr 1fr 1fr;
     
-    align-items: center;
-    align-content: space-between;
+    
+    
 
     background-size: 100% 125%;
     background-color: #fff8fc;
