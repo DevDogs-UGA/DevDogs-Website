@@ -1,20 +1,11 @@
-
 "use client";
-import Image from "next/image";
 import Link from "next/link";
 import Button from "../../components/Button";
-import TempProjectImage from "../../images/tempProject.png";
-import EmblaCarousel from "@/app/components/EmblaCarousel";
-import DevDogsImage from "../../images/logo.png"
 
-const Page = () =>
-{
-
+const Page = () => {
   // Image arrays are for future use when we have more projects
 
   // const OPTIONS = { loop: true };
-
-  
 
   // const SLIDES = Array.from(Array(SLIDE_COUNT).keys())
   // const currentProjects = [
@@ -64,8 +55,8 @@ const Page = () =>
           collaborating on a concept from idea to implementation. Our software
           projects are always open-sourced and aligned to benefit the UGA or
           Athens community. After all, we’re the most familiar with its
-          pain-points, so we’re the best equipped to help our people one
-          project at a time. Take a look at what we’ve done below!
+          pain-points, so we’re the best equipped to help our people one project
+          at a time. Take a look at what we’ve done below!
         </p>
       </div>
       <div className="mb-4">
@@ -86,21 +77,24 @@ const Page = () =>
       {/* For future use when we have multiple projects being worked on in one semester for now we will focus on one main project */}
       {/* <EmblaCarousel slides={currentProjects} options={OPTIONS} /> */}
 
-
-
       {/* <div className="w-full container mx-auto">
         <Image src={TempProjectImage} className="rounded-3xl"/>
       </div> */}
 
-
       <p className="pt-10 text-base sm:text-lg md:text-xl">
-        The UGA Optimized Schedule Builder will retrieve the current data available for courses and prepare an optimized schedule for students based on location, time, major, course details, and more. This resource will help students understand different schedules they can create to help them find and build an amazing course schedule for the upcoming semester. 
+        The UGA Optimized Schedule Builder will retrieve the current data
+        available for courses and prepare an optimized schedule for students
+        based on location, time, major, course details, and more. This resource
+        will help students understand different schedules they can create to
+        help them find and build an amazing course schedule for the upcoming
+        semester.
       </p>
 
       <p className="pt-10 text-base sm:text-lg md:text-xl">
-        Learn more about the project and the tools being used to build the application!
+        Learn more about the project and the tools being used to build the
+        application!
       </p>
-      
+
       <Link
         href="https://github.com/DevDogs-UGA/Optimal-Schedule-Builder"
         className="bg-UGA container transition ease-in-out duration-300 block mx-auto rounded-full max-w-[17rem] font-semibold py-3 my-[75px]  text-white hover:bg-black hover:text-white"
@@ -121,7 +115,6 @@ const Page = () =>
       {/* Carousel */}
       <div>
         {/* <EmblaCarousel slides={pastProjects} options={OPTIONS} /> */}
-
       </div>
     </div>
   );

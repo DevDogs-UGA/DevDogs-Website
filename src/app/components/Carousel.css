@@ -1,36 +1,35 @@
 .carousel-container {
-    position: relative;
-    width: 100%; /* Make sure the container is full width */
-    height: 100%;
-    overflow: hidden; /* Hide any overflow */
+  position: relative;
+  width: 100%; /* Make sure the container is full width */
+  height: 100%;
+  overflow: hidden; /* Hide any overflow */
 }
-  
+
 .carousel-image {
-    width: 100%; /* Scale image to the width of its container */
-    height: auto; /* Maintain aspect ratio */
+  width: 100%; /* Scale image to the width of its container */
+  height: auto; /* Maintain aspect ratio */
 }
 
 .full-width-slide {
-    width: 100vw;
-    height: 23vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  width: 100vw;
+  height: 23vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 @media only screen and (min-width: 1000px) {
-    .full-width-slide {
-        width: 100vw;
-        height: 40vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
+  .full-width-slide {
+    width: 100vw;
+    height: 40vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
 }
 
-
 .full-width-slide img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: cover; /* Ensure the image covers the area without distortion */
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: cover; /* Ensure the image covers the area without distortion */
 }

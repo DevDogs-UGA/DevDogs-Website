@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import Slider from 'react-slick';
+import { useState, useRef } from "react";
+import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import './Carousel.css';
-import Image from 'next/image';
+import "./Carousel.css";
+import Image from "next/image";
+import PropTypes from "prop-types";
 
 const Carousel = ({ images }) => {
-  const [sliderHeight, setSliderHeight] = useState('auto');
+  const sliderHeight = useState("auto")[0];
   const sliderRef = useRef(null);
 
   const settings = {
@@ -20,15 +21,25 @@ const Carousel = ({ images }) => {
     slidesToShow: 1,
     slidesToScroll: 1,
     autoplay: true, // Enable autoplay
-    autoplaySpeed: 3000, // Time between slides in milliseconds 
+    autoplaySpeed: 3000, // Time between slides in milliseconds
   };
 
   return (
-    <div className="carousel-container" style={{ height: sliderHeight }} ref={sliderRef}>
+    <div
+      className="carousel-container"
+      style={{ height: sliderHeight }}
+      ref={sliderRef}
+    >
       <Slider {...settings}>
         {images.map((url, index) => (
-          <div key={index} className='full-width-slide'>
-            <Image src={url} alt={`Slide ${index + 1}`} className="carousel-image" width="100" height="100"/>
+          <div key={index} className="full-width-slide">
+            <Image
+              src={url}
+              alt={`Slide ${index + 1}`}
+              className="carousel-image"
+              width="100"
+              height="100"
+            />
           </div>
         ))}
       </Slider>
@@ -37,3 +48,7 @@ const Carousel = ({ images }) => {
 };
 
 export default Carousel;
+
+Carousel.propTypes = {
+  images: PropTypes.array,
+};
