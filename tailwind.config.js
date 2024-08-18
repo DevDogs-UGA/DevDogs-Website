@@ -11,7 +11,8 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        UGA: "#BA0C2F"
+        UGA: "#BA0C2F",
+        UGASecondary: "#CD0029"
       }
     },
   },
