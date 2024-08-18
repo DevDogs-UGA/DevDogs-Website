@@ -64,13 +64,13 @@ const Page = () =>
      project at a time. Take a look at what we’ve done below!
     </p>
    </div>
-<div className="mb-4">
-   <h2 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-UGA inline">
-    Current{" "}
-   </h2>
-   <h2 className="font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-black inline">
-    Project
-   </h2>
+   <div className="mb-4">
+    <h2 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-UGA inline">
+     Current{" "}
+    </h2>
+    <h2 className="font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-black inline">
+     Project
+    </h2>
    </div>
    {/* Carousel */}
    {/* <CarouselAdvanced /> */}
@@ -90,19 +90,20 @@ const Page = () =>
    >
     <Button className="">View</Button>
    </Link>
-  <div className="mb-4">
-   <h2 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-UGA inline">
-    Past{" "}
-   </h2>
-   <h2 className="font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-black inline">
-    Projects
-   </h2>
-  </div>
-   
+   {/* For future use when we have past projects to show */}
+
+   <div className="pb-4">
+    {/* <h2 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-UGA inline">
+     Past{" "}
+    </h2>
+    <h2 className="font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-black inline">
+     Projects
+    </h2> */}
+   </div>
+
    {/* Carousel */}
    <div>
-
-    <EmblaCarousel slides={pastProjects} options={OPTIONS} />
+    {/* <EmblaCarousel slides={pastProjects} options={OPTIONS} /> */}
 
    </div>
   </div>

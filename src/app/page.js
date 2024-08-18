@@ -7,8 +7,6 @@ import mockup from "./images/mockup.png"
 import Image from "next/image"
 import Link from "next/link"
 import React from "react";
-import HomePageCarousel from "./components/GeneralCarousel"
-import { roles } from "./components/HomePageRoles"
 
 const Home = () =>
 {

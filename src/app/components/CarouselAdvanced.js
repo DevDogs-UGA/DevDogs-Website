@@ -6,8 +6,6 @@ import EmblaCarousel from 'embla-carousel'
 import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures'
 
 
-
-
 export default function CarouselAdvanced()
 {
 

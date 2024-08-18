@@ -4,6 +4,8 @@ import Image from 'next/image';
 import './embla.css';
 // import { NextButton, PrevButton, usePrevNextButtons } from './EmblaCarouselArrowButtons';
 
+// Documentation for external library used: https://www.embla-carousel.com/examples/predefined/
+
 const TWEEN_FACTOR_BASE = 0.52;
 
 const numberWithinRange = (number, min, max) =>
@@ -154,7 +156,7 @@ const EmblaCarousel = (props) =>
     </div>
    </div>
 
-   {/* Remove buttons */}
+   {/* Manual Buttons to control next and prev slide*/}
    {/* <div className="flex justify-center items-center container mx-auto py-10">
         <div className="embla__buttons">
           <PrevButton onClick={onPrevButtonClick} disabled={prevBtnDisabled} />
