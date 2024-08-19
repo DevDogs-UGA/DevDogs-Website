@@ -7,12 +7,13 @@ import am from "../../images/officers/am.jpg"
 import bm from "../../images/officers/bm.jpg"
 import kds from "../../images/officers/kds.jpg"
 
+
 const OurTeam = () => {
     return (
         <div className="section section-team">
             <div className="text-center mt-[2rem]">
                 <h1 className="font-bold text-[3rem] md:text-[3.5rem] lg:text-[4rem] inline">Our </h1>
-                <h1 class="text-UGA font-bold text-[3rem] md:text-[3.5rem] lg:text-[4rem] inline">People</h1>
+                <h1 className="text-UGA font-bold text-[3rem] md:text-[3.5rem] lg:text-[4rem] inline">People</h1>
             </div>
 
             <h3 className="text-black text-[3rem] font-semibold text-center mt-[5rem] p-0"> 2024 - 2025 </h3>
