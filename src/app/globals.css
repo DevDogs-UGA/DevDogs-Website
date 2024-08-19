@@ -103,6 +103,19 @@ p {
   align-items: center;
 }
 
+#grid2 {
+  margin: 5px 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 2.5vw;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+}
+
 .section {
   background-color: #fff8fc;
   background-image: url("images/background.png");
@@ -294,6 +307,11 @@ iframe {
   background-color: #F08787;
 }
 
+.our-people-section {
+  text-align: center;
+  margin: 40px;
+}
+
 @media only screen and (max-width: 600px) {
   .section-home {
     background-size: 100% 20%;
@@ -395,6 +413,5 @@ iframe {
     grid-template-columns: 1fr 1fr;
     gap: 40px
   }
-
 
 }
