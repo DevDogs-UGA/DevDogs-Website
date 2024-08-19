@@ -4,6 +4,7 @@ import Carousel from "../components/Carousel";
 import demo from "../images/demo.png"
 import Button from "../components/Button"
 import Link from "next/link"
+import PageTitleTemplate from "../components/PageTitleTemplate";
 
 //import image1 from "/carousel/carousel1.png"
 //import image2 from "../images/carousel/carousel2.jpg"
@@ -19,9 +20,8 @@ const AboutPage = () => {
     return (
         <div>
             <div className="section section-about">
-                <div id="abouttitle">
-                    <h1>More <b className="dark_red-bold">About Us</b></h1>
-                </div>
+                <PageTitleTemplate blackText={"More "} redText={"About Us"} reverse={true} />
+                
 
                 <div className="grid">
                     <div>
