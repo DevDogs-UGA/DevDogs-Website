@@ -16,7 +16,7 @@ const EventsPage = () => {
             <br />
             <br />
 
-            <h1> Welcome General Body <b className="dark_red-bold">Meetings</b></h1>
+            <h1 className="font-bold text-[1rem] sm:text-[2rem] md:[2.5rem]"> Welcome General Body <b className="dark_red-bold">Meetings</b></h1>
 
             <br />
             <p>Monday August 26th, 2024 from 5:30 PM to 6:30PM at Boyd 328</p>
@@ -24,7 +24,7 @@ const EventsPage = () => {
 
             <br />
 
-            <h1 >Dev <b className="dark_red-bold">Sessions</b></h1>
+            <h1 className="font-bold text-[1rem] sm:text-[2rem] md:[2.5rem]">Dev <b className="dark_red-bold">Sessions</b></h1>
 
             <br />
 
@@ -34,7 +34,7 @@ const EventsPage = () => {
             <br />
             <br />
 
-            <h1> <b className="dark_red-bold">Upcoming </b>Events</h1>
+            <h1 className="font-bold text-[1rem] sm:text-[2rem] md:[2.5rem]"> <b className="dark_red-bold">Upcoming </b>Events</h1>
 
             <br />
 
