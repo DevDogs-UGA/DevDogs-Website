@@ -64,23 +64,17 @@ const AboutPage = () =>
                 <div className="impact-section">
                     <h1 id="impact">Our <b className="dark_red-bold">Impact</b></h1>
                     <br />
-
-
                     <EmblaCarousel slides={imagesForCarousel} banner={false} options={OPTIONS} />
-
-
-
-
                     <br />
                     <br />
                     <h1 id="impact">More Info</h1>
                     <br />
                     <div className="flex flex-nowrap items-center justify-center ">
-                        <Link className="bg-NavBarColor rounded-full text-white mr-4 py-3 px-6 transition ease-in-out duration-200 hover:bg-black" href="/about/projects">
+                        <Link className="bg-NavBarColor rounded-full text-white mr-4 py-3 px-6 transition ease-in-out duration-200 hover:bg-black" target="_blank" href="\about\projects">
                             <Button >All Projects</Button>
                         </Link>
                         <br />
-                        <Link className="bg-UGA rounded-full text-white ml-4 py-3 px-6 transition ease-in-out duration-200 hover:bg-black" href="/about/people">
+                        <Link className="bg-UGA rounded-full text-white ml-4 py-3 px-6 transition ease-in-out duration-200 hover:bg-black" href="\about\people">
                             <Button >Our People</Button>
                         </Link>
                     </div>
