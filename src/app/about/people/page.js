@@ -39,7 +39,7 @@ const OurTeam = () => {
             <div className="our-people-section">
                 <EmblaCarousel slides={imagesForCarousel} banner={false} options={OPTIONS} />
                 <br />
-                <p>DevDogs is proud to consist of ## UGA students from all tech disciplines and backgrounds. We firmly believe that different perspectives breed the solutions--and we think our work shows! Take a look at some of the awesome people that have made DevDogs, DevDogs below.</p>
+                <p>DevDogs is proud to consist of 100 UGA students from all tech disciplines and backgrounds. We firmly believe that different perspectives breed the solutions--and we think our work shows! Take a look at some of the awesome people that have made DevDogs, DevDogs below.</p>
             </div>
 
             <div className="text-center mt-[2rem]">
