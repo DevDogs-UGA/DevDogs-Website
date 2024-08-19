@@ -5,6 +5,7 @@ import Link from "next/link";
 import Button from "../../components/Button";
 import TempProjectImage from "../../images/tempProject.png";
 import EmblaCarousel from "@/app/components/EmblaCarousel";
+import DevDogsImage from "../../images/logo.png"
 
 const Page = () =>
 {
@@ -74,6 +75,12 @@ const Page = () =>
         <h2 className="font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-black inline">
           Project
         </h2>
+
+        <br />
+
+        <h3 className=" font-bold text-[1.5rem] sm:text-[2.5rem] md:[3rem]">
+          UGA Optimized Schedule Builder
+        </h3>
       </div>
 
       {/* For future use when we have multiple projects being worked on in one semester for now we will focus on one main project */}
@@ -81,17 +88,19 @@ const Page = () =>
 
 
 
-      <div className="w-full container mx-auto">
+      {/* <div className="w-full container mx-auto">
         <Image src={TempProjectImage} className="rounded-3xl"/>
-      </div>
+      </div> */}
 
 
       <p className="pt-10 text-base sm:text-lg md:text-xl">
-        DevDogs is proud to consist of over 100 UGA students from all tech disciplines
-        and backgrounds. We firmly believe that different perspectives breed
-        the best solutions--and we think our work shows! Take a look at some of
-        the awesome people that have made DevDogs, DevDogs below.
+        The UGA Optimized Schedule Builder will retrieve the current data available for courses and prepare an optimized schedule for students based on location, time, major, course details, and more. This resource will help students understand different schedules they can create to help them find and build an amazing course schedule for the upcoming semester. 
       </p>
+
+      <p className="pt-10 text-base sm:text-lg md:text-xl">
+        Learn more about the project and the tools being used to build the application!
+      </p>
+      
       <Link
         href="https://github.com/DevDogs-UGA/Optimal-Schedule-Builder"
         className="bg-UGA container transition ease-in-out duration-300 block mx-auto rounded-full max-w-[17rem] font-semibold py-3 my-[75px]  text-white hover:bg-black hover:text-white"
