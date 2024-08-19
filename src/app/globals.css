@@ -371,6 +371,10 @@ iframe {
     padding: 20px;
   }
 
+  .section-event > h1 {
+    font-size: 2rem;
+  }
+
   #abouttitle>h1,
   #devdawgs {
     font-size: 3rem;
