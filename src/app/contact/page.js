@@ -6,10 +6,10 @@ import SocialsAndContact from "../components/SocialsAndContact"
 const Page = () =>
 {
     return (
-        <div className="w-full section flex flex-col h-[100vh]">
+        <div className="w-full section flex flex-col">
             <PageTitleTemplate redText={"Contact "} blackText={"Us"}/>
             <SocialsAndContact/>
-            <DirectMessageForm/>
+            <DirectMessageForm />
         </div>
     )
 }
