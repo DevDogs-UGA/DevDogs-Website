@@ -10,7 +10,7 @@ import githubIcon from "../images/github.svg"
 export default function Footer()
 {
   return (
-    <div className="footer">
+    <div className="footer pt-[10rem]">
 
 
 
@@ -26,29 +26,22 @@ export default function Footer()
           /></Link>
 
 
-        <Link target="_blank" href=" https://www.linkedin.com/company/devdogs-uga/" className="block"> <Image
+          <Link target="_blank" href=" https://www.linkedin.com/company/devdogs-uga/" className="block"> <Image
 
-          src={linkedInIcon}
-          alt="LinkedIn Link"
-        /></Link>
+            src={linkedInIcon}
+            alt="LinkedIn Link"
+          /></Link>
 
 
-      <Link target="_blank" href=" https://github.com/DevDogs-UGA" className="block"> <Image
+          <Link target="_blank" href=" https://github.com/DevDogs-UGA" className="block"> <Image
 
-        src={githubIcon}
-        alt="Github Link"
-      /></Link>
-          
+            src={githubIcon}
+            alt="Github Link"
+          /></Link>
+
         </div >
-        
-      </div >
 
-  {/* <div className=" text-black" id="align-links">
-        <Link target="_blank" className="hover:underline visited:text-white" href={'mailto:devdogs@uga.edu'}>Email</Link>
-        <Link target="_blank" className="hover:underline visited:text-white" href={'https://github.com/DevDogs-UGA'}>Github</Link>
-        <Link target="_blank" className="hover:underline visited:text-white" href={'https://www.linkedin.com/company/devdogs-uga/'}>LinkedIn</Link>
-        <Link target="_blank" className="hover:underline visited:text-white" href={'https://linktr.ee/devdogs'}>Linktree</Link>
-      </div> */}
+      </div >
     </div >
   )
 }
