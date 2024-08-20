@@ -14,7 +14,7 @@
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
     border-radius: 20px 20px 20px 20px;
     display: grid;
-    grid-template-rows: 375px 1fr;
+    grid-template-rows: 300px 1fr;
 }
 
 #officer-title-name {
@@ -72,7 +72,7 @@
         box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
         border-radius: 20px 20px 20px 20px;
         display: grid;
-        grid-template-rows: 300px 1fr;
+        grid-template-rows: 250px 1fr;
     }
 
     #pic {
