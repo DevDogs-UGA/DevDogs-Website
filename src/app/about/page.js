@@ -9,6 +9,7 @@ import EmblaCarousel from "../components/EmblaCarousel";
 import Caoursel1 from "@/app/images/carousel1.png"
 import Caoursel2 from "@/app/images/carousel2.jpg"
 import Caoursel3 from "@/app/images/carousel3.jpg"
+import PageTitleTemplate from "../components/PageTitleTemplate";
 
 
 
@@ -32,37 +33,41 @@ const AboutPage = () =>
 
     return (
         <div>
-            <div className="section section-about">
-                <div id="abouttitle">
-                    <h1>More <b className="dark_red-bold">About Us</b></h1>
-                </div>
+            <div className="section">
+                <PageTitleTemplate blackText={"More "} redText={"About Us"} reverse={true} />
 
-                <div className="grid">
-                    <div>
-                        <h1 id="whoweare"> <b className="dark_red-bold">Who </b>We Are</h1>
-                        <p>DevDogs is a student-run club at UGA dedicated to benefiting our community through code. Each year, we work together to develop impactful software from concept to completion, learning real-world skills and industry-standard tech along the way. </p>
+
+                <div className="sm:my-[8rem] text-center sm:text-left flex flex-col md:flex-row flex-nowrap items-center justify-between">
+                    <div className="basis-1/2">
+                        <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-UGASecondary">Who </h2>
+                        <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">We Are</h2>
+
+                        <p className="font-semibold text-[1.1rem] md:text-[1.3rem] lg:text-[1.5rem]">DevDogs is a student-run club at UGA dedicated to benefiting our community through code. Each year, we work together to develop impactful software from concept to completion, learning real-world skills and industry-standard tech along the way. </p>
                     </div>
-                    <Image id="demo" src={demo} alt="ACM OSP Demo" />
+                    <div className="basis-1/2 py-10"><Image src={demo} alt="ACM OSP Demo" /></div>
                 </div>
 
-                <br />
 
-                <div className="grid">
-                    <div>
-                        <h1 id="whoweare">Our <b className="dark_red-bold">Mission</b></h1>
-                        <p>Above all, we aim to provide a space for passionate students from all disciplines to take ownership of meaningful software projects.</p>
+
+                <div className="sm:my-[8rem] text-center sm:text-left flex flex-col md:flex-row flex-nowrap items-center justify-between">
+                    <div className="basis-1/2">
+                        <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-UGASecondary">Our </h2>
+                        <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">Mission</h2>
+                        <p className="font-semibold text-[1.1rem] md:text-[1.3rem] lg:text-[1.5rem]">Above all, we aim to provide a space for passionate students from all disciplines to take ownership of meaningful software projects.</p>
                         <br />
-                        <p>In the process, we hope to build a network of awesome people, refine skills for our career, and learn how to incite change of our own, one project at a time.</p>
+                        <p className="font-semibold text-[1.1rem] md:text-[1.3rem] lg:text-[1.5rem]">In the process, we hope to build a network of awesome people, refine skills for our career, and learn how to incite change of our own, one project at a time.</p>
                     </div>
-                    <Image id="mockup" src={mockup} alt="ACM OSP Mockup" width="650" height="325" />
+                    <div className="basis-1/2 py-10"><Image id="mockup" src={mockup} alt="ACM OSP Mockup" width="650" height="325" /></div>
+
                 </div>
 
                 <br />
                 <br />
                 <br />
 
-                <div className="impact-section">
-                    <h1 id="impact">Our <b className="dark_red-bold">Impact</b></h1>
+                <div className="text-center">
+                    <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">Our </h2>
+                    <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-UGASecondary">Impact</h2>
                     <br />
 
 
@@ -71,7 +76,7 @@ const AboutPage = () =>
 
 
 
-                    <br />
+                    {/* <br />
                     <br />
                     <h1 id="impact">More Info</h1>
                     <br />
@@ -81,6 +86,17 @@ const AboutPage = () =>
                         </Link>
                         <br />
                         <Link className="bg-UGA rounded-full text-white ml-4 py-3 px-6 transition ease-in-out duration-200 hover:bg-black" href="/about/people">
+                            <Button >Our People</Button>
+                        </Link>
+                    </div> */}
+                </div>
+                <div className="py-[2rem]">
+                    <h1 className="font-bold text-center text-[3rem] my-5">More Info</h1>
+                    <div className="flex items-center flex-nowrap justify-center gap-[2rem] py-4">
+                        <Link href="/about/projects" className="text-lg md:text-xl rounded-full font-medium  py-2 px-4 sm:px-6 transition ease-in-out delay-150 text-white bg-NavBarColor hover:bg-black hover:text-white ">
+                            <Button >All Projects</Button>
+                        </Link>
+                        <Link target="_blank" href="/about/people" className="text-lg md:text-xl rounded-full font-medium  py-2 px-4 sm:px-6 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:bg-black hover:text-white ">
                             <Button >Our People</Button>
                         </Link>
                     </div>

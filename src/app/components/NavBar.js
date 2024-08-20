@@ -59,6 +59,7 @@ const NavBar = () =>
                 <Link href="/academy" className="hover:text-UGA sm:mx-2 transition ease-in-out delay-150">
                     <p className="text-[1.3rem] p-2 sm:text-[1.5rem] no-underline">Academy</p>
                 </Link>
+                
                 <Link href="/contact" className="hover:text-UGA sm:mx-2 transition ease-in-out delay-150">
                     <p className="text-[1.3rem] p-2 sm:text-[1.5rem] no-underline">Contact</p>
                 </Link>

@@ -1,7 +1,15 @@
-const Page = () => {
+
+import DirectMessageForm from "../components/DirectMessageForm"
+import PageTitleTemplate from "../components/PageTitleTemplate"
+import SocialsAndContact from "../components/SocialsAndContact"
+
+const Page = () =>
+{
     return (
-        <div>
-            <h3 className=" my-[35%] text-[5rem]">COMING SOON!</h3>
+        <div className="w-full section flex flex-col h-[100vh]">
+            <PageTitleTemplate redText={"Contact "} blackText={"Us"} />
+            <SocialsAndContact />
+            <DirectMessageForm />
         </div>
     )
 }
