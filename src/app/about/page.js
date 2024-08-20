@@ -37,7 +37,7 @@ const AboutPage = () =>
                 <PageTitleTemplate blackText={"More "} redText={"About Us"} reverse={true} />
 
 
-                <div className="sm:my-[8rem] text-center sm:text-left flex flex-col md:flex-row flex-nowrap items-center justify-between">
+                <div className="sm:my-[8rem] text-center sm:text-left flex flex-col md:flex-row flex-nowrap items-center justify-between page-main-side-padding">
                     <div className="basis-1/2">
                         <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-UGASecondary">Who </h2>
                         <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">We Are</h2>
@@ -49,7 +49,7 @@ const AboutPage = () =>
 
 
 
-                <div className="sm:my-[8rem] text-center sm:text-left flex flex-col md:flex-row flex-nowrap items-center justify-between">
+                <div className="sm:my-[8rem] text-center sm:text-left flex flex-col md:flex-row flex-nowrap items-center justify-between page-main-side-padding">
                     <div className="basis-1/2">
                         <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-UGASecondary">Our </h2>
                         <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">Mission</h2>
@@ -65,7 +65,7 @@ const AboutPage = () =>
                 <br />
                 <br />
 
-                <div className="text-center">
+                <div className="text-center ">
                     <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">Our </h2>
                     <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-UGASecondary">Impact</h2>
                     <br />
@@ -90,7 +90,7 @@ const AboutPage = () =>
                         </Link>
                     </div> */}
                 </div>
-                <div className="py-[2rem]">
+                <div className="py-[2rem] page-main-side-padding">
                     <h1 className="font-bold text-center text-[3rem] my-5">More Info</h1>
                     <div className="flex items-center flex-nowrap justify-center gap-[2rem] py-4">
                         <Link href="/about/projects" className="text-lg md:text-xl rounded-full font-medium  py-2 px-4 sm:px-6 transition ease-in-out delay-150 text-white bg-NavBarColor hover:bg-black hover:text-white ">
