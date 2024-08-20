@@ -10,15 +10,15 @@ import githubIcon from "../images/github.svg"
 export default function Footer()
 {
   return (
-    <div className="footer">
+    <div className="footer pt-[10rem]">
 
 
 
-      <div className="flex flex-row items-center justify-around ml-10">
-        <p className="mr-auto"><b id="UGA-Devdogs">&copy; {(new Date().getFullYear())} DevDogs at the University of Georgia</b></p>
-        <div className="flex flex-row flex-nowrap items-center justify-center">
+      <div className="flex flex-row items-start justify-around px-10">
+        <p className="mr-auto font-bold text-[1rem] sm:text-lg text-left">&copy; {(new Date().getFullYear())} DevDogs at the University of Georgia</p>
+        <div className="flex flex-row flex-wrap sm:flex-nowrap items-center justify-center">
 
-          <p className="block">Follow us for more: </p>
+          <p className="block text-[1rem] sm:text-lg">Follow us for more: </p>
           <Link target="_blank" href=" https://www.instagram.com/devdogs_uga/" className="block"><Image
 
             src={instagramIcon}
