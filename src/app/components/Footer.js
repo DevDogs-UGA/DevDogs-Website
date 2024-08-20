@@ -14,7 +14,7 @@ export default function Footer()
 
 
 
-      <div className="flex flex-row items-start justify-around px-10">
+      <div className="flex flex-row items-start sm:items-center justify-around px-10">
         <p className="mr-auto font-bold text-[1rem] sm:text-lg text-left">&copy; {(new Date().getFullYear())} DevDogs at the University of Georgia</p>
         <div className="flex flex-row flex-wrap sm:flex-nowrap items-center justify-center">
 
