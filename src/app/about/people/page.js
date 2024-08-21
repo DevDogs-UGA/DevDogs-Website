@@ -37,12 +37,7 @@ const OurTeam = () =>
             </div>
             <EmblaCarousel slides={imagesForCarousel} banner={false} options={OPTIONS} />
             <p className="text-center pt-10 text-base sm:text-lg md:text-xl page-main-side-padding">
-                Each year, DevDogs embarks on a new full-stack software project,
-                collaborating on a concept from idea to implementation. Our software
-                projects are always open-sourced and aligned to benefit the UGA or
-                Athens community. After all, we’re the most familiar with its
-                pain-points, so we’re the best equipped to help our people one
-                project at a time. Take a look at what we’ve done below!
+                DevDogs is proud to consist of over 180 UGA students from all tech disciplines and backgrounds. We firmly believe that different perspectives breed the best solutions--and we think our work shows! Take a look at some of the awesome people that have made DevDogs, DevDogs below.
             </p>
 
             <div className="text-center page-main-side-padding">
