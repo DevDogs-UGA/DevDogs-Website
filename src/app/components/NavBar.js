@@ -21,7 +21,7 @@ const NavBar = () =>
     };
 
     return (
-        <div className="w-full bg-[#31304b] flex flex-nowrap justify-around items-center text-white font-semibold h-[15vh]">
+        <div className="w-full bg-[#31304b] flex flex-nowrap justify-around items-center text-white font-semibold py-[2rem]">
             <div className="hidden sm:block sm:w-[300px] ">
                 <Link href="/">
                     <Image src={name2} alt="Mascot and DevDogs" className="hidden md:block" />
