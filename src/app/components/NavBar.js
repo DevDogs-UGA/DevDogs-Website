@@ -13,7 +13,7 @@ const NavBar = () =>
 {
     const pathname = usePathname(); // Get the current path
     const [aboutDropDownOpen, setAboutDropDownOpen] = useState(false);
-    const [SponsorDropDownOpen, setSponsorDropDownOpen] = useState(false);
+    // const [SponsorDropDownOpen, setSponsorDropDownOpen] = useState(false);
 
     const getLinkClasses = (path) =>
     {
@@ -40,7 +40,7 @@ const NavBar = () =>
                     onMouseEnter={() => setAboutDropDownOpen(true)}
                     onMouseLeave={() => setAboutDropDownOpen(false)}
                 >
-                    <Link href="/about" className={` transition ease-in-out delay-150 text-center p-0 m-0 ${pathname.startsWith('/about') ? 'text-red-600 font-semibold' : 'hover:text-UGASecondary'}`}>
+                    <Link href="/about" className={`px-2 transition ease-in-out delay-150 text-center py-0 m-0 ${pathname.startsWith('/about') ? 'text-red-600 font-semibold' : 'hover:text-UGASecondary'}`}>
                         <p className="text-[1.2rem] sm:text-[1.7rem] ">About</p>
                     </Link>
                     <div
@@ -65,7 +65,7 @@ const NavBar = () =>
                     <p className="text-[1.2rem] sm:text-[1.7rem]  transition ease-in-out delay-150 text-center p-0 m-0">Academy</p>
                 </Link>
 
-                <div
+                {/* <div
                     className="relative group flex items-center"
                     onMouseEnter={() => setSponsorDropDownOpen(true)}
                     onMouseLeave={() => setSponsorDropDownOpen(false)}
@@ -87,7 +87,7 @@ const NavBar = () =>
 
                         </div>
                     </div>
-                </div>
+                </div> */}
 
                 <Link href="/contact" className={getLinkClasses("/contact")}>
                     <p className="text-[1.2rem] sm:text-[1.7rem]  transition ease-in-out delay-150 text-center p-0 m-0">Contact</p>
