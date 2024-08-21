@@ -28,7 +28,7 @@ const OurTeam = () =>
         },
     ];
     return (
-        <div className="section">
+        <div className="section flex flex-col">
 
 
             <div className="text-center my-[2rem]">
@@ -46,56 +46,56 @@ const OurTeam = () =>
             </p>
 
             <div className="text-center page-main-side-padding">
-                <h3 className="text-black text-[3rem]  text-center mt-[5rem] p-0 font-extrabold"> 2024 - 2025 </h3>
+                <h3 className="text-black text-[2rem] sm:text-[3rem]  text-center mt-[5rem] p-0 font-extrabold"> 2024 - 2025 </h3>
 
                 <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-UGASecondary">Executive </h2>
                 <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">Board</h2>
             </div>
-            
 
-            <div id="teamtitle page-main-side-padding">
+
+            <div id="teamtitle">
                 <div id="grid">
-                    {/* <Card name={'Justin Brand'} title={'President'} image={jb} bgcolor="brown-dark" />
+                    <Card name={'Justin Brand'} title={'President'} image={jb} bgcolor="brown-dark" />
                     <Card name={'Nivedha Natarajan'} title={'Technical Officer'} image={nn} bgcolor="cyan-light" />
                     <Card name={'Kelsey Sterner'} title={'Community Relations Officer'} image={ks} bgcolor="pink-light" />
                     <Card name={'Avery Marco'} title={'Instructional Officer'} image={am} bgcolor="pink" />
                     <Card name={'Kade Styron'} title={'Corporate & Career Officer'} image={kds} bgcolor="pink-dark" />
-                    <Card name={'Bryant Monahan'} title={'Campus Initiatives Officer'} image={bm} bgcolor="brown-light" /> */}
+                    <Card name={'Bryant Monahan'} title={'Campus Initiatives Officer'} image={bm} bgcolor="brown-light" />
 
 
-                    <FlippableCard image={ks} />
+                    {/* <FlippableCard image={ks} />
                     <FlippableCard image={nn} />
                     <FlippableCard image={jb} />
                     <FlippableCard image={am} />
                     <FlippableCard image={bm} />
-                    <FlippableCard image={kds} />
+                    <FlippableCard image={kds} /> */}
                     <br />
                 </div>
             </div>
 
 
-            <div className="text-center ">
-                
+            {/* <div className="text-center ">
+
 
                 <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-UGASecondary">Notable </h2>
                 <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">Help</h2>
             </div>
 
             <div className="text-center">
-                
-<h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">Focus Group </h2>
+
+                <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">Focus Group </h2>
                 <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-UGASecondary">Leads</h2>
-                
+
             </div>
 
             <div className="text-center">
-                
 
-                
+
+
                 <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">Contributors</h2>
-            </div>
+            </div> */}
 
-            
+
         </div>
     )
 }

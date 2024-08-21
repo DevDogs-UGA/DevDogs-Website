@@ -1,17 +1,26 @@
 import Link from "next/link";
 import SponsorshipCard from "../components/SponsorshipCard";
+import PageTitleTemplate from "../components/PageTitleTemplate";
 
 const Page = () =>
 {
     return (
-        <div className="section section-sponsor">
-            <div id="sponsortitle">
+        <div className="section section-sponsor flex flex-col h-[70vh]">
+            {/* <div id="sponsortitle">
                 <h1><b className="red-bold">Sponsor</b> Now</h1>
-            </div>
+            </div> */}
 
-            <div id="tiertitle">
+            <PageTitleTemplate redText={"Sponsor "} blackText={"Today"} />
+
+            {/* <div id="tiertitle">
                 <h2>Select a <b className="red-bold"> Tier </b></h2>
-            </div>
+            </div> */}
+
+            <div className="text-center my-10">
+                <h3 className="font-bold text-4xl text-center inline p-0 m-0">Select Your </h3>
+                <h3 className="font-bold text-4xl text-center text-UGASecondary inline p-0 m-0">Teir</h3></div>
+
+            
 
             <div id="tiers">
                 <Link target="_blank" href="https://ugapac.evenue.net/cgi-bin/ncommerce3/SEGetEventInfo?ticketCode=GS:UGAARTS:TATE2425:DON.BRONZE:&linkID=ta-ugaarts&dataAccId=157&locale=en_US&siteId=ev_ta-ugaarts" className="hover:drop-shadow-lg">
