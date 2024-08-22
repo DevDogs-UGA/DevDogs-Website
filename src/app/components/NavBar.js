@@ -84,11 +84,11 @@ const NavBar = () => {
           </div>
         </div>
 
-        <Link href="/academy" className={getLinkClasses("/academy")}>
+        {/* <Link href="/academy" className={getLinkClasses("/academy")}>
           <p className="text-[1.2rem] sm:text-[1.7rem]  transition ease-in-out delay-150 text-center p-0 m-0">
             Academy
           </p>
-        </Link>
+        </Link> */}
 
         {/* <div
                     className="relative group flex items-center"
