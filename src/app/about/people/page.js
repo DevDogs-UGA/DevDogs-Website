@@ -56,9 +56,13 @@ const OurTeam = () => {
                     <Card name={'Justin Brand'} 
                           title={'President'}  
                           image={jb} 
-                          bgcolor="brown-dark" />
+                          bgcolor="brown-dark" 
+                    />
                     <Card name={'Nivedha Natarajan'} 
-                          title={'Technical Officer'} image={nn} bgcolor="cyan-light" />
+                          title={'Technical Officer'} 
+                          image={nn} 
+                          bgcolor="cyan-light" 
+                    />
                     <Card name={'Kelsey Sterner'} title={'Community Relations Officer'} image={ks} bgcolor="pink-light" />
                     <Card name={'Avery Marco'} title={'Instructional Officer'} image={am} bgcolor="pink" />
                     <Card name={'Kade Styron'} title={'Corporate & Career Officer'} image={kds} bgcolor="pink-dark" />
