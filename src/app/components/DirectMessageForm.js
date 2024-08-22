@@ -18,14 +18,20 @@ export default function DirectMessageForm() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle form submission logic here, e.g., sending the data to an API.
-    // console.log(formData);
+
+    const { fullname, email, message } = formData;
+    const subject = encodeURIComponent(`Message from ${fullname}`);
+    const body = encodeURIComponent(
+      `Full Name: ${fullname}\nEmail: ${email}\n\nMessage:\n${message}`,
+    );
+
+    window.location.href = `mailto:devdogs@uga.edu?subject=${subject}&body=${body}`;
   };
 
   return (
     <div className="flex flex-col m-0 p-0 w-full">
       <div className="text-center mt-20 mb-10">
-        <p className="inline text-[3rem] font-bold text-UGASecondary ">
+        <p className="inline text-[3rem] font-bold text-UGASecondary">
           Direct{" "}
         </p>
         <p className="inline text-[3rem] font-bold text-black">Message</p>
@@ -33,12 +39,12 @@ export default function DirectMessageForm() {
 
       <form
         onSubmit={handleSubmit}
-        className="rounded-[2rem] w-full mx-auto px-[1.5rem] sm:px-[2rem] py-[2rem] md:px-[5rem] md:py-[3rem] bg-[#f5f5f5] shadow-md "
+        className="rounded-[2rem] w-full mx-auto px-[1.5rem] sm:px-[2rem] py-[2rem] md:px-[5rem] md:py-[3rem] bg-[#f5f5f5] shadow-md"
       >
         <div className="mb-4">
           <label
             htmlFor="fullname"
-            className="pl-4 block text-xl font-extrabold "
+            className="pl-4 block text-xl font-extrabold"
           >
             Full Name
           </label>
@@ -49,11 +55,11 @@ export default function DirectMessageForm() {
             placeholder="Dev Dawg"
             value={formData.fullname}
             onChange={handleChange}
-            className="font-bold mt-1 block w-full px-4 py-2   rounded-xl outline-none shadow-sm focus:ring-2 focus:ring-UGASecondary"
+            className="font-bold mt-1 block w-full px-4 py-2 rounded-xl outline-none shadow-sm focus:ring-2 focus:ring-UGASecondary"
           />
         </div>
         <div className="mb-4">
-          <label htmlFor="email" className="pl-4 block text-xl font-extrabold ">
+          <label htmlFor="email" className="pl-4 block text-xl font-extrabold">
             Email Address{" "}
             <p className="inline text-sm font-medium">(required)</p>
           </label>
@@ -65,13 +71,13 @@ export default function DirectMessageForm() {
             onChange={handleChange}
             placeholder="hello@email.com"
             required
-            className="font-bold mt-1 block w-full px-4 py-2  rounded-xl outline-none shadow-sm focus:ring-2 focus:ring-UGASecondary"
+            className="font-bold mt-1 block w-full px-4 py-2 rounded-xl outline-none shadow-sm focus:ring-2 focus:ring-UGASecondary"
           />
         </div>
-        <div className="mb-4 ">
+        <div className="mb-4">
           <label
             htmlFor="message"
-            className="pl-4 block text-xl font-extrabold "
+            className="pl-4 block text-xl font-extrabold"
           >
             Message <p className="inline text-sm font-medium">(required)</p>
           </label>
@@ -83,7 +89,7 @@ export default function DirectMessageForm() {
             required
             placeholder="Your message here..."
             rows="4"
-            className="font-bold mt-1 block resize-none w-full px-4 py-2  rounded-xl outline-none shadow-sm focus:ring-2 focus:ring-UGASecondary "
+            className="font-bold mt-1 block resize-none w-full px-4 py-2 rounded-xl outline-none shadow-sm focus:ring-2 focus:ring-UGASecondary"
           />
         </div>
         <div className="flex justify-center">

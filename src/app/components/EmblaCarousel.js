@@ -3,7 +3,6 @@ import useEmblaCarousel from "embla-carousel-react";
 import Image from "next/image";
 import "./embla.css";
 import PropTypes from "prop-types";
-// import { NextButton, PrevButton, usePrevNextButtons } from './EmblaCarouselArrowButtons';
 
 // Documentation for external library used: https://www.embla-carousel.com/examples/predefined/
 
@@ -142,14 +141,6 @@ const EmblaCarousel = (props) => {
           ))}
         </div>
       </div>
-
-      {/* Manual Buttons to control next and prev slide*/}
-      {/* <div className="flex justify-center items-center container mx-auto py-10">
-        <div className="embla__buttons">
-          <PrevButton onClick={onPrevButtonClick} disabled={prevBtnDisabled} />
-          <NextButton onClick={onNextButtonClick} disabled={nextBtnDisabled} />
-        </div>
-      </div> */}
     </div>
   );
 };

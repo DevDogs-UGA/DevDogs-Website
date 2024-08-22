@@ -84,6 +84,8 @@ const NavBar = () => {
           </div>
         </div>
 
+        {/* For Later use do not uncomment */}
+
         {/* <Link href="/academy" className={getLinkClasses("/academy")}>
           <p className="text-[1.2rem] sm:text-[1.7rem]  transition ease-in-out delay-150 text-center p-0 m-0">
             Academy
@@ -133,17 +135,3 @@ const NavBar = () => {
 };
 
 export default NavBar;
-
-{
-  /* <Link href="/resources">
-                        <p>Resources</p>
-                    </Link> */
-}
-{
-  /* <Link href="https://discord.com/invite/MuyJ4f5xKE" className="p-2 my-2 transition ease-in-out delay-150  hidden lg:block text-[1rem]  sm:text-[2rem] text-white bg-[#BA0C2F] hover:bg-white hover:text-black rounded-full">
-                <Button>
-                    <p className="text-[1rem]  sm:text-[2rem]">Join Us</p>
-
-                </Button>
-            </Link> */
-}

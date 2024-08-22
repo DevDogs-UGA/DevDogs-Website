@@ -1,11 +1,17 @@
-/* eslint-disable react/prop-types */
+import PropTypes from "prop-types";
+
+PageTitleTemplate.propTypes = {
+  redText: PropTypes.string,
+  blackText: PropTypes.string,
+  className: PropTypes.string,
+  reverse: PropTypes.bool,
+};
 
 export default function PageTitleTemplate({
   redText,
   blackText,
   className = "",
   reverse = false,
-  children,
 }) {
   return (
     <div className={`text-center my-[4rem] ${className}`}>
@@ -28,7 +34,6 @@ export default function PageTitleTemplate({
           </h2>
         </>
       )}
-      {children && <div>{children}</div>}
     </div>
   );
 }

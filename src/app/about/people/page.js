@@ -10,7 +10,6 @@ import EmblaCarousel from "@/app/components/EmblaCarousel";
 import Caoursel1 from "@/app/images/carousel1.png";
 import Caoursel2 from "@/app/images/carousel2.jpg";
 import Caoursel3 from "@/app/images/carousel3.jpg";
-// import FlippableCard from "@/app/components/FlippableCard";
 
 const OurTeam = () => {
   const OPTIONS = { loop: true };
@@ -100,37 +99,9 @@ const OurTeam = () => {
             image={bm}
             bgcolor="brown-light"
           />
-
-          {/* <FlippableCard image={ks} />
-                    <FlippableCard image={nn} />
-                    <FlippableCard image={jb} />
-                    <FlippableCard image={am} />
-                    <FlippableCard image={bm} />
-                    <FlippableCard image={kds} /> */}
           <br />
         </div>
       </div>
-
-      {/* <div className="text-center ">
-
-
-                <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-UGASecondary">Notable </h2>
-                <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">Help</h2>
-            </div>
-
-            <div className="text-center">
-
-                <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">Focus Group </h2>
-                <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-UGASecondary">Leads</h2>
-
-            </div>
-
-            <div className="text-center">
-
-
-
-                <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">Contributors</h2>
-            </div> */}
     </div>
   );
 };
