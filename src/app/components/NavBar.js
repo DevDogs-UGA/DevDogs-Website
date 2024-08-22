@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"; // usePathname is a lightweight alternative to useRouter
@@ -113,6 +113,6 @@ export default NavBar;
             {/* <Link href="https://discord.com/invite/MuyJ4f5xKE" className="p-2 my-2 transition ease-in-out delay-150  hidden lg:block text-[1rem]  sm:text-[2rem] text-white bg-[#BA0C2F] hover:bg-white hover:text-black rounded-full">
                 <Button>
                     <p className="text-[1rem]  sm:text-[2rem]">Join Us</p>
-                    
+
                 </Button>
             </Link> */}

@@ -1,6 +1,6 @@
-import React from "react"
-import "./Border.css"
+import "./Border.css";
 import { Card, CardBody } from "@nextui-org/card";
+import PropTypes from "prop-types";
 
 const Border = ({ title }) => {
   return (
@@ -12,6 +12,10 @@ const Border = ({ title }) => {
       </Card>
     </div>
   );
-}
+};
 
 export default Border;
+
+Border.propTypes = {
+  title: PropTypes.string,
+};

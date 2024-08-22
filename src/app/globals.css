@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
-
 * {
   margin: 0;
 }
@@ -23,19 +21,19 @@
   margin-top: 100px;
 }
 
-#abouttitle>h1,
+#abouttitle > h1,
 h3,
 #devdawgs,
 #teamtitle,
-#teamtitle>h1 {
+#teamtitle > h1 {
   text-align: center;
   padding: 10px;
 }
 
-#abouttitle>h1,
-#eventtitle>h1,
-#teamstitle>h1,
-#sponsortitle>h1,
+#abouttitle > h1,
+#eventtitle > h1,
+#teamstitle > h1,
+#sponsortitle > h1,
 #tiertitle > h1 {
   font-size: 3.5rem;
 }
@@ -58,16 +56,16 @@ h3,
   padding-bottom: 0.4rem;
 }
 
-#teamtitle>h1 {
+#teamtitle > h1 {
   font-size: 3.5rem;
 }
 
-#teamtitle>#officertitle {
+#teamtitle > #officertitle {
   font-size: 2.5rem;
 }
 
 #devdawgs {
-  color: #CD0029;
+  color: #cd0029;
   font-size: 3.3rem;
 }
 
@@ -76,7 +74,7 @@ p {
 }
 
 #eventstitle,
-#eventstitle>h1 {
+#eventstitle > h1 {
   text-align: center;
   padding: 10px;
   font-size: 3.5rem;
@@ -84,7 +82,7 @@ p {
 }
 
 #resourcestitle,
-#resourcestitle>h1 {
+#resourcestitle > h1 {
   text-align: center;
   font-size: 3.5rem;
   padding: 10px;
@@ -159,7 +157,7 @@ p {
   */
 
 #bg-padding {
-  background-color: #BA0C2F;
+  background-color: #ba0c2f;
   padding-bottom: 10px;
 }
 
@@ -196,12 +194,11 @@ p {
 
 .red-bold {
   display: inline;
-  color: #CD0029;
+  color: #cd0029;
 }
 
 .dark_red-bold {
-
-  color: #BA0C2F;
+  color: #ba0c2f;
 }
 
 #mockup {
@@ -225,7 +222,6 @@ p {
   width: 80%;
   height: 80%;
   margin-left: 10%;
-
 }
 
 #leadership {
@@ -258,7 +254,6 @@ iframe {
 #iframe-test {
   width: 100%;
   border: none;
-
 }
 
 .impact-section {
@@ -277,25 +272,24 @@ iframe {
   justify-content: center;
 }
 
-
 #bronze {
-  background-color: #AD665C;
+  background-color: #ad665c;
 }
 
 #silver {
-  background-color: #D8BCBC;
+  background-color: #d8bcbc;
 }
 
 #gold {
-  background-color: #F9BD9B;
+  background-color: #f9bd9b;
 }
 
 #platinum {
-  background-color: #C6C6C6;
+  background-color: #c6c6c6;
 }
 
 #custom {
-  background-color: #F08787;
+  background-color: #f08787;
 }
 
 @media only screen and (max-width: 600px) {
@@ -330,7 +324,6 @@ iframe {
     background-image: url("images/background.png"), url("images/background.png");
     background-position: top, bottom;
     background-repeat: no-repeat, no-repeat;
-
   }
 
   #who-we-are {
@@ -362,13 +355,12 @@ iframe {
     padding-bottom: 0.4rem;
   }
 
-
   #abouttitle {
     margin-top: 50px;
   }
 
   #abouttitle,
-  #abouttitle>h1,
+  #abouttitle > h1,
   h3,
   #devdawgs {
     text-align: center;
@@ -379,7 +371,7 @@ iframe {
     font-size: 2rem;
   }
 
-  #abouttitle>h1,
+  #abouttitle > h1,
   #devdawgs {
     font-size: 3rem;
   }
@@ -397,8 +389,6 @@ iframe {
     margin: 10px 0px;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 40px
+    gap: 40px;
   }
-
-
 }

@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import Image from "next/image"
+import Image from "next/image";
 import mockup from "../images/mockup.png";
-import demo from "../images/demo.png"
-import Button from "../components/Button"
-import Link from "next/link"
+import demo from "../images/demo.png";
+import Button from "../components/Button";
+import Link from "next/link";
 import EmblaCarousel from "../components/EmblaCarousel";
 import Caoursel1 from "@/app/images/carousel1.png"
 import Caoursel2 from "@/app/images/carousel2.jpg"
@@ -13,23 +13,22 @@ import PageTitleTemplate from "../components/PageTitleTemplate";
 
 
 
-// The link for the "All Projects" button goes to the discord because there is not a projects page yet. 
+// The link for the "All Projects" button goes to the discord because there is not a projects page yet.
 // The link for the "Our People" buttongoes to the Team page until the our People page is complete.
 
-const AboutPage = () =>
-{
-    const OPTIONS = { loop: true };
-    const imagesForCarousel = [
-        {
-            image: Caoursel1,
-        },
-        {
-            image: Caoursel2,
-        },
-        {
-            image: Caoursel3,
-        },
-    ];
+const AboutPage = () => {
+  const OPTIONS = { loop: true };
+  const imagesForCarousel = [
+    {
+      image: Caoursel1,
+    },
+    {
+      image: Caoursel2,
+    },
+    {
+      image: Caoursel3,
+    },
+  ];
 
     return (
         <div>
@@ -61,20 +60,20 @@ const AboutPage = () =>
 
                 </div>
 
-                <br />
-                <br />
-                <br />
+        <br />
+        <br />
+        <br />
 
                 <div className="text-center ">
                     <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">Our </h2>
                     <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-UGASecondary">Impact</h2>
                     <br />
 
-
-                    <EmblaCarousel slides={imagesForCarousel} banner={false} options={OPTIONS} />
-
-
-
+          <EmblaCarousel
+            slides={imagesForCarousel}
+            banner={false}
+            options={OPTIONS}
+          />
 
                     {/* <br />
                     <br />

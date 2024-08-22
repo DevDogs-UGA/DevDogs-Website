@@ -12,35 +12,35 @@
     max-width: 80rem;
     height: 20rem;
 
-    margin-left: auto;
-    margin-right: auto;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 #UGA-Devdogs {
-    align-content: space-between;
+  align-content: space-between;
 }
 
 #align-links {
-    align-content: space-between;
+  align-content: space-between;
 }
 
 .box {
-    background-color: #797979;
-    padding: 10px;
-    border-radius: 5px;
-    margin-right: 20px;
+  background-color: #797979;
+  padding: 10px;
+  border-radius: 5px;
+  margin-right: 20px;
 }
 
 @media only screen and (max-width: 600px) {
-    .footer {
-        padding-top: 5rem;
-        display: flex;
-        align-items: center;
-        text-align: center;
-        flex-direction: column;
-    }
+  .footer {
+    padding-top: 5rem;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    flex-direction: column;
+  }
 
-    .box {
-        margin-right: 0px;
-    }
+  .box {
+    margin-right: 0px;
+  }
 }

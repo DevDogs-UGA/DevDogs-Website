@@ -1,32 +1,32 @@
 .header-title {
-    width: 5rem;
-    margin-right:10%;
-    text-align: center;
-    float: left;
-    margin-left: -4.5%;
-    margin-top: -10%;
-    padding-top: 3.8rem;
+  width: 5rem;
+  margin-right: 10%;
+  text-align: center;
+  float: left;
+  margin-left: -4.5%;
+  margin-top: -10%;
+  padding-top: 3.8rem;
 }
 
 .name-text-size {
-    font-size: 1.8rem;
+  font-size: 1.8rem;
 }
 
 .header-image {
-    width: 10rem;
-    margin-left: 3%;
-    margin-top: -6rem;
-    text-align: left;
-    float: left;
+  width: 10rem;
+  margin-left: 3%;
+  margin-top: -6rem;
+  text-align: left;
+  float: left;
 }
 
 .padding {
-    padding-top: 1rem;
+  padding-top: 1rem;
 }
 
 .list {
-    margin-left: 32%;
-    margin-top: -6%;
+  margin-left: 32%;
+  margin-top: -6%;
 }
 
 .resource-card-container {
@@ -44,18 +44,18 @@
 }
 
 li {
-    padding-bottom: 5%;
+  padding-bottom: 5%;
 }
 
 .links-list {
-    margin-top: -2rem;
-    margin-bottom: 2rem;
+  margin-top: -2rem;
+  margin-bottom: 2rem;
 }
 
 #link-color {
-    color: black;
+  color: black;
 }
 
 .list-text-size {
-    font-size: 1.1rem;
+  font-size: 1.1rem;
 }

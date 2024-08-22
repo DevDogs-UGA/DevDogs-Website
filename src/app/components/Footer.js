@@ -1,14 +1,11 @@
-import "./Footer.css"
-import React from 'react';
-import Link from "next/link"
-import Image from "next/image"
-import instagramIcon from "../images/instagram.svg"
-import linkedInIcon from "../images/linkedin.svg"
-import githubIcon from "../images/github.svg"
+import "./Footer.css";
+import Link from "next/link";
+import Image from "next/image";
+import instagramIcon from "../images/instagram.svg";
+import linkedInIcon from "../images/linkedin.svg";
+import githubIcon from "../images/github.svg";
 
-
-export default function Footer()
-{
+export default function Footer() {
   return (
     <div className="footer pt-[10rem]">
 
