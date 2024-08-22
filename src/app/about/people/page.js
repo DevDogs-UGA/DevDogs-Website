@@ -53,20 +53,42 @@ const OurTeam = () => {
 
             <div id="teamtitle">
                 <div id="grid">
-                    <Card name={'Justin Brand'} 
-                          title={'President'}  
-                          image={jb} 
-                          bgcolor="brown-dark" 
+                    <Card 
+                      name={'Justin Brand'} 
+                      title={'President'}  
+                      image={jb} 
+                      bgcolor="brown-dark" 
                     />
-                    <Card name={'Nivedha Natarajan'} 
-                          title={'Technical Officer'} 
-                          image={nn} 
-                          bgcolor="cyan-light" 
+                    <Card 
+                      name={'Nivedha Natarajan'} 
+                      title={'Technical Officer'} 
+                      image={nn} 
+                      bgcolor="cyan-light" 
                     />
-                    <Card name={'Kelsey Sterner'} title={'Community Relations Officer'} image={ks} bgcolor="pink-light" />
-                    <Card name={'Avery Marco'} title={'Instructional Officer'} image={am} bgcolor="pink" />
-                    <Card name={'Kade Styron'} title={'Corporate & Career Officer'} image={kds} bgcolor="pink-dark" />
-                    <Card name={'Bryant Monahan'} title={'Campus Initiatives Officer'} image={bm} bgcolor="brown-light" />
+                    <Card 
+                      name={'Kelsey Sterner'} 
+                      title={'Community Relations Officer'} 
+                      image={ks} 
+                      bgcolor="pink-light" 
+                    />
+                    <Card 
+                      name={'Avery Marco'} 
+                      title={'Instructional Officer'} 
+                      image={am} 
+                      bgcolor="pink" 
+                    />
+                    <Card 
+                      name={'Kade Styron'} 
+                      title={'Corporate & Career Officer'} 
+                      image={kds} 
+                      bgcolor="pink-dark" 
+                    />
+                    <Card 
+                      name={'Bryant Monahan'} 
+                      title={'Campus Initiatives Officer'} 
+                      image={bm} 
+                      bgcolor="brown-light" 
+                    />
                 </div>
             </div>
                             {/* All of the coded commented out below is set to add more people, 
@@ -79,9 +101,21 @@ const OurTeam = () => {
 
             <div id="teamtitle">
                 <div id="grid">
-                    <Card name={'Helium Yang'} title={'Mentor'} bgcolor="brown-dark" />
-                    <Card name={'Dr. Barnes'} title={'Faculty Advisor'} bgcolor="cyan-light" />
-                    <Card name={'Dr.Cotterell'} title={'Faculty Advisor'} bgcolor="pink-light" />
+                    <Card 
+                      name={'Helium Yang'} 
+                      title={'Mentor'} 
+                      bgcolor="brown-dark" 
+                    />
+                    <Card 
+                      name={'Dr. Barnes'} 
+                      title={'Faculty Advisor'} 
+                      bgcolor="cyan-light" 
+                    />
+                    <Card 
+                      name={'Dr.Cotterell'} 
+                      title={'Faculty Advisor'} 
+                      bgcolor="pink-light" 
+                    />
                 </div>
             </div>
 
@@ -93,11 +127,31 @@ const OurTeam = () => {
 
             <div id="teamtitle">
                 <div id="grid">
-                    <Card name={'Full Name'} title={'Role'} bgcolor="brown-dark" />
-                    <Card name={'Full Name'} title={'Role'} bgcolor="cyan-light" />
-                    <Card name={'Full Name'} title={'Role'} bgcolor="pink-light" />
-                    <Card name={'Full Name'} title={'Role'} bgcolor="pink" />
-                    <Card name={'Full Name'} title={'Role'} bgcolor="pink-dark" />
+                    <Card 
+                      name={'Full Name'} 
+                      title={'Role'} 
+                      bgcolor="brown-dark" 
+                      />
+                    <Card 
+                      name={'Full Name'} 
+                      title={'Role'} 
+                      bgcolor="cyan-light" 
+                    />
+                    <Card 
+                      name={'Full Name'} 
+                      title={'Role'} 
+                      bgcolor="pink-light" 
+                    />
+                    <Card 
+                      name={'Full Name'} 
+                      title={'Role'} 
+                      bgcolor="pink" 
+                    />
+                    <Card 
+                      name={'Full Name'} 
+                      title={'Role'} 
+                      bgcolor="pink-dark" 
+                    />
                 </div>
             </div>
 
@@ -107,14 +161,46 @@ const OurTeam = () => {
 
             <div id="teamtitle">
                 <div id="grid2">
-                    <Card name={'Full Name'} title={'Role'} bgcolor="brown-dark" />
-                    <Card name={'Full Name'} title={'Role'} bgcolor="cyan-light" />
-                    <Card name={'Full Name'} title={'Role'} bgcolor="pink-light" />
-                    <Card name={'Full Name'} title={'Role'} bgcolor="pink" />
-                    <Card name={'Full Name'} title={'Role'} bgcolor="pink-dark" />
-                    <Card name={'Full Name'} title={'Role'} bgcolor="brown-dark" />
-                    <Card name={'Full Name'} title={'Role'} bgcolor="cyan-light" />
-                    <Card name={'Full Name'} title={'Role'} bgcolor="pink-light" />
+                    <Card 
+                      name={'Full Name'} 
+                      title={'Role'} 
+                      bgcolor="brown-dark" 
+                    />
+                    <Card 
+                      name={'Full Name'} 
+                      title={'Role'} 
+                      bgcolor="cyan-light" 
+                    />
+                    <Card 
+                      name={'Full Name'} 
+                      title={'Role'} 
+                      bgcolor="pink-light"
+                    />
+                    <Card 
+                      name={'Full Name'} 
+                      title={'Role'} 
+                      bgcolor="pink" 
+                    />
+                    <Card 
+                      name={'Full Name'} 
+                      title={'Role'} 
+                      bgcolor="pink-dark"
+                    />
+                    <Card 
+                      name={'Full Name'} 
+                      title={'Role'} 
+                      bgcolor="brown-dark" 
+                    />
+                    <Card 
+                      name={'Full Name'} 
+                      title={'Role'} 
+                      bgcolor="cyan-light" 
+                    />
+                    <Card 
+                      name={'Full Name'} 
+                      title={'Role'} 
+                      bgcolor="pink-light" 
+                    />
                 </div>
             </div>
         */}
