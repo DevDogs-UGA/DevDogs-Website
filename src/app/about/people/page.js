@@ -61,8 +61,8 @@ const OurTeam = () => {
                     <Card name={'Bryant Monahan'} title={'Campus Initiatives Officer'} image={bm} bgcolor="brown-light" />
                 </div>
             </div>
-                                     {/* All of the coded commented out below is set to add more people, 
-                                         it just need the pictures of the people to be added. */}
+                            {/* All of the coded commented out below is set to add more people, 
+                              it just need the pictures of the people to be added. */}
         {/*
             <div className="text-center mt-[2rem]">
                 <h3 class="text-UGA font-bold text-[3rem] md:text-[3.5rem] lg:text-[4rem] inline">Notable</h3>
