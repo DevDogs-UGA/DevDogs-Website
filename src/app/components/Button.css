@@ -1,46 +1,46 @@
 button {
-    padding: 0.7rem;
-    border-radius: 30px;
-    width: 10rem;
-    font-size: 1.5rem;
+  padding: 0.7rem;
+  border-radius: 30px;
+  width: 10rem;
+  font-size: 1.5rem;
 }
 
-#joinus, #joinus-si {
-    background-color: #BA0C2F;
-    color: #FBFBFB;
+#joinus,
+#joinus-si {
+  background-color: #ba0c2f;
+  color: #fbfbfb;
 }
 
 #learnmore {
-    float: right;
-    background-color: #222233;
-    color: #FFFFFF;
+  float: right;
+  background-color: #222233;
+  color: #ffffff;
 }
 
 #all-projects {
-    background-color: #222233;
-    color: #FFFFFF;
-    width: 15rem;
-    text-align: center;
+  background-color: #222233;
+  color: #ffffff;
+  width: 15rem;
+  text-align: center;
 }
 
 #our-people {
-    background-color: #BA0C2F;
-    color: #FFFFFF;
-    width: 15rem;
-    text-align: center;
+  background-color: #ba0c2f;
+  color: #ffffff;
+  width: 15rem;
+  text-align: center;
 }
 
 @media only screen and (max-width: 600px) {
-    button {
-        padding: 0.4rem;
-        border-radius: 30px;
-        width: 8rem;
-        font-size: 1.2rem;
-    }
-    
-    #learnmore {
-        background-color: #222233;
-        color: #FFFFFF;
-    }
+  button {
+    padding: 0.4rem;
+    border-radius: 30px;
+    width: 8rem;
+    font-size: 1.2rem;
+  }
 
+  #learnmore {
+    background-color: #222233;
+    color: #ffffff;
+  }
 }

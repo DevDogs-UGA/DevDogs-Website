@@ -1,5 +1,4 @@
 .embla {
-  
   margin: auto;
   --slide-height: 26rem;
   --slide-spacing: 1rem;
@@ -97,7 +96,7 @@
   border-radius: 50%;
   display: flex;
   align-items: center;
-  content: '';
+  content: "";
 }
 .embla__dot--selected:after {
   box-shadow: inset 0 0 0 0.2rem var(--text-body);

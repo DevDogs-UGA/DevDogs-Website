@@ -1,101 +1,98 @@
 #officer-description {
-    color: #FFFFFF;
-    background-color: #3A3A3A;
-    /*background-image: none;
+  color: #ffffff;
+  background-color: #3a3a3a;
+  /*background-image: none;
     border-radius: 0rem 0rem 1rem 1rem;*/
-    padding: 2px 16px;
-    border-radius: 0 0 20px 20px;
-
+  padding: 2px 16px;
+  border-radius: 0 0 20px 20px;
 }
 
 .officer-card {
-    /*border-radius: 1rem;
+  /*border-radius: 1rem;
     margin-top: -3rem;*/
-    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
-    border-radius: 20px 20px 20px 20px;
-    display: grid;
-    grid-template-rows: 300px 1fr;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+  border-radius: 20px 20px 20px 20px;
+  display: grid;
+  grid-template-rows: 300px 1fr;
 }
 
 #officer-title-name {
-    padding-top: 0.2rem;
-    padding-bottom: 0.2rem;
-    font-size: 1.0rem;
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+  font-size: 1rem;
 }
 
 #founder {
-    font-size: 1.3rem;
-    padding-top: 0.2rem;
-    padding-bottom: 0.2rem;
-    font-weight: 500;
+  font-size: 1.3rem;
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+  font-weight: 500;
 }
 
 #pic {
-    object-fit: cover;
-    border-radius: 20px 20px 0 0;
-    width: 100%;
-    height: 100%;
+  object-fit: cover;
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  height: 100%;
 }
 
 /* Background color options */
 
 #brown-dark {
-    background-color: #8A7D7D;
+  background-color: #8a7d7d;
 }
 
 #brown-light {
-    background-color: #A49595;
+  background-color: #a49595;
 }
 
 #gray {
-    background-color: #E3E9E9;
+  background-color: #e3e9e9;
 }
 
 #pink-light {
-    background-color: #fff8fc;
+  background-color: #fff8fc;
 }
 
 #pink {
-    background-color: #E37C7C;
+  background-color: #e37c7c;
 }
 
 #pink-dark {
-    background-color: #8E5D5D;
+  background-color: #8e5d5d;
 }
 
 #cyan-light {
-    background-color: #daebec;
+  background-color: #daebec;
 }
 
 @media only screen and (max-width: 600px) {
-    .officer-card {
-        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
-        border-radius: 20px 20px 20px 20px;
-        display: grid;
-        grid-template-rows: 250px 1fr;
-    }
+  .officer-card {
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+    border-radius: 20px 20px 20px 20px;
+    display: grid;
+    grid-template-rows: 250px 1fr;
+  }
 
-    #pic {
-        object-fit: cover;
+  #pic {
+    object-fit: cover;
+  }
 
-    }
+  #officer-description {
+    color: #ffffff;
+    background-color: #3a3a3a;
+    padding: 1px 10px;
+    border-radius: 0 0 20px 20px;
+    height: auto;
+  }
 
+  #officer-title-name {
+    padding-top: 0.1rem;
+    padding-bottom: 0.1rem;
+    font-size: 0.7rem;
+  }
 
-    #officer-description {
-        color: #FFFFFF;
-        background-color: #3A3A3A;
-        padding: 1px 10px;
-        border-radius: 0 0 20px 20px;
-        height: auto;
-    }
-
-    #officer-title-name {
-        padding-top: 0.1rem;
-        padding-bottom: 0.1rem;
-        font-size: 0.7rem;
-    }
-
-    .officer-name {
-        font-size: 1.0rem;
-    }
+  .officer-name {
+    font-size: 1rem;
+  }
 }
