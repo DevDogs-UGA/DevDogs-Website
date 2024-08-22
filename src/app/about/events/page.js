@@ -1,9 +1,12 @@
-const EventsPage = () => {
-    return (
-        <div className="section section-event page-main-side-padding">
-            <div id="eventtitle">
-                <h1><b className="red-bold">Meetings</b> and <b className="red-bold">Events</b></h1>
-            </div>
+const EventsPage = () =>
+{
+  return (
+    <div className="section section-event page-main-side-padding">
+      <div id="eventtitle">
+
+        <b className="red-bold">Meetings</b> and{" "}
+        <b className="red-bold">Events</b>
+      </div>
 
       <br />
 
