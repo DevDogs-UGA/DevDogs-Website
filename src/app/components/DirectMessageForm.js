@@ -23,7 +23,7 @@ export default function DirectMessageForm() {
   };
 
   return (
-    <div>
+    <div className="flex flex-col m-0 p-0 w-full">
       <div className="text-center mt-20 mb-10">
         <p className="inline text-[3rem] font-bold text-UGASecondary ">
           Direct{" "}
@@ -33,7 +33,7 @@ export default function DirectMessageForm() {
 
       <form
         onSubmit={handleSubmit}
-        className="rounded-[2rem] mx-auto px-[3rem] py-[2rem] md:px-[5rem] md:py-[3rem] bg-[#f5f5f5] shadow-md "
+        className="rounded-[2rem] w-full mx-auto px-[1.5rem] sm:px-[2rem] py-[2rem] md:px-[5rem] md:py-[3rem] bg-[#f5f5f5] shadow-md "
       >
         <div className="mb-4">
           <label
@@ -89,7 +89,7 @@ export default function DirectMessageForm() {
         <div className="flex justify-center">
           <button
             type="submit"
-            className="w-[40%] py-2 bg-UGA text-white font-medium text-xl rounded-full hover:bg-black transition ease-in-out duration-150"
+            className="sm:w-[40%] py-2 bg-UGA text-white font-medium text-xl rounded-full hover:bg-black transition ease-in-out duration-150"
           >
             Submit
           </button>
