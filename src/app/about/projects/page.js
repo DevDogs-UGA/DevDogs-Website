@@ -42,7 +42,7 @@ const Page = () => {
   // ];
 
   return (
-    <div className="text-center container mx-auto w-[100%] section">
+    <div className="text-center container mx-auto w-[100%] section page-main-side-padding">
       <div className="my-[125px]">
         <h2 className=" font-bold text-[3.5rem] sm:text-[4.5rem] md:[5.5rem] inline">
           Our{" "}

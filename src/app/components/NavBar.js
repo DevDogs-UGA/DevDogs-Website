@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation"; // usePathname is a lightweight alternative to useRouter
 import "./NavBar.css";
 import Button from "./Button";
 import name2 from "../images/mascotwordlight.png";
@@ -9,11 +10,17 @@ import Image from "next/image";
 import { useState } from "react";
 
 const NavBar = () => {
+  const pathname = usePathname(); // Get the current path
   const [aboutDropDownOpen, setAboutDropDownOpen] = useState(false);
+  // const [SponsorDropDownOpen, setSponsorDropDownOpen] = useState(false);
+
+  const getLinkClasses = (path) => {
+    return `text-[1rem] px-3 no-underline ${pathname === path ? "text-UGASecondary font-semibold" : "hover:text-UGASecondary"}`;
+  };
 
   return (
-    <div className=" w-full bg-[#31304b] flex flex-nowrap justify-around items-center text-white font-semibold h-[15vh] ">
-      <div className="w-[300px]">
+    <div className="w-full bg-[#31304b] flex flex-nowrap justify-around items-center text-white font-semibold py-[2rem]">
+      <div className="hidden sm:block sm:w-[300px] ">
         <Link href="/">
           <Image
             src={name2}
@@ -30,12 +37,9 @@ const NavBar = () => {
         </Link>
       </div>
 
-      <div className="flex flex-nowrap justify-center items-center">
-        <Link
-          href="/"
-          className=" hover:text-UGA sm:mx-2 transition ease-in-out delay-150 "
-        >
-          <p className="text-[1.3rem] p-2 sm:text-[1.5rem] no-underline">
+      <div className="flex flex-nowrap justify-center items-center sm:gap-3">
+        <Link href="/" className={getLinkClasses("/")}>
+          <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
             Home
           </p>
         </Link>
@@ -46,35 +50,33 @@ const NavBar = () => {
         >
           <Link
             href="/about"
-            className="hover:text-UGA sm:mx-2 transition ease-in-out delay-150"
+            className={`px-2 transition ease-in-out delay-150 text-center py-0 m-0 ${pathname.startsWith("/about") ? "text-red-600 font-semibold" : "hover:text-UGASecondary"}`}
           >
-            <p className="text-[1.3rem] p-2 sm:text-[1.5rem] no-underline">
-              About
-            </p>
+            <p className="text-[1.2rem] sm:text-[1.7rem] ">About</p>
           </Link>
           <div
-            className={`absolute top-10 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 transition-all duration-300 ${
+            className={`text-[1rem] p-1 sm:p-2 sm:text-[1.5rem] absolute left-[-.75rem] top-[2rem] sm:top-10 w-[7.5rem] sm:mt-1 sm:w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 transition-all duration-150 ${
               aboutDropDownOpen
                 ? "opacity-300 visible"
                 : "opacity-100 invisible"
             }`}
           >
-            <div className="py-1">
+            <div className=" text-left">
               <Link
                 href="/about/people"
-                className="text- block px-4 py-2 text-gray-700 hover:bg-gray-200 hover:text-black text-lg"
+                className="p-2 rounded-[.5rem] block sm:pl-3 sm:py-2 text-gray-700 hover:bg-gray-200 hover:text-black sm:text-lg"
               >
                 People
               </Link>
               <Link
                 href="/about/projects"
-                className="block px-4 py-2 text-gray-700 hover:bg-gray-200 hover:text-black text-lg"
+                className="p-2 rounded-[.5rem] block sm:pl-3 sm:py-2 text-gray-700 hover:bg-gray-200 hover:text-black sm:text-lg"
               >
                 Projects
               </Link>
               <Link
                 href="/about/events"
-                className="block px-4 py-2 text-gray-700 hover:bg-gray-200 hover:text-black text-lg"
+                className="p-2 rounded-[.5rem] block sm:pl-3 sm:py-2 text-gray-700 hover:bg-gray-200 hover:text-black sm:text-lg"
               >
                 Events
               </Link>
@@ -82,41 +84,50 @@ const NavBar = () => {
           </div>
         </div>
 
-        <Link
-          href="/academy"
-          className="hover:text-UGA sm:mx-2 transition ease-in-out delay-150"
-        >
-          <p className="text-[1.3rem] p-2 sm:text-[1.5rem] no-underline">
+        {/* For Later use do not uncomment */}
+
+        {/* <Link href="/academy" className={getLinkClasses("/academy")}>
+          <p className="text-[1.2rem] sm:text-[1.7rem]  transition ease-in-out delay-150 text-center p-0 m-0">
             Academy
           </p>
-        </Link>
-        <Link
-          href="/contact"
-          className="hover:text-UGA sm:mx-2 transition ease-in-out delay-150"
-        >
-          <p className="text-[1.3rem] p-2 sm:text-[1.5rem] no-underline">
+        </Link> */}
+
+        {/* <div
+                    className="relative group flex items-center"
+                    onMouseEnter={() => setSponsorDropDownOpen(true)}
+                    onMouseLeave={() => setSponsorDropDownOpen(false)}
+                >
+                    <h3 className={` transition ease-in-out delay-150 text-center p-0 m-0 ${pathname.startsWith('/sponsor') ? 'text-red-600 font-semibold' : 'hover:text-UGASecondary'}`}>
+                        <p className="text-[1.2rem] sm:text-[1.7rem] no-underline p-0 m-0">Sponsor</p>
+                    </h3>
+                    <div
+                        className={`p-1 sm:p-2 absolute top-[2rem] sm:top-[3rem] left-[-0.75rem] w-[8rem] sm:w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 transition-all duration-150 ${SponsorDropDownOpen ? 'opacity-300 visible' : 'opacity-100 invisible'
+                            }`}
+                    >
+                        <div className=" text-[1rem] sm:text-[1.5rem]">
+                            <Link href="/sponsor/sponsor-us" className="p-2 rounded-[.5rem] block sm:pl-3 sm:py-2 text-gray-700 hover:bg-gray-200 hover:text-black sm:text-lg">
+                                Sponsor Us
+                            </Link>
+                            <Link href="/sponsor/our-sponsors" className="p-2 rounded-[.5rem] block sm:pl-3 sm:py-2 text-gray-700 hover:bg-gray-200 hover:text-black sm:text-lg">
+                                Our Sponsor
+                            </Link>
+
+                        </div>
+                    </div>
+                </div> */}
+
+        <Link href="/contact" className={getLinkClasses("/contact")}>
+          <p className="text-[1.2rem] sm:text-[1.7rem]  transition ease-in-out delay-150 text-center p-0 m-0">
             Contact
           </p>
         </Link>
-
-        {/* <Link href="/resources">
-                        <p>Resources</p>
-                    </Link> */}
       </div>
-
-      {/* <Link href="https://discord.com/invite/MuyJ4f5xKE" className="p-2 my-2 transition ease-in-out delay-150  hidden lg:block text-[1rem]  sm:text-[2rem] text-white bg-[#BA0C2F] hover:bg-white hover:text-black rounded-full">
-                <Button>
-                    <p className="text-[1rem]  sm:text-[2rem]">Join Us</p>
-
-                </Button>
-            </Link> */}
 
       <Link
         target="_blank"
         href="https://discord.com/invite/MuyJ4f5xKE"
-        className="hidden lg:block text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:bg-white hover:text-black "
+        className="hidden lg:block text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:bg-white hover:text-black"
       >
-        {/* <Button id="joinus-si">Join Us!</Button> */}
         <Button>Join Us!</Button>
       </Link>
     </div>

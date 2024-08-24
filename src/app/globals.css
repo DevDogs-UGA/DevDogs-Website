@@ -95,6 +95,11 @@ p {
   gap: 7vw;
 }
 
+.page-main-side-padding {
+  padding-left: 4rem;
+  padding-right: 4rem;
+}
+
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -108,8 +113,7 @@ p {
   background-size: contain;
   background-repeat: no-repeat;
   background-blend-mode: normal;
-  padding-right: 10%;
-  padding-left: 10%;
+
   padding-top: 2rem;
   max-width: 80rem;
   max-height: 100%;

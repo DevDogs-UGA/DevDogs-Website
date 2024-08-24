@@ -11,14 +11,14 @@ import RolesHome from "./components/RolesHome";
 const Home = () => {
   return (
     <section id="base-background">
-      <div className="section section-home">
+      <div className="section section-home page-main-side-padding">
         <div className="flex flex-wrap items-center justify-center my-[2rem]">
           <div className="md:flex-1 text-center sm:text-left">
             <h2 className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">
               Hey UGA!
             </h2>
             <h1 className="font-extrabold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">
-              We&apos;re{" "}
+              We&#39;re{" "}
               <div className="font-extrabold text-UGASecondary inline">
                 DevDogs,
               </div>
