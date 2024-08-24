@@ -25,7 +25,9 @@ export default function DirectMessageForm() {
       `Full Name: ${fullname}\nEmail: ${email}\n\nMessage:\n${message}`,
     );
 
-    window.location.replace(`mailto:devdogs@uga.edu?subject=${subject}&body=${body}`);
+    window.location.replace(
+      `mailto:devdogs@uga.edu?subject=${subject}&body=${body}`,
+    );
   };
 
   return (
