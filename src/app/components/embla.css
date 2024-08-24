@@ -1,7 +1,6 @@
 .embla {
-  margin: auto;
-  --slide-height: 26rem;
-  --slide-spacing: 1rem;
+  /* --slide-height: 40rem; */
+  --slide-spacing: 0.25rem;
   --slide-size: 55%;
 }
 .embla__viewport {

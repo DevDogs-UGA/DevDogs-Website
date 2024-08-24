@@ -7,16 +7,13 @@ import githubIcon from "../images/github.svg";
 
 export default function Footer() {
   return (
-    <div className="footer">
-      <div className="flex flex-row items-center justify-around ml-10">
-        <p className="mr-auto">
-          <b id="UGA-Devdogs">
-            &copy; {new Date().getFullYear()} DevDogs at the University of
-            Georgia
-          </b>
+    <div className="footer pt-[10rem]">
+      <div className="flex flex-row items-start sm:items-center justify-around px-10">
+        <p className="mr-auto font-bold text-[1rem] sm:text-lg text-left">
+          &copy; {new Date().getFullYear()} DevDogs at the University of Georgia
         </p>
-        <div className="flex flex-row flex-nowrap items-center justify-center">
-          <p className="block">Follow us for more: </p>
+        <div className="flex flex-row flex-wrap sm:flex-nowrap items-center justify-center">
+          <p className="block text-[1rem] sm:text-lg">Follow us for more: </p>
           <Link
             target="_blank"
             href=" https://www.instagram.com/devdogs_uga/"
@@ -44,13 +41,6 @@ export default function Footer() {
           </Link>
         </div>
       </div>
-
-      {/* <div className=" text-black" id="align-links">
-        <Link target="_blank" className="hover:underline visited:text-white" href={'mailto:devdogs@uga.edu'}>Email</Link>
-        <Link target="_blank" className="hover:underline visited:text-white" href={'https://github.com/DevDogs-UGA'}>Github</Link>
-        <Link target="_blank" className="hover:underline visited:text-white" href={'https://www.linkedin.com/company/devdogs-uga/'}>LinkedIn</Link>
-        <Link target="_blank" className="hover:underline visited:text-white" href={'https://linktr.ee/devdogs'}>Linktree</Link>
-      </div> */}
     </div>
   );
 }
