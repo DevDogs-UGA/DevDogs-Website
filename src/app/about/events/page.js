@@ -28,8 +28,8 @@ const EventsPage = () => {
       </h1>
 
       <br />
-      <p>Monday August 26th, 2024 from 5:30 PM to 6:30PM at Boyd 328</p>
-      <p>Monday September 9th, 2024 from 5:30 PM to 6:30PM at Boyd 328</p>
+      <p>Monday August 26th, 2024 from 5:30 PM to 6:30PM at MLC 150</p>
+      <p>Monday September 9th, 2024 from 5:30 PM to 6:30PM at MLC 150</p>
 
       <br />
 
