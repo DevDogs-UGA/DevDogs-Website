@@ -76,20 +76,18 @@ const devArticles = [
   {
     title: "Article",
     authors: ["Author"],
-    tags: ["Tag"],
+    tags: [
+      "Frontend Development",
+      "Backend Development",
+      "Databases",
+      "Project Management Tools",
+      "Web Development",
+      "Mobile Development",
+      "UI Design",
+    ],
     path: "/academy/article",
     image: "https://placehold.co/200x200",
   },
-];
-
-const devTags = [
-  "Frontend Development",
-  "Backend Development",
-  "Databases",
-  "Project Management Tools",
-  "Web Development",
-  "Mobile Development",
-  "UI Design",
 ];
 
 const careerArticles = [
@@ -166,16 +164,10 @@ const careerArticles = [
   {
     title: "Article",
     authors: ["Author"],
-    tags: ["Tag"],
+    tags: ["Building a Resume", "Becoming a Leader", "Having an Impact"],
     path: "/academy/article",
     image: "https://placehold.co/200x200",
   },
-];
-
-const careerTags = [
-  "Building a Resume",
-  "Becoming a Leader",
-  "Having an Impact",
 ];
 
 const RedBlackHeader = ({ red, black, swap = false }) => (
@@ -227,11 +219,11 @@ const AcademyPage = () => {
         </div>
         <div className="flex flex-col text-center items-center">
           <RedBlackHeader black="Software " red="Development" swap={true} />
-          <ArticleBrowser articles={devArticles} tags={devTags} />
+          <ArticleBrowser articles={devArticles} />
         </div>
         <div className="flex flex-col text-center items-center">
           <RedBlackHeader black="Career " red="Development" swap={true} />
-          <ArticleBrowser articles={careerArticles} tags={careerTags} />
+          <ArticleBrowser articles={careerArticles} />
         </div>
       </div>
     </div>

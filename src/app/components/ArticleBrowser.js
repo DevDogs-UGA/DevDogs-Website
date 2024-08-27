@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import PropTypes from "prop-types";
 
-const ArticleBrowser = ({ tags, articles }) => {
+const ArticleBrowser = ({ articles }) => {
   const [searchValue, setSearchValue] = useState("");
   const [appliedTags, setAppliedTags] = useState([]);
 
@@ -13,6 +13,8 @@ const ArticleBrowser = ({ tags, articles }) => {
     appliedTags.includes(tag)
       ? setAppliedTags(appliedTags.toSpliced(appliedTags.indexOf(tag), 1))
       : setAppliedTags([...appliedTags, tag]);
+
+  const tags = [...new Set(articles.flatMap((a) => a.tags))];
 
   return (
     <div className="flex flex-col lg:flex-row justify-center gap-[1rem] h-[90vh] lg:w-full lg:h-[80vh]">
