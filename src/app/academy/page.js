@@ -178,13 +178,23 @@ const careerTags = [
   "Having an Impact",
 ];
 
-const RedBlackHeader = ({ red, black }) => (
+const RedBlackHeader = ({ red, black, swap = false }) => (
   <div>
-    <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">
-      {red}
+    <h2
+      className={
+        "font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]" +
+        (swap ? " text-UGASecondary" : "")
+      }
+    >
+      {swap ? black : red}
     </h2>
-    <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-UGASecondary">
-      {black}
+    <h2
+      className={
+        "font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]" +
+        (swap ? "" : " text-UGASecondary")
+      }
+    >
+      {swap ? red : black}
     </h2>
   </div>
 );
@@ -192,6 +202,7 @@ const RedBlackHeader = ({ red, black }) => (
 RedBlackHeader.propTypes = {
   red: PropTypes.string,
   black: PropTypes.string,
+  swap: PropTypes.bool,
 };
 
 const AcademyPage = () => {
@@ -215,11 +226,11 @@ const AcademyPage = () => {
           </p>
         </div>
         <div className="flex flex-col text-center items-center">
-          <RedBlackHeader red="Software " black="Development" />
+          <RedBlackHeader black="Software " red="Development" swap={true} />
           <ArticleBrowser articles={devArticles} tags={devTags} />
         </div>
         <div className="flex flex-col text-center items-center">
-          <RedBlackHeader red="Career " black="Development" />
+          <RedBlackHeader black="Career " red="Development" swap={true} />
           <ArticleBrowser articles={careerArticles} tags={careerTags} />
         </div>
       </div>
