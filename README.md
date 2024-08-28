@@ -1,35 +1,49 @@
-## Hello! This is the DevDogs Open-source Website.
+## Welcome to the DevDogs Open-Source Website!
 
-If you'd like to contribute, please request to join the web development team [here](https://github.com/orgs/DevDogs-UGA/teams/24-25-website-contributors) and join our discord (link on the involvement network!)
+We’re excited to have you here! If you’re interested in contributing to our project, please request to join the web development team [here](https://github.com/orgs/DevDogs-UGA/teams/24-25-website-contributors) and join our Discord server (link available on the Involvement Network!).
 
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+This project is built using [Next.js](https://nextjs.org/) and was bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-## What we're using
-Next.js/Node.js, React.js, custom CSS, Firebase
+## Technologies We Use
+- **Next.js / Node.js**
+- **React.js**
+- **Custom CSS**
+- **Firebase**
+- **Tailwind CSS**
 
-To work contribute to this website you must have a general understanding of JS/HTML/CSS and React.js.
+### Contributor Requirements
+To contribute to this website, you should have a general understanding of JavaScript, HTML, CSS, and React.js.
 
 ## Getting Started
-1. Request to join the current year Website Contributor team on our Github Organization.
-2. Take a look at the Issues tab to see what work the website needs done.
-  * If you have recommendations, post them in our web-development discord channel!
-3. Fork this repository to create a github repository under your account with our code and assign yourself an issue
-4. Use git or Github Desktop to clone your online github repository to a local file on your computer
-5. Set up the correct environment using npm i to install latest packages
-6. Complete the issue tasks
-7. Push your local changes to your online github repository (through git or Github Desktop)
-8. Create a pull request on the original repository (this one) as you are requesting **us** to pull **your** completed code.
-  * Use good documentation in your PR and code as well as provide pictures (snipping tool, etc.) of the changes
 
-**Be sure to sync your personal github repository with our original before every code session, and pull the changes to your local machine.**
-![image](https://github.com/user-attachments/assets/3e333d93-2fca-4496-b3c3-4c23c10d170e)
+1. **Join the Team**: Request to join the current year's Website Contributor team on our GitHub Organization.
+2. **Review Issues**: Check the Issues tab to see what work needs to be done. If you have recommendations, post them in our web-development Discord channel!
+3. **Fork the Repository**: Create a fork of this repository to work on your own copy of the code. Assign yourself an issue to work on.
+4. **Clone the Repository**: Use Git or GitHub Desktop to clone your forked repository to your local machine.
+5. **Set Up the Environment**: Run `npm install` to install the latest packages and dependencies.
+6. **Work on the Issue**: Complete the tasks associated with your assigned issue.
+7. **Push Changes**: Push your local changes to your forked GitHub repository.
+8. **Create a Pull Request**: Once your work is complete, submit a pull request (PR) to the original repository. Be sure to document your changes thoroughly and include any relevant screenshots.
 
-## Important Notes!
-- Refer to the [Figma](https://www.figma.com/design/mJZGzkMqu6JHfIzPl5zCkU/Website-Design?node-id=0-1&t=6ph7juLn0PV5AIhQ-1) to find what each issue references to keep consistent styling
-- For colors used through the website, reference color.css
+**Important**: Always sync your forked repository with the original before starting any new coding session, and pull the latest changes to your local machine.
 
-## How to Local Test
-To run the development server on your local machine (navigate to your project folder in the terminal):
+## Code Quality
+
+We maintain code quality using ESLint and Prettier. Please ensure your code follows our guidelines by running the following commands before submitting your pull request:
+
+- To automatically fix issues: `npx eslint --fix src`
+- To format your code: `npx prettier --write src`
+
+## Important Notes
+
+- **Design Consistency**: Refer to our [Figma](https://www.figma.com/design/mJZGzkMqu6JHfIzPl5zCkU/Website-Design?node-id=0-1&t=6ph7juLn0PV5AIhQ-1) file for consistent styling across the website.
+- **Colors**: Use the `color.css` file for color references throughout the website.
+
+## How to Run Locally
+
+To run the development server on your local machine, navigate to your project folder in the terminal and use one of the following commands:
+
+
 
 ```bash
 npm run dev
@@ -51,6 +65,7 @@ Here are some resources:
 
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [Learn Tailwind CSS]([https://nextjs.org/learn](https://tailwindcss.com/)) - documentation for Tailwind CSS.
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
 
