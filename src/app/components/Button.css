@@ -1,5 +1,4 @@
 button {
-  padding: 0.7rem;
   border-radius: 30px;
   width: 10rem;
   font-size: 1.5rem;
@@ -33,7 +32,6 @@ button {
 
 @media only screen and (max-width: 600px) {
   button {
-    padding: 0.4rem;
     border-radius: 30px;
     width: 8rem;
     font-size: 1.2rem;

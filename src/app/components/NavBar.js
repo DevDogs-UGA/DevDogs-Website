@@ -19,20 +19,20 @@ const NavBar = () => {
   };
 
   return (
-    <div className="w-full bg-[#31304b] flex flex-nowrap justify-around items-center text-white font-semibold py-[2rem]">
+    <div className="w-full bg-[#31304b] flex flex-nowrap justify-around items-center text-white font-semibold p-[.8rem]">
       <div className="hidden sm:block sm:w-[300px] ">
         <Link href="/">
           <Image
             src={name2}
             alt="Mascot and DevDogs"
-            className="hidden md:block"
+            className="hidden md:block h-[2.5em] w-auto"
           />
         </Link>
         <Link href="/">
           <Image
             src={logoOnly}
             alt="Mascot"
-            className="w-[100px] md:hidden md:w-[150px]"
+            className="md:hidden h-[4em] w-auto"
           />
         </Link>
       </div>
@@ -126,7 +126,7 @@ const NavBar = () => {
       <Link
         target="_blank"
         href="https://discord.com/invite/MuyJ4f5xKE"
-        className="hidden lg:block text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:bg-white hover:text-black"
+        className="hidden lg:block text-lg md:text-xl rounded-full font-medium p-2 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:bg-white hover:text-black"
       >
         <Button>Join Us</Button>
       </Link>
