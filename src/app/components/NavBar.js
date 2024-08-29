@@ -83,22 +83,19 @@ const NavBar = () => {
           </div> */}
         </div>
 
-        <Link href="/about/people" className={getLinkClasses("/about/people")} >
+        <Link href="/about/people" className={getLinkClasses("/about/people")}>
           <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
             Team
           </p>
         </Link>
 
-        <Link href="/about/people" className={getLinkClasses("/about/people")} >
+        <Link href="/about/people" className={getLinkClasses("/about/people")}>
           <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
             Projects
           </p>
         </Link>
 
-        <Link 
-          href="/about/events" 
-          className={getLinkClasses("/about/events")}
-        >
+        <Link href="/about/events" className={getLinkClasses("/about/events")}>
           <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
             Events
           </p>
