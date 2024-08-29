@@ -11,7 +11,7 @@ import { useState } from "react";
 
 const NavBar = () => {
   const pathname = usePathname(); // Get the current path
-  const [aboutDropDownOpen, setAboutDropDownOpen] = useState(false);
+  //const [aboutDropDownOpen, setAboutDropDownOpen] = useState(false);
   // const [SponsorDropDownOpen, setSponsorDropDownOpen] = useState(false);
 
   const getLinkClasses = (path) => {
@@ -45,8 +45,8 @@ const NavBar = () => {
         </Link>
         <div
           className="relative group flex items-center"
-          onMouseEnter={() => setAboutDropDownOpen(true)}
-          onMouseLeave={() => setAboutDropDownOpen(false)}
+          // onMouseEnter={() => setAboutDropDownOpen(true)}
+          // onMouseLeave={() => setAboutDropDownOpen(false)}
         >
           <Link href="/about" className={getLinkClasses("/about")}>
             <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
@@ -83,19 +83,28 @@ const NavBar = () => {
           </div> */}
         </div>
 
-        <Link href="/about/people" className={getLinkClasses("/about/people")}>
+        <Link 
+          href="/about/people" 
+          className={getLinkClasses("/about/people")}
+        >
           <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
             Team
           </p>
         </Link>
 
-        <Link href="/about/projects" className={getLinkClasses("/about/projects")}>
+        <Link 
+          href="/about/projects" 
+          className={getLinkClasses("/about/projects")}
+        >
           <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
             Projects
           </p>
         </Link>
 
-        <Link href="/about/events" className={getLinkClasses("/about/events")}>
+        <Link 
+          href="/about/events" 
+          className={getLinkClasses("/about/events")}
+        >
           <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
             Events
           </p>
@@ -132,7 +141,6 @@ const NavBar = () => {
                         </div>
                     </div>
                 </div> */}
-
 
         {/* Commented out until contact form automatic submission functionality is complete */}
         {/* <Link href="/contact" className={getLinkClasses("/contact")}>
