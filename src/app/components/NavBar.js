@@ -7,7 +7,7 @@ import Button from "./Button";
 import name2 from "../images/mascotwordlight.png";
 import logoOnly from "../images/logo.png";
 import Image from "next/image";
-import { useState } from "react";
+// import { useState } from "react";
 
 const NavBar = () => {
   const pathname = usePathname(); // Get the current path
@@ -83,19 +83,13 @@ const NavBar = () => {
           </div> */}
         </div>
 
-        <Link 
-          href="/about/people" 
-          className={getLinkClasses("/about/people")}
-        >
+        <Link href="/about/people" className={getLinkClasses("/about/people")} >
           <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
             Team
           </p>
         </Link>
 
-        <Link 
-          href="/about/projects" 
-          className={getLinkClasses("/about/projects")}
-        >
+        <Link href="/about/people" className={getLinkClasses("/about/people")} >
           <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
             Projects
           </p>
