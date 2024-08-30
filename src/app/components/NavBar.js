@@ -7,11 +7,11 @@ import Button from "./Button";
 import name2 from "../images/mascotwordlight.png";
 import logoOnly from "../images/logo.png";
 import Image from "next/image";
-import { useState } from "react";
+// import { useState } from "react";
 
 const NavBar = () => {
   const pathname = usePathname(); // Get the current path
-  const [aboutDropDownOpen, setAboutDropDownOpen] = useState(false);
+  //const [aboutDropDownOpen, setAboutDropDownOpen] = useState(false);
   // const [SponsorDropDownOpen, setSponsorDropDownOpen] = useState(false);
 
   const getLinkClasses = (path) => {
@@ -19,20 +19,20 @@ const NavBar = () => {
   };
 
   return (
-    <div className="w-full bg-[#31304b] flex flex-nowrap justify-around items-center text-white font-semibold py-[2rem]">
+    <div className="w-full bg-[#31304b] flex flex-nowrap justify-around items-center text-white font-semibold p-[.8rem]">
       <div className="hidden sm:block sm:w-[300px] ">
         <Link href="/">
           <Image
             src={name2}
             alt="Mascot and DevDogs"
-            className="hidden md:block"
+            className="hidden md:block h-[2.5em] w-auto"
           />
         </Link>
         <Link href="/">
           <Image
             src={logoOnly}
             alt="Mascot"
-            className="w-[100px] md:hidden md:w-[150px]"
+            className="md:hidden h-[4em] w-auto"
           />
         </Link>
       </div>
@@ -45,16 +45,15 @@ const NavBar = () => {
         </Link>
         <div
           className="relative group flex items-center"
-          onMouseEnter={() => setAboutDropDownOpen(true)}
-          onMouseLeave={() => setAboutDropDownOpen(false)}
+          // onMouseEnter={() => setAboutDropDownOpen(true)}
+          // onMouseLeave={() => setAboutDropDownOpen(false)}
         >
-          <Link
-            href="/about"
-            className={`px-2 transition ease-in-out delay-150 text-center py-0 m-0 ${pathname.startsWith("/about") ? "text-red-600 font-semibold" : "hover:text-UGASecondary"}`}
-          >
-            <p className="text-[1.2rem] sm:text-[1.7rem] ">About</p>
+          <Link href="/about" className={getLinkClasses("/about")}>
+            <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
+              About
+            </p>
           </Link>
-          <div
+          {/* <div
             className={`text-[1rem] p-1 sm:p-2 sm:text-[1.5rem] absolute left-[-.75rem] top-[2rem] sm:top-10 w-[7.5rem] sm:mt-1 sm:w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 transition-all duration-150 ${
               aboutDropDownOpen
                 ? "opacity-300 visible"
@@ -81,8 +80,26 @@ const NavBar = () => {
                 Events
               </Link>
             </div>
-          </div>
+          </div> */}
         </div>
+
+        <Link href="/about/people" className={getLinkClasses("/about/people")}>
+          <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
+            Team
+          </p>
+        </Link>
+
+        <Link href="/about/people" className={getLinkClasses("/about/people")}>
+          <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
+            Projects
+          </p>
+        </Link>
+
+        <Link href="/about/events" className={getLinkClasses("/about/events")}>
+          <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
+            Events
+          </p>
+        </Link>
 
         {/* For Later use do not uncomment */}
 
@@ -116,19 +133,20 @@ const NavBar = () => {
                     </div>
                 </div> */}
 
-        <Link href="/contact" className={getLinkClasses("/contact")}>
+        {/* Commented out until contact form automatic submission functionality is complete */}
+        {/* <Link href="/contact" className={getLinkClasses("/contact")}>
           <p className="text-[1.2rem] sm:text-[1.7rem]  transition ease-in-out delay-150 text-center p-0 m-0">
             Contact
           </p>
-        </Link>
+        </Link> */}
       </div>
 
       <Link
         target="_blank"
         href="https://discord.com/invite/MuyJ4f5xKE"
-        className="hidden lg:block text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:bg-white hover:text-black"
+        className="hidden lg:block text-lg md:text-xl rounded-full font-medium p-2 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:bg-white hover:text-black"
       >
-        <Button>Join Us!</Button>
+        <Button>Join Us</Button>
       </Link>
     </div>
   );

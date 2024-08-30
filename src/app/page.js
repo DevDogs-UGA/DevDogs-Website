@@ -32,6 +32,7 @@ const Home = () => {
               alt="DevDogs Logo"
               width="800"
               height="800"
+              className="p-[22%]"
             />
           </div>
         </div>

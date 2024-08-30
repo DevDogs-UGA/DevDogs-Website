@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SponsorshipCard from "../components/SponsorshipCard";
+import Button from "../components/Button";
 
 const SponsorNow = () => {
   return (
@@ -9,6 +10,15 @@ const SponsorNow = () => {
           <b className="red-bold">Sponsor</b> Now
         </h1>
       </div>
+
+      <Link
+        target="_blank"
+        href="https://drive.google.com/file/d/1YjoK3LXnFSpgfiRmoGg3R9teDsCi1VAL/view?usp=sharing"
+        id="sponsorbrochure"
+        className="lg:block text-lg md:text-xl rounded-full font-medium p-2 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:drop-shadow-lg"
+      >
+        <Button>Sponsorship Brochure</Button>
+      </Link>
 
       <div id="tiertitle">
         <h2>
