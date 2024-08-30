@@ -39,7 +39,7 @@ const NavBar = () => {
 
       <div className="flex flex-nowrap justify-center items-center sm:gap-3">
         <Link href="/" className={getLinkClasses("/")}>
-          <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
+          <p className="text-[1rem] sm:text-[1.5rem] transition ease-in-out delay-150 text-center p-0 m-0">
             Home
           </p>
         </Link>
@@ -49,7 +49,7 @@ const NavBar = () => {
           // onMouseLeave={() => setAboutDropDownOpen(false)}
         >
           <Link href="/about" className={getLinkClasses("/about")}>
-            <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
+            <p className="text-[1rem] sm:text-[1.5rem] transition ease-in-out delay-150 text-center p-0 m-0">
               About
             </p>
           </Link>
@@ -84,19 +84,19 @@ const NavBar = () => {
         </div>
 
         <Link href="/about/people" className={getLinkClasses("/about/people")}>
-          <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
+          <p className="text-[1rem] sm:text-[1.5rem] transition ease-in-out delay-150 text-center p-0 m-0">
             Team
           </p>
         </Link>
 
         <Link href="/about/people" className={getLinkClasses("/about/people")}>
-          <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
+          <p className="text-[1rem] sm:text-[1.5rem] transition ease-in-out delay-150 text-center p-0 m-0">
             Projects
           </p>
         </Link>
 
         <Link href="/about/events" className={getLinkClasses("/about/events")}>
-          <p className="text-[1.2rem] sm:text-[1.7rem] transition ease-in-out delay-150 text-center p-0 m-0">
+          <p className="text-[1rem] sm:text-[1.5rem] transition ease-in-out delay-150 text-center p-0 m-0">
             Events
           </p>
         </Link>

@@ -32,7 +32,10 @@ button {
 
 #sponsorbrochure{
   width: 15rem;
+  background-color: #ba0c2f;
+  color: #ffffff;
   text-align: center;
+  display: block;
   margin: auto;
   margin-top: 60px;
 }
@@ -47,5 +50,14 @@ button {
   #learnmore {
     background-color: #222233;
     color: #ffffff;
+  }
+
+  #sponsorbrochure{
+    width: 15rem;
+    background-color: #ba0c2f;
+    color: #ffffff;
+    text-align: center;
+    margin: auto;
+    margin-top: 30px;
   }
 }
