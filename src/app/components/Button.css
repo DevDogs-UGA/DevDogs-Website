@@ -30,6 +30,13 @@ button {
   text-align: center;
 }
 
+#sponsorbrochure{
+  width: 15rem;
+  text-align: center;
+  margin: auto;
+  margin-top: 60px;
+}
+
 @media only screen and (max-width: 600px) {
   button {
     border-radius: 30px;
