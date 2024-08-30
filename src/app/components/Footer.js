@@ -8,7 +8,7 @@ import githubIcon from "../images/github.svg";
 export default function Footer() {
   return (
     <div className="footer pt-[10rem]">
-      <div className="flex flex-row items-start sm:items-center justify-around px-10">
+      <div className="flex flex-row items-start sm:items-center justify-around px-10 my-16">
         <p className="mr-auto font-bold text-[1rem] sm:text-lg text-left">
           &copy; {new Date().getFullYear()} DevDogs at the University of Georgia
         </p>
