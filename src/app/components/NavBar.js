@@ -89,7 +89,10 @@ const NavBar = () => {
           </p>
         </Link>
 
-        <Link href="/about/projects" className={getLinkClasses("/about/projects")}>
+        <Link
+          href="/about/projects"
+          className={getLinkClasses("/about/projects")}
+        >
           <p className="text-[1rem] sm:text-[1.5rem] transition ease-in-out delay-150 text-center p-0 m-0">
             Projects
           </p>
