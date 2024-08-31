@@ -391,4 +391,15 @@ iframe {
     grid-template-columns: 1fr 1fr;
     gap: 40px;
   }
+
+  .page-main-side-padding {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  #iframe-test {
+    width: 400px;
+    height: max-content;
+    border: none;
+  }
 }

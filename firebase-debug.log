@@ -1,0 +1,104 @@
+[debug] [2024-08-31T21:29:05.949Z] ----------------------------------------------------------------------
+[debug] [2024-08-31T21:29:05.951Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\nived\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy
+[debug] [2024-08-31T21:29:05.951Z] CLI Version:   13.15.1
+[debug] [2024-08-31T21:29:05.951Z] Platform:      win32
+[debug] [2024-08-31T21:29:05.951Z] Node Version:  v20.11.0
+[debug] [2024-08-31T21:29:05.951Z] Time:          Sat Aug 31 2024 17:29:05 GMT-0400 (Eastern Daylight Time)
+[debug] [2024-08-31T21:29:05.951Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2024-08-31T21:29:05.994Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2024-08-31T21:29:05.995Z] > authorizing via signed-in user (nivedhanatarajan7@gmail.com)
+[debug] [2024-08-31T21:29:05.995Z] [iam] checking project devdogs-uga-website for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2024-08-31T21:29:05.996Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/devdogs-uga-website:testIamPermissions [none]
+[debug] [2024-08-31T21:29:05.996Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/devdogs-uga-website:testIamPermissions x-goog-quota-user=projects/devdogs-uga-website
+[debug] [2024-08-31T21:29:05.996Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/devdogs-uga-website:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2024-08-31T21:29:06.172Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/devdogs-uga-website:testIamPermissions 200
+[debug] [2024-08-31T21:29:06.172Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/devdogs-uga-website:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2024-08-31T21:29:06.173Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/devdogs-uga-website [none]
+[debug] [2024-08-31T21:29:06.411Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/devdogs-uga-website 200
+[debug] [2024-08-31T21:29:06.411Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/devdogs-uga-website {"projectId":"devdogs-uga-website","projectNumber":"467303800066","displayName":"DevDogs Website","name":"projects/devdogs-uga-website","resources":{"hostingSite":"devdogs-uga-website","realtimeDatabaseInstance":"devdogs-uga-website-default-rtdb"},"state":"ACTIVE","etag":"1_f51d7771-084a-4908-b2d4-a05053b3e84d"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 14.0. You may encounter errors.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2024-08-31T21:29:16.250Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/devdogs-uga-website/sites/devdogs-uga-website [none]
+[debug] [2024-08-31T21:29:16.498Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/devdogs-uga-website/sites/devdogs-uga-website 200
+[debug] [2024-08-31T21:29:16.499Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/devdogs-uga-website/sites/devdogs-uga-website {"name":"projects/devdogs-uga-website/sites/devdogs-uga-website","defaultUrl":"https://devdogs-uga-website.web.app","appId":"1:467303800066:web:846ba466f7c738f028b61b","type":"DEFAULT_SITE"}
+[info]   ▲ Next.js 14.2.5
+
+[info] 
+
+[info]    Creating an optimized production build ...
+
+[info] uncaughtException [Error: EPERM: operation not permitted, open 'C:\GitHub\DevDawgsSite\.next\trace'] {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\GitHub\\DevDawgsSite\\.next\\trace'
+}
+
+[debug] [2024-08-31T21:29:20.874Z] Error: ENOENT: no such file or directory, open 'C:\GitHub\DevDawgsSite\.next\server\middleware-manifest.json'
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2024-08-31T21:29:25.092Z] ----------------------------------------------------------------------
+[debug] [2024-08-31T21:29:25.094Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\nived\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy
+[debug] [2024-08-31T21:29:25.094Z] CLI Version:   13.15.1
+[debug] [2024-08-31T21:29:25.094Z] Platform:      win32
+[debug] [2024-08-31T21:29:25.095Z] Node Version:  v20.11.0
+[debug] [2024-08-31T21:29:25.095Z] Time:          Sat Aug 31 2024 17:29:25 GMT-0400 (Eastern Daylight Time)
+[debug] [2024-08-31T21:29:25.095Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2024-08-31T21:29:25.145Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2024-08-31T21:29:25.145Z] > authorizing via signed-in user (nivedhanatarajan7@gmail.com)
+[debug] [2024-08-31T21:29:25.145Z] [iam] checking project devdogs-uga-website for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2024-08-31T21:29:25.147Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/devdogs-uga-website:testIamPermissions [none]
+[debug] [2024-08-31T21:29:25.147Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/devdogs-uga-website:testIamPermissions x-goog-quota-user=projects/devdogs-uga-website
+[debug] [2024-08-31T21:29:25.147Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/devdogs-uga-website:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2024-08-31T21:29:25.276Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/devdogs-uga-website:testIamPermissions 200
+[debug] [2024-08-31T21:29:25.277Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/devdogs-uga-website:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2024-08-31T21:29:25.278Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/devdogs-uga-website [none]
+[debug] [2024-08-31T21:29:25.540Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/devdogs-uga-website 200
+[debug] [2024-08-31T21:29:36.582Z] ----------------------------------------------------------------------
+[debug] [2024-08-31T21:29:36.585Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\nived\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy
+[debug] [2024-08-31T21:29:36.586Z] CLI Version:   13.15.1
+[debug] [2024-08-31T21:29:36.586Z] Platform:      win32
+[debug] [2024-08-31T21:29:36.586Z] Node Version:  v20.11.0
+[debug] [2024-08-31T21:29:36.586Z] Time:          Sat Aug 31 2024 17:29:36 GMT-0400 (Eastern Daylight Time)
+[debug] [2024-08-31T21:29:36.586Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2024-08-31T21:29:36.642Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2024-08-31T21:29:36.642Z] > authorizing via signed-in user (nivedhanatarajan7@gmail.com)
+[debug] [2024-08-31T21:29:36.642Z] [iam] checking project devdogs-uga-website for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2024-08-31T21:29:36.643Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/devdogs-uga-website:testIamPermissions [none]
+[debug] [2024-08-31T21:29:36.643Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/devdogs-uga-website:testIamPermissions x-goog-quota-user=projects/devdogs-uga-website
+[debug] [2024-08-31T21:29:36.644Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/devdogs-uga-website:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2024-08-31T21:29:36.813Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/devdogs-uga-website:testIamPermissions 200
+[debug] [2024-08-31T21:29:36.813Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/devdogs-uga-website:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2024-08-31T21:29:36.814Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/devdogs-uga-website [none]
+[debug] [2024-08-31T21:29:36.965Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/devdogs-uga-website 200
+[debug] [2024-08-31T21:29:36.965Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/devdogs-uga-website {"projectId":"devdogs-uga-website","projectNumber":"467303800066","displayName":"DevDogs Website","name":"projects/devdogs-uga-website","resources":{"hostingSite":"devdogs-uga-website","realtimeDatabaseInstance":"devdogs-uga-website-default-rtdb"},"state":"ACTIVE","etag":"1_f51d7771-084a-4908-b2d4-a05053b3e84d"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 14.0. You may encounter errors.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2024-08-31T21:29:46.890Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/devdogs-uga-website/sites/devdogs-uga-website [none]
+[debug] [2024-08-31T21:29:47.171Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/devdogs-uga-website/sites/devdogs-uga-website 200
+[debug] [2024-08-31T21:29:47.172Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/devdogs-uga-website/sites/devdogs-uga-website {"name":"projects/devdogs-uga-website/sites/devdogs-uga-website","defaultUrl":"https://devdogs-uga-website.web.app","appId":"1:467303800066:web:846ba466f7c738f028b61b","type":"DEFAULT_SITE"}
+[info]   ▲ Next.js 14.2.5
+
+[info] 
+
