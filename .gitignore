@@ -40,3 +40,5 @@ next-env.d.ts
 
 # eslint
 /.eslintcache
+.idea/inspectionProfiles/Project_Default.xml
+.idea/vcs.xml

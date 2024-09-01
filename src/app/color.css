@@ -1,19 +1,25 @@
 #samples {
-  /* Red / Pink */
-  color: #cd0029;
-  color: #ba0c2f;
-  color: #e37c7c;
-  color: #8e5d5d;
-  color: #fff8fc;
-  color: #f1e9ed;
+  /* Primaries */
+  color: #ba0c2f; /* Bulldog Red */
+  color: #33334d; /* DevDog Blue */
+  color: #fff7f9; /* Barely Pink */
+  color: #23221f; /* Nearly Black */
+  color: #222233; /* Midnight Blue */
+  color: #e4002b; /* Glory Glory Red */
+  color: #ffffff; /* Pure White */
+  color: #000000; /* Solid Black */
 
-  /* Gray / Brown */
-  color: #3a3a3a;
-  color: #8a7d7d;
-  color: #a49595;
+  /* Neutrals */
+  color: #64575a; /* Mud Gray */
+  color: #8a7d7d; /* Grout Gray */
+  color: #aa999d; /* Pebble Gray */
+  color: #d4ccc8; /* Limestone */
+  color: #f2d9df; /* Dusty Pink */
+  color: #d9ecec; /* Baby Blue */
 
-  /* Blues */
-  color: #31304b;
-  color: #daebec;
-  color: #e3e9e9;
+  /* Complementaries */
+  color: #00a3ad; /* Lake Herrick / Hope Blue */
+  color: #f9bd9b; /* Gold */
+  color: #e37c7c; /* Peach */
+  color: #71ccd2; /* Wave */
 }
