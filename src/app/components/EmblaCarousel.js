@@ -8,7 +8,8 @@ import PropTypes from "prop-types";
 
 // This carousel has a zoom in and zoom out effect on autoplay with the spotlight on the middle slide, majority of the code is from Embla Carousel. The component takes in 3 props, the slides(array of images), banner(boolean to check if you want a banner, and options(which outline the behavious of the carousel. To learn more about the different option go to the documentation at Embla Carousel))
 
-const TWEEN_FACTOR_BASE = 0.52;
+// This Number changes the space between the slides
+const TWEEN_FACTOR_BASE = 0.2;
 
 const numberWithinRange = (number, min, max) =>
   Math.min(Math.max(number, min), max);
@@ -93,7 +94,7 @@ const EmblaCarousel = (props) => {
     if (emblaApi) {
       emblaApi.scrollNext();
     }
-  }, 3000); // Change slide every 3 seconds
+  }, 4500); // Change slide every 4.5 seconds
 
   useEffect(() => {
     if (!emblaApi) return;

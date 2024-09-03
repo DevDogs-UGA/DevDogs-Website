@@ -1,6 +1,6 @@
 .embla {
   /* --slide-height: 40rem; */
-  --slide-spacing: 0.25rem;
+  --slide-spacing: 0rem;
   --slide-size: 55%;
 }
 .embla__viewport {
@@ -15,6 +15,7 @@
   transform: translate3d(0, 0, 0);
   flex: 0 0 var(--slide-size);
   min-width: 0;
+  margin: 0;
   padding-left: var(--slide-spacing);
 }
 .embla__slide__number {
