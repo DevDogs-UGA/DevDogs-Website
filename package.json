@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@chakra-ui/react": "^2.8.2",
+    "@heroicons/react": "^2.1.5",
     "@nextui-org/avatar": "^2.0.32",
     "@nextui-org/button": "^2.0.37",
     "@nextui-org/card": "^2.0.33",
