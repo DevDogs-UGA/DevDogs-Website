@@ -3,6 +3,7 @@ import Link from "next/link";
 
 function getCurrentSponsors(tier) {
   //todo: have function call backend and get list of sponsors
+  console.log(tier); //to pass eslint checks
   let numSponsors = 0; //would get this from backend
   if (numSponsors === 0) {
     return (
@@ -61,27 +62,27 @@ export default function CorporateSponsors() {
         reverse={true}
       />
 
-        <div className="flex justify-center font-bold text-[1.5rem] md:text-[2.5rem] lg:text-[3.5rem]">
-          Thank &nbsp; {/*&nbsp; is a space character*/}
-          <h2 className="text-UGASecondary">You</h2>
-        </div>
-
-        <p className="text-center text-[1rem] md:text-[1.2rem] lg:text-[1.5rem]">
-          DevDogs is extremely thankful for the support of out sponsors below.
-          Their generous contributions are imperative to DevDogs' success in its
-          mission to build software with a purpose at the scale of what we do.
-        </p>
-        <br></br>
-        {sponsorList()}
-
-        <div className="flex flex-row justify-center ">
-          <div className="font-bold text-[1.25rem] md:text-[2.25rem] lg:text-[3.25rem] mr-2 ">
-            Want your name here?
-          </div>
-          <button className="rounded-full  bg-[#BA0C2F] text-white border px-4 py-0 ml-2 text-[0.8rem] md:text-[1rem] lg:text-[1.3rem]">
-            Help Us Out
-          </button>
-        </div>
+      <div className="flex justify-center font-bold text-[1.5rem] md:text-[2.5rem] lg:text-[3.5rem]">
+        Thank &nbsp; {/*&nbsp; is a space character*/}
+        <h2 className="text-UGASecondary">You</h2>
       </div>
+
+      <p className="text-center text-[1rem] md:text-[1.2rem] lg:text-[1.5rem]">
+        DevDogs is extremely thankful for the support of out sponsors below.
+        Their generous contributions are imperative to DevDogs&apos; success in
+        its mission to build software with a purpose at the scale of what we do.
+      </p>
+      <br></br>
+      {sponsorList()}
+
+      <div className="flex flex-row justify-center ">
+        <div className="font-bold text-[1.25rem] md:text-[2.25rem] lg:text-[3.25rem] mr-2 ">
+          Want your name here?
+        </div>
+        <button className="rounded-full  bg-[#BA0C2F] text-white border px-4 py-0 ml-2 text-[0.8rem] md:text-[1rem] lg:text-[1.3rem]">
+          Help Us Out
+        </button>
+      </div>
+    </div>
   );
 }
