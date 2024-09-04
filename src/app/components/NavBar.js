@@ -15,7 +15,7 @@ const NavBar = () => {
   // const [SponsorDropDownOpen, setSponsorDropDownOpen] = useState(false);
 
   const getLinkClasses = (path) => {
-    return `text-[1rem] px-3 no-underline ${pathname === path ? "text-UGASecondary font-semibold" : "hover:text-UGASecondary"}`;
+    return `text-[1rem] px-3 no-underline ${pathname === path ? "text-BulldogRed font-semibold" : "hover:text-BulldogRed"}`;
   };
 
   return (
@@ -117,7 +117,7 @@ const NavBar = () => {
                     onMouseEnter={() => setSponsorDropDownOpen(true)}
                     onMouseLeave={() => setSponsorDropDownOpen(false)}
                 >
-                    <h3 className={` transition ease-in-out delay-150 text-center p-0 m-0 ${pathname.startsWith('/sponsor') ? 'text-red-600 font-semibold' : 'hover:text-UGASecondary'}`}>
+                    <h3 className={` transition ease-in-out delay-150 text-center p-0 m-0 ${pathname.startsWith('/sponsor') ? 'text-red-600 font-semibold' : 'hover:text-BulldogRed'}`}>
                         <p className="text-[1.2rem] sm:text-[1.7rem] no-underline p-0 m-0">Sponsor</p>
                     </h3>
                     <div

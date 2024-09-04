@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "prepare": "husky"
+    "prepare": "husky",
+    "fl": "npx prettier --write src & npx eslint --fix src"
   },
   "dependencies": {
     "@chakra-ui/react": "^2.8.2",

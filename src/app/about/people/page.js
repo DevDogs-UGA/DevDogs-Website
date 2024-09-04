@@ -27,10 +27,10 @@ const OurTeam = () => {
   return (
     <div className="section flex flex-col">
       <div className="text-center my-[2rem]">
-        <h1 className="font-bold text-[3rem] md:text-[3.5rem] lg:text-[4rem] inline">
+        <h1 className="font-bold text-[3.5rem] sm:text-[4.5rem] inline text-MidnightBlue">
           Our{" "}
         </h1>
-        <h1 className="text-UGA font-bold text-[3rem] md:text-[3.5rem] lg:text-[4rem] inline">
+        <h1 className="text-GloryGloryRed font-bold text-[3.5rem] sm:text-[4.5rem] inline">
           People
         </h1>
       </div>
@@ -39,7 +39,7 @@ const OurTeam = () => {
         banner={false}
         options={OPTIONS}
       />
-      <p className="text-center pt-10 text-base sm:text-lg md:text-xl page-main-side-padding">
+      <p className="text-center pt-10 page-main-side-padding font-semibold text-[1.1rem] md:text-[1.3rem] lg:text-[1.5rem] ">
         DevDogs is proud to consist of over 180 UGA students from all tech
         disciplines and backgrounds. We firmly believe that different
         perspectives breed the best solutions--and we think our work shows! Take
@@ -53,10 +53,10 @@ const OurTeam = () => {
           2024 - 2025{" "}
         </h3>
 
-        <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-UGASecondary">
+        <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-BulldogRed">
           Executive{" "}
         </h2>
-        <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem]">
+        <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-MidnightBlue">
           Board
         </h2>
       </div>

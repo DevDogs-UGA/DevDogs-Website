@@ -33,9 +33,7 @@ export default function DirectMessageForm() {
   return (
     <div className="flex flex-col m-0 p-0 w-full">
       <div className="text-center mt-20 mb-10">
-        <p className="inline text-[3rem] font-bold text-UGASecondary">
-          Direct{" "}
-        </p>
+        <p className="inline text-[3rem] font-bold text-BulldogRed">Direct </p>
         <p className="inline text-[3rem] font-bold text-black">Message</p>
       </div>
 
@@ -57,7 +55,7 @@ export default function DirectMessageForm() {
             placeholder="Dev Dawg"
             value={formData.fullname}
             onChange={handleChange}
-            className="font-bold mt-1 block w-full px-4 py-2 rounded-xl outline-none shadow-sm focus:ring-2 focus:ring-UGASecondary"
+            className="font-bold mt-1 block w-full px-4 py-2 rounded-xl outline-none shadow-sm focus:ring-2 focus:ring-BulldogRed"
           />
         </div>
         <div className="mb-4">
@@ -73,7 +71,7 @@ export default function DirectMessageForm() {
             onChange={handleChange}
             placeholder="hello@email.com"
             required
-            className="font-bold mt-1 block w-full px-4 py-2 rounded-xl outline-none shadow-sm focus:ring-2 focus:ring-UGASecondary"
+            className="font-bold mt-1 block w-full px-4 py-2 rounded-xl outline-none shadow-sm focus:ring-2 focus:ring-BulldogRed"
           />
         </div>
         <div className="mb-4">
@@ -91,7 +89,7 @@ export default function DirectMessageForm() {
             required
             placeholder="Your message here..."
             rows="4"
-            className="font-bold mt-1 block resize-none w-full px-4 py-2 rounded-xl outline-none shadow-sm focus:ring-2 focus:ring-UGASecondary"
+            className="font-bold mt-1 block resize-none w-full px-4 py-2 rounded-xl outline-none shadow-sm focus:ring-2 focus:ring-BulldogRed"
           />
         </div>
         <div className="flex justify-center">

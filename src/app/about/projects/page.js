@@ -44,10 +44,10 @@ const Page = () => {
   return (
     <div className="text-center container mx-auto w-[100%] section page-main-side-padding">
       <div className="my-[125px]">
-        <h2 className=" font-bold text-[3.5rem] sm:text-[4.5rem] md:[5.5rem] inline">
+        <h2 className=" font-bold text-[3.5rem] sm:text-[4.5rem] md:[5.5rem] inline text-MidnightBlue">
           Our{" "}
         </h2>
-        <h2 className="font-bold text-[3.5rem] sm:text-[4.5rem] md:[5.5rem] text-UGA inline">
+        <h2 className="font-bold text-[3.5rem] sm:text-[4.5rem] text-GloryGloryRed inline">
           Projects
         </h2>
         <p className="pt-10 text-base sm:text-lg md:text-xl">
@@ -63,13 +63,13 @@ const Page = () => {
         <h2 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-UGA inline">
           Current{" "}
         </h2>
-        <h2 className="font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-black inline">
+        <h2 className="font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] inline text-MidnightBlue">
           Project
         </h2>
 
         <br />
 
-        <h3 className=" font-bold text-[1.5rem] sm:text-[2.5rem] md:[3rem]">
+        <h3 className=" font-bold text-[1.5rem] sm:text-[2.5rem] md:[3rem] text-MidnightBlue">
           UGA Optimized Schedule Builder
         </h3>
       </div>
