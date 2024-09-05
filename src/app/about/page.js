@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import mockup from "../images/mockup.png";
-import demo from "../images/demo.png";
+import demo2 from "../images/demo2.png";
 import Button from "../components/Button";
 import Link from "next/link";
 import EmblaCarousel from "../components/EmblaCarousel";
@@ -54,7 +54,7 @@ const AboutPage = () => {
             </p>
           </div>
           <div className="basis-1/2 py-10">
-            <Image src={demo} alt="ACM OSP Demo" />
+            <Image src={demo2} alt="ACM OSP Demo 2" />
           </div>
         </div>
 
