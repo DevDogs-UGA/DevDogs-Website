@@ -40,10 +40,10 @@ const OurTeam = () => {
         options={OPTIONS}
       />
       <p className="text-center pt-10 text-base sm:text-lg md:text-xl page-main-side-padding">
-        DevDogs is proud to consist of over 180 UGA students from all tech
+        DevDogs is proud to consist of over 350 UGA students from all tech
         disciplines and backgrounds. We firmly believe that different
         perspectives breed the best solutions--and we think our work shows! Take
-        a look at some of the awesome people that have made DevDogs, DevDogs
+        a look at some of the awesome people who have made DevDogs, DevDogs
         below.
       </p>
 
