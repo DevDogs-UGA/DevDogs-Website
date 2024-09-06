@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url("https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Heebo:wght@100..900&display=swap");
 
 @font-face {
   font-family: "BaruSans";
@@ -22,7 +22,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: "BaruSans", "Heebo", sans-serif;
+  font-family: "Heebo", sans-serif;
 }
 
 #titleheader {

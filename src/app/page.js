@@ -17,10 +17,11 @@ const Home = () => {
             <h2 className="font-semibold text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-MidnightBlue leading-10">
               Hey UGA!
             </h2>
-            <h1 className="inline font-extrabold text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] text-MidnightBlue ">
+
+            <h1 className="inline font-black text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] text-MidnightBlue">
               We&#39;re{" "}
             </h1>
-            <h1 className="inline font-extrabold text-GloryGloryRed text-[3.5rem] md:text-[4rem] lg:text-[4.5rem]">
+            <h1 className="inline font-black text-GloryGloryRed text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] ">
               DevDogs,
             </h1>
           </div>
