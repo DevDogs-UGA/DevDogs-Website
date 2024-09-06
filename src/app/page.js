@@ -39,7 +39,7 @@ const Home = () => {
 
         <div className="flex sm:flex-row-reverse flex-wrap items-center justify-center my-[2rem]">
           <div className="sm:flex-1 text-center sm:text-right mb-10 sm:my-0 leading-[3.75rem] sm:leading-[4rem] md:leading-[5rem]">
-            <p className="font-semibold text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-DevDogBlue">
+            <p className="font-semibold text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-DevDogBlue leading-3">
               a team of
             </p>
             <p className="font-semibold text-[2rem] md:text-[2.5rem] lg:text-[3rem]  text-DevDogBlue">
@@ -73,7 +73,7 @@ const Home = () => {
             <p className="inline font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">
               ...
             </p>
-            <p className="text-xl md:text-2xl font-semibold py-2 mb-10 text-DevDogBlue">
+            <p className="text-xl md:text-2xl font-semibold py-2 mb-2 text-DevDogBlue">
               And we strive to better our community through code.
             </p>
             <p className="text-lg md:text-xl text-DevDogBlue">
