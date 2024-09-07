@@ -25,9 +25,9 @@ export default function RolesHome() {
   }, [roles.length]);
 
   return (
-    <div className="text-right text-UGA font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">
+    <div className="text-right text-BulldogRed font-semibold text-[3rem] md:text-[4rem] lg:text-[5rem]">
       <h1
-        className={`font-bold transition-opacity duration-500 ease-in-out transform ${
+        className={`font-semibold transition-opacity duration-500 ease-in-out transform ${
           fade ? "opacity-100" : "opacity-0"
         }`}
       >

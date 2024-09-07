@@ -44,10 +44,10 @@ const Page = () => {
   return (
     <div className="text-center container mx-auto w-[100%] section page-main-side-padding">
       <div className="my-[125px]">
-        <h2 className=" font-bold text-[3.5rem] sm:text-[4.5rem] md:[5.5rem] inline">
+        <h2 className=" font-bold text-[3.5rem] sm:text-[4.5rem] md:[5.5rem] inline text-MidnightBlue">
           Our{" "}
         </h2>
-        <h2 className="font-bold text-[3.5rem] sm:text-[4.5rem] md:[5.5rem] text-UGA inline">
+        <h2 className="font-bold text-[3.5rem] sm:text-[4.5rem] text-GloryGloryRed inline">
           Projects
         </h2>
         <p className="pt-10 text-base sm:text-lg md:text-xl">
@@ -60,16 +60,16 @@ const Page = () => {
         </p>
       </div>
       <div className="mb-4">
-        <h2 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-UGA inline">
+        <h2 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-BulldogRed inline">
           Current{" "}
         </h2>
-        <h2 className="font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-black inline">
+        <h2 className="font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] inline text-MidnightBlue">
           Project
         </h2>
 
         <br />
 
-        <h3 className=" font-bold text-[1.5rem] sm:text-[2.5rem] md:[3rem]">
+        <h3 className=" font-bold text-[1.5rem] sm:text-[2.5rem] md:[3rem] text-MidnightBlue">
           UGA Optimized Schedule Builder
         </h3>
       </div>
@@ -97,14 +97,14 @@ const Page = () => {
 
       <Link
         href="https://github.com/DevDogs-UGA/Optimal-Schedule-Builder"
-        className="bg-UGA container transition ease-in-out duration-300 block mx-auto rounded-full max-w-[17rem] font-semibold py-3 my-[75px]  text-white hover:bg-black hover:text-white"
+        className="bg-BulldogRed container transition ease-in-out duration-300 block mx-auto rounded-full max-w-[17rem] font-semibold py-3 my-[75px]  text-white hover:bg-black hover:text-white"
       >
         <Button className="">View</Button>
       </Link>
       {/* For future use when we have past projects to show */}
 
       <div className="pb-4">
-        {/* <h2 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-UGA inline">
+        {/* <h2 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-BulldogRed inline">
      Past{" "}
     </h2>
     <h2 className="font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-black inline">

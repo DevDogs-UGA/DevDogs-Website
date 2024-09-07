@@ -11,8 +11,7 @@
     "start": "next start",
     "lint": "next lint",
     "prepare": "husky",
-    "pre-lint": "npx eslint --fix src",
-    "format": "npx prettier --write src"
+    "fl": "npx prettier --write src & npx eslint --fix src"
   },
   "dependencies": {
     "@chakra-ui/react": "^2.8.2",
