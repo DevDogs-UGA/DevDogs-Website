@@ -13,15 +13,15 @@ const Home = () => {
     <section id="base-background">
       <div className="section section-home page-main-side-padding ">
         <div className="flex flex-wrap items-center justify-center my-[2rem]">
-          <div className="md:flex-1 text-center sm:text-left">
+          <div className="md:flex-2 text-center sm:text-left">
             <h2 className="font-semibold text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-MidnightBlue leading-10">
               Hey UGA!
             </h2>
 
-            <h1 className="inline font-black text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] text-MidnightBlue">
+            <h1 className="inline font-black text-[2rem] sm:text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] text-MidnightBlue">
               We&#39;re{" "}
             </h1>
-            <h1 className="inline font-black text-GloryGloryRed text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] ">
+            <h1 className="inline font-black text-GloryGloryRed text-[2rem] sm:text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] ">
               DevDogs,
             </h1>
           </div>
@@ -31,8 +31,7 @@ const Home = () => {
               id="mascot"
               src={logo}
               alt="DevDogs Logo"
-              width="800"
-              height="800"
+              
               className="p-[22%]"
             />
           </div>
@@ -46,11 +45,11 @@ const Home = () => {
             <p className="font-semibold text-[2rem] md:text-[2.5rem] lg:text-[3rem]  text-DevDogBlue">
               passionate
             </p>
-            <h1 className="font-extrabold text-[3rem] md:text-[4rem] lg:text-[5rem] text-MidnightBlue">
+            <h1 className="font-semibold text-[3rem] md:text-[4rem] lg:text-[5rem] text-MidnightBlue">
               Student
             </h1>
             <RolesHome />
-            <p className="text-DevDogBlueb font-semibold text-[1.5rem] lg:text-[2rem]">
+            <p className="text-DevDogBlue font-semibold text-[1.5rem] lg:text-[2rem]">
               at UGA.
             </p>
           </div>

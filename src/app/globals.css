@@ -4,13 +4,6 @@
 
 @import url("https://fonts.googleapis.com/css2?family=Heebo:wght@100..900&display=swap");
 
-@font-face {
-  font-family: "BaruSans";
-  src: url("../../public/fonts/BaruSansDemo-Regular.ttf") format("truetype");
-  font-weight: normal;
-  font-style: normal;
-}
-
 * {
   margin: 0;
   font-family: myriad-pro, "Heebo", sans-serif;
