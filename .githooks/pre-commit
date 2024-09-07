@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# Run Prettier to format code
+npx prettier --write src
+
+# Run ESLint to check for errors and fix them
+npx eslint --fix src
+
+# Check if ESLint encountered any errors
+if [ $? -ne 0 ]; then
+  echo "Linting errors detected. Please fix them before committing."
+  exit 1
+fi
+
+exit 0
