@@ -31,7 +31,6 @@ const Home = () => {
               id="mascot"
               src={logo}
               alt="DevDogs Logo"
-              
               className="p-[22%]"
             />
           </div>

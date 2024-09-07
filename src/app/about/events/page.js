@@ -9,7 +9,8 @@ const EventsPage = () => {
           &
         </h2>
         <h2 className="font-bold text-[3.5rem] sm:text-[4.5rem] text-GloryGloryRed inline">
-          {" "}Events
+          {" "}
+          Events
         </h2>
       </div>
 
@@ -35,7 +36,6 @@ const EventsPage = () => {
       <p>Monday September 9th, 2024 from 5:30 PM to 6:30PM at MLC 150</p>
 
       <h1 className="font-bold text-[2rem] md:[2.5rem] mt-8 text-MidnightBlue">
-        
         Dev{" "}
         <p className="font-bold text-[2rem] md:[2.5rem] inline text-BulldogRed">
           Sessions
@@ -48,7 +48,6 @@ const EventsPage = () => {
       </p>
 
       <h1 className="font-bold text-[2rem] sm:text-[2rem] md:[2.5rem] mt-8 text-MidnightBlue">
-        
         Upcoming{" "}
         <p className="font-bold text-[2rem] sm:text-[2rem] md:[2.5rem] inline text-BulldogRed">
           Meetings

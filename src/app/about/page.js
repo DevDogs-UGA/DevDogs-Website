@@ -88,7 +88,6 @@ const AboutPage = () => {
           </div>
         </div>
 
-
         <div className="text-center ">
           <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-MidnightBlue">
             Our{" "}

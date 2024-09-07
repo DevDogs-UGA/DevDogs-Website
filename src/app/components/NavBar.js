@@ -24,7 +24,9 @@ const NavBar = () => {
 
   const getLinkClasses = (path) => {
     return `text-xl px-3 no-underline ${
-      pathname === path ? "text-GloryGloryRed font-semibold" : "hover:text-GloryGloryRed"
+      pathname === path
+        ? "text-GloryGloryRed font-semibold"
+        : "hover:text-GloryGloryRed"
     }`;
   };
 
