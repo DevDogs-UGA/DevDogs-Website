@@ -2,7 +2,7 @@
 import "./Home.css";
 import Button from "./components/Button";
 import logo from "./images/logo.png";
-import demo from "./images/demo.png";
+import devdogswelcome from "./images/devdogswelcome.png";
 import mockup from "./images/mockup.png";
 import Image from "next/image";
 import Link from "next/link";
@@ -54,7 +54,12 @@ const Home = () => {
           </div>
 
           <div className="sm:flex-1">
-            <Image src={demo} alt="ACM OSP Demo" width="600" height="300" />
+            <Image
+              src={devdogswelcome}
+              alt="DevDogs Welcome"
+              width="600"
+              height="300"
+            />
           </div>
         </div>
 
