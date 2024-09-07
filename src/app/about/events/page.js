@@ -6,10 +6,10 @@ const EventsPage = () => {
           Meetings{" "}
         </h2>
         <h2 className="font-bold text-[3.5rem] sm:text-[4.5rem]  inline text-MidnightBlue">
-          &{" "}
+          &
         </h2>
         <h2 className="font-bold text-[3.5rem] sm:text-[4.5rem] text-GloryGloryRed inline">
-          Events
+          {" "}Events
         </h2>
       </div>
 
@@ -24,9 +24,9 @@ const EventsPage = () => {
         </p>
       </div>
 
-      <h1 className="font-bold text-[1rem] sm:text-[2rem] md:[2.5rem] mt-8 text-MidnightBlue">
-        Welcome General Body{" "}
-        <p className="font-bold text-[1rem] sm:text-[2rem] md:[2.5rem] inline text-BulldogRed">
+      <h1 className="font-bold text-[2rem] md:[2.5rem] mt-8 text-MidnightBlue">
+        General Body{" "}
+        <p className="font-bold text-[2rem] md:[2.5rem] inline text-BulldogRed">
           Meetings
         </p>
       </h1>
@@ -34,10 +34,10 @@ const EventsPage = () => {
       <p>Monday August 26th, 2024 from 5:30 PM to 6:30PM at MLC 150</p>
       <p>Monday September 9th, 2024 from 5:30 PM to 6:30PM at MLC 150</p>
 
-      <h1 className="font-bold text-[1rem] sm:text-[2rem] md:[2.5rem] mt-8 text-MidnightBlue">
-        {" "}
+      <h1 className="font-bold text-[2rem] md:[2.5rem] mt-8 text-MidnightBlue">
+        
         Dev{" "}
-        <p className="font-bold text-[1rem] sm:text-[2rem] md:[2.5rem] inline text-BulldogRed">
+        <p className="font-bold text-[2rem] md:[2.5rem] inline text-BulldogRed">
           Sessions
         </p>
       </h1>
@@ -47,10 +47,10 @@ const EventsPage = () => {
         <i>*Begins on September 16th, 2024</i>
       </p>
 
-      <h1 className="font-bold text-[1rem] sm:text-[2rem] md:[2.5rem] mt-8 text-MidnightBlue">
-        {" "}
+      <h1 className="font-bold text-[2rem] sm:text-[2rem] md:[2.5rem] mt-8 text-MidnightBlue">
+        
         Upcoming{" "}
-        <p className="font-bold text-[1rem] sm:text-[2rem] md:[2.5rem] inline text-BulldogRed">
+        <p className="font-bold text-[2rem] sm:text-[2rem] md:[2.5rem] inline text-BulldogRed">
           Meetings
         </p>
       </h1>
@@ -60,7 +60,7 @@ const EventsPage = () => {
       </p>
       <p>
         Join us to learn more about DevDogs, meet new people, and how you can
-        get involved!{" "}
+        get involved!
       </p>
 
       <iframe

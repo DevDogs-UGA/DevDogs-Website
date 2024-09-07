@@ -88,9 +88,6 @@ const AboutPage = () => {
           </div>
         </div>
 
-        <br />
-        <br />
-        <br />
 
         <div className="text-center ">
           <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-MidnightBlue">
@@ -114,7 +111,7 @@ const AboutPage = () => {
           <div className="flex items-center flex-nowrap justify-center gap-[2rem] py-4">
             <Link
               href="/about/projects"
-              className="text-lg md:text-xl rounded-full font-medium  py-2 px-4 sm:px-6 transition ease-in-out delay-150 text-white bg-NavBarColor hover:bg-black hover:text-white "
+              className="text-lg md:text-xl rounded-full font-medium  py-2 px-4 sm:px-6 transition ease-in-out delay-150 bg-DevDogBlue text-white hover:bg-black hover:text-white "
             >
               <Button>All Projects</Button>
             </Link>

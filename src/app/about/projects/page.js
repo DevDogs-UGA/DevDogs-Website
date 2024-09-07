@@ -60,7 +60,7 @@ const Page = () => {
         </p>
       </div>
       <div className="mb-4">
-        <h2 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-UGA inline">
+        <h2 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-BulldogRed inline">
           Current{" "}
         </h2>
         <h2 className="font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] inline text-MidnightBlue">
@@ -97,14 +97,14 @@ const Page = () => {
 
       <Link
         href="https://github.com/DevDogs-UGA/Optimal-Schedule-Builder"
-        className="bg-UGA container transition ease-in-out duration-300 block mx-auto rounded-full max-w-[17rem] font-semibold py-3 my-[75px]  text-white hover:bg-black hover:text-white"
+        className="bg-BulldogRed container transition ease-in-out duration-300 block mx-auto rounded-full max-w-[17rem] font-semibold py-3 my-[75px]  text-white hover:bg-black hover:text-white"
       >
         <Button className="">View</Button>
       </Link>
       {/* For future use when we have past projects to show */}
 
       <div className="pb-4">
-        {/* <h2 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-UGA inline">
+        {/* <h2 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-BulldogRed inline">
      Past{" "}
     </h2>
     <h2 className="font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-black inline">

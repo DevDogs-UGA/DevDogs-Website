@@ -33,9 +33,6 @@ module.exports = {
     extend: {
       colors: {
         /* Primaries */
-        UGA: "#BA0C2F",
-        UGASecondary: "#CD0029",
-        NavBarColor: "#31304b",
         BulldogRed: "#ba0c2f",
         DevDogBlue: "#33334d",
         BarelyPink: "#fff7f9",
