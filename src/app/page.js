@@ -49,7 +49,11 @@ const Home = () => {
           </div>
 
           <div className="sm:flex-1">
-            <Image src={devdogswelcome} alt="DevDogs Welcome" width="600" height="300" />
+            <Image src={devdogswelcome} 
+              alt="DevDogs Welcome" 
+              width="600" 
+              height="300" 
+            />
           </div>
         </div>
 
