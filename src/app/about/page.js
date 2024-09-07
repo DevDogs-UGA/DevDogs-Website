@@ -54,7 +54,7 @@ const AboutPage = () => {
             </p>
           </div>
           <div className="basis-1/2 py-10">
-            <Image src={devdogswelcome} alt="ACM OSP Demo 2" />
+            <Image src={devdogswelcome} alt="ACM OSP Welcome" />
           </div>
         </div>
 
