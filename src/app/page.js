@@ -50,7 +50,7 @@ const Home = () => {
 
           <div className="sm:flex-1">
             <Image
-              src={devdogswelcome}    
+              src={devdogswelcome}
               alt="DevDogs Welcome"
               width="600"
               height="300"
