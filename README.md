@@ -16,7 +16,7 @@ To contribute to this website, you should have a general understanding of JavaSc
 
 ## Getting Started
 
-1. **Join the Team**: Request to join the current year's Website Contributor team on our GitHub Organization.
+1. **Join the Team**: Request to join the current year's Website Contributor team on our GitHub Organization. [2024-2025](https://github.com/orgs/DevDogs-UGA/teams/24-25-website-contributors)
 2. **Review Issues**: Check the Issues tab to see what work needs to be done. If you have recommendations, post them in our web-development Discord channel!
 3. **Fork the Repository**: Create a fork of this repository to work on your own copy of the code. Assign yourself an issue to work on.
 4. **Clone the Repository**: Use Git or GitHub Desktop to clone your forked repository to your local machine.
