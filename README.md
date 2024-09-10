@@ -1,6 +1,6 @@
 ## Welcome to the DevDogs Open-Source Website!
 
-We’re excited to have you here! If you’re interested in contributing to our project, please request to join the web development team [here](https://github.com/orgs/DevDogs-UGA/teams/24-25-website-contributors) and join our Discord server (link available on the Involvement Network!).
+We’re excited to have you here! If you’re interested in contributing to our project, please request to join the web development team [here](https://github.com/orgs/DevDogs-UGA/teams/24-25-website-contributors) and join our [Discord server](https://linktr.ee/devdogs).
 
 This project is built using [Next.js](https://nextjs.org/) and was bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
@@ -12,7 +12,7 @@ This project is built using [Next.js](https://nextjs.org/) and was bootstrapped 
 - **Tailwind CSS**
 
 ### Contributor Requirements
-To contribute to this website, you should have a general understanding of JavaScript, HTML, CSS, and React.js.
+To contribute to this website, you should have a basic understanding of JavaScript, HTML, CSS, and React.js.
 
 ## Getting Started
 
