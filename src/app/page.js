@@ -18,10 +18,10 @@ const Home = () => {
               Hey UGA!
             </h2>
 
-            <h1 className="inline font-black text-[2rem] sm:text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] text-MidnightBlue">
+            <h1 className="inline font-bold text-[2rem] sm:text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] text-MidnightBlue">
               We&#39;re{" "}
             </h1>
-            <h1 className="inline font-black text-GloryGloryRed text-[2rem] sm:text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] ">
+            <h1 className="inline font-bold text-GloryGloryRed text-[2rem] sm:text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] ">
               DevDogs,
             </h1>
           </div>
