@@ -1,3 +1,4 @@
+"use client";
 import { useCallback, useEffect, useRef } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Image from "next/image";
@@ -131,7 +132,7 @@ const EmblaCarousel = (props) => {
                       </h3>
                     )}
                     {slide.description && (
-                      <p className="text-[.6rem] p-3 sm:text-[.8rem]">
+                      <p className="text-center text-[.6rem] p-3 sm:text-[.8rem]">
                         {slide.description}
                       </p>
                     )}
