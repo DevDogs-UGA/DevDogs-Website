@@ -58,7 +58,7 @@ export default function page() {
 
       <div className="text-center text-[2rem] sm:text-[2.5rem] mt-[4rem]">
         <h2 className="font-[700] inline  text-BulldogRed">Campus </h2>
-        <h2 className="font-[700] inline text-MidnightBlue">Afiliates</h2>
+        <h2 className="font-[700] inline text-MidnightBlue">Affiliates</h2>
       </div>
       <EmblaCarousel
         slides={imagesForCarousel}
@@ -69,7 +69,7 @@ export default function page() {
       <div className="mt-[6rem] flex flex-wrap gap-x-[4rem] gap-y-[2rem] items-center justify-center w-full page-main-side-padding">
         <Link
           target="_blank"
-          href="https://www.linkedin.com/company/kappa-theta-pi-uga/"
+          href="https://ktpgeorgia.com/"
           className="w-full max-w-[150px] md::max-w-[200px]  object-contain"
         >
           <Image
@@ -80,7 +80,7 @@ export default function page() {
         </Link>
         <Link
           target="_blank"
-          href="https://www.linkedin.com/company/kappa-theta-pi-uga/"
+          href="https://uga.campuslabs.com/engage/organization/csci"
           className="w-full max-w-[150px] md:max-w-[200px]  object-contain"
         >
           <Image
@@ -91,7 +91,7 @@ export default function page() {
         </Link>
         <Link
           target="_blank"
-          href="https://www.linkedin.com/company/kappa-theta-pi-uga/"
+          href="https://acm-uga.github.io/"
           className="w-full max-w-[150px] md:max-w-[200px]  object-contain"
         >
           <Image
@@ -102,7 +102,7 @@ export default function page() {
         </Link>
         <Link
           target="_blank"
-          href="https://www.linkedin.com/company/kappa-theta-pi-uga/"
+          href="https://www.soeuga.com/"
           className="w-full max-w-[150px] md:max-w-[200px]  object-contain"
         >
           <Image
