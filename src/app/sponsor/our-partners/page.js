@@ -1,40 +1,62 @@
 import PageTitleTemplate from "@/app/components/PageTitleTemplate";
 import Image from "next/image";
 import GDC from "@/app/images/GDC.svg";
-import KTP from "@/app/images/KTP.svg";
-import CSCI from "@/app/images/CSCI.svg";
-import SOE from "@/app/images/SOE.svg";
-import ACM from "@/app/images/ACM.svg";
-import Temp from "@/app/images/tempProject.png";
-import Link from "next/link";
+import GDCBg from "@/app/images/GDCBackground.png";
+import KTPBg from "@/app/images/KTPBackground.png";
+import ACMBg from "@/app/images/ACMBackground.png";
+import EPIBg from "@/app/images/EpiBackground.png";
+import SOEBg from "@/app/images/SOEBackground.png";
+import UGAHacks from "@/app/images/UGAHacks.png";
 import EmblaCarousel from "@/app/components/EmblaCarousel";
 
 export default function page() {
   const OPTIONS = { loop: true };
   const imagesForCarousel = [
     {
-      image: Temp,
-      title: "Affiliate 1",
-      description: "this is a sample sentence for the slide sentence.",
+      image: GDCBg,
+      title: "Google Developer Groups on Campus: UGA",
+      description:
+        "GDGC UGA co-hosts their meetings with DevDogs, getting you in the Google sphere.",
+      link: "https://gdg.community.dev/",
     },
     {
-      image: Temp,
-      title: "Affiliate 2",
-      description: "this is a sample sentence for the slide sentence.",
+      image: KTPBg,
+      title: "Kappa Theta Pi: Phi Colony",
+      description:
+        "KTP is UGA's first technology frat, developing the next generation of industry professionals",
+      link: "https://ktpgeorgia.com/",
     },
     {
-      image: Temp,
-      title: "Affiliate 3",
-      description: "this is a sample sentence for the slide sentence.",
+      image: ACMBg,
+      title: "ACM @ UGA",
+      description:
+        "Every week, ACM hosts workshops discussing the latest technologies.",
+      link: "https://acm-uga.github.io/",
     },
     {
-      image: Temp,
-      title: "Affiliate 4",
-      description: "this is a sample sentence for the slide sentence.",
+      image: EPIBg,
+      title: "Computer Science Career Initiative",
+      description:
+        "CSCI provides resources to assist students in their pursuit of a many technical fields.",
+      link: "https://uga.campuslabs.com/engage/organization/csci",
+    },
+    {
+      image: SOEBg,
+      title: "Society of Entrepreneurs",
+      description:
+        "Learn from and connect with founders and business-savvy individuals at SOE's many events.",
+      link: "https://www.soeuga.com/",
+    },
+    {
+      image: UGAHacks,
+      title: "UGA Hacks",
+      description:
+        "Every spring, UGA Hacks puts on a 3-day, 800+ person hackathon at MLC.",
+      link: "https://ugahacks.com/",
     },
   ];
   return (
-    <div className="w-full section">
+    <div className="w-full section ">
       <PageTitleTemplate
         redText="Partners"
         blackText="Campus "
@@ -66,7 +88,7 @@ export default function page() {
         options={OPTIONS}
       />
 
-      <div className="mt-[6rem] flex flex-wrap gap-x-[4rem] gap-y-[2rem] items-center justify-center w-full page-main-side-padding">
+      {/* <div className="mt-[6rem] flex flex-wrap gap-x-[4rem] gap-y-[2rem] items-center justify-center w-full page-main-side-padding pt-[10rem]">
         <Link
           target="_blank"
           href="https://ktpgeorgia.com/"
@@ -111,7 +133,7 @@ export default function page() {
             className="w-full max-w-[150px] md:max-w-[200px] object-contain"
           />
         </Link>
-      </div>
+      </div> */}
     </div>
   );
 }
