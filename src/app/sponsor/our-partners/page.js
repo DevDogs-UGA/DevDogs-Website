@@ -1,12 +1,18 @@
 import PageTitleTemplate from "@/app/components/PageTitleTemplate";
 import Image from "next/image";
-import GDC from "@/app/images/GDC.svg";
+import GDC from "@/app/images/GDGC_UGA.svg";
 import GDCBg from "@/app/images/GDCBackground.png";
 import KTPBg from "@/app/images/KTPBackground.png";
 import ACMBg from "@/app/images/ACMBackground.png";
 import EPIBg from "@/app/images/EpiBackground.png";
 import SOEBg from "@/app/images/SOEBackground.png";
 import UGAHacks from "@/app/images/UGAHacks.png";
+import KTP from "@/app/images/KTP.svg";
+import CSCI from "@/app/images/CSCI.svg";
+import SOE from "@/app/images/SOE.svg";
+import ACM from "@/app/images/ACM.svg";
+import Byte from "@/app/images/ByteX1.svg";
+import Link from "next/link";
 import EmblaCarousel from "@/app/components/EmblaCarousel";
 
 export default function page() {
@@ -17,7 +23,7 @@ export default function page() {
       title: "Google Developer Groups on Campus: UGA",
       description:
         "GDGC UGA co-hosts their meetings with DevDogs, getting you in the Google sphere.",
-      link: "https://gdg.community.dev/",
+      link: "https://gdg.community.dev/gdg-on-campus-university-of-georgia-athens-united-states/",
     },
     {
       image: KTPBg,
@@ -62,21 +68,26 @@ export default function page() {
         blackText="Campus "
         reverse="true"
       />
-      <p className="text-center font-bold text-[1.8rem]">
+      <p className="text-center font-bold text-[1.8rem] pt-[8rem]">
         DevDogs is proud to be affiliated with
       </p>
-      <div className="w-full flex justify-center page-main-side-padding mt-[2rem]">
-        <Image
-          src={GDC}
-          alt="Google Developer Group"
-          className="w-full max-w-[400px] sm:max-w-[500px] md:max-w-[800px] object-contain"
-        />
+      <div className="w-full flex flex-col items-center flex-nowrap justify-center page-main-side-padding mt-[2rem]">
+        <Link
+          href="https://gdg.community.dev/gdg-on-campus-university-of-georgia-athens-united-states/"
+          target="_blank"
+        >
+          <Image
+            src={GDC}
+            alt="Google Developer Group"
+            className="w-full max-w-[400px] sm:max-w-[500px] md:max-w-[800px] object-contain"
+          />
+        </Link>
+        <p className="text-center text-[1rem] sm:text-[1.5rem] page-main-side-padding mt-[2rem]">
+          DevDogs co-hosts its meetings with Google Developer Groups on Campus:
+          UGA, providing Google recognition to contributors, merchandise, and a
+          network of incredible people just like you.
+        </p>
       </div>
-      <p className="text-center text-[1rem] sm:text-[1.5rem] page-main-side-padding mt-[4rem]">
-        DevDogs&#39; meetings are co-branded as Google Developer Groups on
-        Campus: UGA meetings, providing Google recognition to contributors,
-        merchandise, and a network of incredible people just like you.
-      </p>
 
       <div className="text-center text-[2rem] sm:text-[2.5rem] mt-[4rem]">
         <h2 className="font-[700] inline  text-BulldogRed">Campus </h2>
@@ -88,7 +99,7 @@ export default function page() {
         options={OPTIONS}
       />
 
-      {/* <div className="mt-[6rem] flex flex-wrap gap-x-[4rem] gap-y-[2rem] items-center justify-center w-full page-main-side-padding pt-[10rem]">
+      <div className="mt-[4rem] flex flex-wrap gap-[2rem] items-center justify-center w-full page-main-side-padding pt-[10rem]">
         <Link
           target="_blank"
           href="https://ktpgeorgia.com/"
@@ -133,7 +144,18 @@ export default function page() {
             className="w-full max-w-[150px] md:max-w-[200px] object-contain"
           />
         </Link>
-      </div> */}
+        <Link
+          target="_blank"
+          href="https://ugahacks.com/"
+          className="w-full max-w-[150px] md:max-w-[200px]  object-contain"
+        >
+          <Image
+            src={Byte}
+            alt="Byte Mascot"
+            className="w-full max-w-[150px] md:max-w-[200px] object-contain"
+          />
+        </Link>
+      </div>
     </div>
   );
 }

@@ -125,12 +125,12 @@ const EmblaCarousel = (props) => {
                     {(slide.title || slide.description) && (
                       <div className="hidden md:block absolute inset-x-0 bottom-[2rem] sm:bottom-0 bg-black/[.65] text-white rounded-b-[.75rem]">
                         {slide.title && (
-                          <h3 className="text-[1rem] p-1 sm:p-3 sm:text-[1.2rem] font-bold">
+                          <h3 className="text-[1rem] p-1 sm:p-3 sm:text-[1.5rem] font-bold">
                             {slide.title}
                           </h3>
                         )}
                         {slide.description && (
-                          <p className="text-center text-[.6rem] p-3 sm:text-[.8rem]">
+                          <p className="text-center text-[.5rem] pb-[1rem] px-[1rem] sm:text-[1rem]">
                             {slide.description}
                           </p>
                         )}
@@ -150,7 +150,7 @@ const EmblaCarousel = (props) => {
                   {(slide.title || slide.description) && (
                     <div className="absolute inset-x-0 bottom-[2rem] sm:bottom-0 bg-black/[.65] text-white rounded-b-[.75rem]">
                       {slide.title && (
-                        <h3 className="hidden md:block text-[1rem] p-1 sm:p-3 sm:text-[1.2rem] font-bold">
+                        <h3 className="hidden md:block text-[1rem] p-1 sm:p-3 sm:text-[1.5rem] font-bold">
                           {slide.title}
                         </h3>
                       )}
