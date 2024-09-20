@@ -96,7 +96,6 @@ const Home = () => {
           </h1>
           <div className="button-grid">
             <Link
-              target="_blank"
               href="/about"
               className="text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white bg-black hover:bg-white hover:text-black "
             >
