@@ -107,7 +107,7 @@ const OurTeam = () => {
 
       <div className="text-center page-main-side-padding">
         <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-">
-            Contributors
+          Contributors
         </h2>
 
         <LeaderBoard />
