@@ -10,6 +10,7 @@ import EmblaCarousel from "@/app/components/EmblaCarousel";
 import Caoursel1 from "@/app/images/carousel1.png";
 import Caoursel2 from "@/app/images/carousel2.jpg";
 import Caoursel3 from "@/app/images/carousel3.jpg";
+import LeaderBoard from "../../components/LeaderBoard";
 
 const OurTeam = () => {
   const OPTIONS = { loop: true };
@@ -102,6 +103,14 @@ const OurTeam = () => {
           />
           <br />
         </div>
+      </div>
+
+      <div className="text-center page-main-side-padding">
+        <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-">
+            Contributors
+        </h2>
+
+        <LeaderBoard />
       </div>
     </div>
   );
