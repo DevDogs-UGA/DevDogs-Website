@@ -7,9 +7,9 @@ import am from "../../images/officers/am.jpg";
 import bm from "../../images/officers/bm.jpg";
 import kds from "../../images/officers/kds.jpg";
 import EmblaCarousel from "@/app/components/EmblaCarousel";
-import Caoursel1 from "@/app/images/carousel1.png";
-import Caoursel2 from "@/app/images/carousel2.jpg";
-import Caoursel3 from "@/app/images/carousel3.jpg";
+import Caoursel1 from "@/app/images/carousel4.jpg";
+import Caoursel2 from "@/app/images/carousel5.jpg";
+import Caoursel3 from "@/app/images/carousel6.jpg";
 import LeaderBoard from "../../components/LeaderBoard";
 
 const OurTeam = () => {
