@@ -79,7 +79,7 @@ const OurTeam = () => {
           />
           <Card
             name={"Kelsey Sterner"}
-            title={"Community Relations Officer"}
+            title={"Engagement Officer"}
             image={ks}
             bgcolor="pink-light"
           />
