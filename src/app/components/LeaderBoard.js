@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import GithubPicture from "./GithubPicture";
 
 const LeaderBoard = () => {
   const [contributors, setContributors] = useState(null);
@@ -27,25 +28,7 @@ const LeaderBoard = () => {
           key={member.githubLogin}
           className="flex w-full sm:w-1/2 md:w-1/3 lg:w-1/4 mb-4 justify-center"
         >
-          <div className="officer-card m-2">
-            <img
-              id="pic"
-              src={"https://github.com/" + member.githubLogin + ".png"}
-            />
-            <div id="officer-description">
-              <br />
-              <a
-                href={"https://github.com/" + member.githubLogin}
-                target="_blank"
-                className="officer-name font-bold"
-                rel="noreferrer"
-              >
-                {member.fullName}
-              </a>
-              <p id="officer-title-name">{Math.round(member.points)} points</p>
-              <br />
-            </div>
-          </div>
+          <GithubPicture member={member} />
         </div>
       ))}
     </div>
