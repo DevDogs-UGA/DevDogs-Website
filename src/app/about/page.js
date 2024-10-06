@@ -11,7 +11,6 @@ import Caoursel2 from "@/app/images/carousel2.jpg";
 import Caoursel3 from "@/app/images/carousel3.jpg";
 import PageTitleTemplate from "../components/PageTitleTemplate";
 
-
 // The link for the "All Projects" button goes to the discord because there is not a projects page yet.
 // The link for the "Our People" buttongoes to the Team page until the our People page is complete.
 
