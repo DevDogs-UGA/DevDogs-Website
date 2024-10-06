@@ -6,10 +6,11 @@ import devdogswelcome from "../images/devdogswelcome.png";
 import Button from "../components/Button";
 import Link from "next/link";
 import EmblaCarousel from "../components/EmblaCarousel";
-import Caoursel1 from "@/app/images/carousel1.png";
+import Caoursel1 from "@/app/images/athena-frontpage.png";
 import Caoursel2 from "@/app/images/carousel2.jpg";
 import Caoursel3 from "@/app/images/carousel3.jpg";
 import PageTitleTemplate from "../components/PageTitleTemplate";
+
 
 // The link for the "All Projects" button goes to the discord because there is not a projects page yet.
 // The link for the "Our People" buttongoes to the Team page until the our People page is complete.
@@ -19,12 +20,16 @@ const AboutPage = () => {
   const imagesForCarousel = [
     {
       image: Caoursel1,
+      title: "Optimal Schedule Builder, 2024",
+      description: "Website to help UGA's 40,000 students graduate earlier and maximize their day.",
     },
     {
       image: Caoursel2,
+      title: "Project Name, 202#",
     },
     {
       image: Caoursel3,
+      title: "Project Name, 202#",
     },
   ];
 
