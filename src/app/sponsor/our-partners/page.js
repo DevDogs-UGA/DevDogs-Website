@@ -68,7 +68,7 @@ export default function page() {
         blackText="Campus "
         reverse="true"
       />
-      <p className="text-center font-bold text-[1.8rem] pt-[8rem]">
+      <p className="text-center font-bold text-[1.8rem]">
         DevDogs is proud to be affiliated with
       </p>
       <div className="w-full flex flex-col items-center flex-nowrap justify-center page-main-side-padding mt-[2rem]">
@@ -89,7 +89,7 @@ export default function page() {
         </p>
       </div>
 
-      <div className="text-center text-[2rem] sm:text-[2.5rem] mt-[4rem]">
+      <div className="text-center text-[2rem] sm:text-[2.5rem] mt-[6rem]">
         <h2 className="font-[700] inline  text-BulldogRed">Campus </h2>
         <h2 className="font-[700] inline text-MidnightBlue">Affiliates</h2>
       </div>
@@ -99,7 +99,7 @@ export default function page() {
         options={OPTIONS}
       />
 
-      <div className="mt-[4rem] flex flex-wrap gap-[2rem] items-center justify-center w-full page-main-side-padding pt-[10rem]">
+      <div className=" flex flex-wrap gap-[2rem] items-center justify-center w-full page-main-side-padding pt-[8rem]">
         <Link
           target="_blank"
           href="https://ktpgeorgia.com/"
