@@ -32,8 +32,8 @@ const EventsPage = () => {
         </p>
       </h1>
 
-      <p>Monday August 26th, 2024 from 5:30 PM to 6:30PM at MLC 150</p>
-      <p>Monday September 9th, 2024 from 5:30 PM to 6:30PM at MLC 150</p>
+      <p>Monday August 26th, 2024 from 5:30 PM to 6:30PM in MLC 150</p>
+      <p>Monday September 9th, 2024 from 5:30 PM to 6:30PM in MLC 150</p>
 
       <h1 className="font-bold text-[2rem] md:[2.5rem] mt-8 text-MidnightBlue">
         Dev{" "}
@@ -42,7 +42,7 @@ const EventsPage = () => {
         </p>
       </h1>
 
-      <p>Every Monday from 5:30 PM to 6:30PM at Boyd 222*</p>
+      <p>Every Monday from 5:30 PM to 6:30PM in (New) Poultry Science 125*</p>
       <p>
         <i>*Begins on September 16th, 2024</i>
       </p>
