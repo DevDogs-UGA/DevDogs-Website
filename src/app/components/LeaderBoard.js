@@ -7,12 +7,9 @@ const LeaderBoard = () => {
 
   useEffect(() => {
     async function fetchContributors() {
-      let res = await fetch(
-        "https://express-api-olive-psi.vercel.app/getLeaderBoard",
-        {
-          cache: "no-store",
-        },
-      );
+      let res = await fetch("https://api.devdogs.uga.edu/getLeaderBoard", {
+        cache: "no-store",
+      });
       let data = await res.json();
       setContributors(data);
     }
