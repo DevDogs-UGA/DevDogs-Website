@@ -1,5 +1,19 @@
+"use client";
+
+import { useState } from "react";
+
 const TestEnv = () => {
   // Include components you want to test here.
+
+  const [editing, setEditing] = useState(false);
+  const [data, setData] =
+    useState(`Member-provided biography. Lorem ipsum dolor sit amet consectetur.
+            Id maecenas cras rhoncus vestibulum amet. Non vel augue risus erat
+            neque. In in dui ut duis proin amet tempor leo. Convallis nunc diam
+            turpis morbi in nunc. Feugiat iaculis facilisis ut et vitae nibh
+            tristique tristique arcu dictum. Sagittis ultrices sodales
+            pellentesque dolor placerat congue facilisis. Nam facilisi gravida
+            arcu imperdiet faucibus sed et.`);
 
   return (
     <div className="section flex flex-col px-20">
@@ -19,13 +33,20 @@ const TestEnv = () => {
           </div>
 
           <div className="text-xl m-2">
-            Member-provided biography. Lorem ipsum dolor sit amet consectetur.
-            Id maecenas cras rhoncus vestibulum amet. Non vel augue risus erat
-            neque. In in dui ut duis proin amet tempor leo. Convallis nunc diam
-            turpis morbi in nunc. Feugiat iaculis facilisis ut et vitae nibh
-            tristique tristique arcu dictum. Sagittis ultrices sodales
-            pellentesque dolor placerat congue facilisis. Nam facilisi gravida
-            arcu imperdiet faucibus sed et.
+            <p>
+              {!editing ? (
+                data
+              ) : (
+                <textarea
+                  className="w-full h-40"
+                  value={data} // Set the value of textarea to your state
+                  onChange={(e) => setData(e.target.value)} // Update the state when input changes
+                />
+              )}
+            </p>
+            <button onClick={() => setEditing(!editing)}>
+              {!editing ? <p>Edit</p> : <p>Stop Editing</p>}
+            </button>
           </div>
         </div>
 
