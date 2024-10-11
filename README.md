@@ -38,6 +38,7 @@ We maintain code quality using ESLint and Prettier. Please ensure your code foll
 
 - **Design Consistency**: Refer to our [Figma](https://www.figma.com/design/mJZGzkMqu6JHfIzPl5zCkU/Website-Design?node-id=0-1&t=6ph7juLn0PV5AIhQ-1) file for consistent styling across the website.
 - **Resources**: Images and key links mentioned in the Figma can be found in our Google Drive [Website Assets](https://drive.google.com/drive/folders/1Z9QpqmCFKjZYrDLGBTeS77htRj1zP4gy?usp=sharing) folder.
+- **Branding Guidelines**: DevDogs' logos, color palettes, fonts, and other key components of the DevDogs brand and their acceptable use can be found [here](https://drive.google.com/file/d/1_SQ3bJ5-1ss60MYbrtnG81Ot5F_NcR-R/view?usp=sharing).
 - **Colors**: Use the `color.css` file for color references throughout the website.
 
 ## How to Run Locally
