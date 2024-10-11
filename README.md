@@ -37,6 +37,7 @@ We maintain code quality using ESLint and Prettier. Please ensure your code foll
 ## Important Notes
 
 - **Design Consistency**: Refer to our [Figma](https://www.figma.com/design/mJZGzkMqu6JHfIzPl5zCkU/Website-Design?node-id=0-1&t=6ph7juLn0PV5AIhQ-1) file for consistent styling across the website.
+- **Resources**: Images and key links mentioned in the Figma can be found in our Google Drive [Website Assets](https://drive.google.com/drive/folders/1Z9QpqmCFKjZYrDLGBTeS77htRj1zP4gy?usp=sharing) folder.
 - **Colors**: Use the `color.css` file for color references throughout the website.
 
 ## How to Run Locally
