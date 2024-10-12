@@ -111,7 +111,7 @@ const NavBar = () => {
       <Link
         target="_blank"
         href="https://discord.com/invite/MuyJ4f5xKE"
-        className="hidden lg:block text-lg md:text-xl rounded-full font-medium p-2 transition ease-in-out delay-50 text-white bg-[#BA0C2F] hover:bg-white hover:text-black"
+        className="red hidden lg:block text-lg md:text-xl rounded-full font-medium p-2 transition ease-in-out delay-50 text-white"
       >
         <Button>Join Us</Button>
       </Link>
