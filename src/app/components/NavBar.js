@@ -110,7 +110,6 @@ const NavBar = () => {
           </Link>
         ))}
       </div>
-<<<<<<< HEAD
       <div className="flex flex-row align-middle items-center sm:visible invisible">
         <Link
           target="_blank"
@@ -123,15 +122,6 @@ const NavBar = () => {
           <NavBarAvatar />
         </div>
       </div>
-=======
-      <Link
-        target="_blank"
-        href="https://discord.com/invite/MuyJ4f5xKE"
-        className="hidden lg:block text-lg md:text-xl rounded-full font-medium p-2 transition ease-in-out delay-50 text-white bg-[#BA0C2F] hover:bg-white hover:text-black"
-      >
-        <Button>Join Us</Button>
-      </Link>
->>>>>>> parent of e152d055 (created red and blue css classes for buttons that fit those background requirements)
     </div>
   );
 };
