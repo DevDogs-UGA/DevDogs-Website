@@ -6,6 +6,7 @@ import PageTitleTemplate from "../components/PageTitleTemplate";
 // import { REGEXP_ONLY_DIGITS_AND_CHARS } from "input-otp";
 import { useRouter } from "next/navigation";
 import { FaCheck, FaTimes, FaEye, FaEyeSlash } from "react-icons/fa";
+import { cookies } from "next/headers";
 
 const Page = () => {
   const [email, setEmail] = useState("");
@@ -248,24 +249,36 @@ const Page = () => {
 
   const checkAuthentication = async () => {
     try {
-      const response = await fetch("https://api.devdogs.uga.edu/auth/session", {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const cookieStore = cookies();
+      const connectSidCookie = cookieStore.get("connect.sid");
 
-      console.log(await response.json());
-      if (response.status === 200) {
-        setIsAuthenticated(true);
-        setLoading(false);
+      if (connectSidCookie) {
+        const response = await fetch(
+          "https://api.devdogs.uga.edu/auth/session",
+          {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              Cookie: `connect.sid=${connectSidCookie.value}`,
+            },
+          },
+        );
+
+        if (response.status === 200) {
+          const data = await response.json();
+          setIsAuthenticated(data.isAuthenticated);
+        } else {
+          setIsAuthenticated(false);
+        }
       } else {
         setIsAuthenticated(false);
-        setLoading(false);
       }
     } catch (err) {
       console.error("Failed to check authentication:", err);
+      setIsAuthenticated(false);
+    } finally {
+      setLoading(false);
     }
   };
 
