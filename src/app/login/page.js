@@ -310,7 +310,7 @@ const Page = () => {
       sessionStorage.setItem("email", email);
       sessionStorage.setItem("access_token", await data.access_token);
       router.refresh();
-      window.location.href = "/dashboard";
+      router.push("/dashboard");
     } catch (error) {
       setShowing(true);
       console.error("Login failed:", error);
