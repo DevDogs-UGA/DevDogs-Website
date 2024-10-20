@@ -1,43 +1,65 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import "./NavBar.css";
+import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
+import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/solid";
+import NavBarAvatar from "./NavBarAvatar";
 import Button from "./Button";
 import name2 from "../images/mascotwordlight.png";
 import logoOnly from "../images/logo.png";
-import Image from "next/image";
-import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/solid";
-import { useState, useEffect, useRef } from "react";
-import NavBarAvatar from "./NavbarAvatar";
 
 const navLinks = [
   { name: "Home", path: "/", isDropdown: false },
-  { name: "About", path: "/about", isDropdown: false },
-  { name: "Team", path: "/about/people", isDropdown: false },
-  { name: "Projects", path: "/about/projects", isDropdown: false },
-  { name: "Events", path: "/about/events", isDropdown: false },
+  {
+    name: "About",
+    isDropdown: true,
+    children: [
+      { name: "Our People", path: "/about/people" },
+      { name: "Our Events", path: "/about/events" },
+      { name: "Our Projects", path: "/about/projects" },
+    ],
+  },
+  {
+    name: "Partners",
+    isDropdown: true,
+    children: [
+      { name: "Corporate Sponsors", path: "/sponsor/our-sponsors" },
+      { name: "Campus Partners", path: "/sponsor/our-partners" },
+      { name: "Sponsor Now", path: "/sponsor/sponsor-us" },
+    ],
+  },
+  // { name: "Academy", path: "/academy", isDropdown: false },
+
+  // Academy is disabled until it is complete - Jay
+
+  { name: "Contact", path: "/contact", isDropdown: false },
 ];
 
 const NavBar = () => {
   const pathname = usePathname();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(null);
   const dropdownRef = useRef(null);
 
   const getLinkClasses = (path) => {
-    return `text-xl px-3 no-underline ${
+    return `text-2xl px-3 no-underline ${
       pathname === path
-        ? "text-GloryGloryRed font-semibold"
-        : "hover:text-GloryGloryRed"
+        ? "text-white font-bold"
+        : "hover:text-GloryGloryRed text-gray-400"
     }`;
   };
 
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
+  const isParentActive = (children) => {
+    return children.some((child) => pathname.startsWith(child.path));
+  };
+
+  const toggleDropdown = (name) => {
+    setIsDropdownOpen(isDropdownOpen === name ? null : name);
   };
 
   const handleClickOutside = (event) => {
     if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-      setIsDropdownOpen(false);
+      setIsDropdownOpen(null);
     }
   };
 
@@ -47,7 +69,6 @@ const NavBar = () => {
     } else {
       document.removeEventListener("mousedown", handleClickOutside);
     }
-
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
@@ -55,7 +76,8 @@ const NavBar = () => {
 
   return (
     <div className="w-full bg-[#31304b] flex flex-col sm:flex-row justify-around items-center text-white font-semibold p-[.8rem]">
-      <div className="sm:hidden md:block sm:w-[300px]">
+      {/* Logo */}
+      <div className="sm:hidden lg:block sm:w-[300px]">
         <Link href="/">
           <Image
             src={name2}
@@ -64,6 +86,8 @@ const NavBar = () => {
           />
         </Link>
       </div>
+
+      {/* Mobile Hamburger Menu */}
       <div className="sm:hidden w-full flex justify-between items-center px-4">
         <Link href="/">
           <Image
@@ -75,52 +99,108 @@ const NavBar = () => {
         <NavBarAvatar />
         {isDropdownOpen ? (
           <XMarkIcon
-            className="w-[2rem] cursor-pointer transition-transform"
-            onClick={toggleDropdown}
+            className="w-[2rem] cursor-pointer"
+            onClick={() => toggleDropdown(null)}
           />
         ) : (
           <Bars3Icon
-            className="w-[2rem] cursor-pointer transition-transform"
-            onClick={toggleDropdown}
+            className="w-[2rem] cursor-pointer"
+            onClick={() => toggleDropdown("mobile")}
           />
         )}
       </div>
-      {isDropdownOpen && (
+
+      {/* Mobile Dropdown Menu */}
+      {isDropdownOpen === "mobile" && (
         <div
           ref={dropdownRef}
-          className="sm:hidden absolute top-[4rem] left-0 w-full bg-[#31304b] flex flex-col items-start px-4 space-y-2 py-4 z-10"
+          className="sm:hidden absolute top-[4rem] left-0 w-full bg-[#31304b] flex flex-col items-start px-4 py-4 z-10"
         >
-          {navLinks.map(({ name, path }) => (
-            <Link
-              key={name}
-              href={path}
-              className={`${getLinkClasses(path)} text-[2rem] text-left bg-opacity-5 rounded-md bg-[#31304b] w-full p-4 transition ease-out delay-100`}
-            >
-              <p>{name}</p>
-            </Link>
+          {navLinks.map((link) => (
+            <div key={link.name} className="w-full">
+              {link.isDropdown ? (
+                <div className="w-full">
+                  {/* Parent link */}
+                  <div className="text-2xl cursor-pointer w-full text-left">
+                    {link.name}
+                  </div>
+                  {/* Always show child links */}
+                  <div className="pl-4 mt-2">
+                    {link.children.map((child) => (
+                      <Link
+                        key={child.name}
+                        href={child.path}
+                        className="block text-lg py-1 pl-4 text-gray-400"
+                      >
+                        {child.name}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <Link
+                  href={link.path}
+                  className="text-2xl w-full text-left py-2"
+                >
+                  {link.name}
+                </Link>
+              )}
+            </div>
           ))}
         </div>
       )}
-      <div className="hidden sm:flex flex-nowrap justify-center items-center sm:gap-3">
-        {navLinks.map(({ name, path }) => (
-          <Link key={name} href={path} className={getLinkClasses(path)}>
-            <p className="= transition ease-in-out delay-150 text-center p-0 m-0">
-              {name}
-            </p>
-          </Link>
+
+      {/* Desktop Navbar */}
+      <div className="hidden sm:flex flex-nowrap justify-center items-center sm:gap-4">
+        {navLinks.map((link) => (
+          <div key={link.name} className="relative">
+            {link.isDropdown ? (
+              <div
+                onClick={() => toggleDropdown(link.name)}
+                className={`text-2xl px-3 cursor-pointer ${
+                  isParentActive(link.children)
+                    ? "text-white font-bold"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                {link.name}
+              </div>
+            ) : (
+              <Link href={link.path} className={getLinkClasses(link.path)}>
+                {link.name}
+              </Link>
+            )}
+
+            {isDropdownOpen === link.name && (
+              <div
+                ref={dropdownRef}
+                className="absolute bg-[#31304b] mt-2 py-2"
+              >
+                {link.children.map((child) => (
+                  <Link
+                    key={child.name}
+                    href={child.path}
+                    className="block px-4 py-2 hover:bg-gray-700"
+                  >
+                    {child.name}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         ))}
       </div>
+
+      {/* Join Us and Avatar */}
       <div className="flex flex-row align-middle items-center sm:visible invisible">
         <Link
           target="_blank"
           href="https://discord.com/invite/MuyJ4f5xKE"
-          className="hidden lg:block text-lg md:text-xl rounded-full font-medium p-2 transition ease-in-out delay-50 text-white bg-[#BA0C2F] hover:bg-white hover:text-black"
+          className="hidden lg:block text-lg rounded-full p-2 transition ease-in-out delay-50 text-white bg-[#BA0C2F] hover:bg-white hover:text-black"
         >
-          <Button className="hidden">Join Us</Button>
+          <Button>Join Us</Button>
         </Link>
-        <div>
-          <NavBarAvatar />
-        </div>
+        <NavBarAvatar />
       </div>
     </div>
   );
