@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 "use client";
 import * as React from "react";
 import { Cross2Icon } from "@radix-ui/react-icons";
