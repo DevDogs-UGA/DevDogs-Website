@@ -44,11 +44,6 @@ async function authenticateWithRetry(cookie, retries = 0) {
 export async function middleware(req) {
   const cookie = await req.cookies.get("connect.sid");
 
-  if (!cookie) {
-    console.log("Cookie not found, redirecting to login");
-    return NextResponse.redirect(new URL("/login", req.url));
-  }
-
   const isAuthenticated = await authenticateWithRetry(cookie);
 
   if (!isAuthenticated) {
