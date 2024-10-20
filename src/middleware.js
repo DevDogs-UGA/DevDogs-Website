@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 
 export async function middleware(req) {
-  const cookie = req.cookies.get("connect.sid");
+  const cookie = await req.cookies.get("connect.sid");
 
   const res = await fetch("https://api.devdogs.uga.edu/auth/session", {
     method: "GET",
