@@ -1,3 +1,4 @@
+import PageTitleTemplate from "@/app/components/PageTitleTemplate";
 import Link from "next/link";
 import EmblaCarousel from "@/app/components/EmblaCarousel";
 import Caoursel1 from "@/app/images/carousel1.png";
