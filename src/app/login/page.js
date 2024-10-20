@@ -16,14 +16,14 @@ const Page = () => {
   // const [verifyEmail, setVerifyEmail] = useState(false);
   // const [code, setCode] = useState("");
   const [emailError, setEmailError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [passwordCriteria, setPasswordCriteria] = useState({
-    length: false,
-    uppercase: false,
-    lowercase: false,
-    number: false,
-    specialChar: false,
-  });
+  // const [showPassword, setShowPassword] = useState(false);
+  // const [passwordCriteria, setPasswordCriteria] = useState({
+  //   length: false,
+  //   uppercase: false,
+  //   lowercase: false,
+  //   number: false,
+  //   specialChar: false,
+  // });
 
   const router = useRouter();
 
