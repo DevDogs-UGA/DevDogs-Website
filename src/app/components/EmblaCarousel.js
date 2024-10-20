@@ -1,20 +1,16 @@
+"use client";
 import { useCallback, useEffect, useRef } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Image from "next/image";
+import Link from "next/link";
 import "./embla.css";
 import PropTypes from "prop-types";
 
-// Documentation for external library used: https://www.embla-carousel.com/examples/predefined/
-
-// This carousel has a zoom in and zoom out effect on autoplay with the spotlight on the middle slide, majority of the code is from Embla Carousel. The component takes in 3 props, the slides(array of images), banner(boolean to check if you want a banner, and options(which outline the behavious of the carousel. To learn more about the different option go to the documentation at Embla Carousel))
-
-// This Number changes the space between the slides
 const TWEEN_FACTOR_BASE = 0.2;
 
 const numberWithinRange = (number, min, max) =>
   Math.min(Math.max(number, min), max);
 
-// Custom useInterval hook
 function useInterval(callback, delay) {
   const savedCallback = useRef();
 
@@ -89,12 +85,11 @@ const EmblaCarousel = (props) => {
     });
   }, []);
 
-  // Auto-scroll functionality
   useInterval(() => {
     if (emblaApi) {
       emblaApi.scrollNext();
     }
-  }, 4500); // Change slide every 4.5 seconds
+  }, 4500);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -114,30 +109,60 @@ const EmblaCarousel = (props) => {
   return (
     <div className="embla">
       <div className="embla__viewport" ref={emblaRef}>
-        <div className="embla__container ">
+        <div className="embla__container">
           {slides.map((slide, index) => (
             <div className="embla__slide" key={index}>
-              <div className="embla__slide__number relative">
-                <Image
-                  src={slide.image}
-                  alt={`Slide ${index + 1}`}
-                  className="object-cover rounded-[.75rem] my-10 sm:mb-0 h-[10rem] sm:h-[15rem] md:h-[25rem]"
-                />
-                {(slide.title || slide.description) && (
-                  <div className="absolute inset-x-0 bottom-[2rem] sm:bottom-0 bg-[#3a3a3a] text-white rounded-b-[.75rem]">
-                    {slide.title && (
-                      <h3 className="text-[1rem] p-1 sm:p-3 sm:text-[1.2rem] font-bold">
-                        {slide.title}
-                      </h3>
+              {slide.link ? (
+                <Link href={slide.link} target="_blank">
+                  <div className="embla__slide__number relative">
+                    {slide.image && (
+                      <Image
+                        src={slide.image}
+                        alt={`Slide ${index + 1}`}
+                        className="object-cover rounded-[.75rem] my-10 sm:mb-0 h-[10rem] sm:h-[15rem] md:h-[25rem]"
+                      />
                     )}
-                    {slide.description && (
-                      <p className="text-[.6rem] p-3 sm:text-[.8rem]">
-                        {slide.description}
-                      </p>
+                    {(slide.title || slide.description) && (
+                      <div className="hidden md:block absolute inset-x-0 bottom-[2rem] sm:bottom-0 bg-black/[.65] text-white rounded-b-[.75rem]">
+                        {slide.title && (
+                          <h3 className="text-[1rem] p-1 sm:p-3 sm:text-[1.5rem] font-bold">
+                            {slide.title}
+                          </h3>
+                        )}
+                        {slide.description && (
+                          <p className="text-center text-[.5rem] pb-[1rem] px-[1rem] sm:text-[1rem]">
+                            {slide.description}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
+                </Link>
+              ) : (
+                <div className="embla__slide__number relative">
+                  {slide.image && (
+                    <Image
+                      src={slide.image}
+                      alt={`Slide ${index + 1}`}
+                      className="object-cover rounded-[.75rem] my-10 sm:mb-0 h-[10rem] sm:h-[15rem] md:h-[25rem]"
+                    />
+                  )}
+                  {(slide.title || slide.description) && (
+                    <div className="absolute inset-x-0 bottom-[2rem] sm:bottom-0 bg-black/[.65] text-white rounded-b-[.75rem]">
+                      {slide.title && (
+                        <h3 className="hidden md:block text-[1rem] p-1 sm:p-3 sm:text-[1.5rem] font-bold">
+                          {slide.title}
+                        </h3>
+                      )}
+                      {slide.description && (
+                        <p className="hidden md:block text-center text-[.6rem] p-3 sm:text-[.8rem]">
+                          {slide.description}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -146,10 +171,16 @@ const EmblaCarousel = (props) => {
   );
 };
 
-export default EmblaCarousel;
-
 EmblaCarousel.propTypes = {
-  slides: PropTypes.array,
-  banner: PropTypes.bool,
+  slides: PropTypes.arrayOf(
+    PropTypes.shape({
+      image: PropTypes.string.isRequired,
+      title: PropTypes.string,
+      description: PropTypes.string,
+      link: PropTypes.string,
+    }),
+  ),
   options: PropTypes.object,
 };
+
+export default EmblaCarousel;

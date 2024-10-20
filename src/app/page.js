@@ -18,10 +18,10 @@ const Home = () => {
               Hey UGA!
             </h2>
 
-            <h1 className="inline font-black text-[2rem] sm:text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] text-MidnightBlue">
+            <h1 className="inline font-bold text-[2rem] sm:text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] text-MidnightBlue">
               We&#39;re{" "}
             </h1>
-            <h1 className="inline font-black text-GloryGloryRed text-[2rem] sm:text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] ">
+            <h1 className="inline font-bold text-GloryGloryRed text-[2rem] sm:text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] ">
               DevDogs,
             </h1>
           </div>
@@ -97,14 +97,14 @@ const Home = () => {
           <div className="button-grid">
             <Link
               href="/about"
-              className="text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white bg-black hover:bg-white hover:text-black "
+              className="text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-black bg-#33334d hover:bg-white hover:text-black "
             >
               <Button>Learn More</Button>
             </Link>
             <Link
               target="_blank"
               href="https://discord.com/invite/MuyJ4f5xKE"
-              className="text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:bg-white hover:text-black "
+              className="red text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white"
             >
               <Button>Join Us!</Button>
             </Link>

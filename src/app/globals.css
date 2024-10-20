@@ -279,6 +279,22 @@ iframe {
   justify-content: center;
 }
 
+.red {
+  background-color: #ba0c2f;
+}
+
+.red:hover {
+  background-color: #e4002b;
+}
+
+.blue {
+  background-color: #33334d;
+}
+
+.blue:hover {
+  background-color: #222233;
+}
+
 #tiers {
   display: flex;
   justify-content: center;
