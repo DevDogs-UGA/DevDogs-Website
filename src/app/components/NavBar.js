@@ -8,6 +8,7 @@ import logoOnly from "../images/logo.png";
 import Image from "next/image";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/solid";
 import { useState, useEffect, useRef } from "react";
+import NavBarAvatar from "./NavbarAvatar";
 
 const navLinks = [
   { name: "Home", path: "/", isDropdown: false },
@@ -71,6 +72,7 @@ const NavBar = () => {
             className="h-[3em] sm:h-[4em] w-auto"
           />
         </Link>
+        <NavBarAvatar />
         {isDropdownOpen ? (
           <XMarkIcon
             className="w-[2rem] cursor-pointer transition-transform"
@@ -108,13 +110,18 @@ const NavBar = () => {
           </Link>
         ))}
       </div>
-      <Link
-        target="_blank"
-        href="https://discord.com/invite/MuyJ4f5xKE"
-        className="red hidden lg:block text-lg md:text-xl rounded-full font-medium p-2 transition ease-in-out delay-50 text-white"
-      >
-        <Button>Join Us</Button>
-      </Link>
+      <div className="flex flex-row align-middle items-center sm:visible invisible">
+        <Link
+          target="_blank"
+          href="https://discord.com/invite/MuyJ4f5xKE"
+          className="hidden lg:block text-lg md:text-xl rounded-full font-medium p-2 transition ease-in-out delay-50 text-white bg-[#BA0C2F] hover:bg-white hover:text-black"
+        >
+          <Button className="hidden">Join Us</Button>
+        </Link>
+        <div>
+          <NavBarAvatar />
+        </div>
+      </div>
     </div>
   );
 };
