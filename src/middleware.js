@@ -13,7 +13,6 @@ export async function middleware(req) {
       Cookie: cookie?.name + "=" + cookie?.value,
     },
   });
-  console.log(res, res.status);
 
   if (res.status !== 200) {
     return NextResponse.redirect(new URL("/login", req.url));
