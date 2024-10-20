@@ -14,7 +14,7 @@ export async function middleware(req) {
     },
   });
 
-  if (res.status !== 200) {
+  if (!res.ok) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
