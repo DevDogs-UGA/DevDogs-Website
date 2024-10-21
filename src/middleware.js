@@ -15,13 +15,13 @@ export async function middleware(req) {
   });
 
 
-  if (req.cookies.has("connect.sid")) {
+  if (cookie) {
     const res = await fetch("https://api.devdogs.uga.edu/auth/session", {
       method: "GET",
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        Cookie: `${await cookie?.name}=${await cookie?.value}`,
+        Cookie: `${cookie.name}=${cookie.value}`,
       },
     });
 
