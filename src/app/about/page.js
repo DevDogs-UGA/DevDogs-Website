@@ -21,7 +21,7 @@ const AboutPage = () => {
       image: Caoursel1,
       title: "Optimal Schedule Builder, 2024",
       description:
-        "Website to help UGA's 40,000 students graduate earlier and maximize their day.",
+      "Website to help UGA's 40,000 students graduate earlier and maximize their day.",
     },
     {
       image: Caoursel2,
