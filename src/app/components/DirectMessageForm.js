@@ -95,7 +95,7 @@ export default function DirectMessageForm() {
         <div className="flex justify-center">
           <button
             type="submit"
-            className="sm:w-[40%] py-2 bg-UGA text-white font-medium text-xl rounded-full hover:bg-black transition ease-in-out duration-150"
+            className="sm:w-[40%] py-2 bg-GloryGloryRed text-white font-medium text-xl rounded-full hover:bg-black transition ease-in-out duration-150"
           >
             Submit
           </button>

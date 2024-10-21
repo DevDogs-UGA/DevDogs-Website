@@ -1,26 +1,25 @@
 /** @type {import('tailwindcss').Config} */
 
-
-const plugin = require('tailwindcss/plugin')
-const CustomStyle = plugin(function ({ addUtilities })
-{
+const plugin = require("tailwindcss/plugin");
+const CustomStyle = plugin(function ({ addUtilities }) {
   addUtilities({
     ".rotate-y-180": {
-      transform: "rotateY(180deg)"
+      transform: "rotateY(180deg)",
     },
     ".preserve-3d": {
-      transformStyle: "preserve-3d"
+      transformStyle: "preserve-3d",
     },
     ".perspective-1000": {
-      perspective: "1000px"
+      perspective: "1000px",
     },
     ".backface-hidden": {
       backfaceVisibility: "hidden",
-    }
-  })
-})
+    },
+  });
+});
 
 module.exports = {
+  darkMode: ["class"],
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
@@ -32,7 +31,6 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        /* Primaries */
         BulldogRed: "#ba0c2f",
         DevDogBlue: "#33334d",
         BarelyPink: "#fff7f9",
@@ -41,20 +39,29 @@ module.exports = {
         GloryGloryRed: "#e4002b",
         PureWhite: "#ffffff",
         SolidBlack: "#000000",
-        /* Neutrals */
         MudGray: "#64575a",
         GroutGray: "#8a7d7d",
         PebbleGray: "#aa999d",
         Limestone: "#d4ccc8",
         DustyPink: "#f2d9df",
         BabyBlue: "#d9ecec",
-        /* Complementaries */
         LakeHerrick: "#00a3ad",
         Gold: "#f9bd9b",
         Peach: "#e37c7c",
         Wave: "#71ccd2",
-      }
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+      keyframes: {
+        "caret-blink": {
+          "0%,70%,100%": { opacity: "1" },
+          "20%,50%": { opacity: "0" },
+        },
+      },
     },
   },
-  plugins: [CustomStyle],
-}
+  plugins: [CustomStyle, require("tailwindcss-animate")],
+};
