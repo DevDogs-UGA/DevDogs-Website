@@ -88,21 +88,6 @@ const AboutPage = () => {
           </div>
         </div>
 
-        <div className="text-center ">
-          <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-MidnightBlue">
-            Our{" "}
-          </h2>
-          <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-BulldogRed">
-            Impact
-          </h2>
-          <br />
-
-          <EmblaCarousel
-            slides={imagesForCarousel}
-            banner={false}
-            options={OPTIONS}
-          />
-        </div>
         <div className="py-[2rem] page-main-side-padding">
           <h1 className="font-bold text-center text-[3rem] my-5 text-MidnightBlue">
             More Info
