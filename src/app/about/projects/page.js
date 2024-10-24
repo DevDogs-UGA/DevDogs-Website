@@ -42,12 +42,12 @@ const Page = () => {
   // ];
 
   return (
-    <div className="text-center container mx-auto w-[100%] section page-main-side-padding">
+    <div className="section page-main-side-padding container mx-auto w-[100%] text-center">
       <div className="my-[125px]">
-        <h2 className=" font-bold text-[3.5rem] sm:text-[4.5rem] md:[5.5rem] inline text-MidnightBlue">
+        <h2 className="md:[5.5rem] inline text-[3.5rem] font-bold text-MidnightBlue sm:text-[4.5rem]">
           Our{" "}
         </h2>
-        <h2 className="font-bold text-[3.5rem] sm:text-[4.5rem] text-GloryGloryRed inline">
+        <h2 className="inline text-[3.5rem] font-bold text-GloryGloryRed sm:text-[4.5rem]">
           Projects
         </h2>
         <p className="pt-10 text-base sm:text-lg md:text-xl">
@@ -60,16 +60,16 @@ const Page = () => {
         </p>
       </div>
       <div className="mb-4">
-        <h2 className=" font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] text-BulldogRed inline">
+        <h2 className="md:[4rem] inline text-[2.5rem] font-bold text-BulldogRed sm:text-[3.5rem]">
           Current{" "}
         </h2>
-        <h2 className="font-bold text-[2.5rem] sm:text-[3.5rem] md:[4rem] inline text-MidnightBlue">
+        <h2 className="md:[4rem] inline text-[2.5rem] font-bold text-MidnightBlue sm:text-[3.5rem]">
           Project
         </h2>
 
         <br />
 
-        <h3 className=" font-bold text-[1.5rem] sm:text-[2.5rem] md:[3rem] text-MidnightBlue">
+        <h3 className="md:[3rem] text-[1.5rem] font-bold text-MidnightBlue sm:text-[2.5rem]">
           UGA Optimized Schedule Builder
         </h3>
       </div>
@@ -97,7 +97,7 @@ const Page = () => {
 
       <Link
         href="https://github.com/DevDogs-UGA/Optimal-Schedule-Builder"
-        className="red container transition ease-in-out duration-300 block mx-auto rounded-full max-w-[17rem] font-semibold py-3 my-[75px]  text-white"
+        className="red container mx-auto my-[75px] block max-w-[17rem] rounded-full py-3 font-semibold text-white transition duration-300 ease-in-out"
       >
         <Button className="">View</Button>
       </Link>

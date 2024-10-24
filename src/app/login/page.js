@@ -180,33 +180,33 @@ const Page = () => {
     };
 
     return (
-      <div className="text-center w-full page-main-side-padding flex justify-center">
-        <div className="bg-[#F5F5F5] w-96 rounded-[50px] shadow-sm p-4">
+      <div className="page-main-side-padding flex w-full justify-center text-center">
+        <div className="w-96 rounded-[50px] bg-[#F5F5F5] p-4 shadow-sm">
           <h3 className="text-2xl font-bold">Email Address</h3>
           <input
             type="email"
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
-            className="w-full p-2 rounded-xl"
+            className="w-full rounded-xl p-2"
           />
           {emailError && (
-            <p className="text-red-500 text-sm mt-1">{emailError}</p>
+            <p className="mt-1 text-sm text-red-500">{emailError}</p>
           )}
-          <h2 className="text-sm mt-2">
+          <h2 className="mt-2 text-sm">
             Use your UGA email address (@uga.edu)
           </h2>
-          <h3 className="text-2xl font-bold mt-4">Password</h3>
+          <h3 className="mt-4 text-2xl font-bold">Password</h3>
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="w-full p-2 rounded-xl pr-10"
+              className="w-full rounded-xl p-2 pr-10"
             />
             <button
               type="button"
               onClick={togglePasswordVisibility}
-              className="absolute inset-y-0 right-0 pr-3 flex justify-end items-center"
+              className="absolute inset-y-0 right-0 flex items-center justify-end pr-3"
             >
               {showPassword ? <FaEyeSlash /> : <FaEye />}
             </button>
@@ -217,9 +217,9 @@ const Page = () => {
               {Object.entries(passwordCriteria).map(([criterion, isValid]) => (
                 <li key={criterion} className="flex items-center">
                   {isValid ? (
-                    <FaCheck className="text-green-500 mr-2" />
+                    <FaCheck className="mr-2 text-green-500" />
                   ) : (
-                    <FaTimes className="text-red-500 mr-2" />
+                    <FaTimes className="mr-2 text-red-500" />
                   )}
                   {criterion === "length" && "At least 8 characters"}
                   {criterion === "uppercase" && "One uppercase letter"}
@@ -232,7 +232,7 @@ const Page = () => {
           </div>
           <button
             onClick={create}
-            className="bg-BulldogRed rounded-full text-white px-4 py-2 mt-4"
+            className="mt-4 rounded-full bg-BulldogRed px-4 py-2 text-white"
             disabled={!Object.values(passwordCriteria).every(Boolean)}
           >
             Create Account
@@ -318,26 +318,26 @@ const Page = () => {
   };
 
   return (
-    <div className="text-center w-full section page-main-side-padding">
+    <div className="section page-main-side-padding w-full text-center">
       <PageTitleTemplate
         blackText={"Returning User? "}
         redText={"Log In"}
         reverse={true}
       />
 
-      <div className="text-center w-full page-main-side-padding flex justify-center">
-        <div className="bg-[#F5F5F5] w-96 rounded-[50px] shadow-sm p-4">
+      <div className="page-main-side-padding flex w-full justify-center text-center">
+        <div className="w-96 rounded-[50px] bg-[#F5F5F5] p-4 shadow-sm">
           <h3 className="text-2xl font-bold">Email Address</h3>
           <input
             type="email"
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
-            className="w-full p-2 rounded-xl"
+            className="w-full rounded-xl p-2"
           />
           {emailError && (
-            <p className="text-red-500 text-sm mt-1">{emailError}</p>
+            <p className="mt-1 text-sm text-red-500">{emailError}</p>
           )}
-          <h2 className="text-sm mt-2">
+          <h2 className="mt-2 text-sm">
             Use your UGA email address (@uga.edu)
           </h2>
           <h3 className="text-2xl font-bold">Password</h3>
@@ -345,7 +345,7 @@ const Page = () => {
             type="password"
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
-            className="w-full p-2 rounded-xl"
+            className="w-full rounded-xl p-2"
           />
           {/* <div className="mt-3">
             <a href="/" className="text-[#00A3AD] underline text-md">
@@ -353,21 +353,21 @@ const Page = () => {
             </a>
           </div> */}
           {showing ? (
-            <h2 className="font-semibold text-BulldogRed text-lg mt-2">
+            <h2 className="mt-2 text-lg font-semibold text-BulldogRed">
               User with that email and password not found.
             </h2>
           ) : null}
           <button
             onClick={() => login()}
-            className="w-48 text-white bg-[#BA0C2F] p-2 mt-6 rounded-[183px] shadow-sm"
+            className="mt-6 w-48 rounded-[183px] bg-[#BA0C2F] p-2 text-white shadow-sm"
           >
             Log In
           </button>
         </div>
       </div>
 
-      <div className="text-center my-[4rem]">
-        <h2 className="font-bold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem] text-BulldogRed">
+      <div className="my-[4rem] text-center">
+        <h2 className="text-[2.5rem] font-bold text-BulldogRed md:text-[3.5rem] lg:text-[4rem]">
           Create an Account
         </h2>
       </div>

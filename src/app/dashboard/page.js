@@ -173,33 +173,33 @@ export const Box = () => {
   const githubLoginUrl = `https://github.com/login/oauth/authorize?${params}`;
 
   return (
-    <div className="text-center w-full section page-main-side-padding flex flex-col items-center">
+    <div className="section page-main-side-padding flex w-full flex-col items-center text-center">
       <PageTitleTemplate
         blackText={"User "}
         redText={"Settings"}
         reverse={true}
       />
-      <div className="bg-[#F5F5F5] w-8/12 rounded-[25px] flex flex-col lg:flex-row p-4">
-        <div className="w-full lg:w-4/12 text-DevDogBlue">
-          <h2 className="font-bold text-xl text-left">Categories</h2>
-          <h3 className="text-lg text-left font-bold">
+      <div className="flex w-8/12 flex-col rounded-[25px] bg-[#F5F5F5] p-4 lg:flex-row">
+        <div className="w-full text-DevDogBlue lg:w-4/12">
+          <h2 className="text-left text-xl font-bold">Categories</h2>
+          <h3 className="text-left text-lg font-bold">
             <a href="/dashboard">Personalization</a>
           </h3>
-          <h3 className="text-lg text-left -mt-4 hover:underline">
+          <h3 className="-mt-4 text-left text-lg hover:underline">
             <a href="/dashboard/security">Login & Security</a>
           </h3>
           <h3
-            className="text-lg text-left -mt-4 font-[600] text-BulldogRed"
+            className="-mt-4 text-left text-lg font-[600] text-BulldogRed"
             onClick={logout}
           >
             Logout
           </h3>
         </div>
         <div className="w-full lg:w-8/12">
-          <ScrollArea className="h-full lg:max-h-[500px] text-DevDogBlue">
-            <h2 className="font-bold text-xl">Personal Information</h2>
-            <div className="flex items-center flex-col lg:flex-row">
-              <div className="h-32 w-32 rounded-full m-3">
+          <ScrollArea className="h-full text-DevDogBlue lg:max-h-[500px]">
+            <h2 className="text-xl font-bold">Personal Information</h2>
+            <div className="flex flex-col items-center lg:flex-row">
+              <div className="m-3 h-32 w-32 rounded-full">
                 <Image
                   src={
                     pfpLink ||
@@ -215,11 +215,11 @@ export const Box = () => {
                 />
                 <FormDrop onUrlChange={handlePfPChange} />
               </div>
-              <div className="flex flex-col w-2/3 mr-6 mt-4">
+              <div className="mr-6 mt-4 flex w-2/3 flex-col">
                 <h3 className="text-left font-semibold">First Name</h3>
                 <input
                   type="text"
-                  className="w-full p-2 rounded-2xl"
+                  className="w-full rounded-2xl p-2"
                   placeholder="FirstName"
                   onChange={(e) => setFirstName(e.target.value)}
                   value={first_name}
@@ -227,7 +227,7 @@ export const Box = () => {
                 <h3 className="text-left font-semibold">Last Name</h3>
                 <input
                   type="text"
-                  className="w-full p-2 rounded-2xl"
+                  className="w-full rounded-2xl p-2"
                   placeholder="LastName"
                   onChange={(e) => setLastName(e.target.value)}
                   value={last_name}
@@ -235,7 +235,7 @@ export const Box = () => {
               </div>
             </div>
             <div className="mt-4 flex flex-col items-center">
-              <div className="flex justify-center m-4 bg-DevDogBlue rounded-full py-2 text-white h-14 w-3/4 lg:w-11/12 align-middle items-center">
+              <div className="m-4 flex h-14 w-3/4 items-center justify-center rounded-full bg-DevDogBlue py-2 align-middle text-white lg:w-11/12">
                 {github ? (
                   <a
                     href={githubLoginUrl}
@@ -247,7 +247,7 @@ export const Box = () => {
                   </a>
                 ) : (
                   <a
-                    className="flex flex-row justify-center align-middle items-center"
+                    className="flex flex-row items-center justify-center align-middle"
                     href={githubLoginUrl}
                     target="_blank"
                     rel="noreferrer"
@@ -262,14 +262,14 @@ export const Box = () => {
                   </a>
                 )}
               </div>
-              <h2 className="font-semibold text-lg text-left">Biography</h2>
+              <h2 className="text-left text-lg font-semibold">Biography</h2>
               <Textarea
                 placeholder="ExistingBio"
-                className="my-3 ml-1 p-2 w-11/12"
+                className="my-3 ml-1 w-11/12 p-2"
                 onChange={(e) => setBio(e.target.value)}
                 value={bio}
               />
-              <div className="flex justify-center gap-4 flex-col lg:flex-row">
+              <div className="flex flex-col justify-center gap-4 lg:flex-row">
                 {/* <div>
                   <button className="bg-[#8A7D7D] w-fit text-white px-4 p-2 rounded-full">
                     Discard Changes
@@ -277,7 +277,7 @@ export const Box = () => {
                 </div> */}
                 <div>
                   <button
-                    className="bg-[#E37C7C] text-white px-2 p-2 rounded-full"
+                    className="rounded-full bg-[#E37C7C] p-2 px-2 text-white"
                     onClick={updateUserInfo}
                   >
                     Save Changes
@@ -285,8 +285,8 @@ export const Box = () => {
                 </div>
               </div>
             </div>
-            <div className="mt-4 flex justify-start flex-col">
-              <h2 className="font-semibold text-lg text-center">
+            <div className="mt-4 flex flex-col justify-start">
+              <h2 className="text-center text-lg font-semibold">
                 Links & Socials
               </h2>
               <h3 className="text-center lg:mx-14">
@@ -295,7 +295,7 @@ export const Box = () => {
               <h3 className="text-left font-semibold">Resume Download Link</h3>
               <input
                 type="text"
-                className="p-2 w-11/12 ml-4 rounded-full"
+                className="ml-4 w-11/12 rounded-full p-2"
                 placeholder="https://your.resume"
                 onChange={(e) => setResumeLink(e.target.value)}
                 value={resumeLink}
@@ -304,7 +304,7 @@ export const Box = () => {
               <h3 className="text-left font-semibold">Linkedln Link</h3>
               <input
                 type="text"
-                className="p-2 w-11/12 ml-4 rounded-full"
+                className="ml-4 w-11/12 rounded-full p-2"
                 placeholder="https://linkedin.com/in/"
                 onChange={(e) => setLinkedinLink(e.target.value)}
                 value={linkedinLink}
@@ -315,7 +315,7 @@ export const Box = () => {
               </h3>
               <input
                 type="text"
-                className="p-2 w-11/12 ml-4 rounded-full"
+                className="ml-4 w-11/12 rounded-full p-2"
                 placeholder="hello@email.com"
                 onChange={(e) => setContactEmail(e.target.value)}
                 value={contactEmail}
@@ -324,7 +324,7 @@ export const Box = () => {
               <h3 className="text-left font-semibold">Github Link</h3>
               <input
                 type="text"
-                className="p-2 w-11/12 ml-4 rounded-full"
+                className="ml-4 w-11/12 rounded-full p-2"
                 placeholder="https://github.com/"
                 onChange={(e) => setGithubLink(e.target.value)}
                 value={githubLink}
@@ -333,7 +333,7 @@ export const Box = () => {
               <h3 className="text-left font-semibold">Instagram Link</h3>
               <input
                 type="text"
-                className="p-2 w-11/12 ml-4 rounded-full"
+                className="ml-4 w-11/12 rounded-full p-2"
                 placeholder="https://instagram.com/"
                 onChange={(e) => setInstagramLink(e.target.value)}
                 value={instagramLink}
@@ -342,21 +342,21 @@ export const Box = () => {
               <h3 className="text-left font-semibold">Personal Website Link</h3>
               <input
                 type="text"
-                className="p-2 w-11/12 ml-4 rounded-full"
+                className="ml-4 w-11/12 rounded-full p-2"
                 placeholder="https://your.website"
                 onChange={(e) => setPersonalLink(e.target.value)}
                 value={personalLink}
               />
             </div>
-            <div className="flex justify-center gap-4 flex-col lg:flex-row mt-4">
+            <div className="mt-4 flex flex-col justify-center gap-4 lg:flex-row">
               <div>
-                <button className="bg-DevDogBlue w-fit text-white px-4 p-2 rounded-full">
+                <button className="w-fit rounded-full bg-DevDogBlue p-2 px-4 text-white">
                   Discard Changes
                 </button>
               </div>
               <div>
                 <button
-                  className="bg-BulldogRed text-white px-2 p-2 rounded-full"
+                  className="rounded-full bg-BulldogRed p-2 px-2 text-white"
                   onClick={updateUserInfo}
                 >
                   Save Changes
