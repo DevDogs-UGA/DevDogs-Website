@@ -11,7 +11,6 @@ import Issues_Points from "../../components/Issues_Points";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-// eslint-disable-next-line react/prop-types
 export default function Page({ params }) {
   const router = useRouter();
 
@@ -33,7 +32,6 @@ export default function Page({ params }) {
   useEffect(() => {
     async function fetchUser() {
       const res = await fetch(
-        // eslint-disable-next-line react/prop-types
         "https://api.devdogs.uga.edu/users/pages?github=" + params.github,
         {
           method: "GET",
@@ -72,7 +70,6 @@ export default function Page({ params }) {
       setPaid((await data.user_page?.userInfo?.user_page?.paid) || false);
 
       if (email == (await data.user_page?.userInfo?.email_address)) {
-        // eslint-disable-next-line react/prop-types
         router.push("/dog/" + params.github + "/editing");
       }
       setLoading(false);

@@ -10,7 +10,6 @@ import {
 import Issues_Points from "@/app/components/Issues_Points";
 import { useEffect, useState } from "react";
 
-// eslint-disable-next-line react/prop-types
 export default function Page({ params }) {
   const [loading, setLoading] = useState(true);
   const [resumeLink, setResumeLink] = useState(null);
@@ -29,7 +28,6 @@ export default function Page({ params }) {
 
   async function fetchUser() {
     const res = await fetch(
-      // eslint-disable-next-line react/prop-types
       "https://api.devdogs.uga.edu/users/pages?github=" + params.github,
       {
         method: "GET",
