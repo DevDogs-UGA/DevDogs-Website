@@ -28,7 +28,7 @@ const EventsPage = () => {
 
   return (
     <div className="section section-event page-main-side-padding">
-      <div className="my-[125px] text-center">
+      <div className="my-[125px] text-center leading-[3rem] sm:leading-[3.5rem]">
         <h2 className="md:[5.5rem] inline text-[3.5rem] font-bold text-GloryGloryRed sm:text-[4.5rem]">
           Meetings{" "}
         </h2>
@@ -43,13 +43,13 @@ const EventsPage = () => {
 
       <div className="flex items-center gap-6 px-4 pb-10">
         <div className="text-left">
-          <h2 className="inline text-[2.5rem] font-bold text-MidnightBlue md:text-[3rem] lg:text-[3.5rem]">
+          <h2 className="inline text-[2.5rem] font-bold leading-[2.8rem] text-MidnightBlue sm:leading-[3.5rem] md:text-[3rem] lg:text-[3.5rem]">
             General Body Meetings (
           </h2>
-          <h2 className="inline text-[2.5rem] font-bold text-BulldogRed md:text-[3rem] lg:text-[3.5rem]">
+          <h2 className="inline text-[2.5rem] font-bold leading-[2.8rem] text-BulldogRed sm:leading-[3.5rem] md:text-[3rem] lg:text-[3.5rem]">
             GBM
           </h2>
-          <h2 className="inline text-[2.5rem] font-bold text-MidnightBlue md:text-[3rem] lg:text-[3.5rem]">
+          <h2 className="inline text-[2.5rem] font-bold leading-[2.8rem] text-MidnightBlue sm:leading-[3.5rem] md:text-[3rem] lg:text-[3.5rem]">
             s)
           </h2>
           <p className="text-[1rem] sm:text-[1.3rem] md:text-[1.5rem]">
@@ -60,10 +60,10 @@ const EventsPage = () => {
           </p>
         </div>
         <div className="text-right">
-          <h2 className="inline text-[2.5rem] font-bold text-BulldogRed md:text-[3rem] lg:text-[3.5rem]">
+          <h2 className="inline text-[2.5rem] font-bold leading-[2.8rem] text-BulldogRed sm:leading-[3.3rem] md:text-[3rem] lg:text-[3.5rem]">
             Dev{" "}
           </h2>
-          <h2 className="inline text-[2.5rem] font-bold text-MidnightBlue md:text-[3rem] lg:text-[3.5rem]">
+          <h2 className="inline text-[2.5rem] font-bold leading-[2.8rem] text-MidnightBlue sm:leading-[3.3rem] md:text-[3rem] lg:text-[3.5rem]">
             Sessions
           </h2>
           <p className="text-[1rem] sm:text-[1.3rem] md:text-[1.5rem]">
@@ -103,20 +103,18 @@ const EventsPage = () => {
         />
       </div>
 
-      <div>
-        <iframe
-          id="iframe-test"
-          src="https://embed.styledcalendar.com/#IvBYsu9dkaqY2qyAP7tR"
-          title="Styled Calendar"
-          className="styled-calendar-container mt-8"
-          data-cy="calendar-embed-iframe"
-        ></iframe>
-        <script
-          async
-          type="module"
-          src="https://embed.styledcalendar.com/assets/parent-window.js"
-        ></script>
-      </div>
+      <iframe
+        id="iframe-test"
+        src="https://embed.styledcalendar.com/#IvBYsu9dkaqY2qyAP7tR"
+        title="Styled Calendar"
+        className="styled-calendar-container mt-8"
+        data-cy="calendar-embed-iframe"
+      ></iframe>
+      <script
+        async
+        type="module"
+        src="https://embed.styledcalendar.com/assets/parent-window.js"
+      ></script>
     </div>
   );
 };
