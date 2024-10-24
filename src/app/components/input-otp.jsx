@@ -7,7 +7,6 @@ import { OTPInput, OTPInputContext } from "input-otp";
 import { cn } from "@/lib/utils";
 
 const InputOTP = React.forwardRef(
-  // eslint-disable-next-line react/prop-types
   ({ className, containerClassName, ...props }, ref) => (
     <OTPInput
       ref={ref}
@@ -22,13 +21,11 @@ const InputOTP = React.forwardRef(
 );
 InputOTP.displayName = "InputOTP";
 
-// eslint-disable-next-line react/prop-types
 const InputOTPGroup = React.forwardRef(({ className, ...props }, ref) => (
   <div ref={ref} className={cn("flex items-center", className)} {...props} />
 ));
 InputOTPGroup.displayName = "InputOTPGroup";
 
-// eslint-disable-next-line react/prop-types
 const InputOTPSlot = React.forwardRef(({ index, className, ...props }, ref) => {
   const inputOTPContext = React.useContext(OTPInputContext);
   const { char, hasFakeCaret, isActive } = inputOTPContext.slots[index];

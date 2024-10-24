@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 
-// eslint-disable-next-line react/prop-types
 const Issues_Points = ({ github }) => {
   const [loading, setLoading] = useState(true);
   const [issues, setIssues] = useState(null);
