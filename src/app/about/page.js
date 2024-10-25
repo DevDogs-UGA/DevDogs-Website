@@ -37,16 +37,16 @@ const AboutPage = () => {
           reverse={true}
         />
 
-        <div className="sm:my-[8rem] text-center sm:text-left flex flex-col md:flex-row flex-nowrap items-center justify-between page-main-side-padding">
+        <div className="page-main-side-padding flex flex-col flex-nowrap items-center justify-between text-center sm:my-[8rem] sm:text-left md:flex-row">
           <div className="basis-1/2">
-            <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-BulldogRed">
+            <h2 className="inline text-[2rem] font-bold text-BulldogRed md:text-[2.5rem] lg:text-[3rem]">
               Who{" "}
             </h2>
-            <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-MidnightBlue">
+            <h2 className="inline text-[2rem] font-bold text-MidnightBlue md:text-[2.5rem] lg:text-[3rem]">
               We Are
             </h2>
 
-            <p className="font-semibold text-[1.1rem] md:text-[1.3rem] lg:text-[1.5rem] text-DevDogBlue">
+            <p className="text-[1.1rem] font-semibold text-DevDogBlue md:text-[1.3rem] lg:text-[1.5rem]">
               DevDogs is a student-run club at UGA dedicated to benefiting our
               community through code. Each year, we work together to develop
               impactful software from concept to completion, learning real-world
@@ -58,20 +58,20 @@ const AboutPage = () => {
           </div>
         </div>
 
-        <div className="sm:my-[8rem] text-center sm:text-left flex flex-col md:flex-row flex-nowrap items-center justify-between page-main-side-padding">
+        <div className="page-main-side-padding flex flex-col flex-nowrap items-center justify-between text-center sm:my-[8rem] sm:text-left md:flex-row">
           <div className="basis-1/2">
-            <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-BulldogRed">
+            <h2 className="inline text-[2rem] font-bold text-BulldogRed md:text-[2.5rem] lg:text-[3rem]">
               Our{" "}
             </h2>
-            <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-MidnightBlue">
+            <h2 className="inline text-[2rem] font-bold text-MidnightBlue md:text-[2.5rem] lg:text-[3rem]">
               Mission
             </h2>
-            <p className="font-semibold text-[1.1rem] md:text-[1.3rem] lg:text-[1.5rem] text-DevDogBlue">
+            <p className="text-[1.1rem] font-semibold text-DevDogBlue md:text-[1.3rem] lg:text-[1.5rem]">
               Above all, we aim to provide a space for passionate students from
               all disciplines to take ownership of meaningful software projects.
             </p>
             <br />
-            <p className="font-semibold text-[1.1rem] md:text-[1.3rem] lg:text-[1.5rem] text-DevDogBlue">
+            <p className="text-[1.1rem] font-semibold text-DevDogBlue md:text-[1.3rem] lg:text-[1.5rem]">
               In the process, we hope to build a network of awesome people,
               refine skills for our career, and learn how to incite change of
               our own, one project at a time.
@@ -88,11 +88,11 @@ const AboutPage = () => {
           </div>
         </div>
 
-        <div className="text-center ">
-          <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-MidnightBlue">
+        <div className="text-center">
+          <h2 className="inline text-[2rem] font-bold text-MidnightBlue md:text-[2.5rem] lg:text-[3rem]">
             Our{" "}
           </h2>
-          <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-BulldogRed">
+          <h2 className="inline text-[2rem] font-bold text-BulldogRed md:text-[2.5rem] lg:text-[3rem]">
             Impact
           </h2>
           <br />
@@ -103,21 +103,21 @@ const AboutPage = () => {
             options={OPTIONS}
           />
         </div>
-        <div className="py-[2rem] page-main-side-padding">
-          <h1 className="font-bold text-center text-[3rem] my-5 text-MidnightBlue">
+        <div className="page-main-side-padding py-[2rem]">
+          <h1 className="my-5 text-center text-[3rem] font-bold text-MidnightBlue">
             More Info
           </h1>
-          <div className="flex items-center flex-nowrap justify-center gap-[2rem] py-4">
+          <div className="flex flex-nowrap items-center justify-center gap-[2rem] py-4">
             <Link
               href="/about/projects"
-              className="text-lg md:text-xl rounded-full font-medium  py-2 px-4 sm:px-6 transition ease-in-out delay-150 bg-DevDogBlue text-white hover:bg-black hover:text-white "
+              className="rounded-full bg-DevDogBlue px-4 py-2 text-lg font-medium text-white transition delay-150 ease-in-out hover:bg-black hover:text-white sm:px-6 md:text-xl"
             >
               <Button>All Projects</Button>
             </Link>
             <Link
               target="_blank"
               href="/about/people"
-              className="text-lg md:text-xl rounded-full font-medium  py-2 px-4 sm:px-6 transition ease-in-out delay-150 text-white bg-[#BA0C2F] hover:bg-black hover:text-white "
+              className="rounded-full bg-[#BA0C2F] px-4 py-2 text-lg font-medium text-white transition delay-150 ease-in-out hover:bg-black hover:text-white sm:px-6 md:text-xl"
             >
               <Button>Our People</Button>
             </Link>

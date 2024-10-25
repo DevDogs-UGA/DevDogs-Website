@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 
-// eslint-disable-next-line react/prop-types
 const Issues_Points = ({ github }) => {
   const [loading, setLoading] = useState(true);
   const [issues, setIssues] = useState(null);
@@ -32,21 +31,21 @@ const Issues_Points = ({ github }) => {
   if (loading) return <div>Loading...</div>;
 
   return (
-    <div className="flex flex-row md:flex-row md:justify-end mt-6">
+    <div className="mt-6 flex flex-row md:flex-row md:justify-end">
       <div className="md:w-1/2 md:items-end">
         {issues &&
           issues.map((issue) => (
             <div
               key={issue.title}
-              className="flex mt-4 md:mt-0 flex-col align-middle my-3 w-full md:items-end text-end"
+              className="my-3 mt-4 flex w-full flex-col text-end align-middle md:mt-0 md:items-end"
             >
-              <div className="text-2xl mr-3 font-bold inline min-w-fit">
+              <div className="mr-3 inline min-w-fit text-2xl font-bold">
                 {issue.title}
               </div>
-              <div className="text-lg mr-3 font-semibold">
+              <div className="mr-3 text-lg font-semibold">
                 {issue.points.toFixed(0) + " Points"}
               </div>
-              <div className="text-lg mr-3">{issue.designation || null}</div>
+              <div className="mr-3 text-lg">{issue.designation || null}</div>
             </div>
           ))}
       </div>

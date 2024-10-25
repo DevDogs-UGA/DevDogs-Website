@@ -119,18 +119,18 @@ const EmblaCarousel = (props) => {
                       <Image
                         src={slide.image}
                         alt={`Slide ${index + 1}`}
-                        className="object-cover rounded-[.75rem] my-10 sm:mb-0 h-[10rem] sm:h-[15rem] md:h-[25rem]"
+                        className="my-10 h-[10rem] rounded-[.75rem] object-cover sm:mb-0 sm:h-[15rem] md:h-[25rem]"
                       />
                     )}
                     {(slide.title || slide.description) && (
-                      <div className="hidden md:block absolute inset-x-0 bottom-[2rem] sm:bottom-0 bg-black/[.65] text-white rounded-b-[.75rem]">
+                      <div className="absolute inset-x-0 bottom-[2rem] hidden rounded-b-[.75rem] bg-black/[.65] text-white sm:bottom-0 md:block">
                         {slide.title && (
-                          <h3 className="text-[1rem] p-1 sm:p-3 sm:text-[1.5rem] font-bold">
+                          <h3 className="p-1 text-[1rem] font-bold sm:p-3 sm:text-[1.5rem]">
                             {slide.title}
                           </h3>
                         )}
                         {slide.description && (
-                          <p className="text-center text-[.5rem] pb-[1rem] px-[1rem] sm:text-[1rem]">
+                          <p className="px-[1rem] pb-[1rem] text-center text-[.5rem] sm:text-[1rem]">
                             {slide.description}
                           </p>
                         )}
@@ -144,18 +144,18 @@ const EmblaCarousel = (props) => {
                     <Image
                       src={slide.image}
                       alt={`Slide ${index + 1}`}
-                      className="object-cover rounded-[.75rem] my-10 sm:mb-0 h-[10rem] sm:h-[15rem] md:h-[25rem]"
+                      className="my-10 h-[10rem] rounded-[.75rem] object-cover sm:mb-0 sm:h-[15rem] md:h-[25rem]"
                     />
                   )}
                   {(slide.title || slide.description) && (
-                    <div className="absolute inset-x-0 bottom-[2rem] sm:bottom-0 bg-black/[.65] text-white rounded-b-[.75rem]">
+                    <div className="absolute inset-x-0 bottom-[2rem] rounded-b-[.75rem] bg-black/[.65] text-white sm:bottom-0">
                       {slide.title && (
-                        <h3 className="hidden md:block text-[1rem] p-1 sm:p-3 sm:text-[1.5rem] font-bold">
+                        <h3 className="hidden p-1 text-[1rem] font-bold sm:p-3 sm:text-[1.5rem] md:block">
                           {slide.title}
                         </h3>
                       )}
                       {slide.description && (
-                        <p className="hidden md:block text-center text-[.6rem] p-3 sm:text-[.8rem]">
+                        <p className="hidden p-3 text-center text-[.6rem] sm:text-[.8rem] md:block">
                           {slide.description}
                         </p>
                       )}

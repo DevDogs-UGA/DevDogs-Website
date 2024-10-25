@@ -54,22 +54,22 @@ const NavBar = () => {
   }, [isDropdownOpen]);
 
   return (
-    <div className="w-full bg-[#31304b] flex flex-col sm:flex-row justify-around items-center text-white font-semibold p-[.8rem]">
-      <div className="sm:hidden md:block sm:w-[300px]">
+    <div className="flex w-full flex-col items-center justify-around bg-[#31304b] p-[.8rem] font-semibold text-white sm:flex-row">
+      <div className="sm:hidden sm:w-[300px] md:block">
         <Link href="/">
           <Image
             src={name2}
             alt="Mascot and DevDogs"
-            className="hidden md:block h-[2.5em] w-auto"
+            className="hidden h-[2.5em] w-auto md:block"
           />
         </Link>
       </div>
-      <div className="sm:hidden w-full flex justify-between items-center px-4">
+      <div className="flex w-full items-center justify-between px-4 sm:hidden">
         <Link href="/">
           <Image
             src={logoOnly}
             alt="Mascot"
-            className="h-[3em] sm:h-[4em] w-auto"
+            className="h-[3em] w-auto sm:h-[4em]"
           />
         </Link>
         <NavBarAvatar />
@@ -88,33 +88,33 @@ const NavBar = () => {
       {isDropdownOpen && (
         <div
           ref={dropdownRef}
-          className="sm:hidden absolute top-[4rem] left-0 w-full bg-[#31304b] flex flex-col items-start px-4 space-y-2 py-4 z-10"
+          className="absolute left-0 top-[4rem] z-10 flex w-full flex-col items-start space-y-2 bg-[#31304b] px-4 py-4 sm:hidden"
         >
           {navLinks.map(({ name, path }) => (
             <Link
               key={name}
               href={path}
-              className={`${getLinkClasses(path)} text-[2rem] text-left bg-opacity-5 rounded-md bg-[#31304b] w-full p-4 transition ease-out delay-100`}
+              className={`${getLinkClasses(path)} w-full rounded-md bg-[#31304b] bg-opacity-5 p-4 text-left text-[2rem] transition delay-100 ease-out`}
             >
               <p>{name}</p>
             </Link>
           ))}
         </div>
       )}
-      <div className="hidden sm:flex flex-nowrap justify-center items-center sm:gap-3">
+      <div className="hidden flex-nowrap items-center justify-center sm:flex sm:gap-3">
         {navLinks.map(({ name, path }) => (
           <Link key={name} href={path} className={getLinkClasses(path)}>
-            <p className="= transition ease-in-out delay-150 text-center p-0 m-0">
+            <p className="= m-0 p-0 text-center transition delay-150 ease-in-out">
               {name}
             </p>
           </Link>
         ))}
       </div>
-      <div className="flex flex-row align-middle items-center sm:visible invisible">
+      <div className="invisible flex flex-row items-center align-middle sm:visible">
         <Link
           target="_blank"
           href="https://discord.com/invite/MuyJ4f5xKE"
-          className="hidden lg:block text-lg md:text-xl rounded-full font-medium p-2 transition ease-in-out delay-50 text-white bg-[#BA0C2F] hover:bg-white hover:text-black"
+          className="delay-50 hidden rounded-full bg-[#BA0C2F] p-2 text-lg font-medium text-white transition ease-in-out hover:bg-white hover:text-black md:text-xl lg:block"
         >
           <Button className="hidden">Join Us</Button>
         </Link>

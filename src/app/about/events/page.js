@@ -1,21 +1,21 @@
 const EventsPage = () => {
   return (
     <div className="section section-event page-main-side-padding">
-      <div className="text-center my-[125px]">
-        <h2 className=" font-bold text-[3.5rem] sm:text-[4.5rem] md:[5.5rem] text-GloryGloryRed inline">
+      <div className="my-[125px] text-center">
+        <h2 className="md:[5.5rem] inline text-[3.5rem] font-bold text-GloryGloryRed sm:text-[4.5rem]">
           Meetings{" "}
         </h2>
-        <h2 className="font-bold text-[3.5rem] sm:text-[4.5rem]  inline text-MidnightBlue">
+        <h2 className="inline text-[3.5rem] font-bold text-MidnightBlue sm:text-[4.5rem]">
           &
         </h2>
-        <h2 className="font-bold text-[3.5rem] sm:text-[4.5rem] text-GloryGloryRed inline">
+        <h2 className="inline text-[3.5rem] font-bold text-GloryGloryRed sm:text-[4.5rem]">
           {" "}
           Events
         </h2>
       </div>
 
       <div className="text-center">
-        <h1 className="font-semibold text-[2.5rem] text-MidnightBlue">
+        <h1 className="text-[2.5rem] font-semibold text-MidnightBlue">
           All students are welcome!
         </h1>
 
@@ -25,9 +25,9 @@ const EventsPage = () => {
         </p>
       </div>
 
-      <h1 className="font-bold text-[2rem] md:[2.5rem] mt-8 text-MidnightBlue">
+      <h1 className="md:[2.5rem] mt-8 text-[2rem] font-bold text-MidnightBlue">
         General Body{" "}
-        <p className="font-bold text-[2rem] md:[2.5rem] inline text-BulldogRed">
+        <p className="md:[2.5rem] inline text-[2rem] font-bold text-BulldogRed">
           Meetings
         </p>
       </h1>
@@ -35,9 +35,9 @@ const EventsPage = () => {
       <p>Monday August 26th, 2024 from 5:30 PM to 6:30PM in MLC 150</p>
       <p>Monday September 9th, 2024 from 5:30 PM to 6:30PM in MLC 150</p>
 
-      <h1 className="font-bold text-[2rem] md:[2.5rem] mt-8 text-MidnightBlue">
+      <h1 className="md:[2.5rem] mt-8 text-[2rem] font-bold text-MidnightBlue">
         Dev{" "}
-        <p className="font-bold text-[2rem] md:[2.5rem] inline text-BulldogRed">
+        <p className="md:[2.5rem] inline text-[2rem] font-bold text-BulldogRed">
           Sessions
         </p>
       </h1>
@@ -47,9 +47,9 @@ const EventsPage = () => {
         <i>*Begins on September 16th, 2024</i>
       </p>
 
-      <h1 className="font-bold text-[2rem] sm:text-[2rem] md:[2.5rem] mt-8 text-MidnightBlue">
+      <h1 className="md:[2.5rem] mt-8 text-[2rem] font-bold text-MidnightBlue sm:text-[2rem]">
         Upcoming{" "}
-        <p className="font-bold text-[2rem] sm:text-[2rem] md:[2.5rem] inline text-BulldogRed">
+        <p className="md:[2.5rem] inline text-[2rem] font-bold text-BulldogRed sm:text-[2rem]">
           Meetings
         </p>
       </h1>
