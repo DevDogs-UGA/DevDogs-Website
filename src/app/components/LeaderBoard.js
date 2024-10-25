@@ -23,7 +23,7 @@ const LeaderBoard = () => {
       {contributors.map((member) => (
         <div
           key={member.githubLogin}
-          className="flex w-full sm:w-1/2 md:w-1/2 lg:w-1/3 mb-4 justify-center"
+          className="mb-4 flex w-full justify-center sm:w-1/2 md:w-1/2 lg:w-1/3"
         >
           <GithubPicture member={member} />
         </div>

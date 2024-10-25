@@ -31,20 +31,20 @@ export default function DirectMessageForm() {
   };
 
   return (
-    <div className="flex flex-col m-0 p-0 w-full">
-      <div className="text-center mt-20 mb-10">
+    <div className="m-0 flex w-full flex-col p-0">
+      <div className="mb-10 mt-20 text-center">
         <p className="inline text-[3rem] font-bold text-BulldogRed">Direct </p>
         <p className="inline text-[3rem] font-bold text-black">Message</p>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="rounded-[2rem] w-full mx-auto px-[1.5rem] sm:px-[2rem] py-[2rem] md:px-[5rem] md:py-[3rem] bg-[#f5f5f5] shadow-md"
+        className="mx-auto w-full rounded-[2rem] bg-[#f5f5f5] px-[1.5rem] py-[2rem] shadow-md sm:px-[2rem] md:px-[5rem] md:py-[3rem]"
       >
         <div className="mb-4">
           <label
             htmlFor="fullname"
-            className="pl-4 block text-xl font-extrabold"
+            className="block pl-4 text-xl font-extrabold"
           >
             Full Name
           </label>
@@ -55,11 +55,11 @@ export default function DirectMessageForm() {
             placeholder="Dev Dawg"
             value={formData.fullname}
             onChange={handleChange}
-            className="font-bold mt-1 block w-full px-4 py-2 rounded-xl outline-none shadow-sm focus:ring-2 focus:ring-BulldogRed"
+            className="mt-1 block w-full rounded-xl px-4 py-2 font-bold shadow-sm outline-none focus:ring-2 focus:ring-BulldogRed"
           />
         </div>
         <div className="mb-4">
-          <label htmlFor="email" className="pl-4 block text-xl font-extrabold">
+          <label htmlFor="email" className="block pl-4 text-xl font-extrabold">
             Email Address{" "}
             <p className="inline text-sm font-medium">(required)</p>
           </label>
@@ -71,13 +71,13 @@ export default function DirectMessageForm() {
             onChange={handleChange}
             placeholder="hello@email.com"
             required
-            className="font-bold mt-1 block w-full px-4 py-2 rounded-xl outline-none shadow-sm focus:ring-2 focus:ring-BulldogRed"
+            className="mt-1 block w-full rounded-xl px-4 py-2 font-bold shadow-sm outline-none focus:ring-2 focus:ring-BulldogRed"
           />
         </div>
         <div className="mb-4">
           <label
             htmlFor="message"
-            className="pl-4 block text-xl font-extrabold"
+            className="block pl-4 text-xl font-extrabold"
           >
             Message <p className="inline text-sm font-medium">(required)</p>
           </label>
@@ -89,13 +89,13 @@ export default function DirectMessageForm() {
             required
             placeholder="Your message here..."
             rows="4"
-            className="font-bold mt-1 block resize-none w-full px-4 py-2 rounded-xl outline-none shadow-sm focus:ring-2 focus:ring-BulldogRed"
+            className="mt-1 block w-full resize-none rounded-xl px-4 py-2 font-bold shadow-sm outline-none focus:ring-2 focus:ring-BulldogRed"
           />
         </div>
         <div className="flex justify-center">
           <button
             type="submit"
-            className="sm:w-[40%] py-2 bg-UGA text-white font-medium text-xl rounded-full hover:bg-black transition ease-in-out duration-150"
+            className="bg-UGA rounded-full py-2 text-xl font-medium text-white transition duration-150 ease-in-out hover:bg-black sm:w-[40%]"
           >
             Submit
           </button>

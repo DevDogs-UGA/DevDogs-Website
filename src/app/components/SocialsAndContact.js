@@ -7,7 +7,7 @@ import Link from "next/link";
 
 export default function SocialsAndContact() {
   return (
-    <div className="text-center sm:text-left flex flex-col md:flex-row md:flex-nowrap gap-4">
+    <div className="flex flex-col gap-4 text-center sm:text-left md:flex-row md:flex-nowrap">
       <div className="md:basis-2/3">
         <p className="font-[600]">
           Whether you’re a student or a sponsor with comments or concerns, reach
@@ -15,7 +15,7 @@ export default function SocialsAndContact() {
         </p>
       </div>
 
-      <div className=" md:basis-1/3 flex items-center justify-center md:justify-end gap-4">
+      <div className="flex items-center justify-center gap-4 md:basis-1/3 md:justify-end">
         <Link
           target="_blank"
           href={

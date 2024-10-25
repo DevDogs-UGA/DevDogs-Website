@@ -28,7 +28,7 @@ export default function GeneralCarousel({
   }, [currentIndex]);
 
   return (
-    <div className="relative w-full mx-auto overflow-hidden">
+    <div className="relative mx-auto w-full overflow-hidden">
       <div
         className="flex w-full transition-transform duration-500 ease-in-out"
         ref={carouselRef}
@@ -36,23 +36,23 @@ export default function GeneralCarousel({
         {slides.map((slide, index) => (
           <div
             key={index}
-            className={`relative flex-shrink-0 w-full flex flex-col items-center text-center ${childrenClassName}`}
+            className={`relative flex w-full flex-shrink-0 flex-col items-center text-center ${childrenClassName}`}
           >
             <Image
               src={slide.image}
               alt={`Slide ${index}`}
               width={1920}
-              className="object-cover rounded-[2rem]"
+              className="rounded-[2rem] object-cover"
             />
             {banner && (
-              <div className="absolute inset-x-0 py-[.25rem] md:py-[1rem] bottom-0 bg-[#3a3a3a]  text-white rounded-b-[2rem]">
+              <div className="absolute inset-x-0 bottom-0 rounded-b-[2rem] bg-[#3a3a3a] py-[.25rem] text-white md:py-[1rem]">
                 {slide.title && (
-                  <h3 className="text-[1rem] sm:text-[1.5rem] md:text-[2rem] lg:text-[3rem] font-bold">
+                  <h3 className="text-[1rem] font-bold sm:text-[1.5rem] md:text-[2rem] lg:text-[3rem]">
                     {slide.title}
                   </h3>
                 )}
                 {slide.description && (
-                  <p className="mb-2 text-[.5rem] sm:text-[.75rem] md:text-[1rem] ">
+                  <p className="mb-2 text-[.5rem] sm:text-[.75rem] md:text-[1rem]">
                     {slide.description}
                   </p>
                 )}

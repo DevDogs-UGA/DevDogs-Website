@@ -71,7 +71,7 @@ export default function FormDrop(props) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" className="w-full mt-1">
+        <Button variant="outline" className="mt-1 w-full">
           Change Picture
         </Button>
       </AlertDialogTrigger>
@@ -83,7 +83,7 @@ export default function FormDrop(props) {
               File size should not exceed 4.5MB
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col justify-center space-y-4 w-full">
+          <CardContent className="flex w-full flex-col justify-center space-y-4">
             <div className="flex justify-center">
               <Input
                 id="file"

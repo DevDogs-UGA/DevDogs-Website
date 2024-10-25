@@ -17,19 +17,19 @@ export default function PageSubtitleTemplate({
     <div className={`${className}`}>
       {reverse ? (
         <>
-          <h2 className="font-[600] inline text-[2rem] md:text-[3rem] lg:text-[3.5rem] text-MidnightBlue">
+          <h2 className="inline text-[2rem] font-[600] text-MidnightBlue md:text-[3rem] lg:text-[3.5rem]">
             {blackText}
           </h2>
-          <h2 className="font-[600] inline text-[2rem] md:text-[3rem] lg:text-[3.5rem] text-BulldogRed">
+          <h2 className="inline text-[2rem] font-[600] text-BulldogRed md:text-[3rem] lg:text-[3.5rem]">
             {redText}
           </h2>
         </>
       ) : (
         <>
-          <h2 className="font-[600] inline text-[2rem] md:text-[3rem] lg:text-[3.5rem] text-BulldogRed">
+          <h2 className="inline text-[2rem] font-[600] text-BulldogRed md:text-[3rem] lg:text-[3.5rem]">
             {redText}
           </h2>
-          <h2 className="font-[600] inline text-[2rem] md:text-[3rem] lg:text-[3.5rem] text-MidnightBlue">
+          <h2 className="inline text-[2rem] font-[600] text-MidnightBlue md:text-[3rem] lg:text-[3.5rem]">
             {blackText}
           </h2>
         </>
