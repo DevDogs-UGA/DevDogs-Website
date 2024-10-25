@@ -41,7 +41,7 @@ const EventsPage = () => {
         </h2>
       </div>
 
-      <div className="flex flex-col md:flex-row text-center items-center gap-6 px-4 pb-10">
+      <div className="flex flex-col items-center gap-6 px-4 pb-10 text-center md:flex-row">
         <div className="md:text-left">
           <h2 className="inline text-[2.5rem] font-bold leading-[2.8rem] text-MidnightBlue sm:leading-[3.5rem] md:text-[3rem] lg:text-[3.5rem]">
             General Body Meetings (
@@ -81,7 +81,7 @@ const EventsPage = () => {
         <Link
           href="tps://discord.com/invite/MuyJ4f5xKE"
           target="_blank"
-          className=" text-black underline transition duration-200 ease-in-out hover:text-[#9656CE]"
+          className="text-black underline transition duration-200 ease-in-out hover:text-[#9656CE]"
         >
           Discord
         </Link>{" "}
