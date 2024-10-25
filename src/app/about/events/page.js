@@ -41,8 +41,8 @@ const EventsPage = () => {
         </h2>
       </div>
 
-      <div className="flex items-center gap-6 px-4 pb-10">
-        <div className="text-left">
+      <div className="flex flex-col md:flex-row text-center items-center gap-6 px-4 pb-10">
+        <div className="md:text-left">
           <h2 className="inline text-[2.5rem] font-bold leading-[2.8rem] text-MidnightBlue sm:leading-[3.5rem] md:text-[3rem] lg:text-[3.5rem]">
             General Body Meetings (
           </h2>
@@ -59,7 +59,7 @@ const EventsPage = () => {
             required.
           </p>
         </div>
-        <div className="text-right">
+        <div className="md:text-right">
           <h2 className="inline text-[2.5rem] font-bold leading-[2.8rem] text-BulldogRed sm:leading-[3.3rem] md:text-[3rem] lg:text-[3.5rem]">
             Dev{" "}
           </h2>
@@ -81,7 +81,7 @@ const EventsPage = () => {
         <Link
           href="tps://discord.com/invite/MuyJ4f5xKE"
           target="_blank"
-          className="font-bold text-[#9656CE] transition duration-200 ease-in-out hover:text-[#5b209a]"
+          className=" text-black underline transition duration-200 ease-in-out hover:text-[#9656CE]"
         >
           Discord
         </Link>{" "}
@@ -89,12 +89,12 @@ const EventsPage = () => {
       </p>
 
       <div className="py-10 text-center">
-        <h2 className="inline text-[2.5rem] font-bold text-BulldogRed md:text-[3rem] lg:text-[3.5rem]">
+        {/* <h2 className="inline text-[2.5rem] font-bold text-BulldogRed md:text-[3rem] lg:text-[3.5rem]">
           Special{" "}
         </h2>
         <h2 className="inline text-[2.5rem] font-bold text-MidnightBlue md:text-[3rem] lg:text-[3.5rem]">
           Events
-        </h2>
+        </h2> */}
 
         <EmblaCarousel
           slides={imagesForCarousel}
