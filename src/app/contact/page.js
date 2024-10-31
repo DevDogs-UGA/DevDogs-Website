@@ -4,7 +4,7 @@ import SocialsAndContact from "../components/SocialsAndContact";
 
 const Page = () => {
   return (
-    <div className="w-full section page-main-side-padding">
+    <div className="section page-main-side-padding w-full">
       <PageTitleTemplate redText={"Contact "} blackText={"Us"} />
       <SocialsAndContact />
       <DirectMessageForm />

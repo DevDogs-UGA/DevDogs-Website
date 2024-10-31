@@ -8,11 +8,11 @@ import githubIcon from "../images/github.svg";
 export default function Footer() {
   return (
     <div className="footer pt-[10rem]">
-      <div className="flex flex-row items-start sm:items-center justify-around px-10 my-16">
-        <p className="mr-auto font-bold text-[1rem] sm:text-lg text-left">
+      <div className="my-16 flex flex-row items-start justify-around px-10 sm:items-center">
+        <p className="mr-auto text-left text-[1rem] font-bold sm:text-lg">
           &copy; {new Date().getFullYear()} DevDogs at the University of Georgia
         </p>
-        <div className="flex flex-row flex-wrap sm:flex-nowrap items-center justify-center">
+        <div className="flex flex-row flex-wrap items-center justify-center sm:flex-nowrap">
           <p className="block text-[1rem] sm:text-lg">Follow us for more: </p>
           <Link
             target="_blank"

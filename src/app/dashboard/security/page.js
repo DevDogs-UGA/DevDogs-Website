@@ -35,36 +35,36 @@ const Settings = () => {
   };
 
   return (
-    <div className="text-center w-full section page-main-side-padding flex flex-col items-center">
+    <div className="section page-main-side-padding flex w-full flex-col items-center text-center">
       <PageTitleTemplate
         blackText={"User "}
         redText={"Settings"}
         reverse={true}
       />
-      <div className="bg-[#F5F5F5] w-8/12 rounded-[25px] flex flex-col lg:flex-row p-4">
-        <div className="w-full lg:w-4/12 text-DevDogBlue">
-          <h2 className="font-bold text-xl text-left">Categories</h2>
-          <h3 className="text-lg text-left hover:underline">
+      <div className="flex w-8/12 flex-col rounded-[25px] bg-[#F5F5F5] p-4 lg:flex-row">
+        <div className="w-full text-DevDogBlue lg:w-4/12">
+          <h2 className="text-left text-xl font-bold">Categories</h2>
+          <h3 className="text-left text-lg hover:underline">
             <a href="/dashboard">Personalization</a>
           </h3>
-          <h3 className="text-lg text-left -mt-4 font-bold">
+          <h3 className="-mt-4 text-left text-lg font-bold">
             <a href="/dashboard/security">Login & Security</a>
           </h3>
         </div>
         <div className="w-full lg:w-8/12">
-          <h2 className="font-bold text-xl text-center">Account Credentials</h2>
+          <h2 className="text-center text-xl font-bold">Account Credentials</h2>
           <h3 className="text-left font-semibold">Password</h3>
           <input
             type="password"
-            className="p-2 w-11/12 rounded-full"
+            className="w-11/12 rounded-full p-2"
             placeholder="P@55w0rd"
             onChange={(e) => setPassword(e.target.value)}
             value={password}
           />
-          <div className="flex justify-center gap-4 flex-col lg:flex-row mt-4">
+          <div className="mt-4 flex flex-col justify-center gap-4 lg:flex-row">
             <div>
               <button
-                className="bg-[#E37C7C] text-white px-2 p-2 rounded-full"
+                className="rounded-full bg-[#E37C7C] p-2 px-2 text-white"
                 onClick={changePassword}
               >
                 Save Changes

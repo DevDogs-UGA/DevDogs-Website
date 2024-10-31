@@ -1,7 +1,7 @@
 const AcademyPage = () => {
   return (
-    <div className="section flex flex-col h-[75vh]">
-      <h3 className=" my-[35%] text-[5rem] page-main-side-padding">
+    <div className="section flex h-[75vh] flex-col">
+      <h3 className="page-main-side-padding my-[35%] text-[5rem]">
         COMING SOON!
       </h3>
     </div>

@@ -62,16 +62,16 @@ export default function page() {
     },
   ];
   return (
-    <div className="w-full section ">
+    <div className="section w-full">
       <PageTitleTemplate
         redText="Partners"
         blackText="Campus "
         reverse="true"
       />
-      <p className="text-center font-bold text-[1.8rem]">
+      <p className="text-center text-[1.8rem] font-bold">
         DevDogs is proud to be affiliated with
       </p>
-      <div className="w-full flex flex-col items-center flex-nowrap justify-center page-main-side-padding mt-[2rem]">
+      <div className="page-main-side-padding mt-[2rem] flex w-full flex-col flex-nowrap items-center justify-center">
         <Link
           href="https://gdg.community.dev/gdg-on-campus-university-of-georgia-athens-united-states/"
           target="_blank"
@@ -79,19 +79,19 @@ export default function page() {
           <Image
             src={GDC}
             alt="Google Developer Group"
-            className="w-full max-w-[400px] sm:max-w-[500px] md:max-w-[800px] object-contain"
+            className="w-full max-w-[400px] object-contain sm:max-w-[500px] md:max-w-[800px]"
           />
         </Link>
-        <p className="text-center text-[1rem] sm:text-[1.5rem] page-main-side-padding mt-[2rem]">
+        <p className="page-main-side-padding mt-[2rem] text-center text-[1rem] sm:text-[1.5rem]">
           DevDogs co-hosts its meetings with Google Developer Groups on Campus:
           UGA, providing Google recognition to contributors, merchandise, and a
           network of incredible people just like you.
         </p>
       </div>
 
-      <div className="text-center text-[2rem] sm:text-[2.5rem] mt-[6rem]">
-        <h2 className="font-[700] inline  text-BulldogRed">Campus </h2>
-        <h2 className="font-[700] inline text-MidnightBlue">Affiliates</h2>
+      <div className="mt-[6rem] text-center text-[2rem] sm:text-[2.5rem]">
+        <h2 className="inline font-[700] text-BulldogRed">Campus </h2>
+        <h2 className="inline font-[700] text-MidnightBlue">Affiliates</h2>
       </div>
       <EmblaCarousel
         slides={imagesForCarousel}
@@ -99,60 +99,60 @@ export default function page() {
         options={OPTIONS}
       />
 
-      <div className=" flex flex-wrap gap-[2rem] items-center justify-center w-full page-main-side-padding pt-[8rem]">
+      <div className="page-main-side-padding flex w-full flex-wrap items-center justify-center gap-[2rem] pt-[8rem]">
         <Link
           target="_blank"
           href="https://ktpgeorgia.com/"
-          className="w-full max-w-[150px] md::max-w-[200px]  object-contain"
+          className="md::max-w-[200px] w-full max-w-[150px] object-contain"
         >
           <Image
             src={KTP}
             alt="KTP org"
-            className="w-full max-w-[150px] md::max-w-[200px] object-contain"
+            className="md::max-w-[200px] w-full max-w-[150px] object-contain"
           />
         </Link>
         <Link
           target="_blank"
           href="https://uga.campuslabs.com/engage/organization/csci"
-          className="w-full max-w-[150px] md:max-w-[200px]  object-contain"
+          className="w-full max-w-[150px] object-contain md:max-w-[200px]"
         >
           <Image
             src={CSCI}
             alt="CSCI epsilion"
-            className="w-full max-w-[150px] md:max-w-[200px]  object-contain"
+            className="w-full max-w-[150px] object-contain md:max-w-[200px]"
           />
         </Link>
         <Link
           target="_blank"
           href="https://acm-uga.github.io/"
-          className="w-full max-w-[150px] md:max-w-[200px]  object-contain"
+          className="w-full max-w-[150px] object-contain md:max-w-[200px]"
         >
           <Image
             src={ACM}
             alt="ACM at UGA"
-            className="w-full max-w-[150px] md:max-w-[200px]  object-contain"
+            className="w-full max-w-[150px] object-contain md:max-w-[200px]"
           />
         </Link>
         <Link
           target="_blank"
           href="https://www.soeuga.com/"
-          className="w-full max-w-[150px] md:max-w-[200px]  object-contain"
+          className="w-full max-w-[150px] object-contain md:max-w-[200px]"
         >
           <Image
             src={SOE}
             alt="SOE"
-            className="w-full max-w-[150px] md:max-w-[200px] object-contain"
+            className="w-full max-w-[150px] object-contain md:max-w-[200px]"
           />
         </Link>
         <Link
           target="_blank"
           href="https://ugahacks.com/"
-          className="w-full max-w-[150px] md:max-w-[200px]  object-contain"
+          className="w-full max-w-[150px] object-contain md:max-w-[200px]"
         >
           <Image
             src={Byte}
             alt="Byte Mascot"
-            className="w-full max-w-[150px] md:max-w-[200px] object-contain"
+            className="w-full max-w-[150px] object-contain md:max-w-[200px]"
           />
         </Link>
       </div>

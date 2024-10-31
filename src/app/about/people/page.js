@@ -27,11 +27,11 @@ const OurTeam = () => {
   ];
   return (
     <div className="section flex flex-col">
-      <div className="text-center my-[2rem]">
-        <h1 className="font-bold text-[3.5rem] sm:text-[4.5rem] inline text-MidnightBlue">
+      <div className="my-[2rem] text-center">
+        <h1 className="inline text-[3.5rem] font-bold text-MidnightBlue sm:text-[4.5rem]">
           Our{" "}
         </h1>
-        <h1 className="text-GloryGloryRed font-bold text-[3.5rem] sm:text-[4.5rem] inline">
+        <h1 className="inline text-[3.5rem] font-bold text-GloryGloryRed sm:text-[4.5rem]">
           People
         </h1>
       </div>
@@ -41,7 +41,7 @@ const OurTeam = () => {
         options={OPTIONS}
       />
 
-      <p className="text-center pt-10 page-main-side-padding font-semibold text-[1.1rem] md:text-[1.3rem] lg:text-[1.5rem]">
+      <p className="page-main-side-padding pt-10 text-center text-[1.1rem] font-semibold md:text-[1.3rem] lg:text-[1.5rem]">
         DevDogs is proud to consist of over 350 UGA students from all tech
         disciplines and backgrounds. We firmly believe that different
         perspectives breed the best solutions--and we think our work shows! Take
@@ -49,16 +49,16 @@ const OurTeam = () => {
         below.
       </p>
 
-      <div className="text-center page-main-side-padding">
-        <h3 className="text-black text-[2rem] sm:text-[3rem]  text-center mt-[5rem] p-0 font-extrabold">
+      <div className="page-main-side-padding text-center">
+        <h3 className="mt-[5rem] p-0 text-center text-[2rem] font-extrabold text-black sm:text-[3rem]">
           {" "}
           2024 - 2025{" "}
         </h3>
 
-        <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-BulldogRed">
+        <h2 className="inline text-[2rem] font-bold text-BulldogRed md:text-[2.5rem] lg:text-[3rem]">
           Executive{" "}
         </h2>
-        <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-MidnightBlue">
+        <h2 className="inline text-[2rem] font-bold text-MidnightBlue md:text-[2.5rem] lg:text-[3rem]">
           Board
         </h2>
       </div>
@@ -105,8 +105,8 @@ const OurTeam = () => {
         </div>
       </div>
 
-      <div className="text-center page-main-side-padding">
-        <h2 className="font-bold inline text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-">
+      <div className="page-main-side-padding text-center">
+        <h2 className="text- inline text-[2rem] font-bold md:text-[2.5rem] lg:text-[3rem]">
           Contributors
         </h2>
 

@@ -10,7 +10,6 @@ import {
 import Issues_Points from "@/app/components/Issues_Points";
 import { useEffect, useState } from "react";
 
-// eslint-disable-next-line react/prop-types
 export default function Page({ params }) {
   const [loading, setLoading] = useState(true);
   const [resumeLink, setResumeLink] = useState(null);
@@ -29,7 +28,6 @@ export default function Page({ params }) {
 
   async function fetchUser() {
     const res = await fetch(
-      // eslint-disable-next-line react/prop-types
       "https://api.devdogs.uga.edu/users/pages?github=" + params.github,
       {
         method: "GET",
@@ -100,14 +98,14 @@ export default function Page({ params }) {
 
   if (!isAuthenticated) {
     return (
-      <h2 className="text-4xl text-center mt-10">You are not authenticated</h2>
+      <h2 className="mt-10 text-center text-4xl">You are not authenticated</h2>
     );
   }
 
   if (!paid) {
     return (
       <div>
-        <h1 className="text-4xl text-center mt-10">User Page not Found</h1>
+        <h1 className="mt-10 text-center text-4xl">User Page not Found</h1>
       </div>
     );
   }
@@ -115,35 +113,35 @@ export default function Page({ params }) {
   return (
     <div className="section flex flex-col px-20">
       {}
-      <div className="text-center my-[2rem]">
-        <h1 className="font-bold text-[3.5rem] sm:text-[4.5rem] inline text-MidnightBlue">
+      <div className="my-[2rem] text-center">
+        <h1 className="inline text-[3.5rem] font-bold text-MidnightBlue sm:text-[4.5rem]">
           {first_name + " "}
         </h1>
-        <h1 className="text-GloryGloryRed font-bold text-[3.5rem] sm:text-[4.5rem] inline">
+        <h1 className="inline text-[3.5rem] font-bold text-GloryGloryRed sm:text-[4.5rem]">
           {last_name}
         </h1>
       </div>
 
-      <div className="flex flex-col md:flex-row items-center">
-        <div className="md:flex-col flex-row sm:w-1/2">
+      <div className="flex flex-col items-center md:flex-row">
+        <div className="flex-row sm:w-1/2 md:flex-col">
           <h3 className="text-left">
             Edit your info in{" "}
-            <a href="/dashboard" className="hover:underline text-[#00A3AD]">
+            <a href="/dashboard" className="text-[#00A3AD] hover:underline">
               Dashboard
             </a>
             . Only you can see this message.
           </h3>
-          <div className="text-5xl font-extrabold text-DevDogBlue m-2">
+          <div className="m-2 text-5xl font-extrabold text-DevDogBlue">
             Biography
           </div>
 
-          <div className="text-xl m-2">{bio}</div>
+          <div className="m-2 text-xl">{bio}</div>
         </div>
 
-        <div className="w-1/2 flex justify-center md:justify-end flex-col">
-          <div className="officer-card m-5 flex bg-[#E4BBBB] p-3 rounded-3xl flex-col self-center md:self-end">
+        <div className="flex w-1/2 flex-col justify-center md:justify-end">
+          <div className="officer-card m-5 flex flex-col self-center rounded-3xl bg-[#E4BBBB] p-3 md:self-end">
             <img
-              className="rounded-2xl  max-h-[400px] max-w-[350px] min-h-[200px] min-w-[200px] self-center"
+              className="max-h-[400px] min-h-[200px] min-w-[200px] max-w-[350px] self-center rounded-2xl"
               src={
                 pfpLink ||
                 "https://github.com/" + github + ".png" ||
@@ -155,7 +153,7 @@ export default function Page({ params }) {
       </div>
 
       <div className="w-full">
-        <div className="flex flex-row justify-center gap-5 md:justify-start align-middle md:ml-3 md:mt-3">
+        <div className="flex flex-row justify-center gap-5 align-middle md:ml-3 md:mt-3 md:justify-start">
           {linkedinLink ? (
             <a href={linkedinLink} target="_blank" rel="noreferrer">
               <LinkedInLogoIcon className="h-10 w-10" />
@@ -192,7 +190,7 @@ export default function Page({ params }) {
               href={resumeLink}
               target="_blank"
               rel="noreferrer"
-              className="bg-BulldogRed mt-4 md:w-1/3 w-full self-center rounded-full text-white text-sm p-2 text-center"
+              className="mt-4 w-full self-center rounded-full bg-BulldogRed p-2 text-center text-sm text-white md:w-1/3"
             >
               View Resume
             </a>

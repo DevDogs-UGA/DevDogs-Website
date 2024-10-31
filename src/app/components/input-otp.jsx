@@ -7,7 +7,6 @@ import { OTPInput, OTPInputContext } from "input-otp";
 import { cn } from "@/lib/utils";
 
 const InputOTP = React.forwardRef(
-  // eslint-disable-next-line react/prop-types
   ({ className, containerClassName, ...props }, ref) => (
     <OTPInput
       ref={ref}
@@ -22,13 +21,11 @@ const InputOTP = React.forwardRef(
 );
 InputOTP.displayName = "InputOTP";
 
-// eslint-disable-next-line react/prop-types
 const InputOTPGroup = React.forwardRef(({ className, ...props }, ref) => (
   <div ref={ref} className={cn("flex items-center", className)} {...props} />
 ));
 InputOTPGroup.displayName = "InputOTPGroup";
 
-// eslint-disable-next-line react/prop-types
 const InputOTPSlot = React.forwardRef(({ index, className, ...props }, ref) => {
   const inputOTPContext = React.useContext(OTPInputContext);
   const { char, hasFakeCaret, isActive } = inputOTPContext.slots[index];
@@ -46,7 +43,7 @@ const InputOTPSlot = React.forwardRef(({ index, className, ...props }, ref) => {
       {char}
       {hasFakeCaret && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="h-4 w-px animate-caret-blink bg-neutral-950 duration-1000 dark:bg-neutral-50" />
+          <div className="animate-caret-blink h-4 w-px bg-neutral-950 duration-1000 dark:bg-neutral-50" />
         </div>
       )}
     </div>
