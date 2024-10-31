@@ -75,9 +75,9 @@ const NavBar = () => {
   }, [isDropdownOpen]);
 
   return (
-    <div className="w-full bg-[#31304b] flex flex-col sm:flex-row justify-around items-center text-white font-semibold p-[.8rem]">
+    <div className="flex w-full flex-col items-center justify-around bg-[#31304b] p-[.8rem] font-semibold text-white sm:flex-row">
       {/* Logo */}
-      <div className="sm:hidden lg:block sm:w-[300px]">
+      <div className="sm:hidden sm:w-[300px] lg:block">
         <Link href="/">
           <Image
             src={name2}
@@ -87,9 +87,8 @@ const NavBar = () => {
         </Link>
       </div>
 
-
       {/* Mobile Hamburger Menu */}
-      <div className="sm:hidden w-full flex justify-between items-center px-4">
+      <div className="flex w-full items-center justify-between px-4 sm:hidden">
         <Link href="/">
           <Image
             src={logoOnly}
@@ -115,23 +114,23 @@ const NavBar = () => {
       {isDropdownOpen === "mobile" && (
         <div
           ref={dropdownRef}
-          className="sm:hidden absolute top-[4rem] left-0 w-full bg-[#31304b] flex flex-col items-start px-4 py-4 z-10"
+          className="absolute left-0 top-[4rem] z-10 flex w-full flex-col items-start bg-[#31304b] px-4 py-4 sm:hidden"
         >
           {navLinks.map((link) => (
             <div key={link.name} className="w-full">
               {link.isDropdown ? (
                 <div className="w-full">
                   {/* Parent link */}
-                  <div className="text-2xl cursor-pointer w-full text-left">
+                  <div className="w-full cursor-pointer text-left text-2xl">
                     {link.name}
                   </div>
                   {/* Always show child links */}
-                  <div className="pl-4 mt-2">
+                  <div className="mt-2 pl-4">
                     {link.children.map((child) => (
                       <Link
                         key={child.name}
                         href={child.path}
-                        className="block text-lg py-1 pl-4 text-gray-400"
+                        className="block py-1 pl-4 text-lg text-gray-400"
                       >
                         {child.name}
                       </Link>
@@ -141,7 +140,7 @@ const NavBar = () => {
               ) : (
                 <Link
                   href={link.path}
-                  className="text-2xl w-full text-left py-2"
+                  className="w-full py-2 text-left text-2xl"
                 >
                   {link.name}
                 </Link>
@@ -152,15 +151,15 @@ const NavBar = () => {
       )}
 
       {/* Desktop Navbar */}
-      <div className="hidden sm:flex flex-nowrap justify-center items-center sm:gap-4">
+      <div className="hidden flex-nowrap items-center justify-center sm:flex sm:gap-4">
         {navLinks.map((link) => (
           <div key={link.name} className="relative">
             {link.isDropdown ? (
               <div
                 onClick={() => toggleDropdown(link.name)}
-                className={`text-2xl px-3 cursor-pointer ${
+                className={`cursor-pointer px-3 text-2xl ${
                   isParentActive(link.children)
-                    ? "text-white font-bold"
+                    ? "font-bold text-white"
                     : "text-gray-400 hover:text-white"
                 }`}
               >
@@ -175,7 +174,7 @@ const NavBar = () => {
             {isDropdownOpen === link.name && (
               <div
                 ref={dropdownRef}
-                className="absolute bg-[#31304b] mt-2 py-2"
+                className="absolute mt-2 bg-[#31304b] py-2"
               >
                 {link.children.map((child) => (
                   <Link
@@ -193,11 +192,11 @@ const NavBar = () => {
       </div>
 
       {/* Join Us and Avatar */}
-      <div className="flex flex-row align-middle items-center sm:visible invisible">
+      <div className="invisible flex flex-row items-center align-middle sm:visible">
         <Link
           target="_blank"
           href="https://discord.com/invite/MuyJ4f5xKE"
-          className="hidden lg:block text-lg rounded-full p-2 transition ease-in-out delay-50 text-white bg-[#BA0C2F] hover:bg-white hover:text-black"
+          className="delay-50 hidden rounded-full bg-[#BA0C2F] p-2 text-lg text-white transition ease-in-out hover:bg-white hover:text-black lg:block"
         >
           <Button>Join Us</Button>
         </Link>
