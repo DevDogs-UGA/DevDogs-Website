@@ -19,7 +19,7 @@ export default [
       }
     },
     rules: {
-      // NOTE: Remove the rules in the future and fix all warnings
+// NOTE: Remove the rules in the future and fix all warnings
       "react/prop-types": 0,
       "no-unused-vars": 0
   }
