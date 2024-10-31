@@ -144,6 +144,8 @@ const EmblaCarousel = (props) => {
                     <Image
                       src={slide.image}
                       alt={`Slide ${index + 1}`}
+                      width={600}
+                      height={500}
                       className="my-10 h-[10rem] rounded-[.75rem] object-cover sm:mb-0 sm:h-[15rem] md:h-[25rem]"
                     />
                   )}

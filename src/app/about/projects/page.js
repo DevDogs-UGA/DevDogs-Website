@@ -97,7 +97,7 @@ const Page = () => {
 
       <Link
         href="https://github.com/DevDogs-UGA/Optimal-Schedule-Builder"
-        className="container mx-auto my-[75px] block max-w-[17rem] rounded-full bg-BulldogRed py-3 font-semibold text-white transition duration-300 ease-in-out hover:bg-black hover:text-white"
+        className="red container mx-auto my-[75px] block max-w-[17rem] rounded-full py-3 font-semibold text-white transition duration-300 ease-in-out"
       >
         <Button className="">View</Button>
       </Link>
