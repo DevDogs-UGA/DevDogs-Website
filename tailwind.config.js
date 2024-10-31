@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 
 const plugin = require("tailwindcss/plugin");
+
 const CustomStyle = plugin(function ({ addUtilities }) {
   addUtilities({
     ".rotate-y-180": {
@@ -24,12 +25,24 @@ module.exports = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
-
-    // Or if using `src` directory:
-    "./src/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/**/*.{js,ts,jsx,tsx,mdx}", // For src directory support
   ],
   theme: {
     extend: {
+      keyframes: {
+        fadeInOut: {
+          "0%, 100%": { opacity: 0 },
+          "20%, 50%, 80%": { opacity: 1 },
+          
+        },
+        "caret-blink": {
+          "0%, 70%, 100%": { opacity: "1" },
+          "20%, 50%": { opacity: "0" },
+        },
+      },
+      animation: {
+        fadeInOut: "fadeInOut 10s ease-out infinite",
+      },
       colors: {
         BulldogRed: "#ba0c2f",
         DevDogBlue: "#33334d",
@@ -54,12 +67,6 @@ module.exports = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
-      },
-      keyframes: {
-        "caret-blink": {
-          "0%,70%,100%": { opacity: "1" },
-          "20%,50%": { opacity: "0" },
-        },
       },
     },
   },

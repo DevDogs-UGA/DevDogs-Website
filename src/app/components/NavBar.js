@@ -82,10 +82,11 @@ const NavBar = () => {
           <Image
             src={name2}
             alt="Mascot and DevDogs"
-            className="hidden md:block h-[2.5em] w-auto"
+            className="hidden h-[2.5em] w-auto md:block"
           />
         </Link>
       </div>
+
 
       {/* Mobile Hamburger Menu */}
       <div className="sm:hidden w-full flex justify-between items-center px-4">
@@ -93,7 +94,7 @@ const NavBar = () => {
           <Image
             src={logoOnly}
             alt="Mascot"
-            className="h-[3em] sm:h-[4em] w-auto"
+            className="h-[3em] w-auto sm:h-[4em]"
           />
         </Link>
         <NavBarAvatar />

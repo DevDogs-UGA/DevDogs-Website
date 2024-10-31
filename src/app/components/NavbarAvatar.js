@@ -114,7 +114,7 @@ export default function NavBarAvatar() {
                   : null}{" "}
               </p>
               {user?.user_page?.userInfo?.email_address ? (
-                <p className="text-xs leading-none text-muted-foreground">
+                <p className="text-muted-foreground text-xs leading-none">
                   {user.user_page.userInfo.email_address}
                 </p>
               ) : null}

@@ -14,22 +14,22 @@ export default function PageTitleTemplate({
   reverse = false,
 }) {
   return (
-    <div className={`text-center my-[4rem] ${className}`}>
+    <div className={`my-[4rem] text-center ${className}`}>
       {reverse ? (
         <>
-          <h2 className="font-bold inline text-[2.5rem] md:text-[3.5rem] lg:text-[4rem] text-MidnightBlue">
+          <h2 className="inline text-[2.5rem] font-bold text-MidnightBlue md:text-[3.5rem] lg:text-[4rem]">
             {blackText}
           </h2>
-          <h2 className="font-bold inline text-[2.5rem] md:text-[3.5rem] lg:text-[4rem] text-GloryGloryRed">
+          <h2 className="inline text-[2.5rem] font-bold text-GloryGloryRed md:text-[3.5rem] lg:text-[4rem]">
             {redText}
           </h2>
         </>
       ) : (
         <>
-          <h2 className="font-bold inline text-[2.5rem] md:text-[3.5rem] lg:text-[4rem] text-GloryGloryRed">
+          <h2 className="inline text-[2.5rem] font-bold text-GloryGloryRed md:text-[3.5rem] lg:text-[4rem]">
             {redText}
           </h2>
-          <h2 className="font-bold inline text-[2.5rem] md:text-[3.5rem] lg:text-[4rem] text-MidnightBlue">
+          <h2 className="inline text-[2.5rem] font-bold text-MidnightBlue md:text-[3.5rem] lg:text-[4rem]">
             {blackText}
           </h2>
         </>
