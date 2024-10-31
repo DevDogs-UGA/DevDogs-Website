@@ -11,17 +11,17 @@ import RolesHome from "./components/RolesHome";
 const Home = () => {
   return (
     <section id="base-background">
-      <div className="section section-home page-main-side-padding ">
-        <div className="flex flex-wrap items-center justify-center my-[2rem]">
+      <div className="section section-home page-main-side-padding">
+        <div className="my-[2rem] flex flex-wrap items-center justify-center">
           <div className="md:flex-2 text-center sm:text-left">
-            <h2 className="font-semibold text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-MidnightBlue leading-10">
+            <h2 className="text-[2rem] font-semibold leading-10 text-MidnightBlue md:text-[2.5rem] lg:text-[3rem]">
               Hey UGA!
             </h2>
 
-            <h1 className="inline font-bold text-[2rem] sm:text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] text-MidnightBlue">
+            <h1 className="inline text-[2rem] font-bold text-MidnightBlue sm:text-[3.5rem] md:text-[4rem] lg:text-[4.5rem]">
               We&#39;re{" "}
             </h1>
-            <h1 className="inline font-bold text-GloryGloryRed text-[2rem] sm:text-[3.5rem] md:text-[4rem] lg:text-[4.5rem] ">
+            <h1 className="inline text-[2rem] font-bold text-GloryGloryRed sm:text-[3.5rem] md:text-[4rem] lg:text-[4.5rem]">
               DevDogs,
             </h1>
           </div>
@@ -36,19 +36,19 @@ const Home = () => {
           </div>
         </div>
 
-        <div className="flex sm:flex-row-reverse flex-wrap items-center justify-center my-[2rem]">
-          <div className="sm:flex-1 text-center sm:text-right mb-10 sm:my-0 leading-[3.75rem] sm:leading-[4rem] md:leading-[5rem]">
-            <p className="font-semibold text-[2rem] md:text-[2.5rem] lg:text-[3rem] text-DevDogBlue leading-3">
+        <div className="my-[2rem] flex flex-wrap items-center justify-center sm:flex-row-reverse">
+          <div className="mb-10 text-center leading-[3.75rem] sm:my-0 sm:flex-1 sm:text-right sm:leading-[4rem] md:leading-[5rem]">
+            <p className="text-[2rem] font-semibold leading-3 text-DevDogBlue md:text-[2.5rem] lg:text-[3rem]">
               a team of
             </p>
-            <p className="font-semibold text-[2rem] md:text-[2.5rem] lg:text-[3rem]  text-DevDogBlue">
+            <p className="text-[2rem] font-semibold text-DevDogBlue md:text-[2.5rem] lg:text-[3rem]">
               passionate
             </p>
-            <h1 className="font-semibold text-[3rem] md:text-[4rem] lg:text-[5rem] text-MidnightBlue">
+            <h1 className="text-[3rem] font-semibold text-MidnightBlue md:text-[4rem] lg:text-[5rem]">
               Student
             </h1>
             <RolesHome />
-            <p className="text-DevDogBlue font-semibold text-[1.5rem] lg:text-[2rem]">
+            <p className="text-[1.5rem] font-semibold text-DevDogBlue lg:text-[2rem]">
               at UGA.
             </p>
           </div>
@@ -63,24 +63,24 @@ const Home = () => {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center my-[50px] text-center sm:text-left my=[2rem]">
-          <div className="md:flex-1 leading-[2.5rem] sm:leading-[3rem] md:leading-[3.5rem]">
-            <h2 className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem] inline text-BulldogRed">
+        <div className="my=[2rem] my-[50px] flex flex-wrap items-center justify-center text-center sm:text-left">
+          <div className="leading-[2.5rem] sm:leading-[3rem] md:flex-1 md:leading-[3.5rem]">
+            <h2 className="inline text-[2.5rem] font-semibold text-BulldogRed md:text-[3.5rem] lg:text-[4rem]">
               We <> </>
             </h2>
 
-            <h2 className="font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem] inline text-MidnightBlue">
+            <h2 className="inline text-[2.5rem] font-semibold text-MidnightBlue md:text-[3.5rem] lg:text-[4rem]">
               develop some <br />
               awesome <br />
               software
             </h2>
-            <p className="inline font-semibold text-[2.5rem] md:text-[3.5rem] lg:text-[4rem]">
+            <p className="inline text-[2.5rem] font-semibold md:text-[3.5rem] lg:text-[4rem]">
               ...
             </p>
-            <p className="text-xl md:text-2xl font-semibold py-2 mb-2 text-DevDogBlue">
+            <p className="mb-2 py-2 text-xl font-semibold text-DevDogBlue md:text-2xl">
               And we strive to better our community through code.
             </p>
-            <p className="text-lg md:text-xl text-DevDogBlue">
+            <p className="text-lg text-DevDogBlue md:text-xl">
               Each year, we work hard to identify needs in Athens and solve them
               by taking solutions from concept to completion.
             </p>
@@ -91,20 +91,20 @@ const Home = () => {
         </div>
 
         <div className="py-[2rem]">
-          <h1 className="font-bold text-center text-[3rem] text-MidnightBlue">
+          <h1 className="text-center text-[3rem] font-bold text-MidnightBlue">
             Sound Interesting?
           </h1>
           <div className="button-grid">
             <Link
               href="/about"
-              className="text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-black bg-#33334d hover:bg-white hover:text-black "
+              className="m-4 rounded-full bg-black p-2 text-lg font-medium text-white transition delay-150 ease-in-out hover:bg-white hover:text-black md:text-xl"
             >
               <Button>Learn More</Button>
             </Link>
             <Link
               target="_blank"
               href="https://discord.com/invite/MuyJ4f5xKE"
-              className="red text-lg md:text-xl rounded-full font-medium m-4 p-2 transition ease-in-out delay-150 text-white"
+              className="m-4 rounded-full bg-[#BA0C2F] p-2 text-lg font-medium text-white transition delay-150 ease-in-out hover:bg-white hover:text-black md:text-xl"
             >
               <Button>Join Us!</Button>
             </Link>

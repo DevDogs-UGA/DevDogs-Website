@@ -9,10 +9,10 @@ const GithubPicture = (member) => {
         <div id="officer-description">
           <br />
           <a
-            className="flex items-center w-full justify-center"
+            className="flex w-full items-center justify-center"
             href={"/dog/" + data.githubLogin}
           >
-            <a className="officer-name font-bold mr-1">{data.fullName}</a>
+            <a className="officer-name mr-1 font-bold">{data.fullName}</a>
             <OpenInNewWindowIcon />
           </a>
           <p id="officer-title-name">{Math.round(data.points)} points</p>
@@ -21,8 +21,8 @@ const GithubPicture = (member) => {
       ) : (
         <div id="officer-description">
           <br />
-          <a className="flex items-center w-full justify-center">
-            <a className="officer-name font-bold mr-1">{data.fullName}</a>
+          <a className="flex w-full items-center justify-center">
+            <a className="officer-name mr-1 font-bold">{data.fullName}</a>
           </a>
           <p id="officer-title-name">{Math.round(data.points)} points</p>
           <br />

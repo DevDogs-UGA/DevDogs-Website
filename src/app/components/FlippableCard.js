@@ -8,18 +8,18 @@ FlippableCard.propTypes = {
 
 export default function FlippableCard(props) {
   return (
-    <div className=" place-content-center flex">
-      <div className=" w-[20rem] h-[25rem] bg-transparent cursor-pointer group rounded-3xl bg-black perspective-1000">
-        <div className="relative w-full h-full  preserve-3d group-hover:rotate-y-180 duration-500">
-          <div className=" absolute rounded-3xl overflow-hidden backface-hidden">
-            <Image src={props.image} className="w-full h-full" />
+    <div className="flex place-content-center">
+      <div className="group h-[25rem] w-[20rem] cursor-pointer rounded-3xl bg-black bg-transparent perspective-1000">
+        <div className="relative h-full w-full duration-500 preserve-3d group-hover:rotate-y-180">
+          <div className="absolute overflow-hidden rounded-3xl backface-hidden">
+            <Image src={props.image} className="h-full w-full" />
           </div>
-          <div className="absolute bg-black bg-opacity-75 text-white rotate-y-180 w-full h-full rounded-3xl  space-y-5 overflow-hidden backface-hidden">
+          <div className="absolute h-full w-full space-y-5 overflow-hidden rounded-3xl bg-black bg-opacity-75 text-white rotate-y-180 backface-hidden">
             <div className="mt-10 text-center">
-              <span className="font-extrabold text-3xl"> test</span>
+              <span className="text-3xl font-extrabold"> test</span>
             </div>
             <div className="mt-10 text-center">
-              <span className="font-semibold text-xl"> test test</span>
+              <span className="text-xl font-semibold"> test test</span>
             </div>
 
             <div className="mt-10 text-center">
