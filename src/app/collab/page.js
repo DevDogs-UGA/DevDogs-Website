@@ -20,17 +20,22 @@ export default function Page() {
   ];
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [fadeType, setFadeType] = useState("fadeIn");
 
   useEffect(() => {
+    const fadeOutTimeout = setTimeout(() => setFadeType("fadeOut"), 4500);
     const interval = setInterval(() => {
+      setFadeType("fadeIn");
       setCurrentImageIndex(
         (prevIndex) => (prevIndex + 1) % SponsorPerks.length,
       );
-      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % CampusPerks.length);
-    }, 10000); // Change image every 10 seconds
+    }, 9000);
 
-    return () => clearInterval(interval); // Cleanup interval on unmount
-  }, []);
+    return () => {
+      clearTimeout(fadeOutTimeout);
+      clearInterval(interval);
+    };
+  }, [currentImageIndex]);
 
   return (
     <div className="section page-main-side-padding w-full">
@@ -61,9 +66,15 @@ export default function Page() {
             src={SponsorPerks[currentImageIndex].image}
             alt={SponsorPerks[currentImageIndex].name}
             fill={true}
-            className="absolute h-full w-full animate-fadeInOut rounded-t-[50px] object-cover"
+            className={`absolute h-full w-full rounded-t-[50px] object-cover ${
+              fadeType === "fadeIn" ? "animate-fadeIn" : "animate-fadeOut"
+            }`}
           />
-          <div className="relative top-full h-[60px] animate-fadeInOut rounded-b-[50px] bg-[#3A3A3A]">
+          <div
+            className={`relative top-full h-[60px] rounded-b-[50px] bg-[#3A3A3A] ${
+              fadeType === "fadeIn" ? "animate-fadeIn" : "animate-fadeOut"
+            }`}
+          >
             <p className="pt-3 text-center align-middle text-[1.3rem] text-white">
               {SponsorPerks[currentImageIndex].name}
             </p>
@@ -115,13 +126,20 @@ export default function Page() {
               src={CampusPerks[currentImageIndex].image}
               alt={CampusPerks[currentImageIndex].name}
               fill={true}
-              className="absolute h-full w-full animate-fadeInOut rounded-t-[50px] object-cover"
+              className={`absolute h-full w-full rounded-t-[50px] object-cover ${
+                fadeType === "fadeIn" ? "animate-fadeIn" : "animate-fadeOut"
+              }`}
             />
-            <div className="relative top-full h-[60px] animate-fadeInOut rounded-b-[50px] bg-[#3A3A3A]">
+            <div
+              className={`relative top-full h-[60px] rounded-b-[50px] bg-[#3A3A3A] ${
+                fadeType === "fadeIn" ? "animate-fadeIn" : "animate-fadeOut"
+              }`}
+            >
               <p className="pt-3 text-center align-middle text-[1.3rem] text-white">
-                {SponsorPerks[currentImageIndex].name}
+                {CampusPerks[currentImageIndex].name}
               </p>
             </div>
+
             <Link
               href="/contact"
               className="absolute -bottom-[8.5rem] left-1/2 flex h-[4rem] w-[45%] -translate-x-1/2 transform items-center justify-center rounded-full bg-MidnightBlue text-white transition duration-300 ease-in-out hover:bg-[#1a1a26]"
