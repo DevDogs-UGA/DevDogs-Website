@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import { ChevronUp, ChevronDown } from "lucide-react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/solid";
 import NavBarAvatar from "./NavBarAvatar";
 import Button from "./Button";
@@ -29,42 +30,31 @@ const navLinks = [
       { name: "Sponsor Now", path: "/sponsor/sponsor-us" },
     ],
   },
-  // { name: "Academy", path: "/academy", isDropdown: false },
-
-  // Academy is disabled until it is complete - Jay
-
   { name: "Contact", path: "/contact", isDropdown: false },
 ];
 
 const NavBar = () => {
   const pathname = usePathname();
   const [isDropdownOpen, setIsDropdownOpen] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRef = useRef(null);
-
-  const getLinkClasses = (path) => {
-    return `text-2xl px-3 no-underline ${
-      pathname === path
-        ? "text-white font-bold"
-        : "hover:text-GloryGloryRed text-gray-400"
-    }`;
-  };
-
-  const isParentActive = (children) => {
-    return children.some((child) => pathname.startsWith(child.path));
-  };
 
   const toggleDropdown = (name) => {
     setIsDropdownOpen(isDropdownOpen === name ? null : name);
   };
 
   const handleClickOutside = (event) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    if (
+      dropdownRef.current &&
+      !dropdownRef.current.contains(event.target) &&
+      !event.target.closest(".child-link")
+    ) {
       setIsDropdownOpen(null);
     }
   };
 
   useEffect(() => {
-    if (isDropdownOpen) {
+    if (isDropdownOpen || isMobileMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     } else {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -72,7 +62,7 @@ const NavBar = () => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isDropdownOpen]);
+  }, [isDropdownOpen, isMobileMenuOpen]);
 
   return (
     <div className="flex w-full flex-col items-center justify-around bg-[#31304b] p-[.8rem] font-semibold text-white sm:flex-row">
@@ -97,50 +87,60 @@ const NavBar = () => {
           />
         </Link>
         <NavBarAvatar />
-        {isDropdownOpen ? (
+        {isMobileMenuOpen ? (
           <XMarkIcon
             className="w-[2rem] cursor-pointer"
-            onClick={() => toggleDropdown(null)}
+            onClick={() => setIsMobileMenuOpen(false)}
           />
         ) : (
           <Bars3Icon
             className="w-[2rem] cursor-pointer"
-            onClick={() => toggleDropdown("mobile")}
+            onClick={() => setIsMobileMenuOpen(true)}
           />
         )}
       </div>
 
       {/* Mobile Dropdown Menu */}
-      {isDropdownOpen === "mobile" && (
+      {isMobileMenuOpen && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 top-[4rem] z-10 flex w-full flex-col items-start bg-[#31304b] px-4 py-4 sm:hidden"
+          className="absolute left-0 top-[4rem] z-10 flex w-full flex-col gap-4 bg-[#31304b] p-4 sm:hidden"
         >
           {navLinks.map((link) => (
             <div key={link.name} className="w-full">
               {link.isDropdown ? (
                 <div className="w-full">
-                  {/* Parent link */}
-                  <div className="w-full cursor-pointer text-left text-2xl">
+                  <div
+                    onClick={() => toggleDropdown(link.name)}
+                    className="flex w-full cursor-pointer flex-row-reverse items-center gap-x-2 text-2xl"
+                  >
+                    {isDropdownOpen === link.name ? (
+                      <ChevronUp />
+                    ) : (
+                      <ChevronDown />
+                    )}
                     {link.name}
                   </div>
-                  {/* Always show child links */}
-                  <div className="mt-2 pl-4">
-                    {link.children.map((child) => (
-                      <Link
-                        key={child.name}
-                        href={child.path}
-                        className="block py-1 pl-4 text-lg text-gray-400"
-                      >
-                        {child.name}
-                      </Link>
-                    ))}
-                  </div>
+                  {isDropdownOpen === link.name && (
+                    <div className="mt-2 pl-4 text-right">
+                      {link.children.map((child) => (
+                        <Link
+                          key={child.name}
+                          href={child.path}
+                          className="child-link block py-1 pl-4 text-lg text-gray-400"
+                          onClick={() => setIsMobileMenuOpen(false)} // Close mobile menu after clicking
+                        >
+                          {child.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <Link
                   href={link.path}
-                  className="w-full py-2 text-left text-2xl"
+                  className="w-full py-2 text-right text-2xl"
+                  onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {link.name}
                 </Link>
@@ -156,22 +156,27 @@ const NavBar = () => {
           <div key={link.name} className="relative">
             {link.isDropdown ? (
               <div
-                onClick={() => toggleDropdown(link.name)}
-                className={`cursor-pointer px-3 text-2xl ${
-                  isParentActive(link.children)
-                    ? "font-bold text-white"
-                    : "text-gray-400 hover:text-white"
-                }`}
+                className="cursor-pointer px-3 text-2xl text-gray-400 hover:text-white"
+                onMouseEnter={() => toggleDropdown(link.name)}
               >
                 {link.name}
+                {isDropdownOpen === link.name ? (
+                  <ChevronUp className="ml-1 inline" />
+                ) : (
+                  <ChevronDown className="ml-1 inline" />
+                )}
               </div>
             ) : (
-              <Link href={link.path} className={getLinkClasses(link.path)}>
+              <Link
+                href={link.path}
+                className="px-3 text-2xl text-gray-400 no-underline hover:text-white"
+                onMouseLeave={() => toggleDropdown(null)}
+              >
                 {link.name}
               </Link>
             )}
 
-            {isDropdownOpen === link.name && (
+            {isDropdownOpen === link.name && link.isDropdown && (
               <div
                 ref={dropdownRef}
                 className="absolute mt-2 bg-[#31304b] py-2"
