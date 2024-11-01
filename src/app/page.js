@@ -97,14 +97,14 @@ const Home = () => {
           <div className="button-grid">
             <Link
               href="/about"
-              className="m-4 rounded-full bg-black p-2 text-lg font-medium text-white transition delay-150 ease-in-out hover:bg-white hover:text-black md:text-xl"
+              className="bg-#33334d m-4 rounded-full p-2 text-lg font-medium text-black transition delay-150 ease-in-out hover:bg-white hover:text-black md:text-xl"
             >
               <Button>Learn More</Button>
             </Link>
             <Link
               target="_blank"
               href="https://discord.com/invite/MuyJ4f5xKE"
-              className="m-4 rounded-full bg-[#BA0C2F] p-2 text-lg font-medium text-white transition delay-150 ease-in-out hover:bg-white hover:text-black md:text-xl"
+              className="red m-4 rounded-full p-2 text-lg font-medium text-white transition delay-150 ease-in-out md:text-xl"
             >
               <Button>Join Us!</Button>
             </Link>
