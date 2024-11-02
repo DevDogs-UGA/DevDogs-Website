@@ -92,35 +92,32 @@ export default function NavBarAvatar() {
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
               <AvatarImage
-                src={imageUrl}
+                src={imageUrl || "https://github.com/null.png"}
                 alt="@username"
                 className="h-10 w-10"
               />
-              <AvatarFallback
-                src={"https://github.com/null.png"}
-              ></AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56" align="end" forceMount>
-          <DropdownMenuLabel className="font-normal">
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">
-                {user?.user_page?.userInfo?.first_name
-                  ? user.user_page.userInfo.first_name
-                  : null}{" "}
-                {user?.user_page?.userInfo?.last_name
-                  ? user.user_page.userInfo.last_name
-                  : null}{" "}
-              </p>
-              {user?.user_page?.userInfo?.email_address ? (
-                <p className="text-muted-foreground text-xs leading-none">
-                  {user.user_page.userInfo.email_address}
-                </p>
-              ) : null}
+        <DropdownMenuContent
+          className="w-56 bg-[#31304b] text-white"
+          align="end"
+          forceMount
+        >
+          {user?.user_page?.userInfo ? (
+            <div>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    {user.user_page.userInfo?.first_name}{" "}
+                    {user.user_page.userInfo?.last_name}
+                  </p>
+                  <p>{user.user_page.userInfo?.email_address}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
             </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
+          ) : null}
           {user?.user_page?.paid &&
           user?.user_page?.userInfo?.users?.githubLogin ? (
             <a href={"/dog/" + user.user_page.userInfo.users.githubLogin}>

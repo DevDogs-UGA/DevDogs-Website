@@ -72,17 +72,22 @@ const NavBar = () => {
             className="h-[3em] w-auto sm:h-[4em]"
           />
         </Link>
-        <NavBarAvatar />
         {isDropdownOpen ? (
-          <XMarkIcon
-            className="w-[2rem] cursor-pointer transition-transform"
-            onClick={toggleDropdown}
-          />
+          <div className="flex flex-row">
+            <NavBarAvatar />
+            <XMarkIcon
+              className="ml-3 w-[2rem] cursor-pointer transition-transform"
+              onClick={toggleDropdown}
+            />
+          </div>
         ) : (
-          <Bars3Icon
-            className="w-[2rem] cursor-pointer transition-transform"
-            onClick={toggleDropdown}
-          />
+          <div className="flex flex-row">
+            <NavBarAvatar />
+            <Bars3Icon
+              className="ml-3 w-[2rem] cursor-pointer transition-transform"
+              onClick={toggleDropdown}
+            />
+          </div>
         )}
       </div>
       {isDropdownOpen && (
