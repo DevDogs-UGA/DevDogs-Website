@@ -112,7 +112,9 @@ export default function NavBarAvatar() {
                     {user.user_page.userInfo?.first_name}{" "}
                     {user.user_page.userInfo?.last_name}
                   </p>
-                  <p>{user.user_page.userInfo?.email_address}</p>
+                  <p className="text-sm font-medium leading-none">
+                    {user.user_page.userInfo?.email_address}
+                  </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
