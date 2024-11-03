@@ -267,7 +267,7 @@ export const Box = () => {
                 )}
               </div>
               {!verifed ? (
-                <div className="m-4 flex h-14 w-3/4 items-center justify-center rounded-full bg-GloryGloryRed py-2 align-middle text-white lg:w-11/12">
+                <div className="text-semibold m-4 flex h-14 w-3/4 items-center justify-center rounded-full bg-GloryGloryRed py-2 align-middle text-white lg:w-11/12">
                   Verify your email
                 </div>
               ) : null}
