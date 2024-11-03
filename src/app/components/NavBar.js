@@ -104,7 +104,7 @@ const NavBar = () => {
       {isMobileMenuOpen && (
         <div
           ref={dropdownRef}
-          className="text-right absolute left-0 top-[4rem] z-10 flex w-full flex-col gap-4 bg-[#31304b] p-4 sm:hidden"
+          className="absolute left-0 top-[4rem] z-10 flex w-full flex-col gap-4 bg-[#31304b] p-4 text-right sm:hidden"
         >
           {navLinks.map((link) => (
             <div key={link.name} className="w-full">
