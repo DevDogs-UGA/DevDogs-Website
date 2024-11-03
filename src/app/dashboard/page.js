@@ -24,6 +24,7 @@ export const Box = () => {
   const [first_name, setFirstName] = useState(null);
   const [last_name, setLastName] = useState(null);
   const [github, setGitub] = useState(null);
+  const [verifed, setVerified] = useState(null);
 
   const { toast } = useToast();
   const router = useRouter();
@@ -59,6 +60,9 @@ export const Box = () => {
       setFirstName((await data.user_page?.userInfo.first_name) || null);
       setLastName((await data.user_page?.userInfo.last_name) || null);
       setGitub((await data.user_page?.userInfo.users?.githubLogin) || null);
+      setVerified(
+        (await data.user_page?.userInfo.email_verification?.verifed) || null,
+      );
       setLoading(false);
     }
     fetchUser();
@@ -262,6 +266,11 @@ export const Box = () => {
                   </a>
                 )}
               </div>
+              {!verifed ? (
+                <div className="m-4 flex h-14 w-3/4 items-center justify-center rounded-full bg-GloryGloryRed py-2 align-middle text-white lg:w-11/12">
+                  Verify your email
+                </div>
+              ) : null}
               <h2 className="text-left text-lg font-semibold">Biography</h2>
               <Textarea
                 placeholder="ExistingBio"
