@@ -110,6 +110,7 @@ const Page = () => {
       number: false,
       specialChar: false,
     });
+    const [termsAndService, setTermsAndService] = useState(false);
 
     const validateEmail = (email) => {
       const regex = /@uga\.edu$/;
@@ -230,10 +231,28 @@ const Page = () => {
               ))}
             </ul>
           </div>
+          <div className="mt-4 text-left">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                onChange={(e) => setTermsAndService(e.target.checked)}
+                className="form-checkbox h-4 w-4 text-BulldogRed"
+              />
+              <span className="ml-2 text-sm text-gray-600">
+                I agree to the{" "}
+                <a href="#" className="text-BulldogRed">
+                  Terms and Service
+                </a>
+              </span>
+            </label>
+          </div>
           <button
             onClick={create}
             className="mt-4 rounded-full bg-BulldogRed px-4 py-2 text-white"
-            disabled={!Object.values(passwordCriteria).every(Boolean)}
+            disabled={
+              !Object.values(passwordCriteria).every(Boolean) ||
+              !termsAndService
+            }
           >
             Create Account
           </button>

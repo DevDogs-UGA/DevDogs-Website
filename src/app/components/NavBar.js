@@ -86,6 +86,14 @@ const NavBar = () => {
             className="h-[3em] w-auto sm:h-[4em]"
           />
         </Link>
+        {isDropdownOpen ? (
+          <div className="flex flex-row">
+            <NavBarAvatar />
+            <XMarkIcon
+              className="ml-3 w-[2rem] cursor-pointer transition-transform"
+              onClick={toggleDropdown}
+            />
+          </div>
         <NavBarAvatar />
         {isMobileMenuOpen ? (
           <XMarkIcon
@@ -93,6 +101,13 @@ const NavBar = () => {
             onClick={() => setIsMobileMenuOpen(false)}
           />
         ) : (
+          <div className="flex flex-row">
+            <NavBarAvatar />
+            <Bars3Icon
+              className="ml-3 w-[2rem] cursor-pointer transition-transform"
+              onClick={toggleDropdown}
+            />
+          </div>
           <Bars3Icon
             className="w-[2rem] cursor-pointer"
             onClick={() => setIsMobileMenuOpen(true)}
