@@ -61,7 +61,7 @@ export const Box = () => {
       setLastName((await data.user_page?.userInfo.last_name) || null);
       setGitub((await data.user_page?.userInfo.users?.githubLogin) || null);
       setVerified(
-        (await data.user_page?.userInfo.email_verification?.verifed) || null,
+        (await data.user_page?.userInfo.email_verification?.verified) || null,
       );
       setLoading(false);
     }
