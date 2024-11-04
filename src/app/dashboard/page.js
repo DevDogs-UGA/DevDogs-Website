@@ -10,6 +10,7 @@ import FormDrop from "../components/FormDrop";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import Button from "../components/Button";
 
 export const Box = () => {
   const [loading, setLoading] = useState(true);
@@ -24,7 +25,7 @@ export const Box = () => {
   const [first_name, setFirstName] = useState(null);
   const [last_name, setLastName] = useState(null);
   const [github, setGitub] = useState(null);
-  const [verifed, setVerified] = useState(null);
+  const [verified, setVerified] = useState(null);
 
   const { toast } = useToast();
   const router = useRouter();
@@ -125,6 +126,23 @@ export const Box = () => {
     sessionStorage.clear("email");
   };
 
+  const resendEmail = async () => {
+    try {
+      const token = sessionStorage.getItem("access_token");
+
+      const res = await fetch("https://api.devdogs.uga.edu/auth/resendEmail", {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token,
+        },
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const updateUserInfo = async () => {
     try {
       const token = sessionStorage.getItem("access_token");
@@ -202,6 +220,19 @@ export const Box = () => {
         <div className="w-full lg:w-8/12">
           <ScrollArea className="h-full text-DevDogBlue lg:max-h-[500px]">
             <h2 className="text-xl font-bold">Personal Information</h2>
+            {!verified ? (
+              <div className="inline">
+                <h2 className="text-lg font-semibold text-GloryGloryRed">
+                  Verify your email!
+                </h2>
+                <h2
+                  className="text-lg font-semibold text-blue-500"
+                  onClick={resendEmail}
+                >
+                  Resend Email
+                </h2>
+              </div>
+            ) : null}
             <div className="flex flex-col items-center lg:flex-row">
               <div className="m-3 h-32 w-32 rounded-full">
                 <Image
@@ -238,6 +269,8 @@ export const Box = () => {
                 />
               </div>
             </div>
+            <p>Please be sure to verify your email.</p>
+            <Button>Resend Email</Button>
             <div className="mt-4 flex flex-col items-center">
               <div className="m-4 flex h-14 w-3/4 items-center justify-center rounded-full bg-DevDogBlue py-2 align-middle text-white lg:w-11/12">
                 {github ? (
@@ -266,11 +299,6 @@ export const Box = () => {
                   </a>
                 )}
               </div>
-              {!verifed ? (
-                <div className="text-semibold m-4 flex h-14 w-3/4 items-center justify-center rounded-full bg-GloryGloryRed py-2 align-middle text-white lg:w-11/12">
-                  Verify your email
-                </div>
-              ) : null}
               <h2 className="text-left text-lg font-semibold">Biography</h2>
               <Textarea
                 placeholder="ExistingBio"

@@ -144,20 +144,17 @@ const Page = () => {
       }
 
       try {
-        const data = await fetch(
-          "https://api.devdogs.uga.edu/auth/createUser",
-          {
-            method: "POST",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email_address: email,
-              password: password,
-            }),
+        const data = await fetch("https://api.devdogs.uga.edu/auth/createUser", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          body: JSON.stringify({
+            email_address: email,
+            password: password,
+          }),
+        });
 
         if (data.status == 200) {
           console.log("User created");
