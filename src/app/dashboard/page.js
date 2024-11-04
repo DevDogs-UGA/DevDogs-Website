@@ -269,8 +269,6 @@ export const Box = () => {
                 />
               </div>
             </div>
-            <p>Please be sure to verify your email.</p>
-            <Button>Resend Email</Button>
             <div className="mt-4 flex flex-col items-center">
               <div className="m-4 flex h-14 w-3/4 items-center justify-center rounded-full bg-DevDogBlue py-2 align-middle text-white lg:w-11/12">
                 {github ? (
