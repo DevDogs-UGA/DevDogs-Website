@@ -99,7 +99,7 @@ const OurTeam = () => {
           <br />
         </div>
       </div>
-      
+
       <div className="page-main-side-padding text-center">
         <h2 className="inline text-[2rem] font-bold text-BulldogRed md:text-[2.5rem] lg:text-[3rem]">
           A
@@ -222,7 +222,6 @@ const OurTeam = () => {
           <br />
         </div>
       </div>
-
 
       <div className="page-main-side-padding text-center">
         <h2 className="text- inline text-[2rem] font-bold md:text-[2.5rem] lg:text-[3rem]">
