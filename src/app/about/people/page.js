@@ -11,6 +11,7 @@ import Caoursel1 from "@/app/images/carousel4.jpg";
 import Caoursel2 from "@/app/images/carousel5.jpg";
 import Caoursel3 from "@/app/images/carousel6.jpg";
 import LeaderBoard from "../../components/LeaderBoard";
+import temp from "../../images/tempProject.png";
 
 const OurTeam = () => {
   const OPTIONS = { loop: true };
@@ -84,12 +85,6 @@ const OurTeam = () => {
             bgcolor="pink-light"
           />
           <Card
-            name={"Avery Marco"}
-            title={"Instructional Officer"}
-            image={am}
-            bgcolor="pink"
-          />
-          <Card
             name={"Kade Styron"}
             title={"Corporate & Career Officer"}
             image={kds}
@@ -104,6 +99,130 @@ const OurTeam = () => {
           <br />
         </div>
       </div>
+      
+      <div className="page-main-side-padding text-center">
+        <h2 className="inline text-[2rem] font-bold text-BulldogRed md:text-[2.5rem] lg:text-[3rem]">
+          A
+        </h2>
+        <h2 className="inline text-[2rem] font-bold text-MidnightBlue md:text-[2.5rem] lg:text-[3rem]">
+          -Team
+        </h2>
+      </div>
+
+      <div id="ateamtitle">
+        <div id="ateamgrid">
+          <Card
+            name={"Christine Le"}
+            title={"Creative Director"}
+            image={temp}
+            bgcolor="brown-dark"
+          />
+          <Card
+            name={"Reeyan Khimani"}
+            title={"Web Developer"}
+            image={temp}
+            bgcolor="cyan-light"
+          />
+          <Card
+            name={"Harshith Kethavath"}
+            title={"Photographer"}
+            image={temp}
+            bgcolor="pink-light"
+          />
+          <Card
+            name={"Tyler Meyer"}
+            title={"Marketing Director"}
+            image={temp}
+            bgcolor="pink-dark"
+          />
+          <br />
+        </div>
+      </div>
+
+      <div className="page-main-side-padding text-center">
+        <h2 className="inline text-[2rem] font-bold text-BulldogRed md:text-[2.5rem] lg:text-[3rem]">
+          Notable{" "}
+        </h2>
+        <h2 className="inline text-[2rem] font-bold text-MidnightBlue md:text-[2.5rem] lg:text-[3rem]">
+          Help
+        </h2>
+      </div>
+
+      <div id="teamtitle">
+        <div id="grid">
+          <Card
+            name={"Helium Yang"}
+            title={"Mentor"}
+            image={temp}
+            bgcolor="brown-dark"
+          />
+          <Card
+            name={"Dr.Barnes"}
+            title={"Facutly Advisor"}
+            image={temp}
+            bgcolor="cyan-light"
+          />
+          <Card
+            name={"Dr. Cotterell"}
+            title={"Faculty Advisor"}
+            image={temp}
+            bgcolor="pink-light"
+          />
+          <br />
+        </div>
+      </div>
+
+      <div className="page-main-side-padding text-center">
+        <h2 className="inline text-[2rem] font-bold text-MidnightBlue md:text-[2.5rem] lg:text-[3rem]">
+          Focus Group{" "}
+        </h2>
+        <h2 className="inline text-[2rem] font-bold text-BulldogRed md:text-[2.5rem] lg:text-[3rem]">
+          Leads
+        </h2>
+      </div>
+
+      <div id="teamtitle">
+        <div id="grid">
+          <Card
+            name={"Sophia"}
+            title={"UI/UX Design"}
+            image={temp}
+            bgcolor="brown-dark"
+          />
+          <Card
+            name={"Raghav"}
+            title={"Backend/API"}
+            image={temp}
+            bgcolor="cyan-light"
+          />
+          <Card
+            name={"Michael"}
+            title={"Frontend Development"}
+            image={temp}
+            bgcolor="pink-light"
+          />
+          <Card
+            name={"Aahil"}
+            title={"Algorithm"}
+            image={temp}
+            bgcolor="pink-dark"
+          />
+          <Card
+            name={"Cooper"}
+            title={"Database"}
+            image={temp}
+            bgcolor="brown-light"
+          />
+          <Card
+            name={"Jeffery"}
+            title={"Webscraping"}
+            image={temp}
+            bgcolor="brown-light"
+          />
+          <br />
+        </div>
+      </div>
+
 
       <div className="page-main-side-padding text-center">
         <h2 className="text- inline text-[2rem] font-bold md:text-[2.5rem] lg:text-[3rem]">
