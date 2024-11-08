@@ -246,7 +246,7 @@ export const Box = () => {
                   style={{
                     height: "inherit",
                   }}
-                  className="rounded-full"
+                  className="rounded-full object-cover"
                 />
                 <FormDrop onUrlChange={handlePfPChange} />
               </div>
