@@ -94,7 +94,7 @@ export default function NavBarAvatar() {
               <AvatarImage
                 src={imageUrl || "https://github.com/null.png"}
                 alt="@username"
-                className="h-10 w-10"
+                className="h-10 w-10 object-cover"
               />
             </Avatar>
           </Button>

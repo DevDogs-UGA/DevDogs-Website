@@ -64,7 +64,7 @@ const Settings = () => {
           <div className="mt-4 flex flex-col justify-center gap-4 lg:flex-row">
             <div>
               <button
-                className="rounded-full bg-[#E37C7C] p-2 px-2 text-white"
+                className="rounded-full bg-[#BA0C2F] p-2 px-2 text-white"
                 onClick={changePassword}
               >
                 Save Changes
