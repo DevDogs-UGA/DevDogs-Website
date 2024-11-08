@@ -35,7 +35,7 @@ const Settings = () => {
   };
 
   return (
-    <div className="section">
+    <div className="dashboard-section">
       <div className="page-main-side-padding flex w-full flex-col items-center text-center">
         <PageTitleTemplate
           blackText={"User "}

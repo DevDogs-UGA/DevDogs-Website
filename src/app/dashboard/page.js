@@ -195,7 +195,7 @@ export const Box = () => {
   const githubLoginUrl = `https://github.com/login/oauth/authorize?${params}`;
 
   return (
-    <div className="section page-main-side-padding flex w-full flex-col items-center text-center">
+    <div className="dashboard-section page-main-side-padding flex w-full flex-col items-center text-center">
       <PageTitleTemplate
         blackText={"User "}
         redText={"Settings"}

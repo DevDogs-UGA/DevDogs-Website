@@ -134,6 +134,21 @@ p {
   margin-right: auto;
 }
 
+.dashboard-section {
+  background-color: #fff8fc;
+  background-image: url("./images/background.png");
+  background-position-y: 0rem;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-blend-mode: normal;
+
+  padding-top: 2rem;
+  max-width: 80rem;
+  max-height: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .section-sponsor {
   background-size: 100% 70%;
   background-position-y: -3rem;
