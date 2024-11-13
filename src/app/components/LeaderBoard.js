@@ -7,11 +7,18 @@ const LeaderBoard = () => {
 
   useEffect(() => {
     async function fetchContributors() {
-      let res = await fetch("https://api.devdogs.uga.edu/getLeaderBoard", {
-        cache: "no-store",
-      });
-      let data = await res.json();
-      setContributors(data);
+      try {
+        let res = await fetch("https://api.devdogs.uga.edu/getLeaderBoard", {
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        let data = await res.json();
+        setContributors(data);
+      } catch (error) {
+        console.error("Failed to fetch:", error);
+      }
     }
     fetchContributors();
   }, []);
