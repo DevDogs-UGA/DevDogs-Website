@@ -10,7 +10,7 @@ import FormDrop from "../components/FormDrop";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import Button from "../components/Button";
+import ResendEmailButton from "../components/ResendEmailButton";
 
 export const Box = () => {
   const [loading, setLoading] = useState(true);
@@ -34,7 +34,7 @@ export const Box = () => {
     async function fetchUser() {
       const token = sessionStorage.getItem("access_token");
 
-      const res = await fetch("https://api.devdogs.uga.edu/users/user_page", {
+      const res = await fetch("http://localhost:4000/users/user_page", {
         method: "GET",
         credentials: "include",
         headers: {
@@ -78,7 +78,7 @@ export const Box = () => {
       const token = sessionStorage.getItem("access_token");
       console.log(pfpLink);
 
-      const res = await fetch("https://api.devdogs.uga.edu/users/user_page", {
+      const res = await fetch("http://localhost:4000/users/user_page", {
         method: "PATCH",
         credentials: "include",
         headers: {
@@ -111,7 +111,7 @@ export const Box = () => {
 
   const logout = async () => {
     try {
-      await fetch("https://api.devdogs.uga.edu/auth/logout", {
+      await fetch("http://localhost:4000/auth/logout", {
         method: "GET",
         credentials: "include",
         headers: {
@@ -126,28 +126,11 @@ export const Box = () => {
     sessionStorage.clear("email");
   };
 
-  const resendEmail = async () => {
-    try {
-      const token = sessionStorage.getItem("access_token");
-
-      const res = await fetch("https://api.devdogs.uga.edu/auth/resendEmail", {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + token,
-        },
-      });
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const updateUserInfo = async () => {
     try {
       const token = sessionStorage.getItem("access_token");
 
-      const res = await fetch("https://api.devdogs.uga.edu/users/user_page", {
+      const res = await fetch("http://localhost:4000/users/user_page", {
         method: "PATCH",
         credentials: "include",
         headers: {
@@ -187,7 +170,7 @@ export const Box = () => {
 
   const params = queryString.default.stringify({
     client_id: "Ov23li4ImDoJt0HXf1wb",
-    redirect_uri: "https://api.devdogs.uga.edu/auth/callback",
+    redirect_uri: "http://localhost:4000/auth/callback",
     scope: ["read:user", "user:email"].join(" "), // space seperated string
     allow_signup: true,
   });
@@ -220,19 +203,13 @@ export const Box = () => {
         <div className="w-full lg:w-8/12">
           <ScrollArea className="h-full text-DevDogBlue lg:max-h-[500px]">
             <h2 className="text-xl font-bold">Personal Information</h2>
-            {!verified ? (
-              <div className="inline">
-                <h2 className="text-lg font-semibold text-GloryGloryRed">
-                  Verify your email!
-                </h2>
-                <h2
-                  className="text-lg font-semibold text-blue-500"
-                  onClick={resendEmail}
-                >
-                  Resend Email
-                </h2>
-              </div>
-            ) : null}
+            <div className="flex flex-col items-center">
+              {!verified ? (
+                <div className="my-3">
+                  <ResendEmailButton />
+                </div>
+              ) : null}
+            </div>
             <div className="flex flex-col items-center lg:flex-row">
               <div className="m-3 h-32 w-32 rounded-full">
                 <Image
@@ -299,7 +276,7 @@ export const Box = () => {
               </div>
               <h2 className="text-left text-lg font-semibold">Biography</h2>
               <Textarea
-                placeholder="ExistingBio"
+                placeholder="Tell us more about you (major, hobbies, interests, etc.)"
                 className="my-3 ml-1 w-11/12 p-2"
                 onChange={(e) => setBio(e.target.value)}
                 value={bio}
@@ -312,7 +289,7 @@ export const Box = () => {
                 </div> */}
                 <div>
                   <button
-                    className="rounded-full bg-[#BA0C2F] p-2 px-2 text-white"
+                    className="rounded-full bg-[#BA0C2F] p-2 px-2 text-lg font-semibold text-white"
                     onClick={updateUserInfo}
                   >
                     Save Changes
@@ -384,14 +361,14 @@ export const Box = () => {
               />
             </div>
             <div className="mt-4 flex flex-col justify-center gap-4 lg:flex-row">
-              <div>
+              {/* <div>
                 <button className="w-fit rounded-full bg-DevDogBlue p-2 px-4 text-white">
                   Discard Changes
                 </button>
-              </div>
+              </div> */}
               <div>
                 <button
-                  className="rounded-full bg-BulldogRed p-2 px-2 text-white"
+                  className="rounded-full bg-BulldogRed p-2 px-2 text-lg font-semibold text-white"
                   onClick={updateUserInfo}
                 >
                   Save Changes

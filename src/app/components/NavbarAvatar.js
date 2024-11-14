@@ -12,7 +12,7 @@ import {
 import { Button } from "./button.jsx";
 import { User, Settings, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function NavBarAvatar() {
   const [imageUrl, setImageUrl] = useState(null);
@@ -21,6 +21,7 @@ export default function NavBarAvatar() {
   const [email, setEmail] = useState(null);
 
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -31,7 +32,7 @@ export default function NavBarAvatar() {
 
   const logout = async () => {
     try {
-      await fetch("https://api.devdogs.uga.edu/auth/logout", {
+      await fetch("http://localhost:4000/auth/logout", {
         method: "GET",
         credentials: "include",
         headers: {
@@ -39,6 +40,10 @@ export default function NavBarAvatar() {
         },
       });
       console.log("Logged out");
+      setImageUrl(null);
+      setEmail(null);
+      setUser(null);
+      setToken(null);
       router.push("/");
       router.refresh();
     } catch (error) {
@@ -57,7 +62,7 @@ export default function NavBarAvatar() {
         }
 
         const response = await fetch(
-          "https://api.devdogs.uga.edu/users/user_page",
+          "http://localhost:4000/users/user_page",
           {
             method: "GET",
             credentials: "include",
@@ -83,7 +88,7 @@ export default function NavBarAvatar() {
     };
 
     fetchUser();
-  }, [token, email]);
+  }, [token, pathname, email]);
 
   return (
     <div className="ml-4 mt-1">

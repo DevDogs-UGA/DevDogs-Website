@@ -1,12 +1,14 @@
 "use client";
 
 import { EnvelopeIcon } from "@heroicons/react/24/solid";
-import {
-  GitHubLogoIcon,
-  InstagramLogoIcon,
-  LinkedInLogoIcon,
-  CodeIcon,
-} from "@radix-ui/react-icons";
+
+import InstagramIcon from "@/app/images/instagram.svg";
+import EmailIcon from "@/app/images/mail.svg";
+import GitHubIcon from "@/app/images/github.svg";
+import LinkedInIcon from "@/app/images/linkedin.svg";
+import WebsiteIcon from "@/app/images/website.png";
+
+import Image from "next/image";
 import Issues_Points from "../../components/Issues_Points";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -32,7 +34,7 @@ export default function Page({ params }) {
   useEffect(() => {
     async function fetchUser() {
       const res = await fetch(
-        "https://api.devdogs.uga.edu/users/pages?github=" + params.github,
+        "http://localhost:4000/users/pages?github=" + params.github,
         {
           method: "GET",
           credentials: "include",
@@ -126,31 +128,31 @@ export default function Page({ params }) {
         <div className="flex flex-row justify-center gap-5 align-middle md:ml-3 md:mt-3 md:justify-start">
           {linkedinLink ? (
             <a href={linkedinLink} target="_blank" rel="noreferrer">
-              <LinkedInLogoIcon className="h-10 w-10" />
+              <Image src={LinkedInIcon} className="h-14 w-14" />
             </a>
           ) : null}
 
           {instagramLink ? (
             <a href={instagramLink} target="_blank" rel="noreferrer">
-              <InstagramLogoIcon className="h-10 w-10" />
+              <Image src={InstagramIcon} className="h-14 w-14" />
             </a>
           ) : null}
 
           {githubLink ? (
             <a href={githubLink} target="_blank" rel="noreferrer">
-              <GitHubLogoIcon className="h-10 w-10" />
+              <Image src={GitHubIcon} className="h-14 w-14" />
             </a>
           ) : null}
 
           {personalLink ? (
             <a href={personalLink} target="_blank" rel="noreferrer">
-              <CodeIcon className="h-10 w-10" />
+              <Image src={WebsiteIcon} className="h-14 w-14 align-middle" />
             </a>
           ) : null}
 
           {contactEmail ? (
             <a href={"mailto:" + contactEmail} target="_blank" rel="noreferrer">
-              <EnvelopeIcon className="h-10 w-10" />
+              <Image src={EmailIcon} className="h-14 w-14" />
             </a>
           ) : null}
         </div>
@@ -168,17 +170,17 @@ export default function Page({ params }) {
         ) : null}
       </div>
 
-      {/* <div className="text-center my-[2rem]">
-        <h2 className="font-bold text-[2rem] sm:text-[3rem] inline text-GloryGloryRed">
+      <div className="my-[2rem] text-center">
+        {/* <h2 className="inline text-[2rem] font-bold text-GloryGloryRed sm:text-[3rem]">
           Roles{" "}
         </h2>
-        <h2 className="text-MidnightBlue font-bold text-[2rem] sm:text-[3rem] inline">
+        <h2 className="inline text-[2rem] font-bold text-MidnightBlue sm:text-[3rem]">
           and{" "}
-        </h2>
-        <h2 className="font-bold text-[2rem] sm:text-[3rem] inline text-GloryGloryRed">
+        </h2> */}
+        <h2 className="inline text-[2rem] font-bold text-GloryGloryRed sm:text-[3rem]">
           Contributions
         </h2>
-      </div> */}
+      </div>
 
       <Issues_Points github={github} />
     </div>

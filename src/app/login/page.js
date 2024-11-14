@@ -24,18 +24,20 @@ const Page = () => {
     number: false,
     specialChar: false,
   });
+  const [showEmailTooltip, setShowEmailTooltip] = useState(true);
 
   const router = useRouter();
 
   const validateEmail = (email) => {
-    const regex = /@uga\.edu$/;
+    // Updated regex to match the specified formats
+    const regex = /^(?:[a-z]{3}\d{5}|[a-z]{2}\d{5})@uga\.edu$/;
     return regex.test(email);
   };
 
   // const EmailVerification = () => {
   //   const verify = async () => {
   //     try {
-  //       const data = await fetch("https://api.devdogs.uga.edu/auth/verifyEmail", {
+  //       const data = await fetch("http://localhost:4000/auth/verifyEmail", {
   //         method: "POST",
   //         credentials: "include",
   //         headers: {
@@ -113,7 +115,7 @@ const Page = () => {
     const [termsAndService, setTermsAndService] = useState(false);
 
     const validateEmail = (email) => {
-      const regex = /@uga\.edu$/;
+      const regex = /^(?:[a-z]{3}\d{5}|[a-z]{2}\d{5})@uga\.edu$/;
       return regex.test(email);
     };
 
@@ -135,7 +137,9 @@ const Page = () => {
       setEmailError("");
 
       if (!validateEmail(email)) {
-        setEmailError("Please use a valid @uga.edu email address.");
+        setEmailError(
+          "Please use a valid @uga.edu email address. Email must be in the ab12345@uga.edu or abc12345@uga.edu format.",
+        );
         return;
       }
 
@@ -144,20 +148,17 @@ const Page = () => {
       }
 
       try {
-        const data = await fetch(
-          "https://api.devdogs.uga.edu/auth/createUser",
-          {
-            method: "POST",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email_address: email,
-              password: password,
-            }),
+        const data = await fetch("http://localhost:4000/auth/createUser", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          body: JSON.stringify({
+            email_address: email,
+            password: password,
+          }),
+        });
 
         if (data.status == 200) {
           console.log("User created");
@@ -186,16 +187,15 @@ const Page = () => {
           <h3 className="text-2xl font-bold">Email Address</h3>
           <input
             type="email"
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+            }}
             placeholder="Email"
             className="w-full rounded-xl p-2"
           />
           {emailError && (
             <p className="mt-1 text-sm text-red-500">{emailError}</p>
           )}
-          <h2 className="mt-2 text-sm">
-            Use your UGA email address (@uga.edu)
-          </h2>
           <h3 className="mt-4 text-2xl font-bold">Password</h3>
           <div className="relative">
             <input
@@ -240,8 +240,13 @@ const Page = () => {
               />
               <span className="ml-2 text-sm text-gray-600">
                 I agree to the{" "}
-                <a href="#" className="text-BulldogRed">
-                  Terms and Service
+                <a
+                  href="https://docs.google.com/document/d/15sB5OFGq7j07ftnRuLdBKjrsmi-B9o-euBiC60CdGoo/edit?usp=sharing"
+                  target="_blank"
+                  className="text-BulldogRed"
+                  rel="noreferrer"
+                >
+                  Terms of Service
                 </a>
               </span>
             </label>
@@ -267,7 +272,7 @@ const Page = () => {
 
   const checkAuthentication = async () => {
     try {
-      const response = await fetch("https://api.devdogs.uga.edu/auth/session", {
+      const response = await fetch("http://localhost:4000/auth/session", {
         method: "GET",
         credentials: "include",
         headers: {
@@ -301,13 +306,15 @@ const Page = () => {
 
   const login = async () => {
     if (!validateEmail(email)) {
-      setEmailError("Please use a valid @uga.edu email address.");
+      setEmailError(
+        "Please use a valid @uga.edu email address. Make sure it's in the ab12345@uga.edu or abc12345@uga.edu format.",
+      );
       return;
     }
     setEmailError("");
 
     try {
-      const response = await fetch("https://api.devdogs.uga.edu/auth/login", {
+      const response = await fetch("http://localhost:4000/auth/login", {
         method: "POST",
         credentials: "include",
         headers: {
@@ -350,7 +357,9 @@ const Page = () => {
           <h3 className="text-2xl font-bold">Email Address</h3>
           <input
             type="email"
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+            }}
             placeholder="Email"
             className="w-full rounded-xl p-2"
           />

@@ -6,7 +6,7 @@ export async function middleware(req) {
   const cookie = await req.cookies.get("connect.sid");
 
   if (cookie) {
-    const res = await fetch("https://api.devdogs.uga.edu/auth/session", {
+    const res = await fetch("http://localhost:4000/auth/session", {
       method: "GET",
       credentials: "include",
       headers: {
