@@ -79,7 +79,7 @@ const EventsPage = () => {
         The latest dates and times can be found in the calendar below. Members
         are welcome to attend our livestreams on{" "}
         <Link
-          href="tps://discord.com/invite/MuyJ4f5xKE"
+          href="https://discord.com/invite/MuyJ4f5xKE"
           target="_blank"
           className="text-black underline transition duration-200 ease-in-out hover:text-[#9656CE]"
         >

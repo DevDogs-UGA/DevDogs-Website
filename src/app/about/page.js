@@ -109,14 +109,14 @@ const AboutPage = () => {
           <div className="flex flex-nowrap items-center justify-center gap-[2rem] py-4">
             <Link
               href="/about/projects"
-              className="blue rounded-full px-4 py-2 text-lg font-medium text-white transition delay-150 ease-in-out sm:px-6 md:text-xl"
+              className="rounded-full bg-DevDogBlue px-4 py-2 text-lg font-medium text-white transition delay-150 ease-in-out hover:bg-black hover:text-white sm:px-6 md:text-xl"
             >
               <Button>All Projects</Button>
             </Link>
             <Link
               target="_blank"
               href="/about/people"
-              className="red rounded-full px-4 py-2 text-lg font-medium text-white transition delay-150 ease-in-out sm:px-6 md:text-xl"
+              className="rounded-full bg-[#BA0C2F] px-4 py-2 text-lg font-medium text-white transition delay-150 ease-in-out hover:bg-black hover:text-white sm:px-6 md:text-xl"
             >
               <Button>Our People</Button>
             </Link>
