@@ -29,7 +29,7 @@ export default function Page({ params }) {
   const [last_name, setLastName] = useState(null);
   const [github, setGitub] = useState(null);
   const [paid, setPaid] = useState(false);
-  const email = sessionStorage.getItem("email");
+  const email = sessionStorage.getItem("email") || null;
 
   useEffect(() => {
     async function fetchUser() {

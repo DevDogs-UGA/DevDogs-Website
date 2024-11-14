@@ -4,7 +4,10 @@ const GithubPicture = (member) => {
   let data = member.member;
   return (
     <div className="officer-card mx-14 my-6">
-      <img id="pic" src={"https://github.com/" + data.githubLogin + ".png"} />
+      <img
+        id="pic"
+        src={data.pfp_link || "https://github.com/" + data.githubLogin + ".png"}
+      />
       {data.paid ? (
         <div id="officer-description">
           <br />
