@@ -15,17 +15,20 @@ const Settings = () => {
       alert("Password must be at least 8 characters");
       return;
     } else {
-      const res = await fetch("http://localhost:4000/auth/updatePassword", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + token,
+      const res = await fetch(
+        "https://api.devdogs.uga.edu/auth/updatePassword",
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+          },
+          body: JSON.stringify({
+            password: password,
+          }),
         },
-        body: JSON.stringify({
-          password: password,
-        }),
-      });
+      );
       await res.json();
       router.push("/dashboard");
     }

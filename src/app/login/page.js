@@ -37,7 +37,7 @@ const Page = () => {
   // const EmailVerification = () => {
   //   const verify = async () => {
   //     try {
-  //       const data = await fetch("http://localhost:4000/auth/verifyEmail", {
+  //       const data = await fetch("https://api.devdogs.uga.edu/auth/verifyEmail", {
   //         method: "POST",
   //         credentials: "include",
   //         headers: {
@@ -148,17 +148,20 @@ const Page = () => {
       }
 
       try {
-        const data = await fetch("http://localhost:4000/auth/createUser", {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
+        const data = await fetch(
+          "https://api.devdogs.uga.edu/auth/createUser",
+          {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email_address: email,
+              password: password,
+            }),
           },
-          body: JSON.stringify({
-            email_address: email,
-            password: password,
-          }),
-        });
+        );
 
         if (data.status == 200) {
           console.log("User created");
@@ -272,7 +275,7 @@ const Page = () => {
 
   const checkAuthentication = async () => {
     try {
-      const response = await fetch("http://localhost:4000/auth/session", {
+      const response = await fetch("https://api.devdogs.uga.edu/auth/session", {
         method: "GET",
         credentials: "include",
         headers: {
@@ -314,7 +317,7 @@ const Page = () => {
     setEmailError("");
 
     try {
-      const response = await fetch("http://localhost:4000/auth/login", {
+      const response = await fetch("https://api.devdogs.uga.edu/auth/login", {
         method: "POST",
         credentials: "include",
         headers: {

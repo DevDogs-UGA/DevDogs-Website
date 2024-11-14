@@ -32,7 +32,7 @@ export default function NavBarAvatar() {
 
   const logout = async () => {
     try {
-      await fetch("http://localhost:4000/auth/logout", {
+      await fetch("https://api.devdogs.uga.edu/auth/logout", {
         method: "GET",
         credentials: "include",
         headers: {
@@ -62,7 +62,7 @@ export default function NavBarAvatar() {
         }
 
         const response = await fetch(
-          "http://localhost:4000/users/user_page",
+          "https://api.devdogs.uga.edu/users/user_page",
           {
             method: "GET",
             credentials: "include",

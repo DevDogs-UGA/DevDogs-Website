@@ -30,7 +30,7 @@ export default function ResendEmailButton() {
     try {
       const token = sessionStorage.getItem("access_token");
 
-      await fetch("http://localhost:4000/auth/resendEmail", {
+      await fetch("https://api.devdogs.uga.edu/auth/resendEmail", {
         method: "GET",
         credentials: "include",
         headers: {

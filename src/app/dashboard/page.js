@@ -34,7 +34,7 @@ export const Box = () => {
     async function fetchUser() {
       const token = sessionStorage.getItem("access_token");
 
-      const res = await fetch("http://localhost:4000/users/user_page", {
+      const res = await fetch("https://api.devdogs.uga.edu/users/user_page", {
         method: "GET",
         credentials: "include",
         headers: {
@@ -78,7 +78,7 @@ export const Box = () => {
       const token = sessionStorage.getItem("access_token");
       console.log(pfpLink);
 
-      const res = await fetch("http://localhost:4000/users/user_page", {
+      const res = await fetch("https://api.devdogs.uga.edu/users/user_page", {
         method: "PATCH",
         credentials: "include",
         headers: {
@@ -111,7 +111,7 @@ export const Box = () => {
 
   const logout = async () => {
     try {
-      await fetch("http://localhost:4000/auth/logout", {
+      await fetch("https://api.devdogs.uga.edu/auth/logout", {
         method: "GET",
         credentials: "include",
         headers: {
@@ -130,7 +130,7 @@ export const Box = () => {
     try {
       const token = sessionStorage.getItem("access_token");
 
-      const res = await fetch("http://localhost:4000/users/user_page", {
+      const res = await fetch("https://api.devdogs.uga.edu/users/user_page", {
         method: "PATCH",
         credentials: "include",
         headers: {
@@ -170,7 +170,7 @@ export const Box = () => {
 
   const params = queryString.default.stringify({
     client_id: "Ov23li4ImDoJt0HXf1wb",
-    redirect_uri: "http://localhost:4000/auth/callback",
+    redirect_uri: "https://api.devdogs.uga.edu/auth/callback",
     scope: ["read:user", "user:email"].join(" "), // space seperated string
     allow_signup: true,
   });

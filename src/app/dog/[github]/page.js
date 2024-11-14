@@ -34,7 +34,7 @@ export default function Page({ params }) {
   useEffect(() => {
     async function fetchUser() {
       const res = await fetch(
-        "http://localhost:4000/users/pages?github=" + params.github,
+        "https://api.devdogs.uga.edu/users/pages?github=" + params.github,
         {
           method: "GET",
           credentials: "include",

@@ -28,7 +28,7 @@ export default function Page({ params }) {
 
   async function fetchUser() {
     const res = await fetch(
-      "http://localhost:4000/users/pages?github=" + params.github,
+      "https://api.devdogs.uga.edu/users/pages?github=" + params.github,
       {
         method: "GET",
         credentials: "include",
@@ -69,7 +69,7 @@ export default function Page({ params }) {
 
   const checkAuthentication = async () => {
     try {
-      const response = await fetch("http://localhost:4000/auth/session", {
+      const response = await fetch("https://api.devdogs.uga.edu/auth/session", {
         method: "GET",
         credentials: "include",
         headers: {

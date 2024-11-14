@@ -10,7 +10,7 @@ const Issues_Points = ({ github }) => {
   useEffect(() => {
     const fetchIssues = async () => {
       const response = await fetch(
-        "http://localhost:4000/users/issues?github=" + github,
+        "https://api.devdogs.uga.edu/users/issues?github=" + github,
         {
           method: "GET",
           credentials: "include",
