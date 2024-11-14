@@ -7,9 +7,7 @@ const LeaderBoard = () => {
 
   useEffect(() => {
     async function fetchContributors() {
-      let res = await fetch("https://api.devdogs.uga.edu/getLeaderBoard", {
-        cache: "force-cache",
-      });
+      let res = await fetch("https://api.devdogs.uga.edu/getLeaderBoard");
       let data = await res.json();
       setContributors(data);
     }
