@@ -37,6 +37,7 @@ h6 {
 h3,
 #devdawgs,
 #teamtitle,
+#ateamtitle,
 #teamtitle > h1 {
   text-align: center;
   padding: 10px;
@@ -106,6 +107,13 @@ p {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 7vw;
+}
+
+#ateamgrid {
+  margin: 10px 40px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 2vw;
 }
 
 .page-main-side-padding {
