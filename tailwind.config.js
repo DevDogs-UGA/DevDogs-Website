@@ -30,18 +30,18 @@ module.exports = {
   theme: {
     extend: {
       keyframes: {
-        fadeInOut: {
-          "0%, 100%": { opacity: 0 },
-          "20%, 50%, 80%": { opacity: 1 },
-          
+        fadeIn: {
+          '0%': { opacity: 0 },
+          '100%': { opacity: 1 },
         },
-        "caret-blink": {
-          "0%, 70%, 100%": { opacity: "1" },
-          "20%, 50%": { opacity: "0" },
+        fadeOut: {
+          '0%': { opacity: 1 },
+          '100%': { opacity: 0 },
         },
       },
       animation: {
-        fadeInOut: "fadeInOut 10s ease-out infinite",
+        fadeIn: 'fadeIn 4.5s linear',
+        fadeOut: 'fadeOut 4.5s linear',
       },
       colors: {
         BulldogRed: "#ba0c2f",
