@@ -18,6 +18,10 @@ h6 {
   font-family: "Heebo", sans-serif;
 }
 
+p {
+  text-wrap: balance;
+}
+
 #titleheader {
   font-size: 70px;
   text-align: right;
