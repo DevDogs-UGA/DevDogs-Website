@@ -95,12 +95,7 @@ const OurTeam = () => {
             image={sloan}
             bgcolor="pink"
           />
-          <Card
-            name={""}
-            title={""}
-            image={devdog}
-            bgcolor="pink"
-          />
+          <Card name={""} title={""} image={devdog} bgcolor="pink" />
         </div>
       </div>
 
