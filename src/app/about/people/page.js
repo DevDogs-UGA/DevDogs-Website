@@ -5,6 +5,7 @@ import jack from "../../images/officers/jack.jpg";
 import kade from "../../images/officers/kade.jpg";
 import kelsey from "../../images/officers/kelsey.jpg";
 import sloan from "../../images/officers/sloan.jpg";
+import maya from "../../images/officers/maya.jpg";
 import devdog from "../../images/replaceddevdog.png";
 import EmblaCarousel from "@/app/components/EmblaCarousel";
 import Caoursel1 from "@/app/images/carousel4.jpg";
@@ -95,7 +96,12 @@ const OurTeam = () => {
             image={sloan}
             bgcolor="pink"
           />
-          <Card name={""} title={""} image={devdog} bgcolor="pink" />
+          <Card
+            name={"Maya"}
+            title={"Social Media Manager"}
+            image={maya}
+            bgcolor="pink-light"
+          />
         </div>
       </div>
 
