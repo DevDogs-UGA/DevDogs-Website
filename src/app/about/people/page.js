@@ -1,11 +1,11 @@
 "use client";
 import Card from "../../components/Card";
-import nn from "../../images/officers/nn.jpg";
-import ks from "../../images/officers/ks.jpg";
-import jb from "../../images/officers/jb.jpg";
-import am from "../../images/officers/am.jpg";
-import bm from "../../images/officers/bm.jpg";
-import kds from "../../images/officers/kds.jpg";
+import anika from "../../images/officers/anika.jpg";
+import jack from "../../images/officers/jack.jpg";
+import kade from "../../images/officers/kade.jpg";
+import kelsey from "../../images/officers/kelsey.jpg";
+import sloan from "../../images/officers/sloan.jpg";
+import devdog from "../../images/replaceddevdog.png";
 import EmblaCarousel from "@/app/components/EmblaCarousel";
 import Caoursel1 from "@/app/images/carousel4.jpg";
 import Caoursel2 from "@/app/images/carousel5.jpg";
@@ -66,42 +66,41 @@ const OurTeam = () => {
       <div id="teamtitle">
         <div id="grid">
           <Card
-            name={"Justin Brand"}
+            name={"Kelsey"}
             title={"President"}
-            image={jb}
-            bgcolor="brown-dark"
-          />
-          <Card
-            name={"Nivedha Natarajan"}
-            title={"Technical Officer"}
-            image={nn}
-            bgcolor="cyan-light"
-          />
-          <Card
-            name={"Kelsey Sterner"}
-            title={"Engagement Officer"}
-            image={ks}
+            image={kelsey}
             bgcolor="pink-light"
           />
           <Card
-            name={"Avery Marco"}
-            title={"Instructional Officer"}
-            image={am}
-            bgcolor="pink"
-          />
-          <Card
-            name={"Kade Styron"}
-            title={"Corporate & Career Officer"}
-            image={kds}
+            name={"Kade"}
+            title={"Vice President"}
+            image={kade}
             bgcolor="pink-dark"
           />
           <Card
-            name={"Bryant Monahan"}
-            title={"Campus Initiatives Officer"}
-            image={bm}
-            bgcolor="brown-light"
+            name={"Anika"}
+            title={"Membership and Analytics Chair"}
+            image={anika}
+            bgcolor="cyan-light"
           />
-          <br />
+          <Card
+            name={"Jack"}
+            title={"Project Manager"}
+            image={jack}
+            bgcolor="brown-dark"
+          />
+          <Card
+            name={"Sloan"}
+            title={"Techical Chair"}
+            image={sloan}
+            bgcolor="pink"
+          />
+          <Card
+            name={""}
+            title={""}
+            image={devdog}
+            bgcolor="pink"
+          />
         </div>
       </div>
 
