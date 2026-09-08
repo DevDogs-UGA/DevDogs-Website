@@ -351,10 +351,10 @@ export const GROUPS: readonly CommandGroup[] = [
         summary: "Render a club image at one or more sizes.",
         hint: "brand/*, page/*, app/*, event/*, or * for all",
         // No subcommands: graphics are positional, and several can be named at
-        // once. Two axes — WHICH picture and at WHAT SIZE — and every flag here
-        // answers one of them so the command need not ask. Omit them and it
-        // asks; that is the whole design, since the same command serves an
-        // officer exporting one meeting's poster and a script rendering the lot.
+        // once. The command owns its interactive path because it can ask in CLI
+        // order — graphic, format, output — and derive each question from the
+        // previous answer. The outer wizard therefore dispatches bare `images`;
+        // these options remain here for help and scripted invocations.
         options: [
           {
             flag: "--format",
@@ -367,41 +367,19 @@ export const GROUPS: readonly CommandGroup[] = [
           {
             flag: "--all-formats",
             summary: "Every size the named graphics support.",
-            prompt: {
-              kind: "confirm",
-              message: "Render every size these support?",
-              initial: false,
-            },
           },
           {
             flag: "--out",
             value: "<dir>",
             summary: "Write everything into one directory, flat.",
-            prompt: {
-              kind: "text",
-              message:
-                "Write into which directory? (blank: where each belongs)",
-              placeholder: "~/images",
-              optional: true,
-            },
           },
           {
             flag: "--default-out",
             summary: "Write each image where it belongs in the repo.",
-            prompt: {
-              kind: "confirm",
-              message: "Write each one to its own default directory?",
-              initial: true,
-            },
           },
           {
             flag: "--no-output",
             summary: "List what would be written, and what each size is for.",
-            prompt: {
-              kind: "confirm",
-              message: "Just list what would be written?",
-              initial: false,
-            },
           },
         ],
       },

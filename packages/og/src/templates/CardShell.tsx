@@ -1,8 +1,9 @@
+import * as React from "react";
 import type { ReactNode } from "react";
 import { ACCENT, CONTACT, MAUVE, THEME } from "../brand.js";
 import { CARD_REFERENCE_WIDTH, cardLayout, OG_SIZE } from "../formats.js";
 import { MARK, WORDMARK_ON_DARK } from "../generated/assets.js";
-import { Mark, Wordmark } from "../primitives.js";
+import { GdgcCobrand, Icon, Mark, Wordmark } from "../primitives.js";
 import { rgba } from "./wash.js";
 
 export { OG_SIZE };
@@ -38,6 +39,7 @@ export interface CardShellProps {
   accent?: string;
   /** Replaces `devdogsuga.org` in the footer for a page worth deep-linking. */
   footer?: string;
+  cobrand?: boolean;
   children: ReactNode;
 }
 
@@ -67,17 +69,28 @@ export interface CardContext {
 /** The wide layout's fixed left column, holding the lockup, chip and address. */
 const RAIL_WIDTH = 560;
 
+/**
+ * GDGC square artwork uses a centered 760px-wide safe column. Its 160px outer
+ * margin plus 32px of breathing room keeps event details away from both edges.
+ * Height is intentionally unrestricted beyond the normal card padding.
+ */
+const SQUARE_HORIZONTAL_PADDING = 192;
+const SQUARE_VERTICAL_PADDING = 64;
+
 export function cardContext(width: number, height: number): CardContext {
   const layout = cardLayout(width, height);
   const u = width / CARD_REFERENCE_WIDTH[layout];
-  const pad = 64 * u;
+  const horizontalPad =
+    (layout === "square" ? SQUARE_HORIZONTAL_PADDING : 64) * u;
 
   // The wide card's left column is fixed so the content column is predictable;
   // a column sized by its contents would move every time the club's address
   // changed length.
   const railWidth = RAIL_WIDTH * u;
   const contentWidth =
-    layout === "wide" ? width - pad * 2 - railWidth - 72 * u : width - pad * 2;
+    layout === "wide"
+      ? width - horizontalPad * 2 - railWidth - 72 * u
+      : width - horizontalPad * 2;
 
   return { layout, u, contentWidth };
 }
@@ -88,20 +101,34 @@ export function CardShell({
   eyebrow,
   accent = ACCENT.cyan400,
   footer,
+  cobrand = true,
   children,
 }: CardShellProps) {
   const { layout, u } = cardContext(width, height);
 
-  const pad = 64 * u;
+  const horizontalPad =
+    (layout === "square" ? SQUARE_HORIZONTAL_PADDING : 64) * u;
+  const verticalPad = (layout === "square" ? SQUARE_VERTICAL_PADDING : 64) * u;
   const wide = layout === "wide";
+  const square = layout === "square";
   const railWidth = RAIL_WIDTH * u;
 
   const lockup = (
-    <div style={{ display: "flex", alignItems: "center", gap: 18 * u }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: (wide ? 34 : 21) * u,
+      }}
+    >
       <Mark asset={MARK} height={(wide ? 96 : 60) * u} />
-      <Wordmark asset={WORDMARK_ON_DARK} capHeight={(wide ? 46 : 30) * u} />
+      <Wordmark asset={WORDMARK_ON_DARK} capHeight={(wide ? 62 : 39) * u} />
     </div>
   );
+
+  const gdg = cobrand ? (
+    <GdgcCobrand height={(wide ? 62 : layout === "square" ? 54 : 44) * u} />
+  ) : null;
 
   const chip = eyebrow ? (
     <div
@@ -118,7 +145,7 @@ export function CardShell({
         // The wide layout puts this in a fixed-width column, where a flex
         // child stretches to the full 620px by default and the chip becomes a
         // bar. It is a pill in every layout or it is not the same card.
-        alignSelf: "flex-start",
+        alignSelf: square ? "center" : "flex-start",
       }}
     >
       {eyebrow.toUpperCase()}
@@ -130,6 +157,7 @@ export function CardShell({
       style={{
         display: "flex",
         flexDirection: "column",
+        alignItems: square ? "center" : "flex-start",
         gap: 18 * u,
         flexShrink: 0,
       }}
@@ -143,14 +171,18 @@ export function CardShell({
           borderRadius: 3 * u,
         }}
       />
-      <div
-        style={{
-          fontFamily: "Hanken Grotesk",
-          fontSize: 26 * u,
-          color: MAUVE[400],
-        }}
-      >
-        {footer ?? CONTACT.site}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 * u }}>
+        <Icon name="Globe" size={26 * u} color={MAUVE[400]} />
+        <div
+          style={{
+            fontFamily: "Hanken Grotesk",
+            fontSize: 26 * u,
+            color: MAUVE[400],
+            textAlign: square ? "center" : "left",
+          }}
+        >
+          {footer ?? CONTACT.site}
+        </div>
       </div>
     </div>
   );
@@ -167,7 +199,7 @@ export function CardShell({
     // written as `left: 0, top: 0` lands at the top-left of the CONTENT and
     // paints a hard-edged rectangle across the image.
     backgroundImage: `radial-gradient(circle at ${wide ? "94%" : "88%"} 6%, ${rgba(accent, 0.16)}, ${rgba(accent, 0)} 45%)`,
-    padding: pad,
+    padding: `${verticalPad}px ${horizontalPad}px`,
   } as const;
 
   if (wide) {
@@ -196,12 +228,77 @@ export function CardShell({
             display: "flex",
             flexDirection: "column",
             flexGrow: 1,
+            height: "100%",
+            minHeight: 0,
+            justifyContent: "space-between",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              height: height - verticalPad * 2 - 76 * u,
+              overflow: "hidden",
+              justifyContent: "center",
+            }}
+          >
+            {children}
+          </div>
+          <div
+            style={{ display: "flex", alignSelf: "flex-end", flexShrink: 0 }}
+          >
+            {gdg}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (square) {
+    return (
+      <div
+        style={{
+          ...frame,
+          flexDirection: "column",
+          justifyContent: "space-between",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 22 * u,
+            flexShrink: 0,
+          }}
+        >
+          {lockup}
+          {chip}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            flexGrow: 1,
             minHeight: 0,
             overflow: "hidden",
             justifyContent: "center",
           }}
         >
           {children}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 18 * u,
+            flexShrink: 0,
+          }}
+        >
+          {gdg}
+          {address}
         </div>
       </div>
     );
@@ -244,7 +341,17 @@ export function CardShell({
       >
         {children}
       </div>
-      {address}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          flexShrink: 0,
+        }}
+      >
+        {address}
+        {gdg}
+      </div>
     </div>
   );
 }

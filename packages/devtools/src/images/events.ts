@@ -1,4 +1,8 @@
-import { meetingCardDetail, meetingLocation } from "@devdogsuga/og/event";
+import {
+  EVENT_SEGMENT_VISUALS,
+  meetingCardDetail,
+  meetingLocation,
+} from "@devdogsuga/og/event";
 import type { DevtoolsClient } from "../instance.js";
 import type { EventGraphicSource } from "./graphics.js";
 
@@ -64,9 +68,15 @@ interface MeetingRow {
 }
 
 interface WorkshopRow {
+  id: string;
   meetingId: string;
   title: string | null;
   projects: { displayName: string; sortOrder: number | null } | null;
+}
+
+interface CompetitionRow {
+  workshopId: string;
+  judgingStartsAt: string | null;
 }
 
 export function supabaseEvents(client: DevtoolsClient): EventReader {
@@ -98,7 +108,7 @@ export function supabaseEvents(client: DevtoolsClient): EventReader {
       // Cancelled nights are included deliberately: a cancellation is exactly
       // when somebody needs a fresh graphic, and the card has a layout for it.
       // Deleted ones are not.
-      const [meetings, workshops] = await Promise.all([
+      const [meetings, workshops, competitions] = await Promise.all([
         client
           .from("meetings")
           .select(
@@ -108,7 +118,11 @@ export function supabaseEvents(client: DevtoolsClient): EventReader {
           .order("startsAt", { ascending: false }),
         client
           .from("workshops")
-          .select("meetingId, title, projects(displayName, sortOrder)")
+          .select("id, meetingId, title, projects(displayName, sortOrder)")
+          .is("deletedAt", null),
+        client
+          .from("competitions")
+          .select("workshopId, judgingStartsAt")
           .is("deletedAt", null),
       ]);
 
@@ -117,10 +131,17 @@ export function supabaseEvents(client: DevtoolsClient): EventReader {
       if (workshops.error) {
         throw new Error(`Could not read workshops: ${workshops.error.message}`);
       }
+      if (competitions.error) {
+        throw new Error(
+          `Could not read competitions: ${competitions.error.message}`,
+        );
+      }
 
-      const agendas = groupAgendas(
-        (workshops.data ?? []) as unknown as WorkshopRow[],
-      );
+      const workshopRows = (workshops.data ?? []) as unknown as WorkshopRow[];
+      const competitionRows = (competitions.data ?? []) as CompetitionRow[];
+      const agendas = groupAgendas(workshopRows);
+      const workshopById = new Map(workshopRows.map((row) => [row.id, row]));
+      const kickoffIds = new Set(competitionRows.map((row) => row.workshopId));
 
       return ((meetings.data ?? []) as unknown as MeetingRow[]).map((row) => {
         const agenda = agendas.get(row.id) ?? [];
@@ -135,24 +156,76 @@ export function supabaseEvents(client: DevtoolsClient): EventReader {
           cancellationReason: row.cancellationReason,
         };
 
+        const items: Array<{
+          label: string;
+          segment: keyof typeof EVENT_SEGMENT_VISUALS;
+        }> = workshopRows
+          .filter((workshop) => workshop.meetingId === row.id)
+          .map((workshop) => ({
+            label: workshopLabel(workshop),
+            segment: kickoffIds.has(workshop.id) ? "kickoff" : "workshop",
+          }));
+
+        for (const competition of competitionRows) {
+          if (competition.judgingStartsAt === null) continue;
+          const judgingAt = new Date(competition.judgingStartsAt);
+          if (judgingAt < meeting.startsAt || judgingAt >= meeting.endsAt)
+            continue;
+          const workshop = workshopById.get(competition.workshopId);
+          if (!workshop) continue;
+          items.push({ label: workshopLabel(workshop), segment: "judging" });
+        }
+
+        const detail = meetingCardDetail({
+          meeting,
+          title: meetingTitle(
+            row.nameOverride,
+            row.kind,
+            meeting.startsAt,
+            agenda,
+          ),
+          agenda: items.map(
+            (item) =>
+              `${EVENT_SEGMENT_VISUALS[item.segment].label}: ${item.label}`,
+          ),
+          location: meetingLocation(row.building, row.location),
+        });
+
         return {
           slug: row.slug,
           hint: describeMeeting(meeting),
-          detail: meetingCardDetail({
-            meeting,
-            title: meetingTitle(
-              row.nameOverride,
-              row.kind,
-              meeting.startsAt,
-              agenda,
-            ),
-            agenda,
-            location: meetingLocation(row.building, row.location),
+          detail,
+          items: items.map((item) => {
+            const visual = EVENT_SEGMENT_VISUALS[item.segment];
+            return {
+              stem: slugPart(item.label),
+              detail: {
+                ...detail,
+                title: item.label,
+                agenda: undefined,
+                badge: { label: visual.label, accent: visual.accent },
+              },
+            };
           }),
         };
       });
     },
   };
+}
+
+/** A readable path component for a workshop or judging card. */
+function slugPart(label: string): string {
+  return (
+    label
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "agenda-item"
+  );
+}
+
+function workshopLabel(row: WorkshopRow): string {
+  return row.title ?? row.projects?.displayName ?? "Workshop";
 }
 
 /**
@@ -188,8 +261,7 @@ function groupAgendas(rows: readonly WorkshopRow[]): Map<string, string[]> {
           ) || (a.title ?? "").localeCompare(b.title ?? "")
         );
       })
-      .map((row) => row.title ?? row.projects?.displayName ?? null)
-      .filter((label): label is string => label !== null);
+      .map(workshopLabel);
 
     agendas.set(meetingId, labels);
   }

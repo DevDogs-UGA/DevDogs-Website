@@ -1,3 +1,4 @@
+import * as React from "react";
 import { APPS, type AppKey } from "../apps.js";
 import { THEME } from "../brand.js";
 import { MARK } from "../generated/assets.js";

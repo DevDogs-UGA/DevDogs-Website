@@ -8,6 +8,7 @@ import {
   syncRolesOnLink,
 } from "~/server/discord/memberSync";
 import { reconcileRoleDefinitions } from "~/server/discord/reconcile";
+import { isSuccessfulRemovalStatus } from "~/server/auth/connectedAccount";
 
 const CALLBACK_URL = new URL("/auth/callback", env.BASE_URL).toString();
 
@@ -75,7 +76,7 @@ export async function linkProfile(
     .then((obj) => profileSchema.parseAsync(obj));
 
   // Add the Discord user to the DevDogs guild
-  await fetch(
+  const addMemberResult = await fetch(
     `https://discord.com/api/guilds/${env.DISCORD_GUILD_ID}/members/${discordProfile.id}`,
     {
       method: "PUT",
@@ -92,13 +93,17 @@ export async function linkProfile(
     },
   );
 
+  if (!addMemberResult.ok) {
+    throw discordApiError("add_guild_member", addMemberResult);
+  }
+
   // Pull in any synced DevDogs roles the user already holds on Discord, and
   // refresh synced role names/colors. Both soft-fail so neither blocks linking.
   await syncRolesOnLink(userId, discordProfile.id).catch((err: unknown) => {
-    console.error("Failed to sync roles on Discord link:", err);
+    logDiscordFailure("sync_roles", err);
   });
   await reconcileRoleDefinitions().catch((err: unknown) => {
-    console.error("Failed to reconcile Discord role definitions on link:", err);
+    logDiscordFailure("reconcile_role_definitions", err);
   });
 }
 
@@ -109,7 +114,13 @@ export async function linkProfile(
  */
 export async function unlinkProfile(userId: string): Promise<void> {
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getUserIdentities();
+  const { data, error: identitiesError } =
+    await supabase.auth.getUserIdentities();
+  if (identitiesError) {
+    throw new Error(
+      `Failed to read Discord identity: ${identitiesError.message}`,
+    );
+  }
 
   const identity = data?.identities.find((i) => i.provider === "discord");
 
@@ -118,28 +129,62 @@ export async function unlinkProfile(userId: string): Promise<void> {
   // The Discord snowflake ID is stored as `identity_data.sub` by Supabase.
   const discordUserId: unknown = identity.identity_data?.sub;
 
+  // The identity is the user's account data. Its removal must not depend on
+  // the optional guild-management side effect succeeding.
+  const { error } = await supabase.auth.unlinkIdentity(identity);
+  if (error) {
+    throw new Error(`Failed to unlink Discord identity: ${error.message}`);
+  }
+
+  await removeSyncedRolesOnUnlink(userId).catch((cause: unknown) => {
+    logDiscordFailure("remove_synced_roles", cause);
+  });
+
   if (typeof discordUserId !== "string") {
-    throw new Error("Discord identity is missing sub. Unlink aborted.");
+    logDiscordFailure("remove_guild_member", "Identity is missing sub");
+    return;
   }
 
-  // TODO: fix permissions in Discord for this to work
-  const result = await fetch(
-    `https://discord.com/api/guilds/${env.DISCORD_GUILD_ID}/members/${discordUserId}`,
-    {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bot ${env.DISCORD_TOKEN}`,
-        "X-Audit-Log-Reason": "Unlinked Discord account on devdogsuga.org",
+  try {
+    const result = await fetch(
+      `https://discord.com/api/guilds/${env.DISCORD_GUILD_ID}/members/${discordUserId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bot ${env.DISCORD_TOKEN}`,
+          "X-Audit-Log-Reason": "Unlinked Discord account on devdogsuga.org",
+        },
       },
-    },
-  );
-
-  if (!result.ok) {
-    throw new Error(
-      `Failed to remove user from Discord guild (${result.status}). Unlink aborted.`,
     );
-  }
 
-  await supabase.auth.unlinkIdentity(identity);
-  await removeSyncedRolesOnUnlink(userId);
+    if (!isSuccessfulRemovalStatus(result.status)) {
+      discordApiError("remove_guild_member", result);
+    }
+  } catch (cause) {
+    logDiscordFailure("remove_guild_member", cause);
+  }
+}
+
+function discordApiError(operation: string, response: Response): Error {
+  console.error(
+    JSON.stringify({
+      message: "Connected-account side effect failed",
+      provider: "discord",
+      operation,
+      status: response.status,
+      rateLimitBucket: response.headers.get("x-ratelimit-bucket"),
+    }),
+  );
+  return new Error(`Discord ${operation} failed (${response.status})`);
+}
+
+function logDiscordFailure(operation: string, cause: unknown): void {
+  console.error(
+    JSON.stringify({
+      message: "Connected-account side effect failed",
+      provider: "discord",
+      operation,
+      error: cause instanceof Error ? cause.message : String(cause),
+    }),
+  );
 }

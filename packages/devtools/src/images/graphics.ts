@@ -56,6 +56,7 @@ const BRAND = "apps/platform/public/brand";
 
 /** The two renditions anything may need, because anything may reach the GDG platform. */
 const GDG = ["gdgc-wide", "gdgc-square"];
+const EVENT_FORMATS = ["og", ...GDG, "involvement-network"];
 const EMAIL = ["email-1x", "email-2x", "email-3x"];
 
 /* ------------------------------------------------------------------- brand */
@@ -117,7 +118,12 @@ function pageGraphics(): Graphic[] {
       formats: ["og", ...GDG],
       why: `The card ${route} unfurls as.`,
       render: (format) =>
-        PageCard({ width: format.width, height: format.height, ...copy }),
+        PageCard({
+          width: format.width,
+          height: format.height,
+          cobrand: true,
+          ...copy,
+        }),
       // The format is in the filename, not just the directory: `og` and
       // `gdgc-square` are the same page at two sizes, and without it the second
       // silently overwrites the first.
@@ -176,6 +182,7 @@ function appGraphics(): Graphic[] {
               eyebrow: APPS[app].tagline,
               accent: APPS[app].ground,
               footer: APPS[app].host,
+              cobrand: true,
             }),
       destination: (format) => {
         // The two Next reads by name, which have to land in `src/app` under
@@ -211,6 +218,8 @@ export interface EventGraphicSource {
   detail: EventDetail;
   /** For the picker's hint: when it is, and whether it is on. */
   hint: string;
+  /** Separate cards generated only when the night contains multiple items. */
+  items?: Array<{ detail: EventDetail; stem: string }>;
 }
 
 /**
@@ -228,23 +237,58 @@ export interface EventGraphicSource {
 export const EVENT_SCRATCH_DIR = ".images/events";
 
 export function eventGraphics(events: EventGraphicSource[]): Graphic[] {
-  return events.map((event) => ({
-    name: `event/${event.slug}`,
-    group: "event",
-    stem: event.slug,
-    formats: ["og", ...GDG],
-    why: `The ${event.slug} meeting — ${event.hint}.`,
-    render: (format) =>
-      EventCard({
-        width: format.width,
-        height: format.height,
-        ...event.detail,
+  return events.flatMap((event) => {
+    const meeting: Graphic = {
+      name: `event/${event.slug}/meeting`,
+      group: "event",
+      stem: event.slug,
+      formats: EVENT_FORMATS,
+      why: `The ${event.slug} meeting — ${event.hint}.`,
+      render: (format) =>
+        EventCard({
+          width: format.width,
+          height: format.height,
+          cobrand: true,
+          ...event.detail,
+        }),
+      destination: (format) => ({
+        dir: `${EVENT_SCRATCH_DIR}/${event.slug}`,
+        file: `meeting-${format.name}.png`,
       }),
-    destination: (format) => ({
-      dir: EVENT_SCRATCH_DIR,
-      file: `${event.slug}-${format.name}.png`,
-    }),
-  }));
+    };
+
+    if ((event.items?.length ?? 0) < 2) return [meeting];
+
+    const occurrences = new Map<string, number>();
+    const items = event.items!.map((item) => {
+      const occurrence = (occurrences.get(item.stem) ?? 0) + 1;
+      occurrences.set(item.stem, occurrence);
+      const path = occurrence === 1 ? item.stem : `${item.stem}-${occurrence}`;
+
+      return {
+        name: `event/${event.slug}/${path}`,
+        group: "event",
+        // `--out` is deliberately flat, so its private stem still carries
+        // the meeting even though default output can use nested folders.
+        stem: `${event.slug}-${path}`,
+        formats: EVENT_FORMATS,
+        why: `${item.detail.badge?.label ?? "Agenda item"}: ${item.detail.title} — ${event.hint}.`,
+        render: (format: Format) =>
+          EventCard({
+            width: format.width,
+            height: format.height,
+            cobrand: true,
+            ...item.detail,
+          }),
+        destination: (format: Format) => ({
+          dir: `${EVENT_SCRATCH_DIR}/${event.slug}`,
+          file: `${path}-${format.name}.png`,
+        }),
+      } satisfies Graphic;
+    });
+
+    return [meeting, ...items];
+  });
 }
 
 /* --------------------------------------------------------------------- all */

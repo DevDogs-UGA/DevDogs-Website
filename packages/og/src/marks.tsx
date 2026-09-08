@@ -1,3 +1,5 @@
+import * as React from "react";
+
 /**
  * The two app marks, redrawn as tintable JSX.
  *

@@ -146,10 +146,15 @@ describe("prompts", () => {
       "--filter",
       "--all",
       // `images`. The formats a graphic can be drawn at depend on WHICH
-      // graphic — the matrix is sparse — so the command asks after the
-      // graphics are chosen, from the union of what they support. A static
-      // list here would offer sizes that get silently skipped.
+      // graphic — the matrix is sparse — and its own wizard asks in the same
+      // order as the CLI: positional graphic, format, then output. The outer
+      // wizard dispatches bare `images`; these remain available to scripts and
+      // in help without duplicating or reordering that flow.
       "--format",
+      "--all-formats",
+      "--out",
+      "--default-out",
+      "--no-output",
     ]);
     const unasked = new Set<string>();
 

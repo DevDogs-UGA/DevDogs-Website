@@ -65,6 +65,7 @@ export { type IconName } from "./generated/icons.js";
 export {
   Icon,
   IconRow,
+  GdgcCobrand,
   Mark,
   SocialRow,
   Tile,

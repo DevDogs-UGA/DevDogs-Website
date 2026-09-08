@@ -1,12 +1,17 @@
+import * as React from "react";
 import { ACCENT, CONTACT, MAUVE, THEME } from "../brand.js";
 import {
-  GDGC_UGA,
-  GDGC_UGA_LIGHT,
   MARK,
   WORDMARK_ON_DARK,
   WORDMARK_ON_LIGHT,
 } from "../generated/assets.js";
-import { IconRow, Mark, SocialRow, Wordmark } from "../primitives.js";
+import {
+  GdgcCobrand,
+  IconRow,
+  Mark,
+  SocialRow,
+  Wordmark,
+} from "../primitives.js";
 import { rgba } from "./wash.js";
 
 /**
@@ -67,7 +72,7 @@ export function Banner({
 
   const markHeight = (column ? 372 : 384) * u;
   const capHeight = (column ? 82 : 85) * u;
-  const gdgcHeight = ((column ? 33 : 33) * u) / GDGC_CAP_RATIO;
+  const gdgcHeight = (column ? 94 : 88) * u;
   const urlSize = (column ? 42 : 40) * u;
   const handleSize = (column ? 40 : 38) * u;
 
@@ -84,16 +89,6 @@ export function Banner({
         asset={dark ? WORDMARK_ON_DARK : WORDMARK_ON_LIGHT}
         capHeight={capHeight}
       />
-      {cobrand ? (
-        <img
-          // The chapter mark has a ground of its own to match: its wordmark is
-          // white, which is invisible on the light variant of this banner.
-          src={(dark ? GDGC_UGA : GDGC_UGA_LIGHT).src}
-          width={Math.round((GDGC_UGA.width / GDGC_UGA.height) * gdgcHeight)}
-          height={Math.round(gdgcHeight)}
-          style={{ marginTop: (column ? 42 : 26) * u }}
-        />
-      ) : null}
       <div
         style={{
           display: "flex",
@@ -126,9 +121,9 @@ export function Banner({
         display: "flex",
         width,
         height,
-        alignItems: "center",
-        justifyContent: "center",
+        flexDirection: "column",
         background: ink.background,
+        padding: (column ? 52 : 34) * u,
         // Two washes of the club's own accents, so a very wide canvas does not
         // read as an empty black bar. On the root's own `backgroundImage`
         // rather than on stacked layers above it: Satori resolves `position:
@@ -141,14 +136,28 @@ export function Banner({
       <div
         style={{
           display: "flex",
-          flexDirection: column ? "column" : "row",
+          flexGrow: 1,
           alignItems: "center",
-          gap: (column ? 40 : 74) * u,
+          justifyContent: "center",
         }}
       >
-        <Mark asset={MARK} height={markHeight} />
-        {type}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: column ? "column" : "row",
+            alignItems: "center",
+            gap: (column ? 40 : 74) * u,
+          }}
+        >
+          <Mark asset={MARK} height={markHeight} />
+          {type}
+        </div>
       </div>
+      {cobrand ? (
+        <div style={{ display: "flex", alignSelf: "flex-end", flexShrink: 0 }}>
+          <GdgcCobrand height={gdgcHeight} ground={ground} />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -161,8 +170,6 @@ export function Banner({
  * wordmark means converting through the capitals, the same as everything else
  * here.
  */
-const GDGC_CAP_RATIO = 137 / 309;
-
 /**
  * The background wash, as one `background-image`.
  *

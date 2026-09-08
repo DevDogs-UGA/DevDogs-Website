@@ -168,7 +168,7 @@ const WORDMARK_BOX = [37.35, 8.875, 74.05, 16.1] as const;
  * Splits the combined lockup into the two marks the templates place
  * independently.
  *
- * `devdogs-logo-dark.svg` is one file holding both: 51 paths of mascot followed
+ * `devdogs-logo-dark.svg` is one file holding both: 52 paths of mascot followed
  * by a single path of "DevDogs" wordmark. Every layout here sizes the two
  * against each other — the wide banner sets the mascot at 384px and the wordmark
  * at 112 — so they cannot come from one image. The split is by path index and
@@ -178,9 +178,9 @@ const WORDMARK_BOX = [37.35, 8.875, 74.05, 16.1] as const;
 function splitLockup(file: string) {
   const svg = readFileSync(path.join(BRAND, file), "utf8");
   const paths = svg.match(/<path\b[^>]*\/>/g) ?? [];
-  if (paths.length !== 52) {
+  if (paths.length !== 53) {
     throw new Error(
-      `${file}: expected 52 paths (51 mascot + 1 wordmark), got ${paths.length}`,
+      `${file}: expected 53 paths (52 mascot + 1 wordmark), got ${paths.length}`,
     );
   }
 
@@ -193,8 +193,8 @@ function splitLockup(file: string) {
   });
 
   return {
-    mark: crop(paths.slice(0, 51).join(""), MASCOT_BOX),
-    wordmark: crop(paths[51]!, WORDMARK_BOX),
+    mark: crop(paths.slice(0, 52).join(""), MASCOT_BOX),
+    wordmark: crop(paths[52]!, WORDMARK_BOX),
   };
 }
 
@@ -206,6 +206,7 @@ function assets() {
     path.join(BRAND, "gdgc-uga-lockup-dark.svg"),
     "utf8",
   );
+  const gdgMark = readFileSync(path.join(BRAND, "gdg-bracket.svg"), "utf8");
 
   /**
    * The same lockup for a light ground.
@@ -251,6 +252,12 @@ function assets() {
     light.wordmark.svg,
     light.wordmark.box,
     "The same wordmark in black, for the light grounds email bodies use.",
+  );
+  add(
+    "GDG_MARK",
+    gdgMark,
+    svgAttrs(gdgMark),
+    "The official Google Developer Groups bracket mark, downloaded unchanged from developers.google.com.",
   );
   add(
     "GDGC_UGA",

@@ -28,7 +28,7 @@ export const PAGE_CARDS: Record<string, PageCardCopy> = {
   "/": {
     title: "Learn by doing.",
     description:
-      "DevDogs is a club at UGA devoted to bettering our community through open-source software.",
+      "DevDogs is a club at the University of Georgia devoted to bettering our community through open-source software.",
     accent: ACCENT.cyan400,
   },
   "/events": {

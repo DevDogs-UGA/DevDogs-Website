@@ -21,6 +21,7 @@ import SettingsSaveBar from "~/ui/settings-save-bar";
 import { CardSkeleton } from "~/components/Skeletons";
 import VerificationStatusField from "~/components/VerificationStatusField";
 import { getProfilePageData } from "~/server/loaders/console";
+import Callout from "~/ui/callout";
 
 /**
  * One person's own profile. Nothing here is the same page for two visitors,
@@ -33,8 +34,13 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-async function AccountContent() {
+async function AccountContent({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const data = await getProfilePageData();
+  const params = await searchParams;
 
   // Set by a moderator resolving a report with `quarantine`. Everything under
   // it is refused by RLS regardless; this is what stops the page pretending
@@ -44,6 +50,7 @@ async function AccountContent() {
 
   return (
     <>
+      <ConnectedAccountStatus params={params} />
       <ConsoleCard.Root id="profile">
         <ConsoleCard.Header title="Profile" />
         <ConsoleCard.Content>
@@ -193,7 +200,11 @@ async function AccountContent() {
   );
 }
 
-export default function ProfilePage() {
+export default function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   return (
     <div className="flex min-w-0 flex-1 flex-col bg-mauve-900">
       <PageShell
@@ -222,11 +233,43 @@ export default function ProfilePage() {
               </>
             }
           >
-            <AccountContent />
+            <AccountContent searchParams={searchParams} />
           </Suspense>
           <SettingsSaveBar />
         </SettingsFormProvider>
       </PageShell>
     </div>
+  );
+}
+
+function ConnectedAccountStatus({
+  params,
+}: {
+  params: Record<string, string | string[] | undefined>;
+}) {
+  const level = params.connectedAccountStatus;
+  const code = params.connectedAccountCode;
+  const provider = params.connectedAccountProvider;
+  if (typeof level !== "string" || typeof code !== "string") return null;
+
+  const providerName =
+    provider === "github"
+      ? "GitHub"
+      : provider === "discord"
+        ? "Discord"
+        : provider === "linkedin_oidc"
+          ? "LinkedIn"
+          : "That account";
+  const message =
+    code === "identity_already_exists"
+      ? `${providerName} profile is already linked to a DevDogs account. If it does not appear below, sign in to the other account and unlink it first, or contact an officer for help.`
+      : code === "external_side_effect_failed"
+        ? `${providerName} was linked, but its organization or server membership could not be updated. Your connected account is safe; an officer can retry the membership update.`
+        : `${providerName} could not be linked. Please try again or contact an officer if the problem continues.`;
+
+  return (
+    <Callout tone={level === "warning" ? "warning" : "critical"}>
+      {message}
+    </Callout>
   );
 }

@@ -1,3 +1,4 @@
+import * as React from "react";
 import { CONTACT, MAUVE, THEME } from "../brand.js";
 import { EMAIL_SIGNATURE_ASPECT } from "../formats.js";
 import {

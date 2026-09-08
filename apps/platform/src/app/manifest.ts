@@ -60,7 +60,11 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "any",
       },
       {
-        src: "/icon.png",
+        // `icon.tsx`, not a file in `public`. Next's code convention serves a
+        // generated icon at `/icon` rather than `/icon.png`, and appends its
+        // own cache-busting query to the `<link>` it injects; this URL without
+        // one resolves to the same route.
+        src: "/icon",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
