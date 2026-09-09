@@ -56,7 +56,13 @@ export async function linkProfile(_accessToken: string): Promise<void> {
  */
 export async function unlinkProfile(): Promise<void> {
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getUserIdentities();
+  const { data, error: identitiesError } =
+    await supabase.auth.getUserIdentities();
+  if (identitiesError) {
+    throw new Error(
+      `Failed to read LinkedIn identity: ${identitiesError.message}`,
+    );
+  }
 
   const identity = data?.identities.find((i) => i.provider === "linkedin_oidc");
 
@@ -64,5 +70,8 @@ export async function unlinkProfile(): Promise<void> {
 
   // TODO: implement LinkedIn-specific side effects (e.g. org membership removal)
 
-  await supabase.auth.unlinkIdentity(identity);
+  const { error } = await supabase.auth.unlinkIdentity(identity);
+  if (error) {
+    throw new Error(`Failed to unlink LinkedIn identity: ${error.message}`);
+  }
 }

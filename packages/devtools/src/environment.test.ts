@@ -132,7 +132,7 @@ describe("probeEnvironment", () => {
    * the menu before it printed anything.
    */
   it("answers with a well-formed environment and never throws", () => {
-    const env = probeEnvironment();
+    const env = probeEnvironment(() => null);
     const valid: Known[] = ["yes", "no", "unknown"];
 
     expect(valid).toContain(env.docker);
@@ -141,7 +141,18 @@ describe("probeEnvironment", () => {
   });
 
   it("rules out a stack when there is no daemon to hold it", () => {
-    const env = probeEnvironment();
-    if (env.docker === "no") expect(env.stack).toBe("no");
+    const env = probeEnvironment(() => null);
+
+    expect(env).toMatchObject({ docker: "no", stack: "no" });
+  });
+
+  it("recognizes this project's running database container", () => {
+    const env = probeEnvironment((_file, args) =>
+      args[0] === "info"
+        ? "Docker is running"
+        : "supabase_db_DevDogs-Website\n",
+    );
+
+    expect(env).toMatchObject({ docker: "yes", stack: "yes" });
   });
 });

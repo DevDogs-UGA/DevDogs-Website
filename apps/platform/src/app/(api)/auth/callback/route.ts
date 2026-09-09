@@ -7,6 +7,7 @@ import * as github from "~/server/auth/providers/github";
 import * as google from "~/server/auth/providers/google";
 import * as linkedin from "~/server/auth/providers/linkedin";
 import { createSupabaseServerClient } from "~/supabase/server";
+import { withConnectedAccountStatus } from "~/server/auth/connectedAccount";
 
 /**
  * Handles all Supabase OAuth callbacks:
@@ -19,17 +20,30 @@ import { createSupabaseServerClient } from "~/supabase/server";
  * provider's Route Handler before initiating the Supabase OAuth flow.
  */
 export async function GET(request: NextRequest) {
-  const code = request.nextUrl.searchParams.get("code");
-
-  if (!code) {
-    notFound();
-  }
-
   const cookieStore = await cookies();
   const intent = cookieStore.get("auth_intent")?.value ?? "sign-in:google";
   const callbackPath = cookieStore.get("auth_callback_path")?.value ?? "/";
   cookieStore.delete("auth_intent");
   cookieStore.delete("auth_callback_path");
+
+  const errorCode =
+    request.nextUrl.searchParams.get("error_code") ??
+    request.nextUrl.searchParams.get("error");
+  const provider = intent.startsWith("link:") ? intent.slice(5) : "google";
+  if (errorCode) {
+    console.warn(
+      JSON.stringify({
+        message: "OAuth provider rejected identity operation",
+        operation: intent.startsWith("link:") ? "link" : "sign-in",
+        provider,
+        errorCode,
+      }),
+    );
+    redirectWithAccountStatus(callbackPath, "error", errorCode, provider);
+  }
+
+  const code = request.nextUrl.searchParams.get("code");
+  if (!code) notFound();
 
   const supabase = await createSupabaseServerClient();
   const {
@@ -38,7 +52,14 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    console.error("Failed to exchange OAuth code", error);
+    console.error(
+      JSON.stringify({
+        message: "Failed to exchange OAuth code",
+        provider,
+        errorCode: error.code,
+        status: error.status,
+      }),
+    );
     unauthorized();
   }
 
@@ -53,23 +74,77 @@ export async function GET(request: NextRequest) {
 
   if (session?.provider_token && intent === "link:discord") {
     if (!devDogsSession.profile) unauthorized();
-    await discord.linkProfile(
-      session.provider_token,
-      devDogsSession.profile.preferredName,
-      devDogsSession.id,
-    );
+    try {
+      await discord.linkProfile(
+        session.provider_token,
+        devDogsSession.profile.preferredName,
+        devDogsSession.id,
+      );
+    } catch (cause) {
+      logSideEffectFailure("discord", "link", cause);
+      redirectWithAccountStatus(
+        callbackPath,
+        "warning",
+        "external_side_effect_failed",
+        "discord",
+      );
+    }
     redirect(callbackPath);
   }
 
   if (session?.provider_token && intent === "link:github") {
-    await github.linkProfile(session.provider_token);
+    try {
+      await github.linkProfile(session.provider_token);
+    } catch (cause) {
+      logSideEffectFailure("github", "link", cause);
+      redirectWithAccountStatus(
+        callbackPath,
+        "warning",
+        "external_side_effect_failed",
+        "github",
+      );
+    }
     redirect(callbackPath);
   }
 
   if (session?.provider_token && intent === "link:linkedin_oidc") {
-    await linkedin.linkProfile(session.provider_token);
+    try {
+      await linkedin.linkProfile(session.provider_token);
+    } catch (cause) {
+      logSideEffectFailure("linkedin_oidc", "link", cause);
+      redirectWithAccountStatus(
+        callbackPath,
+        "warning",
+        "external_side_effect_failed",
+        "linkedin_oidc",
+      );
+    }
     redirect(callbackPath);
   }
 
   unauthorized();
+}
+
+function redirectWithAccountStatus(
+  callbackPath: string,
+  level: "error" | "warning",
+  code: string,
+  provider: string,
+): never {
+  redirect(withConnectedAccountStatus(callbackPath, level, code, provider));
+}
+
+function logSideEffectFailure(
+  provider: string,
+  operation: string,
+  cause: unknown,
+): void {
+  console.error(
+    JSON.stringify({
+      message: "Connected-account side effect failed",
+      provider,
+      operation,
+      error: cause instanceof Error ? cause.message : String(cause),
+    }),
+  );
 }

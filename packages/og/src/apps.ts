@@ -35,7 +35,7 @@ export const APPS: Record<AppKey, AppBrand> = {
     name: "DevDogs",
     tagline: "Member Portal & Dev Tools",
     blurb:
-      "DevDogs is a club at UGA devoted to bettering our community through open-source software.",
+      "DevDogs is a club at the University of Georgia devoted to bettering our community through open-source software.",
     host: "devdogsuga.org",
     ground: ACCENT.cyan400,
     // The mascot is full-colour artwork rather than a one-colour mark, so this
@@ -46,7 +46,7 @@ export const APPS: Record<AppKey, AppBrand> = {
     name: "DogDays",
     tagline: "Schedule Builder",
     blurb:
-      "Plan your semester against live UGA registrar data — conflict-free schedules weighing professor ratings, walking distance, and the credits you already have.",
+      "Plan your semester against live University of Georgia registrar data — conflict-free schedules weighing professor ratings, walking distance, and the credits you already have.",
     host: "dogdays.dev",
     ground: ACCENT.red400,
     mark: "#000000",

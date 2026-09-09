@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "next build",
+    "images:build": "pnpm --filter @devdogsuga/devtools run cli:no-env images brand/club brand/club-light --format email-1x,email-2x,email-3x --default-out && pnpm --filter @devdogsuga/devtools run cli:no-env images app/platform --format icon-192 --default-out",
+    "build": "pnpm run images:build && next build",
     "dev": "with-env next dev --experimental-https",
     "start": "next start",
     "preview": "next build && next start",

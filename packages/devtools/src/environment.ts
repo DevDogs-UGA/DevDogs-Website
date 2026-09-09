@@ -125,19 +125,21 @@ function containerPrefix(): string {
  * that need real credentials still go through `detectLocalInstance`, which
  * asks the authority at the moment it matters.
  */
-export function probeEnvironment(): Environment {
+export function probeEnvironment(
+  execute: (file: string, args: string[]) => string | null = run,
+): Environment {
   const envFile: Known = existsSync(join(PROJECT_ROOT, ".env")) ? "yes" : "no";
 
   // `docker info` rather than `docker version`: version answers from the
   // client alone, so it reports success against a daemon that is not running.
-  const docker: Known = run("docker", ["info"]) === null ? "no" : "yes";
+  const docker: Known = execute("docker", ["info"]) === null ? "no" : "yes";
 
   // A stack cannot be up without a daemon to hold it, so this needs no second
   // subprocess to say "no", and asking anyway on a machine with no Docker
   // installed would pay the whole timeout for an answer already in hand.
   if (docker === "no") return { docker, stack: "no", envFile };
 
-  const names = run("docker", ["ps", "--format", "{{.Names}}"]);
+  const names = execute("docker", ["ps", "--format", "{{.Names}}"]);
   if (names === null) return { docker, stack: "unknown", envFile };
 
   const prefix = containerPrefix();

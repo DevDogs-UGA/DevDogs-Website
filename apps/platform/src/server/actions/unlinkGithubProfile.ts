@@ -13,15 +13,27 @@ export default async function unlinkGithubProfile() {
   }).catch(() => authenticate("google", "/account"));
 
   const clientId = user.profile.oauthRegistration?.clientId;
+  await unlinkProfile();
+
   if (clientId) {
-    await db.transaction(async (tx) => {
-      await tx
-        .delete(oauthRegistrations)
-        .where(eq(oauthRegistrations.userId, user.id));
-      await supabaseAdmin.auth.admin.oauth.deleteClient(clientId);
-    });
+    try {
+      await db.transaction(async (tx) => {
+        await tx
+          .delete(oauthRegistrations)
+          .where(eq(oauthRegistrations.userId, user.id));
+        await supabaseAdmin.auth.admin.oauth.deleteClient(clientId);
+      });
+    } catch (cause) {
+      console.error(
+        JSON.stringify({
+          message: "Connected-account side effect failed",
+          provider: "github",
+          operation: "delete_oauth_client",
+          error: cause instanceof Error ? cause.message : String(cause),
+        }),
+      );
+    }
   }
 
-  await unlinkProfile();
   refresh();
 }

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../../../../packages/og/src";
 @import "../components/moderation/styles.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";

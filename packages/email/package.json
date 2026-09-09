@@ -6,6 +6,7 @@
   "description": "react-email sources compiled to typed, React-free HTML templates",
   "exports": {
     ".": {
+      "devdogs-source": "./src/runtime/index.ts",
       "types": "./dist/runtime/index.d.ts",
       "default": "./dist/runtime/index.js"
     }

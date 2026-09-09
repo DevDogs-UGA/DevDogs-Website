@@ -72,6 +72,7 @@ export const BASE_ID = "appt422RNi98uAqwX";
 
 export interface MemberRow {
   userId: string;
+  preferredName: string;
   ugaEmail: string | null;
   legalFirstName: string | null;
   legalLastName: string | null;
@@ -459,6 +460,22 @@ export const members = table("Members", "tblLTJtir40NrL87x", {
     .matchKey()
     .push((m: MemberRow) => m.userId),
 
+  // The human-readable field an officer sets as the Members primary in Airtable,
+  // so a Member chip on any linked record reads as a person, not a UUID.
+  // `preferredName` is NOT NULL on the profile, so this is never blank; the
+  // legal-name fallback is belt-and-suspenders for a row that somehow arrives
+  // without one. Kept after `platformId` so the scaffolder still makes Platform
+  // ID the primary on a fresh base, matching every other table — the live
+  // primary is a dashboard choice the sync does not depend on.
+  name: field
+    .text("flddUp1hUoD2W79Qa", "Name")
+    .push(
+      (m: MemberRow) =>
+        m.preferredName ||
+        [m.legalFirstName, m.legalLastName].filter(Boolean).join(" ") ||
+        null,
+    ),
+
   ugaEmail: field
     .email("fldrFt40qy37Ftn9z", "UGA email")
     .push((m: MemberRow) => m.ugaEmail),
@@ -557,12 +574,13 @@ export const meetings = table("Meetings", "tblYhJZWMnBrZ4ylM", {
     .matchKey()
     .push((m: MeetingRow) => m.id),
   // The label stays "Name" on purpose, even though the column and this key are
-  // now `nameOverride`. `verify` matches the live base by field NAME, so
-  // changing this string without renaming the field in the Airtable UI first
-  // would fail verification against every existing base. The two move
-  // together: relabel it to "Custom name, irregular events only" there, then
-  // here, in the same change. The scaffolder is create-only and will not
-  // rename.
+  // now `nameOverride`. This string is cosmetic: `verify` matches live fields
+  // by field ID (a rename is invisible to it, by design), and reads/writes go
+  // over the wire by field ID too. The only thing that consumes the name is the
+  // scaffolder, which is create-only and uses it just to name a field it is
+  // creating for the first time — so editing it here does nothing to an
+  // existing base and will not rename a live column. Keep it aligned with the
+  // Airtable label anyway, as documentation of what the column is.
   nameOverride: field
     .text("fldc0NfTHVxHk8Za0", "Name")
     // Capped, not just trimmed. `meetings_nameOverride_length` is a check

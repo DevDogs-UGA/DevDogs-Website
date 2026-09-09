@@ -156,6 +156,12 @@ describe("reach", () => {
 });
 
 describe("options become argv", () => {
+  it("lets images ask for graphic, format, and output in CLI order", async () => {
+    const argv = await walk([groupOf("images")!, findCommand(["images"])!]);
+    expect(argv).toEqual(["images"]);
+    expect(asked).toEqual(["What would you like to do?", "Brand:"]);
+  });
+
   it("adds a flag when the confirm is answered yes", async () => {
     const argv = await walk([
       groupOf("airtable")!,

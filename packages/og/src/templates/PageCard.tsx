@@ -1,3 +1,4 @@
+import * as React from "react";
 import { MAUVE, THEME } from "../brand.js";
 import { CardShell, cardContext, type CardContext } from "./CardShell.js";
 
@@ -18,6 +19,7 @@ export interface PageCardProps {
   eyebrow?: string;
   accent?: string;
   footer?: string;
+  cobrand?: boolean;
 }
 
 /**
@@ -44,6 +46,7 @@ export function PageCard({
   eyebrow,
   accent,
   footer,
+  cobrand,
 }: PageCardProps) {
   const context = cardContext(width, height);
 
@@ -54,6 +57,7 @@ export function PageCard({
       eyebrow={eyebrow}
       accent={accent}
       footer={footer}
+      cobrand={cobrand}
     >
       <div
         style={{

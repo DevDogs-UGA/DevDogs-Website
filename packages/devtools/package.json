@@ -19,6 +19,7 @@
     "@clack/prompts": "catalog:",
     "@devdogsuga/airtable": "workspace:*",
     "@devdogsuga/docs": "workspace:*",
+    "@devdogsuga/email": "workspace:*",
     "@devdogsuga/env": "workspace:*",
     "@devdogsuga/og": "workspace:*",
     "@resvg/resvg-js": "^2.6.2",

@@ -1,7 +1,8 @@
+import * as React from "react";
 import type { ReactElement } from "react";
 import { ICON_PATHS, type IconName } from "./generated/icons.js";
-import { type Asset } from "./generated/assets.js";
-import { THEME, WORDMARK_METRICS } from "./brand.js";
+import { GDG_MARK, type Asset } from "./generated/assets.js";
+import { MAUVE, THEME, WORDMARK_METRICS } from "./brand.js";
 
 /**
  * Satori is not a browser, and three of its limits shape everything below.
@@ -64,6 +65,44 @@ export function Wordmark({
 }) {
   return (
     <Mark asset={asset} height={capHeight / WORDMARK_METRICS.capHeightRatio} />
+  );
+}
+
+/** The chapter lockup used on every asset destined for GDG on Campus. */
+export function GdgcCobrand({
+  height,
+  ground = "dark",
+}: {
+  height: number;
+  ground?: "dark" | "light";
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: height * 0.2 }}>
+      <Mark asset={GDG_MARK} height={height * 0.58} />
+      <div
+        style={{ display: "flex", flexDirection: "column", lineHeight: 1.05 }}
+      >
+        <div
+          style={{
+            fontFamily: "Hanken Grotesk",
+            fontWeight: 700,
+            fontSize: height * 0.29,
+            color: ground === "dark" ? THEME.heading : MAUVE[800],
+          }}
+        >
+          Google Developer Groups
+        </div>
+        <div
+          style={{
+            fontFamily: "Hanken Grotesk",
+            fontSize: height * 0.25,
+            color: ground === "dark" ? MAUVE[300] : MAUVE[700],
+          }}
+        >
+          On Campus · University of Georgia
+        </div>
+      </div>
+    </div>
   );
 }
 

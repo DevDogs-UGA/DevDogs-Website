@@ -1,4 +1,8 @@
 import type { MeetingSegment } from "~/server/loaders/meetings";
+import {
+  EVENT_KIND_VISUALS,
+  EVENT_SEGMENT_VISUALS,
+} from "@devdogsuga/og/event";
 
 /**
  * How a meeting is *shown*. The one place the page decides what a segment
@@ -46,79 +50,29 @@ export interface SegmentBadge {
  * emerald start of this week's. `open` is amber, the one warm colour, for the
  * one night with nothing scheduled.
  */
-export const segmentBadge: Record<MeetingSegment, SegmentBadge> = {
-  judging: {
-    bg: "bg-rose-400",
-    text: "text-black",
-    dot: "bg-rose-500",
-    chipDark: "border-rose-400/30 bg-rose-500/10 text-rose-300",
-    dotDark: "bg-rose-400",
-    label: "Judging",
-  },
-  kickoff: {
-    bg: "bg-emerald-400",
-    text: "text-black",
-    dot: "bg-emerald-500",
-    chipDark: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
-    dotDark: "bg-emerald-400",
-    label: "Kickoff",
-  },
-  workshop: {
-    bg: "bg-emerald-400",
-    text: "text-black",
-    dot: "bg-emerald-500",
-    chipDark: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
-    dotDark: "bg-emerald-400",
-    label: "Workshop",
-  },
-  open: {
-    bg: "bg-amber-400",
-    text: "text-black",
-    dot: "bg-amber-400",
-    chipDark: "border-amber-400/30 bg-amber-500/10 text-amber-300",
-    dotDark: "bg-amber-400",
-    // Was "Open build", which collided with the real Build Session kind: two
-    // labels for what a reader takes to be one night. This segment now says
-    // only what it structurally meant, no workshops, no judging, and no kind
-    // an officer chose. It is rare now too, since `resolveMeetingSegments`
-    // suppresses it whenever a `kind` is set.
-    label: "Unscheduled",
-  },
-};
+export const segmentBadge: Record<MeetingSegment, SegmentBadge> =
+  Object.fromEntries(
+    Object.entries(EVENT_SEGMENT_VISUALS).map(([segment, visual]) => [
+      segment,
+      { ...visual, text: "text-black" },
+    ]),
+  ) as unknown as Record<MeetingSegment, SegmentBadge>;
 
 /**
  * The badge for a night an officer NAMED, keyed by `meetings.kind`.
  *
- * A lookup with a fallback rather than a total mapping, and NOT because the
- * list is open. It is closed at four values, by `parseMeetingKind` upstream
- * and by `meetings_kind_choices` in the database, so an unknown kind cannot
- * reach here. The fallback is for the three recognised choices that
- * deliberately have no hue: `Study Session`, `Interest Meeting` and `Social`
- * all print themselves in the neutral pill. Storing Title Case display
- * strings rather than identifiers is what makes that work: the label is the
- * value, so a kind can be added above without also being given a colour.
- *
- * Only `Build Session` earns a hue. It is MODAL, roughly half the calendar,
- * recurring every week a sprint runs, so a reader learns its colour. A social
- * happens twice a semester, and every hue spent makes the ones that matter
- * less distinct. Adding another is one entry here.
- *
- * Sky is the one hue `segmentBadge` does not spend: judging is rose, workshop
- * and kickoff share emerald, `open` is amber. `CompetitionTimeline` reads this
- * same badge for its Wednesday dot, so the page and illustration cannot drift.
+ * The closed four-value vocabulary comes from `EVENT_KIND_VISUALS`, shared
+ * with generated event art. Each authored kind has its own hue so its calendar
+ * dot, badge, image gradient, and image badge all carry the same meaning.
  */
-export const kindBadge: Record<string, SegmentBadge> = {
-  "Build Session": {
-    bg: "bg-sky-400",
-    text: "text-black",
-    dot: "bg-sky-500",
-    chipDark: "border-sky-400/30 bg-sky-500/10 text-sky-300",
-    dotDark: "bg-sky-400",
-    label: "Build Session",
-  },
-};
+export const kindBadge: Record<string, SegmentBadge> = Object.fromEntries(
+  Object.entries(EVENT_KIND_VISUALS).map(([label, visual]) => [
+    label,
+    { ...visual, text: "text-black", label },
+  ]),
+);
 
-/** The neutral badge the three un-hued kinds print themselves in. */
+/** Defensive fallback for data outside the closed authored-kind vocabulary. */
 function neutralKindBadge(kind: string): SegmentBadge {
   return {
     bg: "bg-white",
@@ -274,10 +228,7 @@ export const CHIP_CLS =
 export const CHIP_DARK_CLS =
   "rounded-full border px-2.5 py-0.5 text-xs font-medium";
 
-/** The chip for a recognised kind with no hue of its own: `Study Session`,
- *  `Interest Meeting`, `Social`. Neutral because those three deliberately have
- *  no colour, NOT because the value is unknown. The list is closed at four, by
- *  `parseMeetingKind` upstream and `meetings_kind_choices` in the database. */
+/** Defensive neutral chip for data outside the closed kind vocabulary. */
 export const NEUTRAL_CHIP_DARK_CLS = "border-white/20 bg-white/5 text-white";
 
 /** A bordered action: the Directions trigger, RSVP, check-in. Light plates. */
@@ -288,3 +239,7 @@ export const ACTION_CLS =
  *  which brightens its border instead of lifting. */
 export const ACTION_DARK_CLS =
   "flex w-fit items-center gap-1.5 rounded-lg border border-mauve-600 bg-mauve-800 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:border-white";
+
+/** The high-attention action on a dark event dialog. */
+export const ACTION_PRIMARY_DARK_CLS =
+  "flex w-fit items-center gap-1.5 rounded-lg border border-white bg-white px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-transparent hover:text-white";

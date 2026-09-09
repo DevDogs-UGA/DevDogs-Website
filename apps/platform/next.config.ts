@@ -18,6 +18,11 @@ const config = {
         destination: "https://forms.gle/WS4NNd72zMAy6VXn6",
         permanent: false,
       },
+      {
+        source: "/discord",
+        destination: "https://discord.gg/BdDdkNQhqp",
+        permanent: false,
+      },
     ];
   },
   turbopack: {

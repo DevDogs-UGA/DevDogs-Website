@@ -7,6 +7,10 @@ import { installationToken } from "~/server/github/client";
 import { db } from "~/server/db";
 import { leaderboardProfiles } from "~/server/db/schema";
 import { createSupabaseServerClient } from "~/supabase/server";
+import {
+  isSuccessfulGitHubInvitation,
+  isSuccessfulRemovalStatus,
+} from "~/server/auth/connectedAccount";
 
 const CALLBACK_URL = new URL("/auth/callback", env.BASE_URL).toString();
 
@@ -72,51 +76,16 @@ export async function linkProfile(accessToken: string): Promise<void> {
       "X-GitHub-Api-Version": "2022-11-28",
     },
   })
-    .then((res) => res.json())
+    .then(async (res) => {
+      if (!res.ok) throw githubApiError("read_profile", res);
+      const body: unknown = await res.json();
+      return body;
+    })
     .then((obj) => profileSchema.parseAsync(obj));
 
-  // Invite the GitHub user as a contributor to the DevDogs organization.
-  // Authenticated as the DevDogs App: an installation token that expires in an
-  // hour, rather than an org owner's `ghp_` token that does not expire at all.
-  await fetch(`https://api.github.com/orgs/${env.GITHUB_ORG}/invitations`, {
-    method: "POST",
-    headers: {
-      Authorization: "Bearer " + (await installationToken()),
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-    },
-    body: JSON.stringify({
-      invitee_id: profile.id,
-      role: "direct_member",
-      team_ids: [14192632],
-    }),
-  })
-    .then((res) => res.json())
-    .catch(console.error);
-
-  // Accept the organization invitation on behalf of the user
-  await fetch(
-    "https://api.github.com/user/memberships/orgs/" + env.GITHUB_ORG,
-    {
-      method: "PATCH",
-      headers: {
-        Authorization: "Bearer " + accessToken,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-      body: JSON.stringify({ state: "active" }),
-    },
-  )
-    .then((res) => res.json())
-    .catch(console.error);
-
-  // Records the GitHub identity against the member, and nothing more. The
-  // points columns here were fed by `syncLeaderboard`, removed 2026-08 with the
-  // GitHub-issue leaderboard. The mapping is kept because any replacement needs
-  // to know which GitHub account belongs to which member, and link time is the
-  // only moment that is knowable.
-  //
-  // Not `memberPoints`, which is the competition points system fed by the tally.
+  // Records the GitHub identity against the member, and nothing more. This is
+  // persisted before optional organization membership work so that a GitHub
+  // API failure cannot lose the mapping established by the identity link.
   await db
     .insert(leaderboardProfiles)
     .values({
@@ -131,6 +100,48 @@ export async function linkProfile(accessToken: string): Promise<void> {
         avatarUrl: sql`excluded."avatarUrl"`,
       },
     });
+
+  // Invite the GitHub user as a contributor to the DevDogs organization.
+  // Authenticated as the DevDogs App: an installation token that expires in an
+  // hour, rather than an org owner's `ghp_` token that does not expire at all.
+  const invitation = await fetch(
+    `https://api.github.com/orgs/${env.GITHUB_ORG}/invitations`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + (await installationToken()),
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      body: JSON.stringify({
+        invitee_id: profile.id,
+        role: "direct_member",
+        team_ids: [14192632],
+      }),
+    },
+  );
+  // A specific 422 body means membership or an invitation already exists.
+  // Other 422 validation failures remain errors.
+  if (!(await isSuccessfulGitHubInvitation(invitation))) {
+    throw githubApiError("invite_org_member", invitation);
+  }
+
+  // Accept the organization invitation on behalf of the user
+  const membership = await fetch(
+    "https://api.github.com/user/memberships/orgs/" + env.GITHUB_ORG,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: "Bearer " + accessToken,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      body: JSON.stringify({ state: "active" }),
+    },
+  );
+  if (!membership.ok) {
+    throw githubApiError("activate_org_membership", membership);
+  }
 }
 
 /**
@@ -142,33 +153,74 @@ export async function linkProfile(accessToken: string): Promise<void> {
  */
 export async function unlinkProfile(): Promise<void> {
   const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getUserIdentities();
+  const { data, error: identitiesError } =
+    await supabase.auth.getUserIdentities();
+  if (identitiesError) {
+    throw new Error(
+      `Failed to read GitHub identity: ${identitiesError.message}`,
+    );
+  }
   const identity = data?.identities.find((i) => i.provider === "github");
 
   if (!identity) return;
 
   const login: unknown = identity.identity_data?.user_name;
 
-  if (typeof login !== "string") {
-    throw new Error("GitHub identity is missing user_name. Unlink aborted.");
+  // Unlink first. Organization membership is an external side effect and an
+  // already-absent member must not strand the identity.
+  const { error } = await supabase.auth.unlinkIdentity(identity);
+  if (error) {
+    throw new Error(`Failed to unlink GitHub identity: ${error.message}`);
   }
 
-  const result = await fetch(
-    `https://api.github.com/orgs/${env.GITHUB_ORG}/memberships/${login}`,
-    {
-      method: "DELETE",
-      headers: {
-        Authorization: "Bearer " + (await installationToken()),
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-    },
-  );
+  if (typeof login !== "string") {
+    console.error(
+      JSON.stringify({
+        message: "Connected-account side effect failed",
+        provider: "github",
+        operation: "remove_org_member",
+        error: "Identity is missing user_name",
+      }),
+    );
+    return;
+  }
 
-  if (!result.ok) {
-    throw new Error(
-      `Failed to remove user from GitHub org (${result.status}). Unlink aborted.`,
+  try {
+    const result = await fetch(
+      `https://api.github.com/orgs/${env.GITHUB_ORG}/memberships/${login}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: "Bearer " + (await installationToken()),
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+      },
+    );
+
+    if (!isSuccessfulRemovalStatus(result.status)) {
+      githubApiError("remove_org_member", result);
+    }
+  } catch (cause) {
+    console.error(
+      JSON.stringify({
+        message: "Connected-account side effect failed",
+        provider: "github",
+        operation: "remove_org_member",
+        error: cause instanceof Error ? cause.message : String(cause),
+      }),
     );
   }
+}
 
-  await supabase.auth.unlinkIdentity(identity);
+function githubApiError(operation: string, response: Response): Error {
+  console.error(
+    JSON.stringify({
+      message: "Connected-account side effect failed",
+      provider: "github",
+      operation,
+      status: response.status,
+      requestId: response.headers.get("x-github-request-id"),
+    }),
+  );
+  return new Error(`GitHub ${operation} failed (${response.status})`);
 }

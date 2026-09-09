@@ -37,9 +37,23 @@ export const size = OG_SIZE;
 
 export const contentType = "image/png";
 
+/**
+ * One element as the PNG Next will serve, at whatever size it asks for.
+ *
+ * The card conventions are all 1.91:1 and go through {@link ogResponse}. The
+ * icon conventions are square and two different sizes, so they come here
+ * instead of carrying their own copy of the `next/og` reasoning above.
+ */
+export function imageResponse(
+  element: ReactElement,
+  dimensions: { width: number; height: number },
+): ImageResponse {
+  return new ImageResponse(element, { ...dimensions, fonts: loadFonts() });
+}
+
 /** Renders one of these cards as the PNG Next will serve. */
 export function ogResponse(element: ReactElement): ImageResponse {
-  return new ImageResponse(element, { ...size, fonts: loadFonts() });
+  return imageResponse(element, size);
 }
 
 /**

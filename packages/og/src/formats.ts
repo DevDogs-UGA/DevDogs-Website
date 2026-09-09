@@ -103,6 +103,14 @@ export const FORMATS: Record<string, Format> = {
     family: "card",
     why: "The square the GDG platform and every social profile crop to.",
   },
+  "involvement-network": {
+    name: "involvement-network",
+    width: 1300,
+    height: 780,
+    scale: 1,
+    family: "card",
+    why: "The 1300×780 event image uploaded to the Involvement Network.",
+  },
   savvycal: {
     name: "savvycal",
     width: 1500,

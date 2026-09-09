@@ -549,6 +549,9 @@ importers:
       '@devdogsuga/env':
         specifier: workspace:*
         version: link:../../packages/env
+      '@devdogsuga/og':
+        specifier: workspace:*
+        version: link:../../packages/og
       '@devdogsuga/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -777,6 +780,9 @@ importers:
       '@devdogsuga/docs':
         specifier: workspace:*
         version: link:../../docs
+      '@devdogsuga/email':
+        specifier: workspace:*
+        version: link:../email
       '@devdogsuga/env':
         specifier: workspace:*
         version: link:../env

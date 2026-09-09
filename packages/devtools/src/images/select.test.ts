@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { staticGraphics, assertUniqueStems, type Graphic } from "./graphics.js";
+import {
+  staticGraphics,
+  assertUniqueStems,
+  eventGraphics,
+  type Graphic,
+} from "./graphics.js";
 import {
   commaList,
   formatsFor,
@@ -53,6 +58,64 @@ describe("graphic patterns", () => {
   it("does not repeat a graphic named twice over", () => {
     const { matched } = matchGraphics(["page/*", "page/home"], registry);
     expect(new Set(matched.map((g) => g.name)).size).toBe(matched.length);
+  });
+});
+
+describe("multi-item meetings", () => {
+  it("adds one graphic per agenda item while keeping the whole meeting", () => {
+    const detail = { title: "Build night", date: "Sep 10, 2026", time: "6 PM" };
+    const graphics = eventGraphics([
+      {
+        slug: "build-night",
+        hint: "Sep 10, 2026",
+        detail,
+        items: [
+          { stem: "workshop", detail: { ...detail, title: "React" } },
+          { stem: "judging", detail: { ...detail, title: "DogPack" } },
+        ],
+      },
+    ]);
+
+    expect(graphics.map((graphic) => graphic.name)).toEqual([
+      "event/build-night/meeting",
+      "event/build-night/workshop",
+      "event/build-night/judging",
+    ]);
+  });
+
+  it("does not split a meeting with only one agenda item", () => {
+    const detail = { title: "Workshop", date: "Sep 10, 2026", time: "6 PM" };
+    expect(
+      eventGraphics([
+        {
+          slug: "workshop",
+          hint: "Sep 10, 2026",
+          detail,
+          items: [{ stem: "workshop", detail }],
+        },
+      ]),
+    ).toHaveLength(1);
+  });
+
+  it("offers the Involvement Network export for meetings and agenda items", () => {
+    const detail = { title: "Build night", date: "Sep 10, 2026", time: "6 PM" };
+    const graphics = eventGraphics([
+      {
+        slug: "build-night",
+        hint: "Sep 10, 2026",
+        detail,
+        items: [
+          { stem: "react", detail: { ...detail, title: "React" } },
+          { stem: "judging", detail: { ...detail, title: "Judging" } },
+        ],
+      },
+    ]);
+
+    expect(
+      graphics.every((graphic) =>
+        graphic.formats.includes("involvement-network"),
+      ),
+    ).toBe(true);
   });
 });
 

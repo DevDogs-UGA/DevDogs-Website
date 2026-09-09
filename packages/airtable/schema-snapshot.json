@@ -262,6 +262,11 @@
           "type": "singleLineText"
         },
         {
+          "id": "flddUp1hUoD2W79Qa",
+          "name": "Name",
+          "type": "singleLineText"
+        },
+        {
           "id": "fldmpCcukx7kkNMZs",
           "name": "Notes",
           "type": "multilineText"

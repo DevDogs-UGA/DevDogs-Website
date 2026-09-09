@@ -29,6 +29,80 @@
  */
 export const EVENT_TZ = "America/New_York";
 
+/** One visual identity per authored kind, shared by calendar and event art. */
+export const EVENT_KIND_VISUALS = {
+  "Build Session": {
+    accent: "#00a6f4",
+    bg: "bg-sky-400",
+    dot: "bg-sky-500",
+    chipDark: "border-sky-400/30 bg-sky-500/10 text-sky-300",
+    dotDark: "bg-sky-400",
+  },
+  "Study Session": {
+    accent: "#ffb900",
+    bg: "bg-amber-400",
+    dot: "bg-amber-500",
+    chipDark: "border-amber-400/30 bg-amber-500/10 text-amber-300",
+    dotDark: "bg-amber-400",
+  },
+  "Interest Meeting": {
+    accent: "#a684ff",
+    bg: "bg-violet-400",
+    dot: "bg-violet-500",
+    chipDark: "border-violet-400/30 bg-violet-500/10 text-violet-300",
+    dotDark: "bg-violet-400",
+  },
+  Social: {
+    accent: "#ff637e",
+    bg: "bg-rose-400",
+    dot: "bg-rose-500",
+    chipDark: "border-rose-400/30 bg-rose-500/10 text-rose-300",
+    dotDark: "bg-rose-400",
+  },
+} as const;
+
+/** Structural agenda badges, shared by the calendar and per-item event art. */
+export const EVENT_SEGMENT_VISUALS = {
+  workshop: {
+    accent: "#00d492",
+    bg: "bg-emerald-400",
+    dot: "bg-emerald-500",
+    chipDark: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
+    dotDark: "bg-emerald-400",
+    label: "Workshop",
+  },
+  kickoff: {
+    accent: "#00d492",
+    bg: "bg-emerald-400",
+    dot: "bg-emerald-500",
+    chipDark: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
+    dotDark: "bg-emerald-400",
+    label: "Kickoff",
+  },
+  judging: {
+    accent: "#ff637e",
+    bg: "bg-rose-400",
+    dot: "bg-rose-500",
+    chipDark: "border-rose-400/30 bg-rose-500/10 text-rose-300",
+    dotDark: "bg-rose-400",
+    label: "Judging",
+  },
+  open: {
+    accent: "#ffb900",
+    bg: "bg-amber-400",
+    dot: "bg-amber-400",
+    chipDark: "border-amber-400/30 bg-amber-500/10 text-amber-300",
+    dotDark: "bg-amber-400",
+    label: "Unscheduled",
+  },
+} as const;
+
+export function eventKindVisual(kind?: string) {
+  return kind && kind in EVENT_KIND_VISUALS
+    ? EVENT_KIND_VISUALS[kind as keyof typeof EVENT_KIND_VISUALS]
+    : undefined;
+}
+
 /** "Sep 10, 2026" — the app's own date format, and this card's. */
 export function formatEventDate(at: Date | string): string {
   return new Date(at).toLocaleDateString("en-US", {
@@ -57,6 +131,8 @@ export interface EventDetail {
   location?: string;
   /** The kind of night this is, for the chip: "Workshop", "Hack Night". */
   kind?: string;
+  /** Overrides the meeting kind for a single agenda item's calendar badge. */
+  badge?: { label: string; accent: string };
   /** What is on the agenda, most important first. */
   agenda?: string[];
   /**

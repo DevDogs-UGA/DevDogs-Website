@@ -118,6 +118,11 @@ create temporary table "officer_submissions" (
   "slug" text primary key,
   "email" text not null,
   "preferredName" text not null,
+  -- Name of record, which is not always the preferred name: Armani submitted as
+  -- Ashlee, Kyle as Gia Khang. Kept distinct so `profile.legalName` carries the
+  -- real thing while the card and the Airtable primary show what they go by.
+  "legalFirstName" text not null,
+  "legalLastName" text not null,
   "title" text,
   "roleDescription" text not null,
   -- Numeric UGA Bulletin detail ids. They distinguish credentials with the
@@ -167,12 +172,14 @@ create temporary table "officer_submissions" (
 );
 
 insert into "officer_submissions" (
-  "slug", "email", "preferredName", "title", "roleDescription",
+  "slug", "email", "preferredName", "legalFirstName", "legalLastName",
+  "title", "roleDescription",
   "programIds", "graduationYear", "graduationSemester",
   "altEmails", "pronouns", "showGithub", "showLinkedin", "seededId"
 ) values
   (
     'jack-harrington', 'jbh36784@uga.edu', 'Jack Harrington',
+    'Jack', 'Harrington',
     'Vice President',
     'Jack Harrington is a Computer Science student at the University of Georgia with a passion for building full-stack software that solves real-world problems. As Vice President, Jack helps coordinate the student-led software projects DevDogs runs for the UGA community. As a Software Engineer Intern with the U.S. Air Force, he has built production software in a collaborative engineering environment, and he contributes to SpectraGuru, an open-source spectrum analysis platform for research.',
     array[73962, 84091]::integer[], 2027, 'spring',
@@ -182,6 +189,7 @@ insert into "officer_submissions" (
   ),
   (
     'zayan-hoodani', 'zkh27085@uga.edu', 'Zayan Hoodani',
+    'Zayan', 'Hoodani',
     'Events Director',
     'Zayan Hoodani is a sophomore studying Computer Science while pursuing a certificate in Cybersecurity and Privacy. As Events Director, Zayan facilitates events and works to create a fun, collaborative environment. He is a NetOps Intern at GreenSky, architecting automated systems for cloud network segmentation on AWS and provisioning physical switch infrastructure, and Director of R&D at The Hack Pack. Zayan loves anything to do with cybersecurity and AI.',
     array[73962, 19969]::integer[], 2028, 'spring',
@@ -191,6 +199,7 @@ insert into "officer_submissions" (
   ),
   (
     'nandan-praveen', 'np43598@uga.edu', 'Nandan Praveen',
+    'Nandan', 'Praveen',
     'DogPack Project Manager',
     'Nandan Praveen is a sophomore majoring in Computer Systems Engineering, currently serving as DogPack Project Manager and Flutter Focus Lead at DevDogs. His work spans Flutter, Next.js, MySQL, and Supabase, orchestrating both the UI/UX of the app and the backend while helping developers grow in core and advanced concepts. Outside DevDogs, Nandan does ML research with UGA''s VIPR lab, building image-based models using PyTorch and TensorFlow.',
     array[45516]::integer[], 2029, 'spring',
@@ -200,6 +209,7 @@ insert into "officer_submissions" (
   ),
   (
     'shruti-mishra', 'sbm64430@uga.edu', 'Shruti Mishra',
+    'Shruti', 'Mishra',
     'Backend Integration Focus Lead',
     'Shruti Mishra is a sophomore at the University of Georgia studying Computer Science with an emphasis in Artificial Intelligence. Shruti serves as the Backend Integration Focus Lead on the DevDogs leadership team, is a member of the UGAHacks Tech Team helping develop the website for UGA''s annual hackathon, and serves on the Outreach Team for HackPack, UGA''s cybersecurity club. She is passionate about software engineering and AI.',
     array[73962]::integer[], 2027, 'spring',
@@ -211,6 +221,7 @@ insert into "officer_submissions" (
     -- Submitted as Ashlee Peacox; Armani is the name she goes by. Her wording,
     -- her pronouns -- see the note above.
     'armani-peacox', 'aap86342@uga.edu', 'Armani Peacox',
+    'Ashlee', 'Peacox',
     'Campus Outreach Director',
     'Armani is a Computer Science and Interdisciplinary Art student at the University of Georgia with a passion for game development. She serves as the Campus Outreach Director for UGA''s Dev Dogs chapter and is actively involved in TheHackPack, Girls Who Code, and the Powerlifting & Bodybuilding Club. Her interests include gameplay programming, game design, virtual and augmented reality, human-computer interaction, and digital art.',
     array[73962, 86044, 62630]::integer[], null, null,
@@ -220,6 +231,7 @@ insert into "officer_submissions" (
   ),
   (
     'gabrielle-rose', 'glr26038@uga.edu', 'Gabrielle Rose',
+    'Gabrielle', 'Rose',
     'UI/UX Focus Lead',
     'Gabrielle Rose is pursuing a degree in Computer Science with a focus on front-end development, human-computer interaction, and UI/UX design, and is passionate about creating intuitive, user-centered technologies that solve real-world problems. In the future, Gabrielle aspires to bridge the gap between people and technology by designing digital solutions that create meaningful impact and empower communities to confidently engage with technology.',
     array[73962]::integer[], 2028, 'spring',
@@ -231,6 +243,7 @@ insert into "officer_submissions" (
     -- Submitted as Gia Khang Quach; Kyle is the name he goes by there --
     -- his own resume prints linkedin.com/in/kyle-quach.
     'kyle-quach', 'gq72484@uga.edu', 'Kyle Quach',
+    'Gia Khang', 'Quach',
     'Next.js Focus Lead',
     'Kyle Quach is a sophomore majoring in Computer Science at the University of Georgia. Kyle''s interests span software development to AI engineering, and he sometimes develops games on the side. He has built projects with tech stacks such as Java, C#, Python, and JavaScript, as well as frameworks like React and Spring. As an aspiring software developer, Kyle looks forward to building software that contributes meaningfully to people''s daily lives.',
     array[73962]::integer[], 2028, 'spring',
@@ -332,13 +345,15 @@ where lower(u."email") = s."email"
 -- deliberately assert that every current officer is on the DevDogs roster;
 -- the normal roster import remains authoritative after seeding.
 insert into "platform"."profile" (
-  "userId", "preferredName", "roleDescription",
+  "userId", "preferredName", "ugaEmail", "legalFirstName", "legalLastName",
+  "roleDescription",
   "graduationYear", "graduationSemester", "pronouns",
   "showGithub", "showLinkedin",
   "involvementFirstName", "involvementLastName", "involvementImportedAt"
 )
 select
-  s."userId", s."preferredName", s."roleDescription",
+  s."userId", s."preferredName", s."email", s."legalFirstName", s."legalLastName",
+  s."roleDescription",
   s."graduationYear",
   s."graduationSemester"::"platform"."graduationSemester",
   s."pronouns", s."showGithub", s."showLinkedin",
@@ -359,6 +374,15 @@ on conflict ("userId") do update set
   ),
   "pronouns" = coalesce(
     "platform"."profile"."pronouns", excluded."pronouns"
+  ),
+  "ugaEmail" = coalesce(
+    "platform"."profile"."ugaEmail", excluded."ugaEmail"
+  ),
+  "legalFirstName" = coalesce(
+    "platform"."profile"."legalFirstName", excluded."legalFirstName"
+  ),
+  "legalLastName" = coalesce(
+    "platform"."profile"."legalLastName", excluded."legalLastName"
   ),
   "involvementFirstName" = excluded."involvementFirstName",
   "involvementLastName" = excluded."involvementLastName",
@@ -521,11 +545,12 @@ where not exists (
 on conflict ("id") do nothing;
 
 insert into "platform"."profile" (
-  "userId", "preferredName", "roleDescription",
+  "userId", "preferredName", "ugaEmail", "legalFirstName", "legalLastName",
+  "roleDescription",
   "graduationYear", "graduationSemester", "pronouns",
   "involvementFirstName", "involvementLastName", "involvementImportedAt"
 )
-select u."id", 'Sloan Finger',
+select u."id", 'Sloan Finger', 'jsf51288@uga.edu', 'Sloan', 'Finger',
   'Sloan Finger is President of DevDogs, leading the executive board and the '
   'club''s software projects. A University of Georgia student graduating in '
   'spring 2027, Sloan built and maintains the DevDogs platform -- this site '
@@ -548,6 +573,15 @@ on conflict ("userId") do update set
   ),
   "pronouns" = coalesce(
     "platform"."profile"."pronouns", excluded."pronouns"
+  ),
+  "ugaEmail" = coalesce(
+    "platform"."profile"."ugaEmail", excluded."ugaEmail"
+  ),
+  "legalFirstName" = coalesce(
+    "platform"."profile"."legalFirstName", excluded."legalFirstName"
+  ),
+  "legalLastName" = coalesce(
+    "platform"."profile"."legalLastName", excluded."legalLastName"
   ),
   "involvementFirstName" = excluded."involvementFirstName",
   "involvementLastName" = excluded."involvementLastName",
