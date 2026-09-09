@@ -1,18 +1,26 @@
-import { AppIcon } from "@devdogsuga/og";
+import { MARK, Mark } from "@devdogsuga/og";
 import { imageResponse } from "~/lib/ogImage";
 
 /**
- * The favicon, and the larger of the two icons `manifest.ts` declares.
- *
- * Next's file convention with the artwork generated rather than committed: the
- * same `AppIcon` the CLI renders to disk, so a change to the tile or the mascot
- * moves the tab icon without anybody re-exporting a PNG. 512 is the size a web
- * app manifest must carry; `AppIcon` scales off its `size` prop, so this is one
- * drawing rather than a second one that has to be kept in step.
+ * The browser favicon: the DevDogs mascot on a transparent canvas, without the
+ * surrounding app tile.
  */
 export const size = { width: 512, height: 512 };
 export const contentType = "image/png";
 
 export default function Icon() {
-  return imageResponse(AppIcon({ app: "platform", size: size.width }), size);
+  return imageResponse(
+    <div
+      style={{
+        display: "flex",
+        width: "100%",
+        height: "100%",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Mark asset={MARK} height={size.height * 0.94} />
+    </div>,
+    size,
+  );
 }

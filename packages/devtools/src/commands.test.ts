@@ -155,6 +155,10 @@ describe("prompts", () => {
       "--out",
       "--default-out",
       "--no-output",
+      // `emails` asks these after its template picker so the interactive and
+      // scripted paths share one flow.
+      "--format",
+      "--out",
     ]);
     const unasked = new Set<string>();
 
@@ -194,6 +198,7 @@ describe("coverage of what the CLI dispatches", () => {
     "oauth",
     "airtable",
     "docs",
+    "emails",
     "images",
     "qr",
     "env",

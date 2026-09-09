@@ -96,6 +96,7 @@ import { runDocsIndex } from "./docs/index-pages.js";
 import { runTask } from "./run/pick.js";
 import { runBw } from "./bws/bw.js";
 import { runImages } from "./images/commands.js";
+import { runEmails } from "./emails/commands.js";
 import { runQr } from "./qr/commands.js";
 
 const DOCTOR_COMMANDS = [
@@ -958,6 +959,11 @@ async function dispatch(argv: string[]): Promise<string | null> {
     // database, and `images page/*` must not demand a running stack to draw
     // pictures that come entirely out of this repo.
     await runImages(rest, { connect });
+    return DONE;
+  }
+
+  if (first === "emails") {
+    await runEmails(rest);
     return DONE;
   }
 

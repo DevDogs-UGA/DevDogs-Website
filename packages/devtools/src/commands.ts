@@ -347,6 +347,29 @@ export const GROUPS: readonly CommandGroup[] = [
     title: "Brand",
     commands: [
       {
+        name: "emails",
+        summary: "Render populated transactional email previews.",
+        hint: "HTML or plain text, one template or all",
+        // Like `images`, this command owns its dependent questions: formats
+        // and output only make sense after the templates have been selected.
+        options: [
+          {
+            flag: "--format",
+            value: "<html,text>",
+            summary: "Outputs to write. Defaults to html.",
+          },
+          {
+            flag: "--out",
+            value: "<dir>",
+            summary: "Output directory. Defaults to ./email-previews.",
+          },
+          {
+            flag: "--no-output",
+            summary: "List subjects and destination files without writing.",
+          },
+        ],
+      },
+      {
         name: "images",
         summary: "Render a club image at one or more sizes.",
         hint: "brand/*, page/*, app/*, event/*, or * for all",

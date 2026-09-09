@@ -68,6 +68,24 @@ Edit a template and run `pnpm --filter @devdogsuga/email compile` to regenerate
 `src/generated/templates.ts`; the package's `build` does it for you. That file
 carries a "do not edit" header and means it.
 
+## Preview populated emails
+
+Use Devtools when you want examples filled with realistic, non-sensitive data
+rather than compiler sentinels:
+
+```sh
+pnpm devtools emails
+pnpm devtools emails '*' --out ~/emails
+pnpm devtools emails TeamInvite --format html,text --out ./previews
+pnpm devtools emails '*' --no-output
+```
+
+With no template names, the command opens a picker for the templates, output
+formats, and destination. For scripts, name one or more templates (or `*`),
+and pass `--format html,text` when both MIME alternatives are useful. HTML is
+the default. The fixture registry is type-checked against every template, so a
+new template or required prop cannot leave the preview command silently stale.
+
 The same run writes `__snapshots__/<Template>.html` — the rendered artifact with
 its sentinels still in place. Open one in a browser to see what a template looks
 like, and read it in review: because the sentinels survive, a design change

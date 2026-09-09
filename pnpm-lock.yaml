@@ -780,6 +780,9 @@ importers:
       '@devdogsuga/docs':
         specifier: workspace:*
         version: link:../../docs
+      '@devdogsuga/email':
+        specifier: workspace:*
+        version: link:../email
       '@devdogsuga/env':
         specifier: workspace:*
         version: link:../env
