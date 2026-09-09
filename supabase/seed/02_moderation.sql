@@ -88,22 +88,22 @@ on conflict ("provider", "provider_id") do nothing;
 -- resets the display name to the name of record, and resolving one against
 -- Sandy's leaves it alone and warns. Both paths are worth being able to see.
 insert into "platform"."profile"
-  ("userId", "preferredName", "bio", "legalFirstName", "legalLastName")
+  ("userId", "preferredName", "ugaEmail", "bio", "legalFirstName", "legalLastName")
 values
   (
     '00000000-0000-4000-a000-000000000001',
-    'Sandy Member', 'A perfectly ordinary member.',
+    'Sandy Member', 'sandy.member@uga.edu', 'A perfectly ordinary member.',
     null, null
   ),
   (
     '00000000-0000-4000-a000-000000000002',
-    'BUY CHEAP FOLLOWERS NOW',
+    'BUY CHEAP FOLLOWERS NOW', 'avery.author@uga.edu',
     'Buy now! Resolve the open report from /console/moderation.',
     'Avery', 'Author'
   ),
   (
     '00000000-0000-4000-a000-000000000003',
-    'Morgan Moderator', 'Reviews the queue.',
+    'Morgan Moderator', 'morgan.moderator@uga.edu', 'Reviews the queue.',
     'Morgan', 'Moderator'
   )
 on conflict ("userId") do nothing;

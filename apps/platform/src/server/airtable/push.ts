@@ -71,6 +71,7 @@ export async function pushMembers(
   const rows = await db
     .select({
       userId: profiles.userId,
+      preferredName: profiles.preferredName,
       ugaEmail: profiles.ugaEmail,
       legalFirstName: profiles.legalFirstName,
       legalLastName: profiles.legalLastName,

@@ -9,6 +9,7 @@ import {
 } from "@phosphor-icons/react/ssr";
 import {
   ACTION_DARK_CLS,
+  ACTION_PRIMARY_DARK_CLS,
   CANCELLED_LABEL,
   cancellationNotice,
   CHIP_DARK_CLS,
@@ -22,6 +23,9 @@ import {
   locationLine,
 } from "~/components/EventsSection/FindUs/buildings";
 import FindUs from "~/components/EventsSection/FindUs";
+import AddToCalendar from "~/components/EventsSection/AddToCalendar";
+import { calendarLinks } from "~/lib/calendarEvent";
+import { env } from "~/env";
 import {
   formatEventSpan,
   formatEventTime,
@@ -155,6 +159,16 @@ export default async function MeetingPage({
   // the clock-shaped claims and the two actions come off it below.
   const cancelled = meeting.cancelledAt !== null;
   const where = locationLine(meeting.building, meeting.location);
+  const eventUrl = `${env.BASE_URL.replace(/\/$/, "")}/events/${encodeURIComponent(slug)}`;
+  const addToCalendar = calendarLinks({
+    title: meetingTitle(meeting, workshops),
+    startsAt: meeting.startsAt,
+    endsAt: meeting.endsAt,
+    location: where,
+    summary: meeting.summary,
+    rsvpUrl: meeting.rsvpUrl,
+    eventUrl,
+  });
 
   return (
     <>
@@ -247,21 +261,6 @@ export default async function MeetingPage({
           <MapPinIcon className="shrink-0 text-mauve-400" weight="fill" />
           {where ?? "Room to be announced"}
         </p>
-        {/* The in-place trigger, not `FindUsLink`: following the link would
-            navigate away from this meeting, and a cold-loaded directions dialog
-            closes to /events, so a member who only wanted walking directions
-            would lose the meeting they were reading. Nested dialogs stack, and
-            closing the inner one leaves this one open. As the `aside` of this
-            dialog's pair, on a wide screen it opens beside the meeting instead
-            of over it. */}
-        {isMappedBuilding(meeting.building) && (
-          <FindUs
-            building={meeting.building}
-            room={meeting.location}
-            tone="dark"
-            pair="aside"
-          />
-        )}
       </div>
 
       {/* Plain text from Airtable, rendered as text. Never as markup: it is
@@ -300,53 +299,74 @@ export default async function MeetingPage({
         </section>
       )}
 
-      {/* Neither action survives a cancellation. An RSVP button on a night that
-          is not happening collects replies to nothing, and a check-in link
-          would write attendance against it, the row a member would then have to
-          argue their way out of. */}
-      {!cancelled &&
-        (meeting.rsvpUrl !== null ||
-          (meeting.attendanceFormUrl !== null &&
-            attendanceFormIsLive(meeting, now))) && (
-          <div className="flex flex-col gap-2">
+      {/* Calendar, RSVP and check-in do not survive a cancellation. Directions
+          does: the room remains useful context for a night whose plans changed. */}
+      {(isMappedBuilding(meeting.building) ||
+        (!cancelled &&
+          (meeting.rsvpUrl !== null ||
+            !ended ||
+            (meeting.attendanceFormUrl !== null &&
+              attendanceFormIsLive(meeting, now))))) && (
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap gap-2">
-              {meeting.rsvpUrl !== null && (
-                <a
-                  href={meeting.rsvpUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={ACTION_DARK_CLS}
-                >
-                  RSVP <ArrowUpRightIcon />
-                </a>
+              {!cancelled && !ended && (
+                <AddToCalendar
+                  googleUrl={addToCalendar.google}
+                  outlookUrl={addToCalendar.outlook}
+                  icsUrl={`/events/${encodeURIComponent(slug)}/calendar.ics`}
+                />
               )}
-              {/* `attendanceFormIsLive` answers "is there a link, and is the
-                meeting on". NOT "is attendance open", which this process cannot
-                know since the Airtable form's own open and close is the only
-                gate. So the button is a pointer and the line below it refuses to
-                promise anything. The null check is separate because the
-                predicate does not narrow the type. */}
-              {meeting.attendanceFormUrl !== null &&
-                attendanceFormIsLive(meeting, now) && (
+              {isMappedBuilding(meeting.building) && (
+                <FindUs
+                  building={meeting.building}
+                  room={meeting.location}
+                  tone="dark"
+                  pair="aside"
+                />
+              )}
+            </div>
+            {!cancelled && (
+              <div className="ml-auto flex flex-wrap justify-end gap-2">
+                {/* `attendanceFormIsLive` answers "is there a link, and is the
+                    meeting on". NOT "is attendance open", which this process
+                    cannot know since the Airtable form's own open and close is
+                    the only gate. */}
+                {meeting.attendanceFormUrl !== null &&
+                  attendanceFormIsLive(meeting, now) && (
+                    <a
+                      href={meeting.attendanceFormUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={ACTION_DARK_CLS}
+                    >
+                      <ClipboardTextIcon /> Check in <ArrowUpRightIcon />
+                    </a>
+                  )}
+                {/* Last in the right-hand group so the light primary action
+                    anchors the outer edge of the row. */}
+                {meeting.rsvpUrl !== null && (
                   <a
-                    href={meeting.attendanceFormUrl}
+                    href={meeting.rsvpUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={ACTION_DARK_CLS}
+                    className={ACTION_PRIMARY_DARK_CLS}
                   >
-                    <ClipboardTextIcon /> Check in <ArrowUpRightIcon />
+                    RSVP <ArrowUpRightIcon />
                   </a>
                 )}
-            </div>
-            {meeting.attendanceFormUrl !== null &&
-              attendanceFormIsLive(meeting, now) && (
-                <p className="text-xs text-mauve-400">
-                  Officers open and close the check-in form themselves, so it
-                  may not be taking responses yet.
-                </p>
-              )}
+              </div>
+            )}
           </div>
-        )}
+          {meeting.attendanceFormUrl !== null &&
+            attendanceFormIsLive(meeting, now) && (
+              <p className="text-xs text-mauve-400">
+                Officers open and close the check-in form themselves, so it may
+                not be taking responses yet.
+              </p>
+            )}
+        </div>
+      )}
 
       {/* ⚠️ `!cancelled`, and it is not a tidiness gate.
           `attendanceCount === 0` is GUARANTEED for a cancelled night, since

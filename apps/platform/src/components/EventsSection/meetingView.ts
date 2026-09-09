@@ -239,3 +239,7 @@ export const ACTION_CLS =
  *  which brightens its border instead of lifting. */
 export const ACTION_DARK_CLS =
   "flex w-fit items-center gap-1.5 rounded-lg border border-mauve-600 bg-mauve-800 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:border-white";
+
+/** The high-attention action on a dark event dialog. */
+export const ACTION_PRIMARY_DARK_CLS =
+  "flex w-fit items-center gap-1.5 rounded-lg border border-white bg-white px-3 py-1.5 text-xs font-semibold text-black transition-colors hover:bg-transparent hover:text-white";

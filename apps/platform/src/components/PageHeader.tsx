@@ -16,6 +16,8 @@ interface Props extends PropsWithChildren {
   accent: AccentColor;
   /** Vertically center actions against the complete title/description block. */
   centerActions?: boolean;
+  /** Page-specific layout for the action group. */
+  actionsClassName?: string;
 }
 
 /**
@@ -32,6 +34,7 @@ export default function PageHeader({
   accent,
   children,
   centerActions = false,
+  actionsClassName = "",
 }: Props) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-4 px-1">
@@ -47,7 +50,7 @@ export default function PageHeader({
       </div>
       {children && (
         <div
-          className={`flex items-center gap-2 ${centerActions ? "self-center" : ""}`}
+          className={`flex flex-wrap items-center gap-2 ${centerActions ? "self-center" : ""} ${actionsClassName}`}
         >
           {children}
         </div>

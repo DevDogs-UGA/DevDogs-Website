@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 import Link from "next/link";
 import { ArrowUpRightIcon, MapPinIcon } from "@phosphor-icons/react/ssr";
 import {
@@ -63,8 +64,12 @@ interface Props {
    * one read, threaded down, instead of a dozen a few ms apart.
    */
   now: Date;
+  activeFilter: string | null;
+  onActiveFilterChange: (filter: string | null) => void;
   onVisibleMeetingChange?: (meetingId: string | null) => void;
   onHighlightedMeetingChange?: (meetingId: string | null) => void;
+  /** The bottom edge of the sticky calendar is the mobile activation line. */
+  scrollBoundaryRef?: RefObject<HTMLElement | null>;
 }
 
 /**
@@ -146,26 +151,73 @@ function availableFilters(meetings: MeetingInRange[]): SegmentBadge[] {
   return [...filters.values()];
 }
 
+export function ScheduleFilters({
+  meetings,
+  active,
+  onChange,
+  className = "",
+}: {
+  meetings: MeetingInRange[];
+  active: string | null;
+  onChange: (filter: string | null) => void;
+  className?: string;
+}) {
+  const filters = availableFilters(meetings);
+  if (filters.length <= 1) return null;
+
+  return (
+    <div
+      className={`flex flex-wrap justify-center gap-1.5 lg:justify-start ${className}`}
+      role="group"
+      aria-label="Filter the schedule"
+    >
+      {filters.map((badge) => (
+        <button
+          key={badge.label}
+          type="button"
+          aria-pressed={active === badge.label}
+          onClick={() => onChange(active === badge.label ? null : badge.label)}
+          className={`${CHIP_DARK_CLS} inline-flex cursor-pointer items-center gap-1.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+            active === badge.label
+              ? "border-white bg-white text-black"
+              : `${NEUTRAL_CHIP_DARK_CLS} hover:border-white/50`
+          }`}
+        >
+          <span
+            aria-hidden
+            className={`inline-block size-1.5 shrink-0 rounded-full ${badge.dotDark}`}
+          />
+          {badge.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function ScheduleList({
   meetings,
   now,
+  activeFilter,
+  onActiveFilterChange,
   onVisibleMeetingChange,
   onHighlightedMeetingChange,
+  scrollBoundaryRef,
 }: Props) {
-  const [active, setActive] = useState<string | null>(null);
+  const [scrolledMeetingId, setScrolledMeetingId] = useState<string | null>(
+    null,
+  );
   const listRef = useRef<HTMLDivElement>(null);
 
-  const filters = availableFilters(meetings);
   // Filter FIRST, then group. The order is the whole implementation of "an
   // emptied week shows no heading": a week whose every night was filtered out
   // never becomes a group, so there is nothing to render a heading for.
   const shown =
-    active === null
+    activeFilter === null
       ? meetings
       : meetings.filter((meeting) => {
           const { segments } = resolveMeetingSegments(meeting);
           return meetingBadges({ kind: meeting.kind, segments }).some(
-            (badge) => badge.label === active,
+            (badge) => badge.label === activeFilter,
           );
         });
 
@@ -183,10 +235,13 @@ export default function ScheduleList({
     const root = listRef.current;
     if (!root || !onVisibleMeetingChange) return;
 
+    const mobile = window.matchMedia("(max-width: 63.999rem)");
+
     const rows = [...root.querySelectorAll<HTMLElement>("[data-meeting-id]")];
     const visibleRows = new Set<Element>();
     const observer = new IntersectionObserver(
       (entries) => {
+        if (mobile.matches) return;
         for (const entry of entries) {
           if (entry.isIntersecting) visibleRows.add(entry.target);
           else visibleRows.delete(entry.target);
@@ -204,11 +259,80 @@ export default function ScheduleList({
     return () => observer.disconnect();
   }, [onVisibleMeetingChange, shown]);
 
+  // This deliberately mirrors the homepage timeline. Before any card reaches
+  // the sticky calendar, the first is active; each card crossing its bottom
+  // edge advances emphasis to the following card.
+  useEffect(() => {
+    const root = listRef.current;
+    const boundary = scrollBoundaryRef?.current;
+    if (!root || !boundary) return;
+
+    const mobile = window.matchMedia("(max-width: 63.999rem)");
+    let frame = 0;
+
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (!mobile.matches) {
+          setScrolledMeetingId(null);
+          return;
+        }
+
+        const rows = [
+          ...root.querySelectorAll<HTMLElement>("[data-meeting-id]"),
+        ];
+        if (rows.length === 0) {
+          setScrolledMeetingId(null);
+          onHighlightedMeetingChange?.(null);
+          return;
+        }
+
+        const line = boundary.getBoundingClientRect().bottom;
+        const crossed = rows.filter(
+          (row) => row.getBoundingClientRect().top <= line,
+        ).length;
+        const row = rows[Math.min(crossed, rows.length - 1)];
+        const meetingId = row?.dataset.meetingId ?? null;
+        setScrolledMeetingId(meetingId);
+        onHighlightedMeetingChange?.(meetingId);
+      });
+    };
+
+    const handleBreakpointChange = () => {
+      if (!mobile.matches) {
+        setScrolledMeetingId(null);
+        onHighlightedMeetingChange?.(null);
+      } else {
+        update();
+      }
+    };
+
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    mobile.addEventListener("change", handleBreakpointChange);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      mobile.removeEventListener("change", handleBreakpointChange);
+    };
+  }, [
+    onHighlightedMeetingChange,
+    onVisibleMeetingChange,
+    scrollBoundaryRef,
+    shown,
+  ]);
+
   return (
-    <section className="flex flex-col gap-4" aria-labelledby="schedule-heading">
+    <section
+      className="flex flex-col gap-4"
+      aria-labelledby="schedule-heading-desktop"
+    >
       <h3
-        id="schedule-heading"
-        className="font-display text-xl font-extrabold text-white md:text-2xl"
+        id="schedule-heading-desktop"
+        className="font-display hidden text-xl font-extrabold text-white md:text-2xl lg:block"
       >
         Coming up
       </h3>
@@ -217,35 +341,12 @@ export default function ScheduleList({
           console puts a card's one ACTION and where check-in already lives.
           Hidden when there is nothing to tell apart: a single chip filters a
           list into itself. */}
-      {filters.length > 1 && (
-        <div
-          className="flex flex-wrap gap-1.5"
-          role="group"
-          aria-label="Filter the schedule"
-        >
-          {filters.map((badge) => (
-            <button
-              key={badge.label}
-              type="button"
-              aria-pressed={active === badge.label}
-              onClick={() =>
-                setActive(active === badge.label ? null : badge.label)
-              }
-              className={`${CHIP_DARK_CLS} inline-flex cursor-pointer items-center gap-1.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-                active === badge.label
-                  ? "border-white bg-white text-black"
-                  : `${NEUTRAL_CHIP_DARK_CLS} hover:border-white/50`
-              }`}
-            >
-              <span
-                aria-hidden
-                className={`inline-block size-1.5 shrink-0 rounded-full ${badge.dotDark}`}
-              />
-              {badge.label}
-            </button>
-          ))}
-        </div>
-      )}
+      <ScheduleFilters
+        meetings={meetings}
+        active={activeFilter}
+        onChange={onActiveFilterChange}
+        className="hidden lg:flex"
+      />
 
       {meetings.length === 0 ? (
         <EmptySchedule />
@@ -255,11 +356,11 @@ export default function ScheduleList({
         // fact about the filter, which the reader can undo. Saying "no meetings
         // coming up" here would be a lie, and the chips stay visible above so
         // there is a way back.
-        <NoMatches onClear={() => setActive(null)} />
+        <NoMatches onClear={() => onActiveFilterChange(null)} />
       ) : (
         <div ref={listRef} className="flex flex-col gap-6">
           {weeks.map((week) => (
-            <div key={week.key} className="flex flex-col gap-2">
+            <div key={week.key} data-week-group className="flex flex-col gap-2">
               <h4 className="text-xs font-semibold tracking-wide text-mauve-400 uppercase">
                 {weekLabel(week.key)}
               </h4>
@@ -274,6 +375,8 @@ export default function ScheduleList({
                     meeting={meeting}
                     now={now}
                     onHighlight={onHighlightedMeetingChange}
+                    scrollActive={scrolledMeetingId === meeting.id}
+                    scrollTracking={scrolledMeetingId !== null}
                   />
                 ))}
               </ul>
@@ -343,10 +446,14 @@ function ScheduleRow({
   meeting,
   now,
   onHighlight,
+  scrollActive,
+  scrollTracking,
 }: {
   meeting: MeetingInRange;
   now: Date;
   onHighlight?: (meetingId: string | null) => void;
+  scrollActive: boolean;
+  scrollTracking: boolean;
 }) {
   // Derived chips and the officer's kind, composed together. Both are shown: a
   // social that also runs a workshop is a real night, and a row printing only
@@ -375,9 +482,22 @@ function ScheduleRow({
   return (
     <li
       data-meeting-id={meeting.id}
-      className="relative flex gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-4 transition-colors focus-within:border-white/30 focus-within:bg-white/10 hover:border-white/30 hover:bg-white/10 md:gap-5"
-      onPointerEnter={() => onHighlight?.(meeting.id)}
-      onPointerLeave={() => onHighlight?.(null)}
+      data-scroll-active={scrollActive}
+      className={`relative flex gap-4 rounded-lg border border-white/10 bg-white/5 px-4 py-4 transition-[opacity,transform,background-color,border-color] duration-200 focus-within:border-white/30 focus-within:bg-white/10 md:gap-5 lg:hover:border-white/30 lg:hover:bg-white/10 ${
+        scrollTracking
+          ? scrollActive
+            ? "-translate-y-1 border-white/30 bg-white/10 opacity-100"
+            : "opacity-60"
+          : ""
+      }`}
+      onPointerEnter={() => {
+        if (window.matchMedia("(min-width: 64rem)").matches)
+          onHighlight?.(meeting.id);
+      }}
+      onPointerLeave={() => {
+        if (window.matchMedia("(min-width: 64rem)").matches)
+          onHighlight?.(null);
+      }}
       onFocus={() => onHighlight?.(meeting.id)}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget))

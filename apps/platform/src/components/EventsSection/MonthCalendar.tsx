@@ -28,6 +28,7 @@ import {
   useRole,
 } from "@floating-ui/react";
 import { AnimatePresence, motion } from "motion/react";
+import type { Variants } from "motion/react";
 import {
   ArrowUpRightIcon,
   CaretLeftIcon,
@@ -60,6 +61,22 @@ const monthNameFormat = new Intl.DateTimeFormat("en-US", {
   month: "long",
 });
 
+const compactRangeFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
+/** `custom` reaches the exiting grid after its old render has been removed.
+ * A direct `exit={{ y: direction }}` freezes the previous direction on that
+ * grid, which made Back animate the same way as Forward. */
+const CALENDAR_GRID_VARIANTS: Variants = {
+  enter: (direction: number) => ({ opacity: 0, y: direction * 28 }),
+  center: { opacity: 1, y: 0 },
+  exit: (direction: number) => ({ opacity: 0, y: direction * -28 }),
+};
+
 /**
  * A month as a single comparable integer, so "is this before the window's
  * first month" is one comparison rather than a year-then-month dance that has
@@ -67,6 +84,19 @@ const monthNameFormat = new Intl.DateTimeFormat("en-US", {
  */
 function monthIndex(year: number, month: number): number {
   return year * 12 + month;
+}
+
+/** The Sunday-to-Sunday span represented by one calendar row. */
+function weekRange(year: number, month: number, week: number) {
+  const from = new Date(Date.UTC(year, month, 1, 12));
+  from.setUTCDate(1 - from.getUTCDay() + week * 7);
+  const to = new Date(from);
+  to.setUTCDate(to.getUTCDate() + 7);
+  return { from, to };
+}
+
+function utcDateKey(date: Date): string {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
 }
 
 /**
@@ -316,6 +346,10 @@ interface Props {
     to: { year: number; month: number };
   };
   highlightedMeetingId?: string | null;
+  /** Returns the meeting the adjacent list will scroll to, if the range has one. */
+  onCompactRangeChange?: (from: Date, to: Date) => string | null;
+  /** Reports the mobile sticky state so adjacent chrome can appear with it. */
+  onStickyChange?: (stuck: boolean) => void;
 }
 
 export default function MonthCalendar({
@@ -326,6 +360,8 @@ export default function MonthCalendar({
   today,
   bounds,
   highlightedMeetingId = null,
+  onCompactRangeChange,
+  onStickyChange,
 }: Props) {
   // Which month the grid draws. Seeded from props, resolved server-side rather
   // than read from the clock here. A client component's SSR pass cannot sit
@@ -337,8 +373,6 @@ export default function MonthCalendar({
   const viewIdx = monthIndex(year, month);
   const fromIdx = monthIndex(bounds.from.year, bounds.from.month);
   const toIdx = monthIndex(bounds.to.year, bounds.to.month);
-  const canGoBack = viewIdx > fromIdx;
-  const canGoForward = viewIdx < toIdx;
 
   // Grid maths on explicit values via `Date.UTC`, read back with the `getUTC*`
   // accessors. A bare `new Date(year, month, 1)` would be built in the
@@ -351,6 +385,13 @@ export default function MonthCalendar({
   const firstDayOfWeek = monthStart.getUTCDay();
 
   const [open, setOpen] = useState(false);
+  const [compact, setCompact] = useState(false);
+  const [compactWindow, setCompactWindow] = useState<{
+    start: number;
+    anchorMeetingId: string | null;
+  } | null>(null);
+  const [calendarDirection, setCalendarDirection] = useState<-1 | 1>(1);
+  const calendarRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<{
     day: number;
     meetings: MeetingInRange[];
@@ -364,6 +405,7 @@ export default function MonthCalendar({
     undefined,
   );
   const enterDir = useRef(0);
+  const previousCompactStart = useRef<number | null>(null);
   const prevCellY = useRef<number | null>(null);
   const approxInitialPos = useRef({ x: 0, y: 0 });
 
@@ -374,6 +416,43 @@ export default function MonthCalendar({
     },
     [],
   );
+
+  // Capture the natural position before the sticky parent starts moving. The
+  // previous version recomputed a chain of `offsetTop` values on every scroll;
+  // once sticky positioning participated in that chain, the target could move
+  // down the page at the same rate as the scroll and never be crossed.
+  useEffect(() => {
+    const calendar = calendarRef.current;
+    if (!calendar) return;
+
+    const mobile = window.matchMedia("(max-width: 63.999rem)");
+    let frame = 0;
+    const stickySurface = calendar.parentElement ?? calendar;
+    const naturalTop =
+      stickySurface.getBoundingClientRect().top + window.scrollY;
+
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        setCompact(mobile.matches && window.scrollY + 64 >= naturalTop);
+      });
+    };
+
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    mobile.addEventListener("change", update);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      mobile.removeEventListener("change", update);
+    };
+  }, []);
+
+  useEffect(() => {
+    onStickyChange?.(compact);
+  }, [compact, onStickyChange]);
 
   const { refs, x, y, strategy, context, isPositioned } = useFloating({
     placement: "right-start",
@@ -470,11 +549,17 @@ export default function MonthCalendar({
   }
 
   const meetingsByDay = new Map<number, MeetingInRange[]>();
+  const meetingsByDate = new Map<string, MeetingInRange[]>();
   for (const meeting of meetings) {
     // Bucketed by the club's zone, not the ambient one. See `clubDay`. The
     // year is compared too: the window spans months, and December 2026 and
     // December 2027 are not the same squares.
     const at = clubDay(meeting.startsAt);
+    const dateKey = `${at.year}-${String(at.month + 1).padStart(2, "0")}-${String(at.day).padStart(2, "0")}`;
+    meetingsByDate.set(dateKey, [
+      ...(meetingsByDate.get(dateKey) ?? []),
+      meeting,
+    ]);
     if (at.year !== year || at.month !== month) continue;
     // `meetings` is ascending, so pushing preserves the order within a day.
     meetingsByDay.set(at.day, [...(meetingsByDay.get(at.day) ?? []), meeting]);
@@ -499,6 +584,8 @@ export default function MonthCalendar({
   const cells: (number | null)[] = [];
   for (let i = 0; i < firstDayOfWeek; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  // Complete the final week so the full month remains a rectangular grid.
+  while (cells.length % 7 !== 0) cells.push(null);
 
   // Today only lights up when the grid is actually showing today's month, so
   // paging away does not leave a stray highlight on the same square number.
@@ -506,6 +593,118 @@ export default function MonthCalendar({
     today !== null && today.year === year && today.month === month
       ? today.day
       : null;
+
+  // The sticky schedule shows one week. Anchor it to the scroll-highlighted
+  // event (or today before the list has taken over).
+  const highlightedDay = meetings.find(
+    (meeting) => meeting.id === highlightedMeetingId,
+  );
+  const highlightedParts = highlightedDay
+    ? clubDay(highlightedDay.startsAt)
+    : null;
+  const anchorDay =
+    highlightedParts?.year === year && highlightedParts.month === month
+      ? highlightedParts.day
+      : todayDay;
+  const weekCount = cells.length / 7;
+  const anchorWeek = Math.floor((firstDayOfWeek + (anchorDay ?? 1) - 1) / 7);
+  const mobileFirstWeek = Math.min(anchorWeek, Math.max(weekCount - 1, 0));
+  const derivedCompactStart = weekRange(
+    year,
+    month,
+    mobileFirstWeek,
+  ).from.getTime();
+  const visibleCompactStart =
+    compactWindow?.anchorMeetingId === highlightedMeetingId
+      ? compactWindow.start
+      : derivedCompactStart;
+  const compactRangeEnd = new Date(visibleCompactStart + 6 * 86_400_000);
+  const calendarTitle = compact
+    ? compactRangeFormat.formatRange(
+        new Date(visibleCompactStart),
+        compactRangeEnd,
+      )
+    : `${monthName} ${year}`;
+  const gridStart = weekRange(year, month, 0).from.getTime();
+  const visibleCells = cells.map((day, index) => {
+    const date = new Date(gridStart + index * 86_400_000);
+    return {
+      // The complete grid stays mounted while its viewport collapses. Dates
+      // from an adjacent month are revealed only when their row is the active
+      // compact week; in the full-month view they remain blank gutters.
+      day: compact ? date.getUTCDate() : day,
+      index,
+      dateKey: compact || day !== null ? utcDateKey(date) : null,
+    };
+  });
+  const gridKey = `${year}-${month}-full`;
+  const gridDirection =
+    compact && previousCompactStart.current !== null
+      ? visibleCompactStart >= previousCompactStart.current
+        ? 1
+        : -1
+      : calendarDirection;
+  previousCompactStart.current = compact ? visibleCompactStart : null;
+  const compactRow = Math.max(
+    0,
+    Math.min(
+      weekCount - 1,
+      Math.round((visibleCompactStart - gridStart) / (7 * 86_400_000)),
+    ),
+  );
+  // Each row is 34px (`h-8.5`) with a 1px grid gap between rows.
+  const rowStride = 35;
+  const fullGridHeight = weekCount * 34 + Math.max(weekCount - 1, 0);
+
+  const firstAllowedWeek = weekRange(
+    bounds.from.year,
+    bounds.from.month,
+    0,
+  ).from.getTime();
+  const afterLastAllowedMonth = Date.UTC(
+    bounds.to.year,
+    bounds.to.month + 1,
+    1,
+    12,
+  );
+  const canGoBack = compact
+    ? visibleCompactStart - 7 * 86_400_000 >= firstAllowedWeek
+    : viewIdx > fromIdx;
+  const canGoForward = compact
+    ? visibleCompactStart + 7 * 86_400_000 < afterLastAllowedMonth
+    : viewIdx < toIdx;
+
+  function stepCalendar(delta: -1 | 1) {
+    if (!compact) {
+      setCalendarDirection(delta);
+      stepMonth(delta);
+      return;
+    }
+
+    const nextStart = visibleCompactStart + delta * 7 * 86_400_000;
+    if (nextStart < firstAllowedWeek || nextStart >= afterLastAllowedMonth)
+      return;
+    const range = {
+      from: new Date(nextStart),
+      to: new Date(nextStart + 7 * 86_400_000),
+    };
+    const targetMeetingId =
+      onCompactRangeChange?.(range.from, range.to) ?? null;
+    const middle = new Date(nextStart + 7 * 86_400_000);
+    const nextYear = middle.getUTCFullYear();
+    const nextMonth = middle.getUTCMonth();
+    const nextViewIdx = monthIndex(nextYear, nextMonth);
+
+    closeImmediate();
+    setCalendarDirection(delta);
+    setCompactWindow({
+      start: nextStart,
+      anchorMeetingId: targetMeetingId ?? highlightedMeetingId,
+    });
+    if (nextViewIdx !== viewIdx) {
+      onViewChange({ year: nextYear, month: nextMonth });
+    }
+  }
 
   // Imperative animation state, read once per render (see the file-level note).
   const dir = enterDir.current;
@@ -515,6 +714,7 @@ export default function MonthCalendar({
   return (
     <>
       <div
+        ref={calendarRef}
         // No frame of its own: the console card this sits in is the frame.
         className="flex flex-col gap-4"
         onMouseEnter={() => clearTimeout(closeTimer.current)}
@@ -524,7 +724,7 @@ export default function MonthCalendar({
           {/* Live so a keyboard user who just pressed Previous hears which
               month they landed on. The grid below re-renders silently. */}
           <h3 aria-live="polite" className="font-display font-bold text-white">
-            {monthName} {year}
+            {calendarTitle}
           </h3>
           {/* Real buttons with their own labels, not icon-only div handlers:
               the caret alone has no accessible name, and the calendar icon
@@ -534,18 +734,18 @@ export default function MonthCalendar({
             <button
               type="button"
               className={PAGE_BUTTON_CLS}
-              onClick={() => stepMonth(-1)}
+              onClick={() => stepCalendar(-1)}
               disabled={!canGoBack}
-              aria-label="Previous month"
+              aria-label={compact ? "Previous week" : "Previous month"}
             >
               <CaretLeftIcon aria-hidden />
             </button>
             <button
               type="button"
               className={PAGE_BUTTON_CLS}
-              onClick={() => stepMonth(1)}
+              onClick={() => stepCalendar(1)}
               disabled={!canGoForward}
-              aria-label="Next month"
+              aria-label={compact ? "Next week" : "Next month"}
             >
               <CaretRightIcon aria-hidden />
             </button>
@@ -558,62 +758,96 @@ export default function MonthCalendar({
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-px">
-          {cells.map((day, idx) => {
-            const dayMeetings = day ? (meetingsByDay.get(day) ?? []) : [];
-            const highlighted = dayMeetings.some(
-              (meeting) => meeting.id === highlightedMeetingId,
-            );
+        <motion.div
+          className="relative overflow-hidden"
+          initial={false}
+          animate={{ height: compact ? 34 : fullGridHeight }}
+          transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
+        >
+          <AnimatePresence
+            initial={false}
+            mode="popLayout"
+            custom={gridDirection}
+          >
+            <motion.div
+              key={gridKey}
+              custom={gridDirection}
+              className="grid grid-cols-7 gap-px"
+              variants={CALENDAR_GRID_VARIANTS}
+              initial="enter"
+              animate={{
+                opacity: 1,
+                y: compact ? -compactRow * rowStride : 0,
+              }}
+              exit="exit"
+              transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
+            >
+              {visibleCells.map(({ day, index: idx, dateKey }) => {
+                const dayMeetings =
+                  dateKey === null
+                    ? []
+                    : compact
+                      ? (meetingsByDate.get(dateKey) ?? [])
+                      : (meetingsByDay.get(day ?? 0) ?? []);
+                const highlighted = dayMeetings.some(
+                  (meeting) => meeting.id === highlightedMeetingId,
+                );
 
-            const cellContent = (
-              <>
-                <span>{day ?? ""}</span>
-                {dayMeetings.length > 0 && (
-                  <div className="mt-0.5 flex gap-0.5">
-                    {dayMeetings.map((meeting) => (
-                      <span
-                        key={meeting.id}
-                        className={`size-1 rounded-full ${meetingBadge(meeting)?.dotDark ?? "bg-mauve-400"} ${meeting.id === highlightedMeetingId ? "ring-2 ring-white ring-offset-1 ring-offset-mauve-900" : ""}`}
-                      />
-                    ))}
-                  </div>
-                )}
-              </>
-            );
+                const cellContent = (
+                  <>
+                    <span>{day ?? ""}</span>
+                    {dayMeetings.length > 0 && (
+                      <div className="mt-0.5 flex gap-0.5">
+                        {dayMeetings.map((meeting) => (
+                          <span
+                            key={meeting.id}
+                            className={`size-1 rounded-full ${meetingBadge(meeting)?.dotDark ?? "bg-mauve-400"} ${meeting.id === highlightedMeetingId ? "ring-2 ring-white ring-offset-1 ring-offset-mauve-900" : ""}`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
 
-            const baseClass = `flex h-8.5 flex-col items-center justify-start py-1.5 text-xs ${day === todayDay ? "font-black text-white" : "text-mauve-300"} ${!day ? "invisible" : ""}`;
+                const isToday =
+                  today !== null &&
+                  dateKey ===
+                    `${today.year}-${String(today.month + 1).padStart(2, "0")}-${String(today.day).padStart(2, "0")}`;
+                const baseClass = `flex h-8.5 flex-col items-center justify-start py-1.5 text-xs ${isToday ? "font-black text-white" : "text-mauve-300"} ${!day ? "invisible" : ""}`;
 
-            if (dayMeetings.length === 0 || !day) {
-              return (
-                <div key={idx} className={baseClass}>
-                  {cellContent}
-                </div>
-              );
-            }
-
-            return (
-              <button
-                // Keyed by month as well as position: paging reuses the same
-                // 42 slots, and a bare index would let React keep a focused
-                // cell mounted across a month change with new contents.
-                key={`${year}-${month}-${idx}`}
-                type="button"
-                className={`${baseClass} relative cursor-pointer rounded before:absolute before:-inset-x-2 before:-inset-y-1.5 before:content-[''] hover:bg-white/10 ${highlighted ? "bg-white/15" : ""}`}
-                aria-expanded={open && active?.day === day}
-                aria-haspopup="dialog"
-                onMouseEnter={(e) =>
-                  handleCellEnter(day, e.currentTarget, dayMeetings)
+                if (dayMeetings.length === 0 || !day) {
+                  return (
+                    <div key={idx} className={baseClass}>
+                      {cellContent}
+                    </div>
+                  );
                 }
-                onFocus={(e) =>
-                  handleCellFocus(day, e.currentTarget, dayMeetings)
-                }
-                onBlur={handleClose}
-              >
-                {cellContent}
-              </button>
-            );
-          })}
-        </div>
+
+                return (
+                  <button
+                    // Keyed by month as well as position: paging reuses the same
+                    // 42 slots, and a bare index would let React keep a focused
+                    // cell mounted across a month change with new contents.
+                    key={dateKey ?? `${year}-${month}-${idx}`}
+                    type="button"
+                    className={`${baseClass} relative cursor-pointer rounded before:absolute before:-inset-x-2 before:-inset-y-1.5 before:content-[''] lg:hover:bg-white/10 ${highlighted ? "bg-white/15" : ""}`}
+                    aria-expanded={open && active?.day === day}
+                    aria-haspopup="dialog"
+                    onMouseEnter={(e) =>
+                      handleCellEnter(day, e.currentTarget, dayMeetings)
+                    }
+                    onFocus={(e) =>
+                      handleCellFocus(day, e.currentTarget, dayMeetings)
+                    }
+                    onBlur={handleClose}
+                  >
+                    {cellContent}
+                  </button>
+                );
+              })}
+            </motion.div>
+          </AnimatePresence>
+        </motion.div>
         {/* Derived from the meetings actually on THIS month's grid rather than
             from a fixed list, so a hue appears in the legend exactly when it
             appears as a dot. A fixed list guesses wrong in both directions. It
@@ -622,7 +856,7 @@ export default function MonthCalendar({
             never rose. And it could never mention a build session, whose colour
             comes from an officer's `kind` rather than from the segment
             union. */}
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-white/10 pt-3 text-xs text-mauve-400">
+        <div className="mt-3 hidden flex-wrap gap-x-4 gap-y-1 border-t border-white/10 pt-3 text-xs text-mauve-400 lg:flex">
           {visibleLegend.length === 0 ? (
             <span className="text-mauve-500">No events this month</span>
           ) : (

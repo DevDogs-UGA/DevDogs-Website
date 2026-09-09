@@ -6,9 +6,11 @@ import { ConsoleCard } from "~/ui/card";
 import PageHeader from "~/components/PageHeader";
 import type { MeetingInRange, MeetingSummary } from "~/server/loaders/meetings";
 import EventsSchedule from "./EventsSchedule";
+import { env } from "~/env";
+import SubscribeToCalendar from "./SubscribeToCalendar";
 
-const HEADER_LINK_CLS =
-  "flex h-9 items-center gap-2 rounded-lg border border-mauve-600 bg-mauve-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:border-white";
+const HEADER_PRIMARY_LINK_CLS =
+  "flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-white bg-white px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-transparent hover:text-white lg:w-auto";
 
 export interface EventsPageProps {
   /**
@@ -75,6 +77,7 @@ export default function EventsPage({
   // still the one somebody deciding whether to walk over cares about, which
   // is the same rule `getUpcomingMeetings` uses.
   const upcoming = meetings.filter((m) => m.endsAt >= now);
+  const subscriptionUrl = new URL("/events/calendar.ics", env.BASE_URL);
 
   return (
     <div className="relative isolate mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 @sm:px-6">
@@ -88,11 +91,13 @@ export default function EventsPage({
         description="Every meeting, past and coming."
         accent="cyan"
         centerActions
+        actionsClassName="mx-6 w-[calc(100%-3rem)] flex-col lg:mx-0 lg:w-auto lg:flex-row"
       >
+        <SubscribeToCalendar feedUrl={subscriptionUrl.toString()} />
         {/* The explainer left this page when it became strictly a schedule, so
             the link says where it went rather than keeping a second copy here
             in step by hand. */}
-        <Link href="/#how-it-works" className={HEADER_LINK_CLS}>
+        <Link href="/#how-it-works" className={HEADER_PRIMARY_LINK_CLS}>
           A Week in DevDogs <ArrowRightIcon />
         </Link>
       </PageHeader>
