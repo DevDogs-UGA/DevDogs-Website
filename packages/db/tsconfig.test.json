@@ -1,0 +1,10 @@
+{
+  // Covers the co-located `*.test.ts` files tsconfig.json excludes from the
+  // build, so they're still typechecked without being emitted into dist.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.test.ts"]
+}

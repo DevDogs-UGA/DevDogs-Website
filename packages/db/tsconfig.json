@@ -1,0 +1,27 @@
+{
+  // The repo base, NOT `../config/tsconfig/lib.json` like most other emitting
+  // packages — deliberately, ported from `@devdogsuga/supabase`'s tsconfig.
+  //
+  // Switching this to the shared `lib` preset (`moduleResolution: nodenext`)
+  // makes tsc resolve `@supabase/supabase-js` through its **CJS** entry and
+  // bake that path into the emitted declarations:
+  //
+  //   base:     import("@supabase/supabase-js").SupabaseClient<…>
+  //   nodenext: import("@supabase/supabase-js/dist/index.cjs").SupabaseClient<…>
+  //
+  // Consumers resolve the ESM entry, so the two `SupabaseClient` classes
+  // become distinct declarations and every client handed across the boundary
+  // fails to assign — "property 'supabaseUrl' is protected but type … is not
+  // a class derived from …". Verified against the product repo under this
+  // config; keep the imports in src/client and src/server carrying `.js`.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+}

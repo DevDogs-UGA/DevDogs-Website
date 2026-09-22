@@ -1,0 +1,16 @@
+{
+  // Emits for production consumers. Pure TypeScript — unlike og, this package
+  // has no JSX, since the Satori templates that consumed these tokens stayed
+  // behind in `@devdogsuga/og`.
+  "extends": "../config/tsconfig/lib.json",
+  "compilerOptions": {
+    "lib": ["ES2025"],
+    "types": ["node"],
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src"],
+  // Tests are typechecked (tsconfig.typecheck.json includes them) but never
+  // emitted.
+  "exclude": ["src/**/*.test.ts"]
+}

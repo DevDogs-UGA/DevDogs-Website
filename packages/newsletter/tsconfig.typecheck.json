@@ -1,0 +1,17 @@
+{
+  // `pnpm typecheck` covers the tests and the vitest config too, which
+  // tsconfig.json cannot include: anything under `rootDir` is emitted, and a
+  // `.test.js` inside `dist` is dead weight the platform would still bundle.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    // tsconfig.base.json sets `incremental: true`, and a `noEmit` pass still
+    // writes its .tsbuildinfo. With `rootDir: "."` the default location for
+    // it is derived from the inherited `outDir`, i.e. INSIDE `dist` — which
+    // `files: ["dist"]` then ships to npm. Park it next to the config that
+    // produced it instead (gitignored); `dist` stays purely emitted output.
+    "tsBuildInfoFile": "./tsconfig.typecheck.tsbuildinfo"
+  },
+  "include": ["src", "vitest.config.ts"]
+}

@@ -1,0 +1,45 @@
+{
+  "name": "@devdogsuga/brand",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "The club's brand tokens — palette, contact/social copy, embedded fonts and mark/wordmark artwork — extracted from @devdogsuga/og's Satori templates so any consumer can use them without pulling in a renderer",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DevDogsUGA/Backstage",
+    "directory": "packages/brand"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./event": {
+      "types": "./dist/event.d.ts",
+      "default": "./dist/event.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

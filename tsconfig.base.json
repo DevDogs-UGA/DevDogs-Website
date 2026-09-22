@@ -1,15 +1,30 @@
 {
+  // Repo-wide base. Every package here is a published library (no Next apps
+  // in this monorepo), so `noEmit: true` is deliberate at this layer: it
+  // forces each package's own tsconfig to opt back into emission explicitly
+  // (`noEmit: false`, `declaration: true`, `outDir`, `rootDir`) rather than
+  // inheriting emit by accident. Mirrors DevDogsUGA's tsconfig.base.json,
+  // which the migrated packages' own tsconfig.json files (and
+  // packages/config/tsconfig/lib.json, itself migrated in Wave 1) already
+  // extend and were typechecked against — matching it here avoids surprise
+  // divergence for copy-don't-rewrite ports.
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2025",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["ES2022", "DOM"],
+    "lib": ["ES2025", "DOM", "DOM.Iterable"],
+    "moduleDetection": "force",
+    "allowJs": true,
+    "checkJs": true,
     "strict": true,
+    "noUncheckedIndexedAccess": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "verbatimModuleSyntax": false
+    "verbatimModuleSyntax": true,
+    "incremental": true,
+    "noEmit": true
   }
 }

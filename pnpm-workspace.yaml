@@ -1,3 +1,72 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Which dependencies' install scripts may run — pnpm 11's per-dep decision
+# map. Values carried over from the product repo's decisions at the migration
+# sha; all three here build a required native/platform artifact.
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true
+  workerd: true
+
+# Single source of truth for every dependency used by more than one workspace
+# package (and for the pinned-on-purpose ones used by exactly one). Packages
+# reference these with "catalog:" instead of a literal range, so a shared
+# version can only ever be bumped here. Values are carried over verbatim from
+# the product repo's catalog at the migration sha so the Backstage copies
+# resolve to exactly what they were built and tested against there.
+catalog:
+  # --- Framework / runtime ---
+  react: ^19.2.8
+  react-dom: ^19.2.8
+
+  # --- Supabase ---
+  "@supabase/ssr": ^0.12.4
+  "@supabase/supabase-js": ^2.112.3
+
+  # --- Data ---
+  # drizzle-orm stays pinned exact on the 1.0.0-rc line; the `latest`
+  # dist-tag still points at 0.45.x, so a range here would silently downgrade.
+  drizzle-orm: 1.0.0-rc.4
+  postgres: ^3.4.9
+  zod: 4.4.3
+
+  # --- Observability ---
+  # All @sentry/* JS packages ship in lockstep off the sentry-javascript
+  # monorepo; pin every one used in this workspace to the same release.
+  "@sentry/core": ^10.75.1
+
+  # --- Styling ---
+  tailwindcss: ^4.3.3
+
+  # --- Toolchain ---
+  # typescript is held at 6.x on purpose: typescript-eslint peer-requires
+  # ">=4.8.4 <6.1.0", so TS 7 breaks linting in every package.
+  "@opennextjs/cloudflare": ^1.20.2
+  tsx: ^4.23.12
+  typescript: ^6.0.3
+
+  # --- Testing ---
+  # vitest is held at 4.x on purpose: 5.x is still on the beta dist-tag.
+  "@testing-library/jest-dom": ^7.0.1
+  "@vitest/coverage-v8": ^4.1.11
+  vitest: ^4.1.11
+
+  # --- Types ---
+  "@types/node": ^26.2.0
+  "@types/react": ^19.2.18
+  "@types/react-dom": ^19.2.4
+
+minimumReleaseAgeExclude:
+  - '@sentry/core@10.75.1'
+
+onlyBuiltDependencies:
+  - esbuild
+
+# Run package.json scripts through pnpm's built-in JS shell (@yarnpkg/shell)
+# instead of the platform shell, matching the product repo: it implements the
+# POSIX subset these scripts need ($VAR, &&, >, KEY=VALUE prefixes)
+# identically on Windows and POSIX. Note it also globs unquoted [...]
+# patterns; keep such arguments quoted.
+shellEmulator: true

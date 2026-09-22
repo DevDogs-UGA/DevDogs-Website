@@ -3,16 +3,11 @@ description: >-
   The post-checkout bootstrap every job shares: enable corepack (pnpm), set up
   Node from .nvmrc with a pnpm cache, and install with a frozen lockfile.
 
-# ⚠️ CHECKOUT IS NOT HERE, AND CANNOT BE. A local composite action
-# (`uses: ./.github/actions/…`) only resolves AFTER the repository is on disk,
-# because the action's own files live in it. So the `actions/checkout` step
-# stays in each job — which is also where its `fetch-depth` belongs (`0` for
-# the jobs that diff against a base ref to find affected packages, or need
-# both ends of a push, the default elsewhere). This action is the three steps
-# that were byte-identical after it.
-#
-# The setup-node pin keeps its `# v4` trailing comment so Dependabot updates it
-# here the same way it does the `uses:` pins in the workflows.
+# Mirrors DevDogsUGA's .github/actions/setup-workspace. Checkout is not here,
+# and cannot be: a local composite action (`uses: ./.github/actions/…`) only
+# resolves after the repository is on disk, because the action's own files
+# live in it. So `actions/checkout` stays in each job, with `fetch-depth`
+# chosen per job.
 runs:
   using: composite
   steps:

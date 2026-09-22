@@ -1,0 +1,60 @@
+{
+  "name": "@devdogsuga/db",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Supabase client factories and the Drizzle/postgres-js client factory, merged. Generic over a consumer-supplied `Database` type — no generated types or schema data ship here.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devdogsuga/Backstage.git",
+    "directory": "packages/db"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "exports": {
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "default": "./dist/client/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "default": "./dist/server/index.js"
+    },
+    "./typegen": {
+      "types": "./dist/typegen/index.d.ts",
+      "default": "./dist/typegen/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:rls": "vitest run --config vitest.rls.config.ts",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@supabase/ssr": "catalog:",
+    "@supabase/supabase-js": "catalog:",
+    "server-only": "^0.0.1"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "1.0.0-rc.4",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "drizzle-orm": "catalog:",
+    "postgres": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "name": "@devdogsuga/telemetry",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Shared Sentry constants, options builder, scrubbers, and alert() for every service that reports telemetry. Standalone by design — devtools bundles this as a regular dep so error reporting works with no/broken repo.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devdogsuga/Backstage",
+    "directory": "packages/telemetry"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "devdogs-source": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sentry/core": "catalog:"
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter slides dev",
-    "build": "pnpm --filter slides build"
+    "build": "pnpm -r --if-present run build",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "test": "pnpm -r --if-present run test",
+    "build:slides": "pnpm --filter slides build"
   },
   "engines": {
     "node": ">=22.12"

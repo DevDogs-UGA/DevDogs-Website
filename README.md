@@ -1,18 +1,54 @@
-# DevDogs Monorepo
+# Backstage
 
-DevDogs is UGA's student developer club. This is the contributor repository: the club's apps (Schedule Builder, Study Group Finder), the database (`supabase/`: every migration, seed and config), and the docs. It has no deploys and no production secrets. The platform app, the email templates, every deploy and the officer CLIs live in the officers' [Backstage](https://github.com/DevDogsUGA/Backstage) repository, which pins this one by commit. Pick your team's docs to get started:
+**Backstage is a public, never-deployed monorepo that publishes machinery to
+npm under `@devdogsuga`.** It is not a second copy of the product. Nothing in
+here runs anywhere, ever — [DevDogsUGA](https://github.com/DevDogsUGA/DevDogsUGA)
+(the product monorepo) remains the only repository with runtimes, deploys,
+secrets, or user-facing content.
 
-- [Platform](https://devdogsuga.org/docs/platform/getting-started/prerequisites) — the site, console, docs, and OAuth server (Next.js; code in Backstage, database and docs here)
-- [Schedule Builder](https://devdogsuga.org/docs/schedule-builder/getting-started/prerequisites) — course schedule planning (Next.js)
-- [Study Group Finder](https://devdogsuga.org/docs/study-group-finder/getting-started/prerequisites) — study groups (Flutter)
+## What lives here vs. there
+
+- **Backstage publishes machinery**: shared library packages any DevDogs repo
+  (or, eventually, anyone) can `pnpm add @devdogsuga/<package>`. Wave 1
+  migrated `config`, `telemetry`, `env`, `db`, `brand`, `newsletter`,
+  `docs-compiler`, and `airtable` here from DevDogsUGA's `packages/`.
+- **DevDogsUGA keeps anything a contributor authors** — app code, page
+  templates, email/OG templates, the env variable *registry* (the values;
+  this repo only ships the framework that reads them), generated database
+  types, migrations, and every deployment, cron, and secret binding.
+- `apps/slides` is the one exception to "nothing deploys": it's not a
+  service, it's the source for officer/workshop slide decks (Slidev),
+  currently including the 9/28 Supabase workshop deck. It builds static
+  output; nothing here serves it.
+
+Full design rationale (principles, mechanism, the package ledger) and
+migration-specific detail live outside this repo, in Sloan's planning notes
+("Backstage Packages — Implementation Plan" and its Wave 1 build sheet).
+
+## Releases
+
+Fully automatic — no changesets, no version bump PRs, no human publish step.
+Every merge to `main` that changes a package's contents patch-bumps and
+republishes just that package, with npm provenance and **no npm token of any
+kind** (OIDC trusted publishing). See `.github/workflows/publish.yaml` and
+`scripts/publish-changed-packages.mjs` for the mechanism, and that workflow's
+header comment for the one-time setup this needs on npmjs.com/GitHub before
+it can run at all — none of that is configured yet.
+
+## Scripts
+
+```bash
+pnpm build       # pnpm -r build   — builds every package (and the slides app)
+pnpm typecheck   # pnpm -r typecheck
+pnpm test        # pnpm -r test
+pnpm dev         # slides dev server
+```
 
 ## Quickstart
 
 ```bash
-git clone https://github.com/DevDogsUGA/DevDogsUGA.git && cd DevDogsUGA
-fnm install && npm install -g pnpm
-pnpm install
-pnpm devtools setup
+git clone https://github.com/DevDogsUGA/Backstage.git
+cd Backstage
+corepack enable && pnpm install
+pnpm build
 ```
-
-Full docs: [devdogsuga.org/docs](https://devdogsuga.org/docs)

@@ -1,0 +1,17 @@
+{
+  "extends": "../config/tsconfig/lib.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    // TypeScript 6 no longer auto-includes everything under node_modules/@types;
+    // the compiler walks the filesystem. Same pattern as packages/with-env.
+    "types": ["node"]
+  },
+  "include": ["src"],
+  // Tests are typechecked (tsconfig.typecheck.json includes them) but never
+  // emitted: `include: ["src"]` alone compiled every `*.test.ts` into `dist`,
+  // so `files: ["dist"]` shipped `dist/parse.test.js` & co. to npm — dead
+  // weight that also puts a runtime `import "vitest"` inside the published
+  // tarball, where vitest is only a devDependency.
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
+}

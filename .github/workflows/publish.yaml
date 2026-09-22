@@ -1,0 +1,85 @@
+name: Publish
+
+# Auto patch-bump + publish to npm, on every push to `main`. No human step,
+# no changesets — per the parent plan (§3 "Releases: fully automatic"). The
+# actual bump/diff/publish logic lives in scripts/publish-changed-packages.mjs;
+# this file is just the trigger, the workspace build, and the trust boundary
+# around the registry credential.
+#
+# ============================================================================
+# INERT UNTIL ALL OF THE FOLLOWING ARE TRUE — written now per the build
+# sheet, on the assumption they will be, but NONE of it is configured yet:
+# ============================================================================
+#
+#   1. A GitHub remote exists for this repository (Backstage), so `push` to
+#      `main` can fire at all.
+#   2. The `@devdogsuga` npm org is claimed on npmjs.com.
+#   3. EVERY package this workflow might publish has npm Trusted Publishing
+#      configured for it individually (npmjs.com → package → Settings →
+#      Publishing access → Trusted Publisher → GitHub Actions), pointing at:
+#        - this repository (owner/Backstage)
+#        - workflow filename: .github/workflows/publish.yaml
+#        - environment: (none configured below — leave blank unless a
+#          `environment:` key is added to the job)
+#      This has to be done once per package AFTER its first publish exists
+#      as a name on the registry — trusted publishing is configured on an
+#      existing package, it doesn't create one. The very first publish of
+#      each new package therefore needs a one-time manual `npm publish` with
+#      a real token from a maintainer's machine (or npm's "pending trusted
+#      publisher" flow, if available, which lets you register trust before
+#      the first version exists — check npm's current docs at
+#      implementation time). Either way, this is a Sloan-side task, tracked
+#      as a cutover flag.
+#   4. package.json in each publishable package under packages/* has
+#      "private": false, a "repository" field, and "publishConfig": {
+#      "access": "public", "provenance": true } — per the build sheet's Hard
+#      Rule 3. Package-owning agents are responsible for this; this workflow
+#      does not set it and does not check for it beyond what `npm publish`
+#      itself enforces (it will refuse an unscoped-private package).
+#
+# WHY NO TOKEN: with Trusted Publishing configured (point 3), npm exchanges
+# this job's OIDC token (minted because of `permissions: id-token: write`
+# below) for a short-lived publish credential itself — no NODE_AUTH_TOKEN,
+# no NPM_TOKEN, no secret of any kind lives in this repo or its settings.
+# That is the whole point (see the ledger: "no npm token secrets").
+#
+# WHY `npm publish`, NOT `pnpm publish`: pnpm's packing natively rewrites
+# `workspace:*` dependency ranges to real versions (used to build the
+# tarball), but Trusted Publishing is an npm-CLI/npm-registry OIDC protocol.
+# `npm publish <tarball>` is what actually authenticates and uploads;
+# pnpm never touches the registry in this pipeline. See
+# scripts/publish-changed-packages.mjs for the full mechanism and its
+# documented v1 limitations.
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  # One publish run at a time — the script mutates package.json on disk and
+  # shells out to the registry; two runs racing would double-bump.
+  group: publish-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # required for npm OIDC / Trusted Publishing
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: ./.github/actions/setup-workspace
+      # Trusted Publishing needs npm >=11.5.1 (the version it shipped in).
+      # setup-node's bundled npm tracks the Node release, not a fixed npm
+      # version, so this is pinned explicitly rather than assumed.
+      - name: Ensure npm supports Trusted Publishing
+        run: npm install -g npm@^11.5.1
+      # Everything a publishable package might import from a sibling
+      # workspace package needs to exist as real dist/ output before
+      # `pnpm pack` reads its `files` list.
+      - name: Build (workspace)
+        run: pnpm -r --if-present run build
+      - name: Patch-bump + publish changed packages
+        run: node scripts/publish-changed-packages.mjs
