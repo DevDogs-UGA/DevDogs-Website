@@ -19,6 +19,10 @@ importers:
       vue:
         specifier: ^3.5.43
         version: 3.5.43(typescript@6.0.3)
+    devDependencies:
+      unocss:
+        specifier: ^66.10.5
+        version: 66.10.5(cac@7.0.0)(rolldown@1.2.9)(srvx@1.0.5)(vite@8.3.0(@types/node@22.20.4)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/config: {}
 

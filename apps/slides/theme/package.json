@@ -1,0 +1,21 @@
+{
+  "name": "@devdogsuga/slidev-theme-internal",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Local DevDogs Slidev theme (not published — promotable to packages/slidev-theme later)",
+  "engines": {
+    "slidev": ">=0.47.0"
+  },
+  "slidev": {
+    "defaults": {
+      "fonts": {
+        "sans": "Hanken Grotesk",
+        "mono": "Cascadia Code",
+        "custom": "Alan Sans",
+        "weights": "400,500,600,700,800",
+        "provider": "google"
+      },
+      "colorSchema": "dark"
+    }
+  }
+}
