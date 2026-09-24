@@ -61,7 +61,14 @@ export const EVENT_KIND_VISUALS = {
   },
 } as const;
 
-/** Structural agenda badges, shared by the calendar and per-item event art. */
+/**
+ * Structural agenda badges, shared by the calendar and per-item event art.
+ *
+ * A competition is a mirrored GitHub issue with an asynchronous lifecycle --
+ * nothing about a MEETING's structure says "this kicks off" or "this judges"
+ * (see `apps/platform/src/lib/meetingSegments.ts`), so `workshop` and `open`
+ * are the only two segments.
+ */
 export const EVENT_SEGMENT_VISUALS = {
   workshop: {
     accent: "#00d492",
@@ -70,22 +77,6 @@ export const EVENT_SEGMENT_VISUALS = {
     chipDark: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
     dotDark: "bg-emerald-400",
     label: "Workshop",
-  },
-  kickoff: {
-    accent: "#00d492",
-    bg: "bg-emerald-400",
-    dot: "bg-emerald-500",
-    chipDark: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
-    dotDark: "bg-emerald-400",
-    label: "Kickoff",
-  },
-  judging: {
-    accent: "#ff637e",
-    bg: "bg-rose-400",
-    dot: "bg-rose-500",
-    chipDark: "border-rose-400/30 bg-rose-500/10 text-rose-300",
-    dotDark: "bg-rose-400",
-    label: "Judging",
   },
   open: {
     accent: "#ffb900",
@@ -150,10 +141,10 @@ export interface EventDetail {
  * Somewhere the campus map has no footprint for. The room text carries the
  * detail instead.
  *
- * One string literal, matching `OTHER_BUILDING` in the app's `buildings.ts` and
- * the `Building` single-select in `packages/airtable`'s registry. Those two
- * already keep separate copies of this vocabulary, with a test holding them
- * together, for the same dependency-direction reason that applies here.
+ * One string literal, matching `OTHER_BUILDING` in the app's `buildings.ts`
+ * and `MEETING_BUILDING_CHOICES` in `@devdogsuga/events`'s schema. Those
+ * two already keep separate copies of this vocabulary, with a test holding
+ * them together, for the same dependency-direction reason that applies here.
  */
 const OTHER_BUILDING = "Other";
 

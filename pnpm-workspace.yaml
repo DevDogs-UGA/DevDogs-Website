@@ -13,9 +13,9 @@ allowBuilds:
 # Single source of truth for every dependency used by more than one workspace
 # package (and for the pinned-on-purpose ones used by exactly one). Packages
 # reference these with "catalog:" instead of a literal range, so a shared
-# version can only ever be bumped here. Values are carried over verbatim from
-# the product repo's catalog at the migration sha so the Backstage copies
-# resolve to exactly what they were built and tested against there.
+# version can only ever be bumped here. Values are kept in sync with the
+# product repo's catalog, for every entry Backstage actually uses, as of
+# DevDogsUGA@e5f8737a — see CUTOVER.md for what that marker means.
 catalog:
   # --- Framework / runtime ---
   react: ^19.2.8
@@ -43,7 +43,6 @@ catalog:
   # --- Toolchain ---
   # typescript is held at 6.x on purpose: typescript-eslint peer-requires
   # ">=4.8.4 <6.1.0", so TS 7 breaks linting in every package.
-  "@opennextjs/cloudflare": ^1.20.2
   tsx: ^4.23.12
   typescript: ^6.0.3
 

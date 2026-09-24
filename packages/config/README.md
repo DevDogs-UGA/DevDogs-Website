@@ -1,6 +1,6 @@
 # @devdogsuga/config
 
-The shared tsconfig, ESLint, Vitest and OpenNext presets.
+The shared tsconfig, ESLint and Vitest presets.
 
 Config only, no runtime code. Each preset is a subpath export, taken as-is or
 merged with whatever a package adds on top:
