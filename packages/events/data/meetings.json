@@ -161,6 +161,45 @@
           "project": null
         }
       ]
+    },
+    {
+      "id": "production-test-2026-09-27-workshop",
+      "title": "Production test (not a real event): workshop",
+      "summary": "Not a real event. Used to test attendance, reflections and credit during the production test call; cancelled afterwards.",
+      "kind": "Interest Meeting",
+      "building": "Other",
+      "location": "Online",
+      "startsAt": "2026-09-27T13:00:00.000Z",
+      "endsAt": "2026-09-28T02:00:00.000Z",
+      "rsvpUrl": null,
+      "cancelledAt": null,
+      "cancellationReason": null,
+      "countsForCredit": true,
+      "surveyUrl": "https://devdogsuga.org/docs",
+      "agenda": [
+        {
+          "id": "production-test-2026-09-27-workshop-agenda",
+          "title": "Production test workshop (not real)",
+          "description": "Not a real workshop. Exists to test workshop credit during the production test call.",
+          "project": null
+        }
+      ]
+    },
+    {
+      "id": "production-test-2026-09-27-build-session",
+      "title": "Production test (not a real event): build session",
+      "summary": "Not a real event. Used to test attendance without credit during the production test call; cancelled afterwards.",
+      "kind": "Build Session",
+      "building": "Other",
+      "location": "Online",
+      "startsAt": "2026-09-27T13:00:00.000Z",
+      "endsAt": "2026-09-28T02:00:00.000Z",
+      "rsvpUrl": null,
+      "cancelledAt": null,
+      "cancellationReason": null,
+      "countsForCredit": false,
+      "surveyUrl": null,
+      "agenda": []
     }
   ]
 }
