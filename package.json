@@ -8,7 +8,8 @@
     "build": "pnpm -r --if-present run build",
     "typecheck": "pnpm -r --if-present run typecheck",
     "test": "pnpm -r --if-present run test",
-    "build:slides": "pnpm --filter slides build"
+    "build:slides": "pnpm --filter slides build",
+    "pack:local": "node scripts/pack-local.mjs"
   },
   "engines": {
     "node": ">=22.12"

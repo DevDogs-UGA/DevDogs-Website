@@ -11,7 +11,9 @@ secrets, or user-facing content.
 - **Backstage publishes machinery**: shared library packages any DevDogs repo
   (or, eventually, anyone) can `pnpm add @devdogsuga/<package>`. Wave 1
   migrated `config`, `telemetry`, `env`, `db`, `brand`, `newsletter`, and
-  `docs-compiler` here from DevDogsUGA's `packages/`.
+  `docs-compiler` here from DevDogsUGA's `packages/`; `events` followed after,
+  once `packages/events` in the product repo was ready to move out entirely.
+  See `CUTOVER.md` for the migrated-from sha and what stays forward-ported.
 - **DevDogsUGA keeps anything a contributor authors** — app code, page
   templates, email/OG templates, the env variable *registry* (the values;
   this repo only ships the framework that reads them), generated database
@@ -42,7 +44,13 @@ pnpm build       # pnpm -r build   — builds every package (and the slides app)
 pnpm typecheck   # pnpm -r typecheck
 pnpm test        # pnpm -r test
 pnpm dev         # slides dev server
+pnpm pack:local  # build + pnpm-pack every publishable package into .packs/
 ```
+
+`pack:local` is the pre-publish bridge: before any package has ever been
+published to npm, `DevDogsUGA` consumes these packages by pointing pnpm
+`overrides` at the tarballs it writes to `.packs/`. See CUTOVER.md, "The
+local-pack bridge".
 
 ## Quickstart
 
