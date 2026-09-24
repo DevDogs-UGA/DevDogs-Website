@@ -10,8 +10,8 @@ secrets, or user-facing content.
 
 - **Backstage publishes machinery**: shared library packages any DevDogs repo
   (or, eventually, anyone) can `pnpm add @devdogsuga/<package>`. Wave 1
-  migrated `config`, `telemetry`, `env`, `db`, `brand`, `newsletter`,
-  `docs-compiler`, and `airtable` here from DevDogsUGA's `packages/`.
+  migrated `config`, `telemetry`, `env`, `db`, `brand`, `newsletter`, and
+  `docs-compiler` here from DevDogsUGA's `packages/`.
 - **DevDogsUGA keeps anything a contributor authors** — app code, page
   templates, email/OG templates, the env variable *registry* (the values;
   this repo only ships the framework that reads them), generated database

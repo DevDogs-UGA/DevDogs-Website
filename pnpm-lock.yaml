@@ -81,28 +81,6 @@ importers:
         specifier: ^66.10.5
         version: 66.10.5(cac@7.0.0)(rolldown@1.2.9)(srvx@1.0.5)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.15)(yaml@2.9.1))
 
-  packages/airtable:
-    dependencies:
-      zod:
-        specifier: ^4.4.3
-        version: 4.6.5
-    devDependencies:
-      '@devdogsuga/config':
-        specifier: workspace:*
-        version: link:../config
-      '@types/node':
-        specifier: ^26.2.0
-        version: 26.6.2
-      '@vitest/coverage-v8':
-        specifier: ^4.1.11
-        version: 4.1.11(vitest@4.1.11)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@26.6.2)(@vitest/coverage-v8@4.1.11)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.15)(yaml@2.9.1))
-
   packages/brand:
     devDependencies:
       '@devdogsuga/config':
