@@ -72,49 +72,53 @@ are done.
 
 ## B. In `DevDogsUGA` (the consumer cutover — one branch)
 
+> Done on DevDogsUGA branch `backstage-cutover` (unmerged), consuming these
+> packages through the `.packs/` bridge. Only the first item remains:
+> swapping the bridge for published versions once they exist.
+
 - [ ] Add the 8 packages as real npm dependencies at their published versions,
       replacing the `.packs/`-tarball overrides documented above.
-- [ ] Delete the migrated `packages/*` from the product repo:
+- [x] Delete the migrated `packages/*` from the product repo:
       `config`, `telemetry`, `docs-build`, `env`, `supabase`, `drizzle`,
       `newsletter`, `events`.
-- [ ] `docs-build` → `docs-compiler`: the package was **renamed** in the move.
+- [x] `docs-build` → `docs-compiler`: the package was **renamed** in the move.
       Every import of `@devdogsuga/docs-build` has to be retargeted. The `.`
       and `./gen` subpaths and all internals are unchanged, so it is a pure
       find-and-replace of the specifier.
-- [ ] `supabase` + `drizzle` → **one** package, `@devdogsuga/db`, under three
+- [x] `supabase` + `drizzle` → **one** package, `@devdogsuga/db`, under three
       subpaths. Nothing is exported from its root:
       - `@devdogsuga/supabase` browser/SSR helpers → `@devdogsuga/db/client`
       - `@devdogsuga/supabase` admin client + `@devdogsuga/drizzle` → `@devdogsuga/db/server`
       - type generation → `@devdogsuga/db/typegen`
-- [ ] The db client helpers are now **generic over `Database`**. Every call site
+- [x] The db client helpers are now **generic over `Database`**. Every call site
       has to supply the repo's own generated type as a type argument; it is no
       longer baked into the package. Expect this to be the largest single
       mechanical diff of the cutover.
-- [ ] Keep `database.types.ts` in `DevDogsUGA` and regenerate it there with
+- [x] Keep `database.types.ts` in `DevDogsUGA` and regenerate it there with
       `@devdogsuga/db/typegen`. It is generated repo data and deliberately does
       not ship in the package. Wire up whatever `db typegen` command the repo
       wants around `generateDatabaseTypes()`.
-- [ ] Keep `schemas.ts` (`SCHEMAS` / `AppKey` / `SchemaName`) in `DevDogsUGA` —
+- [x] Keep `schemas.ts` (`SCHEMAS` / `AppKey` / `SchemaName`) in `DevDogsUGA` —
       the app→Postgres-schema map is business data. It can key its values off
       `DatabaseSchema<Database>` imported from `@devdogsuga/db/client`.
-- [ ] Retarget the RLS persona suite (`packages/supabase/testing/**`, which
+- [x] Retarget the RLS persona suite (`packages/supabase/testing/**`, which
       stays in `DevDogsUGA`) to import its clients from `@devdogsuga/db/client`
       and `@devdogsuga/db/server`. It exercises the product's real schema, so
       it never moved; only its imports change.
-- [ ] Apps drop their direct `@t3-oss/env-*` dependency and import
+- [x] Apps drop their direct `@t3-oss/env-*` dependency and import
       `@devdogsuga/env/nextjs` instead. `apps/platform` and
       `apps/schedule-builder` are the two that depend on it directly today;
       the re-export exists precisely so the pin lives in one place.
-- [ ] `og` → `open-graph` rename, and make `og` consume `@devdogsuga/brand`
+- [x] `og` → `open-graph` rename, and make `og` consume `@devdogsuga/brand`
       for its tokens instead of defining its own. Today `brand` is an
       *extracted copy* of og's `brand.ts` / `event.ts` / `fonts.ts` /
       `oklch.ts` / `generated/` — **a token edit has to be made in both repos
       until this lands.** `og` itself was deliberately untouched in Wave 1.
-- [ ] `packages/newsletter` in the product repo imported og in `assets.ts` and
+- [x] `packages/newsletter` in the product repo imported og in `assets.ts` and
       `theme.ts` (`GDGC_UGA`, event chips from `@devdogsuga/og/event`). The
       Backstage copy already imports `@devdogsuga/brand` instead; confirm no
       og import survives anywhere once the product copy is deleted.
-- [ ] Re-run the full product test suite. Wave 1 verified these packages
+- [x] Re-run the full product test suite. Wave 1 verified these packages
       against *their own* tests, which is not the same as verifying the apps
       that consume them.
 
