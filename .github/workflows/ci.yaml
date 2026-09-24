@@ -47,6 +47,12 @@ jobs:
         run: pnpm -r --if-present run typecheck
       - name: Test (workspace)
         run: pnpm -r --if-present run test
+      # `check` is its own script, not `test`, because it exercises the CLI
+      # a config author actually runs (`pnpm --filter @devdogsuga/events
+      # check`), not just the package's own vitest suite. Merge-blocking
+      # here, matching how it gates merges in the product repo's ci.yaml.
+      - name: Events config passes its publishability checks
+        run: pnpm --filter @devdogsuga/events check
       # Redundant with the workspace build above (apps/slides has its own
       # `build` script, so `pnpm -r build` already builds it) — kept as an
       # explicit, separately-named step because the 9/28 deck lives here and

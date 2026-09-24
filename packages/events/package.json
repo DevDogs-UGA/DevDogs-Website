@@ -1,0 +1,45 @@
+{
+  "name": "@devdogsuga/events",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Config-as-code for the club's meetings and workshops: the Zod schema, the publishability validator, and the authored data itself",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devdogsuga/Backstage.git",
+    "directory": "packages/events"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "devdogs-source": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "data"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "tsx src/check.ts"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
