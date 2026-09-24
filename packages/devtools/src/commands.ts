@@ -708,6 +708,48 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
     ],
   },
   {
+    title: "GitHub",
+    commands: [
+      {
+        name: "github",
+        summary: "Reconcile the repository's fixed branch/tag rulesets.",
+        hint: "main, production, ~ALL, team/**, tags",
+        subcommands: [
+          {
+            name: "rulesets",
+            summary:
+              "Diff the fixed rulesets against live GitHub; --apply to write.",
+            hint: "dry-run plan by default",
+            options: [
+              {
+                flag: "--org",
+                value: "<org>",
+                summary: "GitHub org. Defaults to DevDogsUGA.",
+              },
+              {
+                flag: "--repo",
+                value: "<repo>",
+                summary: "Repository name. Defaults to DevDogsUGA.",
+              },
+              {
+                flag: "--app-slug",
+                value: "<slug>",
+                summary:
+                  "The GitHub App whose id bypasses team/** creation. Defaults to devdogs-platform.",
+              },
+              {
+                flag: "--apply",
+                summary: "Write the plan instead of only printing it.",
+              },
+              YES,
+              JSON_FLAG,
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
     title: "Project setup",
     commands: [
       {
