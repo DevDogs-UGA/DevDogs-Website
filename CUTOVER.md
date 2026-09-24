@@ -173,10 +173,118 @@ are done.
         devtools never had to guard against (its old `PROJECT_ROOT` could
         never throw). No dlx preflight/self-refresh, no minimums manifest,
         no contract-test fixture repo — all explicitly out of A1's scope.
-- [ ] Wave 2, stage A2: dlx preflight + self-refresh (minimums manifest,
-      version pinning for `devtools-ci`), move `newsletter` send/export out
-      to a Backstage script, contract tests against a fixture repo. Not
-      started.
+- [x] Wave 2, stage A2: dlx preflight + self-refresh, `newsletter` moved to
+      a Backstage script, contract tests against a fixture repo. Landed on
+      Backstage `main`. What A2 did:
+      - **Preflight + self-refresh** (`packages/devtools/src/repo/
+        preflight.ts`, wired into `launch()` so it runs on every `devtools`
+        command — never `devtools-ci`, which still pins an exact version on
+        purpose and never imports this module at all). Fetches a
+        zod-validated `{ devtools: { latest, minimum } }` manifest from
+        DevDogsUGA's `main` branch (`DEVTOOLS_MINIMUMS_URL` overridable,
+        defaulting to
+        `https://raw.githubusercontent.com/DevDogsUGA/DevDogsUGA/main/devtools-minimums.json`),
+        ~1.5s timeout, fails open on any error. Disk cache under
+        `$XDG_CACHE_HOME/devdogsuga-devtools/` (`~/.cache` fallback), 10
+        minutes — short on purpose, so a hotfix's dropped `minimum` reaches
+        a contributor within one coffee break rather than the plan's
+        original "a few hours". Below minimum: re-execs as `pnpm dlx
+        @devdogsuga/devtools@<latest>` with an EXACT version spec (load-
+        bearing per the devtools-dlx prototype's FINDINGS.md experiment
+        6d), stdio inherited, exit code propagated, env loop guard. Below
+        latest but at/above minimum: one-line stderr nudge.
+        `--skip-preflight`/`DEVTOOLS_SKIP_PREFLIGHT=1` bypass entirely;
+        `--refresh` bypasses the disk cache and forces the re-exec target
+        to `latest`. Dev-mode skip (version `0.0.0-dev`, or — the real-
+        world default — the package's own directory not sitting under any
+        `node_modules`, i.e. a workspace checkout rather than a published
+        install).
+      - **Lazy repo root**: `workers.ts`, `db/seed-roles.ts`,
+        `commands.ts`'s `WORKER_APP_CHOICES` (plus `gen/hypno.ts`, found
+        the same way while verifying `--help`) all made lazy/memoized.
+        `devtools --help` and `devtools setup` now work from `/tmp`;
+        `setup` outside a repo runs its prerequisite checks and points at
+        `git clone` instead of throwing, per §5 "works pre-clone". Every
+        other repo-dependent command outside a repo still refuses with the
+        same `RepoNotFoundError` message, now caught cleanly in
+        `launch()`'s tier-resolution branch instead of an uncaught stack
+        trace.
+      - **`newsletter` moved out of devtools**, into the new (private,
+        never-published) `packages/newsletter-cli` — run as `pnpm
+        newsletter …` from a Backstage checkout. Ported verbatim (commands,
+        imap, smtp, oauth, loopback, and their tests), with the newsletter-
+        package import switched from devtools' dynamic repo-peer resolution
+        to a direct static import of the workspace sibling
+        `@devdogsuga/newsletter`. No credential migration was actually
+        needed: the module reads no env vars for a secret — auth is an
+        interactive OAuth browser sign-in as the club mailbox (borrowing
+        Thunderbird's allowlisted app registration), with the refresh token
+        cached at `~/.config/devdogsuga/newsletter-mailbox.json`, already
+        outside any repo. See that package's README.
+        `@devdogsuga/newsletter` dropped from devtools' `peerDependencies`.
+      - **Contract tests** (`packages/devtools/test/contract/`,
+        `pnpm test:contract`, separate from the default `pnpm test` since a
+        real `pnpm install` per run is slow): a committed fixture repo
+        (`test/fixture-repo/`) — the repo-root marker, `workers.json`, an
+        app with a `wrangler.jsonc` cron and a real `scheduled.ts`, a
+        package with a real `env.ts` manifest, a stub `devdogs-source`
+        package. The suite `pnpm pack`s devtools/telemetry/env, points a
+        temp copy's `pnpm-workspace.yaml` `overrides` at the tarballs, and
+        runs the real bin for `--help` (in-repo and outside any repo),
+        `cron list`, `env example` (real module identity), root discovery
+        from a subdirectory, the not-in-repo refusal, and four preflight
+        cases (fail-open, nudge, `--skip-preflight`, the re-exec decision).
+        Wired into `.github/workflows/ci.yaml` and `.github/workflows/
+        publish.yaml` (before the patch-bump+publish step).
+      - Added a hidden `devtools version` command (prints the running
+        build's version to clean stdout) — mostly for confirming a
+        self-refresh actually landed; not in the command tree, same
+        treatment as the `deploy` redirect.
+      - **dlx bridge, proven against a local Verdaccio**
+        (`/home/sloan/scratchpad/devdogs/prototypes/devtools-dlx/verdaccio-conf/`,
+        `@devdogsuga/*` has no uplink): publishing `@devdogsuga/telemetry`
+        and `@devdogsuga/devtools` there (both via `pnpm pack` tarballs,
+        NOT `npm publish` directly from source — the latter leaves
+        `catalog:`/`workspace:*` specifiers unresolved, which pnpm's
+        installer then refuses as "not supported by any resolver" for an
+        external package) and running:
+        ```
+        pnpm dlx --config.registry=http://localhost:4873 @devdogsuga/devtools@<version> <args…>
+        ```
+        from inside the `DevDogsUGA-cutover` worktree works end to end —
+        proved with `cron list --tier development` (`DEV_DB=local`),
+        listing the worktree's real cron schedules, worktree staying clean
+        throughout. (The alternative `pnpm dlx --package=file:…
+        --package=file:… devtools …` bridge fails for the same reason:
+        `@devdogsuga/telemetry`'s declared dependency on `@devdogsuga`-
+        published tarballs still isn't resolvable without either a
+        registry or a `pnpm.overrides`/`pnpm-workspace.yaml overrides`
+        entry pnpm actually reads — the registry route is the one that
+        works with no extra flags.) **Post-publish, this collapses to**
+        `pnpm dlx @devdogsuga/devtools` (no `--config.registry` — the
+        default registry resolves `@devdogsuga` once the real npm org is
+        claimed and packages are published there).
+      - **End-to-end self-refresh, proven**: published devtools `0.1.0` and
+        `0.1.1` to the same Verdaccio, served a `devtools-minimums.json`
+        (`{ "devtools": { "latest": "0.1.1", "minimum": "0.1.1" } }`) from a
+        throwaway local static server, and ran (from the cutover worktree,
+        `DEV_DB=local`):
+        ```
+        DEVTOOLS_MINIMUMS_URL=<manifest url> DEVTOOLS_REGISTRY=http://localhost:4873 \
+          pnpm dlx --config.registry=http://localhost:4873 @devdogsuga/devtools@0.1.0 version --tier development
+        ```
+        Printed `devtools: 0.1.0 is below the minimum supported version —
+        relaunching as 0.1.1...`, re-exec'd via `pnpm dlx
+        @devdogsuga/devtools@0.1.1`, and the final line printed was `0.1.1`
+        — the exact version the manifest named as latest. Worktree stayed
+        clean throughout (the "Added N entries to minimumReleaseAgeExclude"
+        message pnpm prints is in-memory only, confirmed via `git status
+        --short` and an unchanged `pnpm-workspace.yaml`).
+      - Known gaps, left for stage B or later: no CI actually runs any of
+        this yet (no remote); `devtools-ci`'s "exact pinned version" story
+        (§9) has no automated check that a deploy workflow's pin stays in
+        sync with what's published — a manual/documentation concern for
+        now.
 - [ ] Stage B: re-home the 11 tests `packages/devtools/MOVED-TESTS.md`
       lists, once devtools is consumed as a package inside DevDogsUGA.
 - [ ] `packages/db` ships no test of its own for the client/server factories —
