@@ -29,7 +29,8 @@
     "ci:env": "node ./bin/devtools-ci.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:contract": "vitest run --config vitest.contract.config.ts"
   },
   "dependencies": {
     "@bitwarden/cli": "2026.7.0",

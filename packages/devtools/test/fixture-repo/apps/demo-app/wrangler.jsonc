@@ -1,0 +1,20 @@
+{
+  // Minimal fixture wrangler config: one cron trigger at the root
+  // (development tier, per devtools' cron/discovery.ts blockForTier), and a
+  // production override with a different schedule — enough to exercise
+  // discoverWranglerConfigs()/cronsForTier() without needing a real deploy
+  // target.
+  "name": "demo-app",
+  "main": "cloudflare/scheduled.ts",
+  "compatibility_date": "2026-01-01",
+  "triggers": {
+    "crons": ["*/30 * * * *"]
+  },
+  "env": {
+    "production": {
+      "triggers": {
+        "crons": ["0 6 * * *"]
+      }
+    }
+  }
+}

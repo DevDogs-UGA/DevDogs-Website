@@ -1,0 +1,13 @@
+{
+  "name": "@devdogs-fixture/demo-source",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Stub for the repo-local, never-published packages devtools loads via the `devdogs-source` export condition (real examples: open-graph, email \u2014 see src/repo/source.ts). Exercises resolveFromRepo's manual exports-map read.",
+  "exports": {
+    ".": {
+      "devdogs-source": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "type": "module"
+}

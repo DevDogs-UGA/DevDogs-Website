@@ -47,6 +47,15 @@ jobs:
         run: pnpm -r --if-present run typecheck
       - name: Test (workspace)
         run: pnpm -r --if-present run test
+      # devtools' contract tests (packages/devtools/test/contract) — a real
+      # `pnpm pack` + `pnpm install` + subprocess run against a committed
+      # fixture repo, per the carve-out plan's §8 risk mitigation. Separate
+      # from `pnpm -r test` above because it is slow (a real install) and
+      # was deliberately kept out of the default `test` script for that
+      # reason; needs the build step above to have already produced
+      # devtools'/telemetry's/env's `dist/`.
+      - name: devtools contract tests
+        run: pnpm --filter @devdogsuga/devtools run test:contract
       # `check` is its own script, not `test`, because it exercises the CLI
       # a config author actually runs (`pnpm --filter @devdogsuga/events
       # check`), not just the package's own vitest suite. Merge-blocking

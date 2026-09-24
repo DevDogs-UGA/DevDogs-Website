@@ -1,0 +1,10 @@
+{
+  "name": "@devdogs-fixture/demo-package",
+  "private": true,
+  "version": "0.0.0",
+  "dependencies": {
+    "@devdogsuga/env": "*",
+    "zod": "4.4.3"
+  },
+  "type": "module"
+}

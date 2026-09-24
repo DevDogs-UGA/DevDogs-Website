@@ -10,3 +10,10 @@ dist/
 .env
 .env.*
 !.env.example
+
+# The devtools contract-test fixture commits a hand-written stand-in for a
+# compiled build (packages/devtools/test/fixture-repo/packages/demo-source/
+# dist/index.js) — it is never actually built, and would otherwise be
+# silently caught by the blanket dist/ rule above.
+!packages/devtools/test/fixture-repo/packages/demo-source/dist/
+!packages/devtools/test/fixture-repo/packages/demo-source/dist/index.js

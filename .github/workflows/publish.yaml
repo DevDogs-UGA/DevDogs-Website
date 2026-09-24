@@ -81,5 +81,13 @@ jobs:
       # `pnpm pack` reads its `files` list.
       - name: Build (workspace)
         run: pnpm -r --if-present run build
+      # Plan §8's risk mitigation: "devtools CI must run its own contract
+      # tests against a fixture repo before publish" — a bad devtools
+      # publish reaches every contributor via dlx within ~24h with no
+      # library-bump-PR review gate in between (see the plan's Risks
+      # section), so this runs unconditionally here rather than trusting
+      # that `ci.yaml` already ran it on the merged commit.
+      - name: devtools contract tests
+        run: pnpm --filter @devdogsuga/devtools run test:contract
       - name: Patch-bump + publish changed packages
         run: node scripts/publish-changed-packages.mjs

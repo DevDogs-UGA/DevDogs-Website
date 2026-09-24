@@ -1,0 +1,10 @@
+{
+  "name": "devdogs-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Minimal DevDogsUGA-shaped workspace, committed as a fixture for devtools' contract tests (packages/devtools/test/contract). Never installed or built directly \u2014 the contract test suite copies this into a temp directory, injects `pnpm.overrides` pointing at freshly-packed @devdogsuga/devtools and its published dependencies, and `pnpm install`s that copy. See test/contract/README.md.",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "type": "module"
+}
