@@ -4,9 +4,17 @@ packages:
 
 # Which dependencies' install scripts may run — pnpm 11's per-dep decision
 # map. Values carried over from the product repo's decisions at the migration
-# sha; all three here build a required native/platform artifact.
+# sha; all four here build a required native/platform artifact. `sharp`
+# joined with the devtools package (Wave 2, stage A1) — it renders club
+# images and needs its platform binary fetched at install time, same reason
+# it is `true` in the product repo's own list.
 allowBuilds:
+  # core-js (via @bitwarden/cli, devtools) postinstalls a funding banner and
+  # nothing the package needs to work — `false` here is a decision, matching
+  # the product repo's own, not an omission.
+  core-js: false
   esbuild: true
+  sharp: true
   unrs-resolver: true
   workerd: true
 
@@ -20,6 +28,13 @@ catalog:
   # --- Framework / runtime ---
   react: ^19.2.8
   react-dom: ^19.2.8
+
+  # --- CLI ---
+  # Exact, not a range: 1.8.x changed @clack/core's inferred return types
+  # (isCancel/select's CANCEL_SYMBOL narrowing) in a way that breaks devtools'
+  # `unwrap()` pattern across a couple dozen call sites. DevDogsUGA pins this
+  # same exact version for the same reason.
+  "@clack/prompts": 1.7.0
 
   # --- Supabase ---
   "@supabase/ssr": ^0.12.4
@@ -35,7 +50,13 @@ catalog:
   # --- Observability ---
   # All @sentry/* JS packages ship in lockstep off the sentry-javascript
   # monorepo; pin every one used in this workspace to the same release.
-  "@sentry/core": ^10.75.1
+  # Exact, not a range: devtools' @sentry/node has to resolve the SAME
+  # @sentry/core instance this does, or their types (Client, Integration)
+  # are structurally identical but nominally distinct, and every
+  # Sentry.init() call site fails to typecheck. A caret range let pnpm pick
+  # two different patch versions across the two dependents.
+  "@sentry/core": 10.75.1
+  "@sentry/node": 10.75.1
 
   # --- Styling ---
   tailwindcss: ^4.3.3
@@ -62,6 +83,7 @@ minimumReleaseAgeExclude:
 
 onlyBuiltDependencies:
   - esbuild
+  - sharp
 
 # Run package.json scripts through pnpm's built-in JS shell (@yarnpkg/shell)
 # instead of the platform shell, matching the product repo: it implements the
