@@ -31,8 +31,8 @@ default, in both `pnpm devtools` and `devtools-ci`:
   environment until the devtools Sentry project exists at all (see the
   committed placeholder in `src/telemetry.ts`). Either condition means no
   `Sentry.init()` call happens: no network request, no console output.
-- **What's scrubbed**: this CLI touches newsletter recipient addresses and
-  local `.env` files, so every event passes through
+- **What's scrubbed**: this CLI touches local `.env` files, so every event
+  passes through
   `@devdogsuga/telemetry`'s shared scrubbers before it leaves the process —
   file paths reduced to basenames, email addresses redacted, and
   token/secret-shaped values stripped out of messages, breadcrumbs, and

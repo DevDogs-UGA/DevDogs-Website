@@ -9,7 +9,8 @@
     "typecheck": "pnpm -r --if-present run typecheck",
     "test": "pnpm -r --if-present run test",
     "build:slides": "pnpm --filter slides build",
-    "pack:local": "node scripts/pack-local.mjs"
+    "pack:local": "node scripts/pack-local.mjs",
+    "newsletter": "node packages/newsletter-cli/bin/newsletter.mjs"
   },
   "engines": {
     "node": ">=22.12"

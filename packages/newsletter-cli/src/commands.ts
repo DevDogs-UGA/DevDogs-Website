@@ -1,22 +1,37 @@
 /**
- * `pnpm devtools newsletter [version…] [--format eml,html] [--out dir]
+ * `pnpm newsletter [version…] [--format eml,html] [--out dir]
  * [--push] [--send --to addresses] [--mailbox address]`.
+ *
+ * Ported from `@devdogsuga/devtools`' `src/newsletter/commands.ts` (Wave 2,
+ * stage A2 — see the carve-out plan's §9: "`newsletter` (preview + send) ->
+ * Backstage script, since the content lives there"). Behaviour and flags are
+ * unchanged; the only real difference from the devtools original is HOW the
+ * newsletter package is loaded — devtools had to resolve `@devdogsuga/
+ * newsletter` dynamically FROM a target DevDogsUGA checkout (`repo/peers.ts`,
+ * an optional peer dependency), because devtools ships as a package
+ * published independently of any one repo. This script lives INSIDE
+ * Backstage, where `@devdogsuga/newsletter` is an ordinary workspace
+ * sibling, so it imports it directly, statically, like any other package.
+ *
+ * No env vars, no `.env`, no DevDogsUGA env registry involvement at all —
+ * see this package's README for what credentials this needs and where they
+ * come from (an interactive OAuth browser sign-in, not a stored secret).
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { randomBytes } from "node:crypto";
-import {
-  isTTY,
-  log,
-  multiselect,
-  spinner,
-  text as askText,
-} from "@clack/prompts";
+import { isTTY, log, multiselect, spinner, text as askText } from "@clack/prompts";
 import { Resvg } from "@resvg/resvg-js";
-import { positionals } from "../args.js";
-import { errorMessage, explain, unwrap } from "../ui.js";
-import { loadNewsletter, loadNewsletterExport } from "../repo/peers.js";
+import { ISSUES, issueByVersion } from "@devdogsuga/newsletter";
+import {
+  buildEml,
+  emailImages,
+  previewRenderContext,
+  renderIssueDocument,
+} from "@devdogsuga/newsletter/export";
+import { positionals } from "./args.js";
+import { errorMessage, explain, unwrap } from "./ui.js";
 import { appendDraft } from "./imap.js";
 import { originationHeaders, submitMessage } from "./smtp.js";
 import { openInBrowser, startLoopback, type Loopback } from "./loopback.js";
@@ -95,19 +110,14 @@ export function parseNewsletterArgs(
     (value) => !NEWSLETTER_FORMATS.includes(value as NewsletterFormat),
   );
   if (badFormats.length)
-    return new Error(
-      `Unknown format ${badFormats.join(", ")}. Try eml or html.`,
-    );
+    return new Error(`Unknown format ${badFormats.join(", ")}. Try eml or html.`);
 
   return {
     // Versions can only be validated against the built package, which loads
     // lazily inside the run — so they pass through here unchecked.
     versions: positionals(argv),
     formats: [...new Set(rawFormats)] as NewsletterFormat[],
-    out: resolve(
-      cwd,
-      expandHome(flagValue(argv, "--out") ?? "changelog-exports"),
-    ),
+    out: resolve(cwd, expandHome(flagValue(argv, "--out") ?? "changelog-exports")),
     push,
     send,
     to,
@@ -129,9 +139,7 @@ async function interactive(
 ): Promise<NewsletterOptions> {
   if (options.versions.length) return options;
   if (!isTTY(process.stdout)) {
-    throw new Error(
-      "No terminal to choose issues. Name one, or pass * for all.",
-    );
+    throw new Error("No terminal to choose issues. Name one, or pass * for all.");
   }
   const versions = unwrap(
     await multiselect({
@@ -208,10 +216,7 @@ async function signInViaLoopback(
   try {
     const timeout = new Promise<never>((_, rejectLate) => {
       setTimeout(
-        () =>
-          rejectLate(
-            new Error("Five minutes passed with no sign-in. Run it again."),
-          ),
+        () => rejectLate(new Error("Five minutes passed with no sign-in. Run it again.")),
         5 * 60_000,
       ).unref();
     });
@@ -264,7 +269,7 @@ async function mailboxAccessToken(mailbox: string): Promise<string> {
   }
   if (!isTTY(process.stdout)) {
     throw new Error(
-      `No terminal to sign in as ${mailbox}. Run \`pnpm devtools newsletter --push\` interactively once; after that this works anywhere.`,
+      `No terminal to sign in as ${mailbox}. Run \`pnpm newsletter --push\` interactively once; after that this works anywhere.`,
     );
   }
   const state = randomBytes(16).toString("hex");
@@ -273,9 +278,7 @@ async function mailboxAccessToken(mailbox: string): Promise<string> {
     ? await signInViaLoopback(mailbox, server, state)
     : await signInViaPaste(mailbox);
   await writeGrant({ mailbox, refreshToken: tokens.refreshToken });
-  log.info(
-    `Signed in. The grant lives in ${grantPath()} — mode 600, keep it that way.`,
-  );
+  log.info(`Signed in. The grant lives in ${grantPath()} — mode 600, keep it that way.`);
   return tokens.accessToken;
 }
 
@@ -283,20 +286,14 @@ export async function runNewsletter(argv: string[]): Promise<void> {
   const parsed = parseNewsletterArgs(argv, process.cwd());
   if (parsed instanceof Error) {
     explain("Could not read that.", parsed.message, [
-      "pnpm devtools newsletter",
-      "pnpm devtools newsletter '*' --format eml,html --out ~/changelog",
+      "pnpm newsletter",
+      "pnpm newsletter '*' --format eml,html --out ~/changelog",
     ]);
     process.exitCode = 1;
     return;
   }
 
   try {
-    // Dynamic so every unrelated devtools command can still run before the
-    // newsletter package has been built on a fresh checkout.
-    const { ISSUES, issueByVersion } = await loadNewsletter();
-    const { buildEml, emailImages, previewRenderContext, renderIssueDocument } =
-      await loadNewsletterExport();
-
     const unknown = parsed.versions.filter(
       (version) => version !== "*" && !issueByVersion(version),
     );
@@ -304,7 +301,7 @@ export async function runNewsletter(argv: string[]): Promise<void> {
       explain(
         "Could not read that.",
         `No issue called ${unknown.join(", ")}. Try ${ISSUES.map((issue) => issue.version).join(", ")}, or *.`,
-        ["pnpm devtools newsletter", "pnpm devtools newsletter '*'"],
+        ["pnpm newsletter", "pnpm newsletter '*'"],
       );
       process.exitCode = 1;
       return;
@@ -344,11 +341,7 @@ export async function runNewsletter(argv: string[]): Promise<void> {
         await writeFile(
           file,
           format === "eml"
-            ? buildEml({
-                subject: issue.title,
-                html: renderIssueDocument(issue),
-                images,
-              })
+            ? buildEml({ subject: issue.title, html: renderIssueDocument(issue), images })
             : renderIssueDocument(issue, previewRenderContext()),
         );
         written.push(file);
@@ -407,7 +400,7 @@ export async function runNewsletter(argv: string[]): Promise<void> {
   } catch (err) {
     explain("Could not export the changelog.", errorMessage(err), [
       "Build it with `pnpm --filter @devdogsuga/newsletter build`.",
-      "Then try `pnpm devtools newsletter '*' --out ~/changelog`.",
+      "Then try `pnpm newsletter '*' --out ~/changelog`.",
     ]);
     process.exitCode = 1;
   }

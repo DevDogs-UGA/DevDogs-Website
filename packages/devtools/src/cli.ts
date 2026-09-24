@@ -96,7 +96,6 @@ import { runCompletions } from "./completions.js";
 import { runBw } from "./bws/bw.js";
 import { runImages } from "./images/commands.js";
 import { runEmails } from "./emails/commands.js";
-import { runNewsletter } from "./newsletter/commands.js";
 import { runGen } from "./gen/commands.js";
 import { runCronList, runCronRun } from "./cron/commands.js";
 import { runWorkflows } from "./workflows/commands.js";
@@ -963,11 +962,6 @@ async function dispatch(argv: string[]): Promise<string | null> {
 
   if (first === "emails") {
     await runEmails(rest);
-    return DONE;
-  }
-
-  if (first === "newsletter") {
-    await runNewsletter(rest);
     return DONE;
   }
 

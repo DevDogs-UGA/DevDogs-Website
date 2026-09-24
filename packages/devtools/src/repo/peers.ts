@@ -137,17 +137,8 @@ export function loadBrandEvent(): Promise<typeof BrandEventModule> {
   return loadPeer<typeof BrandEventModule>("@devdogsuga/brand/event");
 }
 
-// ── @devdogsuga/newsletter ───────────────────────────────────────────────────
-// Published (see the ledger), consumed by `apps/platform`; devtools' own
-// `newsletter` command reads it the same way as any other peer. A2 moves
-// this command to a Backstage script — until then it stays here.
-import type * as NewsletterModule from "@devdogsuga/newsletter";
-import type * as NewsletterExportModule from "@devdogsuga/newsletter/export";
-
-export function loadNewsletter(): Promise<typeof NewsletterModule> {
-  return loadPeer<typeof NewsletterModule>("@devdogsuga/newsletter");
-}
-
-export function loadNewsletterExport(): Promise<typeof NewsletterExportModule> {
-  return loadPeer<typeof NewsletterExportModule>("@devdogsuga/newsletter/export");
-}
+// `@devdogsuga/newsletter` used to be an optional peer here, read by
+// devtools' own `newsletter` command. Wave 2, stage A2 moved that command to
+// a plain Backstage script (`packages/newsletter-cli`) — see its README —
+// since the content it exports lives in Backstage already; devtools has no
+// reason to load it at all any more.

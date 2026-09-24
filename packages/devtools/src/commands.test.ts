@@ -166,18 +166,10 @@ describe("prompts", () => {
       "--out",
       "--default-out",
       "--dry-run",
-      // `emails` and `newsletter` ask these after their template and issue
-      // pickers so the interactive and scripted paths share one flow.
+      // `emails` asks these after its template picker so the interactive and
+      // scripted paths share one flow.
       "--format",
       "--out",
-      // `newsletter` again: push is the third option in the same outputs
-      // picker, and the mailbox is a default nobody retypes, flag-only.
-      // Sending is flag-only on purpose — a real send should be typed out,
-      // recipients and all, never arrived at through a picker.
-      "--push",
-      "--send",
-      "--to",
-      "--mailbox",
       // scripting-only: machine-readable output; a wizard asking for JSON
       // mode produces nothing useful since the wizard itself is the UI.
       "--json",
@@ -224,7 +216,6 @@ describe("coverage of what the CLI dispatches", () => {
     "oauth",
     "docs",
     "emails",
-    "newsletter",
     "images",
     "env",
     // The merged Supabase/Database group: one top-level command, `db`, whose

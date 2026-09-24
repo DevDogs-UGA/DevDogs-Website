@@ -450,44 +450,6 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
         ],
       },
       {
-        name: "newsletter",
-        summary: "Export Changelog issues as Outlook drafts and previews.",
-        hint: "a version, several, or * for all",
-        options: [
-          {
-            flag: "--format",
-            value: "<eml,html>",
-            summary: "Outputs to write. Defaults to both.",
-          },
-          {
-            flag: "--out",
-            value: "<dir>",
-            summary: "Output directory. Defaults to ./changelog-exports.",
-          },
-          {
-            flag: "--push",
-            summary:
-              "Append each issue to the club mailbox's Drafts, for review in any Outlook.",
-          },
-          {
-            flag: "--send",
-            summary:
-              "Send each issue over SMTP, byte-for-byte. Outlook's composers rewrite drafts they send; this path does not.",
-          },
-          {
-            flag: "--to",
-            value: "<a,b,…>",
-            summary: "Recipients of --send. Required with it.",
-          },
-          {
-            flag: "--mailbox",
-            value: "<address>",
-            summary:
-              "Mailbox --push and --send sign into. Defaults to devdogs@uga.edu.",
-          },
-        ],
-      },
-      {
         name: "images",
         summary: "Render a club image at one or more sizes.",
         hint: "brand/*, page/*, app/*, event/*, or * for all",
@@ -1185,7 +1147,7 @@ export const GROUPS: readonly CommandGroup[] = [
   },
   {
     title: "Content & communications",
-    commands: commands("images", "emails", "newsletter"),
+    commands: commands("images", "emails"),
   },
   {
     title: "Configuration & integrations",

@@ -1,0 +1,29 @@
+{
+  "name": "@devdogsuga/newsletter-cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Officer script: export/preview/push/send DevDogs Changelog issues. Never published — run from inside this Backstage checkout, see README.md.",
+  "bin": {
+    "newsletter": "./bin/newsletter.mjs"
+  },
+  "scripts": {
+    "build": "tsc",
+    "cli": "node ./bin/newsletter.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@clack/prompts": "catalog:",
+    "@devdogsuga/newsletter": "workspace:*",
+    "@resvg/resvg-js": "^2.6.2"
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
