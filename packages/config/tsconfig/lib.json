@@ -1,7 +1,7 @@
 {
   // Shared preset for the workspace's emitting Node libraries (docs-build,
   // moderation, devtools). Inherits the repo-wide
-  // target/strictness from tsconfig.base.json and layers on the two things
+  // target/strictness from ./base.json and layers on the two things
   // those packages need that the Next apps don't: Node resolution and real
   // emit.
   //
@@ -10,11 +10,16 @@
   // `extends`, but vitest's oxc transform does not, and it reads these configs
   // too ("Failed to load tsconfig ... Tsconfig not found").
   //
+  // Extends "./base.json" (a sibling shipped in this same package), not a
+  // path back out to the repo root: this file is published as part of
+  // @devdogsuga/config (see package.json's `exports`), and a path escaping
+  // packages/config would resolve nowhere once installed as a dependency.
+  //
   // outDir/rootDir/include/exclude are deliberately NOT here — TypeScript
   // resolves relative paths against the config file that declares them, so a
   // path set here would point inside packages/config. Each package keeps its
   // own; everything else is inherited.
-  "extends": "../../../tsconfig.base.json",
+  "extends": "./base.json",
   "compilerOptions": {
     "module": "nodenext",
     "moduleResolution": "nodenext",

@@ -25,6 +25,7 @@ export {
 export { loadFonts, type LoadedFont } from "./fonts.js";
 export {
   type Asset,
+  GDG_MARK,
   GDGC_UGA,
   GDGC_UGA_LIGHT,
   MARK,

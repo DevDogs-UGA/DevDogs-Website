@@ -1,0 +1,34 @@
+{
+  // Repo-wide base, self-contained: this file ships as part of the published
+  // @devdogsuga/config package (see package.json's `exports`), so it cannot
+  // `extend` anything outside packages/config — a path like
+  // "../../../tsconfig.base.json" assumes a fixed depth inside THIS repo's
+  // tree and resolves nowhere once installed as a dependency elsewhere
+  // (TS6053). tsconfig.json at the repo root extends this file, not the
+  // other way around, so there is exactly one place these options live.
+  //
+  // Every package here is a published library (no Next apps in this
+  // monorepo), so `noEmit: true` is deliberate at this layer: it forces each
+  // package's own tsconfig to opt back into emission explicitly
+  // (`noEmit: false`, `declaration: true`, `outDir`, `rootDir`) rather than
+  // inheriting emit by accident.
+  "compilerOptions": {
+    "target": "ES2025",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2025", "DOM", "DOM.Iterable"],
+    "moduleDetection": "force",
+    "allowJs": true,
+    "checkJs": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "incremental": true,
+    "noEmit": true
+  }
+}

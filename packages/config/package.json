@@ -12,6 +12,7 @@
   },
   "exports": {
     "./eslint": "./eslint/index.js",
+    "./tsconfig/*": "./tsconfig/*",
     "./vitest/node": {
       "types": "./vitest/node.d.ts",
       "default": "./vitest/node.js"
