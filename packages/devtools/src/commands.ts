@@ -943,6 +943,13 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
                 summary: "Reconcile the platform's role catalogue.",
                 options: [],
               },
+              {
+                name: "production",
+                summary:
+                  "Apply supabase/seed/production/*.sql — roles and officers.",
+                hint: "confirms before writing to a hosted database",
+                options: [YES],
+              },
             ],
           },
           {

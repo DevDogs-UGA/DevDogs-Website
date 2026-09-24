@@ -57,6 +57,7 @@ import { runGenerateTypes } from "./db/generate-types.js";
 import { runIntrospect } from "./db/introspect.js";
 import { runNewMigration } from "./db/new-migration.js";
 import { runSeedBuckets } from "./db/seed-buckets.js";
+import { runSeedProduction } from "./db/seed-production.js";
 import { runSeedRoles } from "./db/seed-roles.js";
 import { runOAuthSetup } from "./oauth/wizard.js";
 import {
@@ -790,6 +791,59 @@ async function runDbCommand(rest: string[]): Promise<void> {
         return;
       }
       const code = await runSeedRoles(connection.dbUrl);
+      process.exitCode = code === 0 ? 0 : 1;
+      return;
+    }
+    if (ssub === "production") {
+      const connection = await resolveDbConnection({
+        label: "devtools db seed production",
+      });
+      if (!connection) {
+        process.exitCode = 1;
+        return;
+      }
+
+      // Same non-local gate `runStack` uses for `reset`/`migrate`: named up
+      // front (tier/host only, never the DB_URL) and, absent --yes, refused
+      // outright for a non-interactive caller rather than left to hang on a
+      // prompt nobody is there to answer. `seed production` writes real rows
+      // to whatever it targets, so a staging or production session gets the
+      // same confirmation those destructive commands do; a local session
+      // (the common case — verifying the seed split, or repairing a local
+      // stack after `reset --no-seed`) does not, matching `seed
+      // buckets`/`seed roles` today.
+      if (!isLocalConnection(connection)) {
+        log.message(
+          `This will write supabase/seed/production/*.sql to ${describeDbTarget(connection)}` +
+            (connection.projectRef
+              ? ` (project ${connection.projectRef}).`
+              : "."),
+        );
+
+        if (!subRest.includes("--yes")) {
+          if (!process.stdin.isTTY) {
+            process.stderr.write(
+              "devtools db seed production: --yes is required to run non-interactively.\n",
+            );
+            process.exitCode = 1;
+            return;
+          }
+
+          const confirmed = unwrap(
+            await confirm({
+              message:
+                connection.tier === "production"
+                  ? "This writes the production seed set to the PRODUCTION database " +
+                    `(project ${connection.projectRef ?? "unknown"}). Continue?`
+                  : `This writes the production seed set to ${describeDbTarget(connection)}. Continue?`,
+              initialValue: false,
+            }),
+          );
+          if (!confirmed) bail("Left the database alone.");
+        }
+      }
+
+      const code = await runSeedProduction(connection.dbUrl);
       process.exitCode = code === 0 ? 0 : 1;
       return;
     }
