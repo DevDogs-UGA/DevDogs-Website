@@ -52,22 +52,42 @@ describe("buildDesiredRulesets", () => {
     });
   });
 
-  it("~ALL blocks updates everywhere except team/**", () => {
+  it("~ALL blocks update/creation/deletion/non_fast_forward everywhere except team/**", () => {
     const allBranches = desired.find((d) => d.name === "~ALL")!;
     expect(allBranches.conditions.ref_name).toEqual({
       include: ["~ALL"],
       exclude: ["refs/heads/team/**"],
     });
-    expect(allBranches.rules).toEqual([
-      { type: "update", parameters: { update_allows_fetch_and_merge: false } },
+    expect(allBranches.rules.map((r) => r.type).sort()).toEqual(
+      ["update", "creation", "deletion", "non_fast_forward"].sort(),
+    );
+  });
+
+  it("~ALL bypasses devops always, and omits Renovate when unresolved", () => {
+    const allBranches = desired.find((d) => d.name === "~ALL")!;
+    expect(allBranches.bypass_actors).toEqual([
+      { actor_id: 9002, actor_type: "Team", bypass_mode: "always" },
     ]);
   });
 
-  it("team/** is creation-only, bypassed only by the App", () => {
-    const teamCreation = desired.find((d) => d.name === "team/**")!;
-    expect(teamCreation.rules).toEqual([{ type: "creation" }]);
-    expect(teamCreation.bypass_actors).toEqual([
+  it("~ALL bypasses Renovate too, when its App id is resolved", () => {
+    const withRenovate = buildDesiredRulesets({ ...actors, renovateAppId: 7001 });
+    const allBranches = withRenovate.find((d) => d.name === "~ALL")!;
+    expect(allBranches.bypass_actors).toEqual([
+      { actor_id: 9002, actor_type: "Team", bypass_mode: "always" },
+      { actor_id: 7001, actor_type: "Integration", bypass_mode: "always" },
+    ]);
+  });
+
+  it("team/** allows creation/deletion/non_fast_forward but not update, bypassed by the App and devops", () => {
+    const teamFixed = desired.find((d) => d.name === "team/**")!;
+    expect(teamFixed.rules.map((r) => r.type).sort()).toEqual(
+      ["creation", "deletion", "non_fast_forward"].sort(),
+    );
+    expect(teamFixed.rules.some((r) => r.type === "update")).toBe(false);
+    expect(teamFixed.bypass_actors).toEqual([
       { actor_id: 5001, actor_type: "Integration", bypass_mode: "always" },
+      { actor_id: 9002, actor_type: "Team", bypass_mode: "always" },
     ]);
   });
 

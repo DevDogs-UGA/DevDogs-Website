@@ -11,7 +11,7 @@
  * against what `gh api .../rulesets` actually reports; `commands.ts` is the
  * `devtools github rulesets` command that prints or applies the difference.
  *
- * ## Why a `team/**` creation-only ruleset is safe alongside per-team ones
+ * ## Why the fixed `team/**` ruleset is safe alongside per-team ones
  *
  * `rulesets.ts`'s constraint 2 warns against ever running a broad `team/**`
  * ruleset alongside the per-team ones `teamSync.ts` creates: rules AGGREGATE
@@ -19,22 +19,36 @@
  * restricting `update`/`push` would leave every team blocked by the broad
  * one while bypassing only its own — readable, unpushable, silently.
  *
- * That warning is about a ruleset carrying `update` (or `deletion`) on
- * `team/**`. This one carries `creation` ONLY. No per-team ruleset
- * (`teamRulesetPayload` in DevDogsUGA) has ever granted a `creation` rule —
- * `rulesets.ts`'s own doc says why: the branch is cut by `cutTeamBranch`
- * with the App's token before the per-team ruleset exists, so a `creation`
- * rule there would be inert on the first branch and would block
- * re-provisioning after a deletion. Two rulesets governing disjoint rule
- * TYPES on the same ref pattern don't aggregate into a conflict — there is
- * nothing for them to disagree about. What this ruleset closes is a real
- * hole `rulesets.ts` never covered: every team member holds a repository-wide
- * `push` grant (GitHub team permissions have no branch dimension), so
- * *before* the platform provisions a team, any member could `git push
- * origin HEAD:refs/heads/team/<slug>` and front-run the App — creating the
- * ref with content of their choosing, or squatting a slug that never gets
- * legitimately provisioned. Restricting `creation` to the App closes that,
- * and touches no rule a per-team ruleset owns.
+ * That warning is about a ruleset carrying `update` on `team/**`. This one
+ * carries `creation`, `deletion` and `non_fast_forward` — deliberately NOT
+ * `update`. No per-team ruleset (`teamRulesetPayload` in DevDogsUGA) has
+ * ever granted a `creation` rule — `rulesets.ts`'s own doc says why: the
+ * branch is cut by `cutTeamBranch` with the App's token before the per-team
+ * ruleset exists, so a `creation` rule there would be inert on the first
+ * branch and would block re-provisioning after a deletion. Two rulesets
+ * governing disjoint rule TYPES on the same ref pattern don't aggregate into
+ * a conflict for `creation` — there is nothing for them to disagree about.
+ * What that rule closes is a real hole `rulesets.ts` never covered: every
+ * team member holds a repository-wide `push` grant (GitHub team permissions
+ * have no branch dimension), so *before* the platform provisions a team, any
+ * member could `git push origin HEAD:refs/heads/team/<slug>` and front-run
+ * the App — creating the ref with content of their choosing, or squatting a
+ * slug that never gets legitimately provisioned.
+ *
+ * `deletion` and `non_fast_forward` DO aggregate against the per-team
+ * ruleset's own `deletion` rule (and its deliberate absence of
+ * `non_fast_forward`) — deliberately. A team is a bypass actor on its OWN
+ * per-team ruleset, not on this one, so the aggregate result is that a team
+ * can no longer delete or force-push its own branch, even though its
+ * per-team ruleset alone would let it (bypass is ruleset-scoped, constraint
+ * 1) — TASK-324's access-control checklist requires exactly that refusal.
+ * `update` is excluded from this ruleset for the opposite reason: it is the
+ * one rule type the per-team ruleset itself carries and bypasses its own
+ * team for, so adding a second `update` rule here — which only the App and
+ * devops bypass — would block every team's ordinary pushes to its own
+ * branch despite its per-team ruleset correctly bypassing them. That is
+ * exactly the failure constraint 2 describes; leaving `update` out is what
+ * keeps this ruleset on the safe side of it.
  *
  * ## Fixed cost is now 5, not 4
  *
@@ -54,6 +68,15 @@ export interface RulesetActors {
   adminsTeamId: number;
   /** The DevDogs Platform GitHub App's id (`app_id`, not the installation id). */
   appId: number;
+  /**
+   * The Renovate GitHub App's id, or `undefined` when it cannot be resolved
+   * yet (TASK-299 — Sloan has not installed it at the time this module was
+   * written). `undefined` means "omit it from `~ALL`'s bypass list", not "fail
+   * the plan" — `commands.ts` resolves this separately from the other three
+   * (all required) and prints a warning rather than refusing, so re-running
+   * after the App is installed picks it up with no code change here.
+   */
+  renovateAppId?: number;
 }
 
 /**
@@ -195,6 +218,17 @@ export function buildDesiredRulesets(actors: RulesetActors): DesiredRuleset[] {
       // `production`, if either of THOSE rulesets were ever misconfigured,
       // and including any other stray branch nothing else names. This is
       // deliberately the blunt, redundant backstop.
+      //
+      // TASK-324's access-control checklist requires refusing a non-admin
+      // member who tries to CREATE an arbitrary new branch too, not only
+      // push to an existing one — `creation`, `deletion` and
+      // `non_fast_forward` join `update` here for that. `grep`-verified
+      // (2026-09-24) that no platform code path (`teamSync.ts`, the rest of
+      // `server/github/`) ever creates, deletes or force-pushes a ref
+      // outside `refs/heads/team/**` — `cutTeamBranch`'s `createRef` is the
+      // only ref-creation call in the app, and it targets a team ref, which
+      // `~ALL` already excludes. So the platform's own App does NOT bypass
+      // `~ALL`; nothing here needs it to.
       name: "~ALL",
       target: "branch",
       enforcement: "active",
@@ -213,18 +247,52 @@ export function buildDesiredRulesets(actors: RulesetActors): DesiredRuleset[] {
       },
       bypass_actors: [
         { actor_id: actors.devopsTeamId, actor_type: "Team", bypass_mode: "always" },
+        // Renovate (TASK-299) creates and updates `renovate/*` branches for
+        // its dependency-update PRs — an ordinary bot workflow, not a hole,
+        // so it bypasses the same way the platform App bypasses `team/**`.
+        // Conditional: the App may not be installed yet, in which case
+        // `commands.ts` never resolves an id for it and this entry is
+        // omitted rather than the whole plan failing — see
+        // `RulesetActors.renovateAppId`'s doc.
+        ...(actors.renovateAppId !== undefined
+          ? [
+              {
+                actor_id: actors.renovateAppId,
+                actor_type: "Integration" as const,
+                bypass_mode: "always" as const,
+              },
+            ]
+          : []),
       ],
       rules: [
         {
           type: "update",
           parameters: { update_allows_fetch_and_merge: false },
         },
+        { type: "creation" },
+        { type: "deletion" },
+        { type: "non_fast_forward" },
       ],
     },
     {
-      // Creation-only — see this file's header for why that is safe
-      // alongside `teamRulesetName()`'s per-team rulesets, which carry no
-      // `creation` rule and therefore never aggregate against this one.
+      // `creation`, `deletion` and `non_fast_forward` — deliberately NOT
+      // `update`. Pushes to a team's own branch stay governed entirely by
+      // that team's per-team ruleset (`teamRulesetPayload`, which grants
+      // exactly that team `update`+`deletion` bypass on its own ref); this
+      // ruleset must not add a SECOND `update` rule here, because rules
+      // aggregate and only the App/devops bypass this one — an `update` rule
+      // here would block every team's own pushes despite their per-team
+      // ruleset correctly bypassing (`rulesets.ts`'s constraint 2, the exact
+      // failure this file's header already warns about).
+      //
+      // `deletion` and `non_fast_forward`, by contrast, are SAFE to add here
+      // precisely because they aggregate: a team bypasses its own per-team
+      // ruleset's `deletion` rule, but is not a bypass actor on THIS one, so
+      // the aggregate result is that nobody but the App or devops can delete
+      // or force-push any `team/**` branch — including a team acting on its
+      // own. See `rulesets.ts`'s `teamRulesetPayload` doc, updated alongside
+      // this file, for what that changes about the per-team ruleset's own
+      // "right trade" reasoning.
       name: "team/**",
       target: "branch",
       enforcement: "active",
@@ -233,8 +301,13 @@ export function buildDesiredRulesets(actors: RulesetActors): DesiredRuleset[] {
       },
       bypass_actors: [
         { actor_id: actors.appId, actor_type: "Integration", bypass_mode: "always" },
+        { actor_id: actors.devopsTeamId, actor_type: "Team", bypass_mode: "always" },
       ],
-      rules: [{ type: "creation" }],
+      rules: [
+        { type: "creation" },
+        { type: "deletion" },
+        { type: "non_fast_forward" },
+      ],
     },
     {
       // The tag ruleset `rulesets.ts`'s constraint 3 counts toward the fixed

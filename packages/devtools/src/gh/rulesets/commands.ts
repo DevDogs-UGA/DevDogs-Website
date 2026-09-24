@@ -34,6 +34,8 @@ const DEFAULT_REPO = "DevDogsUGA";
 const DEFAULT_APP_SLUG = "devdogs-platform";
 const DEFAULT_DEVOPS_SLUG = "devops";
 const DEFAULT_ADMINS_SLUG = "admins";
+/** TASK-299 — installed separately from the platform App; may not exist yet. */
+const DEFAULT_RENOVATE_SLUG = "renovate";
 
 interface RulesetsOptions {
   org: string;
@@ -172,7 +174,24 @@ export async function runGithubRulesets(argv: readonly string[]): Promise<number
     return 1;
   }
 
-  const desired = buildDesiredRulesets({ devopsTeamId, adminsTeamId, appId });
+  // Renovate (TASK-299) is resolved SEPARATELY and is allowed to fail: Sloan
+  // may not have installed it yet, and that must not block reconciling
+  // everything else. A failure here prints a warning and the plan simply
+  // omits it from `~ALL`'s bypass list — re-running after the App is
+  // installed picks it up with no further action.
+  let renovateAppId: number | undefined;
+  try {
+    renovateAppId = await resolveAppId(opts.org, DEFAULT_RENOVATE_SLUG);
+  } catch (err) {
+    process.stderr.write(
+      `devtools github rulesets: warning: could not resolve the Renovate App ` +
+        `("${DEFAULT_RENOVATE_SLUG}") — ~ALL's plan omits it as a bypass actor ` +
+        `until it is installed (TASK-299). ${err instanceof Error ? err.message : String(err)}\n`,
+    );
+  }
+
+  const actors = { devopsTeamId, adminsTeamId, appId, renovateAppId };
+  const desired = buildDesiredRulesets(actors);
 
   let summaries;
   let details;
@@ -186,7 +205,7 @@ export async function runGithubRulesets(argv: readonly string[]): Promise<number
     return 1;
   }
 
-  const plan = planRulesets(summaries, details, { devopsTeamId, adminsTeamId, appId }, desired);
+  const plan = planRulesets(summaries, details, actors, desired);
 
   if (opts.json) {
     console.log(JSON.stringify(plan, null, 2));
