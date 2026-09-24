@@ -101,7 +101,7 @@ const SECTION_LABELS: Record<string, string> = {
   supabase:
     "supabase — read by config.toml and the Supabase CLI (supabase/env.ts)",
   devtools:
-    "devtools — operator tooling, no app reads these (packages/devtools/env.ts)",
+    "devtools — operator tooling, no app reads these (@devdogsuga/devtools)",
 };
 
 /** `study-group-finder:tooling` and friends fold into their app's section. */

@@ -24,6 +24,24 @@
  * cutover it is an installed npm dependency, not a workspace package under
  * `packages/`, so this scan never sees it at all.
  *
+ * devtools' OWN operator manifest (this package's root `env.ts` — the keys
+ * no app reads at all: `BWS_ACCESS_TOKEN`, `CLOUDFLARE_API_TOKEN`, and
+ * friends) has the same problem in reverse: since the Backstage cutover
+ * devtools is no longer one of the TARGET repo's workspace packages either,
+ * so the scan below would never see it. It is loaded unconditionally,
+ * always, regardless of which repo devtools is running against — see
+ * `ownManifestPath()`'s own comment for how it stays resolvable both from a
+ * workspace checkout and from an installed `pnpm dlx`/`node_modules` copy,
+ * and for why loading it through the same `importRepoTs()` tsx path as
+ * every other manifest (rather than a plain static `import`) is what keeps
+ * its `declare()`/`define()` calls landing in the SAME `@devdogsuga/env`
+ * registry instance the target repo's manifests populate (module identity —
+ * see `repo/peers.ts`'s header and the devtools-dlx prototype's
+ * FINDINGS.md experiment 3): both resolve the `@devdogsuga/env` bare
+ * specifier through pnpm's single physical store location for that one
+ * installed version, not through devtools' own bundled copy (it ships
+ * none — `@devdogsuga/env` is only ever an optional peer).
+ *
  * Most workspace packages declare nothing, so "no env.ts found" means
  * not-a-manifest rather than an error.
  *
@@ -39,7 +57,8 @@
  * at length.
  */
 import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { getEnvSync, loadEnv } from "../repo/peers.js";
 import { findRepoRoot } from "../repo/root.js";
 import { importRepoTs } from "../repo/tsx-loader.js";
@@ -140,7 +159,37 @@ function manifestPaths(): string[] {
   const supabase = manifestIn(join(findRepoRoot(), "supabase"));
   if (supabase) paths.push(supabase);
 
+  // devtools' own operator manifest — always included, regardless of the
+  // target repo. Last, matching where it sat back when devtools itself was
+  // `packages/devtools` (alphabetically last of the packages this repo
+  // ever had). `SECTION_ORDER` in `env/example.ts` fixes the RENDERED
+  // section order independently of this insertion order, so this position
+  // is cosmetic for `.env.example`; it still matters for which source
+  // "wins" a shared key's declaration-order tie-break.
+  paths.push(ownManifestPath());
+
   return paths;
+}
+
+/**
+ * The absolute path to devtools' own `env.ts`, resolved relative to THIS
+ * module's own file rather than the target repo — it ships alongside
+ * `dist/` (see `package.json`'s `files`), not inside the target repo's
+ * workspace, so `findRepoRoot()`/`workspaceDirs()` can never find it.
+ *
+ * `import.meta.url` here is `dist/env/discovery.js` (this file's build
+ * output — `tsconfig.json`'s `rootDir: "src"` / `outDir: "dist"` mirrors
+ * `src/env/discovery.ts`'s own location one level down), so two `..` reach
+ * the package root: `dist/env/discovery.js` -> `dist/env` -> `dist` ->
+ * package root, where `env.ts` sits (deliberately outside `src/`, per that
+ * file's own header — `tsconfig.typecheck.json` includes it as a sibling
+ * of `src` for exactly that reason). Same file, same relative shape, in
+ * both a workspace checkout (`packages/devtools/env.ts`) and an installed
+ * copy (`node_modules/@devdogsuga/devtools/env.ts`).
+ */
+function ownManifestPath(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  return join(here, "..", "..", "env.ts");
 }
 
 function workspaceDirs(): string[] {

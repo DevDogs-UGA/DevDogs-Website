@@ -16,11 +16,13 @@
   },
   "bin": {
     "devtools": "./bin/devtools.mjs",
-    "devtools-ci": "./bin/devtools-ci.mjs"
+    "devtools-ci": "./bin/devtools-ci.mjs",
+    "devtools-ci-bare": "./bin/devtools-ci-bare.mjs"
   },
   "files": [
     "bin",
-    "dist"
+    "dist",
+    "env.ts"
   ],
   "scripts": {
     "build": "tsc",
