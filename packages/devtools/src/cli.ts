@@ -101,6 +101,7 @@ import { runCronList, runCronRun } from "./cron/commands.js";
 import { runWorkflows } from "./workflows/commands.js";
 import { runCf } from "./cf/commands.js";
 import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
+import { ownVersion } from "./repo/preflight.js";
 
 const DOCTOR_COMMANDS = [
   "doctor",
@@ -1098,6 +1099,15 @@ export async function main(argv: string[]): Promise<void> {
   if (argv[0] === "completions") {
     const code = runCompletions(argv.slice(1));
     process.exitCode = code;
+    return;
+  }
+
+  // Clean stdout, same reasoning as `completions` above: mostly useful for
+  // confirming which build actually ran, since a dlx self-refresh (see
+  // `repo/preflight.ts`) is otherwise invisible short of reading stderr's
+  // one-line nudge/refresh notice.
+  if (argv[0] === "version") {
+    process.stdout.write(`${ownVersion()}\n`);
     return;
   }
 
