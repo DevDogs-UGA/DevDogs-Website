@@ -46,7 +46,7 @@ import { runDocsIndex } from "./docs/index-pages.js";
 import { loadRegistry } from "./env/discovery.js";
 import { positionals } from "./args.js";
 import { findCiCommand, subcommandCiNames } from "./commands.js";
-import { isWorkerApp, WORKER_APPS } from "./workers.js";
+import { isWorkerApp, workerApps } from "./workers.js";
 import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
 
 function flagValue(rest: string[], flag: string): string | undefined {
@@ -283,7 +283,7 @@ async function runDeployCommand(rest: string[]): Promise<void> {
       if (!app) {
         throw new DeployError("--app <name> is required.", [
           "It names the workspace app whose manifest declares the Worker's",
-          `secrets — ${WORKER_APPS.join(", ")}.`,
+          `secrets — ${workerApps().join(", ")}.`,
         ]);
       }
       await runDeploySecretsFile({ app });

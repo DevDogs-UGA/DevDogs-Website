@@ -10,10 +10,15 @@ import { loadEnvLoad } from "../repo/peers.js";
 import { run } from "../db/run.js";
 import { resolveTier } from "../tier.js";
 import { unwrap } from "../ui.js";
-import { isWorkerApp, WORKER_APPS } from "../workers.js";
+import { isWorkerApp, workerApps } from "../workers.js";
 import { withWranglerEnv } from "./local-env.js";
 
-const UNKNOWN_APP_HINT = `Expected: ${WORKER_APPS.join(", ")}.`;
+// A function, not a top-level constant — `workerApps()` reads `workers.json`
+// via `findRepoRoot()`, which must not run at import time (see
+// `workers.ts`'s header on why that broke `--help`/`setup` outside a repo).
+function unknownAppHint(): string {
+  return `Expected: ${workerApps().join(", ")}.`;
+}
 
 function parseAppAndRest(argv: readonly string[]): {
   app?: string;
@@ -43,7 +48,7 @@ export async function runCf(argv: readonly string[]): Promise<number> {
     }
     if (!isWorkerApp(app)) {
       process.stderr.write(
-        `devtools cf preview: unknown app "${app}". ${UNKNOWN_APP_HINT}\n`,
+        `devtools cf preview: unknown app "${app}". ${unknownAppHint()}\n`,
       );
       return 1;
     }
@@ -176,7 +181,7 @@ export async function runCf(argv: readonly string[]): Promise<number> {
     }
     if (!isWorkerApp(app)) {
       process.stderr.write(
-        `devtools cf typegen: unknown app "${app}". ${UNKNOWN_APP_HINT}\n`,
+        `devtools cf typegen: unknown app "${app}". ${unknownAppHint()}\n`,
       );
       return 1;
     }
@@ -194,7 +199,7 @@ export async function runCf(argv: readonly string[]): Promise<number> {
     }
     if (!isWorkerApp(app)) {
       process.stderr.write(
-        `devtools cf build: unknown app "${app}". ${UNKNOWN_APP_HINT}\n`,
+        `devtools cf build: unknown app "${app}". ${unknownAppHint()}\n`,
       );
       return 1;
     }

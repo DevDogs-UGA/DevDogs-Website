@@ -9,7 +9,13 @@ import { join } from "node:path";
 import { findRepoRoot } from "../repo/root.js";
 import { supabase } from "./run.js";
 
-const SEED_FILES = [join(findRepoRoot(), "supabase", "seed", "01_roles.sql")];
+// Lazy — computed inside `runSeedRoles`, not at module load, so importing
+// this file never calls `findRepoRoot()` on its own (it used to, as a
+// top-level `const`, which broke `--help`/`setup` outside a repo — see
+// `workers.ts`'s header for the general pattern this follows).
+function seedFiles(): string[] {
+  return [join(findRepoRoot(), "supabase", "seed", "01_roles.sql")];
+}
 
 /**
  * Always `--db-url` — the session's own connection string, never the
@@ -18,7 +24,7 @@ const SEED_FILES = [join(findRepoRoot(), "supabase", "seed", "01_roles.sql")];
  * `db/connection.ts`'s header.
  */
 export async function runSeedRoles(dbUrl: string): Promise<number> {
-  for (const file of SEED_FILES) {
+  for (const file of seedFiles()) {
     const code = await supabase(
       "db",
       "query",

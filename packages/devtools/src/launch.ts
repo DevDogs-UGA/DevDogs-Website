@@ -34,9 +34,37 @@ import { confirm, select } from "@clack/prompts";
 import type { DeployEnvironment } from "@devdogsuga/env";
 import type { DevDatabase } from "@devdogsuga/env/load";
 import type { TierChoice } from "@devdogsuga/env/session";
-import { findRepoRoot } from "./repo/root.js";
+import { discoverRepoRoot, findRepoRoot, RepoNotFoundError } from "./repo/root.js";
 import { loadEnvLoad, loadEnvSession } from "./repo/peers.js";
+import { isDevMode, ownVersion, runPreflight } from "./repo/preflight.js";
 import { errorMessage, unwrap } from "./ui.js";
+
+/**
+ * Pulls the two preflight-only boolean flags out of `argv`, wherever they
+ * sit, the same way `stripTierFlag` does for `--tier` below. Neither takes
+ * a value. `DEVTOOLS_SKIP_PREFLIGHT=1` is the env-var spelling of
+ * `--skip-preflight`, for shells/CI wrappers that would rather set an env
+ * var once than remember a flag on every invocation.
+ */
+export function stripPreflightFlags(argv: readonly string[]): {
+  skipPreflight: boolean;
+  refresh: boolean;
+  rest: string[];
+} {
+  const rest: string[] = [];
+  let skipPreflight = process.env.DEVTOOLS_SKIP_PREFLIGHT === "1";
+  let refresh = false;
+  for (const arg of argv) {
+    if (arg === "--skip-preflight") {
+      skipPreflight = true;
+    } else if (arg === "--refresh") {
+      refresh = true;
+    } else {
+      rest.push(arg);
+    }
+  }
+  return { skipPreflight, refresh, rest };
+}
 
 /**
  * Pulls a global `--tier <t>` out of `argv`, wherever it sits, leaving every
@@ -101,7 +129,27 @@ async function dispatch(argv: string[]): Promise<void> {
  * nothing this function could return that would mean anything.
  */
 export async function launch(argv: readonly string[]): Promise<void> {
-  const { explicit, rest } = stripTierFlag(argv);
+  // Preflight runs on EVERY command of this bin, including `--help` — see
+  // `repo/preflight.ts`'s header. It never requires a repo (the manifest
+  // fetch/cache/self-refresh logic is entirely repo-independent), so it
+  // runs before `findRepoRoot()` is anywhere near the picture, unlike tier
+  // resolution below. `devtools-ci` (`launch-ci.ts`) deliberately does not
+  // call this at all — CI pins an exact version on purpose.
+  const { skipPreflight, refresh, rest: afterPreflight } = stripPreflightFlags(argv);
+  await runPreflight({
+    currentVersion: ownVersion(),
+    argv: afterPreflight,
+    skipPreflight,
+    refresh,
+    devMode: isDevMode(),
+    // Set only for testing against a local Verdaccio (see the end-to-end
+    // self-refresh validation in CUTOVER.md); unset in production, where a
+    // bare `pnpm dlx @devdogsuga/devtools@<version>` resolves against the
+    // default npm registry with no flag needed at all.
+    registry: process.env.DEVTOOLS_REGISTRY,
+  });
+
+  const { explicit, rest } = stripTierFlag(afterPreflight);
 
   // `--help`/`-h` bypasses tier resolution entirely, BEFORE it can refuse.
   // `cli.ts`'s own `main()` already answers these with no env in play (see
@@ -144,6 +192,14 @@ export async function launch(argv: readonly string[]): Promise<void> {
     // already existed, and keeping that means it can read current values
     // when offering to rewrite them.
     tier = "development";
+  } else if (discoverRepoRoot() === null) {
+    // Every command past this point needs a real repo to resolve a tier
+    // against (`findRepoRoot()` below would throw `RepoNotFoundError`
+    // anyway) — surfaced here as the same clean, expected refusal every
+    // other repo-dependent command gives, rather than an uncaught throw
+    // with a stack trace pointing at internal module paths.
+    process.stderr.write(`devtools: ${new RepoNotFoundError().message}\n`);
+    process.exit(1);
   } else {
     // The `.env`-names-a-remote-database lookup (and the port probe that
     // phrases the local hint) are only paid when the resolution could

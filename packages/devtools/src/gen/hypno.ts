@@ -31,23 +31,26 @@ import { join } from "node:path";
 import { createRequire } from "node:module";
 import { findRepoRoot } from "../repo/root.js";
 
-const SRC = join(
-  findRepoRoot(),
-  "apps",
-  "platform",
-  "src",
-  "components",
-  "HeroSection",
-  "Hypno.tsx",
-);
-const OUT = join(
-  findRepoRoot(),
-  "apps",
-  "platform",
-  "src",
-  "assets",
-  "hypno.webp",
-);
+// Lazy — computed inside `runGenHypno`/`loadChromium`, not at module load.
+// This file used to compute these as top-level `const`s, which called
+// `findRepoRoot()` (and threw `RepoNotFoundError`) the instant anything
+// imported this module — including `devtools --help` from outside a repo,
+// since the command tree pulls every command module in transitively. See
+// `workers.ts`'s header for the general pattern.
+function srcPath(): string {
+  return join(
+    findRepoRoot(),
+    "apps",
+    "platform",
+    "src",
+    "components",
+    "HeroSection",
+    "Hypno.tsx",
+  );
+}
+function outPath(): string {
+  return join(findRepoRoot(), "apps", "platform", "src", "assets", "hypno.webp");
+}
 
 const RENDER_PX = 3536;
 const VIEWBOX = 1926.25;
@@ -81,7 +84,7 @@ async function loadChromium() {
 }
 
 export async function runGenHypno(): Promise<number> {
-  const src = readFileSync(SRC, "utf8");
+  const src = readFileSync(srcPath(), "utf8");
   const paths = [...src.matchAll(/<path d="([^"]+)"/g)].map((m) => m[1]);
   if (paths.length !== 24) {
     process.stderr.write(
@@ -172,9 +175,9 @@ ${paths.map((d) => `<path d="${d}"/>`).join("\n")}
       .sort((a, b) => b.target - a.target || b.q - a.q)[0] ??
     results.sort((a, b) => a.b - b.b)[0]!;
 
-  writeFileSync(OUT, Buffer.from(pick.url.split(",")[1]!, "base64"));
+  writeFileSync(outPath(), Buffer.from(pick.url.split(",")[1]!, "base64"));
   console.log(
-    `\nwrote ${OUT}\n  ${pick.target}px @ q=${pick.q} -> ${pick.b} bytes (budget ${BUDGET})`,
+    `\nwrote ${outPath()}\n  ${pick.target}px @ q=${pick.q} -> ${pick.b} bytes (budget ${BUDGET})`,
   );
 
   await browser.close();

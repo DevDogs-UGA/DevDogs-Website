@@ -10,13 +10,16 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { findRepoRoot } from "../repo/root.js";
-import { WORKER_APPS } from "../workers.js";
+import { workerApps } from "../workers.js";
 
 const run = promisify(execFile);
 
 /** Re-exported so existing importers of this module (e.g. `deploy/orphans.ts`,
- * this file's own tests) do not need to know the list moved to `workers.ts`. */
-export { WORKER_APPS };
+ * this file's own tests) do not need to know the list moved to `workers.ts`.
+ * A function, not a top-level constant — see `workers.ts`'s header on why
+ * eagerly reading `workers.json` at import time broke `--help`/`setup`
+ * outside a repo. */
+export { workerApps };
 
 export class CloudflareError extends Error {}
 
@@ -38,7 +41,7 @@ export async function listWorkerSecrets(
   const secrets = new Map<string, Set<string>>();
   const unreadable: string[] = [];
 
-  for (const app of WORKER_APPS) {
+  for (const app of workerApps()) {
     const worker = `${target}-${app}`;
     try {
       const { stdout } = await run(

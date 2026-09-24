@@ -25,7 +25,7 @@
  * order and deploy internals live in `docs/`, not here: `--help` is a map, and
  * a map that reprints the territory is the thing this replaced.
  */
-import { WORKER_APPS } from "./workers.js";
+import { workerApps } from "./workers.js";
 
 /**
  * One choice in a select prompt.
@@ -39,11 +39,26 @@ export interface OptionChoice {
   hint?: string;
 }
 
-/** The `--app <slug>` choices shared by `cf preview`/`typegen`/`build`. */
-const WORKER_APP_CHOICES: OptionChoice[] = WORKER_APPS.map((app) => ({
-  value: app,
-  label: app,
-}));
+/**
+ * The `--app <slug>` choices shared by `cf preview`/`typegen`/`build`.
+ *
+ * `workerApps()` reads `workers.json` via `findRepoRoot()`, which throws
+ * outside a DevDogsUGA checkout — and this module (via `help.ts`/`menu.ts`)
+ * is imported for `devtools --help`, which must work from anywhere,
+ * `/tmp` included (see `workers.ts`'s header). The tree below is built once
+ * at import time regardless, so this falls back to an empty choice list
+ * rather than propagating the throw: `--help` still renders the command
+ * shape with no `--app` values listed, and any actual `cf preview --app …`
+ * invocation outside a repo fails with the same clear `RepoNotFoundError`
+ * it always would have, just a little further downstream.
+ */
+const WORKER_APP_CHOICES: OptionChoice[] = (() => {
+  try {
+    return workerApps().map((app) => ({ value: app, label: app }));
+  } catch {
+    return [];
+  }
+})();
 
 /**
  * A prompt the wizard raises to fill an option the command line would carry.
