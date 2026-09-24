@@ -33,6 +33,15 @@ Server-only. The module's first line is `import "server-only"`, so an
 accidental browser import of this subpath fails at build rather than leaking
 a service key at runtime.
 
+Under plain Vitest, that guard throws on import: `server-only` only turns
+into a no-op when a Next.js server bundle aliases it. A consumer testing code
+that reaches this subpath needs both of these in its Vitest config:
+
+- `resolve.alias["server-only"]` pointing at an empty stub module.
+- `test.server.deps.inline: [/@devdogsuga\/db/]`. Without it Vitest hands
+  this package to Node's native `import()`, which resolves the real
+  `server-only` before the alias is ever consulted.
+
 - `createAdminClient` — the service-role Supabase client. Bypasses RLS.
 - `createDb` — the shared postgres-js + Drizzle client factory:
 
