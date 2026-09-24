@@ -194,6 +194,24 @@ export interface CommandNode {
    * not get a GUI entry: their output is meant to be consumed by a shell.
    */
   surface?: "interactive" | "cli-only";
+  /**
+   * This command reads and writes no DevDogsUGA env file, database, or
+   * `DEPLOY_ENV` — `launch.ts` may enter plain `development` for it with no
+   * tier prompt and no multi-tier refusal, exactly like the hardcoded
+   * `setup`/`completions` bypass it already carries (see that file's
+   * `launch()` for why those two cannot go through ordinary tier
+   * resolution).
+   *
+   * Both `github rulesets` and `github settings` are the first commands to
+   * use this flag rather than joining that hardcoded name check: everything
+   * either one touches is a `gh api` call against GitHub itself, resolved
+   * from `--org`/`--repo` flags, not from the session's deploy tier — so
+   * `--tier` was never a real requirement, only an artifact of every command
+   * going through the same tier-resolution gate before dispatch. Marked on
+   * the leaf command (`rulesets`, `settings`), not the `github` group node,
+   * because `launch.ts` looks up the exact dispatched path.
+   */
+  envFree?: boolean;
 }
 
 /** Top-level sections. Only `--help` and the wizard's first screen use these. */
@@ -712,14 +730,15 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
     commands: [
       {
         name: "github",
-        summary: "Reconcile the repository's fixed branch/tag rulesets.",
-        hint: "main, production, ~ALL, team/**, tags",
+        summary: "Reconcile the repository's rulesets and settings.",
+        hint: "rulesets: main, production, ~ALL, team/**, tags; settings: security, Actions, environments",
         subcommands: [
           {
             name: "rulesets",
             summary:
               "Diff the fixed rulesets against live GitHub; --apply to write.",
             hint: "dry-run plan by default",
+            envFree: true,
             options: [
               {
                 flag: "--org",
@@ -740,6 +759,30 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
               {
                 flag: "--apply",
                 summary: "Write the plan instead of only printing it.",
+              },
+              YES,
+              JSON_FLAG,
+            ],
+          },
+          {
+            name: "settings",
+            summary: "Diff security/Actions/environment settings vs live GitHub.",
+            hint: "dry-run plan by default",
+            envFree: true,
+            options: [
+              {
+                flag: "--org",
+                value: "<org>",
+                summary: "GitHub org. Defaults to DevDogsUGA.",
+              },
+              {
+                flag: "--repo",
+                value: "<repo>",
+                summary: "Repository name. Defaults to DevDogsUGA.",
+              },
+              {
+                flag: "--apply",
+                summary: "Write fixable drift instead of only printing it.",
               },
               YES,
               JSON_FLAG,
@@ -1205,6 +1248,10 @@ export const GROUPS: readonly CommandGroup[] = [
   {
     title: "Moderation",
     commands: commands("catalog", "doctor", "roundtrip", "grant-root"),
+  },
+  {
+    title: "GitHub",
+    commands: commands("github"),
   },
   {
     title: "CLI utilities",

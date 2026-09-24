@@ -1,7 +1,8 @@
 /**
  * Unit tests for `stripTierFlag`, the one pure piece of `launch.ts`, plus
- * `launch()`'s bypasses: `--help`/`-h`, and the `setup`/`completions`
- * commands that must run before there is a tier to resolve.
+ * `launch()`'s bypasses: `--help`/`-h`, the `setup`/`completions` commands
+ * that must run before there is a tier to resolve, and the catalog-driven
+ * `envFree` bypass (`github rulesets`/`github settings`, TASK-342).
  *
  * Everything else in that module either resolves the real filesystem
  * (`availableTiers`), mutates `process.env` (`enterEnvironment`), or exits
@@ -221,4 +222,22 @@ describe("launch", () => {
     expect(resolveSessionTier).not.toHaveBeenCalled();
     expect(main).toHaveBeenCalledWith(["completions", "bash"]);
   });
+
+  it("github rulesets skips tier resolution — catalog-marked envFree (TASK-322/TASK-342 wart)", async () => {
+    const { launch } = await import("./launch.js");
+    await launch(["github", "rulesets", "--apply"]);
+    expect(resolveSessionTier).not.toHaveBeenCalled();
+    expect(enterEnvironment).toHaveBeenCalledWith("development", {
+      override: false,
+    });
+    expect(main).toHaveBeenCalledWith(["github", "rulesets", "--apply"]);
+  });
+
+  it("github settings skips tier resolution — catalog-marked envFree", async () => {
+    const { launch } = await import("./launch.js");
+    await launch(["github", "settings", "--json"]);
+    expect(resolveSessionTier).not.toHaveBeenCalled();
+    expect(main).toHaveBeenCalledWith(["github", "settings", "--json"]);
+  });
+
 });

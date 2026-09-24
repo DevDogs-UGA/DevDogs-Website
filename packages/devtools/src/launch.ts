@@ -34,6 +34,7 @@ import { confirm, select } from "@clack/prompts";
 import type { DeployEnvironment } from "@devdogsuga/env";
 import type { DevDatabase } from "@devdogsuga/env/load";
 import type { TierChoice } from "@devdogsuga/env/session";
+import { findCommand } from "./commands.js";
 import { discoverRepoRoot, findRepoRoot, RepoNotFoundError } from "./repo/root.js";
 import { loadEnvLoad, loadEnvSession } from "./repo/peers.js";
 import { isDevMode, ownVersion, runPreflight } from "./repo/preflight.js";
@@ -92,6 +93,30 @@ export function stripTierFlag(argv: readonly string[]): {
   const missing = value === undefined || value.startsWith("-");
   rest.splice(index, missing ? 1 : 2);
   return { explicit: missing ? undefined : value, rest };
+}
+
+/**
+ * Whether the command `rest` dispatches to is declared `envFree` in
+ * `commands.ts`'s catalog — the leading run of non-flag tokens is the
+ * command path (`["github", "rulesets"]` out of `["github", "rulesets",
+ * "--apply"]`), the same convention `stripTierFlag`/`stripPreflightFlags`
+ * already use for pulling a flag out of argv wherever it sits.
+ *
+ * Catalog-driven rather than a second hardcoded name list: `setup` and
+ * `completions` below stay their own explicit branch (each skips tier
+ * resolution for a DIFFERENT reason worth spelling out at the call site —
+ * see the comment above), but a plain "this command touches no env at all"
+ * exemption reads once, from the same tree `--help` and the wizard already
+ * render, rather than as a name a future GitHub-only command has to
+ * remember to add here too.
+ */
+function isEnvFreeCommand(rest: readonly string[]): boolean {
+  const path: string[] = [];
+  for (const arg of rest) {
+    if (arg.startsWith("-")) break;
+    path.push(arg);
+  }
+  return findCommand(path)?.envFree === true;
 }
 
 /** The real interactive picker: a clack `select`, unwrapped so Ctrl-C exits
@@ -172,7 +197,7 @@ export async function launch(argv: readonly string[]): Promise<void> {
 
   let tier: DeployEnvironment;
   let devDatabase: DevDatabase | undefined;
-  if (rest[0] === "setup" || rest[0] === "completions") {
+  if (rest[0] === "setup" || rest[0] === "completions" || isEnvFreeCommand(rest)) {
     // Two commands run BEFORE there is a tier to resolve, and forcing the
     // mandate on them breaks each in its own way:
     //
@@ -186,6 +211,15 @@ export async function launch(argv: readonly string[]): Promise<void> {
     //     completions bash)"`), always non-TTY, and reads no env at all; the
     //     multi-tier refusal would exit 1 in every new shell on exactly the
     //     machines of the people working on the deploy workflow.
+    //
+    // A third, open-ended case joins them here via `isEnvFreeCommand`:
+    // `github rulesets` and `github settings` (TASK-322, TASK-342) touch no
+    // DevDogsUGA env file or database at all — every write either one makes
+    // is a `gh api` call resolved from its own `--org`/`--repo` flags — so
+    // demanding a `--tier` before either could run was never a real
+    // requirement, only every command sharing one dispatch gate. See
+    // `isEnvFreeCommand`'s own doc for why this is catalog-driven rather
+    // than a third name joining the `rest[0] ===` checks above.
     //
     // Development is still ENTERED below (missing-file tolerated), not
     // skipped: `setup` under the old `with-env` wrapper saw whatever `.env`

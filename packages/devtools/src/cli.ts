@@ -100,6 +100,7 @@ import { runEmails } from "./emails/commands.js";
 import { runGen } from "./gen/commands.js";
 import { runCronList, runCronRun } from "./cron/commands.js";
 import { runGithubRulesets } from "./gh/rulesets/commands.js";
+import { runGithubSettings } from "./gh/settings/commands.js";
 import { runWorkflows } from "./workflows/commands.js";
 import { runCf } from "./cf/commands.js";
 import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
@@ -1057,9 +1058,11 @@ async function dispatch(argv: string[]): Promise<string | null> {
     let code: number;
     if (sub === "rulesets") {
       code = await runGithubRulesets(githubArgs);
+    } else if (sub === "settings") {
+      code = await runGithubSettings(githubArgs);
     } else {
       process.stderr.write(
-        `devtools github: unknown subcommand "${sub ?? "(none)"}". Expected: rulesets.\n`,
+        `devtools github: unknown subcommand "${sub ?? "(none)"}". Expected: rulesets or settings.\n`,
       );
       code = 1;
     }

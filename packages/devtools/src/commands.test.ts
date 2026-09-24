@@ -180,6 +180,19 @@ describe("prompts", () => {
       "--workflow",
       "--params",
       "--port",
+      // GitHub org/repo/App-slug scoping (`github rulesets`/`github
+      // settings`). All three default to the one repository (and App) this
+      // reconciler manages; a wizard question for values that are wrong
+      // roughly never is a worse version of just editing the flag on the
+      // rare drill (a fork, a renamed App) that needs them.
+      "--org",
+      "--repo",
+      "--app-slug",
+      // Write gate, not a question: `--apply` toggles "print" to "write" the
+      // same way `--dry-run` does elsewhere in this file — the confirmation
+      // before writing (`confirmApply`) IS the question, not a second one
+      // for whether to ask it.
+      "--apply",
     ]);
     const unasked = new Set<string>();
 
@@ -227,6 +240,7 @@ describe("coverage of what the CLI dispatches", () => {
     "cron",
     "workflows",
     "cf",
+    "github",
     // Both are dispatched twice: once in `main()` ahead of `intro()`, which is
     // what a typed command line reaches, and once in `dispatch` for the walk
     // the wizard hands back. They belong here for the second of those.
