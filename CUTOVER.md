@@ -124,9 +124,61 @@ are done.
 
 ## C. In `Backstage`
 
-- [ ] Wave 2, separately: devtools split + the §5 contract (dlx packaging,
-      pnpm-exec spawning, optional-peer resolution, telemetry as a regular dep,
-      two-tier preflight). Prototype-first per plan §8. Not started.
+- [x] Wave 2, stage A1: `packages/devtools` moved here as a publishable
+      package, refactored off the assumption that it lives inside
+      DevDogsUGA. Landed on Backstage `main`. What A1 did:
+      - `findRepoRoot()` (`src/repo/root.ts`) replaces both `PROJECT_ROOT`
+        and `REPO_ROOT`: walks up from `process.cwd()` for the
+        `pnpm-workspace.yaml` + `package.json.name === "devdogs-monorepo"`
+        marker (per the devtools-dlx prototype's FINDINGS.md, experiment 1).
+        Lazy and memoized; throws a clear `RepoNotFoundError` ("run this
+        from inside a DevDogsUGA clone") when not found.
+      - `resolveFromRepo`/`findDependent` (`src/repo/resolve.ts`), with unit
+        tests, per FINDINGS' recommended contract — including the subpath
+        gotcha found while smoke-testing (`@devdogsuga/env/load` needs
+        `findDependent` to search on the PACKAGE name, not the literal
+        specifier).
+      - Every `@devdogsuga/*` import classified and converted to a dynamic,
+        repo-resolved load: `env`/`db`/`brand`/`newsletter` as optional
+        peers (`src/repo/peers.ts`); `open-graph`/`email`/`docs` as
+        repo-local `devdogs-source`-condition loads (`src/repo/source.ts`,
+        via `src/repo/tsx-loader.ts`); `telemetry` stays a regular
+        dependency, the one exception. `open-graph`/`email` have no real
+        types in Backstage (private, stay in DevDogsUGA) — hand-maintained
+        type shims live in `src/images/open-graph-types.ts` and
+        `src/emails/email-types.ts`.
+      - Ships built JS (`tsc` to `dist/`); both bins (`devtools`,
+        `devtools-ci`) run `dist/` directly via plain `node`, no `tsx`
+        wrapper. `tsx` is a runtime dependency used only programmatically to
+        load the target repo's own TypeScript.
+      - 11 tests that read real DevDogsUGA repo content (real manifests,
+        real `apps/*`, a real CLI subprocess) moved out —
+        `packages/devtools/MOVED-TESTS.md` lists each with what it asserted
+        and what it needs; stage B re-homes them. Everything else (615
+        tests) passes here.
+      - Verified with a real `pnpm pack:local` tarball installed and run
+        against the read-only `DevDogsUGA-cutover` worktree: `--help`,
+        `cron list` (loads real cron contracts via tsx), `env example
+        --check` (loads every real env manifest + the peer-resolved
+        `@devdogsuga/env`), `images --all-formats --dry-run` and `emails
+        '*' --dry-run` (both load real `open-graph`/`email` content), `db
+        status`, `devtools-ci deploy --help` — from the repo root, from
+        `apps/platform`, and (for the "clear error" case) from `/tmp`. The
+        worktree stayed clean (`git status --short`) through every run.
+      - Known gaps, left for stage A2 or later: `setup`/`--help` still
+        require being inside a real repo end-to-end — a few modules
+        (`workers.ts`'s `workers.json` read, `db/seed-roles.ts`'s seed-file
+        path, `commands.ts`'s `WORKER_APPS`-derived `--app` choices) resolve
+        `findRepoRoot()` eagerly at module load, which the original in-repo
+        devtools never had to guard against (its old `PROJECT_ROOT` could
+        never throw). No dlx preflight/self-refresh, no minimums manifest,
+        no contract-test fixture repo — all explicitly out of A1's scope.
+- [ ] Wave 2, stage A2: dlx preflight + self-refresh (minimums manifest,
+      version pinning for `devtools-ci`), move `newsletter` send/export out
+      to a Backstage script, contract tests against a fixture repo. Not
+      started.
+- [ ] Stage B: re-home the 11 tests `packages/devtools/MOVED-TESTS.md`
+      lists, once devtools is consumed as a package inside DevDogsUGA.
 - [ ] `packages/db` ships no test of its own for the client/server factories —
       only `typegen` (2 tests). The suite that covered this code in the product
       repo was the live-DB RLS suite, which stayed behind. The factories are

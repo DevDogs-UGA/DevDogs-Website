@@ -1,0 +1,7 @@
+{
+  "name": "schedule-builder",
+  "scripts": {
+    "dev": "echo dev",
+    "build": "echo build"
+  }
+}

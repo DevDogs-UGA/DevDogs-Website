@@ -1,0 +1,74 @@
+{
+  "name": "@devdogsuga/devtools",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Contributor CLI for a DevDogsUGA checkout: database, env, images, emails, cron, deploy. Ships built JS; run via `pnpm dlx @devdogsuga/devtools` (or the `devtools`/`devtools-ci` bins once installed) from inside a DevDogsUGA clone.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devdogsuga/Backstage.git",
+    "directory": "packages/devtools"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "bin": {
+    "devtools": "./bin/devtools.mjs",
+    "devtools-ci": "./bin/devtools-ci.mjs"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "cli": "node ./bin/devtools.mjs",
+    "ci": "node ./dist/ci.js",
+    "ci:env": "node ./bin/devtools-ci.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@bitwarden/cli": "2026.7.0",
+    "@bitwarden/sdk-napi": "1.0.0",
+    "@clack/prompts": "catalog:",
+    "@devdogsuga/telemetry": "workspace:*",
+    "@resvg/resvg-js": "^2.6.2",
+    "@sentry/node": "catalog:",
+    "@supabase/supabase-js": "catalog:",
+    "dotenv": "^17.4.2",
+    "postgres": "catalog:",
+    "satori": "^0.33.4",
+    "sharp": "0.35.3",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "@devdogsuga/brand": "*",
+    "@devdogsuga/db": "*",
+    "@devdogsuga/env": "*",
+    "@devdogsuga/newsletter": "*"
+  },
+  "peerDependenciesMeta": {
+    "@devdogsuga/brand": { "optional": true },
+    "@devdogsuga/db": { "optional": true },
+    "@devdogsuga/env": { "optional": true },
+    "@devdogsuga/newsletter": { "optional": true }
+  },
+  "devDependencies": {
+    "@devdogsuga/brand": "workspace:*",
+    "@devdogsuga/config": "workspace:*",
+    "@devdogsuga/db": "workspace:*",
+    "@devdogsuga/env": "workspace:*",
+    "@devdogsuga/newsletter": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "react": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "study-group-finder",
+  "scripts": {
+    "dev": "echo dev",
+    "build": "echo build"
+  }
+}

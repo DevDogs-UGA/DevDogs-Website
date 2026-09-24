@@ -1,0 +1,7 @@
+{
+  "name": "sandbox",
+  "scripts": {
+    "dev": "echo dev",
+    "build": "echo build"
+  }
+}

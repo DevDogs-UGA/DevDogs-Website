@@ -1,0 +1,12 @@
+{
+  // `pnpm typecheck` covers `env.ts` (devtools' own operator manifest) and
+  // `vitest.config.ts` too, neither of which `tsconfig.json` can include:
+  // anything under `rootDir` is emitted to `dist/`, and `env.ts` sits at the
+  // package root deliberately (see its own header) rather than under `src/`.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["src", "env.ts", "vitest.config.ts"]
+}

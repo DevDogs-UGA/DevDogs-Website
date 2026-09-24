@@ -1,0 +1,153 @@
+/**
+ * Loads devtools' optional-peer `@devdogsuga/*` libraries — the ones
+ * published to npm and consumed by the TARGET repo, which devtools reads at
+ * runtime rather than bundling its own copy of (see this package's
+ * `package.json`: `peerDependencies` + `peerDependenciesMeta.optional`, and
+ * `FINDINGS.md` experiment 2).
+ *
+ * Every export here is memoized per module (one dynamic `import()` per
+ * process, not per call) — this is what makes the module-identity guarantee
+ * in FINDINGS experiment 3 hold: every devtools call site that needs
+ * `@devdogsuga/env`'s registry gets the exact same module instance the
+ * repo's own manifests populated via `declare()`/`define()`, because both
+ * resolve to the identical absolute file path and Node's ESM cache is keyed
+ * by resolved URL.
+ */
+import { pathToFileURL } from "node:url";
+import { findRepoRoot, RepoNotFoundError } from "./root.js";
+import { findDependent, resolveFromRepo } from "./resolve.js";
+
+const moduleCache = new Map<string, Promise<unknown>>();
+
+/**
+ * Dynamically imports `specifier` as the repo would resolve it, memoized so
+ * repeated calls in one process return the SAME module instance (required
+ * for the env-registry identity guarantee above).
+ *
+ * Falls back to a plain bare-specifier `import()` when devtools is not
+ * running inside a DevDogsUGA checkout at all (`findRepoRoot()` throws
+ * `RepoNotFoundError`). That is not a production affordance — under real
+ * `pnpm dlx` use, `specifier` is an optional peer devtools' own package
+ * never installs, so the fallback import fails with the ordinary
+ * `MODULE_NOT_FOUND` either way. It exists so devtools' OWN test suite
+ * (which has no target repo to discover, but does have every one of these
+ * peers as a real Backstage workspace package) exercises this code against
+ * the genuine package rather than needing every test to mock this module.
+ */
+function loadPeer<T>(specifier: string): Promise<T> {
+  const cached = moduleCache.get(specifier);
+  if (cached) return cached as Promise<T>;
+
+  const promise = (async () => {
+    // See `findRepoRoot()`'s own comment: Backstage's test suite sets this
+    // so every peer resolves to the real Backstage-workspace copy instead
+    // of a nonexistent target repo, without a per-test mock.
+    if (process.env.DEVTOOLS_TEST_REPO_ROOT) {
+      return import(specifier) as Promise<T>;
+    }
+    let repoRoot: string;
+    try {
+      repoRoot = findRepoRoot();
+    } catch (err) {
+      if (err instanceof RepoNotFoundError) {
+        return import(specifier) as Promise<T>;
+      }
+      throw err;
+    }
+    const resolutionBase = findDependent(repoRoot, specifier);
+    if (!resolutionBase) {
+      throw new Error(
+        `Nothing in this repo depends on ${specifier} — expected an app or package under apps/*` +
+          ` or packages/* to declare it (dependencies/devDependencies/peerDependencies).`,
+      );
+    }
+    const { resolvedPath } = resolveFromRepo(repoRoot, resolutionBase, specifier);
+    return import(pathToFileURL(resolvedPath).href) as Promise<T>;
+  })();
+
+  moduleCache.set(specifier, promise);
+  return promise;
+}
+
+/** Test-only: clears the memoized peer modules so a test can re-resolve with a fresh mock. */
+export function resetPeerCacheForTests(): void {
+  moduleCache.clear();
+}
+
+// ── @devdogsuga/env ─────────────────────────────────────────────────────────
+// Import types only from the bare specifier (erased at build; @devdogsuga/env
+// is a Backstage devDependency purely for these types). Runtime values always
+// come through the loaders below.
+import type * as EnvModule from "@devdogsuga/env";
+import type * as EnvLoadModule from "@devdogsuga/env/load";
+import type * as EnvSessionModule from "@devdogsuga/env/session";
+
+let resolvedEnvModule: typeof EnvModule | undefined;
+
+export function loadEnv(): Promise<typeof EnvModule> {
+  return loadPeer<typeof EnvModule>("@devdogsuga/env").then((mod) => {
+    resolvedEnvModule = mod;
+    return mod;
+  });
+}
+
+/**
+ * The synchronous companion to `loadEnv()`, for the handful of call sites
+ * (`gh/environments.ts`'s `GITHUB_ENVIRONMENT_SPECS` getters) that cannot
+ * become async without changing their own callers' contract — they read a
+ * plain array off a getter, not a Promise. Safe ONLY after `loadEnv()` has
+ * resolved at least once; every caller of these getters already requires
+ * `env/discovery.ts`'s `loadRegistry()` (which calls `loadEnv()` itself) to
+ * have run first, via `assertRegistryLoaded()`'s own guard.
+ */
+export function getEnvSync(): typeof EnvModule {
+  if (!resolvedEnvModule) {
+    throw new Error(
+      "getEnvSync() called before loadEnv() ever resolved — call loadRegistry() " +
+        "(env/discovery.ts) first.",
+    );
+  }
+  return resolvedEnvModule;
+}
+
+/** Test-only: clears the sync cache alongside `resetPeerCacheForTests()`. */
+export function resetEnvSyncCacheForTests(): void {
+  resolvedEnvModule = undefined;
+}
+
+export function loadEnvLoad(): Promise<typeof EnvLoadModule> {
+  return loadPeer<typeof EnvLoadModule>("@devdogsuga/env/load");
+}
+
+export function loadEnvSession(): Promise<typeof EnvSessionModule> {
+  return loadPeer<typeof EnvSessionModule>("@devdogsuga/env/session");
+}
+
+// ── @devdogsuga/db ───────────────────────────────────────────────────────────
+import type * as DbTypegenModule from "@devdogsuga/db/typegen";
+
+export function loadDbTypegen(): Promise<typeof DbTypegenModule> {
+  return loadPeer<typeof DbTypegenModule>("@devdogsuga/db/typegen");
+}
+
+// ── @devdogsuga/brand ────────────────────────────────────────────────────────
+import type * as BrandEventModule from "@devdogsuga/brand/event";
+
+export function loadBrandEvent(): Promise<typeof BrandEventModule> {
+  return loadPeer<typeof BrandEventModule>("@devdogsuga/brand/event");
+}
+
+// ── @devdogsuga/newsletter ───────────────────────────────────────────────────
+// Published (see the ledger), consumed by `apps/platform`; devtools' own
+// `newsletter` command reads it the same way as any other peer. A2 moves
+// this command to a Backstage script — until then it stays here.
+import type * as NewsletterModule from "@devdogsuga/newsletter";
+import type * as NewsletterExportModule from "@devdogsuga/newsletter/export";
+
+export function loadNewsletter(): Promise<typeof NewsletterModule> {
+  return loadPeer<typeof NewsletterModule>("@devdogsuga/newsletter");
+}
+
+export function loadNewsletterExport(): Promise<typeof NewsletterExportModule> {
+  return loadPeer<typeof NewsletterExportModule>("@devdogsuga/newsletter/export");
+}

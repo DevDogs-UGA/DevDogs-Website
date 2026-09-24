@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2025"],
+    "types": ["node"],
+    // The base config sets noEmit for app packages; this one ships dist/,
+    // so emit is switched back on here. `typecheck` passes --noEmit itself.
+    "noEmit": false,
+    "declaration": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    // The image templates in @devdogsuga/open-graph are JSX, and `images` renders them
+    // here. `react-jsx` rather than `react` so the sources need no React import
+    // of their own — Satori reads the plain {type, props} objects the automatic
+    // runtime produces, and never mounts them.
+    "jsx": "react-jsx"
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["src/**/*.test.ts"]
+}

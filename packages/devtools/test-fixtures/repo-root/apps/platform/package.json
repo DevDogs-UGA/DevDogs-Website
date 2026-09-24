@@ -1,0 +1,7 @@
+{
+  "name": "platform",
+  "scripts": {
+    "dev": "echo dev",
+    "build": "echo build"
+  }
+}
