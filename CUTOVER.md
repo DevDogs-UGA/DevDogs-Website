@@ -287,12 +287,14 @@ are done.
         now.
 - [ ] Stage B: re-home the 11 tests `packages/devtools/MOVED-TESTS.md`
       lists, once devtools is consumed as a package inside DevDogsUGA.
-- [ ] `packages/db` ships no test of its own for the client/server factories —
-      only `typegen` (2 tests). The suite that covered this code in the product
-      repo was the live-DB RLS suite, which stayed behind. The factories are
-      currently untested here.
-- [ ] `vitest.rls.config.ts` is an empty lane (`passWithNoTests`) kept for
-      parity. Either write a live-stack test for the factories or delete it.
+- [x] `packages/db` now has mocked unit tests for the client/server
+      factories (`src/client/index.test.ts`, `src/server/index.test.ts`),
+      covering schema/cookie pass-through, the admin client's disabled
+      session persistence, and `createDb`'s connection caching — no live DB.
+      `vitest.rls.config.ts` was deleted (with its `test:rls` script and the
+      stale CI comment example): the RLS persona suite stayed in DevDogsUGA
+      per the note above, so there was never going to be a live-DB suite of
+      this package's own to grow into that lane.
 - [ ] Verify the publish pipeline end-to-end on the first real push. It has
       **never executed** — no remote exists — and
       `scripts/publish-changed-packages.mjs` documents its own v1 limitations

@@ -4,8 +4,8 @@ name: CI
 # never runs a service (see README, "What this repo is"), so nothing here
 # needs a credential to prove it works. Every package's `test` script is
 # expected to be credential-free by construction; a script that genuinely
-# needs a live service (e.g. `@devdogsuga/db`'s `test:rls`) is named
-# something other than `test` for exactly that reason and is NOT run here.
+# needs a live service is named something other than `test` for exactly
+# that reason and is NOT run here.
 #
 # INERT UNTIL A REMOTE EXISTS. This workflow is authored ahead of the GitHub
 # remote and the `@devdogsuga` npm org being claimed (see the parent plan,

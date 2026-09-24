@@ -36,7 +36,6 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:rls": "vitest run --config vitest.rls.config.ts",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {

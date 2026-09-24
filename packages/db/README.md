@@ -74,5 +74,9 @@ decides where its `database.types.ts` lives.
   `@devdogsuga/db/client` to key its own map's values.
 - The RLS persona test suite (`packages/supabase/testing/**`) — exercises
   DevDogsUGA's actual business schema (`profile`, `reports`, moderation
-  policy, attendance, …), not this package's own code. See
-  `vitest.rls.config.ts` for the cutover note.
+  policy, attendance, …), not this package's own code. It stays in
+  DevDogsUGA, retargeted to import its clients from `@devdogsuga/db/client`
+  and `@devdogsuga/db/server`. This package's own client/server factories are
+  covered by mocked unit tests in `src/client/index.test.ts` and
+  `src/server/index.test.ts` instead; there is no live-DB lane here (the
+  `vitest.rls.config.ts` placeholder was deleted once that became clear).
