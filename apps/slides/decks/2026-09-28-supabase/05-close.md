@@ -13,7 +13,7 @@ subtitle: See you Wednesday for the next build session
 layout: qr
 accent: cyan
 chip: DISCORD
-src: /qr/discord.svg
+qrSrc: /qr/discord.svg
 label: Discord
 caption: Questions, help, and Wednesday dev sessions
 ---
@@ -24,7 +24,7 @@ caption: Questions, help, and Wednesday dev sessions
 layout: qr
 accent: cyan
 chip: DEVDOGSUGA.ORG
-src: /qr/devdogsuga-org.svg
+qrSrc: /qr/devdogsuga-org.svg
 label: devdogsuga.org
 caption: Sign in, join a team, browse the competition
 ---

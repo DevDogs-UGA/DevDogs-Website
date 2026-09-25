@@ -51,6 +51,17 @@ body {
   letter-spacing: -0.01em;
 }
 
+/* Slidev's own base styles hardcode `<p>` to a fixed line-height (1.5rem,
+   via its `leading-6` utility) no matter the paragraph's own font-size.
+   That's fine at body-copy sizes, but any layout that renders markdown
+   body text at a bigger size (`statement`'s text-4xl, for one) ends up
+   with a line-height *smaller* than the text itself, so wrapped lines
+   overlap instead of stacking. Use a relative line-height instead, so it
+   scales with whatever font-size the paragraph actually has. */
+.slidev-layout p {
+  line-height: 1.5;
+}
+
 .slidev-layout h1 {
   color: var(--accent);
 }

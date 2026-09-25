@@ -58,6 +58,11 @@ const showMobile = computed(() => track.value !== 'web')
   font-family: 'Alan Sans', 'Hanken Grotesk', sans-serif;
   font-weight: 800;
   font-size: 3rem;
+  /* Explicit, generous line-height: without it this inherits something
+     far too tight (measured 0.5x font-size), so the second line of a
+     wrapped half (e.g. the "DogPack sits here" side, which wraps in its
+     narrower column) collides with the line above it. */
+  line-height: 1.3;
   color: var(--accent);
 }
 

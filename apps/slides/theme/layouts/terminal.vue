@@ -2,18 +2,26 @@
 // Terminal / shell-output slide. Put a fenced ```bash (or similar) block in
 // the default slot; it's rendered inside a faux terminal window chrome.
 // The titlebar shows `file` when given (a real file path, e.g.
-// `file: supabase/migrations/0002_profiles.sql`), else falls back to `title`
-// (any freeform titlebar text, e.g. "supabase dashboard → SQL editor").
-// Frontmatter: accent, file, title (default "shell"), chip, chrome, wash
+// `file: supabase/migrations/0002_profiles.sql`), else falls back to
+// `titlebar` (any freeform titlebar text, e.g. "supabase dashboard → SQL
+// editor").
+// Frontmatter: accent, file, titlebar (default "shell"), chip, chrome, wash
 // (see LAYOUTS.md)
 //   ---
 //   layout: terminal
 //   accent: emerald
-//   title: supabase dashboard → SQL editor
+//   titlebar: supabase dashboard → SQL editor
 //   ---
 //   ```sql
 //   select * from messages;
 //   ```
+//
+// NOTE: this frontmatter key is `titlebar`, not `title` -- Slidev reserves
+// plain `title` on a slide's frontmatter for its own slide-title metadata
+// (table of contents, browser tab, etc.) and never forwards it as a prop to
+// the layout component, so a `title: ...` here would silently render as the
+// "shell" default instead. Same class of gotcha as the `qr` layout's
+// `qrSrc` (see that layout and the git log for how this was found).
 import { computed } from 'vue'
 import { accentHex } from '../accents'
 import Wash from '../components/Wash.vue'
@@ -22,28 +30,28 @@ import Chrome from '../components/Chrome.vue'
 const props = withDefaults(defineProps<{
   accent?: string
   file?: string
-  title?: string
+  titlebar?: string
   chip?: string
   chrome?: boolean
   wash?: 'site' | 'template'
 }>(), {
   accent: undefined,
   file: undefined,
-  title: 'shell',
+  titlebar: 'shell',
   chip: undefined,
   chrome: true,
   wash: undefined,
 })
 
 const style = computed(() => ({ '--accent': accentHex(props.accent) }))
-const titlebarText = computed(() => props.file ?? props.title)
+const titlebarText = computed(() => props.file ?? props.titlebar)
 </script>
 
 <template>
   <div class="slidev-layout dd-terminal relative overflow-hidden" :style="style">
     <Wash :accent="accent" :wash="wash" />
     <Chrome v-if="chrome" :accent="accent" :chip="chip" />
-    <div class="dd-content h-full flex flex-col justify-center">
+    <div class="dd-content dd-terminal-content h-full flex flex-col justify-center">
       <div class="dd-terminal-window">
         <div class="dd-terminal-titlebar">
           <span class="dd-terminal-dot" style="background:#FF6467" />
@@ -60,6 +68,19 @@ const titlebarText = computed(() => props.file ?? props.title)
 </template>
 
 <style scoped>
+.dd-terminal-content {
+  /* Centering (`justify-center`) only clears the top-left DevDogs mark by
+     coincidence, when the window is short enough that its natural centered
+     top edge falls below the mark. A long code block (a big SQL migration,
+     say) can center itself close enough to the top that the window's
+     titlebar renders underneath the mark instead. This floor guarantees
+     clearance regardless of content height -- same fix as dual-code's
+     `dd-dual-code-content` padding. If a code block is still too tall to
+     fit under this, split it across two slides rather than shrinking the
+     font (see LAYOUTS.md's Gotchas). */
+  padding-top: 1.5rem;
+}
+
 .dd-terminal-window {
   border-radius: 0.75rem;
   overflow: hidden;

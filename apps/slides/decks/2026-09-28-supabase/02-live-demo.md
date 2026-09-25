@@ -13,7 +13,7 @@ chip: LIVE DEMO
 layout: terminal
 accent: emerald
 chip: CLONE
-title: clone + switch
+titlebar: clone + switch
 ---
 
 <Track web>
@@ -102,12 +102,12 @@ create policy "messages are readable by everyone"
 layout: dual-code
 accent: emerald
 chip: CODE
-title: From in-memory to Supabase
+heading: From in-memory to Supabase
 leftFile: components/Guestbook.tsx
 rightFile: lib/guestbook.dart
 ---
 
-```md magic-move
+````md magic-move
 ```ts
 const [entries, setEntries] = useState<Entry[]>([]);
 ```
@@ -122,11 +122,11 @@ useEffect(() => {
     .then(({ data }) => setMessages(data ?? []));
 }, []);
 ```
-```
+````
 
 ::right::
 
-```md magic-move
+````md magic-move
 ```dart
 List<Entry> _entries = [];
 ```
@@ -141,7 +141,7 @@ Future<void> _loadMessages() async {
   setState(() => _messages = List<Map<String, dynamic>>.from(rows));
 }
 ```
-```
+````
 
 <!-- Presenter notes: Magic Move animates useState (in-memory) into the Supabase query. Demo tag: demo/01-read. Recovery: `git switch --detach --discard-changes demo/01-read`. -->
 
@@ -159,18 +159,21 @@ chip: STEP 2
 layout: dual-code
 accent: emerald
 chip: CODE
-title: Sign in / sign out
+heading: Sign in / sign out
 leftFile: components/Guestbook.tsx
 rightFile: lib/guestbook.dart
 ---
 
-```ts {2|3-6|all}
+```ts {2|3-9|all}
 function signIn() {
   supabase.auth.signInWithOAuth({
-    // auth-js's Provider type only lists Supabase's built-in providers,
-    // so a custom OIDC provider like ours needs a cast to satisfy it.
+    // auth-js's Provider type only lists Supabase's
+    // own providers, so a custom OIDC provider like
+    // ours needs a cast to satisfy it.
     provider: "custom:devdogsuga" as never,
-    options: { redirectTo: window.location.origin + "/guestbook" },
+    options: {
+      redirectTo: window.location.origin + "/guestbook",
+    },
   });
 }
 ```
@@ -202,7 +205,7 @@ chip: STEP 3
 layout: terminal
 accent: emerald
 chip: SQL
-title: supabase dashboard → SQL editor
+titlebar: supabase dashboard → SQL editor
 ---
 
 ```sql
@@ -219,13 +222,14 @@ create policy "authenticated users can insert their own messages"
 layout: dual-code
 accent: emerald
 chip: CODE
-title: Naive insert — client sends its own name
+heading: Naive insert — client sends its own name
 leftFile: components/Guestbook.tsx
 rightFile: lib/guestbook.dart
 ---
 
-```ts {1-6|8-12}
-// Naive version: we trust the client to tell us its own display name.
+```ts {1-7|9-16}
+// Naive version: we trust the client for its own
+// display name.
 const authorName =
   session.user.user_metadata.name ??
   session.user.user_metadata.full_name ??
@@ -234,17 +238,23 @@ const authorName =
 
 const { data, error } = await supabase
   .from("messages")
-  .insert({ body: body.trim(), author_name: authorName })
+  .insert({
+    body: body.trim(),
+    author_name: authorName,
+  })
   .select("id, user_id, author_name, body, created_at")
   .single();
 ```
 
 ::right::
 
-```dart {1-2}
-// Naive version: same body, same trust problem -- mobile doesn't send
-// its own author_name at all in this workshop, so there's nothing to spoof.
-await _supabase.from('messages').insert({'body': body});
+```dart {1-3}
+// Naive version: same trust problem -- mobile never
+// sends author_name at all, so there's nothing here
+// to spoof.
+await _supabase
+    .from('messages')
+    .insert({'body': body});
 ```
 
 <!-- Presenter notes: Highlight the authorName lookup -- it reads straight off the client's own session data, which the client fully controls. -->
@@ -295,7 +305,18 @@ create policy "profiles are readable by everyone"
   for select
   to anon, authenticated
   using (true);
+```
 
+<!-- Presenter notes: This migration is long, so it's split across three slides -- same file, no new SQL editor paste in between. Same shape as the messages table: create, RLS on, one read-for-everyone policy. -->
+
+---
+layout: terminal
+accent: emerald
+chip: SQL
+file: supabase/migrations/20260928000100_profiles.sql
+---
+
+```sql
 create function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -316,7 +337,18 @@ begin
   return new;
 end;
 $$;
+```
 
+<!-- Presenter notes: Walk through the trigger function here: security definer + empty search_path so it can write to profiles even though the signed-in user has no write policy there, and can't be tricked by a planted function. The name comes from the first of name, full_name, preferred_username, or the email prefix. -->
+
+---
+layout: terminal
+accent: emerald
+chip: SQL
+file: supabase/migrations/20260928000100_profiles.sql
+---
+
+```sql
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
@@ -339,49 +371,63 @@ alter table public.messages
 alter table public.messages drop column author_name;
 ```
 
-<!-- Presenter notes: Walk through the trigger: security definer + empty search_path so it can write to profiles even though the signed-in user has no write policy there, and can't be tricked by a planted function. The name comes from the first of name, full_name, preferred_username, or the email prefix. -->
+<!-- Presenter notes: Second half of the same migration -- the trigger hookup, a backfill for anyone who signed up before this migration existed, and the schema change that finally removes the naive author_name column now that profiles(name) covers it. -->
 
 ---
 layout: dual-code
 accent: emerald
 chip: CODE
-title: The client can no longer lie
+heading: The client can no longer lie
 leftFile: components/Guestbook.tsx
 rightFile: lib/guestbook.dart
 ---
 
-```md magic-move
+````md magic-move
 ```ts
 const { data, error } = await supabase
   .from("messages")
-  .insert({ body: body.trim(), author_name: authorName })
-  .select("id, user_id, author_name, body, created_at")
+  .insert({
+    body: body.trim(),
+    author_name: authorName,
+  })
+  .select(
+    "id, user_id, author_name, body, created_at",
+  )
   .single();
 ```
 ```ts
-// The name is looked up server-side from public.profiles (set once, at
-// sign-up) -- we never send it from the client.
+// The name is looked up server-side, from
+// public.profiles (set once at sign-up) --
+// we never send it from the client.
 const { data, error } = await supabase
   .from("messages")
   .insert({ body: body.trim() })
-  .select("id, user_id, body, created_at, profiles(name)")
+  .select(
+    "id, user_id, body, created_at, profiles(name)",
+  )
   .single();
 ```
-```
+````
 
 ::right::
 
-```md magic-move
+````md magic-move
 ```dart
-await _supabase.from('messages').insert({'body': body});
+await _supabase
+    .from('messages')
+    .insert({'body': body});
 ```
 ```dart
-// The name is looked up server-side from public.profiles.
-await _supabase.from('messages').insert({'body': body});
-// (unchanged here -- mobile never sent author_name to begin with; the
-// win is entirely in the select below.)
+// The name is looked up server-side, from
+// public.profiles.
+await _supabase
+    .from('messages')
+    .insert({'body': body});
+// (unchanged here -- mobile never sent author_name
+// to begin with; the win is entirely in the select
+// below.)
 ```
-```
+````
 
 <!-- Presenter notes: The insert drops author_name entirely -- the column doesn't exist anymore. Point out `profiles(name)` in the select: PostgREST embeds the related row through the new foreign key in one query. -->
 
@@ -409,7 +455,7 @@ chip: STEP 5
 layout: terminal
 accent: emerald
 chip: SQL
-title: supabase dashboard → SQL editor
+titlebar: supabase dashboard → SQL editor
 ---
 
 ```sql
@@ -426,29 +472,39 @@ create policy "authenticated users can delete their own messages"
 layout: dual-code
 accent: emerald
 chip: CODE
-title: Only your own delete button
+heading: Only your own delete button
 leftFile: components/Guestbook.tsx
 rightFile: lib/guestbook.dart
 ---
 
-```ts {1-4|6}
+```ts {1-9|11}
 async function handleDelete(id: string) {
-  const { error } = await supabase.from("messages").delete().eq("id", id);
+  const { error } = await supabase
+    .from("messages")
+    .delete()
+    .eq("id", id);
   if (!error) {
-    setMessages(messages.filter((message) => message.id !== id));
+    setMessages(
+      messages.filter((message) => message.id !== id),
+    );
   }
 }
-// session?.user.id === message.user_id gates whether the button renders
+// session?.user.id === message.user_id gates
+// whether the button renders
 ```
 
 ::right::
 
-```dart {1-3|5}
+```dart {1-6|8-9}
 Future<void> _delete(String id) async {
-  await _supabase.from('messages').delete().eq('id', id);
+  await _supabase
+      .from('messages')
+      .delete()
+      .eq('id', id);
   await _loadMessages();
 }
-// session?.user.id == message['user_id'] gates whether the icon renders
+// session?.user.id == message['user_id'] gates
+// whether the icon renders
 ```
 
 <!-- Presenter notes: The delete button only renders for your own rows client-side, but the real guard is the RLS policy -- try deleting someone else's id from devtools/curl and Postgres refuses it regardless of what the UI shows. -->

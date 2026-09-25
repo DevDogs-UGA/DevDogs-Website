@@ -11,7 +11,7 @@
 // versa. With no track set (e.g. the PDF export), both columns show, same
 // as before.
 //
-// Frontmatter: accent, title (optional heading rendered above both
+// Frontmatter: accent, heading (optional heading rendered above both
 // columns — use this instead of a markdown `#` so it doesn't get trapped
 // inside the left slot), leftLabel (default "Next.js"), rightLabel
 // (default "Flutter"), leftFile/rightFile (file path shown in each column's
@@ -20,7 +20,7 @@
 //   ---
 //   layout: dual-code
 //   accent: emerald
-//   title: Sign in
+//   heading: Sign in
 //   leftFile: components/Guestbook.tsx
 //   rightFile: lib/guestbook.dart
 //   ---
@@ -33,6 +33,13 @@
 //   ```dart
 //   await supabase.auth.signInWithOAuth(...);
 //   ```
+//
+// NOTE: this frontmatter key is `heading`, not `title` -- Slidev reserves
+// plain `title` on a slide's frontmatter for its own slide-title metadata
+// and never forwards it as a prop to the layout component, so a
+// `title: ...` here silently renders nothing (same gotcha as the `qr`
+// layout's `qrSrc` and the `terminal` layout's `titlebar` -- see those and
+// the git log for how this was found).
 import { computed } from 'vue'
 import { accentHex } from '../accents'
 import Wash from '../components/Wash.vue'
@@ -41,7 +48,7 @@ import { track } from '../lib/track'
 
 const props = withDefaults(defineProps<{
   accent?: string
-  title?: string
+  heading?: string
   leftLabel?: string
   rightLabel?: string
   leftFile?: string
@@ -51,7 +58,7 @@ const props = withDefaults(defineProps<{
   wash?: 'site' | 'template'
 }>(), {
   accent: undefined,
-  title: undefined,
+  heading: undefined,
   leftLabel: 'Next.js',
   rightLabel: 'Flutter',
   leftFile: undefined,
@@ -73,8 +80,8 @@ const showRight = computed(() => track.value !== 'web')
   <div class="slidev-layout dd-dual-code relative overflow-hidden" :style="style">
     <Wash :accent="accent" :wash="wash" />
     <Chrome v-if="chrome" :accent="accent" :chip="chip" />
-    <div class="dd-content h-full flex flex-col">
-      <h2 v-if="title" class="dd-dual-code-heading">{{ title }}</h2>
+    <div class="dd-content dd-dual-code-content h-full flex flex-col">
+      <h2 v-if="heading" class="dd-dual-code-heading">{{ heading }}</h2>
       <div
         class="grid gap-4 flex-1 min-h-0"
         :style="{ gridTemplateColumns: showLeft && showRight ? '1fr 1fr' : '1fr' }"
@@ -103,6 +110,15 @@ const showRight = computed(() => track.value !== 'web')
 </template>
 
 <style scoped>
+.dd-dual-code-content {
+  /* Unlike every other layout (which centers its content vertically, so
+     it naturally clears the top-left DevDogs mark), this one stretches
+     its two windows full-height from the very top of the slide -- without
+     this padding the left window's titlebar renders right underneath the
+     mark and the two overlap. */
+  padding-top: 4rem;
+}
+
 .dd-dual-code-heading {
   margin-bottom: 1rem;
 }

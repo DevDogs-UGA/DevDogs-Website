@@ -200,16 +200,19 @@ caption: "Client → Supabase → Postgres"
 window with a titlebar (matching `terminal`'s chrome) showing that
 column's file path. Built on Slidev's named-slot convention (same
 mechanism as the built-in `two-cols` layout).
-- Frontmatter: `accent`, `title` (optional — renders a heading **above**
+- Frontmatter: `accent`, `heading` (optional — renders a heading **above**
   both columns; use this instead of a markdown `#`, because a `#` at the
-  top of the slide body lands inside the *left* column only), `leftLabel`
-  (default `"Next.js"`), `rightLabel` (default `"Flutter"`), `leftFile` /
-  `rightFile` (file path shown in each column's titlebar, optional)
+  top of the slide body lands inside the *left* column only. **Must be
+  `heading`, not `title`** — see the Gotchas note on Slidev's reserved
+  `title:` frontmatter key), `leftLabel` (default `"Next.js"`),
+  `rightLabel` (default `"Flutter"`), `leftFile` / `rightFile` (file path
+  shown in each column's titlebar, optional)
 - Slots: default = left column (Next.js), `right` = right column
   (Flutter). Use Shiki line-highlight (`` ```ts {1-3|4} ``), click-through
-  steps (`` ```ts {1-3|5|all} ``), or a ` ```md magic-move ` block per
-  Slidev's normal code-block syntax in either column — both render inside
-  the window chrome with no extra setup.
+  steps (`` ```ts {1-3|5|all} ``), or a ` ````md magic-move ` block (four
+  backticks for the wrapper — see the Gotchas note) per Slidev's normal
+  code-block syntax in either column — both render inside the window
+  chrome with no extra setup.
 - **Track mode** (see below): when `?track=web` or `?track=mobile` is
   set, only the matching column shows, full width. With no track set —
   including the PDF export — both columns show, same as before.
@@ -217,7 +220,7 @@ mechanism as the built-in `two-cols` layout).
 ---
 layout: dual-code
 accent: emerald
-title: Sign in
+heading: Sign in
 leftFile: components/Guestbook.tsx
 rightFile: lib/guestbook.dart
 ---
@@ -239,13 +242,14 @@ bash for CLI-less contexts) rendered inside a faux terminal/window chrome.
 Same click-through/Magic Move support as `dual-code`.
 - Frontmatter: `accent`, `file` (a real file path shown in the titlebar,
   e.g. `supabase/migrations/0002_profiles.sql` — takes priority over
-  `title` when both are set), `title` (freeform titlebar text, default
-  `"shell"`)
+  `titlebar` when both are set), `titlebar` (freeform titlebar text,
+  default `"shell"`. **Must be `titlebar`, not `title`** — see the
+  Gotchas note on Slidev's reserved `title:` frontmatter key)
 ```md
 ---
 layout: terminal
 accent: emerald
-title: supabase dashboard → SQL editor
+titlebar: supabase dashboard → SQL editor
 ---
 
 ```sql
@@ -285,16 +289,18 @@ the same tab), not just the first page load. See `theme/lib/track.ts`.
 
 ### `qr`
 Big centered QR + caption. Use for the attendance/Discord/exit slides.
-`src` must point at a file under `public/qr/` (served at `/qr/...`) —
-`/qr/attendance.svg` and `/qr/discord.svg` already exist.
-- Frontmatter: `accent`, `src` (required), `caption` (optional), `label`
+`qrSrc` must point at a file under `public/qr/` (served at `/qr/...`) —
+`/qr/attendance.svg` and `/qr/discord.svg` already exist. **Must be
+`qrSrc`, not `src`** — see the Gotchas note on Slidev's reserved `src:`
+frontmatter key.
+- Frontmatter: `accent`, `qrSrc` (required), `caption` (optional), `label`
   (small kicker above the code, optional)
 - Slot: default — optional extra copy under the caption
 ```md
 ---
 layout: qr
 accent: cyan
-src: /qr/attendance.svg
+qrSrc: /qr/attendance.svg
 label: Attendance
 caption: Scan to check in
 ---
@@ -404,6 +410,17 @@ row dividers). Source of truth for all of these is `theme/accents.ts`
   `layout:`) gets merged as an *override* onto every slide the fragment
   contains, clobbering that fragment's own per-slide `accent`/`layout`.
   Set `accent`/`layout` inside the fragment file itself, per slide.
+- **Slidev reserves `src:` on any slide's frontmatter** to mean "import
+  this slide's content from another markdown file" (that's what the
+  master deck's own `---\nsrc: ./2026-09-28-supabase/NN-name.md\n---`
+  blocks do). If the imported path doesn't resolve to a markdown file,
+  Slidev logs an import error internally and **silently drops the whole
+  slide** — no error surfaces in the browser or dev-server log, it just
+  isn't in the deck. This is why the `qr` layout's own frontmatter key is
+  `qrSrc`, not `src`: a `qr` slide written with `src: /qr/foo.svg` looks
+  fine in the markdown but vanishes from the rendered deck, because
+  Slidev tries (and fails) to import `/qr/foo.svg` as a slide. Never name
+  a layout's own frontmatter prop `src`.
 - **The master deck's first frontmatter block is `hide: true`.** It only
   carries deck-wide headmatter (`theme`, `fonts`, `background`,
   `colorSchema`, ...) and is not a real slide — don't remove `hide: true`
@@ -416,7 +433,27 @@ row dividers). Source of truth for all of these is `theme/accents.ts`
   fragment file.
 - **Dual-code heading.** Don't put a markdown `#`/`##` at the very top of
   a `dual-code` slide's body — it becomes part of the *left* column only.
-  Use the `title` frontmatter prop for a heading that spans both columns.
+  Use the `heading` frontmatter prop for a heading that spans both
+  columns.
+- **Slidev reserves `title:` on any slide's frontmatter** for its own
+  slide-title metadata (table of contents, browser tab, presenter view) —
+  it's parsed into `slide.title` and never forwarded as a prop to the
+  layout component. A layout whose own prop is named `title` silently
+  gets `undefined` for it: `terminal` falls back to its default titlebar
+  text ("shell") and `dual-code` just never renders its heading, with no
+  error anywhere. This is why those two layouts' own frontmatter keys are
+  `titlebar` and `heading` respectively, not `title`. Never name a
+  layout's own frontmatter prop `title`.
+- **Magic Move's wrapper fence needs 4 backticks, not 3.** A
+  ` ```md magic-move ` block containing normal ` ```ts `/` ```dart `
+  code fences only parses correctly if the *outer* fence has more
+  backticks than anything nested inside it — plain Markdown fences don't
+  nest by themselves. Write it as ` ````md magic-move ` (four backticks)
+  wrapping the inner triple-backtick blocks. Get this wrong and the whole
+  block — including the inner fence markers — renders as inert plain
+  text, with no error anywhere (the built-in reference doc at
+  `@slidev/cli/skills/slidev/references/code-magic-move.md` says as much,
+  easy to miss).
 - **Fonts** are loaded via the master deck's `fonts:` headmatter (Google
   Fonts), not per-fragment — don't re-declare `fonts:` in fragment files.
 - **`pnpm build` / `pnpm dev`** run from `apps/slides/` (see

@@ -54,10 +54,21 @@ chip: ENTER
 - Turn on **GitHub 2FA** (Settings → Password and authentication) — required before any team action
 - Get on a team at **devdogsuga.org/teams**
 - Pick an issue from the Competitions project
+
+<!-- Presenter notes: Callouts to say out loud: get 2FA on tonight, before the mixer ends -- it blocks every team action. -->
+
+---
+layout: numbered-list
+accent: red
+chip: ENTER
+---
+
+# Enter the competition
+
 - Work on your team's branch, **`team/<slug>`**
 - Open an **early draft** pull request into `main` that links the issue — `Closes #123`
 
-<!-- Presenter notes: Callouts to say out loud: stars only count if your entry PR opened before the issue closed, so open the draft PR early rather than waiting until it's polished. Get 2FA on tonight, before the mixer ends — it blocks every team action. -->
+<!-- Presenter notes: Stars only count if your entry PR opened before the issue closed, so open the draft PR early rather than waiting until it's polished. -->
 
 ---
 layout: bullets-card
@@ -87,14 +98,14 @@ pnpm dev
 layout: dual-code
 accent: red
 chip: CONFLICTS
-title: A conflict, then resolved
+heading: A conflict, then resolved
 leftFile: components/Feature.tsx
 rightFile: components/Feature.tsx
 leftLabel: Before
 rightLabel: After
 ---
 
-```md magic-move
+````md magic-move
 ```ts
 <<<<<<< HEAD
 export const greeting = "Hello from main";
@@ -105,7 +116,7 @@ export const greeting = "Hi from our branch";
 ```ts
 export const greeting = "Hi from our branch";
 ```
-```
+````
 
 ::right::
 

@@ -37,10 +37,19 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
   <div class="slidev-layout dd-numbered-list-layout relative overflow-hidden" :style="style">
     <Wash :accent="accent" :wash="wash" />
     <Chrome v-if="chrome" :accent="accent" :chip="chip" />
-    <div class="dd-content h-full flex flex-col justify-center">
+    <div class="dd-content dd-numbered-list-content h-full flex flex-col justify-center">
       <NumberedListBody>
         <slot />
       </NumberedListBody>
     </div>
   </div>
 </template>
+
+<style scoped>
+.dd-numbered-list-content {
+  /* A long list (5+ rows) centers close enough to the top that its
+     heading can render underneath the DevDogs mark -- same fix as
+     `terminal`/`dual-code`, see their notes. */
+  padding-top: 1.5rem;
+}
+</style>
