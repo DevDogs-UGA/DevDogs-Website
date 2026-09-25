@@ -276,6 +276,16 @@ select * from messages;
 ```
 ```
 
+## Colour meanings (Supabase deck, 2026-09-25)
+
+| Colour | Means |
+|---|---|
+| `emerald` | SQL, run in the Supabase Dashboard |
+| `purple` / `sky` | Next.js / Flutter code (automatic on `dual-code` splits and `<Track>`) |
+| `amber` | Shell commands (and the events slide) |
+| `indigo` | The feature-competition section |
+| `rose` | Everything else: agenda, section intros, wrap-up |
+
 ## Code colours
 
 Code slides say what kind of code they hold by colour:

@@ -9,6 +9,10 @@ export const ACCENTS = {
   // Tailwind sky-400. Not a template accent: it marks Flutter code, beside
   // purple for Next.js (see TRACK_ACCENT in lib/track.ts).
   sky: '#00BCFF',
+  // Tailwind rose-400: general slides (agenda, section intros, wrap-up).
+  rose: '#FF637E',
+  // Tailwind indigo-400: the feature-competition section.
+  indigo: '#7C86FF',
 } as const
 
 export type AccentName = keyof typeof ACCENTS

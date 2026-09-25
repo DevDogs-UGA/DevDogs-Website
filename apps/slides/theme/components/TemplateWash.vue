@@ -13,8 +13,8 @@ import amber from '../assets/template-wash/amber.png'
 import emerald from '../assets/template-wash/emerald.png'
 import red from '../assets/template-wash/red.png'
 
-// The template has no sky background; cyan is the nearest.
-const IMAGES: Record<AccentName, string> = { purple, cyan, amber, emerald, red, sky: cyan }
+// The template has no sky, rose or indigo background; use the nearest.
+const IMAGES: Record<AccentName, string> = { purple, cyan, amber, emerald, red, sky: cyan, rose: red, indigo: purple }
 
 const props = withDefaults(defineProps<{ accent?: string }>(), { accent: undefined })
 

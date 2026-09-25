@@ -13,6 +13,8 @@ export default defineConfig({
         emerald: '#00D492',
         red: '#FF6467',
         sky: '#00BCFF',
+        rose: '#FF637E',
+        indigo: '#7C86FF',
       },
       dd: {
         bg: '#0c090c',
