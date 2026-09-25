@@ -203,9 +203,10 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
   white-space: nowrap;
 }
 
+/* The space before the mark is the text's own; the gap after it keeps the
+   icon from touching the name. */
 .dd-preshow-mark {
-  margin-left: 0.35em;
-  margin-right: 0.05em;
+  margin-right: 0.2em;
 }
 
 .dd-preshow-brand {
