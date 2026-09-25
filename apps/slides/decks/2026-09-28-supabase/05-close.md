@@ -1,34 +1,24 @@
 ---
 layout: closing
-accent: cyan
+accent: rose
 chip: NEXT UP
 subtitle: See you Wednesday for the next build session
 ---
 
 # Before you go
 
-<!-- Presenter notes: Wrap-up — thank everyone, point at the two QR codes coming up, remind them the competition closes Oct 5. -->
+::footer::
 
----
-layout: qr
-accent: cyan
-chip: DISCORD
-qrSrc: /qr/discord.svg
-label: Discord
-caption: Questions, help, and Wednesday dev sessions
----
+<div class="dd-close-qr-row">
+  <QRSlot src="/qr/discord.svg" label="Discord" caption="Questions, help, and Wednesday dev sessions" accent="rose" compact />
+  <QRSlot src="/qr/devdogsuga-org.svg" label="devdogsuga.org" caption="Sign in, join a team, browse the competition" accent="rose" compact />
+</div>
 
-<!-- Presenter notes: Discord is where competition help happens all week — plug it before people leave. -->
+<p class="dd-close-contact">devdogsuga.org &middot; @devdogsuga &middot; devdogs@uga.edu</p>
 
----
-layout: qr
-accent: cyan
-chip: DEVDOGSUGA.ORG
-qrSrc: /qr/devdogsuga-org.svg
-label: devdogsuga.org
-caption: Sign in, join a team, browse the competition
----
-
-devdogsuga.org · @devdogsuga · devdogs@uga.edu
-
-<!-- Presenter notes: This QR was generated for tonight with segno (matching the style of the existing attendance/discord codes) since no devdogsuga.org QR existed yet in public/qr -- see the deck's git log if it ever needs regenerating. -->
+<!-- Presenter notes: Wrap-up -- thank everyone, point at the two QR codes
+(Discord and devdogsuga.org), remind them the competition closes Monday
+Oct 5, when the meeting starts. Both QR images are the plain segno-generated
+codes at /qr/discord.svg and /qr/devdogsuga-org.svg -- Sloan is generating
+branded replacements and can drop them in at those same paths with no slide
+edit needed. -->

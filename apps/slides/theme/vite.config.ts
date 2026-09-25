@@ -4,8 +4,12 @@
 // can't import it at runtime.
 import { fileURLToPath } from 'node:url'
 import { snippetsWebhook } from './vite/snippets'
+import { meetingsData } from './vite/meetings'
 
 export default {
   // apps/slides/, where the gitignored .env with the webhook URLs lives.
-  plugins: [snippetsWebhook(fileURLToPath(new URL('..', import.meta.url)))],
+  plugins: [
+    snippetsWebhook(fileURLToPath(new URL('..', import.meta.url))),
+    meetingsData(),
+  ],
 }

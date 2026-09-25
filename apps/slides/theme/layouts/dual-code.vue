@@ -20,7 +20,10 @@
 // doesn't lose a column whenever `?track=` happens to be set from an
 // earlier live-demo slide in the same session), chip, chrome, wash (see
 // LAYOUTS.md)
-// Slots: default (left column, Next.js) and `right` (right column, Flutter)
+// Slots: default (left column, Next.js), `right` (right column, Flutter),
+// and `bottom` (optional -- a full-width callout rendered below both
+// columns, e.g. a caveat that applies to the whole slide rather than one
+// column. Omit it and nothing renders; no empty bar).
 //   ---
 //   layout: dual-code
 //   accent: emerald
@@ -37,6 +40,11 @@
 //   ```dart
 //   await supabase.auth.signInWithOAuth(...);
 //   ```
+//
+//   ::bottom::
+//
+//   > Conflict in `pnpm-lock.yaml`? Don't edit it by hand -- run `pnpm install`
+//   > and commit the result.
 //
 // NOTE: this frontmatter key is `heading`, not `title` -- Slidev reserves
 // plain `title` on a slide's frontmatter for its own slide-title metadata
@@ -129,6 +137,9 @@ const showRight = computed(() => !props.trackSplit || track.value !== 'web')
           </div>
         </div>
       </div>
+      <div v-if="$slots.bottom" class="dd-dual-code-bottom">
+        <slot name="bottom" />
+      </div>
     </div>
   </div>
 </template>
@@ -136,6 +147,28 @@ const showRight = computed(() => !props.trackSplit || track.value !== 'web')
 <style scoped>
 .dd-dual-code-heading {
   margin-bottom: 1rem;
+}
+
+.dd-dual-code-bottom {
+  flex-shrink: 0;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--dd-card-fill);
+  border: 1px solid var(--dd-hairline);
+  font-size: 0.95rem;
+  color: var(--dd-grey-support);
+}
+
+.dd-dual-code-bottom :deep(p),
+.dd-dual-code-bottom :deep(blockquote) {
+  margin: 0;
+}
+
+.dd-dual-code-bottom :deep(blockquote) {
+  padding: 0;
+  border: none;
+  color: inherit;
 }
 
 .dd-dual-code-window {

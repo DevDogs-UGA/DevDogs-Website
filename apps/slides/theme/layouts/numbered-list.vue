@@ -12,6 +12,9 @@
 //   - Small PRs, one feature per branch
 //   - Pull `main` before you start a session
 //   - Run `pnpm install` and commit the lockfile together
+//
+// Nest a plain item under a numbered one for a dimmed sub-line (steps, a
+// caveat) -- see NumberedListBody.vue and LAYOUTS.md.
 import { computed } from 'vue'
 import { accentHex } from '../accents'
 import Wash from '../components/Wash.vue'

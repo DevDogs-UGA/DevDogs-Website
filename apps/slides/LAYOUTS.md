@@ -131,6 +131,21 @@ accent: cyan
 - Pull `main` before you start a session
 - Run `pnpm install` and commit the lockfile together
 ```
+Nest a plain item under a numbered one for a dimmed one-line sub-note
+(steps, a caveat) instead of a new numbered step — it renders smaller, in
+`--dd-grey-support`, with no number and no hairline of its own:
+```md
+---
+layout: numbered-list
+accent: indigo
+---
+
+# Enter the competition
+
+- Turn on **GitHub 2FA**
+  - Settings → Password and authentication → Enable two-factor authentication
+- Get on a team at **devdogsuga.org/teams**
+```
 
 ### `agenda`
 A thin preset of `numbered-list` — same accent-numbered, hairline-divided
@@ -224,7 +239,10 @@ mechanism as the built-in `two-cols` layout).
   steps (`` ```ts {1-3|5|all} ``), or a ` ````md magic-move ` block (four
   backticks for the wrapper — see the Gotchas note) per Slidev's normal
   code-block syntax in either column — both render inside the window
-  chrome with no extra setup.
+  chrome with no extra setup. `bottom` (optional) — a full-width callout
+  rendered below both columns (a card-filled box, hairline border), for
+  something that applies to the whole slide rather than one column (e.g. a
+  gotcha about the exercise). Omit it and nothing renders.
 - **Track mode** (see below): when `?track=web` or `?track=mobile` is
   set, only the matching column shows, full width. With no track set —
   including the PDF export — both columns show, same as before. This
@@ -369,16 +387,30 @@ accent: amber
 ### `closing`
 Exit / "before you go" slide — like `title` but meant to be the last
 content slide (pair it with a `qr` slide right after for attendance/
-Discord).
+Discord, or fold QR codes straight into this one via `footer`).
 - Frontmatter: `accent`, `subtitle`
+- Slots: default (the big heading), `footer` (optional — rendered below
+  the subtitle at normal scale rather than the heading's giant size; a
+  `.dd-close-qr-row` div around a couple of `<QRSlot compact>`s lays them
+  out side by side, and a `.dd-close-contact` paragraph gets the dim
+  secondary-grey contact-line styling)
 ```md
 ---
 layout: closing
-accent: cyan
-subtitle: See you next week
+accent: rose
+subtitle: See you Wednesday for the next build session
 ---
 
-# Thanks for coming
+# Before you go
+
+::footer::
+
+<div class="dd-close-qr-row">
+  <QRSlot src="/qr/discord.svg" label="Discord" caption="Questions and help" accent="rose" compact />
+  <QRSlot src="/qr/devdogsuga-org.svg" label="devdogsuga.org" caption="Sign in, join a team" accent="rose" compact />
+</div>
+
+<p class="dd-close-contact">devdogsuga.org · @devdogsuga · devdogs@uga.edu</p>
 ```
 
 ### `default`
@@ -455,7 +487,12 @@ Auto-imported globally in slide markdown (no `import` needed):
 - **`<QRSlot src="/qr/attendance.svg" caption="Scan to check in"
   accent="cyan" />`** — the QR+caption block the `qr` layout wraps. Use it
   directly if you need a QR code inside a non-`qr` layout (e.g. a slide
-  that's mostly text with a small QR in the corner).
+  that's mostly text with a small QR in the corner, or two side by side on
+  `closing`'s `footer` slot). Extra props: `label` (small kicker above the
+  code — `qr` renders its own instead, at slide scale), `size` (QR image
+  side length, any CSS length, default `14rem`), `compact` (smaller
+  padding/type, for fitting two on one slide instead of one filling the
+  frame).
 - **`<Track web>...</Track>`** / **`<Track mobile>...</Track>`** — see
   "Track mode" above.
 

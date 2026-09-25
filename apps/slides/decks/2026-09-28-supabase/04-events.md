@@ -6,22 +6,24 @@ chip: UPCOMING
 
 # Upcoming meetings
 
-<!--
-Rendered from @devdogsuga/events (getClubConfig()) as of 2026-09-25 —
-meetings after 2026-09-28 18:00 America/New_York, "Production test" titles
-skipped. Only two meetings exist in the committed data past tonight's
-cutoff, so this shows both rather than the ~4 the design note asks for;
-re-run this query closer to the workshop in case more have been added.
+<UpcomingStack />
 
-  meetings after cutoff:
-  2026-09-30T22:00:00Z  Build Session                     DLW 124
-  2026-10-05T22:30:00Z  Workshop: Career Fair Readiness   DLW 110
+<!--
+Same "stack of upcoming nights" component as the platform's own homepage
+(apps/platform/src/components/EventsSection/UpcomingMeetings.tsx), ported to
+this theme as <UpcomingStack> (theme/components/UpcomingStack.vue +
+NextMeetingStrip.vue) instead of hand-typed markdown, which is what used to
+render broken here.
+
+Data comes from @devdogsuga/events (getClubConfig()) via the
+`virtual:dd-meetings` Vite plugin (theme/vite/meetings.ts), filtered to
+meetings after this workshop starts (2026-09-28 18:00 America/New_York),
+cancelled meetings and "Production test" fixtures dropped, soonest first.
+Only two meetings exist in the committed data past tonight's cutoff, so the
+stack shows both rather than the ~3 it's built for -- re-run closer to the
+workshop in case more have been added, no slide edit needed either way.
 -->
 
-### Wed Sep 30 — Build Session
-<Chip type="dev session" /> DLW 124 · 6:00 PM
-
-### Mon Oct 5 — Workshop: Career Fair Readiness
-<Chip type="workshop" /> DLW 110 · 6:30 PM
-
-<!-- Presenter notes: Two real meetings ahead — this Wednesday's build session, and next Monday's career-fair-readiness workshop, which lines up with tonight's competition deadline (Oct 5, 6:30 PM). -->
+<!-- Presenter notes: Two real meetings ahead -- this Wednesday's build
+session, and next Monday's career-fair-readiness workshop, which lines up
+with tonight's competition deadline (Oct 5, when the meeting starts). -->

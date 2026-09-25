@@ -4,6 +4,15 @@
 // auto-numbered in the accent color, with a hairline divider between rows.
 // Pulled out into its own component so neither layout has to duplicate the
 // counter/divider CSS.
+//
+// A dimmed sub-line: nest a plain item under a numbered one for a one-line
+// note underneath it (steps, a caveat, whatever doesn't deserve its own
+// number) --
+//   - Turn on **GitHub 2FA**
+//     - Settings → Password and authentication → Enable two-factor authentication
+// The nested item renders smaller, in `--dd-grey-support`, with no number of
+// its own and no hairline of its own -- a footnote under the row above it,
+// not a new step. See LAYOUTS.md's `numbered-list` section.
 </script>
 
 <template>
@@ -47,5 +56,29 @@
   color: var(--accent);
   font-family: 'Cascadia Code', monospace;
   font-weight: 700;
+}
+
+/* The dimmed sub-line -- a nested <ul>/<li> under a numbered item. Higher
+   specificity than the two rules above (an extra ancestor each), so it wins
+   without needing !important: no number, no hairline, smaller and dimmer. */
+.dd-numbered-list :deep(li) ul {
+  list-style: none;
+  counter-reset: none;
+  padding-left: 0;
+  margin: 0.35em 0 0;
+}
+
+.dd-numbered-list :deep(li) ul li {
+  counter-increment: none;
+  margin-left: 0;
+  padding: 0;
+  border-bottom: none;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--dd-grey-support);
+}
+
+.dd-numbered-list :deep(li) ul li::before {
+  content: none;
 }
 </style>
