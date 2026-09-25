@@ -275,11 +275,16 @@ accent: emerald
 chip: WEB ONLY
 ---
 
-<Track web>
-
 # What's wrong with this?
 
+<Track web>
+
 Open devtools, edit the outgoing request, post as someone else's name.
+
+</Track>
+<Track mobile>
+
+Watch the DogDays screen — we'll break it there. Your Flutter app has the same hole.
 
 </Track>
 
