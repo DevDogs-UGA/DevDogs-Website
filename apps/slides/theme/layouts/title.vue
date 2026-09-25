@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Deck-opening / meeting-title slide.
-// Frontmatter: accent, subtitle
+// Frontmatter: accent, subtitle, chip, chrome, wash (see LAYOUTS.md)
 //   ---
 //   layout: title
 //   accent: emerald
@@ -9,13 +9,21 @@
 //   # Supabase
 import { computed } from 'vue'
 import { accentHex } from '../accents'
+import Wash from '../components/Wash.vue'
+import Chrome from '../components/Chrome.vue'
 
 const props = withDefaults(defineProps<{
   accent?: string
   subtitle?: string
+  chip?: string
+  chrome?: boolean
+  wash?: 'site' | 'template'
 }>(), {
   accent: undefined,
   subtitle: undefined,
+  chip: undefined,
+  chrome: true,
+  wash: undefined,
 })
 
 const style = computed(() => ({ '--accent': accentHex(props.accent) }))
@@ -23,7 +31,8 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
 
 <template>
   <div class="slidev-layout dd-title relative overflow-hidden" :style="style">
-    <div class="dd-corner-wash" />
+    <Wash :accent="accent" :wash="wash" />
+    <Chrome v-if="chrome" :accent="accent" :chip="chip" />
     <div class="dd-edge-bar" />
     <div class="dd-content h-full flex flex-col justify-center pl-6">
       <slot />

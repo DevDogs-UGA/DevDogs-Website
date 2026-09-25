@@ -18,6 +18,10 @@ export default defineConfig({
         panel: '#131317',
         ink: '#f5f5f7',
         muted: '#9a9aa2',
+        // The three template greys — see theme/accents.ts GREYS.
+        support: '#A89EA9',
+        secondary: '#D7D0D7',
+        dim: '#79697B',
       },
     },
     fontFamily: {

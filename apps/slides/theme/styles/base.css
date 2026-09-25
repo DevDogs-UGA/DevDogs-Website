@@ -14,6 +14,15 @@
   --dd-emerald: #00D492;
   --dd-red: #FF6467;
 
+  /* The three template greys, one job each — see theme/accents.ts GREYS. */
+  --dd-grey-support: #A89EA9;
+  --dd-grey-secondary: #D7D0D7;
+  --dd-grey-dim: #79697B;
+
+  /* Card fill + hairline divider, also from the template. */
+  --dd-card-fill: #1D161E;
+  --dd-hairline: #2A212C;
+
   /* Per-slide accent — layouts override this via inline style from the
      `accent` frontmatter prop. Defaults to emerald. */
   --accent: var(--dd-emerald);
@@ -62,17 +71,6 @@ body {
   color: #0a0a0c;
 }
 
-/* Shared corner/edge accent wash, echoing the PPTX layout's embedded PNG
-   glow — a radial gradient in the accent color bleeding in from a corner. */
-.dd-corner-wash {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background: radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--accent) 35%, transparent) 0%, transparent 45%),
-    radial-gradient(circle at 0% 100%, color-mix(in srgb, var(--accent) 18%, transparent) 0%, transparent 40%);
-}
-
 .dd-edge-bar {
   position: absolute;
   inset: 0 auto 0 0;
@@ -84,4 +82,100 @@ body {
 .dd-content {
   position: relative;
   z-index: 1;
+}
+
+/* ── Chrome: DevDogs mark (top-left), GDG footer (bottom-right), and the
+   top-right accent chip. See theme/components/Chrome.vue and Chip.vue. ── */
+
+.dd-chrome-mark {
+  position: absolute;
+  top: 0.4in;
+  left: 0.4in;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dd-chrome-mark img {
+  display: block;
+  height: 1.4rem;
+  width: auto;
+}
+
+.dd-chrome-footer {
+  position: absolute;
+  bottom: 0.4in;
+  right: 0.4in;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.dd-chrome-footer img {
+  display: block;
+  height: 1.7rem;
+  width: auto;
+}
+
+.dd-chrome-footer-lines {
+  line-height: 1.15;
+  text-align: right;
+}
+
+.dd-chrome-footer-lines .dd-line-1 {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 0.7rem;
+  color: var(--dd-ink);
+}
+
+.dd-chrome-footer-lines .dd-line-2 {
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 0.65rem;
+  color: var(--dd-grey-secondary);
+}
+
+/* ── Static site-style blob wash and the template PNG wash fallback. ── */
+
+.dd-wash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* Echoes the site sections' diagonal top/bottom edge cuts, subtly — a slide
+   is a fixed rectangle, so this is one gentle corner rather than the site's
+   per-section slope. */
+.dd-wash-site {
+  clip-path: polygon(0 0, 100% 0, 100% 96%, 0 100%);
+}
+
+.dd-wash-template img {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+
+/* Code-tab text (Shiki code-groups / magic-move tab bars), deck-wide — these
+   just recolor Slidev's own tab chrome and are safe everywhere. */
+:root {
+  --slidev-code-tab-text-color: var(--dd-grey-dim);
+  --slidev-code-tab-active-text-color: var(--dd-ink);
+  --slidev-code-tab-divider: var(--dd-hairline);
+}
+
+/* A highlighted line ({1-3|5}) gets a soft accent-tinted bar; every other
+   line in that same step dims, which is Slidev's own `.slidev-code-dishonored`.
+   Safe deck-wide: it only touches lines Slidev has already marked. */
+.slidev-code .slidev-code-highlighted {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-left: 2px solid var(--accent);
+  margin-left: -2px;
+  padding-left: 2px;
 }

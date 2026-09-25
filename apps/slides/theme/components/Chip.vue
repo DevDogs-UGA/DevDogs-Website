@@ -16,9 +16,15 @@ const TYPE_ACCENT: Record<string, string> = {
 const props = withDefaults(defineProps<{
   type?: string
   color?: string
+  // 'outline' (default) is the low-emphasis pill used inline in prose, e.g.
+  // on the `events` layout. 'solid' is the accent-filled, white-caps-text
+  // pill used for every content slide's top-right corner chip (see the
+  // `chip` frontmatter key and Chrome.vue).
+  variant?: 'outline' | 'solid'
 }>(), {
   type: undefined,
   color: undefined,
+  variant: 'outline',
 })
 
 const hex = computed(() =>
@@ -28,6 +34,14 @@ const hex = computed(() =>
 
 <template>
   <span
+    v-if="variant === 'solid'"
+    class="inline-flex items-center rounded-full px-3.5 py-1.5 text-xs font-700 uppercase tracking-wide text-white"
+    :style="{ background: hex }"
+  >
+    <slot>{{ type }}</slot>
+  </span>
+  <span
+    v-else
     class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-600 uppercase tracking-wide"
     :style="{ color: hex, borderColor: hex, background: `color-mix(in srgb, ${hex} 14%, transparent)`, border: '1px solid' }"
   >

@@ -17,3 +17,16 @@ export function accentHex(name?: string | null): string {
     return ACCENTS[name as AccentName]
   return ACCENTS[DEFAULT_ACCENT]
 }
+
+// The three greys from the template, each with one job. Support is regular
+// body/caption text, secondary is contact-line/footer text, dim is the
+// quietest tier (code comments, card headers).
+export const GREYS = {
+  support: '#A89EA9',
+  secondary: '#D7D0D7',
+  dim: '#79697B',
+} as const
+
+// Card fill and hairline divider, also from the template.
+export const CARD_FILL = '#1D161E'
+export const HAIRLINE = '#2A212C'
