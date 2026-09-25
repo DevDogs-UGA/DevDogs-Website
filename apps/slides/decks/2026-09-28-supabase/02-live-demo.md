@@ -252,13 +252,19 @@ const { data, error } = await supabase
 
 ::right::
 
-```dart {1-3}
-// Naive version: same trust problem -- mobile never
-// sends author_name at all, so there's nothing here
-// to spoof.
-await _supabase
-    .from('messages')
-    .insert({'body': body});
+```dart {1-7|9-12}
+// Naive version: we trust the client for its own
+// display name.
+final metadata = session.user.userMetadata ?? {};
+final authorName = metadata['name'] ??
+    metadata['full_name'] ??
+    session.user.email ??
+    'Anonymous';
+
+await _supabase.from('messages').insert({
+  'body': body,
+  'author_name': authorName,
+});
 ```
 
 <!-- Presenter notes: Highlight the authorName lookup -- it reads straight off the client's own session data, which the client fully controls. -->
@@ -409,7 +415,8 @@ const { data, error } = await supabase
   .select(
     "id, user_id, body, created_at, profiles(name)",
   )
-  .single();
+  .single()
+  .overrideTypes<Message, { merge: false }>();
 ```
 ````
 
@@ -417,23 +424,95 @@ const { data, error } = await supabase
 
 ````md magic-move
 ```dart
-await _supabase
-    .from('messages')
-    .insert({'body': body});
+await _supabase.from('messages').insert({
+  'body': body,
+  'author_name': authorName,
+});
 ```
 ```dart
 // The name is looked up server-side, from
-// public.profiles.
+// public.profiles (set once at sign-up) --
+// we never send it from the client.
 await _supabase
     .from('messages')
     .insert({'body': body});
-// (unchanged here -- mobile never sent author_name
-// to begin with; the win is entirely in the select
-// below.)
 ```
 ````
 
 <!-- Presenter notes: The insert drops author_name entirely -- the column doesn't exist anymore. Point out `profiles(name)` in the select: PostgREST embeds the related row through the new foreign key in one query. -->
+
+---
+layout: dual-code
+accent: emerald
+chip: CODE
+heading: Showing the author's name
+leftFile: components/Guestbook.tsx
+rightFile: lib/guestbook.dart
+---
+
+````md magic-move
+```ts
+supabase
+  .from("messages")
+  .select(
+    "id, user_id, author_name, body, created_at",
+  )
+  .order("created_at", { ascending: false })
+  .then(({ data }) => setMessages(data ?? []));
+
+// …
+<h2>{message.author_name}</h2>
+```
+```ts
+supabase
+  .from("messages")
+  .select(
+    "id, user_id, body, created_at, profiles(name)",
+  )
+  .order("created_at", { ascending: false })
+  // Many-to-one embed: one object, not an array.
+  .overrideTypes<Message[], { merge: false }>()
+  .then(({ data }) => setMessages(data ?? []));
+
+// …
+<h2>{message.profiles?.name ?? "Unknown"}</h2>
+```
+````
+
+::right::
+
+````md magic-move
+```dart
+final rows = await _supabase
+    .from('messages')
+    .select(
+      'id, user_id, author_name, body, created_at',
+    )
+    .order('created_at', ascending: false);
+
+// …
+title: Text(message['author_name'] as String),
+```
+```dart
+final rows = await _supabase
+    .from('messages')
+    .select(
+      'id, user_id, body, created_at, profiles(name)',
+    )
+    .order('created_at', ascending: false);
+
+// …
+// Many-to-one embed: one object (or null),
+// not a list.
+final profile =
+    message['profiles'] as Map<String, dynamic>?;
+final authorName =
+    profile?['name'] as String? ?? 'Unknown';
+title: Text(authorName),
+```
+````
+
+<!-- Presenter notes: `profiles(name)` embeds the author's profile through the new foreign key. Each message has exactly one author, so PostgREST returns a single object (or null), never a list. Without generated types supabase-js guesses an array, which is why web needs overrideTypes. Getting this wrong shows blank names on web and crashes Flutter. Demo tag: demo/04-profiles. -->
 
 ---
 layout: statement
