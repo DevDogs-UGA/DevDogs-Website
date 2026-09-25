@@ -33,6 +33,7 @@ import {
   upsertDevDogsProvider,
   type LocalSupabaseConfig,
 } from "./db.js";
+import { DiscoveryError, fetchIssuer } from "./discovery.js";
 import { recordResolved } from "../invocation.js";
 import { bail, unwrap } from "../ui.js";
 
@@ -205,7 +206,7 @@ export async function runOAuthSetup(baseUrlOverride?: string): Promise<void> {
             {
               value: "new" as const,
               label: "Add a new provider with a different identifier",
-              hint: `e.g. custom:devdogs-staging`,
+              hint: `e.g. custom:devdogsuga-staging`,
             },
           ],
         }),
@@ -228,9 +229,28 @@ export async function runOAuthSetup(baseUrlOverride?: string): Promise<void> {
     }
   }
 
-  // ── Step 6: Upsert custom OAuth provider ───────────────────────────────────
+  // ── Step 6: Discover the issuer ───────────────────────────────────────────
 
-  const issuer = `${baseUrl}/auth/v1`;
+  // Supabase Auth's own OIDC provider refuses to register a custom provider
+  // whose declared issuer disagrees with what ITS discovery document reports
+  // — and that need not be `${baseUrl}/auth/v1`; Supabase may advertise its
+  // project ref host there instead of the custom domain this ran against.
+  // Reading the issuer from discovery, rather than assuming it, is what
+  // keeps this correct either way — see `discovery.ts`'s header.
+  const discoverySpinner = spinner();
+  discoverySpinner.start("Discovering issuer");
+  let issuer: string;
+  try {
+    issuer = await fetchIssuer(baseUrl);
+    discoverySpinner.stop(`Discovered issuer: ${issuer}`);
+  } catch (err) {
+    discoverySpinner.stop("Could not discover the issuer");
+    if (err instanceof DiscoveryError) bail(err.message);
+    throw err;
+  }
+
+  // ── Step 7: Upsert custom OAuth provider ────────────────────────────────
+
   const s = spinner();
   s.start(`Configuring ${identifier}`);
   const row = await upsertDevDogsProvider(localConfig, {
@@ -242,7 +262,7 @@ export async function runOAuthSetup(baseUrlOverride?: string): Promise<void> {
   });
   s.stop(`Configured ${row.identifier} (issuer: ${row.issuer})`);
 
-  // ── Step 7: Persist config to .env.local ───────────────────────────────────
+  // ── Step 8: Persist config to .env.local ───────────────────────────────────
 
   upsertEnvLocal(cwd, {
     [ENV_KEYS.baseUrl]: baseUrl,
@@ -252,7 +272,7 @@ export async function runOAuthSetup(baseUrlOverride?: string): Promise<void> {
   });
   log.success("Credentials saved to .env.local");
 
-  // ── Step 8: Redirect URI registration ────────────────────────────────────
+  // ── Step 9: Redirect URI registration ────────────────────────────────────
 
   const callbackUri = `${localConfig.apiUrl}/auth/v1/callback`;
 
@@ -270,7 +290,7 @@ export async function runOAuthSetup(baseUrlOverride?: string): Promise<void> {
     openBrowser(keysUrl);
   }
 
-  // ── Step 9: Next-steps checklist ──────────────────────────────────────────
+  // ── Step 10: Next-steps checklist ──────────────────────────────────────────
 
   const nextSteps: string[] = [];
   let step = 1;

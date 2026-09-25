@@ -8,7 +8,7 @@ export const WEBSITE_URL = "https://devdogsuga.org";
  * Custom OAuth/OIDC provider identifier. Supabase requires custom provider
  * identifiers to be prefixed with "custom:".
  */
-export const PROVIDER_IDENTIFIER = "custom:devdogs";
+export const PROVIDER_IDENTIFIER = "custom:devdogsuga";
 
 export const PROVIDER_NAME = "DevDogs";
 
