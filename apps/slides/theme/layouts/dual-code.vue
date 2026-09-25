@@ -15,7 +15,11 @@
 // columns — use this instead of a markdown `#` so it doesn't get trapped
 // inside the left slot), leftLabel (default "Next.js"), rightLabel
 // (default "Flutter"), leftFile/rightFile (file path shown in each column's
-// titlebar), chip, chrome, wash (see LAYOUTS.md)
+// titlebar), trackSplit (default true — set `false` for a slide whose two
+// columns aren't the web/mobile split, e.g. a before/after diff, so it
+// doesn't lose a column whenever `?track=` happens to be set from an
+// earlier live-demo slide in the same session), chip, chrome, wash (see
+// LAYOUTS.md)
 // Slots: default (left column, Next.js) and `right` (right column, Flutter)
 //   ---
 //   layout: dual-code
@@ -53,6 +57,7 @@ const props = withDefaults(defineProps<{
   rightLabel?: string
   leftFile?: string
   rightFile?: string
+  trackSplit?: boolean
   chip?: string
   chrome?: boolean
   wash?: 'site' | 'template'
@@ -63,6 +68,7 @@ const props = withDefaults(defineProps<{
   rightLabel: 'Flutter',
   leftFile: undefined,
   rightFile: undefined,
+  trackSplit: true,
   chip: undefined,
   chrome: true,
   wash: undefined,
@@ -71,9 +77,10 @@ const props = withDefaults(defineProps<{
 const style = computed(() => ({ '--accent': accentHex(props.accent) }))
 
 // undefined = show both (no track chosen, or PDF export). Otherwise show
-// only the matching column, full width.
-const showLeft = computed(() => track.value !== 'mobile')
-const showRight = computed(() => track.value !== 'web')
+// only the matching column, full width. Slides with `trackSplit: false`
+// (see NOTE above) always show both, regardless of `?track=`.
+const showLeft = computed(() => !props.trackSplit || track.value !== 'mobile')
+const showRight = computed(() => !props.trackSplit || track.value !== 'web')
 </script>
 
 <template>

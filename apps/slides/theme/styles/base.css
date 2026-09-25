@@ -183,8 +183,15 @@ body {
 
 /* A highlighted line ({1-3|5}) gets a soft accent-tinted bar; every other
    line in that same step dims, which is Slidev's own `.slidev-code-dishonored`.
-   Safe deck-wide: it only touches lines Slidev has already marked. */
-.slidev-code .slidev-code-highlighted {
+   Safe deck-wide: it only touches lines Slidev has already marked.
+   Excludes `.shiki-magic-move-item`: Slidev's `updateCodeHighlightRange`
+   (logic/utils.ts) reruns for magic-move blocks too, and a fenced block with
+   no `{range}` (every magic-move step in this deck) highlights *every* line
+   by default. Magic-move's own tokens are per-word inline-block spans, not
+   per-line blocks, so painting this same border-left/background on each one
+   turned every token into its own little boxed-in fragment instead of one
+   clean highlighted line -- the code looked shredded into vertical bars. */
+.slidev-code .slidev-code-highlighted:not(.shiki-magic-move-item) {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   border-left: 2px solid var(--accent);
   margin-left: -2px;

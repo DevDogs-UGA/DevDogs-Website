@@ -206,7 +206,8 @@ mechanism as the built-in `two-cols` layout).
   `heading`, not `title`** — see the Gotchas note on Slidev's reserved
   `title:` frontmatter key), `leftLabel` (default `"Next.js"`),
   `rightLabel` (default `"Flutter"`), `leftFile` / `rightFile` (file path
-  shown in each column's titlebar, optional)
+  shown in each column's titlebar, optional), `trackSplit` (default
+  `true` — see Track mode below)
 - Slots: default = left column (Next.js), `right` = right column
   (Flutter). Use Shiki line-highlight (`` ```ts {1-3|4} ``), click-through
   steps (`` ```ts {1-3|5|all} ``), or a ` ````md magic-move ` block (four
@@ -215,7 +216,14 @@ mechanism as the built-in `two-cols` layout).
   chrome with no extra setup.
 - **Track mode** (see below): when `?track=web` or `?track=mobile` is
   set, only the matching column shows, full width. With no track set —
-  including the PDF export — both columns show, same as before.
+  including the PDF export — both columns show, same as before. This
+  applies to *every* `dual-code` slide, not just the Next.js/Flutter
+  ones — a slide using the columns for something else entirely (e.g. a
+  before/after diff, `leftLabel: Before` / `rightLabel: After`) still
+  loses a column once `?track=` has been set anywhere earlier in the
+  same tab's session (it's sticky, see Track mode below). Set
+  `trackSplit: false` on that slide's frontmatter to opt it out and
+  always show both columns.
 ```md
 ---
 layout: dual-code

@@ -103,6 +103,7 @@ leftFile: components/Feature.tsx
 rightFile: components/Feature.tsx
 leftLabel: Before
 rightLabel: After
+trackSplit: false
 ---
 
 ````md magic-move

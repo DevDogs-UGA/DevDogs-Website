@@ -136,9 +136,13 @@ List<Map<String, dynamic>> _messages = [];
 Future<void> _loadMessages() async {
   final rows = await _supabase
       .from('messages')
-      .select('id, user_id, author_name, body, created_at')
+      .select(
+        'id, user_id, author_name, body, created_at',
+      )
       .order('created_at', ascending: false);
-  setState(() => _messages = List<Map<String, dynamic>>.from(rows));
+  setState(() {
+    _messages = List<Map<String, dynamic>>.from(rows);
+  });
 }
 ```
 ````
