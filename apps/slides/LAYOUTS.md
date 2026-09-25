@@ -29,10 +29,50 @@ fragment placeholders — keep it when filling them in):
 | Events | amber |
 | Before-you-go / exit | cyan |
 
+## Chrome, chips, and the background wash
+
+Every layout below renders three things automatically, unless you turn
+them off:
+
+- **The background wash.** A dark (`#0a0a0c`) base with a soft accent
+  tint, drawn behind everything else. Two modes, chosen by
+  `themeConfig.wash` in the deck's headmatter (`site` (default) or
+  `template`) or overridden per-slide with a `wash` frontmatter key:
+  - `site` (default) — a static (no parallax, no JS) port of the
+    website's section blob wash (`apps/platform/src/ui/section-background.tsx`
+    and its callers like `HeroSection`/`EventsSection`): five radial
+    gradients, tinted with `color-mix(in srgb, var(--accent) N%,
+    transparent)` so it always matches the slide's own accent, plus a
+    subtle diagonal edge cut echoing the site sections' own slant.
+  - `template` — the pptx deck template's own baked-in background PNG
+    for that accent (one per `purple`/`cyan`/`amber`/`emerald`/`red`,
+    extracted from `Slides Template.pptx`'s `DD_<ACCENT>` slide layouts
+    into `theme/assets/template-wash/`).
+  ```md
+  ---
+  theme: ../theme
+  themeConfig:
+    wash: template
+  ---
+  ```
+- **Chrome**: the DevDogs mark + wordmark, top-left, and the GDG on
+  Campus mark + "Google Developer Groups" / "On Campus · University of
+  Georgia" footer, bottom-right — both straight from the workspace
+  `@devdogsuga/brand` package (never redrawn). Turn it off on a
+  particular slide with `chrome: false`.
+- **The corner chip**, if you set a `chip` frontmatter key (e.g. `chip:
+  WORKSHOP`) — an accent-filled pill, white caps text, top-right. Uses
+  the same `Chip` component as the `events` layout's inline chips, just
+  in its `solid` variant.
+
+So every layout's frontmatter includes `accent`, `chip` (optional),
+`chrome` (optional, default `true`), and `wash` (optional, overrides the
+deck-wide `themeConfig.wash`) on top of whatever's documented below.
+
 ## Layouts
 
 All layouts render a dark background (`#0a0a0c`) and the accent
-corner-wash automatically — you don't need to add either yourself.
+wash automatically — you don't need to add either yourself.
 
 ### `title`
 Deck-opening / meeting-title slide.
@@ -61,9 +101,30 @@ kicker: "01 · Tour"
 # Supabase, the tour
 ```
 
-### `agenda`
+### `numbered-list`
 Write a normal markdown list; items auto-number in the accent color
-(`01`, `02`, ... via CSS counters — don't hand-number them).
+(`01`, `02`, ... via CSS counters — don't hand-number them), each row
+separated by a `#2A212C` hairline divider. Use this for any accent-
+numbered list of rows: rules, steps, whatever isn't specifically the
+agenda.
+- Frontmatter: `accent`
+```md
+---
+layout: numbered-list
+accent: cyan
+---
+
+# Merge conflict prevention
+
+- Small PRs, one feature per branch
+- Pull `main` before you start a session
+- Run `pnpm install` and commit the lockfile together
+```
+
+### `agenda`
+A thin preset of `numbered-list` — same accent-numbered, hairline-divided
+rows, just under a name that reads better in frontmatter for this
+specific slide.
 - Frontmatter: `accent`
 ```md
 ---
@@ -77,6 +138,31 @@ accent: cyan
 - Build against it
 - Dashboard tour
 - How the monorepo uses it
+```
+
+### `bullets-card`
+Left an accent-dot bullet list; right a `#1D161E` rounded card with a
+dim, uppercase header and its own mini numbered list (or a code block —
+whatever fits).
+- Frontmatter: `accent`, `cardTitle` (the card's dim caps header,
+  optional)
+- Slots: default (left bullets), `card` (right card body)
+```md
+---
+layout: bullets-card
+accent: emerald
+cardTitle: What you'll need
+---
+
+- A Supabase project
+- The publishable key
+- Five minutes
+
+::card::
+
+1. `supabase init`
+2. `supabase start`
+3. `devtools oauth`
 ```
 
 ### `statement`
@@ -110,21 +196,30 @@ caption: "Client → Supabase → Postgres"
 
 ### `dual-code`
 **The workhorse for the Next.js/Flutter dual-track sections (§4, §7, §8,
-§9).** Two columns, left = Next.js, right = Flutter, each independently
-Shiki-highlighted. Built on Slidev's named-slot convention (same mechanism
-as the built-in `two-cols` layout).
+§9).** Two columns, left = Next.js, right = Flutter, each in its own faux
+window with a titlebar (matching `terminal`'s chrome) showing that
+column's file path. Built on Slidev's named-slot convention (same
+mechanism as the built-in `two-cols` layout).
 - Frontmatter: `accent`, `title` (optional — renders a heading **above**
   both columns; use this instead of a markdown `#`, because a `#` at the
   top of the slide body lands inside the *left* column only), `leftLabel`
-  (default `"Next.js"`), `rightLabel` (default `"Flutter"`)
+  (default `"Next.js"`), `rightLabel` (default `"Flutter"`), `leftFile` /
+  `rightFile` (file path shown in each column's titlebar, optional)
 - Slots: default = left column (Next.js), `right` = right column
-  (Flutter). Use Shiki line-highlight (`` ```ts {1-3|4} ``) or
-  `magic-move` per Slidev's normal code-block syntax in either column.
+  (Flutter). Use Shiki line-highlight (`` ```ts {1-3|4} ``), click-through
+  steps (`` ```ts {1-3|5|all} ``), or a ` ```md magic-move ` block per
+  Slidev's normal code-block syntax in either column — both render inside
+  the window chrome with no extra setup.
+- **Track mode** (see below): when `?track=web` or `?track=mobile` is
+  set, only the matching column shows, full width. With no track set —
+  including the PDF export — both columns show, same as before.
 ```md
 ---
 layout: dual-code
 accent: emerald
 title: Sign in
+leftFile: components/Guestbook.tsx
+rightFile: lib/guestbook.dart
 ---
 
 ```ts
@@ -141,7 +236,11 @@ await supabase.auth.signInWithOAuth(/* custom:devdogs */);
 ### `terminal`
 Fenced code block (any language — SQL for the dashboard/SQL-editor beats,
 bash for CLI-less contexts) rendered inside a faux terminal/window chrome.
-- Frontmatter: `accent`, `title` (window titlebar text, default `"shell"`)
+Same click-through/Magic Move support as `dual-code`.
+- Frontmatter: `accent`, `file` (a real file path shown in the titlebar,
+  e.g. `supabase/migrations/0002_profiles.sql` — takes priority over
+  `title` when both are set), `title` (freeform titlebar text, default
+  `"shell"`)
 ```md
 ---
 layout: terminal
@@ -153,6 +252,36 @@ title: supabase dashboard → SQL editor
 select * from messages;
 ```
 ```
+
+## Track mode
+
+Two demo laptops share one deck (web and mobile) — see the design note
+`workshop-repos-and-supabase-demo-design.md`. `?track=web` or
+`?track=mobile` on the URL tells the deck which laptop it's running on;
+that choice is written to `sessionStorage` so it survives clicking
+through slides (and following a link into the presenter/remote view from
+the same tab), not just the first page load. See `theme/lib/track.ts`.
+
+- **`dual-code`** shows only the matching column, full width, when a
+  track is set — both columns with no track (so the PDF export always has
+  both).
+- **`<Track web>...</Track>`** / **`<Track mobile>...</Track>`** — wrap
+  any bit of slide content that's only relevant to one track. Shows when
+  the track matches, or when no track is set at all (same both-tracks-by-
+  default rule as `dual-code`).
+  ```md
+  <Track web>Only shows on the web laptop.</Track>
+  <Track mobile>Only shows on the mobile laptop.</Track>
+  ```
+- **`preshow`** layout — the very first slide, shown while people find
+  seats. `?track=web` → "DogDays sits here ←"; `?track=mobile` → "→
+  DogPack sits here"; no track → both halves side by side.
+  ```md
+  ---
+  layout: preshow
+  accent: emerald
+  ---
+  ```
 
 ### `qr`
 Big centered QR + caption. Use for the attendance/Discord/exit slides.
@@ -206,8 +335,8 @@ subtitle: See you next week
 ```
 
 ### `default`
-Fallback when no `layout:` is set. Still dark + accent-aware (corner wash
-only, no other chrome) so a forgotten `layout:` doesn't fall back to a
+Fallback when no `layout:` is set. Still dark + accent-aware, with the
+usual wash and chrome, so a forgotten `layout:` doesn't fall back to a
 white slide. You shouldn't need to reference it directly.
 
 ## Components
@@ -227,6 +356,24 @@ Auto-imported globally in slide markdown (no `import` needed):
   accent="cyan" />`** — the QR+caption block the `qr` layout wraps. Use it
   directly if you need a QR code inside a non-`qr` layout (e.g. a slide
   that's mostly text with a small QR in the corner).
+- **`<Track web>...</Track>`** / **`<Track mobile>...</Track>`** — see
+  "Track mode" above.
+
+## The three greys
+
+On top of the five accents, the template defines three grey tiers, each
+with one job — exposed as both CSS vars and UnoCSS utilities:
+
+| Var | Utility | Hex | Job |
+|---|---|---|---|
+| `--dd-grey-support` | `text-dd-support` | `#A89EA9` | Support/body text |
+| `--dd-grey-secondary` | `text-dd-secondary` | `#D7D0D7` | Contact lines, footer |
+| `--dd-grey-dim` | `text-dd-dim` | `#79697B` | Quietest tier: code comments, card headers |
+
+Also available: `--dd-card-fill` (`#1D161E`, the `bullets-card` card
+background) and `--dd-hairline` (`#2A212C`, the `numbered-list`/`agenda`
+row dividers). Source of truth for all of these is `theme/accents.ts`
+(`GREYS`, `CARD_FILL`, `HAIRLINE`).
 
 ## Gotchas
 
@@ -276,3 +423,24 @@ Auto-imported globally in slide markdown (no `import` needed):
   `package.json` scripts) and point at
   `decks/2026-09-28-supabase.md`, so they build the whole assembled deck,
   fragments included.
+- **Components auto-import in markdown, not inside layout `.vue` files.**
+  Slidev's component auto-import (no `import` needed for `<Chip>`,
+  `<Accent>`, `<Track>`, ...) only applies to slide markdown. A layout
+  `.vue` file under `theme/layouts/` must `import` anything it uses from
+  `theme/components/` explicitly — see how every layout imports `Wash` and
+  `Chrome`.
+- **`themeConfig` is a real Slidev headmatter key**, not a DevDogs
+  invention — it's how the deck-wide wash mode reaches every layout
+  (`import { configs } from '@slidev/client'`, then
+  `configs.themeConfig?.wash`). Slidev also turns every key under
+  `themeConfig` into a `--slidev-theme-<key>` CSS var automatically; we
+  don't use that mechanism for `wash` (it needs to switch which
+  component renders, not just a CSS value) but don't be surprised if you
+  see the var show up in devtools.
+- **Track mode's `sessionStorage` is per-tab.** It survives clicking
+  through slides and following a same-tab link into the presenter view,
+  but a browser tab opened completely fresh (not via a link/`window.open`
+  from the deck) won't inherit it — pass `?track=...` on that fresh URL
+  too. This is why the pre-flight checklist in the design note has each
+  laptop open its own URL with the track baked in, rather than relying on
+  a shared window.
