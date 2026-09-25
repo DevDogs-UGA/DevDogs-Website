@@ -107,43 +107,52 @@ leftFile: components/Guestbook.tsx
 rightFile: lib/guestbook.dart
 ---
 
-````md magic-move
-```ts
-const [entries, setEntries] = useState<Entry[]>([]);
+````md magic-move [@11,@15] {lines: true}
+```ts {12}
+export default function Guestbook() {
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [name, setName] = useState("");
+  const [message, setMessage] = useState("");
 ```
-```ts
-const [messages, setMessages] = useState<Message[]>([]);
+```ts {15-24}
+  const [messages, setMessages] = useState<Message[]>([]);
 
-useEffect(() => {
-  supabase
-    .from("messages")
-    .select("id, user_id, author_name, body, created_at")
-    .order("created_at", { ascending: false })
-    .then(({ data }) => setMessages(data ?? []));
-}, []);
+  // Load the guestbook, newest first, once on mount.
+  useEffect(() => {
+    supabase
+      .from("messages")
+      .select("id, user_id, author_name, body, created_at")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setMessages(data ?? []));
+  }, []);
 ```
 ````
 
 ::right::
 
-````md magic-move
-```dart
-List<Entry> _entries = [];
+````md magic-move [@26,@17] {lines: true}
+```dart {28}
+  // Newest entries are added to the front of the list, so the list itself is
+  // always in "newest first" order.
+  final List<GuestbookEntry> _entries = [];
 ```
-```dart
-List<Map<String, dynamic>> _messages = [];
+```dart {17-32}
+  @override
+  void initState() {
+    super.initState();
+    _loadMessages();
+  }
 
-Future<void> _loadMessages() async {
-  final rows = await _supabase
-      .from('messages')
-      .select(
-        'id, user_id, author_name, body, created_at',
-      )
-      .order('created_at', ascending: false);
-  setState(() {
-    _messages = List<Map<String, dynamic>>.from(rows);
-  });
-}
+  // Load the guestbook, newest first.
+  Future<void> _loadMessages() async {
+    try {
+      final rows = await _supabase
+          .from('messages')
+          .select('id, user_id, author_name, body, created_at')
+          .order('created_at', ascending: false);
+      if (mounted) {
+        setState(() => _messages = List<Map<String, dynamic>>.from(rows));
+      }
 ```
 ````
 
@@ -168,29 +177,38 @@ leftFile: components/Guestbook.tsx
 rightFile: lib/guestbook.dart
 ---
 
-```ts {2|3-9|all}
-function signIn() {
-  supabase.auth.signInWithOAuth({
-    // auth-js's Provider type only lists Supabase's
-    // own providers, so a custom OIDC provider like
-    // ours needs a cast to satisfy it.
-    provider: "custom:devdogsuga" as never,
-    options: {
-      redirectTo: window.location.origin + "/guestbook",
-    },
-  });
-}
+```ts {40|41-44|39-46}{lines:true,startLine:37}
+  }, []);
+
+  function signIn() {
+    supabase.auth.signInWithOAuth({
+      // auth-js's Provider type only lists Supabase's built-in providers, so
+      // a custom OIDC provider like ours needs a cast to satisfy it.
+      provider: "custom:devdogsuga" as never,
+      options: { redirectTo: window.location.origin + "/guestbook" },
+    });
+  }
+
+  function signOut() {
+    supabase.auth.signOut();
+  }
 ```
 
 ::right::
 
-```dart {2-3|all}
-Future<void> _signIn() {
-  return _supabase.auth.signInWithOAuth(
-    OAuthProvider('custom:devdogsuga'),
-    redirectTo: _redirectTo,
-  );
-}
+```dart {56-57|55-60}{lines:true,startLine:51}
+      debugPrint('Could not load the guestbook: $error');
+    }
+  }
+
+  Future<void> _signIn() {
+    return _supabase.auth.signInWithOAuth(
+      OAuthProvider('custom:devdogsuga'),
+      redirectTo: _redirectTo,
+    );
+  }
+
+  Future<void> _signOut() => _supabase.auth.signOut();
 ```
 
 <!-- Presenter notes: Because the contributor's own GoTrue is the relying party, sign-in mints a native session in auth.users -- auth.uid() just works with the RLS policies coming up. Flutter's OAuthProvider is a real class here (gotrue Dart >= 2.20), so no cast needed on that side. -->
@@ -231,40 +249,41 @@ leftFile: components/Guestbook.tsx
 rightFile: lib/guestbook.dart
 ---
 
-```ts {1-7|9-16}
-// Naive version: we trust the client for its own
-// display name.
-const authorName =
-  session.user.user_metadata.name ??
-  session.user.user_metadata.full_name ??
-  session.user.email ??
-  "Anonymous";
+```ts {59-65|67-71}{lines:true,startLine:57}
+  }
 
-const { data, error } = await supabase
-  .from("messages")
-  .insert({
-    body: body.trim(),
-    author_name: authorName,
-  })
-  .select("id, user_id, author_name, body, created_at")
-  .single();
+  // Naive version: we trust the client to tell us its own display name.
+  // (Step 4 of the workshop replaces this with a server-side lookup.)
+  const authorName =
+    session.user.user_metadata.name ??
+    session.user.user_metadata.full_name ??
+    session.user.email ??
+    "Anonymous";
+
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({ body: body.trim(), author_name: authorName })
+    .select("id, user_id, author_name, body, created_at")
+    .single();
 ```
 
 ::right::
 
-```dart {1-7|9-12}
-// Naive version: we trust the client for its own
-// display name.
-final metadata = session.user.userMetadata ?? {};
-final authorName = metadata['name'] ??
-    metadata['full_name'] ??
-    session.user.email ??
-    'Anonymous';
+```dart {79-83|85-88}{lines:true,startLine:77}
+  }
 
-await _supabase.from('messages').insert({
-  'body': body,
-  'author_name': authorName,
-});
+  // Naive version: we trust the client to tell us its own display name.
+  // (The next commit replaces this with a server-side lookup.)
+  final metadata = session.user.userMetadata ?? {};
+  final authorName =
+      metadata['name'] ?? metadata['full_name'] ?? session.user.email ?? 'Anonymous';
+
+  await _supabase.from('messages').insert({
+    'body': body,
+    'author_name': authorName,
+  });
+
+  _bodyController.clear();
 ```
 
 <!-- Presenter notes: Highlight the authorName lookup -- it reads straight off the client's own session data, which the client fully controls. -->
@@ -397,50 +416,53 @@ leftFile: components/Guestbook.tsx
 rightFile: lib/guestbook.dart
 ---
 
-````md magic-move
-```ts
-const { data, error } = await supabase
-  .from("messages")
-  .insert({
-    body: body.trim(),
-    author_name: authorName,
-  })
-  .select(
-    "id, user_id, author_name, body, created_at",
-  )
-  .single();
+````md magic-move [@67,@66] {lines: true}
+```ts {67-71}
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({ body: body.trim(), author_name: authorName })
+    .select("id, user_id, author_name, body, created_at")
+    .single();
+
+  if (!error && data) {
 ```
-```ts
-// The name is looked up server-side, from
-// public.profiles (set once at sign-up) --
-// we never send it from the client.
-const { data, error } = await supabase
-  .from("messages")
-  .insert({ body: body.trim() })
-  .select(
-    "id, user_id, body, created_at, profiles(name)",
-  )
-  .single()
-  .overrideTypes<Message, { merge: false }>();
+```ts {66-76}
+  // The name is looked up server-side from public.profiles (set once, at
+  // sign-up) -- we never send it from the client, so no one can post
+  // under a name that isn't theirs.
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({ body: body.trim() })
+    .select("id, user_id, body, created_at, profiles(name)")
+    .single()
+    // Same reasoning as the list query above -- this is a single row, and
+    // its embedded profile is a single object, not an array.
+    .overrideTypes<Message, { merge: false }>();
+
+  if (!error && data) {
 ```
 ````
 
 ::right::
 
-````md magic-move
-```dart
-await _supabase.from('messages').insert({
-  'body': body,
-  'author_name': authorName,
-});
+````md magic-move [@85,@79] {lines: true}
+```dart {85-88}
+  await _supabase.from('messages').insert({
+    'body': body,
+    'author_name': authorName,
+  });
+
+  _bodyController.clear();
+  await _loadMessages();
 ```
-```dart
-// The name is looked up server-side, from
-// public.profiles (set once at sign-up) --
-// we never send it from the client.
-await _supabase
-    .from('messages')
-    .insert({'body': body});
+```dart {79-82}
+  // The name is looked up server-side from public.profiles (set once, at
+  // sign-up) -- we never send it from the client, so no one can post
+  // under a name that isn't theirs.
+  await _supabase.from('messages').insert({'body': body});
+
+  _bodyController.clear();
+  await _loadMessages();
 ```
 ````
 
@@ -455,67 +477,71 @@ leftFile: components/Guestbook.tsx
 rightFile: lib/guestbook.dart
 ---
 
-````md magic-move
-```ts
-supabase
-  .from("messages")
-  .select(
-    "id, user_id, author_name, body, created_at",
-  )
-  .order("created_at", { ascending: false })
-  .then(({ data }) => setMessages(data ?? []));
-
-// …
-<h2>{message.author_name}</h2>
+````md magic-move [@32,@35] {lines: true}
+```ts {33-37}
+  // Load the guestbook, newest first, once on mount.
+  useEffect(() => {
+    supabase
+      .from("messages")
+      .select("id, user_id, author_name, body, created_at")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setMessages(data ?? []));
+  }, []);
 ```
-```ts
-supabase
-  .from("messages")
-  .select(
-    "id, user_id, body, created_at, profiles(name)",
-  )
-  .order("created_at", { ascending: false })
-  // Many-to-one embed: one object, not an array.
-  .overrideTypes<Message[], { merge: false }>()
-  .then(({ data }) => setMessages(data ?? []));
-
-// …
-<h2>{message.profiles?.name ?? "Unknown"}</h2>
+```ts {36-44}
+  // Load the guestbook, newest first, once on mount.
+  useEffect(() => {
+    supabase
+      .from("messages")
+      .select("id, user_id, body, created_at, profiles(name)")
+      .order("created_at", { ascending: false })
+      // Without generated database types, supabase-js guesses `profiles` is
+      // an array; a many-to-one embed is actually a single object, so we
+      // tell it the real shape here.
+      .overrideTypes<Message[], { merge: false }>()
+      .then(({ data }) => setMessages(data ?? []));
+  }, []);
 ```
 ````
+
+```ts {129}{lines:true,startLine:127}
+          <li key={message.id} className="rounded-lg border border-gray-200 p-4">
+            <div className="flex items-baseline justify-between">
+              <h2 className="font-semibold">{message.profiles?.name ?? "Unknown"}</h2>
+              <span className="text-sm text-gray-500">
+```
 
 ::right::
 
-````md magic-move
-```dart
-final rows = await _supabase
-    .from('messages')
-    .select(
-      'id, user_id, author_name, body, created_at',
-    )
-    .order('created_at', ascending: false);
-
-// …
-title: Text(message['author_name'] as String),
+````md magic-move [@48,@48] {lines: true}
+```dart {49-52}
+  Future<void> _loadMessages() async {
+    try {
+      final rows = await _supabase
+          .from('messages')
+          .select('id, user_id, author_name, body, created_at')
+          .order('created_at', ascending: false);
+      if (mounted) {
 ```
-```dart
-final rows = await _supabase
-    .from('messages')
-    .select(
-      'id, user_id, body, created_at, profiles(name)',
-    )
-    .order('created_at', ascending: false);
-
-// …
-// Many-to-one embed: one object (or null),
-// not a list.
-final profile =
-    message['profiles'] as Map<String, dynamic>?;
-final authorName =
-    profile?['name'] as String? ?? 'Unknown';
-title: Text(authorName),
+```dart {49-52}
+  Future<void> _loadMessages() async {
+    try {
+      final rows = await _supabase
+          .from('messages')
+          .select('id, user_id, body, created_at, profiles(name)')
+          .order('created_at', ascending: false);
+      if (mounted) {
 ```
 ````
+
+```dart {136-140}{lines:true,startLine:136}
+                  final profile = message['profiles'] as Map<String, dynamic>?;
+                  final authorName = profile?['name'] as String? ?? 'Unknown';
+
+                  return ListTile(
+                    title: Text(authorName),
+                    subtitle: Text(message['body'] as String),
+```
 
 <!-- Presenter notes: `profiles(name)` embeds the author's profile through the new foreign key. Each message has exactly one author, so PostgREST returns a single object (or null), never a list. Without generated types supabase-js guesses an array, which is why web needs overrideTypes. Getting this wrong shows blank names on web and crashes Flutter. Demo tag: demo/04-profiles. -->
 
@@ -565,34 +591,42 @@ leftFile: components/Guestbook.tsx
 rightFile: lib/guestbook.dart
 ---
 
-```ts {1-9|11}
-async function handleDelete(id: string) {
-  const { error } = await supabase
-    .from("messages")
-    .delete()
-    .eq("id", id);
-  if (!error) {
-    setMessages(
-      messages.filter((message) => message.id !== id),
-    );
+```ts {84-89}{lines:true,startLine:82}
   }
-}
-// session?.user.id === message.user_id gates
-// whether the button renders
+
+  async function handleDelete(id: string) {
+    const { error } = await supabase.from("messages").delete().eq("id", id);
+    if (!error) {
+      setMessages(messages.filter((message) => message.id !== id));
+    }
+  }
+```
+
+```ts {142}{lines:true,startLine:140}
+            </div>
+            <p className="mt-1 text-gray-600">{message.body}</p>
+            {session?.user.id === message.user_id && (
+              <button
+                onClick={() => handleDelete(message.id)}
 ```
 
 ::right::
 
-```dart {1-6|8-9}
-Future<void> _delete(String id) async {
-  await _supabase
-      .from('messages')
-      .delete()
-      .eq('id', id);
-  await _loadMessages();
-}
-// session?.user.id == message['user_id'] gates
-// whether the icon renders
+```dart {90-93}{lines:true,startLine:88}
+  }
+
+  Future<void> _delete(String id) async {
+    await _supabase.from('messages').delete().eq('id', id);
+    await _loadMessages();
+  }
+```
+
+```dart {139}{lines:true,startLine:137}
+                itemBuilder: (context, index) {
+                  final message = _messages[index];
+                  final isOwnMessage = session?.user.id == message['user_id'];
+                  // Embedded from public.profiles via the messages ->
+                  // profiles foreign key. messages.user_id -> profiles.id is
 ```
 
 <!-- Presenter notes: The delete button only renders for your own rows client-side, but the real guard is the RLS policy -- try deleting someone else's id from devtools/curl and Postgres refuses it regardless of what the UI shows. -->
