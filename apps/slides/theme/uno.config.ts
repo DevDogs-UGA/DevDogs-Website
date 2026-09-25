@@ -14,7 +14,7 @@ export default defineConfig({
         red: '#FF6467',
       },
       dd: {
-        bg: '#0a0a0c',
+        bg: '#0c090c',
         panel: '#131317',
         ink: '#f5f5f7',
         muted: '#9a9aa2',

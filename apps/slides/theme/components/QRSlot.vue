@@ -23,7 +23,7 @@ const ring = computed(() => accentHex(props.accent))
       class="rounded-2xl p-6"
       :style="{ background: 'var(--dd-panel)', boxShadow: `0 0 0 2px ${ring}` }"
     >
-      <img :src="src" class="h-64 w-64" alt="QR code" />
+      <img :src="src" class="h-56 w-56" alt="QR code" />
     </div>
     <div v-if="caption || $slots.default" class="text-center text-lg text-dd-muted">
       <slot>{{ caption }}</slot>

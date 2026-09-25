@@ -23,9 +23,9 @@ const COMPANIONS: Record<AccentName, [AccentName, AccentName]> = {
 
 type Blob = [cx: string, cy: string, rx: string, ry: string, strength: number]
 
-const MAIN: Blob = ['84%', '12%', '56%', '76%', 38]
-const FIRST: Blob = ['56%', '10%', '24%', '30%', 16]
-const SECOND: Blob = ['92%', '56%', '22%', '30%', 16]
+const MAIN: Blob = ['84%', '12%', '56%', '76%', 30]
+const FIRST: Blob = ['56%', '10%', '24%', '30%', 12]
+const SECOND: Blob = ['92%', '56%', '22%', '30%', 12]
 
 const props = withDefaults(defineProps<{ accent?: string }>(), { accent: undefined })
 

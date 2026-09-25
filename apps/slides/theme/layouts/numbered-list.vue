@@ -45,11 +45,3 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
   </div>
 </template>
 
-<style scoped>
-.dd-numbered-list-content {
-  /* A long list (5+ rows) centers close enough to the top that its
-     heading can render underneath the DevDogs mark -- same fix as
-     `terminal`/`dual-code`, see their notes. */
-  padding-top: 1.5rem;
-}
-</style>

@@ -34,7 +34,7 @@ fragment placeholders — keep it when filling them in):
 Every layout below renders three things automatically, unless you turn
 them off:
 
-- **The background wash.** A dark (`#0a0a0c`) base with a soft accent
+- **The background wash.** A dark (`#0c090c`, Tailwind's `mauve-950`, the website's dark background) base with a soft accent
   tint, drawn behind everything else. Three modes, chosen by
   `themeConfig.wash` in the deck's headmatter (`corner` (default), `site`
   or `template`) or overridden per-slide with a `wash` frontmatter key:
@@ -69,6 +69,12 @@ them off:
   WORKSHOP`) — an accent-filled pill, white caps text, top-right. Uses
   the same `Chip` component as the `events` layout's inline chips, just
   in its `solid` variant.
+- **The safe area.** Every layout's content sits inside
+  `--dd-safe-top` / `--dd-safe-bottom` / `--dd-safe-x` (base.css), which
+  clear the chrome bands top and bottom, so no layout needs its own
+  padding to dodge the mark, chip or footer. That leaves 420px of the
+  552px canvas for content; a slide taller than that gets clipped, so
+  split it rather than shrinking the type.
 
 So every layout's frontmatter includes `accent`, `chip` (optional),
 `chrome` (optional, default `true`), and `wash` (optional, overrides the
@@ -76,7 +82,7 @@ deck-wide `themeConfig.wash`) on top of whatever's documented below.
 
 ## Layouts
 
-All layouts render a dark background (`#0a0a0c`) and the accent
+All layouts render a dark background (`#0c090c`, `mauve-950`) and the accent
 wash automatically — you don't need to add either yourself.
 
 ### `title`

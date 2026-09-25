@@ -117,15 +117,6 @@ const showRight = computed(() => !props.trackSplit || track.value !== 'web')
 </template>
 
 <style scoped>
-.dd-dual-code-content {
-  /* Unlike every other layout (which centers its content vertically, so
-     it naturally clears the top-left DevDogs mark), this one stretches
-     its two windows full-height from the very top of the slide -- without
-     this padding the left window's titlebar renders right underneath the
-     mark and the two overlap. */
-  padding-top: 4rem;
-}
-
 .dd-dual-code-heading {
   margin-bottom: 1rem;
 }

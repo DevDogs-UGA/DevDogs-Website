@@ -68,19 +68,6 @@ const titlebarText = computed(() => props.file ?? props.titlebar)
 </template>
 
 <style scoped>
-.dd-terminal-content {
-  /* Centering (`justify-center`) only clears the top-left DevDogs mark by
-     coincidence, when the window is short enough that its natural centered
-     top edge falls below the mark. A long code block (a big SQL migration,
-     say) can center itself close enough to the top that the window's
-     titlebar renders underneath the mark instead. This floor guarantees
-     clearance regardless of content height -- same fix as dual-code's
-     `dd-dual-code-content` padding. If a code block is still too tall to
-     fit under this, split it across two slides rather than shrinking the
-     font (see LAYOUTS.md's Gotchas). */
-  padding-top: 1.5rem;
-}
-
 .dd-terminal-window {
   border-radius: 0.75rem;
   overflow: hidden;
@@ -111,13 +98,16 @@ const titlebarText = computed(() => props.file ?? props.titlebar)
 }
 
 .dd-terminal-body {
-  padding: 1rem 1.25rem;
+  padding: 0.75rem 1.25rem;
   /* Shiki's own code block draws its own background/padding by default;
      inside the terminal window chrome we want the code to fill the window
      instead of drawing a second box inside it. */
   --slidev-code-background: transparent;
   --slidev-code-padding: 0;
   --slidev-code-radius: 0;
+  /* A hair tighter than Slidev's 18px so a 22-line migration fits the safe
+     area without shrinking the type. */
+  --slidev-code-line-height: 17px;
 }
 
 .dd-terminal-body :deep(pre) {

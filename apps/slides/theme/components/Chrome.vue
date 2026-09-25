@@ -45,8 +45,11 @@ const props = withDefaults(defineProps<{
 <style scoped>
 .dd-chip-slot {
   position: absolute;
-  top: 0.4in;
-  right: 0.4in;
+  top: var(--dd-chrome-inset);
+  right: var(--dd-chrome-inset);
   z-index: 2;
+  height: var(--dd-chrome-band);
+  display: flex;
+  align-items: center;
 }
 </style>

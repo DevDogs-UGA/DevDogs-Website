@@ -3,7 +3,7 @@
    deck template (see memory: devdogs-deck-template). */
 
 :root {
-  --dd-bg: #0a0a0c;
+  --dd-bg: #0c090c; /* Tailwind mauve-950, the website's dark background */
   --dd-panel: #131317;
   --dd-ink: #f5f5f7;
   --dd-muted: #9a9aa2;
@@ -27,6 +27,16 @@
      `accent` frontmatter prop. Defaults to emerald. */
   --accent: var(--dd-emerald);
 
+  /* The corner chrome (mark, chip, footer) sits this far in from the slide
+     edge, and every layout's content stays inside the safe area, which
+     clears the chrome bands top and bottom. Slide canvas is 980×552. */
+  --dd-chrome-inset: 30px;
+  /* The mark and the chip share one band, so they centre on the same line. */
+  --dd-chrome-band: 24px;
+  --dd-safe-top: 68px;
+  --dd-safe-bottom: 64px;
+  --dd-safe-x: 56px;
+
   --slidev-theme-primary: var(--dd-emerald);
   --slidev-slide-container-background: var(--dd-bg);
 }
@@ -34,6 +44,12 @@
 html,
 body {
   background: var(--dd-bg);
+}
+
+/* Replaces Slidev's own `px-14 py-10` so no layout can put content under
+   the chrome; `.slidev-page` only raises specificity over Slidev's rule. */
+.slidev-page .slidev-layout {
+  padding: var(--dd-safe-top) var(--dd-safe-x) var(--dd-safe-bottom);
 }
 
 .slidev-layout {
@@ -79,7 +95,7 @@ body {
 
 .slidev-layout ::selection {
   background: var(--accent);
-  color: #0a0a0c;
+  color: var(--dd-bg);
 }
 
 .dd-edge-bar {
@@ -100,9 +116,10 @@ body {
 
 .dd-chrome-mark {
   position: absolute;
-  top: 0.4in;
-  left: 0.4in;
+  top: var(--dd-chrome-inset);
+  left: var(--dd-chrome-inset);
   z-index: 2;
+  height: var(--dd-chrome-band);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -110,23 +127,23 @@ body {
 
 .dd-chrome-mark img {
   display: block;
-  height: 1.4rem;
+  height: 1.15rem;
   width: auto;
 }
 
 .dd-chrome-footer {
   position: absolute;
-  bottom: 0.4in;
-  right: 0.4in;
+  bottom: var(--dd-chrome-inset);
+  right: var(--dd-chrome-inset);
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 .dd-chrome-footer img {
   display: block;
-  height: 1.7rem;
+  height: 1.4rem;
   width: auto;
 }
 
@@ -138,13 +155,13 @@ body {
 .dd-chrome-footer-lines .dd-line-1 {
   font-family: 'Hanken Grotesk', sans-serif;
   font-weight: 700;
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   color: var(--dd-ink);
 }
 
 .dd-chrome-footer-lines .dd-line-2 {
   font-family: 'Hanken Grotesk', sans-serif;
-  font-size: 0.65rem;
+  font-size: 0.55rem;
   color: var(--dd-grey-secondary);
 }
 

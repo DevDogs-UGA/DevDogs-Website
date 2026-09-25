@@ -46,7 +46,7 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
   <div class="slidev-layout dd-qr relative overflow-hidden" :style="style">
     <Wash :accent="accent" :wash="wash" />
     <Chrome v-if="chrome" :accent="accent" :chip="chip" />
-    <div class="dd-content h-full flex flex-col justify-center items-center text-center gap-6">
+    <div class="dd-content h-full flex flex-col justify-center items-center text-center gap-4">
       <p v-if="label" class="text-lg font-600 uppercase tracking-widest" :style="{ color: 'var(--accent)' }">
         {{ label }}
       </p>

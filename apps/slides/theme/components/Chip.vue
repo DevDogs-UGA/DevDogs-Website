@@ -35,7 +35,7 @@ const hex = computed(() =>
 <template>
   <span
     v-if="variant === 'solid'"
-    class="inline-flex items-center rounded-full px-3.5 py-1.5 text-xs font-700 uppercase tracking-wide text-white"
+    class="inline-flex items-center rounded-full px-3 py-1 text-[0.65rem] font-700 uppercase tracking-wide text-white"
     :style="{ background: hex }"
   >
     <slot>{{ type }}</slot>
