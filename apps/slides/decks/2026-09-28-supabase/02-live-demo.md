@@ -1,75 +1,92 @@
 ---
 layout: section-divider
-accent: cyan
+accent: rose
 kicker: "02 · Live demo"
 chip: LIVE DEMO
 ---
 
 # Build it live
 
-<!-- Presenter notes: Sloan is back at the podium. Shruti's concepts map onto real code now — two laptops, one Supabase project, projected side by side. If Sloan is presenting alone, type the web (Next.js) side live and jump the Flutter laptop to each tag as we go. -->
+<!-- Presenter notes: Sloan is back at the podium. Shruti's concepts map onto real code now — two laptops, one Supabase project, projected side by side. Both laptops type the code live (or paste it from the slides); if one presenter is alone, drive the web side and paste the Flutter side from the slides. -->
 
 ---
-layout: terminal
-accent: cyan
+layout: dual-code
+accent: rose
 chip: CLONE
-titlebar: clone + switch
+heading: Get the workshop code
+leftFile: terminal
+rightFile: terminal
 ---
+
+```bash
+# Download the workshop repo
+gh repo clone DevDogsUGA/Web-Workshops
+cd Web-Workshops
+# Start from Setup Night's code
+git switch 01-nextjs-introduction
+# Install dependencies
+pnpm install
+```
+
+::right::
+
+```bash
+# Download the workshop repo
+gh repo clone DevDogsUGA/Mobile-Workshops
+cd Mobile-Workshops
+# Start from Setup Night's code
+git switch 01-flutter-introduction
+# Install dependencies
+flutter pub get
+```
+
+<!-- Presenter notes: Everyone already has this from Setup Night — this is just the Supabase branch point. Both branches are "what you built, plus the guestbook we didn't get to." -->
+
+---
+layout: bullets-card
+accent: rose
+chip: SETUP
+cardTitle: Where they go
+---
+
+# Project setup
+
+- Create a Supabase project at **supabase.com/dashboard**; it takes about a minute
+- Copy the **Project URL** and the **publishable** key from Project Settings → API
+- Paste them into your app's env file
+
+::card::
 
 <Track web>
 
 ```bash
-git clone https://github.com/DevDogsUGA/web-workshops.git
-cd web-workshops
-git switch 01-nextjs-introduction
+# .env.local
+NEXT_PUBLIC_SUPABASE_URL=…
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=…
 ```
 
 </Track>
 <Track mobile>
 
 ```bash
-git clone https://github.com/DevDogsUGA/mobile-workshops.git
-cd mobile-workshops
-git switch 01-flutter-introduction
+# demo.env
+SUPABASE_URL=…
+SUPABASE_PUBLISHABLE_KEY=…
 ```
 
 </Track>
 
-<!-- Presenter notes: Everyone already has this from Setup Night — this is just the Supabase branch point. Both branches are "what you built, plus the guestbook we didn't get to." -->
-
----
-layout: bullets-card
-accent: cyan
-chip: SETUP
-cardTitle: One-click
----
-
-# Project setup
-
-- Create a Supabase project — dashboard, takes about a minute
-- Copy the **publishable** key (Project Settings → API)
-- Drop the URL + key into `.env.local` (web) or `demo.env` (mobile)
-
-::card::
-
-```bash
-pnpm dlx @devdogsuga/devtools oauth
-```
-
-Registers "Sign in with DevDogs" as an OAuth provider on your project —
-one command instead of the manual dashboard steps.
-
-<!-- Presenter notes: Walk through creating a project live, then run devtools oauth on both laptops. This is the part most likely to eat time — budget for it, and a lead can drive if the room lags. -->
+<!-- Presenter notes: Create the project live on both laptops. The URL looks like https://<ref>.supabase.co and the key starts with sb_publishable_. Web copies .env.example to .env.local; Flutter copies demo.env.example to demo.env and runs with `--dart-define-from-file=demo.env`. The publishable key is safe in the app; the secret key never is. This is the part most likely to eat time -- budget for it, and a lead can drive if the room lags. Sign-in setup waits until step 2. -->
 
 ---
 layout: statement
-accent: cyan
+accent: rose
 chip: STEP 1
 ---
 
 # Read the guestbook
 
-<!-- Presenter notes: First step — swap the in-memory array for a real Supabase table, read-only. Demo tag: demo/01-read. Recovery: `git switch --detach --discard-changes demo/01-read`. -->
+<!-- Presenter notes: First step — swap the in-memory array for a real Supabase table, read-only. -->
 
 ---
 layout: terminal
@@ -100,7 +117,7 @@ create policy "messages are readable by everyone"
 
 ---
 layout: dual-code
-accent: cyan
+accent: rose
 chip: CODE
 heading: From in-memory to Supabase
 leftFile: components/Guestbook.tsx
@@ -156,21 +173,49 @@ export default function Guestbook() {
 ```
 ````
 
-<!-- Presenter notes: Magic Move animates useState (in-memory) into the Supabase query. Demo tag: demo/01-read. Recovery: `git switch --detach --discard-changes demo/01-read`. -->
+<!-- Presenter notes: Magic Move animates useState (in-memory) into the Supabase query. -->
 
 ---
 layout: statement
-accent: cyan
+accent: rose
 chip: STEP 2
 ---
 
 # Sign in with DevDogs
 
-<!-- Presenter notes: No SQL this step — it's all client-side against the OAuth provider we just registered. Demo tag: demo/02-sign-in. Recovery: `git switch --detach --discard-changes demo/02-sign-in`. -->
+<!-- Presenter notes: No SQL this step. First register the app with DevDogs and add the provider in the Dashboard (next two slides), then the client code. -->
+
+---
+layout: numbered-list
+accent: rose
+chip: DEVDOGS
+---
+
+# Register your app with DevDogs
+
+- Go to **devdogsuga.org/tools/oauth** and create a client
+- Redirect URI: `https://<ref>.supabase.co/auth/v1/callback`
+- Copy the **client ID** and **client secret**
+
+<!-- Presenter notes: The redirect URI is the contributor's own Supabase project's auth callback (the project ref is in the Project URL). The secret is shown once -- keep the tab open until it's pasted into Supabase on the next slide. -->
+
+---
+layout: numbered-list
+accent: rose
+chip: DASHBOARD
+---
+
+# Add the provider in Supabase
+
+- Authentication → **Sign In / Providers** → add a custom **OIDC** provider
+- Identifier `devdogsuga` · Issuer `https://api.devdogsuga.org/auth/v1`
+- Scopes `openid email profile` · paste the client ID + secret · save
+
+<!-- Presenter notes: Supabase prefixes custom provider IDs, so the app signs in with `custom:devdogsuga`. VERIFY ON THE 9/27 DRY RUN: the exact Dashboard labels, and the issuer -- Supabase refuses an issuer that disagrees with the discovery document (TASK-346/347); `devtools oauth` reads it from discovery, so if the dashboard rejects api.devdogsuga.org, use the issuer the discovery doc advertises. `devtools oauth` does all of this in one command; it comes back in the local bonus section at the end. -->
 
 ---
 layout: dual-code
-accent: cyan
+accent: rose
 chip: CODE
 heading: Sign in / sign out
 leftFile: components/Guestbook.tsx
@@ -215,13 +260,12 @@ rightFile: lib/guestbook.dart
 
 ---
 layout: statement
-accent: cyan
+accent: rose
 chip: STEP 3
 ---
 
 # Let signed-in users post
 
-<!-- Presenter notes: Demo tag: demo/03-insert-naive. Recovery: `git switch --detach --discard-changes demo/03-insert-naive`. -->
 
 ---
 layout: terminal
@@ -242,7 +286,7 @@ create policy "authenticated users can insert their own messages"
 
 ---
 layout: dual-code
-accent: cyan
+accent: rose
 chip: CODE
 heading: Naive insert — client sends its own name
 leftFile: components/Guestbook.tsx
@@ -290,34 +334,28 @@ rightFile: lib/guestbook.dart
 
 ---
 layout: statement
-accent: cyan
-chip: WEB ONLY
+accent: rose
+chip: QUESTION
 ---
 
 # What's wrong with this?
 
-<Track web>
+<v-click>
 
-Open devtools, edit the outgoing request, post as someone else's name.
+The **app** decides whose name goes on each message. Anyone can send any `author_name` they like, and the database stores whatever it's told.
 
-</Track>
-<Track mobile>
+</v-click>
 
-Watch the DogDays screen — we'll break it there. Your Flutter app has the same hole.
-
-</Track>
-
-<!-- Presenter notes: Web-only beat -- skip on the mobile laptop. Same demo tag as the last step: demo/03-insert-naive. Recovery: `git switch --detach --discard-changes demo/03-insert-naive`. Live: open the network tab, intercept the insert, change author_name to a friend's name, and post -- Postgres has no opinion, because nothing checked it. This is the setup for the profiles fix next. -->
+<!-- Presenter notes: Ask the room first and take a few guesses before clicking to reveal. The insert trusts a name the client sends, and a client is just a program anyone can modify: edit the request, call the API directly, or change the app. RLS checks who you are (auth.uid() = user_id), but nothing checks the name. On the web laptop you can prove it: edit the insert request's author_name in the browser's network tools and resend. This sets up the profiles fix next. -->
 
 ---
 layout: statement
-accent: cyan
+accent: rose
 chip: STEP 4
 ---
 
 # Stop trusting the client for names
 
-<!-- Presenter notes: Demo tag: demo/04-profiles. Recovery: `git switch --detach --discard-changes demo/04-profiles`. -->
 
 ---
 layout: terminal
@@ -409,7 +447,7 @@ alter table public.messages drop column author_name;
 
 ---
 layout: dual-code
-accent: cyan
+accent: rose
 chip: CODE
 heading: The client can no longer lie
 leftFile: components/Guestbook.tsx
@@ -470,7 +508,7 @@ rightFile: lib/guestbook.dart
 
 ---
 layout: dual-code
-accent: cyan
+accent: rose
 chip: CODE
 heading: Showing the author's name
 leftFile: components/Guestbook.tsx
@@ -540,17 +578,16 @@ rightFile: lib/guestbook.dart
                     subtitle: Text(message['body'] as String),
 ```
 
-<!-- Presenter notes: `profiles(name)` embeds the author's profile through the new foreign key. Each message has exactly one author, so PostgREST returns a single object (or null), never a list. Without generated types supabase-js guesses an array, which is why web needs overrideTypes. Getting this wrong shows blank names on web and crashes Flutter. Demo tag: demo/04-profiles. -->
+<!-- Presenter notes: `profiles(name)` embeds the author's profile through the new foreign key. Each message has exactly one author, so PostgREST returns a single object (or null), never a list. Without generated types supabase-js guesses an array, which is why web needs overrideTypes. Getting this wrong shows blank names on web and crashes Flutter. -->
 
 ---
 layout: statement
-accent: cyan
+accent: rose
 chip: STEP 5
 ---
 
 # Delete your own messages
 
-<!-- Presenter notes: Demo tag: demo/05-delete. Recovery: `git switch --detach --discard-changes demo/05-delete`. -->
 
 ---
 layout: terminal
@@ -571,7 +608,7 @@ create policy "authenticated users can delete their own messages"
 
 ---
 layout: dual-code
-accent: cyan
+accent: rose
 chip: CODE
 heading: Only your own delete button
 leftFile: components/Guestbook.tsx
@@ -620,7 +657,7 @@ rightFile: lib/guestbook.dart
 
 ---
 layout: section-divider
-accent: cyan
+accent: rose
 chip: BONUS
 kicker: Run it locally
 ---
@@ -631,13 +668,15 @@ kicker: Run it locally
 
 ---
 layout: terminal
-accent: cyan
-chip: LOCAL
+accent: amber
+chip: SHELL
 titlebar: terminal
 ---
 
 ```bash
+# Start Postgres, Auth, and Studio in Docker
 npx supabase start
+# Print the local API URL, Studio URL, and publishable key
 npx supabase status
 ```
 
@@ -645,14 +684,17 @@ npx supabase status
 
 ---
 layout: terminal
-accent: emerald
-chip: SQL
+accent: amber
+chip: SHELL
 titlebar: terminal
 ---
 
 ```bash
+# Create empty, timestamped files under supabase/migrations,
+# then paste in the SQL we ran in the Dashboard
 npx supabase migration new guestbook
 npx supabase migration new profiles
+# Rebuild the local database from those files
 npx supabase db reset
 ```
 
@@ -660,12 +702,14 @@ npx supabase db reset
 
 ---
 layout: terminal
-accent: cyan
-chip: LOCAL
+accent: amber
+chip: SHELL
 titlebar: terminal
 ---
 
 ```bash
+# Register "Sign in with DevDogs" on the local stack in one step
+# (db reset wiped the provider we just set up by hand)
 pnpm dlx @devdogsuga/devtools oauth
 ```
 
@@ -673,7 +717,7 @@ pnpm dlx @devdogsuga/devtools oauth
 
 ---
 layout: statement
-accent: cyan
+accent: rose
 chip: MONOREPO
 ---
 
