@@ -48,6 +48,7 @@ import { computed } from 'vue'
 import { accentHex } from '../accents'
 import Wash from '../components/Wash.vue'
 import Chrome from '../components/Chrome.vue'
+import SnippetScope from '../components/SnippetScope.vue'
 import { track } from '../lib/track'
 
 const props = withDefaults(defineProps<{
@@ -99,7 +100,9 @@ const showRight = computed(() => !props.trackSplit || track.value !== 'web')
             <span v-if="leftFile" class="dd-dual-code-file">{{ leftFile }}</span>
           </div>
           <div class="dd-dual-code-body">
-            <slot />
+            <SnippetScope :track="trackSplit ? 'web' : undefined" :file="leftFile">
+              <slot />
+            </SnippetScope>
           </div>
         </div>
         <div v-if="showRight" class="dd-dual-code-window dd-dual-code-window-right">
@@ -108,7 +111,9 @@ const showRight = computed(() => !props.trackSplit || track.value !== 'web')
             <span v-if="rightFile" class="dd-dual-code-file">{{ rightFile }}</span>
           </div>
           <div class="dd-dual-code-body">
-            <slot name="right" />
+            <SnippetScope :track="trackSplit ? 'mobile' : undefined" :file="rightFile">
+              <slot name="right" />
+            </SnippetScope>
           </div>
         </div>
       </div>

@@ -7,6 +7,7 @@
 // PDF export — shows every track's content).
 import { computed } from 'vue'
 import { track, type TrackName } from '../lib/track'
+import { provideSnippetScope } from '../lib/snippets'
 
 const props = defineProps<{
   web?: boolean
@@ -15,6 +16,9 @@ const props = defineProps<{
 
 const wants = computed<TrackName>(() => (props.mobile ? 'mobile' : 'web'))
 const visible = computed(() => track.value === undefined || track.value === wants.value)
+
+// Code inside posts to this track's Discord channel only.
+provideSnippetScope({ get track() { return wants.value } })
 </script>
 
 <template>

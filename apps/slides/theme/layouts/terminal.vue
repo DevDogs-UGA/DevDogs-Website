@@ -26,6 +26,7 @@ import { computed } from 'vue'
 import { accentHex } from '../accents'
 import Wash from '../components/Wash.vue'
 import Chrome from '../components/Chrome.vue'
+import SnippetScope from '../components/SnippetScope.vue'
 
 const props = withDefaults(defineProps<{
   accent?: string
@@ -60,7 +61,9 @@ const titlebarText = computed(() => props.file ?? props.titlebar)
           <span class="dd-terminal-title">{{ titlebarText }}</span>
         </div>
         <div class="dd-terminal-body">
-          <slot />
+          <SnippetScope :file="file">
+            <slot />
+          </SnippetScope>
         </div>
       </div>
     </div>

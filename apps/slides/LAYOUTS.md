@@ -364,6 +364,59 @@ Fallback when no `layout:` is set. Still dark + accent-aware, with the
 usual wash and chrome, so a forgotten `layout:` doesn't fall back to a
 white slide. You shouldn't need to reference it directly.
 
+## Code blocks: file line numbers, context, and Discord
+
+Code from a real file should look like the file: its own line numbers, the
+lines being taught at full strength, and a few surrounding lines dimmed for
+context. Slidev dims every line outside a block's highlight range, so the
+highlight range *is* the focus and everything else in the block is context.
+
+- **Plain block:** give the file's first shown line as `startLine`. Highlight
+  ranges are then file line numbers.
+
+  ````md
+  ```ts {41-43|43}{lines:true,startLine:38}
+  ...lines 38 onward, exactly as in the file...
+  ```
+  ````
+- **Magic Move:** Slidev can't offset Magic Move line numbers, so the theme's
+  override (`components/ShikiMagicMove.vue`) reads each step's first line
+  from the block's title slot: `[@38]` for every step, or `[@38,@36]` per
+  step. Step ranges are file line numbers here too.
+
+  `````md
+  ````md magic-move [@38,@36] {lines: true}
+  ```ts {41-42}
+  ...before, from line 38...
+  ```
+  ```ts {39-41|41}
+  ...after, from line 36...
+  ```
+  ````
+  `````
+- Commands (`bash`) aren't file excerpts: no line numbers, no ranges.
+
+### Posting to Discord
+
+In the presenter view (`/presenter/`, dev server only), every code block gets
+a Discord button beside its copy button, and `p` posts every block on the
+current slide. A post is the block's focus: the contiguous span its highlight
+ranges cover (the whole block if a range is `all` or it has none; the final
+step for Magic Move), headed with the file path and its line numbers.
+
+Channels follow the track: the Next.js column of a `dual-code` slide and
+anything inside `<Track web>` go to DogDays, the Flutter column and
+`<Track mobile>` to DogPack, and everything else (the SQL) to both. A
+`dual-code` slide with `trackSplit: false` isn't a web/mobile split, so it
+posts to both.
+
+The browser never sees a webhook URL. The buttons POST to the dev server's
+`/__snippets` endpoint (`theme/vite/snippets.ts`), which reads the two
+webhook URLs from `apps/slides/.env` (gitignored; copy `.env.example`):
+`DISCORD_SNIPPETS_WEBHOOK_WEB` and `DISCORD_SNIPPETS_WEBHOOK_MOBILE`.
+Restart the dev server after editing `.env`. A missing URL makes the button
+show an error naming the variable.
+
 ## Components
 
 Auto-imported globally in slide markdown (no `import` needed):
