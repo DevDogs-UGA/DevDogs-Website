@@ -26,9 +26,12 @@ const COMPANIONS: Record<AccentName, [AccentName, AccentName]> = {
 
 type Blob = [cx: string, cy: string, rx: string, ry: string, strength: number]
 
-const MAIN: Blob = ['84%', '12%', '56%', '76%', 30]
-const FIRST: Blob = ['56%', '10%', '24%', '30%', 12]
-const SECOND: Blob = ['92%', '56%', '22%', '30%', 12]
+const MAIN: Blob = ['84%', '12%', '56%', '76%', 25]
+const FIRST: Blob = ['56%', '10%', '24%', '30%', 10]
+const SECOND: Blob = ['92%', '56%', '22%', '30%', 10]
+// A barely-there echo in the corner opposite the chip, so the far side of the
+// slide isn't flat black.
+const OPPOSITE: Blob = ['10%', '94%', '44%', '56%', 6]
 
 const props = withDefaults(defineProps<{ accent?: string }>(), { accent: undefined })
 
@@ -43,6 +46,7 @@ const backgroundImage = computed(() => {
     gradient(FIRST, accentHex(first)),
     gradient(SECOND, accentHex(second)),
     gradient(MAIN, accentHex(name)),
+    gradient(OPPOSITE, accentHex(name)),
   ].join(', ')
 })
 </script>
