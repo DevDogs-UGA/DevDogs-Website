@@ -217,6 +217,15 @@ body {
    per-line blocks, so painting this same border-left/background on each one
    turned every token into its own little boxed-in fragment instead of one
    clean highlighted line -- the code looked shredded into vertical bars. */
+/* Two excerpts from different parts of one file, stacked in the same
+   window: a dashed rule marks the jump so the line numbers don't read as
+   continuous. */
+.dd-code-block + .dd-code-block {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--dd-hairline);
+}
+
 /* Shiki's `.line` is an inline span, so without this a highlight only
    tints the text itself, in boxes. As a full-width inline-block the bar
    spans the window; the newline between lines still breaks them. */

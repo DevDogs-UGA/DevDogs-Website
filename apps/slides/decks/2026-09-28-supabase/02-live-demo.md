@@ -250,40 +250,40 @@ rightFile: lib/guestbook.dart
 ---
 
 ```ts {59-65|67-71}{lines:true,startLine:57}
-  }
+    }
 
-  // Naive version: we trust the client to tell us its own display name.
-  // (Step 4 of the workshop replaces this with a server-side lookup.)
-  const authorName =
-    session.user.user_metadata.name ??
-    session.user.user_metadata.full_name ??
-    session.user.email ??
-    "Anonymous";
+    // Naive version: we trust the client to tell us its own display name.
+    // (Step 4 of the workshop replaces this with a server-side lookup.)
+    const authorName =
+      session.user.user_metadata.name ??
+      session.user.user_metadata.full_name ??
+      session.user.email ??
+      "Anonymous";
 
-  const { data, error } = await supabase
-    .from("messages")
-    .insert({ body: body.trim(), author_name: authorName })
-    .select("id, user_id, author_name, body, created_at")
-    .single();
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({ body: body.trim(), author_name: authorName })
+      .select("id, user_id, author_name, body, created_at")
+      .single();
 ```
 
 ::right::
 
 ```dart {79-83|85-88}{lines:true,startLine:77}
-  }
+    }
 
-  // Naive version: we trust the client to tell us its own display name.
-  // (The next commit replaces this with a server-side lookup.)
-  final metadata = session.user.userMetadata ?? {};
-  final authorName =
-      metadata['name'] ?? metadata['full_name'] ?? session.user.email ?? 'Anonymous';
+    // Naive version: we trust the client to tell us its own display name.
+    // (The next commit replaces this with a server-side lookup.)
+    final metadata = session.user.userMetadata ?? {};
+    final authorName =
+        metadata['name'] ?? metadata['full_name'] ?? session.user.email ?? 'Anonymous';
 
-  await _supabase.from('messages').insert({
-    'body': body,
-    'author_name': authorName,
-  });
+    await _supabase.from('messages').insert({
+      'body': body,
+      'author_name': authorName,
+    });
 
-  _bodyController.clear();
+    _bodyController.clear();
 ```
 
 <!-- Presenter notes: Highlight the authorName lookup -- it reads straight off the client's own session data, which the client fully controls. -->
@@ -418,28 +418,28 @@ rightFile: lib/guestbook.dart
 
 ````md magic-move [@67,@66] {lines: true}
 ```ts {67-71}
-  const { data, error } = await supabase
-    .from("messages")
-    .insert({ body: body.trim(), author_name: authorName })
-    .select("id, user_id, author_name, body, created_at")
-    .single();
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({ body: body.trim(), author_name: authorName })
+      .select("id, user_id, author_name, body, created_at")
+      .single();
 
-  if (!error && data) {
+    if (!error && data) {
 ```
 ```ts {66-76}
-  // The name is looked up server-side from public.profiles (set once, at
-  // sign-up) -- we never send it from the client, so no one can post
-  // under a name that isn't theirs.
-  const { data, error } = await supabase
-    .from("messages")
-    .insert({ body: body.trim() })
-    .select("id, user_id, body, created_at, profiles(name)")
-    .single()
-    // Same reasoning as the list query above -- this is a single row, and
-    // its embedded profile is a single object, not an array.
-    .overrideTypes<Message, { merge: false }>();
+    // The name is looked up server-side from public.profiles (set once, at
+    // sign-up) -- we never send it from the client, so no one can post
+    // under a name that isn't theirs.
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({ body: body.trim() })
+      .select("id, user_id, body, created_at, profiles(name)")
+      .single()
+      // Same reasoning as the list query above -- this is a single row, and
+      // its embedded profile is a single object, not an array.
+      .overrideTypes<Message, { merge: false }>();
 
-  if (!error && data) {
+    if (!error && data) {
 ```
 ````
 
@@ -447,22 +447,22 @@ rightFile: lib/guestbook.dart
 
 ````md magic-move [@85,@79] {lines: true}
 ```dart {85-88}
-  await _supabase.from('messages').insert({
-    'body': body,
-    'author_name': authorName,
-  });
+    await _supabase.from('messages').insert({
+      'body': body,
+      'author_name': authorName,
+    });
 
-  _bodyController.clear();
-  await _loadMessages();
+    _bodyController.clear();
+    await _loadMessages();
 ```
 ```dart {79-82}
-  // The name is looked up server-side from public.profiles (set once, at
-  // sign-up) -- we never send it from the client, so no one can post
-  // under a name that isn't theirs.
-  await _supabase.from('messages').insert({'body': body});
+    // The name is looked up server-side from public.profiles (set once, at
+    // sign-up) -- we never send it from the client, so no one can post
+    // under a name that isn't theirs.
+    await _supabase.from('messages').insert({'body': body});
 
-  _bodyController.clear();
-  await _loadMessages();
+    _bodyController.clear();
+    await _loadMessages();
 ```
 ````
 
@@ -478,8 +478,7 @@ rightFile: lib/guestbook.dart
 ---
 
 ````md magic-move [@32,@35] {lines: true}
-```ts {33-37}
-  // Load the guestbook, newest first, once on mount.
+```ts {32-36}
   useEffect(() => {
     supabase
       .from("messages")
@@ -488,8 +487,7 @@ rightFile: lib/guestbook.dart
       .then(({ data }) => setMessages(data ?? []));
   }, []);
 ```
-```ts {36-44}
-  // Load the guestbook, newest first, once on mount.
+```ts {35-43}
   useEffect(() => {
     supabase
       .from("messages")
@@ -508,13 +506,12 @@ rightFile: lib/guestbook.dart
           <li key={message.id} className="rounded-lg border border-gray-200 p-4">
             <div className="flex items-baseline justify-between">
               <h2 className="font-semibold">{message.profiles?.name ?? "Unknown"}</h2>
-              <span className="text-sm text-gray-500">
 ```
 
 ::right::
 
-````md magic-move [@48,@48] {lines: true}
-```dart {49-52}
+````md magic-move [@47,@47] {lines: true}
+```dart {48-51}
   Future<void> _loadMessages() async {
     try {
       final rows = await _supabase
@@ -523,7 +520,7 @@ rightFile: lib/guestbook.dart
           .order('created_at', ascending: false);
       if (mounted) {
 ```
-```dart {49-52}
+```dart {48-51}
   Future<void> _loadMessages() async {
     try {
       final rows = await _supabase
