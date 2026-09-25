@@ -55,9 +55,6 @@ const titlebarText = computed(() => props.file ?? props.titlebar)
     <div class="dd-content dd-terminal-content h-full flex flex-col justify-center">
       <div class="dd-terminal-window">
         <div class="dd-terminal-titlebar">
-          <span class="dd-terminal-dot" style="background:#FF6467" />
-          <span class="dd-terminal-dot" style="background:#FFB900" />
-          <span class="dd-terminal-dot" style="background:#00D492" />
           <span class="dd-terminal-title">{{ titlebarText }}</span>
         </div>
         <div class="dd-terminal-body">
@@ -87,14 +84,7 @@ const titlebarText = computed(() => props.file ?? props.titlebar)
   border-bottom: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
-.dd-terminal-dot {
-  width: 0.65rem;
-  height: 0.65rem;
-  border-radius: 999px;
-}
-
 .dd-terminal-title {
-  margin-left: 0.5rem;
   font-family: 'Cascadia Code', monospace;
   font-size: 0.8rem;
   color: var(--dd-muted);
