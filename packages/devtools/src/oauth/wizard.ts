@@ -52,6 +52,7 @@ import {
   StateMismatchError,
   start as startLoopback,
   verifyState,
+  type LoopbackListener,
 } from "./loopback.js";
 import { buildConnectUrl } from "./connect-url.js";
 import { ExchangeError, exchangeCode, type ExchangeResult } from "./exchange.js";
@@ -293,7 +294,12 @@ async function connectByDevice(
 }
 
 /**
- * Step 2 (one-click branch): PKCE + loopback listener + browser + exchange.
+ * Step 2 (one-click branch): browser + loopback callback + exchange, given
+ * an ALREADY-STARTED `listener` — starting it is `connectViaOneClick`'s job,
+ * not this function's, so that the one failure that should fall back to the
+ * device flow (the listener failing to even start) is never confused with
+ * any failure in here, all of which are this flow's own and must propagate
+ * (or `bail()`) unchanged rather than triggering a fallback.
  *
  * Always closes the listener, on every exit path — success, denial,
  * malformed callback, state mismatch, timeout, or an exchange error.
@@ -303,6 +309,7 @@ async function connectOneClick(
   platformUrl: string,
   cwd: string,
   transportReason: string,
+  listener: LoopbackListener,
 ): Promise<ExchangeResult> {
   const verifier = generateCodeVerifier();
   const challenge = codeChallengeFor(verifier);
@@ -312,7 +319,6 @@ async function connectOneClick(
 
   log.info(`Using the loopback flow — ${transportReason}.`);
 
-  const listener = await startLoopback();
   try {
     const connectUrl = buildConnectUrl({
       platformUrl,
@@ -386,14 +392,16 @@ async function connectOneClick(
  * node); `cli.ts` refuses passing both, so at most one is set here. Left
  * undefined, the transport is auto-detected from the environment.
  *
- * When loopback is chosen — by override or by auto-detection — and its
- * listener fails to even START (the one failure `startLoopback()` can
- * surface before `connectOneClick` takes over; every later failure in that
- * flow calls `bail()`, which exits the process rather than returning here),
- * this falls back to the device flow UNLESS loopback was explicitly forced,
- * in which case the failure is real and is left to propagate.
+ * `startLoopback()` is called HERE, not inside `connectOneClick`, and ONLY
+ * its failure falls back to device — every failure that can happen once the
+ * listener is actually up (denial, timeout, a bad exchange — all of which
+ * `connectOneClick` reports via `bail()`, or an unexpected rethrow) is that
+ * flow's own and must propagate unchanged, not be mistaken for "the listener
+ * never started" and silently rerouted to a different transport with a
+ * misleading warning. Loopback forced via `--loopback` never falls back at
+ * all: a start failure there is left to propagate as-is.
  */
-async function connectViaOneClick(
+export async function connectViaOneClick(
   target: ConnectTarget,
   platformUrl: string,
   cwd: string,
@@ -408,8 +416,9 @@ async function connectViaOneClick(
     return connectByDevice(target, platformUrl, cwd, decision.reason);
   }
 
+  let listener: LoopbackListener;
   try {
-    return await connectOneClick(target, platformUrl, cwd, decision.reason);
+    listener = await startLoopback();
   } catch (err) {
     if (transportOverride === "loopback") throw err;
     log.warn(
@@ -423,6 +432,8 @@ async function connectViaOneClick(
       "the loopback listener failed to start",
     );
   }
+
+  return connectOneClick(target, platformUrl, cwd, decision.reason, listener);
 }
 
 /** Step 2 (paste branch): the original manual flow — DevDogs API URL, then client ID/secret. */
