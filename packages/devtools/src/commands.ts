@@ -833,6 +833,16 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
               optional: true,
             },
           },
+          {
+            flag: "--device",
+            summary:
+              "Force the device-code flow instead of the local loopback listener.",
+          },
+          {
+            flag: "--loopback",
+            summary:
+              "Force the local loopback listener even over SSH/Codespaces/a dev container.",
+          },
         ],
       },
       {

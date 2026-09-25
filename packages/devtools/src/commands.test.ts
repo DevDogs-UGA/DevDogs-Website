@@ -193,6 +193,14 @@ describe("prompts", () => {
       // before writing (`confirmApply`) IS the question, not a second one
       // for whether to ask it.
       "--apply",
+      // `oauth`'s connect-transport override (TASK-352). Which transport —
+      // the local loopback listener or the device-code flow — is decided
+      // automatically from the environment (SSH/Codespaces/dev container,
+      // or the loopback listener failing to start), and the wizard already
+      // prints which one it picked and why; a prompt here would just ask
+      // the same question the auto-detection already answered.
+      "--device",
+      "--loopback",
     ]);
     const unasked = new Set<string>();
 

@@ -55,6 +55,14 @@ import {
 } from "./loopback.js";
 import { buildConnectUrl } from "./connect-url.js";
 import { ExchangeError, exchangeCode, type ExchangeResult } from "./exchange.js";
+import {
+  DeviceError,
+  PollError,
+  pollForToken,
+  requestDeviceCode,
+  type DeviceCodeResult,
+} from "./device.js";
+import { decideTransport, type ConnectTransport } from "./transport.js";
 import { defaultLabel } from "./label.js";
 import {
   HostedCredentialsMissingError,
@@ -68,7 +76,7 @@ import { recordResolved } from "../invocation.js";
 import { loadEnvSession } from "../repo/peers.js";
 import { discoverRepoRoot } from "../repo/root.js";
 import { resolveTier } from "../tier.js";
-import { bail, unwrap } from "../ui.js";
+import { bail, errorMessage, unwrap } from "../ui.js";
 
 /** Runs `supabase status`, retrying if not running. */
 async function detectLocalWithRetry(cwd: string): Promise<ConnectTarget> {
@@ -200,6 +208,90 @@ function describeExchangeError(err: ExchangeError): string {
   }
 }
 
+/** One human-readable line per `DeviceError` kind (see `device.ts`'s `requestDeviceCode`). */
+function describeDeviceError(err: DeviceError): string {
+  switch (err.kind) {
+    case "rate_limited":
+    case "network":
+    case "malformed":
+    case "invalid_request":
+      return err.message;
+  }
+}
+
+/** One human-readable line per `PollError` kind (see `device.ts`'s `pollForToken`). */
+function describePollError(err: PollError): string {
+  switch (err.kind) {
+    case "invalid_grant":
+      return `The device code was rejected (${err.message}). Run the command again.`;
+    case "access_denied":
+    case "expired_token":
+    case "invalid_request":
+    case "network":
+    case "malformed":
+      return err.message;
+  }
+}
+
+/**
+ * Step 2 (one-click branch, device transport): request a device code,
+ * show the user code and verification URL prominently, try to open a
+ * browser to it (failure is not fatal — the URL is already on screen), and
+ * poll until the platform reports the user approved it, denied it, or the
+ * code expired.
+ */
+async function connectByDevice(
+  target: ConnectTarget,
+  platformUrl: string,
+  cwd: string,
+  transportReason: string,
+): Promise<ExchangeResult> {
+  const label = defaultLabel(cwd);
+  const callbackUri = `${target.apiUrl}/auth/v1/callback`;
+
+  log.info(`Using the device-code flow — ${transportReason}.`);
+
+  const requestSpinner = spinner();
+  requestSpinner.start("Requesting a device code");
+  let device: DeviceCodeResult;
+  try {
+    device = await requestDeviceCode({ platformUrl, label, callbackUri });
+    requestSpinner.stop("Got a device code");
+  } catch (err) {
+    requestSpinner.stop("Could not request a device code");
+    if (err instanceof DeviceError) bail(describeDeviceError(err));
+    throw err;
+  }
+
+  note(
+    `Enter this code: ${device.userCode}\n` +
+      `At: ${device.verificationUri}\n\n` +
+      `Or open this URL directly:\n${device.verificationUriComplete}`,
+    "Approve the connection",
+  );
+  log.info(`Opening ${device.verificationUriComplete}`);
+  openBrowser(device.verificationUriComplete);
+
+  const pollSpinner = spinner();
+  pollSpinner.start(
+    `Waiting for you to enter ${device.userCode} and approve the connection`,
+  );
+  try {
+    const result = await pollForToken({
+      platformUrl,
+      deviceCode: device.deviceCode,
+      intervalSeconds: device.interval,
+      expiresInSeconds: device.expiresIn,
+    });
+    pollSpinner.stop("Approved");
+    return result;
+  } catch (err) {
+    pollSpinner.stop("Connection not completed");
+    if (err instanceof PollError) bail(describePollError(err));
+    throw err;
+  }
+}
+
 /**
  * Step 2 (one-click branch): PKCE + loopback listener + browser + exchange.
  *
@@ -210,12 +302,15 @@ async function connectOneClick(
   target: ConnectTarget,
   platformUrl: string,
   cwd: string,
+  transportReason: string,
 ): Promise<ExchangeResult> {
   const verifier = generateCodeVerifier();
   const challenge = codeChallengeFor(verifier);
   const state = generateState();
   const label = defaultLabel(cwd);
   const callbackUri = `${target.apiUrl}/auth/v1/callback`;
+
+  log.info(`Using the loopback flow — ${transportReason}.`);
 
   const listener = await startLoopback();
   try {
@@ -280,6 +375,53 @@ async function connectOneClick(
     }
   } finally {
     listener.close();
+  }
+}
+
+/**
+ * Step 2 (one-click branch): decides loopback vs. device (see `transport.ts`)
+ * and runs it.
+ *
+ * `transportOverride` is `--device`/`--loopback` (see `commands.ts`'s `oauth`
+ * node); `cli.ts` refuses passing both, so at most one is set here. Left
+ * undefined, the transport is auto-detected from the environment.
+ *
+ * When loopback is chosen — by override or by auto-detection — and its
+ * listener fails to even START (the one failure `startLoopback()` can
+ * surface before `connectOneClick` takes over; every later failure in that
+ * flow calls `bail()`, which exits the process rather than returning here),
+ * this falls back to the device flow UNLESS loopback was explicitly forced,
+ * in which case the failure is real and is left to propagate.
+ */
+async function connectViaOneClick(
+  target: ConnectTarget,
+  platformUrl: string,
+  cwd: string,
+  transportOverride: ConnectTransport | undefined,
+): Promise<ExchangeResult> {
+  const decision = decideTransport({
+    forceDevice: transportOverride === "device",
+    forceLoopback: transportOverride === "loopback",
+  });
+
+  if (decision.transport === "device") {
+    return connectByDevice(target, platformUrl, cwd, decision.reason);
+  }
+
+  try {
+    return await connectOneClick(target, platformUrl, cwd, decision.reason);
+  } catch (err) {
+    if (transportOverride === "loopback") throw err;
+    log.warn(
+      `Could not start the local loopback listener (${errorMessage(err)}) — ` +
+        "falling back to the device-code flow.",
+    );
+    return connectByDevice(
+      target,
+      platformUrl,
+      cwd,
+      "the loopback listener failed to start",
+    );
   }
 }
 
@@ -380,7 +522,10 @@ async function connectByPasting(
 /**
  * The wizard. `baseUrlOverride`/`platformUrlOverride`, when given, skip
  * their respective prompts (only reachable via "Paste credentials instead"
- * and the one-click flow respectively).
+ * and the one-click flow respectively). `transportOverride` (`--device`/
+ * `--loopback`) forces the one-click flow's transport — see
+ * `connectViaOneClick` — and is ignored on the "Paste credentials instead"
+ * branch, which has no transport of its own.
  *
  * Intro and outro are the caller's, so this composes into the devtools menu
  * without drawing a second box inside the first.
@@ -388,6 +533,7 @@ async function connectByPasting(
 export async function runOAuthSetup(
   baseUrlOverride?: string,
   platformUrlOverride?: string,
+  transportOverride?: ConnectTransport,
 ): Promise<void> {
   const cwd = process.cwd();
 
@@ -429,10 +575,11 @@ export async function runOAuthSetup(
 
   const usedOneClick = connectMethod === "one-click";
   const { clientId, clientSecret, issuer } = usedOneClick
-    ? await connectOneClick(
+    ? await connectViaOneClick(
         target,
         platformUrlOverride ?? process.env[ENV_KEYS.platformUrl] ?? WEBSITE_URL,
         cwd,
+        transportOverride,
       )
     : await connectByPasting(baseUrlOverride);
 
