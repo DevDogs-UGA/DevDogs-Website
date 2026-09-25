@@ -47,7 +47,7 @@ const ring = computed(() => accentHex(props.accent))
     >
       <img :src="src" :style="{ height: size, width: size }" alt="QR code" />
     </div>
-    <div v-if="caption || $slots.default" class="text-center text-dd-muted" :class="compact ? 'text-sm max-w-[16rem]' : 'text-lg'">
+    <div v-if="caption || $slots.default" class="text-center text-dd-muted" :class="compact ? 'text-sm max-w-[18rem]' : 'text-lg'">
       <slot>{{ caption }}</slot>
     </div>
   </div>

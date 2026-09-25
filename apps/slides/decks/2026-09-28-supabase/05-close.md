@@ -10,8 +10,8 @@ subtitle: See you Wednesday for the next build session
 ::footer::
 
 <div class="dd-close-qr-row">
-  <QRSlot src="/qr/discord.svg" label="Discord" caption="Questions, help, and Wednesday dev sessions" accent="rose" compact />
-  <QRSlot src="/qr/devdogsuga-org.svg" label="devdogsuga.org" caption="Sign in, join a team, browse the competition" accent="rose" compact />
+  <QRSlot src="/qr/discord.svg" label="Discord" caption="Questions, help, and Wednesday dev sessions" accent="rose" size="9.5rem" compact />
+  <QRSlot src="/qr/devdogsuga-org.svg" label="devdogsuga.org" caption="Sign in, join a team, browse the competition" accent="rose" size="9.5rem" compact />
 </div>
 
 <p class="dd-close-contact">devdogsuga.org &middot; @devdogsuga &middot; devdogs@uga.edu</p>

@@ -46,7 +46,7 @@ const title = computed(() => props.meeting.title ?? props.meeting.kind ?? DATE_F
 
 const timeSpan = computed(() => `${TIME_FMT.format(startsAt.value)} – ${TIME_FMT.format(endsAt.value)}`)
 
-const location = computed(() => [props.meeting.building, props.meeting.location].filter(Boolean).join(' · '))
+const location = computed(() => [props.meeting.building, props.meeting.location].filter(Boolean).join(' '))
 </script>
 
 <template>

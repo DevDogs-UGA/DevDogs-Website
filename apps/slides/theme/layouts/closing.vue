@@ -47,12 +47,12 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
   <div class="slidev-layout dd-closing relative overflow-hidden" :style="style">
     <Wash :accent="accent" :wash="wash" />
     <Chrome v-if="chrome" :accent="accent" :chip="chip" />
-    <div class="dd-content h-full flex flex-col justify-center items-center text-center gap-8">
+    <div class="dd-content h-full flex flex-col justify-center items-center text-center gap-5">
       <div>
-        <div class="text-6xl">
+        <div :class="$slots.footer ? 'text-5xl' : 'text-6xl'">
           <slot />
         </div>
-        <p v-if="subtitle" class="mt-6 text-xl text-dd-muted">
+        <p v-if="subtitle" class="mt-3 text-xl text-dd-muted">
           {{ subtitle }}
         </p>
       </div>
