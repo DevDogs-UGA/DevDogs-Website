@@ -73,6 +73,9 @@ importers:
       '@devdogsuga/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@devdogsuga/events':
+        specifier: workspace:*
+        version: link:../../packages/events
       '@slidev/cli':
         specifier: ^53.0.0
         version: 53.0.0(@nuxt/kit@3.21.11(magicast@0.5.5))(@oxc-project/types@0.150.0)(@types/markdown-it@14.2.0)(@types/node@26.6.2)(@vitejs/devtools-kit@0.4.12(@modelcontextprotocol/server@2.0.0)(cac@7.0.0)(srvx@1.0.5)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.15)(yaml@2.9.1)))(@vue/compiler-sfc@3.5.43)(cac@7.0.0)(esbuild@0.28.2)(hono@4.13.8)(lightningcss@1.33.0)(magicast@0.5.5)(markdown-it@14.3.2)(oxc-parser@0.150.0)(postcss@8.5.28)(react@19.3.0)(rolldown@1.2.9)(srvx@1.0.5)(terser@5.16.9)(tsx@4.23.15)

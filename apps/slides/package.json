@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@devdogsuga/brand": "workspace:*",
+    "@devdogsuga/events": "workspace:*",
     "@slidev/cli": "^53.0.0",
     "@slidev/theme-default": "^0.25.0",
     "vue": "^3.5.43"
