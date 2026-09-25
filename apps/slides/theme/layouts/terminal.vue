@@ -1,7 +1,11 @@
 <script setup lang="ts">
 // Terminal / shell-output slide. Put a fenced ```bash (or similar) block in
 // the default slot; it's rendered inside a faux terminal window chrome.
-// Frontmatter: accent, title (window title, default "shell")
+// The titlebar shows `file` when given (a real file path, e.g.
+// `file: supabase/migrations/0002_profiles.sql`), else falls back to `title`
+// (any freeform titlebar text, e.g. "supabase dashboard → SQL editor").
+// Frontmatter: accent, file, title (default "shell"), chip, chrome, wash
+// (see LAYOUTS.md)
 //   ---
 //   layout: terminal
 //   accent: emerald
@@ -12,28 +16,40 @@
 //   ```
 import { computed } from 'vue'
 import { accentHex } from '../accents'
+import Wash from '../components/Wash.vue'
+import Chrome from '../components/Chrome.vue'
 
 const props = withDefaults(defineProps<{
   accent?: string
+  file?: string
   title?: string
+  chip?: string
+  chrome?: boolean
+  wash?: 'site' | 'template'
 }>(), {
   accent: undefined,
+  file: undefined,
   title: 'shell',
+  chip: undefined,
+  chrome: true,
+  wash: undefined,
 })
 
 const style = computed(() => ({ '--accent': accentHex(props.accent) }))
+const titlebarText = computed(() => props.file ?? props.title)
 </script>
 
 <template>
   <div class="slidev-layout dd-terminal relative overflow-hidden" :style="style">
-    <div class="dd-corner-wash" />
+    <Wash :accent="accent" :wash="wash" />
+    <Chrome v-if="chrome" :accent="accent" :chip="chip" />
     <div class="dd-content h-full flex flex-col justify-center">
       <div class="dd-terminal-window">
         <div class="dd-terminal-titlebar">
           <span class="dd-terminal-dot" style="background:#FF6467" />
           <span class="dd-terminal-dot" style="background:#FFB900" />
           <span class="dd-terminal-dot" style="background:#00D492" />
-          <span class="dd-terminal-title">{{ title }}</span>
+          <span class="dd-terminal-title">{{ titlebarText }}</span>
         </div>
         <div class="dd-terminal-body">
           <slot />
@@ -75,6 +91,12 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
 
 .dd-terminal-body {
   padding: 1rem 1.25rem;
+  /* Shiki's own code block draws its own background/padding by default;
+     inside the terminal window chrome we want the code to fill the window
+     instead of drawing a second box inside it. */
+  --slidev-code-background: transparent;
+  --slidev-code-padding: 0;
+  --slidev-code-radius: 0;
 }
 
 .dd-terminal-body :deep(pre) {
