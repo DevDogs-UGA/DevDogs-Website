@@ -314,6 +314,13 @@ export async function runOAuthSetup(baseUrlOverride?: string): Promise<void> {
     `     provider: "${identifier}",`,
     `     options: { redirectTo: \`\${origin}/auth/callback\` },`,
     `   });`,
+    ``,
+    // The provider row lives in `auth.custom_oauth_providers`, which a plain
+    // `supabase stop`/`supabase start` leaves alone — but `supabase db
+    // reset` and `supabase stop --no-backup` both erase it along with the
+    // rest of the database, silently turning this sign-in button off.
+    `Re-run \`devtools oauth\` after \`supabase db reset\` or \`supabase stop --no-backup\` —`,
+    `either wipes this provider along with the rest of the local database.`,
   );
 
   note(nextSteps.join("\n"), "Next steps");

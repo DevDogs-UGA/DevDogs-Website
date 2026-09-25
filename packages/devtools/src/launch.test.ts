@@ -240,4 +240,23 @@ describe("launch", () => {
     expect(main).toHaveBeenCalledWith(["github", "settings", "--json"]);
   });
 
+  it("oauth skips tier resolution — catalog-marked envFree (TASK-345)", async () => {
+    // This module's cwd (Backstage's own checkout) is not a DevDogsUGA
+    // clone, so `discoverRepoRoot()` genuinely returns null here — the same
+    // condition a workshop repo with no DevDogsUGA checkout at all would
+    // hit. Reaching `main()` anyway, rather than the `RepoNotFoundError`
+    // exit, is what proves `oauth` runs outside a checkout.
+    const { launch } = await import("./launch.js");
+    await launch(["oauth", "--base-url", "https://api.devdogsuga.org"]);
+    expect(resolveSessionTier).not.toHaveBeenCalled();
+    expect(enterEnvironment).toHaveBeenCalledWith("development", {
+      override: false,
+    });
+    expect(main).toHaveBeenCalledWith([
+      "oauth",
+      "--base-url",
+      "https://api.devdogsuga.org",
+    ]);
+  });
+
 });

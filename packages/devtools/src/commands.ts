@@ -798,6 +798,19 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
       {
         name: "oauth",
         summary: 'Configure "Sign in with DevDogs" for this directory.',
+        hint: "works outside a DevDogsUGA checkout too",
+        // Talks only to whatever local Supabase project is running in `cwd`
+        // (see `oauth/db.ts`'s `detectLocalSupabase`) and, for a hosted
+        // target, to the platform's own OAuth endpoints — never a
+        // DevDogsUGA env file, database, or `DEPLOY_ENV`. TASK-345: a
+        // workshop repo with no DevDogsUGA checkout at all must still be
+        // able to run `pnpm dlx @devdogsuga/devtools oauth`, so this joins
+        // `github rulesets`/`github settings` in the catalog-driven bypass
+        // rather than the hardcoded `setup`/`completions` check — see
+        // `launch.ts`'s `isEnvFreeCommand`. Inside a checkout, the command's
+        // own hosted-target path still resolves a tier itself, lazily, only
+        // when a hosted target is actually chosen (see `oauth/wizard.ts`).
+        envFree: true,
         options: [
           {
             flag: "--base-url",
