@@ -1,6 +1,6 @@
 ---
 layout: section-divider
-accent: emerald
+accent: cyan
 kicker: "02 · Live demo"
 chip: LIVE DEMO
 ---
@@ -11,7 +11,7 @@ chip: LIVE DEMO
 
 ---
 layout: terminal
-accent: emerald
+accent: cyan
 chip: CLONE
 titlebar: clone + switch
 ---
@@ -39,7 +39,7 @@ git switch 01-flutter-introduction
 
 ---
 layout: bullets-card
-accent: emerald
+accent: cyan
 chip: SETUP
 cardTitle: One-click
 ---
@@ -63,7 +63,7 @@ one command instead of the manual dashboard steps.
 
 ---
 layout: statement
-accent: emerald
+accent: cyan
 chip: STEP 1
 ---
 
@@ -75,7 +75,7 @@ chip: STEP 1
 layout: terminal
 accent: emerald
 chip: SQL
-file: supabase/migrations/20260928000000_guestbook.sql
+titlebar: supabase dashboard → SQL editor
 ---
 
 ```sql
@@ -100,7 +100,7 @@ create policy "messages are readable by everyone"
 
 ---
 layout: dual-code
-accent: emerald
+accent: cyan
 chip: CODE
 heading: From in-memory to Supabase
 leftFile: components/Guestbook.tsx
@@ -160,7 +160,7 @@ export default function Guestbook() {
 
 ---
 layout: statement
-accent: emerald
+accent: cyan
 chip: STEP 2
 ---
 
@@ -170,7 +170,7 @@ chip: STEP 2
 
 ---
 layout: dual-code
-accent: emerald
+accent: cyan
 chip: CODE
 heading: Sign in / sign out
 leftFile: components/Guestbook.tsx
@@ -215,7 +215,7 @@ rightFile: lib/guestbook.dart
 
 ---
 layout: statement
-accent: emerald
+accent: cyan
 chip: STEP 3
 ---
 
@@ -242,7 +242,7 @@ create policy "authenticated users can insert their own messages"
 
 ---
 layout: dual-code
-accent: emerald
+accent: cyan
 chip: CODE
 heading: Naive insert — client sends its own name
 leftFile: components/Guestbook.tsx
@@ -290,7 +290,7 @@ rightFile: lib/guestbook.dart
 
 ---
 layout: statement
-accent: emerald
+accent: cyan
 chip: WEB ONLY
 ---
 
@@ -311,7 +311,7 @@ Watch the DogDays screen — we'll break it there. Your Flutter app has the same
 
 ---
 layout: statement
-accent: emerald
+accent: cyan
 chip: STEP 4
 ---
 
@@ -323,7 +323,7 @@ chip: STEP 4
 layout: terminal
 accent: emerald
 chip: SQL
-file: supabase/migrations/20260928000100_profiles.sql
+titlebar: supabase dashboard → SQL editor
 ---
 
 ```sql
@@ -341,13 +341,13 @@ create policy "profiles are readable by everyone"
   using (true);
 ```
 
-<!-- Presenter notes: This migration is long, so it's split across three slides -- same file, no new SQL editor paste in between. Same shape as the messages table: create, RLS on, one read-for-everyone policy. -->
+<!-- Presenter notes: Long, so it's split across three slides: run each in the SQL editor in order, on one laptop (shared project). Same shape as the messages table: create, RLS on, one read-for-everyone policy. -->
 
 ---
 layout: terminal
 accent: emerald
 chip: SQL
-file: supabase/migrations/20260928000100_profiles.sql
+titlebar: supabase dashboard → SQL editor
 ---
 
 ```sql
@@ -379,7 +379,7 @@ $$;
 layout: terminal
 accent: emerald
 chip: SQL
-file: supabase/migrations/20260928000100_profiles.sql
+titlebar: supabase dashboard → SQL editor
 ---
 
 ```sql
@@ -405,11 +405,11 @@ alter table public.messages
 alter table public.messages drop column author_name;
 ```
 
-<!-- Presenter notes: Second half of the same migration -- the trigger hookup, a backfill for anyone who signed up before this migration existed, and the schema change that finally removes the naive author_name column now that profiles(name) covers it. -->
+<!-- Presenter notes: Last of the three: the trigger hookup, a backfill for anyone who signed up before this ran, and the schema change that finally removes the naive author_name column now that profiles(name) covers it. -->
 
 ---
 layout: dual-code
-accent: emerald
+accent: cyan
 chip: CODE
 heading: The client can no longer lie
 leftFile: components/Guestbook.tsx
@@ -470,7 +470,7 @@ rightFile: lib/guestbook.dart
 
 ---
 layout: dual-code
-accent: emerald
+accent: cyan
 chip: CODE
 heading: Showing the author's name
 leftFile: components/Guestbook.tsx
@@ -545,16 +545,6 @@ rightFile: lib/guestbook.dart
 ---
 layout: statement
 accent: cyan
-chip: MONOREPO
----
-
-The monorepo writes this exact same SQL, as a real migration, under `supabase/migrations`.
-
-<!-- Presenter notes: One sentence, then move on. `02-nextjs-supabase` and `02-flutter-supabase` go public on GitHub right after tonight's workshop. -->
-
----
-layout: statement
-accent: emerald
 chip: STEP 5
 ---
 
@@ -581,7 +571,7 @@ create policy "authenticated users can delete their own messages"
 
 ---
 layout: dual-code
-accent: emerald
+accent: cyan
 chip: CODE
 heading: Only your own delete button
 leftFile: components/Guestbook.tsx
@@ -627,3 +617,66 @@ rightFile: lib/guestbook.dart
 ```
 
 <!-- Presenter notes: The delete button only renders for your own rows client-side, but the real guard is the RLS policy -- try deleting someone else's id from devtools/curl and Postgres refuses it regardless of what the UI shows. -->
+
+---
+layout: section-divider
+accent: cyan
+chip: BONUS
+kicker: Run it locally
+---
+
+# Everything we clicked, as files
+
+<!-- Presenter notes: Demo only -- nobody needs to follow along, and it needs Docker. Everything so far ran in the shared project's Dashboard; this turns the same SQL into migration files in the repo, which is how the monorepo works. Before starting: `supabase stop` any other local stack on this laptop (same ports, 54321-54324). -->
+
+---
+layout: terminal
+accent: cyan
+chip: LOCAL
+titlebar: terminal
+---
+
+```bash
+npx supabase start
+npx supabase status
+```
+
+<!-- Presenter notes: start boots Postgres, Auth, and Studio in Docker (first run downloads images -- do it before the meeting). status prints the local API URL (http://127.0.0.1:54321), Studio (http://127.0.0.1:54323), and the local publishable key. Open Studio: it's the same dashboard, empty. -->
+
+---
+layout: terminal
+accent: emerald
+chip: SQL
+titlebar: terminal
+---
+
+```bash
+npx supabase migration new guestbook
+npx supabase migration new profiles
+npx supabase db reset
+```
+
+<!-- Presenter notes: Each `migration new` creates an empty, timestamped file under supabase/migrations -- paste in the SQL we ran in the Dashboard, in the same order (the guestbook table and policies into the first, the profiles table, trigger, and backfill into the second). `db reset` rebuilds the local database from those files, so anyone who clones the repo gets the same schema. -->
+
+---
+layout: terminal
+accent: cyan
+chip: LOCAL
+titlebar: terminal
+---
+
+```bash
+pnpm dlx @devdogsuga/devtools oauth
+```
+
+<!-- Presenter notes: The DevDogs sign-in provider isn't part of the migrations, and `db reset` wipes it, so register it again against the local stack. Then point `.env.local` (web) or `demo.env` (mobile) at the local URL and publishable key from `supabase status`, restart the app, and sign in against your own machine. -->
+
+---
+layout: statement
+accent: cyan
+chip: MONOREPO
+---
+
+The monorepo works exactly like this: every schema change is a migration under `supabase/migrations`.
+
+<!-- Presenter notes: One sentence, then move on to the competition. `02-nextjs-supabase` and `02-flutter-supabase` (with these migrations) go public on GitHub right after tonight's workshop. -->
