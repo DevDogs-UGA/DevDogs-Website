@@ -29,7 +29,7 @@ const props = withDefaults(defineProps<{
   label?: string
   chip?: string
   chrome?: boolean
-  wash?: 'site' | 'template'
+  wash?: 'corner' | 'site' | 'template'
 }>(), {
   accent: undefined,
   caption: undefined,

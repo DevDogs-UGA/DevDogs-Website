@@ -33,7 +33,7 @@ const props = withDefaults(defineProps<{
   titlebar?: string
   chip?: string
   chrome?: boolean
-  wash?: 'site' | 'template'
+  wash?: 'corner' | 'site' | 'template'
 }>(), {
   accent: undefined,
   file: undefined,

@@ -35,10 +35,15 @@ Every layout below renders three things automatically, unless you turn
 them off:
 
 - **The background wash.** A dark (`#0a0a0c`) base with a soft accent
-  tint, drawn behind everything else. Two modes, chosen by
-  `themeConfig.wash` in the deck's headmatter (`site` (default) or
-  `template`) or overridden per-slide with a `wash` frontmatter key:
-  - `site` (default) — a static (no parallax, no JS) port of the
+  tint, drawn behind everything else. Three modes, chosen by
+  `themeConfig.wash` in the deck's headmatter (`corner` (default), `site`
+  or `template`) or overridden per-slide with a `wash` frontmatter key:
+  - `corner` (default) — the template's corner glow rebuilt in CSS: one
+    radial gradient off the top-right corner (behind the chip) in the
+    slide's accent, plus two fainter companion blobs in complementary deck
+    accents, all blurred. `theme/components/CornerWash.vue` holds the
+    accent → companions map and the blob positions.
+  - `site` — a static (no parallax, no JS) port of the
     website's section blob wash (`apps/platform/src/ui/section-background.tsx`
     and its callers like `HeroSection`/`EventsSection`): five radial
     gradients, tinted with `color-mix(in srgb, var(--accent) N%,

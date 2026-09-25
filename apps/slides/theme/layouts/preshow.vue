@@ -17,7 +17,7 @@ const props = withDefaults(defineProps<{
   accent?: string
   chip?: string
   chrome?: boolean
-  wash?: 'site' | 'template'
+  wash?: 'corner' | 'site' | 'template'
 }>(), {
   accent: undefined,
   chip: undefined,

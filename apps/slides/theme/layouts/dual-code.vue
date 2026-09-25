@@ -60,7 +60,7 @@ const props = withDefaults(defineProps<{
   trackSplit?: boolean
   chip?: string
   chrome?: boolean
-  wash?: 'site' | 'template'
+  wash?: 'corner' | 'site' | 'template'
 }>(), {
   accent: undefined,
   heading: undefined,
