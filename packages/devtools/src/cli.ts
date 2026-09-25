@@ -1000,7 +1000,10 @@ async function dispatch(argv: string[]): Promise<string | null> {
   if (first === "bw") return runBw(rest);
 
   if (first === "oauth") {
-    await runOAuthSetup(flagValue(rest, "--base-url"));
+    await runOAuthSetup(
+      flagValue(rest, "--base-url"),
+      flagValue(rest, "--platform-url"),
+    );
     return 'All done! You\'re ready to "Sign in with DevDogs".';
   }
 

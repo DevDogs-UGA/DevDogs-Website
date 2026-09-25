@@ -6,10 +6,19 @@
  * install; nothing here is published, so that separation bought only a second
  * `@clack/prompts` dependency and a second place to look for a CLI.
  *
- * It still points at whatever project you run it in. That is the point: a
- * forum developer runs it against *their* local Supabase, not this one.
+ * Two axes, chosen independently:
+ *
+ *   * TARGET — which Supabase project gets the custom provider: the one
+ *     `supabase status` reports for this directory, or a hosted one
+ *     (staging/production, or someone else's) named by URL + service-role
+ *     key. See `target.ts`.
+ *   * CONNECT METHOD — how the OAuth client's `client_id`/`client_secret`
+ *     are obtained: the one-click flow (default, TASK-351) opens a browser
+ *     at the platform's `/tools/oauth/connect`, waits on a loopback
+ *     listener, and exchanges a PKCE-protected code for them; "Paste
+ *     credentials instead" is the original manual flow, for a platform that
+ *     is unreachable or a contributor who would rather not open a browser.
  */
-import { execFile } from "node:child_process";
 import {
   confirm,
   log,
@@ -19,6 +28,7 @@ import {
   spinner,
   text,
 } from "@clack/prompts";
+import type { DeployEnvironment } from "@devdogsuga/env";
 import {
   DEFAULT_API_URL,
   ENV_KEYS,
@@ -27,36 +37,48 @@ import {
   WEBSITE_URL,
 } from "./config.js";
 import { upsertEnvLocal } from "./env-file.js";
-import {
-  checkProvider,
-  detectLocalSupabase,
-  upsertDevDogsProvider,
-  type LocalSupabaseConfig,
-} from "./db.js";
+import { checkProvider, upsertDevDogsProvider } from "./db.js";
 import { DiscoveryError, fetchIssuer } from "./discovery.js";
+import { openBrowser } from "./browser.js";
+import {
+  codeChallengeFor,
+  generateCodeVerifier,
+  generateState,
+} from "./pkce.js";
+import {
+  CallbackDeniedError,
+  CallbackMalformedError,
+  CallbackTimeoutError,
+  StateMismatchError,
+  start as startLoopback,
+  verifyState,
+} from "./loopback.js";
+import { buildConnectUrl } from "./connect-url.js";
+import { ExchangeError, exchangeCode, type ExchangeResult } from "./exchange.js";
+import { defaultLabel } from "./label.js";
+import {
+  HostedCredentialsMissingError,
+  NoTierResolvedError,
+  readHostedTargetFromEnvFiles,
+  resolveLocalTarget,
+  resolveHostedTargetInRepo,
+  type ConnectTarget,
+} from "./target.js";
 import { recordResolved } from "../invocation.js";
+import { loadEnvSession } from "../repo/peers.js";
+import { discoverRepoRoot } from "../repo/root.js";
+import { resolveTier } from "../tier.js";
 import { bail, unwrap } from "../ui.js";
 
-/** Opens `url` in the user's default browser, cross-platform. */
-function openBrowser(url: string): void {
-  if (process.platform === "win32") {
-    execFile("cmd", ["/c", "start", "", url]);
-  } else if (process.platform === "darwin") {
-    execFile("open", [url]);
-  } else {
-    execFile("xdg-open", [url]);
-  }
-}
-
 /** Runs `supabase status`, retrying if not running. */
-async function detectWithRetry(cwd: string): Promise<LocalSupabaseConfig> {
+async function detectLocalWithRetry(cwd: string): Promise<ConnectTarget> {
   while (true) {
     const s = spinner();
     s.start("Detecting local Supabase");
     try {
-      const config = detectLocalSupabase(cwd);
-      s.stop(`Connected to ${config.apiUrl}`);
-      return config;
+      const target = await resolveLocalTarget(cwd);
+      s.stop(`Connected to ${target.apiUrl}`);
+      return target;
     } catch (err) {
       s.stop("Could not detect local Supabase");
       log.error(err instanceof Error ? err.message : String(err));
@@ -74,21 +96,197 @@ async function detectWithRetry(cwd: string): Promise<LocalSupabaseConfig> {
   }
 }
 
-/**
- * The wizard. `baseUrl`, when given, skips the first prompt.
- *
- * Intro and outro are the caller's, so this composes into the devtools menu
- * without drawing a second box inside the first.
- */
-export async function runOAuthSetup(baseUrlOverride?: string): Promise<void> {
-  const cwd = process.cwd();
+function requireUrl(v: string | undefined): string | undefined {
+  if (!v) return "Required";
+  try {
+    new URL(v);
+    return undefined;
+  } catch {
+    return "Enter a valid URL";
+  }
+}
 
-  log.info(
-    'Configures the Supabase project in this directory to support "Sign in with DevDogs".',
+function requireNonEmpty(v: string | undefined): string | undefined {
+  return v?.trim() ? undefined : "Required";
+}
+
+/** A hosted target reached from INSIDE a DevDogsUGA checkout: asks which tier, lazily. */
+async function chooseHostedTargetInRepo(): Promise<ConnectTarget> {
+  try {
+    return await resolveHostedTargetInRepo(undefined, {
+      resolveTier: (tierArg, message) =>
+        resolveTier(tierArg, message, { label: "devtools oauth" }),
+      enterEnvironment: async (tier: DeployEnvironment) => {
+        const envSession = await loadEnvSession();
+        // `override: true` — a DELIBERATE, later choice of tier here must
+        // win over the `development` the (envFree) launcher already
+        // entered before this command ever ran. See `target.ts`'s
+        // `RepoHostedTargetDeps.enterEnvironment`.
+        await envSession.enterEnvironment(tier, { override: true });
+      },
+    });
+  } catch (err) {
+    if (err instanceof HostedCredentialsMissingError) bail(err.message);
+    if (err instanceof NoTierResolvedError) bail("No tier selected.");
+    throw err;
+  }
+}
+
+/** A hosted target reached from OUTSIDE any checkout: `.env.local`/`.env`, else a prompt. */
+async function chooseHostedTargetFromEnvOrPrompt(
+  cwd: string,
+): Promise<ConnectTarget> {
+  const fromFiles = readHostedTargetFromEnvFiles(cwd);
+
+  if (fromFiles.apiUrl && fromFiles.serviceRoleKey) {
+    log.info("Using the Supabase URL and service-role key from .env.local/.env.");
+    return { apiUrl: fromFiles.apiUrl, serviceRoleKey: fromFiles.serviceRoleKey, kind: "hosted" };
+  }
+
+  const apiUrl = unwrap(
+    await text({ message: "Supabase project URL", validate: requireUrl }),
+  ).replace(/\/+$/, "");
+  const serviceRoleKey = unwrap(
+    await password({
+      message: "Supabase service-role key",
+      validate: requireNonEmpty,
+    }),
+  ).trim();
+
+  return { apiUrl, serviceRoleKey, kind: "hosted" };
+}
+
+/** Step 1: choose which Supabase project this run configures. */
+async function chooseTarget(cwd: string): Promise<ConnectTarget> {
+  const insideRepo = discoverRepoRoot(cwd) !== null;
+
+  const kind = unwrap(
+    await select({
+      message: "Which Supabase project are you configuring?",
+      options: [
+        {
+          value: "local" as const,
+          label: "Local (this directory)",
+          hint: "supabase status",
+        },
+        {
+          value: "hosted" as const,
+          label: "A hosted project",
+          hint: insideRepo
+            ? "staging, production, or another project"
+            : "reads .env.local/.env, or asks",
+        },
+      ],
+    }),
   );
 
-  // ── Step 1: DevDogs API base URL ───────────────────────────────────────────
+  if (kind === "local") return detectLocalWithRetry(cwd);
+  return insideRepo
+    ? chooseHostedTargetInRepo()
+    : chooseHostedTargetFromEnvOrPrompt(cwd);
+}
 
+/** One human-readable line per `ExchangeError` kind. */
+function describeExchangeError(err: ExchangeError): string {
+  switch (err.kind) {
+    case "invalid_grant":
+      return `The authorization code was rejected (${err.message}). Run the command again.`;
+    case "rate_limited":
+      return err.message;
+    case "network":
+    case "malformed":
+    case "invalid_request":
+      return err.message;
+  }
+}
+
+/**
+ * Step 2 (one-click branch): PKCE + loopback listener + browser + exchange.
+ *
+ * Always closes the listener, on every exit path — success, denial,
+ * malformed callback, state mismatch, timeout, or an exchange error.
+ */
+async function connectOneClick(
+  target: ConnectTarget,
+  platformUrl: string,
+  cwd: string,
+): Promise<ExchangeResult> {
+  const verifier = generateCodeVerifier();
+  const challenge = codeChallengeFor(verifier);
+  const state = generateState();
+  const label = defaultLabel(cwd);
+  const callbackUri = `${target.apiUrl}/auth/v1/callback`;
+
+  const listener = await startLoopback();
+  try {
+    const connectUrl = buildConnectUrl({
+      platformUrl,
+      redirectUri: listener.redirectUri,
+      codeChallenge: challenge,
+      state,
+      label,
+      callbackUri,
+    });
+
+    log.info(`Opening ${connectUrl}`);
+    openBrowser(connectUrl);
+    note(
+      `If your browser did not open, visit this URL:\n${connectUrl}`,
+      "Approve the connection",
+    );
+
+    const s = spinner();
+    s.start("Waiting for you to approve the connection in your browser");
+    let callback: { code: string; state: string };
+    try {
+      callback = await listener.result;
+    } catch (err) {
+      s.stop("Connection not completed");
+      if (err instanceof CallbackDeniedError) {
+        bail(
+          err.errorCode === "access_denied"
+            ? "Connection declined in the browser."
+            : `Connection failed: ${err.message}`,
+        );
+      }
+      if (err instanceof CallbackTimeoutError) bail(err.message);
+      if (err instanceof CallbackMalformedError) bail(err.message);
+      throw err;
+    }
+    s.stop("Approved");
+
+    let verified: { code: string; state: string };
+    try {
+      verified = verifyState(state, callback);
+    } catch (err) {
+      if (err instanceof StateMismatchError) bail(err.message);
+      throw err;
+    }
+
+    const exchangeSpinner = spinner();
+    exchangeSpinner.start("Exchanging the authorization code");
+    try {
+      const result = await exchangeCode({
+        platformUrl,
+        code: verified.code,
+        codeVerifier: verifier,
+      });
+      exchangeSpinner.stop("Connected");
+      return result;
+    } catch (err) {
+      exchangeSpinner.stop("Could not complete the exchange");
+      if (err instanceof ExchangeError) bail(describeExchangeError(err));
+      throw err;
+    }
+  } finally {
+    listener.close();
+  }
+}
+
+/** Step 2 (paste branch): the original manual flow — DevDogs API URL, then client ID/secret. */
+async function connectByPasting(
+  baseUrlOverride?: string,
+): Promise<ExchangeResult> {
   let baseUrl =
     baseUrlOverride ?? process.env[ENV_KEYS.baseUrl] ?? DEFAULT_API_URL;
 
@@ -115,20 +313,7 @@ export async function runOAuthSetup(baseUrlOverride?: string): Promise<void> {
   // rerun line needs to skip this step next time.
   if (!baseUrlOverride) recordResolved("--base-url", baseUrl);
 
-  // ── Step 2: Provider display name ─────────────────────────────────────────
-
-  const providerName = unwrap(
-    await text({
-      message: "Provider display name",
-      initialValue: process.env[ENV_KEYS.providerName] ?? PROVIDER_NAME,
-      placeholder: PROVIDER_NAME,
-    }),
-  );
-
-  // ── Step 3: OAuth client credentials ───────────────────────────────────────
-
-  let clientId: string | undefined =
-    process.env[ENV_KEYS.clientId] || undefined;
+  let clientId: string | undefined = process.env[ENV_KEYS.clientId] || undefined;
   let clientSecret: string | undefined =
     process.env[ENV_KEYS.clientSecret] || undefined;
 
@@ -169,11 +354,89 @@ export async function runOAuthSetup(baseUrlOverride?: string): Promise<void> {
     ).trim();
   }
 
-  // ── Step 4: Detect local Supabase ─────────────────────────────────────────
+  // Supabase Auth's own OIDC provider refuses to register a custom provider
+  // whose declared issuer disagrees with what ITS discovery document
+  // reports — and that need not be `${baseUrl}/auth/v1`; Supabase may
+  // advertise its project ref host there instead of the custom domain this
+  // ran against. Reading the issuer from discovery, rather than assuming
+  // it, is what keeps this correct either way — see `discovery.ts`'s
+  // header. (The one-click branch skips this entirely: the exchange
+  // response carries the issuer directly.)
+  const discoverySpinner = spinner();
+  discoverySpinner.start("Discovering issuer");
+  let issuer: string;
+  try {
+    issuer = await fetchIssuer(baseUrl);
+    discoverySpinner.stop(`Discovered issuer: ${issuer}`);
+  } catch (err) {
+    discoverySpinner.stop("Could not discover the issuer");
+    if (err instanceof DiscoveryError) bail(err.message);
+    throw err;
+  }
 
-  const localConfig = await detectWithRetry(cwd);
+  return { clientId, clientSecret, issuer };
+}
 
-  // ── Step 5: Resolve provider identifier ───────────────────────────────────
+/**
+ * The wizard. `baseUrlOverride`/`platformUrlOverride`, when given, skip
+ * their respective prompts (only reachable via "Paste credentials instead"
+ * and the one-click flow respectively).
+ *
+ * Intro and outro are the caller's, so this composes into the devtools menu
+ * without drawing a second box inside the first.
+ */
+export async function runOAuthSetup(
+  baseUrlOverride?: string,
+  platformUrlOverride?: string,
+): Promise<void> {
+  const cwd = process.cwd();
+
+  log.info(
+    'Configures a Supabase project to support "Sign in with DevDogs".',
+  );
+
+  // ── Step 1: Choose target ────────────────────────────────────────────────
+
+  const target = await chooseTarget(cwd);
+
+  // ── Step 2: Connect ──────────────────────────────────────────────────────
+
+  const providerName = unwrap(
+    await text({
+      message: "Provider display name",
+      initialValue: process.env[ENV_KEYS.providerName] ?? PROVIDER_NAME,
+      placeholder: PROVIDER_NAME,
+    }),
+  );
+
+  const connectMethod = unwrap(
+    await select({
+      message: "How do you want to connect?",
+      options: [
+        {
+          value: "one-click" as const,
+          label: "One-click connect",
+          hint: "opens your browser — recommended",
+        },
+        {
+          value: "paste" as const,
+          label: "Paste credentials instead",
+          hint: "register an OAuth client on the website by hand",
+        },
+      ],
+    }),
+  );
+
+  const usedOneClick = connectMethod === "one-click";
+  const { clientId, clientSecret, issuer } = usedOneClick
+    ? await connectOneClick(
+        target,
+        platformUrlOverride ?? process.env[ENV_KEYS.platformUrl] ?? WEBSITE_URL,
+        cwd,
+      )
+    : await connectByPasting(baseUrlOverride);
+
+  // ── Step 3: Configure — resolve the provider identifier, then upsert ──────
 
   let identifier = PROVIDER_IDENTIFIER;
 
@@ -182,7 +445,7 @@ export async function runOAuthSetup(baseUrlOverride?: string): Promise<void> {
     s.start(`Checking for existing ${identifier} provider`);
     let existing: { exists: boolean; name?: string };
     try {
-      existing = await checkProvider(localConfig, identifier);
+      existing = await checkProvider(target, identifier);
       s.stop(
         existing.exists
           ? `Found existing ${identifier} provider (${existing.name ?? "unnamed"})`
@@ -216,7 +479,7 @@ export async function runOAuthSetup(baseUrlOverride?: string): Promise<void> {
         const suffix = unwrap(
           await text({
             message: `New identifier suffix — will be registered as "custom:<suffix>"`,
-            placeholder: "devdogs-staging",
+            placeholder: "devdogsuga-staging",
             validate: (v) => {
               if (!v?.trim()) return "Required";
               if (/[^a-z0-9-]/.test(v.trim()))
@@ -229,31 +492,9 @@ export async function runOAuthSetup(baseUrlOverride?: string): Promise<void> {
     }
   }
 
-  // ── Step 6: Discover the issuer ───────────────────────────────────────────
-
-  // Supabase Auth's own OIDC provider refuses to register a custom provider
-  // whose declared issuer disagrees with what ITS discovery document reports
-  // — and that need not be `${baseUrl}/auth/v1`; Supabase may advertise its
-  // project ref host there instead of the custom domain this ran against.
-  // Reading the issuer from discovery, rather than assuming it, is what
-  // keeps this correct either way — see `discovery.ts`'s header.
-  const discoverySpinner = spinner();
-  discoverySpinner.start("Discovering issuer");
-  let issuer: string;
-  try {
-    issuer = await fetchIssuer(baseUrl);
-    discoverySpinner.stop(`Discovered issuer: ${issuer}`);
-  } catch (err) {
-    discoverySpinner.stop("Could not discover the issuer");
-    if (err instanceof DiscoveryError) bail(err.message);
-    throw err;
-  }
-
-  // ── Step 7: Upsert custom OAuth provider ────────────────────────────────
-
   const s = spinner();
   s.start(`Configuring ${identifier}`);
-  const row = await upsertDevDogsProvider(localConfig, {
+  const row = await upsertDevDogsProvider(target, {
     identifier,
     name: providerName,
     clientId,
@@ -262,66 +503,78 @@ export async function runOAuthSetup(baseUrlOverride?: string): Promise<void> {
   });
   s.stop(`Configured ${row.identifier} (issuer: ${row.issuer})`);
 
-  // ── Step 8: Persist config to .env.local ───────────────────────────────────
+  // ── Step 4: Finish — persist to .env.local, print next steps ─────────────
 
-  upsertEnvLocal(cwd, {
-    [ENV_KEYS.baseUrl]: baseUrl,
+  const envValues: Record<string, string> = {
     [ENV_KEYS.providerName]: providerName,
     [ENV_KEYS.clientId]: clientId,
+    // The secret key never rides in a value string that ships to a client —
+    // `.env.local` is a server-side/CLI file, never bundled, the same
+    // guarantee the original manual flow already carried; this branch adds
+    // nothing new to that boundary.
     [ENV_KEYS.clientSecret]: clientSecret,
-  });
+  };
+  if (!usedOneClick) {
+    envValues[ENV_KEYS.baseUrl] =
+      baseUrlOverride ?? process.env[ENV_KEYS.baseUrl] ?? DEFAULT_API_URL;
+  }
+  upsertEnvLocal(cwd, envValues);
   log.success("Credentials saved to .env.local");
 
-  // ── Step 9: Redirect URI registration ────────────────────────────────────
+  const callbackUri = `${target.apiUrl}/auth/v1/callback`;
 
-  const callbackUri = `${localConfig.apiUrl}/auth/v1/callback`;
-
-  const alreadyRegistered = unwrap(
-    await confirm({
-      message:
-        "Have you already registered your Supabase callback URL with DevDogs?",
-      initialValue: false,
-    }),
-  );
-
-  if (!alreadyRegistered) {
-    const keysUrl = `${WEBSITE_URL}/tools/oauth?add_redirect_uri=${encodeURIComponent(callbackUri)}`;
-    log.info(`Opening ${keysUrl}`);
-    openBrowser(keysUrl);
-  }
-
-  // ── Step 10: Next-steps checklist ──────────────────────────────────────────
-
-  const nextSteps: string[] = [];
-  let step = 1;
-
-  if (!alreadyRegistered) {
-    nextSteps.push(
-      `${step++}. Finish registering your callback URL in the browser that just opened:`,
-      `   Local:      ${callbackUri}`,
-      `   Production: https://<your-project>.supabase.co/auth/v1/callback`,
-      ``,
+  // The one-click flow already told the platform this callback URL as part
+  // of `/tools/oauth/connect` (`callback_uri`), so there is nothing left to
+  // register by hand. Only the manual "paste credentials" path — which
+  // created its OAuth client on the website, where redirect URIs are a
+  // separate step — still needs this.
+  if (!usedOneClick) {
+    const alreadyRegistered = unwrap(
+      await confirm({
+        message:
+          "Have you already registered your Supabase callback URL with DevDogs?",
+        initialValue: false,
+      }),
     );
+
+    if (!alreadyRegistered) {
+      const keysUrl = `${WEBSITE_URL}/tools/oauth?add_redirect_uri=${encodeURIComponent(callbackUri)}`;
+      log.info(`Opening ${keysUrl}`);
+      openBrowser(keysUrl);
+    }
+
+    if (!alreadyRegistered) {
+      note(
+        `Finish registering your callback URL in the browser that just opened:\n` +
+          `   ${callbackUri}`,
+        "One more step",
+      );
+    }
   }
 
-  nextSteps.push(
-    `${step++}. Make sure your project's supabase/config.toml allows your app callback:`,
+  const nextSteps: string[] = [
+    `Make sure your project's supabase/config.toml allows your app callback:`,
     `   additional_redirect_urls = ["http://localhost:<port>/auth/callback"]`,
     ``,
-    `${step++}. Trigger sign-in from your app:`,
+    `Trigger sign-in from your app:`,
     ``,
     `   await supabase.auth.signInWithOAuth({`,
     `     provider: "${identifier}",`,
     `     options: { redirectTo: \`\${origin}/auth/callback\` },`,
     `   });`,
-    ``,
-    // The provider row lives in `auth.custom_oauth_providers`, which a plain
-    // `supabase stop`/`supabase start` leaves alone — but `supabase db
-    // reset` and `supabase stop --no-backup` both erase it along with the
-    // rest of the database, silently turning this sign-in button off.
-    `Re-run \`devtools oauth\` after \`supabase db reset\` or \`supabase stop --no-backup\` —`,
-    `either wipes this provider along with the rest of the local database.`,
-  );
+  ];
+
+  if (target.kind === "local") {
+    nextSteps.push(
+      ``,
+      // The provider row lives in `auth.custom_oauth_providers`, which a
+      // plain `supabase stop`/`supabase start` leaves alone — but `supabase
+      // db reset` and `supabase stop --no-backup` both erase it along with
+      // the rest of the database, silently turning this sign-in button off.
+      `Re-run \`devtools oauth\` after \`supabase db reset\` or \`supabase stop --no-backup\` —`,
+      `either wipes this provider along with the rest of the local database.`,
+    );
+  }
 
   note(nextSteps.join("\n"), "Next steps");
 }

@@ -815,10 +815,21 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
           {
             flag: "--base-url",
             value: "<url>",
-            summary: "DevDogs API URL. Asked for when absent.",
+            summary: "DevDogs API URL. Only used by \"Paste credentials instead\".",
             prompt: {
               kind: "text",
               message: "DevDogs API URL? (blank asks inside the wizard)",
+              optional: true,
+            },
+          },
+          {
+            flag: "--platform-url",
+            value: "<url>",
+            summary:
+              "Platform URL for one-click connect. Defaults to https://devdogsuga.org.",
+            prompt: {
+              kind: "text",
+              message: "Platform URL? (blank uses the default)",
               optional: true,
             },
           },
