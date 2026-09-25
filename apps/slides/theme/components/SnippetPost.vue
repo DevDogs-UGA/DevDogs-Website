@@ -59,8 +59,8 @@ const label = computed(() => ({
     @click="post"
   >
     <ph-circle-notch v-if="state === 'posting'" class="p-2 w-8 h-8 animate-spin" />
-    <ph-check-circle v-else-if="state === 'posted'" class="p-2 w-8 h-8 text-emerald" />
-    <ph-warning-circle v-else-if="state === 'failed'" class="p-2 w-8 h-8 text-red" />
+    <ph-check-circle v-else-if="state === 'posted'" class="p-2 w-8 h-8 text-accent-emerald" />
+    <ph-warning-circle v-else-if="state === 'failed'" class="p-2 w-8 h-8 text-accent-red" />
     <ph-discord-logo v-else class="p-2 w-8 h-8" />
   </button>
 </template>

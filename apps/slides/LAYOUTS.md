@@ -276,6 +276,18 @@ select * from messages;
 ```
 ```
 
+## Code colours
+
+Code slides say what kind of code they hold by colour:
+
+- **Emerald** is SQL, which both stacks run unchanged (in the Supabase
+  Dashboard's SQL editor).
+- **Purple** is Next.js and **sky** is Flutter, wherever the two stacks
+  diverge. On a `dual-code` web/mobile split each column wears its stack's
+  colour; with `?track=` set, the whole slide (chip, wash) follows that
+  column. `<Track web>` / `<Track mobile>` colour whatever code they wrap.
+  The mapping lives in `TRACK_ACCENT` (`theme/lib/track.ts`).
+
 ## Track mode
 
 Two demo laptops share one deck (web and mobile) — see the design note

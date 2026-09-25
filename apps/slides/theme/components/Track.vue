@@ -6,7 +6,8 @@
 // when no track is set at all (so a plain, no-query-param view — like the
 // PDF export — shows every track's content).
 import { computed } from 'vue'
-import { track, type TrackName } from '../lib/track'
+import { accentHex } from '../accents'
+import { track, TRACK_ACCENT, type TrackName } from '../lib/track'
 import { provideSnippetScope } from '../lib/snippets'
 
 const props = defineProps<{
@@ -22,7 +23,9 @@ provideSnippetScope({ get track() { return wants.value } })
 </script>
 
 <template>
-  <template v-if="visible">
+  <!-- display: contents keeps this wrapper out of layout; it only carries
+       the stack's colour (TRACK_ACCENT) down to the code inside. -->
+  <div v-if="visible" class="contents" :style="{ '--accent': accentHex(TRACK_ACCENT[wants]) }">
     <slot />
-  </template>
+  </div>
 </template>

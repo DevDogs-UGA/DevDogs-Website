@@ -19,6 +19,7 @@ const COMPANIONS: Record<AccentName, [AccentName, AccentName]> = {
   purple: ['cyan', 'red'],
   red: ['amber', 'purple'],
   amber: ['red', 'purple'],
+  sky: ['purple', 'emerald'],
 }
 
 type Blob = [cx: string, cy: string, rx: string, ry: string, strength: number]

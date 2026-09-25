@@ -49,7 +49,7 @@ import { accentHex } from '../accents'
 import Wash from '../components/Wash.vue'
 import Chrome from '../components/Chrome.vue'
 import SnippetScope from '../components/SnippetScope.vue'
-import { track } from '../lib/track'
+import { track, TRACK_ACCENT } from '../lib/track'
 
 const props = withDefaults(defineProps<{
   accent?: string
@@ -75,7 +75,14 @@ const props = withDefaults(defineProps<{
   wash: undefined,
 })
 
-const style = computed(() => ({ '--accent': accentHex(props.accent) }))
+// On a web/mobile split each column wears its stack's colour (TRACK_ACCENT),
+// and with a track chosen the whole slide (chip, wash) follows that column.
+// With both columns showing, the chip and wash keep the slide's `accent`.
+const slideAccent = computed(() =>
+  props.trackSplit && track.value ? TRACK_ACCENT[track.value] : props.accent)
+const style = computed(() => ({ '--accent': accentHex(slideAccent.value) }))
+const leftStyle = computed(() => props.trackSplit ? { '--accent': accentHex(TRACK_ACCENT.web) } : {})
+const rightStyle = computed(() => props.trackSplit ? { '--accent': accentHex(TRACK_ACCENT.mobile) } : {})
 
 // undefined = show both (no track chosen, or PDF export). Otherwise show
 // only the matching column, full width. Slides with `trackSplit: false`
@@ -86,15 +93,15 @@ const showRight = computed(() => !props.trackSplit || track.value !== 'web')
 
 <template>
   <div class="slidev-layout dd-dual-code relative overflow-hidden" :style="style">
-    <Wash :accent="accent" :wash="wash" />
-    <Chrome v-if="chrome" :accent="accent" :chip="chip" />
+    <Wash :accent="slideAccent" :wash="wash" />
+    <Chrome v-if="chrome" :accent="slideAccent" :chip="chip" />
     <div class="dd-content dd-dual-code-content h-full flex flex-col">
       <h2 v-if="heading" class="dd-dual-code-heading">{{ heading }}</h2>
       <div
         class="grid gap-4 flex-1 min-h-0"
         :style="{ gridTemplateColumns: showLeft && showRight ? '1fr 1fr' : '1fr' }"
       >
-        <div v-if="showLeft" class="dd-dual-code-window">
+        <div v-if="showLeft" class="dd-dual-code-window" :style="leftStyle">
           <div class="dd-dual-code-titlebar">
             <span class="dd-dual-code-label">{{ leftLabel }}</span>
             <span v-if="leftFile" class="dd-dual-code-file">{{ leftFile }}</span>
@@ -105,7 +112,12 @@ const showRight = computed(() => !props.trackSplit || track.value !== 'web')
             </SnippetScope>
           </div>
         </div>
-        <div v-if="showRight" class="dd-dual-code-window dd-dual-code-window-right">
+        <div
+          v-if="showRight"
+          class="dd-dual-code-window"
+          :class="{ 'dd-dual-code-window-right': !trackSplit }"
+          :style="rightStyle"
+        >
           <div class="dd-dual-code-titlebar">
             <span class="dd-dual-code-label">{{ rightLabel }}</span>
             <span v-if="rightFile" class="dd-dual-code-file">{{ rightFile }}</span>

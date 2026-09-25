@@ -10,6 +10,10 @@ import { ref } from 'vue'
 
 export type TrackName = 'web' | 'mobile'
 
+// Code colour by stack: purple where the Next.js code diverges, sky for
+// Flutter. Emerald is kept for SQL, which both stacks run as-is.
+export const TRACK_ACCENT = { web: 'purple', mobile: 'sky' } as const satisfies Record<TrackName, string>
+
 const STORAGE_KEY = 'dd-track'
 
 function isTrackName(value: string | null): value is TrackName {
