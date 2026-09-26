@@ -72,9 +72,10 @@ them off:
 - **The safe area.** Every layout's content sits inside
   `--dd-safe-top` / `--dd-safe-bottom` / `--dd-safe-x` (base.css), which
   clear the chrome bands top and bottom, so no layout needs its own
-  padding to dodge the mark, chip or footer. That leaves 420px of the
-  552px canvas for content; a slide taller than that gets clipped, so
-  split it rather than shrinking the type.
+  padding to dodge the mark, chip or footer, and each keeps about 30px of
+  air from them. That leaves 388px of the 552px canvas for content; a
+  slide taller than that gets clipped, so split it rather than shrinking
+  the type.
 
 So every layout's frontmatter includes `accent`, `chip` (optional),
 `chrome` (optional, default `true`), and `wash` (optional, overrides the
@@ -222,9 +223,8 @@ caption: "Client → Supabase → Postgres"
 
 ### `dual-code`
 **The workhorse for the Next.js/Flutter dual-track sections (§4, §7, §8,
-§9).** Two columns, left = Next.js, right = Flutter, each in its own faux
-window with a titlebar (matching `terminal`'s chrome) showing that
-column's file path. Built on Slidev's named-slot convention (same
+§9).** Two columns, left = Next.js, right = Flutter, each a code window
+(see "Code windows" below) titled with its stack and file path. Built on Slidev's named-slot convention (same
 mechanism as the built-in `two-cols` layout).
 - Frontmatter: `accent`, `heading` (optional — renders a heading **above**
   both columns; use this instead of a markdown `#`, because a `#` at the
@@ -235,11 +235,10 @@ mechanism as the built-in `two-cols` layout).
   shown in each column's titlebar, optional), `trackSplit` (default
   `true` — see Track mode below)
 - Slots: default = left column (Next.js), `right` = right column
-  (Flutter). Use Shiki line-highlight (`` ```ts {1-3|4} ``), click-through
-  steps (`` ```ts {1-3|5|all} ``), or a ` ````md magic-move ` block (four
-  backticks for the wrapper — see the Gotchas note) per Slidev's normal
-  code-block syntax in either column — both render inside the window
-  chrome with no extra setup. `bottom` (optional) — a full-width callout
+  (Flutter). Code from the workshop repos comes in as a `<<<` line (see
+  "Code blocks" below); a ` ````md magic-move ` block (four backticks for
+  the wrapper — see the Gotchas note) takes one `<<<` line per step. Shell
+  blocks and plain fenced code work too. `bottom` (optional) — a full-width callout
   rendered below both columns (a card-filled box, hairline border), for
   something that applies to the whole slide rather than one column (e.g. a
   gotcha about the exercise). Omit it and nothing renders.
@@ -256,42 +255,37 @@ mechanism as the built-in `two-cols` layout).
 ```md
 ---
 layout: dual-code
-accent: emerald
-heading: Sign in
+accent: rose
+heading: Sign in / sign out
 leftFile: components/Guestbook.tsx
 rightFile: lib/guestbook.dart
 ---
 
-```ts
-await supabase.auth.signInWithOAuth({ provider: 'custom:devdogs' })
-```
+<<< web@step-2:components/Guestbook.tsx {16|20-28|39-50}
 
 ::right::
 
-```dart
-await supabase.auth.signInWithOAuth(/* custom:devdogs */);
-```
+<<< mobile@step-2:lib/guestbook.dart {22-33|55-62}
 ```
 
 ### `terminal`
-Fenced code block (any language — SQL for the dashboard/SQL-editor beats,
-bash for CLI-less contexts) rendered inside a faux terminal/window chrome.
-Same click-through/Magic Move support as `dual-code`.
-- Frontmatter: `accent`, `file` (a real file path shown in the titlebar,
-  e.g. `supabase/migrations/0002_profiles.sql` — takes priority over
-  `titlebar` when both are set), `titlebar` (freeform titlebar text,
+One code window, full width: a shell session, or SQL for the Dashboard's
+SQL editor. The same window in the same place as a `dual-code` column.
+- Frontmatter: `accent`, `heading` (above the window; give every code
+  slide one, so the windows line up), `titlebar` (the window's label,
   default `"shell"`. **Must be `titlebar`, not `title`** — see the
-  Gotchas note on Slidev's reserved `title:` frontmatter key)
+  Gotchas note on Slidev's reserved `title:` frontmatter key), `file` (a
+  path shown beside the label, and the path a Discord post names)
 ```md
 ---
 layout: terminal
 accent: emerald
-titlebar: supabase dashboard → SQL editor
+heading: Create the messages table
+titlebar: Dashboard → SQL editor
+file: supabase/migrations/20260928000000_guestbook.sql
 ---
 
-```sql
-select * from messages;
-```
+<<< web@step-1:supabase/migrations/20260928000000_guestbook.sql {7-13|15|17-22}
 ```
 
 ## Colour meanings (Supabase deck, 2026-09-25)
@@ -337,13 +331,22 @@ the same tab), not just the first page load. See `theme/lib/track.ts`.
   <Track mobile>Only shows on the mobile laptop.</Track>
   ```
 - **`preshow`** layout — the very first slide, shown while people find
-  seats. `?track=web` → "DogDays sits here ←"; `?track=mobile` → "→
-  DogPack sits here"; no track → both halves side by side.
+  seats: the talk's header band (`logo` image, the `#` heading under it,
+  `subtitle` for date/time/room), then "Working on web apps? Sit on this
+  side" for DogDays and the mobile equivalent for DogPack, each with the
+  project's mark and name in its platform colour (DogDays red, DogPack
+  purple). `?track=web` / `?track=mobile` → that half only, full width; no
+  track → both halves side by side.
   ```md
   ---
   layout: preshow
-  accent: emerald
+  accent: rose
+  logo: /logos/supabase-wordmark.svg
+  logoAlt: Supabase
+  subtitle: Mon Sep 28 · 6:00–7:30 PM · DLW 124
   ---
+
+  # Workshop: From Concepts to Integration
   ```
 
 ## Presenting across two laptops
@@ -501,35 +504,76 @@ white slide. You shouldn't need to reference it directly.
 
 ## Code blocks: file line numbers, context, and Discord
 
-Code from a real file should look like the file: its own line numbers, the
-lines being taught at full strength, and a few surrounding lines dimmed for
-context. Slidev dims every line outside a block's highlight range, so the
-highlight range *is* the focus and everything else in the block is context.
+### Code windows
 
-- **Plain block:** give the file's first shown line as `startLine`. Highlight
-  ranges are then file line numbers.
+`dual-code` columns and `terminal` are the same window (base.css "Code
+windows"): a heading, then the window filling the rest of the safe area. On
+every code slide the window is the same size in the same place, however much
+code it holds.
 
-  ````md
-  ```ts {41-43|43}{lines:true,startLine:38}
-  ...lines 38 onward, exactly as in the file...
-  ```
-  ````
-- **Magic Move:** Slidev can't offset Magic Move line numbers, so the theme's
-  override (`components/ShikiMagicMove.vue`) reads each step's first line
-  from the block's title slot: `[@38]` for every step, or `[@38,@36]` per
-  step. Step ranges are file line numbers here too.
+Inside a window, a code block is an editor viewport onto a whole file: the
+file's own line numbers down the gutter, the lines being taught at full
+strength, everything else dimmed, and the code filling the window top to
+bottom. The file slides behind the window so the highlighted lines sit in
+the middle, and glides to the next range on each click
+(`theme/lib/viewport.ts`). A range taller than the window starts near its
+top, so split long ranges into clicks. Two blocks in one window split its
+height, with a dashed rule between them; a shell block keeps its natural
+height and the file below it takes the rest.
+
+### Code from the workshop repos
+
+Slide code is never pasted into the deck. It comes from the workshop repos,
+which are git submodules pinned to their `02-supabase` answer key:
+`workshops/web` (web-workshops-planning) and `workshops/mobile`
+(mobile-workshops-planning). A slide names a file at a demo step:
+
+````md
+<<< web@step-2:components/Guestbook.tsx {16|20-28|39-50}
+<<< mobile:lib/guestbook.dart {90-93}
+````
+
+- The part after `@` is a git revision in the submodule: `step-N` is the
+  commit whose message says "step N," (each demo step is one commit on
+  `02-supabase`), `step-0` is the commit before step 1 (the `01-` branch,
+  where the demo starts), and no `@` means the pinned commit, the finished
+  demo. Any other git revision works too.
+- Ranges are the file's own line numbers. `{*}` highlights nothing in
+  particular and shows the top of the file.
+- In a Magic Move block, one `<<<` line per step:
 
   `````md
-  ````md magic-move [@38,@36] {lines: true}
-  ```ts {41-42}
-  ...before, from line 38...
-  ```
-  ```ts {39-41|41}
-  ...after, from line 36...
-  ```
+  ````md magic-move
+  <<< web@step-3:components/Guestbook.tsx {67-71}
+  <<< web@step-4:components/Guestbook.tsx {66-76}
   ````
   `````
-- Commands (`bash`) aren't file excerpts: no line numbers, no ranges.
+- `theme/setup/transformers.ts` expands each line at build time into a
+  fenced block holding the whole file. A missing submodule, an unknown
+  revision, or a range past the end of the file fails the build.
+- **Keeping it current:** change the code in the workshop repo, push, then
+  `git submodule update --remote apps/slides/workshops/web` (or `mobile`) in
+  Backstage and commit the new pin. Check the slides' ranges against the
+  new line numbers: a range that still fits the file builds fine but may
+  point at the wrong lines.
+- A fresh Backstage clone needs `git submodule update --init`. The
+  submodules are the private planning repos, so CI needs a token that can
+  read them (or, after 9/28, point them at the public repos, which will
+  have `02-supabase` then).
+
+### Shell blocks
+
+`bash`, `sh`, `zsh` and `shell` blocks render as a terminal session
+(`theme/lib/shell.ts`): a prompt before every command (working directory,
+git branch, `❯`), `#` lines as dimmed annotations with no prompt, and an
+idle prompt with a cursor at the end. The prompt follows the commands: `cd`
+moves it, cd-ing into a fresh clone puts it on `main`, and `git switch`
+changes the branch. It starts in the track's repo (`~/Web-Workshops` or
+`~/Mobile-Workshops`), or `~` with no track; set the start yourself with
+`{*}{cwd:'~/DevDogsUGA',branch:'main'}` after the language. The prompts
+aren't part of the code, so copying or posting never picks them up.
+
+Env files aren't commands: fence them as `dotenv`.
 
 ### Posting to Discord
 
@@ -537,7 +581,8 @@ In the presenter view (`/presenter/`, dev server only), every code block gets
 a Discord button beside its copy button, and `p` posts every block on the
 current slide. A post is the block's focus: the contiguous span its highlight
 ranges cover (the whole block if a range is `all` or it has none; the final
-step for Magic Move), headed with the file path and its line numbers.
+step for Magic Move), headed with the file path and its line numbers. The
+copy button copies the same focus, not the whole file.
 
 Channels follow the track: the Next.js column of a `dual-code` slide and
 anything inside `<Track web>` go to DogDays, the Flutter column and

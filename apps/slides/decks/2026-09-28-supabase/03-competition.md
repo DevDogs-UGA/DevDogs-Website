@@ -74,7 +74,7 @@ cardTitle: Start of every session
 
 ::card::
 
-```bash
+```bash {*}{cwd:'~/DevDogsUGA'}
 git pull               # latest team commits
 git fetch origin       # fetch main
 git merge origin/main  # merge main in

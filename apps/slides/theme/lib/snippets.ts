@@ -78,6 +78,17 @@ export function focusOf(code: string, startLine: number, ranges: string[]) {
   }
 }
 
+// A rendered line's code, without the shell prompt drawn into it
+// (lib/shell.ts).
+export function lineText(line: Element): string {
+  let text = ''
+  for (const node of Array.from(line.childNodes)) {
+    if (node instanceof Element && node.classList.contains('dd-prompt')) continue
+    text += node.textContent ?? ''
+  }
+  return text
+}
+
 export const canPost = import.meta.env.DEV
 
 export async function postSnippet(snippet: Snippet): Promise<void> {

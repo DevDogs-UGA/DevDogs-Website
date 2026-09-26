@@ -10,7 +10,8 @@
 //   - ?track=mobile → only the mobile (sky / DogPack) half, full width
 //   - no track set  → both halves side by side (so the PDF export and a
 //     shared/no-param view show the whole room layout)
-// Frontmatter: accent, subtitle, chip, chrome, wash (see LAYOUTS.md)
+// Frontmatter: accent, logo (an image above the heading, e.g. the topic's
+// wordmark) + logoAlt, subtitle, chip, chrome, wash (see LAYOUTS.md)
 import { computed } from 'vue'
 import { accentHex } from '../accents'
 import Wash from '../components/Wash.vue'
@@ -21,12 +22,16 @@ import { track } from '../lib/track'
 
 const props = withDefaults(defineProps<{
   accent?: string
+  logo?: string
+  logoAlt?: string
   subtitle?: string
   chip?: string
   chrome?: boolean
   wash?: 'corner' | 'site' | 'template'
 }>(), {
   accent: undefined,
+  logo: undefined,
+  logoAlt: '',
   subtitle: undefined,
   chip: undefined,
   chrome: true,
@@ -47,6 +52,7 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
     <Chrome v-if="chrome" :accent="accent" :chip="chip" />
     <div class="dd-content h-full flex flex-col">
       <div class="dd-preshow-header">
+        <img v-if="logo" :src="logo" :alt="logoAlt" class="dd-preshow-logo">
         <slot />
         <p v-if="subtitle" class="dd-preshow-eventline">
           {{ subtitle }}
@@ -60,21 +66,25 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
         <div v-if="showWeb" class="dd-preshow-half dd-preshow-half-web">
           <div class="dd-preshow-half-wash" />
           <p class="dd-preshow-line">
-            Working on web apps? Sit here
+            Working on web apps?<br>
+            Sit on this side
           </p>
           <ph-arrow-down-bold class="dd-preshow-arrow" />
           <p class="dd-preshow-sub">
-            Designed for <span class="dd-preshow-name"><DogDaysMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogDays</span></span> contributors
+            Designed for <span class="dd-preshow-name dd-preshow-dogdays"><DogDaysMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogDays</span></span> contributors<br>
+            and future web developers
           </p>
         </div>
         <div v-if="showMobile" class="dd-preshow-half dd-preshow-half-mobile">
           <div class="dd-preshow-half-wash" />
           <p class="dd-preshow-line">
-            Working on mobile apps? Sit here
+            Working on mobile apps?<br>
+            Sit on this side
           </p>
           <ph-arrow-down-bold class="dd-preshow-arrow" />
           <p class="dd-preshow-sub">
-            Designed for <span class="dd-preshow-name"><DogPackMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogPack</span></span> contributors
+            Designed for <span class="dd-preshow-name dd-preshow-dogpack"><DogPackMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogPack</span></span> contributors<br>
+            and future mobile developers
           </p>
         </div>
       </div>
@@ -88,10 +98,23 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
   flex: none;
 }
 
+.dd-preshow-logo {
+  display: block;
+  height: 2.6rem;
+  width: auto;
+  margin: 0 auto;
+}
+
 .dd-preshow-header :deep(h1) {
   font-size: 2.75rem;
   line-height: 1.1;
   margin: 0;
+}
+
+/* Under a logo, the heading is its subtitle. */
+.dd-preshow-logo + :deep(h1) {
+  margin-top: 0.6rem;
+  font-size: 1.75rem;
 }
 
 .dd-preshow-eventline {
@@ -165,10 +188,10 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
 .dd-preshow-line {
   font-family: 'Alan Sans', 'Hanken Grotesk', sans-serif;
   font-weight: 800;
-  font-size: 2.35rem;
+  font-size: 2.1rem;
   line-height: 1.2;
   margin: 0;
-  max-width: 18ch;
+  white-space: nowrap;
 }
 
 .dd-preshow-half-web .dd-preshow-line {
@@ -211,16 +234,17 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
 
 .dd-preshow-brand {
   font-family: 'Alan Sans', 'Hanken Grotesk', sans-serif;
-  font-weight: 800;
+  /* Bold, as the platform's project cards set these names. */
+  font-weight: 700;
 }
 
-.dd-preshow-half-web .dd-preshow-mark,
-.dd-preshow-half-web .dd-preshow-brand {
+/* The projects' own colours from the platform (red-700 / purple-700 there,
+   on white), a step lighter here for the dark slide. */
+.dd-preshow-dogdays {
+  color: var(--dd-red);
+}
+
+.dd-preshow-dogpack {
   color: var(--dd-purple);
-}
-
-.dd-preshow-half-mobile .dd-preshow-mark,
-.dd-preshow-half-mobile .dd-preshow-brand {
-  color: var(--dd-sky);
 }
 </style>

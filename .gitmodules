@@ -1,0 +1,8 @@
+[submodule "apps/slides/workshops/web"]
+	path = apps/slides/workshops/web
+	url = https://github.com/DevDogsUGA/web-workshops-planning.git
+	branch = 02-supabase
+[submodule "apps/slides/workshops/mobile"]
+	path = apps/slides/workshops/mobile
+	url = https://github.com/DevDogsUGA/mobile-workshops-planning.git
+	branch = 02-supabase

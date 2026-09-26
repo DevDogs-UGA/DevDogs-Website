@@ -1,20 +1,19 @@
 <script setup lang="ts">
-// Terminal / shell-output slide. Put a fenced ```bash (or similar) block in
-// the default slot; it's rendered inside a faux terminal window chrome.
-// The titlebar shows `file` when given (a real file path, e.g.
-// `file: supabase/migrations/0002_profiles.sql`), else falls back to
-// `titlebar` (any freeform titlebar text, e.g. "supabase dashboard → SQL
-// editor").
-// Frontmatter: accent, file, titlebar (default "shell"), chip, chrome, wash
-// (see LAYOUTS.md)
+// One code window, full width: a shell session, or SQL for the Dashboard's
+// SQL editor. The same window, in the same place, as a dual-code column
+// (see base.css "Code windows"), so code slides don't jump around.
+// The titlebar shows `titlebar` as its label (default "shell") and `file`
+// beside it when given; `file` is also the path a Discord post names.
+// Frontmatter: accent, heading, titlebar, file, chip, chrome, wash (see
+// LAYOUTS.md)
 //   ---
 //   layout: terminal
 //   accent: emerald
-//   titlebar: supabase dashboard → SQL editor
+//   heading: Create the messages table
+//   titlebar: Dashboard → SQL editor
+//   file: supabase/migrations/20260928000000_guestbook.sql
 //   ---
-//   ```sql
-//   select * from messages;
-//   ```
+//   <<< web@step-1:supabase/migrations/20260928000000_guestbook.sql {7-22}
 //
 // NOTE: this frontmatter key is `titlebar`, not `title` -- Slidev reserves
 // plain `title` on a slide's frontmatter for its own slide-title metadata
@@ -30,6 +29,7 @@ import SnippetScope from '../components/SnippetScope.vue'
 
 const props = withDefaults(defineProps<{
   accent?: string
+  heading?: string
   file?: string
   titlebar?: string
   chip?: string
@@ -37,6 +37,7 @@ const props = withDefaults(defineProps<{
   wash?: 'corner' | 'site' | 'template'
 }>(), {
   accent: undefined,
+  heading: undefined,
   file: undefined,
   titlebar: 'shell',
   chip: undefined,
@@ -45,19 +46,20 @@ const props = withDefaults(defineProps<{
 })
 
 const style = computed(() => ({ '--accent': accentHex(props.accent) }))
-const titlebarText = computed(() => props.file ?? props.titlebar)
 </script>
 
 <template>
   <div class="slidev-layout dd-terminal relative overflow-hidden" :style="style">
     <Wash :accent="accent" :wash="wash" />
     <Chrome v-if="chrome" :accent="accent" :chip="chip" />
-    <div class="dd-content dd-terminal-content h-full flex flex-col justify-center">
-      <div class="dd-terminal-window">
-        <div class="dd-terminal-titlebar">
-          <span class="dd-terminal-title">{{ titlebarText }}</span>
+    <div class="dd-content h-full flex flex-col">
+      <h2 v-if="heading" class="dd-window-heading">{{ heading }}</h2>
+      <div class="dd-window flex-1">
+        <div class="dd-window-titlebar">
+          <span class="dd-window-label">{{ titlebar }}</span>
+          <span v-if="file" class="dd-window-file">{{ file }}</span>
         </div>
-        <div class="dd-terminal-body">
+        <div class="dd-window-body dd-code-frame">
           <SnippetScope :file="file">
             <slot />
           </SnippetScope>
@@ -66,45 +68,3 @@ const titlebarText = computed(() => props.file ?? props.titlebar)
     </div>
   </div>
 </template>
-
-<style scoped>
-.dd-terminal-window {
-  border-radius: 0.75rem;
-  overflow: hidden;
-  background: var(--dd-panel);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
-}
-
-.dd-terminal-titlebar {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.6rem 0.9rem;
-  background: #0000002e;
-  border-bottom: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
-}
-
-.dd-terminal-title {
-  font-family: 'Cascadia Code', monospace;
-  font-size: 0.8rem;
-  color: var(--dd-muted);
-}
-
-.dd-terminal-body {
-  padding: 0.75rem 1.25rem;
-  /* Shiki's own code block draws its own background/padding by default;
-     inside the terminal window chrome we want the code to fill the window
-     instead of drawing a second box inside it. */
-  --slidev-code-background: transparent;
-  --slidev-code-padding: 0;
-  --slidev-code-radius: 0;
-  /* A hair tighter than Slidev's 18px so a 22-line migration fits the safe
-     area without shrinking the type. */
-  --slidev-code-line-height: 17px;
-}
-
-.dd-terminal-body :deep(pre) {
-  margin: 0;
-  background: transparent !important;
-}
-</style>

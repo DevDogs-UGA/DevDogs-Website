@@ -2,10 +2,12 @@
 layout: preshow
 accent: rose
 chip: WORKSHOP
+logo: /logos/supabase-wordmark.svg
+logoAlt: Supabase
 subtitle: Mon Sep 28 · 6:00–7:30 PM · DLW 124
 ---
 
-# Supabase
+# Workshop: From Concepts to Integration
 
 <!-- Presenter notes: showing while people find seats. No talking yet — this is just so DogDays (web/Next.js) and DogPack (mobile/Flutter) sit at the right table. Tonight's workshop: adding a real backend — auth, a database, and row-level security — to the app you started at Setup Night. Two tracks tonight, Next.js and Flutter, same Supabase project. -->
 
