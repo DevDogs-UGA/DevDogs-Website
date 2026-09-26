@@ -23,7 +23,7 @@ rightFile: terminal
 gh repo clone DevDogsUGA/Web-Workshops
 cd Web-Workshops
 # Start from Setup Night's code
-git switch 01-nextjs-introduction
+git switch 01-nextjs-intro
 # Install dependencies
 pnpm install
 ```
@@ -35,7 +35,7 @@ pnpm install
 gh repo clone DevDogsUGA/Mobile-Workshops
 cd Mobile-Workshops
 # Start from Setup Night's code
-git switch 01-flutter-introduction
+git switch 01-flutter-intro
 # Install dependencies
 flutter pub get
 ```
@@ -723,4 +723,4 @@ chip: MONOREPO
 
 The monorepo works exactly like this: every schema change is a migration under `supabase/migrations`.
 
-<!-- Presenter notes: One sentence, then move on to the competition. `02-nextjs-supabase` and `02-flutter-supabase` (with these migrations) go public on GitHub right after tonight's workshop. -->
+<!-- Presenter notes: One sentence, then move on to the competition. The `02-supabase` branches (with these migrations) go public on GitHub right after tonight's workshop. -->
