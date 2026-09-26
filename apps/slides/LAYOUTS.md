@@ -256,7 +256,7 @@ mechanism as the built-in `two-cols` layout).
 ---
 layout: dual-code
 accent: rose
-heading: Sign in / sign out
+heading: Sign In / Sign Out
 leftFile: ~/components/Guestbook.tsx
 rightFile: ~/lib/guestbook.dart
 ---
@@ -280,7 +280,7 @@ SQL editor. The same window in the same place as a `dual-code` column.
 ---
 layout: terminal
 accent: emerald
-heading: Create the messages table
+heading: Create the Messages Table
 titlebar: Dashboard → SQL editor
 file: ~/supabase/migrations/20260928000000_guestbook.sql
 ---
@@ -333,20 +333,20 @@ the same tab), not just the first page load. See `theme/lib/track.ts`.
 - **`preshow`** layout — the very first slide, shown while people find
   seats: the talk's header band (`logo` image, the `#` heading under it,
   `subtitle` for date/time/room), then "Working on web apps? Sit on this
-  side" for DogDays and the mobile equivalent for DogPack, each with the
+  side!" for DogDays and the mobile equivalent for DogPack, each with the
   project's mark and name in its platform colour (DogDays red, DogPack
   purple). `?track=web` / `?track=mobile` → that half only, full width; no
   track → both halves side by side.
   ```md
   ---
   layout: preshow
-  accent: rose
+  accent: emerald
   logo: /logos/supabase-wordmark.svg
   logoAlt: Supabase
   subtitle: Mon Sep 28 · 6:00–7:30 PM · DLW 124
   ---
 
-  # Workshop: From Concepts to Integration
+  # Workshop: Backend Integration
   ```
 
 ## Presenting across two laptops

@@ -13,7 +13,7 @@ chip: LIVE DEMO
 layout: dual-code
 accent: rose
 chip: CLONE
-heading: Get the workshop code
+heading: Get the Workshop Code
 leftFile: terminal
 rightFile: terminal
 ---
@@ -92,7 +92,7 @@ chip: STEP 1
 layout: terminal
 accent: emerald
 chip: SQL
-heading: Create the messages table
+heading: Create the Messages Table
 titlebar: Dashboard → SQL editor
 file: ~/supabase/migrations/20260928000000_guestbook.sql
 ---
@@ -132,7 +132,7 @@ flutter pub add supabase_flutter gotrue
 layout: dual-code
 accent: rose
 chip: CODE
-heading: From in-memory to Supabase
+heading: From In-Memory to Supabase
 leftFile: ~/components/Guestbook.tsx
 rightFile: ~/lib/guestbook.dart
 ---
@@ -193,7 +193,7 @@ chip: DASHBOARD
 layout: dual-code
 accent: rose
 chip: CODE
-heading: Sign in / sign out
+heading: Sign In / Sign Out
 leftFile: ~/components/Guestbook.tsx
 rightFile: ~/lib/guestbook.dart
 ---
@@ -218,7 +218,7 @@ chip: STEP 3
 layout: terminal
 accent: emerald
 chip: SQL
-heading: Let signed-in users post
+heading: Let Signed-In Users Post
 titlebar: Dashboard → SQL editor
 file: ~/supabase/migrations/20260928000000_guestbook.sql
 ---
@@ -231,7 +231,7 @@ file: ~/supabase/migrations/20260928000000_guestbook.sql
 layout: dual-code
 accent: rose
 chip: CODE
-heading: Naive insert — client sends its own name
+heading: Naive Insert — Client Sends Its Own Name
 leftFile: ~/components/Guestbook.tsx
 rightFile: ~/lib/guestbook.dart
 ---
@@ -272,7 +272,7 @@ chip: STEP 4
 layout: terminal
 accent: emerald
 chip: SQL
-heading: Move names into profiles
+heading: Move Names into Profiles
 titlebar: Dashboard → SQL editor
 file: ~/supabase/migrations/20260928000100_profiles.sql
 ---
@@ -285,7 +285,7 @@ file: ~/supabase/migrations/20260928000100_profiles.sql
 layout: dual-code
 accent: rose
 chip: CODE
-heading: The client can no longer lie
+heading: The Client Can No Longer Lie
 leftFile: ~/components/Guestbook.tsx
 rightFile: ~/lib/guestbook.dart
 ---
@@ -308,7 +308,7 @@ rightFile: ~/lib/guestbook.dart
 layout: dual-code
 accent: rose
 chip: CODE
-heading: Showing the author's name
+heading: Showing the Author's Name
 leftFile: ~/components/Guestbook.tsx
 rightFile: ~/lib/guestbook.dart
 ---
@@ -339,7 +339,7 @@ chip: STEP 5
 layout: terminal
 accent: emerald
 chip: SQL
-heading: Let users delete their own messages
+heading: Let Users Delete Their Own Messages
 titlebar: Dashboard → SQL editor
 file: ~/supabase/migrations/20260928000000_guestbook.sql
 ---
@@ -352,7 +352,7 @@ file: ~/supabase/migrations/20260928000000_guestbook.sql
 layout: dual-code
 accent: rose
 chip: CODE
-heading: Only your own delete button
+heading: Only Your Own Delete Button
 leftFile: ~/components/Guestbook.tsx
 rightFile: ~/lib/guestbook.dart
 ---
@@ -380,7 +380,7 @@ kicker: Run it locally
 layout: terminal
 accent: amber
 chip: SHELL
-heading: Start Supabase locally
+heading: Start Supabase Locally
 titlebar: terminal
 ---
 
@@ -397,7 +397,7 @@ npx supabase status
 layout: terminal
 accent: amber
 chip: SHELL
-heading: Turn the SQL into migrations
+heading: Turn the SQL into Migrations
 titlebar: terminal
 ---
 
@@ -416,7 +416,7 @@ npx supabase db reset
 layout: terminal
 accent: amber
 chip: SHELL
-heading: Sign in with DevDogs, locally
+heading: Sign In with DevDogs, Locally
 titlebar: terminal
 ---
 

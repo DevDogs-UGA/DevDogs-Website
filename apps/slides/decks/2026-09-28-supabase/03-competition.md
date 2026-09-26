@@ -88,7 +88,7 @@ pnpm dev               # start dev server
 layout: dual-code
 accent: indigo
 chip: CONFLICTS
-heading: A conflict, then resolved
+heading: A Conflict, Then Resolved
 leftFile: ~/components/Feature.tsx
 rightFile: ~/components/Feature.tsx
 leftLabel: Before

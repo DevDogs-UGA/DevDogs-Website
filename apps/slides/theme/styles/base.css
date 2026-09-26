@@ -227,7 +227,8 @@ body {
 
 .dd-window-heading {
   flex: none;
-  margin: 0 0 0.8rem;
+  margin: 0 0 1.4rem;
+  text-align: center;
   font-size: 1.6rem;
   line-height: 1.2;
 }

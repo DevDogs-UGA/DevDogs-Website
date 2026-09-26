@@ -67,9 +67,11 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
           <div class="dd-preshow-half-wash" />
           <p class="dd-preshow-line">
             Working on web apps?<br>
-            Sit on this side
+            Sit on this side!
           </p>
-          <ph-arrow-down-bold class="dd-preshow-arrow" />
+          <svg class="dd-preshow-arrow" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3.5v16M5 12.5l7 7 7-7" />
+          </svg>
           <p class="dd-preshow-sub">
             Designed for <span class="dd-preshow-name dd-preshow-dogdays"><DogDaysMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogDays</span></span> contributors<br>
             and future web developers
@@ -79,9 +81,11 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
           <div class="dd-preshow-half-wash" />
           <p class="dd-preshow-line">
             Working on mobile apps?<br>
-            Sit on this side
+            Sit on this side!
           </p>
-          <ph-arrow-down-bold class="dd-preshow-arrow" />
+          <svg class="dd-preshow-arrow" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3.5v16M5 12.5l7 7 7-7" />
+          </svg>
           <p class="dd-preshow-sub">
             Designed for <span class="dd-preshow-name dd-preshow-dogpack"><DogPackMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogPack</span></span> contributors<br>
             and future mobile developers
@@ -202,8 +206,18 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
   color: var(--dd-sky);
 }
 
+/* Drawn rather than an icon font: even Phosphor's bold arrow is a hairline
+   next to the extra-bold heading above it. At 1em of the heading's size,
+   a 3.6-unit stroke is the heading's own ~0.15em stem, with round ends
+   like Alan Sans's terminals. */
 .dd-preshow-arrow {
-  font-size: 2rem;
+  width: 2.1rem;
+  height: 2.1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .dd-preshow-half-web .dd-preshow-arrow {
@@ -215,12 +229,17 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
 }
 
 .dd-preshow-sub {
-  margin: 0;
+  margin: 0.9rem 0 0;
   font-size: 1.15rem;
-  color: var(--dd-grey-secondary);
+  font-style: italic;
+  /* A step lighter than --dd-grey-secondary. */
+  color: #e6e1e6;
 }
 
 .dd-preshow-name {
+  /* A name, not part of the italic sentence around it (and Alan Sans has
+     no italic, so it would only be slanted). */
+  font-style: normal;
   display: inline-flex;
   align-items: baseline;
   white-space: nowrap;
