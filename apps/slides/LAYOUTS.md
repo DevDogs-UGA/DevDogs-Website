@@ -346,6 +346,87 @@ the same tab), not just the first page load. See `theme/lib/track.ts`.
   ---
   ```
 
+## Presenting across two laptops
+
+Track mode (above) needs both laptops to actually be *following the same
+deck state* — one laptop advances slides and click-steps, the other two
+(web follower, mobile follower) update live. That's Slidev's built-in
+presenter/remote-control feature, riding the same HMR websocket Vite uses
+for live-reload, reached over a named Cloudflare Tunnel so it works over
+whatever network the venue has, behind Cloudflare Access so only officers
+can open it.
+
+**The three URLs** (presenter laptop runs `pnpm present`; the other two
+just open a URL in a browser):
+
+- Presenter (this laptop only, never shared): `https://<tunnel-host>/presenter/?password=<SLIDES_PRESENTER_PASSWORD>`
+- Web follower: `https://<tunnel-host>/?track=web`
+- Mobile follower: `https://<tunnel-host>/?track=mobile`
+
+`<tunnel-host>` is `SLIDES_TUNNEL_HOSTNAME` from `.env` (defaults to
+`slides.devdogsuga.org`). Advancing slides or click-steps from the
+presenter view moves both followers; each follower keeps the track it
+opened with (`?track=...`, remembered in that tab's `sessionStorage` per
+"Track mode" above) even as slides advance. Arrow keys pressed in a
+follower tab only move that tab's local view — followers can't drive the
+deck or each other, only the presenter can.
+
+### One-time setup (Sloan; officers-only via Cloudflare Access)
+
+This part is infrastructure, not app code — done once outside this repo,
+by whoever holds the Cloudflare account:
+
+1. `cloudflared tunnel login` — authorizes this machine against the
+   DevDogsUGA Cloudflare account. Writes a cert under `~/.cloudflared/`.
+2. `cloudflared tunnel create devdogs-slides` — creates the named tunnel
+   and writes its credentials JSON to `~/.cloudflared/<tunnel-id>.json`.
+3. `cloudflared tunnel route dns devdogs-slides slides.devdogsuga.org` —
+   points the DNS record at the tunnel.
+4. In the Cloudflare Zero Trust dashboard, add a **self-hosted Access
+   application** for `slides.devdogsuga.org` with a policy scoped to
+   officers only (e.g. an email-domain or group rule), so the tunnel
+   itself is reachable but nobody outside that policy gets past the
+   Access login page.
+5. Fill in `apps/slides/.env` (copy from `.env.example`):
+   `SLIDES_PRESENTER_PASSWORD`, and `SLIDES_TUNNEL_NAME` /
+   `SLIDES_TUNNEL_HOSTNAME` if they differ from the defaults
+   (`devdogs-slides` / `slides.devdogsuga.org`).
+
+Tunnel credentials live only in `~/.cloudflared/` on the machine that ran
+`tunnel login`/`tunnel create` — never commit them, and they never touch
+this repo.
+
+### Running it
+
+From `apps/slides/`: `pnpm present`. It fails fast with a message
+pointing back to this section if `SLIDES_PRESENTER_PASSWORD` is missing
+from `.env`, or if the named tunnel isn't set up yet (`cloudflared tunnel
+info <name>` fails — e.g. setup above hasn't been done on this machine).
+Otherwise it starts the Slidev dev server (`--remote`, bound to
+`127.0.0.1` — only `cloudflared` on the same machine needs to reach it)
+and `cloudflared tunnel run` together, prints the three URLs above, and
+stops both on Ctrl-C or if either one exits unexpectedly.
+
+`pnpm dev` is unaffected — it still just starts the plain local dev
+server on `http://localhost:3030`, tunnel or no tunnel, and works exactly
+as before.
+
+### Manual-advance fallback
+
+If the tunnel, Access, or the network at the venue isn't cooperating,
+fall back to no sync at all: each laptop runs its own `pnpm dev` and
+opens its own `?track=web` / `?track=mobile` URL, and the presenter
+advances their copy while quietly saying "next slide" for the other
+laptop to follow along by hand. The PDF export goes out afterwards
+either way, so nobody's missing anything by the next day.
+
+### What syncs and what doesn't
+
+Only the **dev server** (`pnpm dev` / `pnpm present`) has the
+presenter/remote-control websocket. The static build (`pnpm build`, what
+actually gets deployed/exported) has no server to sync through — it's
+just static files. Always present off the dev server, not a build.
+
 ### `qr`
 Big centered QR + caption. Use for the attendance/Discord/exit slides.
 `qrSrc` must point at a file under `public/qr/` (served at `/qr/...`) —

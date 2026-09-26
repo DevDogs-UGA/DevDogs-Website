@@ -35,8 +35,11 @@ const ENV_KEYS: Record<Track, string> = {
 const MAX_INLINE = 1900
 
 // KEY="value" lines from apps/slides/.env, if it exists. Real environment
-// variables win.
-function readEnv(envDir: string): Record<string, string | undefined> {
+// variables win. Exported so theme/vite.config.ts can read the same .env
+// (for SLIDES_TUNNEL_HOSTNAME) without re-parsing it. scripts/present.mjs
+// needs its own copy of this parser instead — it runs directly under `node`,
+// outside Vite's transform pipeline, so it can't import a .ts file here.
+export function readEnv(envDir: string): Record<string, string | undefined> {
   const file = join(envDir, '.env')
   const vars: Record<string, string> = {}
   if (existsSync(file)) {
