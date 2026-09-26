@@ -257,8 +257,8 @@ mechanism as the built-in `two-cols` layout).
 layout: dual-code
 accent: rose
 heading: Sign in / sign out
-leftFile: components/Guestbook.tsx
-rightFile: lib/guestbook.dart
+leftFile: ~/components/Guestbook.tsx
+rightFile: ~/lib/guestbook.dart
 ---
 
 <<< web@step-2:components/Guestbook.tsx {16|20-28|39-50}
@@ -282,7 +282,7 @@ layout: terminal
 accent: emerald
 heading: Create the messages table
 titlebar: Dashboard → SQL editor
-file: supabase/migrations/20260928000000_guestbook.sql
+file: ~/supabase/migrations/20260928000000_guestbook.sql
 ---
 
 <<< web@step-1:supabase/migrations/20260928000000_guestbook.sql {7-13|15|17-22}

@@ -89,8 +89,8 @@ layout: dual-code
 accent: indigo
 chip: CONFLICTS
 heading: A conflict, then resolved
-leftFile: components/Feature.tsx
-rightFile: components/Feature.tsx
+leftFile: ~/components/Feature.tsx
+rightFile: ~/components/Feature.tsx
 leftLabel: Before
 rightLabel: After
 trackSplit: false

@@ -94,7 +94,7 @@ accent: emerald
 chip: SQL
 heading: Create the messages table
 titlebar: Dashboard → SQL editor
-file: supabase/migrations/20260928000000_guestbook.sql
+file: ~/supabase/migrations/20260928000000_guestbook.sql
 ---
 
 <<< web@step-1:supabase/migrations/20260928000000_guestbook.sql {7-13|15|17-22}
@@ -106,8 +106,8 @@ layout: dual-code
 accent: rose
 chip: CODE
 heading: Connect to Supabase
-leftFile: lib/supabase.ts
-rightFile: lib/main.dart
+leftFile: ~/lib/supabase.ts
+rightFile: ~/lib/main.dart
 ---
 
 ```bash
@@ -133,8 +133,8 @@ layout: dual-code
 accent: rose
 chip: CODE
 heading: From in-memory to Supabase
-leftFile: components/Guestbook.tsx
-rightFile: lib/guestbook.dart
+leftFile: ~/components/Guestbook.tsx
+rightFile: ~/lib/guestbook.dart
 ---
 
 ````md magic-move
@@ -194,8 +194,8 @@ layout: dual-code
 accent: rose
 chip: CODE
 heading: Sign in / sign out
-leftFile: components/Guestbook.tsx
-rightFile: lib/guestbook.dart
+leftFile: ~/components/Guestbook.tsx
+rightFile: ~/lib/guestbook.dart
 ---
 
 <<< web@step-2:components/Guestbook.tsx {16|20-28|39-50|54-68}
@@ -220,7 +220,7 @@ accent: emerald
 chip: SQL
 heading: Let signed-in users post
 titlebar: Dashboard → SQL editor
-file: supabase/migrations/20260928000000_guestbook.sql
+file: ~/supabase/migrations/20260928000000_guestbook.sql
 ---
 
 <<< web@step-3:supabase/migrations/20260928000000_guestbook.sql {24-29}
@@ -232,8 +232,8 @@ layout: dual-code
 accent: rose
 chip: CODE
 heading: Naive insert — client sends its own name
-leftFile: components/Guestbook.tsx
-rightFile: lib/guestbook.dart
+leftFile: ~/components/Guestbook.tsx
+rightFile: ~/lib/guestbook.dart
 ---
 
 <<< web@step-3:components/Guestbook.tsx {18|53-65|67-77|97-112}
@@ -274,7 +274,7 @@ accent: emerald
 chip: SQL
 heading: Move names into profiles
 titlebar: Dashboard → SQL editor
-file: supabase/migrations/20260928000100_profiles.sql
+file: ~/supabase/migrations/20260928000100_profiles.sql
 ---
 
 <<< web@step-4:supabase/migrations/20260928000100_profiles.sql {6-11|13-19|25-30|31-44|46-48|50-61|63-70}
@@ -286,8 +286,8 @@ layout: dual-code
 accent: rose
 chip: CODE
 heading: The client can no longer lie
-leftFile: components/Guestbook.tsx
-rightFile: lib/guestbook.dart
+leftFile: ~/components/Guestbook.tsx
+rightFile: ~/lib/guestbook.dart
 ---
 
 ````md magic-move
@@ -309,8 +309,8 @@ layout: dual-code
 accent: rose
 chip: CODE
 heading: Showing the author's name
-leftFile: components/Guestbook.tsx
-rightFile: lib/guestbook.dart
+leftFile: ~/components/Guestbook.tsx
+rightFile: ~/lib/guestbook.dart
 ---
 
 ````md magic-move
@@ -341,7 +341,7 @@ accent: emerald
 chip: SQL
 heading: Let users delete their own messages
 titlebar: Dashboard → SQL editor
-file: supabase/migrations/20260928000000_guestbook.sql
+file: ~/supabase/migrations/20260928000000_guestbook.sql
 ---
 
 <<< web@step-5:supabase/migrations/20260928000000_guestbook.sql {31-37}
@@ -353,8 +353,8 @@ layout: dual-code
 accent: rose
 chip: CODE
 heading: Only your own delete button
-leftFile: components/Guestbook.tsx
-rightFile: lib/guestbook.dart
+leftFile: ~/components/Guestbook.tsx
+rightFile: ~/lib/guestbook.dart
 ---
 
 <<< web@step-5:components/Guestbook.tsx {84-89|142|143-149}
