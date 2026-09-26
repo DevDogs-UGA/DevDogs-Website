@@ -66,7 +66,7 @@ them off:
   `@devdogsuga/brand` package (never redrawn). Turn it off on a
   particular slide with `chrome: false`.
 - **The corner chip**, if you set a `chip` frontmatter key (e.g. `chip:
-  WORKSHOP`) — an accent-filled pill, white caps text, top-right. Uses
+  WORKSHOP`) — an accent-filled pill, dark caps text (white fails contrast on every accent), top-right. Uses
   the same `Chip` component as the `events` layout's inline chips, just
   in its `solid` variant.
 - **The safe area.** Every layout's content sits inside

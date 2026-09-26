@@ -17,9 +17,11 @@ const props = withDefaults(defineProps<{
   type?: string
   color?: string
   // 'outline' (default) is the low-emphasis pill used inline in prose, e.g.
-  // on the `events` layout. 'solid' is the accent-filled, white-caps-text
+  // on the `events` layout. 'solid' is the accent-filled, dark-caps-text
   // pill used for every content slide's top-right corner chip (see the
-  // `chip` frontmatter key and Chrome.vue).
+  // `chip` frontmatter key and Chrome.vue). Dark, not white: every accent
+  // is a light 400-level colour, so white text on it measures 1.7-3.1:1,
+  // while the slide background's near-black measures 6.3-11.5:1.
   variant?: 'outline' | 'solid'
 }>(), {
   type: undefined,
@@ -35,8 +37,8 @@ const hex = computed(() =>
 <template>
   <span
     v-if="variant === 'solid'"
-    class="inline-flex items-center rounded-full px-3 py-1 text-[0.65rem] font-700 uppercase tracking-wide text-white"
-    :style="{ background: hex }"
+    class="inline-flex items-center rounded-full px-3 py-1 text-[0.65rem] font-700 uppercase tracking-wide"
+    :style="{ background: hex, color: 'var(--dd-bg)' }"
   >
     <slot>{{ type }}</slot>
   </span>

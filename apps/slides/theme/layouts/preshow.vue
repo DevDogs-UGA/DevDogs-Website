@@ -66,29 +66,29 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
         <div v-if="showWeb" class="dd-preshow-half dd-preshow-half-web">
           <div class="dd-preshow-half-wash" />
           <p class="dd-preshow-line">
-            Working on web apps?<br>
-            Sit on this side!
+            Designed for <span class="dd-preshow-name dd-preshow-dogdays"><DogDaysMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogDays</span></span> contributors<br>
+            and future web developers
           </p>
           <svg class="dd-preshow-arrow" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 3.5v16M5 12.5l7 7 7-7" />
           </svg>
           <p class="dd-preshow-sub">
-            Designed for <span class="dd-preshow-name dd-preshow-dogdays"><DogDaysMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogDays</span></span> contributors<br>
-            and future web developers
+            Working on web apps?<br>
+            Sit on this side!
           </p>
         </div>
         <div v-if="showMobile" class="dd-preshow-half dd-preshow-half-mobile">
           <div class="dd-preshow-half-wash" />
           <p class="dd-preshow-line">
-            Working on mobile apps?<br>
-            Sit on this side!
+            Designed for <span class="dd-preshow-name dd-preshow-dogpack"><DogPackMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogPack</span></span> contributors<br>
+            and future mobile developers
           </p>
           <svg class="dd-preshow-arrow" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 3.5v16M5 12.5l7 7 7-7" />
           </svg>
           <p class="dd-preshow-sub">
-            Designed for <span class="dd-preshow-name dd-preshow-dogpack"><DogPackMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogPack</span></span> contributors<br>
-            and future mobile developers
+            Working on mobile apps?<br>
+            Sit on this side!
           </p>
         </div>
       </div>
@@ -192,10 +192,15 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
 .dd-preshow-line {
   font-family: 'Alan Sans', 'Hanken Grotesk', sans-serif;
   font-weight: 800;
-  font-size: 2.1rem;
-  line-height: 1.2;
+  font-size: 1.6rem;
+  line-height: 1.25;
   margin: 0;
-  white-space: nowrap;
+  text-wrap: balance;
+}
+
+/* Half the width with both halves showing, so a size smaller. */
+.dd-preshow-both .dd-preshow-line {
+  font-size: 1.3rem;
 }
 
 .dd-preshow-half-web .dd-preshow-line {
@@ -206,16 +211,27 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
   color: var(--dd-sky);
 }
 
+@keyframes dd-preshow-nudge {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(0.45rem);
+  }
+}
+
 /* Drawn rather than an icon font: even Phosphor's bold arrow is a hairline
-   next to the extra-bold heading above it. At 1em of the heading's size,
-   a 3.6-unit stroke is the heading's own ~0.15em stem, with round ends
-   like Alan Sans's terminals. */
+   next to the extra-bold line above it. A 2.75-unit stroke at this size
+   is that line's own ~0.15em stem (it's set at 1.6rem), with round ends
+   like Alan Sans's terminals. It nudges down, over and over, toward the
+   seats. */
 .dd-preshow-arrow {
   width: 2.1rem;
   height: 2.1rem;
+  animation: dd-preshow-nudge 1.6s ease-in-out infinite;
   fill: none;
   stroke: currentColor;
-  stroke-width: 3.6;
+  stroke-width: 2.75;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
