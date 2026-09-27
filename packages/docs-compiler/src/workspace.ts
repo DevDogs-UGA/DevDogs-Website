@@ -4,10 +4,13 @@
  *
  * Deliberately not a YAML library: this package declares no YAML dependency,
  * and every workspace file this monorepo writes shares one mechanical shape —
- * `packages:` followed by a list of quoted, single-star globs — so a
- * hand-rolled reader is a dozen lines instead of a new dependency. A glob this
- * repo has never written (nested, unquoted, a second key before the list
- * ends) is read as "no more packages" rather than guessed at.
+ * `packages:` followed by a list of quoted entries, each either a single-star
+ * glob (`apps/*`) or one bare directory (`docs` — a content package that is a
+ * dependency in the pnpm graph, not a sibling of a `*` glob) — so a
+ * hand-rolled reader is a dozen lines instead of a new dependency. An entry
+ * shaped some other way (nested, a glob star anywhere but the last segment) is
+ * read as "not a package this reader understands" rather than guessed at; a
+ * line that is neither a list item nor blank ends the list, same as before.
  *
  * Separate from `gen/program.ts`'s own `findRepoRoot`/target discovery on
  * purpose: that module pulls in the TypeScript compiler, which the bare mode
@@ -91,26 +94,37 @@ function readPackage(absDir: string): Omit<WorkspacePackage, "dir"> | null {
   };
 }
 
-/** Every package under a `<dir>/*` glob in `pnpm-workspace.yaml`. */
+/**
+ * Every package the workspace declares, whether under a `<dir>/*` glob (one
+ * package per subdirectory) or named directly (one bare entry, one package —
+ * `docs` is exactly this shape: a single content package, not a parent folder
+ * of several).
+ */
 export function discoverWorkspacePackages(
   repoRoot: string,
 ): WorkspacePackage[] {
   const packages: WorkspacePackage[] = [];
 
   for (const glob of readGlobs(repoRoot)) {
-    const match = /^([^*]+)\/\*$/.exec(glob);
-    if (match === null) continue; // only the single-star, one-level form is used here.
+    const globbed = /^([^*]+)\/\*$/.exec(glob);
+    if (globbed !== null) {
+      const parent = path.join(repoRoot, globbed[1]!);
+      if (!fs.statSync(parent, { throwIfNoEntry: false })?.isDirectory()) continue;
 
-    const parent = path.join(repoRoot, match[1]!);
-    if (!fs.statSync(parent, { throwIfNoEntry: false })?.isDirectory()) continue;
-
-    for (const entry of fs.readdirSync(parent, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      const pkg = readPackage(path.join(parent, entry.name));
-      if (pkg !== null) {
-        packages.push({ ...pkg, dir: `${match[1]}/${entry.name}` });
+      for (const entry of fs.readdirSync(parent, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        const pkg = readPackage(path.join(parent, entry.name));
+        if (pkg !== null) {
+          packages.push({ ...pkg, dir: `${globbed[1]}/${entry.name}` });
+        }
       }
+      continue;
     }
+
+    if (glob.includes("*")) continue; // some other glob shape — not written here.
+
+    const pkg = readPackage(path.join(repoRoot, glob));
+    if (pkg !== null) packages.push({ ...pkg, dir: glob });
   }
 
   return packages;

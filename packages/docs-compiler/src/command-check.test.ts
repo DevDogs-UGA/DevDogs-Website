@@ -137,4 +137,107 @@ describe("checkCommands", () => {
     const pages = [page({ content: fence("console", "$ pnpm devtools db migration new") })];
     expect(checkCommands(pages, options())).toEqual([]);
   });
+
+  it("checks each `&&`-chained segment independently", () => {
+    const pages = [
+      page({
+        content: fence("sh", "pnpm devtools db migration new && pnpm devtools db migration new"),
+      }),
+    ];
+    expect(checkCommands(pages, options())).toEqual([]);
+  });
+
+  it("fails the offending half of a `&&`-chained line", () => {
+    const pages = [
+      page({
+        content: fence("sh", "pnpm devtools db migration new && pnpm devtools db reset --hard"),
+      }),
+    ];
+    const errors = checkCommands(pages, options());
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toContain("db reset");
+  });
+
+  it("splits on `;` and `|` as well as `&&`/`||`", () => {
+    const pages = [
+      page({
+        content: fence("sh", "pnpm --filter schedule-builder build ; pnpm --filter schedule-builder dev | cat"),
+      }),
+    ];
+    expect(checkCommands(pages, options())).toEqual([]);
+  });
+
+  it("accepts any positional args after a leaf devtools command", () => {
+    const pages = [
+      page({
+        content: fence(
+          "sh",
+          "pnpm devtools emails TeamInvite\npnpm devtools images 'page/*'",
+        ),
+        project: "toolkit",
+        path: "toolkit/guides/email",
+      }),
+    ];
+    const opts = options({
+      devtoolsCommands: new Set(["emails", "images"]),
+    });
+    expect(checkCommands(pages, opts)).toEqual([]);
+  });
+
+  it("fails a devtools group given a child it does not have", () => {
+    const pages = [page({ content: fence("sh", "pnpm devtools db bogus") })];
+    const errors = checkCommands(pages, options());
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toContain("db bogus");
+  });
+
+  it("allows a devtools group invoked with no subcommand", () => {
+    const pages = [page({ content: fence("sh", "pnpm devtools db") })];
+    expect(checkCommands(pages, options())).toEqual([]);
+  });
+
+  it("skips flags and their values before matching a devtools command", () => {
+    const pages = [
+      page({
+        content: fence(
+          "sh",
+          "pnpm devtools db migration new --tier staging --yes",
+        ),
+      }),
+    ];
+    expect(checkCommands(pages, options())).toEqual([]);
+  });
+
+  it("joins a backslash-continued command before checking it", () => {
+    const pages = [
+      page({
+        content: fence(
+          "sh",
+          "pnpm devtools db migration new \\\n  --tier staging \\\n  --yes",
+        ),
+      }),
+    ];
+    expect(checkCommands(pages, options())).toEqual([]);
+  });
+
+  it("ignores a segment naming a placeholder token", () => {
+    const pages = [
+      page({ content: fence("sh", "pnpm --filter <app> run cf:build:<tier>") }),
+    ];
+    expect(checkCommands(pages, options())).toEqual([]);
+  });
+
+  it("ignores a --filter path selector it cannot resolve", () => {
+    const pages = [
+      page({ content: fence("sh", "pnpm --filter ./apps/platform build") }),
+    ];
+    expect(checkCommands(pages, options())).toEqual([]);
+  });
+
+  it("ignores a --filter dependency-graph suffix it cannot resolve", () => {
+    const pages = [
+      page({ content: fence("sh", "pnpm --filter 'schedule-builder^...' run build") }),
+    ];
+    expect(checkCommands(pages, options())).toEqual([]);
+  });
 });

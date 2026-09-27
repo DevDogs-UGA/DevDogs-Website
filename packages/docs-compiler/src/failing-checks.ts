@@ -26,6 +26,13 @@ import {
 export interface FailingChecksResult {
   linkErrors: LinkCheckError[];
   commandErrors: CommandCheckError[];
+  /**
+   * True when `pnpm devtools …` lines went unchecked because the devtools
+   * catalog could not be loaded (see `devtools-catalog.ts`) — a silent skip
+   * otherwise, since `commandErrors` looks identical to "every line was
+   * checked and passed".
+   */
+  devtoolsCatalogMissing: boolean;
 }
 
 /**
@@ -46,28 +53,46 @@ export async function runFailingChecks(
 
   const repoRoot = findWorkspaceRoot(contentRoot);
   if (repoRoot === null) {
-    return { linkErrors, commandErrors: [] };
+    return { linkErrors, commandErrors: [], devtoolsCatalogMissing: false };
   }
 
+  const devtoolsCommands = await loadDevtoolsCommands(repoRoot);
   const packages = discoverWorkspacePackages(repoRoot);
   const commandErrors = checkCommands(pages, {
-    devtoolsCommands: await loadDevtoolsCommands(repoRoot),
+    devtoolsCommands,
     packages,
     appBySlug: appPackagesBySlug(packages),
     rootPackage: readRootPackage(repoRoot),
   });
 
-  return { linkErrors, commandErrors };
+  return {
+    linkErrors,
+    commandErrors,
+    devtoolsCatalogMissing: devtoolsCommands === null,
+  };
 }
 
 /** Prints every error found, `path:line: message`, and says how many. */
 export function printFailingChecks(result: FailingChecksResult): void {
   const all = [...result.linkErrors, ...result.commandErrors];
-  if (all.length === 0) return;
 
-  console.error(`[docs-compiler] ${all.length} error(s):`);
-  for (const error of all) {
-    const at = error.line === null ? "" : `:${error.line}`;
-    console.error(`[docs-compiler] error: ${error.file}${at}: ${error.message}`);
+  if (all.length > 0) {
+    console.error(`[docs-compiler] ${all.length} error(s):`);
+    for (const error of all) {
+      const at = error.line === null ? "" : `:${error.line}`;
+      console.error(`[docs-compiler] error: ${error.file}${at}: ${error.message}`);
+    }
+  }
+
+  // Not an error — the check quietly narrows to link-checking alone whenever
+  // devtools isn't installed/built next to this content (see
+  // `devtools-catalog.ts`), which is correct in TASK-302's "pnpm dlx" world
+  // but is otherwise indistinguishable from every `pnpm devtools` line
+  // actually having been checked and passed. Said once so that silence is a
+  // choice a reader can see, not a gap they have to already know about.
+  if (result.devtoolsCatalogMissing) {
+    console.error(
+      "[docs-compiler] notice: devtools catalog not found — \"pnpm devtools …\" commands were not checked",
+    );
   }
 }

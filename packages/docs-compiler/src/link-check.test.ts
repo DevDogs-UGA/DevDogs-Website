@@ -125,6 +125,93 @@ describe("checkLinks", () => {
     expect(checkLinks(pages)).toEqual([]);
   });
 
+  it("resolves an absolute link to a folder with its own index page", () => {
+    const pages = [
+      page({ content: "[gs](/docs/platform/getting-started)" }),
+      page({ path: "platform/getting-started/index", title: "Getting started" }),
+    ];
+    expect(checkLinks(pages)).toEqual([]);
+  });
+
+  it("resolves an absolute link to a folder with no index but real children", () => {
+    const pages = [
+      page({ content: "[gs](/docs/platform/getting-started)" }),
+      page({ path: "platform/getting-started/windows", title: "Windows" }),
+    ];
+    expect(checkLinks(pages)).toEqual([]);
+  });
+
+  it("checks an anchor on a folder link against the folder's index page", () => {
+    const pages = [
+      page({ content: "[gs](/docs/platform/getting-started#install)" }),
+      page({
+        path: "platform/getting-started/index",
+        headings: [{ id: "install", title: "Install", depth: 2 }],
+      }),
+    ];
+    expect(checkLinks(pages)).toEqual([]);
+  });
+
+  it("fails an anchor the folder's index page does not declare", () => {
+    const pages = [
+      page({ content: "[gs](/docs/platform/getting-started#nope)" }),
+      page({ path: "platform/getting-started/index" }),
+    ];
+    const errors = checkLinks(pages);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toContain("nope");
+  });
+
+  it("leaves an anchor unverified on a folder link with no index page", () => {
+    const pages = [
+      page({ content: "[gs](/docs/platform/getting-started#whatever)" }),
+      page({ path: "platform/getting-started/windows" }),
+    ];
+    expect(checkLinks(pages)).toEqual([]);
+  });
+
+  it("fails a link to a folder that has no pages under it at all", () => {
+    const pages = [page({ content: "[gs](/docs/platform/nowhere)" })];
+    expect(checkLinks(pages)).toHaveLength(1);
+  });
+
+  it("resolves a relative link with no .md extension and no leading ./", () => {
+    const pages = [
+      page({ path: "toolkit/guides/docs-compiler", content: "[env](env)" }),
+      page({ path: "toolkit/guides/env" }),
+    ];
+    expect(checkLinks(pages)).toEqual([]);
+  });
+
+  it("resolves a relative link (no extension) that climbs a directory, with a trailing anchor", () => {
+    const pages = [
+      page({
+        path: "toolkit/guides/env/commands",
+        content: "[env](../env#some-heading)",
+      }),
+      page({
+        path: "toolkit/guides/env",
+        headings: [{ id: "some-heading", title: "Some heading", depth: 2 }],
+      }),
+    ];
+    expect(checkLinks(pages)).toEqual([]);
+  });
+
+  it("resolves a relative folder link to a page that only exists as a folder", () => {
+    const pages = [
+      page({ path: "toolkit/index", content: "[env](./guides/env)" }),
+      page({ path: "toolkit/guides/env/commands" }),
+    ];
+    expect(checkLinks(pages)).toEqual([]);
+  });
+
+  it("ignores a relative link to a non-markdown asset", () => {
+    const pages = [
+      page({ content: "![logo](./assets/logo.svg)" }),
+    ];
+    expect(checkLinks(pages)).toEqual([]);
+  });
+
   it("checks a mounted page's relative link once per project it lands in", () => {
     const pages = [
       page({

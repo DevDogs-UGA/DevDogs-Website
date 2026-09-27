@@ -13,13 +13,33 @@
  *     path `@devdogsuga/devtools`'s own command tree declares. That set is a
  *     parameter rather than anything this file knows on its own — see the
  *     header of `devtools-catalog.ts` for why, and what loads it in practice.
+ *     Flags (and, where obvious, their values) are stripped before matching,
+ *     and the check takes the *longest* prefix of what is left that the
+ *     catalog declares: a leaf command (nothing in the catalog starts with
+ *     `"<path> "`) accepts any positional args after it
+ *     (`pnpm devtools emails TeamInvite`, `pnpm devtools images 'page/*'`),
+ *     while a group only fails when a further token is given that is not one
+ *     of its children — a bare group with nothing after it is left alone.
  *   - `pnpm --filter <pkg> [run] <script>` and a bare `pnpm run <script>` are
  *     checked against the workspace's own `package.json`s (`workspace.ts`). A
  *     bare `pnpm run` has no `--filter` to name the package, so it is read as
  *     running inside the app the docs page is about (`apps/<project-slug>`
  *     when it exists), or the workspace root otherwise — the two places a
  *     contributor is actually standing when a written command says `pnpm run`
- *     with nothing else.
+ *     with nothing else. A `--filter` value that is a path selector (`./x`)
+ *     or carries pnpm's dependency-graph suffixes (`...`, `^...`) names a
+ *     *set* of packages this check has no way to resolve, so it is left
+ *     alone rather than failed for not being a literal package name.
+ *
+ * A line can chain several commands (`&&`, `||`, `;`, `|`) and only one of
+ * them need be `pnpm`; each segment is checked on its own. A line can also
+ * continue onto the next with a trailing `\`, the shape a long `pnpm devtools
+ * … --flag value \` sample wraps onto several lines — continuations are
+ * joined back into one logical line before anything else runs, so a flag's
+ * value on the next physical line is never mistaken for the command's next
+ * positional argument. A segment that mentions a placeholder token
+ * (`<app>`, `{app}`) is left unchecked entirely: it is a stand-in the reader
+ * is meant to fill in, not a command this repo can look up.
  *
  * A fence opts out entirely with a `nocheck` meta word (` ```sh nocheck `),
  * for the rare page that shows a command exactly to say it is wrong.
@@ -97,16 +117,45 @@ export function checkCommands(
       if ((node.meta ?? "").split(/\s+/).includes("nocheck")) return;
 
       const startLine = node.position?.start.line ?? null;
-      const lines = node.value.split("\n");
+      const rawLines = node.value.split("\n");
 
-      lines.forEach((raw, index) => {
-        const line = startLine === null ? null : startLine + 1 + index;
-        checkLine(raw, line, page, file, options, byPackageName, errors);
-      });
+      for (const { text, startIndex } of joinContinuations(rawLines)) {
+        const line = startLine === null ? null : startLine + 1 + startIndex;
+        checkLine(text, line, page, file, options, byPackageName, errors);
+      }
     });
   }
 
   return errors;
+}
+
+/**
+ * Merges a `\`-continued physical line with what follows it, so a sample that
+ * wraps one long command onto several lines is checked as the one logical
+ * line it is. `startIndex` is the first physical line's index (0-based, into
+ * the fence's own lines), which is what a reported error points at.
+ */
+function joinContinuations(
+  lines: readonly string[],
+): { text: string; startIndex: number }[] {
+  const out: { text: string; startIndex: number }[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const startIndex = i;
+    let text = (lines[i] ?? "").replace(/\s+$/, "");
+
+    while (text.endsWith("\\") && i + 1 < lines.length) {
+      text = text.slice(0, -1).replace(/\s+$/, "");
+      i++;
+      text = `${text} ${(lines[i] ?? "").trim()}`.replace(/\s+$/, "");
+    }
+
+    out.push({ text, startIndex });
+    i++;
+  }
+
+  return out;
 }
 
 function checkLine(
@@ -119,28 +168,48 @@ function checkLine(
   errors: CommandCheckError[],
 ): void {
   const trimmed = stripPromptAndComment(raw);
-  const tokens = tokenize(trimmed);
-  if (tokens[0] !== "pnpm") return;
+
+  for (const segment of splitSegments(trimmed)) {
+    checkSegment(segment, line, page, file, options, byPackageName, errors);
+  }
+}
+
+/** A chained shell line, split on `&&`, `||`, `;` and `|` (in that order, so `||` is never read as two `|`s). */
+function splitSegments(line: string): string[] {
+  return line
+    .split(/&&|\|\||;|\|/)
+    .map((segment) => segment.trim())
+    .filter((segment) => segment !== "");
+}
+
+/** A stand-in the reader is meant to fill in (`<app>`, `{app}`), not a real value. */
+function hasPlaceholder(token: string): boolean {
+  return /[<{][^\s<>{}]*[>}]/.test(token);
+}
+
+function checkSegment(
+  segment: string,
+  line: number | null,
+  page: DocsPage,
+  file: string,
+  options: CommandCheckOptions,
+  byPackageName: ReadonlyMap<string, WorkspacePackage>,
+  errors: CommandCheckError[],
+): void {
+  const tokens = tokenize(segment);
+  if (tokens.length === 0 || tokens[0] !== "pnpm") return;
+  if (tokens.some(hasPlaceholder)) return;
 
   if (tokens[1] === "devtools") {
-    if (options.devtoolsCommands === null) return;
-
-    const path = takeUntilFlag(tokens.slice(2));
-    if (path.length === 0) return; // bare `pnpm devtools`: nothing to check.
-
-    if (!options.devtoolsCommands.has(path.join(" "))) {
-      errors.push({
-        file,
-        line,
-        message: `"pnpm devtools ${path.join(" ")}" is not a devtools command`,
-      });
-    }
+    checkDevtoolsCommand(tokens.slice(2), line, file, options, errors);
     return;
   }
 
   if (tokens[1] === "--filter") {
     const packageName = tokens[2];
     if (packageName === undefined) return;
+
+    if (isUnresolvableSelector(packageName)) return;
 
     let rest = tokens.slice(3);
     if (rest[0] === "run") rest = rest.slice(1);
@@ -184,6 +253,99 @@ function checkLine(
   }
 }
 
+/**
+ * A `--filter` value naming a *set* of packages rather than one literal
+ * name: a path selector (`./apps/platform`, `../foo`), or pnpm's
+ * dependency-graph suffixes (`pkg...`, `...pkg`, `pkg^...`). This check has
+ * no workspace graph to resolve either against, so it leaves them alone
+ * rather than failing a filter that may well be exactly right.
+ */
+function isUnresolvableSelector(value: string): boolean {
+  return (
+    value.startsWith("./") ||
+    value.startsWith("../") ||
+    value.startsWith("/") ||
+    value.includes("...")
+  );
+}
+
+function checkDevtoolsCommand(
+  rest: readonly string[],
+  line: number | null,
+  file: string,
+  options: CommandCheckOptions,
+  errors: CommandCheckError[],
+): void {
+  if (options.devtoolsCommands === null) return;
+  const catalog = options.devtoolsCommands;
+
+  const tokens = stripFlags(rest);
+  if (tokens.length === 0) return; // bare `pnpm devtools`: nothing to check.
+
+  let matchLen = 0;
+  for (let k = 1; k <= tokens.length; k++) {
+    if (catalog.has(tokens.slice(0, k).join(" "))) matchLen = k;
+  }
+
+  if (matchLen === 0) {
+    errors.push({
+      file,
+      line,
+      message: `"pnpm devtools ${tokens.join(" ")}" is not a devtools command`,
+    });
+    return;
+  }
+
+  const matchedPath = tokens.slice(0, matchLen).join(" ");
+  const nextToken = tokens[matchLen];
+
+  // A group only fails when there is a further token that is not one of its
+  // children — which, since `matchLen` is the *longest* matching prefix, is
+  // exactly what a leftover next token means. A bare group with nothing after
+  // it is left alone: "if unsure, allow bare groups".
+  if (nextToken !== undefined && isGroup(matchedPath, catalog)) {
+    errors.push({
+      file,
+      line,
+      message: `"pnpm devtools ${tokens.join(" ")}" is not a devtools command`,
+    });
+  }
+}
+
+/** Whether `path` is a proper prefix of some other catalog path — a group rather than a leaf. */
+function isGroup(path: string, catalog: ReadonlySet<string>): boolean {
+  const prefix = `${path} `;
+  for (const entry of catalog) {
+    if (entry.startsWith(prefix)) return true;
+  }
+  return false;
+}
+
+/**
+ * Drops flag tokens, and — where obvious — the value token immediately after
+ * one: a `--key value` pair each stay together, so `value` is never mistaken
+ * for the command's next positional argument. `--key=value` needs no such
+ * pairing, since it is already one token. What is left over, in order, is the
+ * command's own path plus whatever real positional args followed it.
+ */
+function stripFlags(tokens: readonly string[]): string[] {
+  const out: string[] = [];
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]!;
+    if (!token.startsWith("-")) {
+      out.push(token);
+      continue;
+    }
+    if (token.includes("=")) continue;
+
+    const next = tokens[i + 1];
+    if (next !== undefined && !next.startsWith("-")) i++; // consume its value too.
+  }
+
+  return out;
+}
+
 /** Drops a leading shell prompt (`$ `, `> `) and a trailing `# comment`. */
 function stripPromptAndComment(line: string): string {
   const withoutPrompt = line.replace(/^\s*[$>]\s+/, "");
@@ -193,14 +355,4 @@ function stripPromptAndComment(line: string): string {
 
 function tokenize(line: string): string[] {
   return line.split(/\s+/).filter((token) => token !== "");
-}
-
-/** Tokens up to the first one that looks like a flag. */
-function takeUntilFlag(tokens: readonly string[]): string[] {
-  const out: string[] = [];
-  for (const token of tokens) {
-    if (token.startsWith("-")) break;
-    out.push(token);
-  }
-  return out;
 }

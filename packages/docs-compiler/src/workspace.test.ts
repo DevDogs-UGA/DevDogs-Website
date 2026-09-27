@@ -59,6 +59,23 @@ describe("workspace", () => {
     expect([...byApp.keys()]).toEqual(["schedule-builder"]);
   });
 
+  it("discovers a bare (non-glob) workspace entry as its own single package", () => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), "docs-build-workspace-"));
+    write(
+      "pnpm-workspace.yaml",
+      'packages:\n  - "apps/*"\n  - "docs"\n',
+    );
+    write(
+      "docs/package.json",
+      JSON.stringify({ name: "@devdogsuga/docs", scripts: { build: "tsx build.ts" } }),
+    );
+
+    const packages = discoverWorkspacePackages(root);
+    const docs = packages.find((p) => p.name === "@devdogsuga/docs");
+    expect(docs?.dir).toBe("docs");
+    expect([...(docs?.scripts ?? [])]).toEqual(["build"]);
+  });
+
   it("reads the workspace root's own scripts", () => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "docs-build-workspace-"));
     write("pnpm-workspace.yaml", "packages:\n  - \"apps/*\"\n");

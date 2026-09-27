@@ -6,11 +6,31 @@
  *
  * Two shapes are checked, both of them how this content actually links to
  * itself: an absolute `/docs/<project>/<path>(#anchor)` URL, the one a
- * reader's browser bar shows, and a relative `*.md` link, the one a
- * contributor writes while looking at the file next to the one they are
- * editing. Anything else — `https://`, `mailto:`, a bare `#anchor` with no
- * page component when this page itself has no such heading — is either
- * external or already covered by a different rule, and is left alone.
+ * reader's browser bar shows, and a relative link, the one a contributor
+ * writes while looking at the file next to the one they are editing.
+ * Anything else — `https://`, `mailto:`, a bare `#anchor` with no page
+ * component when this page itself has no such heading — is either external or
+ * already covered by a different rule, and is left alone.
+ *
+ * Either shape can point at a folder rather than a page: the renderer serves
+ * folder routes (a folder's own `index` page when it has one, or a generated
+ * listing when it does not), so a link resolves when its target is a page, OR
+ * `<target>/index` is a page, OR some page's path starts with `<target>/`
+ * (the folder has children even without an index). An anchor on a folder link
+ * is checked against the folder's `index` page's headings when one exists;
+ * with no index to check against, the anchor is left unverified rather than
+ * failed for a listing this check has no headings for.
+ *
+ * A relative link is resolved the way a browser resolves a relative URL from
+ * the linking page's own emitted path, treating that path as a file — so
+ * `./x` is a sibling and `../x` a cousin, exactly per `dirname`/`join`, and
+ * this holds however the source spells it: `./toolchain`, `../guides/x`, a
+ * bare `toolchain` (a `_shared` page mounted into several projects has
+ * nowhere to spell an absolute link that survives every mount, so it writes
+ * these), with or without a trailing `.md`. A relative link whose last
+ * segment carries a non-`.md` extension (`./diagram.png`, `../logo.svg`) is
+ * read as a link to some other kind of asset this check has no opinion about,
+ * not a page, and is left alone.
  *
  * Pages are read as markdown (`remark-parse` + `remark-gfm`, matching
  * `parse.ts`) rather than scanned line by line, so a link written inside a
@@ -64,9 +84,9 @@ export function checkLinks(pages: readonly DocsPage[]): LinkCheckError[] {
       if (target === null) return;
 
       const line = node.position?.start.line ?? null;
-      const targetPage = byPath.get(target.path);
+      const resolved = resolvePath(target.path, byPath, pages);
 
-      if (targetPage === undefined) {
+      if (resolved === null) {
         errors.push({
           file,
           line,
@@ -76,7 +96,13 @@ export function checkLinks(pages: readonly DocsPage[]): LinkCheckError[] {
       }
 
       if (target.anchor !== null) {
-        const known = targetPage.headings.some((h) => h.id === target.anchor);
+        // A folder route with no index has no headings to check an anchor
+        // against — left unverified rather than failed for a listing this
+        // check cannot see into.
+        const headingsPage = resolved.kind === "page" ? resolved.page : resolved.indexPage;
+        if (headingsPage === null) return;
+
+        const known = headingsPage.headings.some((h) => h.id === target.anchor);
         if (!known) {
           errors.push({
             file,
@@ -89,6 +115,29 @@ export function checkLinks(pages: readonly DocsPage[]): LinkCheckError[] {
   }
 
   return errors;
+}
+
+/** Where `path` resolves: an exact page, a folder (index page or listing), or nothing. */
+type Resolved =
+  | { kind: "page"; page: DocsPage }
+  | { kind: "folder"; indexPage: DocsPage | null };
+
+function resolvePath(
+  path: string,
+  byPath: ReadonlyMap<string, DocsPage>,
+  pages: readonly DocsPage[],
+): Resolved | null {
+  const direct = byPath.get(path);
+  if (direct !== undefined) return { kind: "page", page: direct };
+
+  const indexPage = byPath.get(`${path}/index`) ?? null;
+  if (indexPage !== null) return { kind: "folder", indexPage };
+
+  const prefix = `${path}/`;
+  const hasChildren = pages.some((p) => p.path.startsWith(prefix));
+  if (hasChildren) return { kind: "folder", indexPage: null };
+
+  return null;
 }
 
 function labelFor(page: DocsPage): string {
@@ -122,12 +171,32 @@ function resolveTarget(url: string, page: DocsPage): Target | null {
   }
 
   const isExternal = /^[a-z][a-z0-9+.-]*:/i.test(bare) || bare.startsWith("//");
-  if (!isExternal && !bare.startsWith("/") && bare.endsWith(".md")) {
-    const dir = dirname(page.path);
-    return { path: normalise(join(dir, bare.slice(0, -".md".length))), anchor };
-  }
+  if (isExternal || bare.startsWith("/")) return null;
 
-  return null;
+  const relative = stripMdSuffix(bare);
+  if (relative === null) return null; // a relative link to some other kind of asset.
+
+  const dir = dirname(page.path);
+  return { path: normalise(join(dir, relative)), anchor };
+}
+
+/**
+ * `bare` with a trailing `.md` removed, or unchanged when it names no file
+ * extension at all (`./toolchain`, a bare `toolchain` — the folder-URL forms
+ * `_shared` pages use so the same relative link survives every mount). Null
+ * when the last segment carries some other extension (`./diagram.png`): a
+ * relative link to an asset this check has no page to look up.
+ */
+function stripMdSuffix(bare: string): string | null {
+  const lastSlash = bare.lastIndexOf("/");
+  const lastSegment = bare.slice(lastSlash + 1);
+  const dot = lastSegment.lastIndexOf(".");
+  if (dot <= 0) return bare; // no extension (or a dotfile-like leading dot).
+
+  const ext = lastSegment.slice(dot + 1).toLowerCase();
+  if (ext !== "md") return null;
+
+  return bare.slice(0, bare.length - (lastSegment.length - dot));
 }
 
 /* Posix-style path helpers, deliberately not `node:path`: every `DocsPage`
