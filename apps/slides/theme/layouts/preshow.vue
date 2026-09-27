@@ -65,28 +65,28 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
       >
         <div v-if="showWeb" class="dd-preshow-half dd-preshow-half-web">
           <div class="dd-preshow-half-wash" />
-          <p class="dd-preshow-line">
+          <p class="dd-preshow-sub">
             Designed for <span class="dd-preshow-name dd-preshow-dogdays"><DogDaysMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogDays</span></span> contributors<br>
             and future web developers
           </p>
           <svg class="dd-preshow-arrow" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 3.5v16M5 12.5l7 7 7-7" />
           </svg>
-          <p class="dd-preshow-sub">
+          <p class="dd-preshow-line">
             Working on web apps?<br>
             Sit on this side!
           </p>
         </div>
         <div v-if="showMobile" class="dd-preshow-half dd-preshow-half-mobile">
           <div class="dd-preshow-half-wash" />
-          <p class="dd-preshow-line">
+          <p class="dd-preshow-sub">
             Designed for <span class="dd-preshow-name dd-preshow-dogpack"><DogPackMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogPack</span></span> contributors<br>
             and future mobile developers
           </p>
           <svg class="dd-preshow-arrow" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 3.5v16M5 12.5l7 7 7-7" />
           </svg>
-          <p class="dd-preshow-sub">
+          <p class="dd-preshow-line">
             Working on mobile apps?<br>
             Sit on this side!
           </p>
@@ -192,15 +192,10 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
 .dd-preshow-line {
   font-family: 'Alan Sans', 'Hanken Grotesk', sans-serif;
   font-weight: 800;
-  font-size: 1.6rem;
-  line-height: 1.25;
+  font-size: 2.1rem;
+  line-height: 1.2;
   margin: 0;
-  text-wrap: balance;
-}
-
-/* Half the width with both halves showing, so a size smaller. */
-.dd-preshow-both .dd-preshow-line {
-  font-size: 1.3rem;
+  white-space: nowrap;
 }
 
 .dd-preshow-half-web .dd-preshow-line {
@@ -221,17 +216,16 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
 }
 
 /* Drawn rather than an icon font: even Phosphor's bold arrow is a hairline
-   next to the extra-bold line above it. A 2.75-unit stroke at this size
-   is that line's own ~0.15em stem (it's set at 1.6rem), with round ends
-   like Alan Sans's terminals. It nudges down, over and over, toward the
-   seats. */
+   next to the extra-bold line below it. At 1em of that line's size, a
+   3.6-unit stroke is its own ~0.15em stem, with round ends
+   like Alan Sans's terminals. It nudges down, over and over. */
 .dd-preshow-arrow {
   width: 2.1rem;
   height: 2.1rem;
   animation: dd-preshow-nudge 1.6s ease-in-out infinite;
   fill: none;
   stroke: currentColor;
-  stroke-width: 2.75;
+  stroke-width: 3.6;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -245,7 +239,8 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
 }
 
 .dd-preshow-sub {
-  margin: 0.9rem 0 0;
+  /* The extra space sits between the subtitle and the arrow. */
+  margin: 0 0 0.9rem;
   font-size: 1.15rem;
   font-style: italic;
   /* A step lighter than --dd-grey-secondary. */

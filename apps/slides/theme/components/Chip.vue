@@ -37,7 +37,7 @@ const hex = computed(() =>
 <template>
   <span
     v-if="variant === 'solid'"
-    class="inline-flex items-center rounded-full px-3 py-1 text-[0.65rem] font-700 uppercase tracking-wide"
+    class="dd-chip-solid inline-block rounded-full px-3 text-[0.65rem] font-700 uppercase tracking-wide"
     :style="{ background: hex, color: 'var(--dd-bg)' }"
   >
     <slot>{{ type }}</slot>
@@ -50,3 +50,15 @@ const hex = computed(() =>
     <slot>{{ type }}</slot>
   </span>
 </template>
+
+<style scoped>
+/* All caps, so the line box's room for descenders sat empty under the
+   letters and pushed them high. Trimmed to the caps, the even padding
+   centres them. (Trimming needs a block container, hence inline-block.) */
+.dd-chip-solid {
+  text-box: trim-both cap alphabetic;
+  /* Hanken Grotesk's cap-height metric sits a hair above its drawn
+     capitals, which left them slightly low; this evens the ink out. */
+  padding-block: calc(0.5rem - 0.3px) calc(0.5rem + 0.3px);
+}
+</style>
