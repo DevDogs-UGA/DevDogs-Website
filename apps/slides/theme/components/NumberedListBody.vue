@@ -73,7 +73,7 @@
   margin-left: 0;
   padding: 0;
   border-bottom: none;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 400;
   color: var(--dd-grey-support);
 }

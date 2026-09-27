@@ -24,6 +24,10 @@ const props = withDefaults(defineProps<{ count?: number }>(), {
 })
 
 const shown = computed(() => meetings.slice(0, props.count))
+
+// Each card takes a turn in the spotlight, on a loop, so the eye walks the
+// whole list while the slide is up.
+const EMPHASIS_SECONDS = 2.5
 </script>
 
 <template>
@@ -32,6 +36,7 @@ const shown = computed(() => meetings.slice(0, props.count))
       v-for="(meeting, i) in shown"
       :key="meeting.id"
       :class="STACK_STEP[i] ?? STACK_STEP[STACK_STEP.length - 1]"
+      :style="{ animationDelay: `${i * EMPHASIS_SECONDS}s`, animationDuration: `${shown.length * EMPHASIS_SECONDS}s` }"
     >
       <NextMeetingStrip
         :meeting="meeting"
@@ -60,6 +65,24 @@ const shown = computed(() => meetings.slice(0, props.count))
 .dd-upcoming-stack > li {
   width: 100%;
   transform-origin: top center;
+  border-radius: 0.75rem;
+  animation-name: dd-upcoming-spotlight;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+/* `scale` composes with the stack's `transform: scale(...)` steps. The
+   spotlight holds for a third of the cycle, one card at a time (each card's
+   delay is its turn). */
+@keyframes dd-upcoming-spotlight {
+  0%, 36%, 100% {
+    scale: 1;
+    box-shadow: 0 0 0 0 transparent;
+  }
+  6%, 30% {
+    scale: 1.05;
+    box-shadow: 0 0.6rem 1.8rem -0.6rem color-mix(in srgb, var(--dd-ink) 25%, transparent);
+  }
 }
 
 .dd-stack-95 {

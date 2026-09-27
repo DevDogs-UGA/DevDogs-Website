@@ -19,12 +19,18 @@ const props = withDefaults(defineProps<{
   // Smaller padding + caption type, for fitting two side by side on a
   // single slide rather than one centered QRSlot filling the frame.
   compact?: boolean
+  // Crops the image's own quiet zone (the blank margin QR generators put
+  // around the modules), as a percentage of its width, e.g. "9.8%" for a
+  // 4-module margin on a 33-module code (4/41). The frame's padding is
+  // margin enough on a dark slide.
+  trim?: string
 }>(), {
   caption: undefined,
   accent: undefined,
   label: undefined,
   size: '14rem',
   compact: false,
+  trim: undefined,
 })
 
 const ring = computed(() => accentHex(props.accent))
@@ -42,10 +48,10 @@ const ring = computed(() => accentHex(props.accent))
     </p>
     <div
       class="rounded-2xl"
-      :class="compact ? 'p-3' : 'p-6'"
+      :class="compact ? 'p-2.5' : 'p-6'"
       :style="{ background: 'var(--dd-panel)', boxShadow: `0 0 0 2px ${ring}` }"
     >
-      <img :src="src" :style="{ height: size, width: size }" alt="QR code" />
+      <img :src="src" :style="{ height: size, width: size, objectViewBox: trim ? `inset(${trim})` : undefined }" alt="QR code" />
     </div>
     <div v-if="caption || $slots.default" class="text-center text-dd-muted" :class="compact ? 'text-sm max-w-[18rem]' : 'text-lg'">
       <slot>{{ caption }}</slot>

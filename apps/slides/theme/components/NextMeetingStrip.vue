@@ -11,6 +11,7 @@
 // black-border, block-shadow look, but keeping the same shape: eyebrow
 // over name over time/location, in a date-led row.
 import { computed } from 'vue'
+import { EVENT_KIND_VISUALS, EVENT_SEGMENT_VISUALS } from '@devdogsuga/brand/event'
 import type { DeckMeeting } from '../vite/meetings'
 
 const props = withDefaults(defineProps<{
@@ -47,10 +48,20 @@ const title = computed(() => props.meeting.title ?? props.meeting.kind ?? DATE_F
 const timeSpan = computed(() => `${TIME_FMT.format(startsAt.value)} – ${TIME_FMT.format(endsAt.value)}`)
 
 const location = computed(() => [props.meeting.building, props.meeting.location].filter(Boolean).join(' '))
+
+// The event's own colour, as on the website's calendar: by kind, and
+// workshops (which carry no kind) in the workshop green. Not the slide's
+// accent, so the cards don't blend into the heading and chip.
+const accent = computed(() => {
+  const kind = props.meeting.kind as keyof typeof EVENT_KIND_VISUALS | null
+  if (kind && kind in EVENT_KIND_VISUALS) return EVENT_KIND_VISUALS[kind].accent
+  if (/^workshop/i.test(props.meeting.title ?? '')) return EVENT_SEGMENT_VISUALS.workshop.accent
+  return undefined
+})
 </script>
 
 <template>
-  <div class="dd-meeting-strip">
+  <div class="dd-meeting-strip" :style="accent ? { '--accent': accent } : undefined">
     <div class="dd-meeting-date">
       <span class="dd-meeting-weekday">{{ weekday }}</span>
       <span class="dd-meeting-day">{{ day }}</span>

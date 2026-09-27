@@ -47,12 +47,12 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
   <div class="slidev-layout dd-closing relative overflow-hidden" :style="style">
     <Wash :accent="accent" :wash="wash" />
     <Chrome v-if="chrome" :accent="accent" :chip="chip" />
-    <div class="dd-content h-full flex flex-col justify-center items-center text-center gap-5">
+    <div class="dd-content h-full flex flex-col justify-center items-center text-center" :class="$slots.footer ? 'gap-6' : 'gap-5'">
       <div>
         <div :class="$slots.footer ? 'text-4xl' : 'text-6xl'">
           <slot />
         </div>
-        <p v-if="subtitle" class="mt-3 text-xl text-dd-muted">
+        <p v-if="subtitle" class="dd-closing-subtitle">
           {{ subtitle }}
         </p>
       </div>
@@ -64,11 +64,19 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
 </template>
 
 <style scoped>
+.dd-closing-subtitle {
+  margin: 0.75rem 0 0;
+  font-family: 'Alan Sans', 'Hanken Grotesk', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--dd-ink);
+}
+
 .dd-closing-footer {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
 .dd-closing-footer :deep(.dd-close-qr-row) {
@@ -78,9 +86,31 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
   gap: 3rem;
 }
 
+/* Handles on one line (Instagram, GitHub, LinkedIn icons + the handle),
+   email on the next, each led by its icons. */
 .dd-closing-footer :deep(.dd-close-contact) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
   margin: 0;
   color: var(--dd-grey-secondary);
   font-size: 1.05rem;
+}
+
+.dd-closing-footer :deep(.dd-close-contact p) {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.dd-closing-footer :deep(.dd-close-contact svg) {
+  color: var(--accent);
+  font-size: 1.15em;
+}
+
+.dd-closing-footer :deep(.dd-close-contact .dd-close-handle) {
+  margin-left: 0.25rem;
 }
 </style>
