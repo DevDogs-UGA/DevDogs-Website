@@ -201,6 +201,9 @@ describe("prompts", () => {
       // the same question the auto-detection already answered.
       "--device",
       "--loopback",
+      // `doctor --report`: a write-gate for stdout, not a question — same
+      // reasoning as `--apply`/`--json` above.
+      "--report",
     ]);
     const unasked = new Set<string>();
 
@@ -229,9 +232,8 @@ describe("coverage of what the CLI dispatches", () => {
    */
   const DISPATCHED = [
     "completions",
-    "catalog",
+    "moderation",
     "doctor",
-    "roundtrip",
     "grant-root",
     "setup",
     "oauth",

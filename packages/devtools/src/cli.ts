@@ -32,7 +32,8 @@ import {
   PERSONAS,
   type Instance,
 } from "./instance.js";
-import { conformance, listApps, quarantineRoundTrip } from "./doctor.js";
+import { conformance, listApps, quarantineRoundTrip } from "./moderation.js";
+import { runEnvironmentDoctor } from "./environment-doctor.js";
 import {
   currentRootHolder,
   grantRoot,
@@ -106,16 +107,11 @@ import { runCf } from "./cf/commands.js";
 import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
 import { ownVersion } from "./repo/preflight.js";
 
-const DOCTOR_COMMANDS = [
-  "doctor",
-  "roundtrip",
-  "catalog",
-  "grant-root",
-] as const;
-type DoctorCommand = (typeof DOCTOR_COMMANDS)[number];
+const MODERATION_COMMANDS = ["moderation", "grant-root"] as const;
+type ModerationCommand = (typeof MODERATION_COMMANDS)[number];
 
-function isDoctorCommand(value: string): value is DoctorCommand {
-  return (DOCTOR_COMMANDS as readonly string[]).includes(value);
+function isModerationCommand(value: string): value is ModerationCommand {
+  return (MODERATION_COMMANDS as readonly string[]).includes(value);
 }
 
 function flagValue(rest: string[], flag: string): string | undefined {
@@ -301,12 +297,15 @@ async function runStack(command: StackCommand, rest: string[]): Promise<void> {
   }
 }
 
-async function runCatalog(instance: Instance): Promise<void> {
+async function runModerationCatalog(instance: Instance): Promise<void> {
   const catalog = await readCatalog(instance);
   note(renderCatalog(catalog), "Moderation catalog");
 }
 
-async function runDoctor(instance: Instance, appSlug?: string): Promise<void> {
+async function runModerationCheck(
+  instance: Instance,
+  appSlug?: string,
+): Promise<void> {
   let slug = appSlug;
 
   if (!slug) {
@@ -370,7 +369,7 @@ async function runDoctor(instance: Instance, appSlug?: string): Promise<void> {
   }
 }
 
-async function runRoundTrip(instance: Instance): Promise<void> {
+async function runModerationRoundTrip(instance: Instance): Promise<void> {
   const s = spinner();
   s.start("Filing a report, quarantining it, and looking again");
 
@@ -731,6 +730,7 @@ async function runDbCommand(rest: string[]): Promise<void> {
 
     if (msub === "new") {
       const code = await runNewMigration(
+        flagValue(mrest, "--app"),
         mrest.find((arg) => !arg.startsWith("-")),
       );
       process.exitCode = code === 0 ? 0 : 1;
@@ -1112,7 +1112,27 @@ async function dispatch(argv: string[]): Promise<string | null> {
     return null;
   }
 
-  if (!isDoctorCommand(first)) {
+  // The old moderation names, refused with the new namespace rather than
+  // falling into "Unknown command" — same rationale as `secrets` above.
+  // `doctor` itself is NOT here: that name now belongs to the environment
+  // checker below, a deliberate reuse rather than a collision.
+  if (first === "catalog" || first === "roundtrip") {
+    explain(`\`${first}\` is now \`devtools moderation ${first}\`.`, "", [
+      `pnpm devtools moderation ${first}`,
+    ]);
+    process.exitCode = 1;
+    return null;
+  }
+
+  if (first === "doctor") {
+    await runEnvironmentDoctor({
+      app: flagValue(rest, "--app"),
+      report: rest.includes("--report"),
+    });
+    return DONE;
+  }
+
+  if (!isModerationCommand(first)) {
     log.error(`Unknown command: ${first}`);
     // The top level only. The command is unknown, so there is no level below
     // it to describe, and reprinting the whole tree here is what made the old
@@ -1128,14 +1148,24 @@ async function dispatch(argv: string[]): Promise<string | null> {
     return null;
   }
 
-  if (first === "catalog") {
-    await runCatalog(instance);
-  } else if (first === "doctor") {
-    await runDoctor(instance, flagValue(rest, "--app"));
-  } else if (first === "grant-root") {
-    await runGrantRoot(instance, flagValue(rest, "--user"));
+  if (first === "moderation") {
+    const [msub, ...mrest] = rest;
+    if (msub === "check") {
+      await runModerationCheck(instance, flagValue(mrest, "--app"));
+    } else if (msub === "catalog") {
+      await runModerationCatalog(instance);
+    } else if (msub === "roundtrip") {
+      await runModerationRoundTrip(instance);
+    } else {
+      log.error(
+        msub
+          ? `devtools moderation: unknown subcommand "${msub}". Try ${subcommandList(["moderation"])}.`
+          : `devtools moderation: which of ${subcommandList(["moderation"])}?`,
+      );
+      process.exitCode = 1;
+    }
   } else {
-    await runRoundTrip(instance);
+    await runGrantRoot(instance, flagValue(rest, "--user"));
   }
 
   return DONE;

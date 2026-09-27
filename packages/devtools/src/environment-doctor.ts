@@ -1,0 +1,447 @@
+/**
+ * `pnpm devtools doctor [--app <slug>] [--report]`
+ *
+ * The new environment checker. Entirely read-only: it inspects this machine
+ * and this checkout's `.env`, and for a hosted Supabase project, makes a
+ * couple of network calls to say whether it is reachable — never writes
+ * anything. `setup.ts`'s hosted wizard runs the same checks at the end of
+ * its own run (see its last step), so a contributor who set up through the
+ * wizard and one who ran `doctor` cold see the same report.
+ *
+ * Every check carries a stable FAQ id from the docs contract's list (see
+ * `docs/_shared/getting-started/troubleshooting.md` once written) so a
+ * failure message can point at
+ * `https://devdogsuga.org/docs/<app>/getting-started/troubleshooting#<id>`
+ * rather than explaining itself twice.
+ *
+ * Pure classification lives in small exported functions so this file's own
+ * tests do not have to fake `child_process`/`fs` to prove the logic; the
+ * orchestrator (`runEnvironmentDoctor`) is the only part that actually
+ * touches the machine.
+ */
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { log, note } from "@clack/prompts";
+import { parse as parseDotenv } from "dotenv";
+import { discoverRepoRoot } from "./repo/root.js";
+import { validateSessionPoolerUrl } from "./db/pooler.js";
+
+export type CheckStatus = "ok" | "warn" | "skip";
+
+export interface DoctorCheck {
+  id: string;
+  status: CheckStatus;
+  summary: string;
+  /** How to fix it, when `status !== "ok"`. */
+  fix?: string;
+  faqId?: string;
+}
+
+const TROUBLESHOOTING_APPS = ["schedule-builder", "study-group-finder", "platform"];
+
+function faqUrl(app: string, id: string): string {
+  return `https://devdogsuga.org/docs/${app}/getting-started/troubleshooting#${id}`;
+}
+
+// ── Pure checks ──────────────────────────────────────────────────────────────
+
+/** The floor is 22.12: pnpm 11 needs `node:sqlite`, stable there. `.nvmrc`
+ * pins 24, which is what a `fnm use` picks up; a machine below the floor is
+ * a WARN, not an error — plenty of contributors' shells still resolve an
+ * old global `node` first. */
+export function checkNodeVersion(nodeVersion: string, app: string): DoctorCheck {
+  const [major = 0, minor = 0] = nodeVersion.split(".").map(Number);
+  const ok = major > 22 || (major === 22 && minor >= 12);
+  return {
+    id: "node-version",
+    status: ok ? "ok" : "warn",
+    summary: ok
+      ? `Node ${nodeVersion}`
+      : `Node ${nodeVersion} is below the floor (>= 22.12)`,
+    fix: ok
+      ? undefined
+      : "Install fnm, then `fnm use` in the repo (reads .nvmrc).",
+    faqId: ok ? undefined : "node-version",
+  };
+}
+
+export function checkFnmHookPresent(
+  shellProfile: string | null,
+  app: string,
+): DoctorCheck {
+  const present = Boolean(
+    shellProfile?.includes("fnm env") || shellProfile?.includes("fnm_env"),
+  );
+  return {
+    id: "fnm-not-found",
+    status: present ? "ok" : "warn",
+    summary: present
+      ? "fnm hook found in shell profile"
+      : "No fnm hook found in your shell profile",
+    fix: present
+      ? undefined
+      : "Add fnm's shell hook (`fnm env --use-on-cd --shell <bash|zsh|powershell> | ...`) and restart your terminal.",
+    faqId: present ? undefined : "fnm-not-found",
+  };
+}
+
+export function checkPnpmVersion(
+  pnpmVersion: string | null,
+  pinned: string,
+  app: string,
+): DoctorCheck {
+  if (!pnpmVersion) {
+    return {
+      id: "pnpm-missing",
+      status: "warn",
+      summary: "pnpm is not on PATH",
+      fix: '`npm install -g pnpm` (never `corepack enable` — this repo does not use corepack).',
+      faqId: "pnpm-missing",
+    };
+  }
+  const pinnedVersion = pinned.replace(/^pnpm@/, "").split("+")[0];
+  const ok = pnpmVersion === pinnedVersion;
+  return {
+    id: "pnpm-version",
+    status: ok ? "ok" : "warn",
+    summary: ok
+      ? `pnpm ${pnpmVersion}`
+      : `pnpm ${pnpmVersion} does not match the pinned ${pinnedVersion}`,
+    fix: ok
+      ? undefined
+      : "pnpm self-switches to the pinned version on its first run in the repo (pmOnFail=download). Run any pnpm command here again.",
+    faqId: ok ? undefined : "pnpm-version",
+  };
+}
+
+/** `git config core.autocrlf` — `input` or `false` is correct on every
+ * platform this repo documents (WSL2, native Windows, macOS, Linux); `true`
+ * rewrites LF to CRLF on checkout and breaks anything that shells out to a
+ * script with a shebang. */
+export function checkAutocrlf(value: string | null): DoctorCheck {
+  const ok = value === "input" || value === "false" || value === null;
+  return {
+    id: "crlf-line-endings",
+    status: ok ? "ok" : "warn",
+    summary: ok
+      ? "core.autocrlf is not rewriting line endings"
+      : `core.autocrlf=${value} rewrites LF to CRLF on checkout`,
+    fix: ok
+      ? undefined
+      : "`git config --global core.autocrlf input` (or `false`), then re-clone or `git rm --cached -r . && git reset --hard`.",
+    faqId: ok ? undefined : "crlf-line-endings",
+  };
+}
+
+/** WSL2's own filesystem, never `/mnt/c/...` — a Windows-drive checkout
+ * makes every file operation cross the 9p boundary and Docker bind mounts
+ * silently fail to see edits. */
+export function checkRepoUnderMntC(repoRoot: string): DoctorCheck {
+  const ok = !repoRoot.startsWith("/mnt/");
+  return {
+    id: "repo-under-mnt-c",
+    status: ok ? "ok" : "warn",
+    summary: ok
+      ? "Repo is on the Linux filesystem"
+      : `Repo is under ${repoRoot} — a Windows drive mounted into WSL2`,
+    fix: ok
+      ? undefined
+      : "Clone into your Linux home (~), never /mnt/c/..., and reopen with the VS Code WSL extension.",
+    faqId: ok ? undefined : "repo-under-mnt-c",
+  };
+}
+
+/** Windows only. `RemoteSigned` (or looser) is what lets fnm's PowerShell
+ * hook and pnpm's shims actually run. */
+export function checkPowerShellExecutionPolicy(
+  policy: string | null,
+): DoctorCheck {
+  const restricted = policy === "Restricted" || policy === "AllSigned";
+  return {
+    id: "powershell-execution-policy",
+    status: restricted ? "warn" : "ok",
+    summary: restricted
+      ? `Execution policy is ${policy}, which blocks locally-created scripts`
+      : `Execution policy is ${policy ?? "unrestricted"}`,
+    fix: restricted
+      ? "`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, then restart your terminal."
+      : undefined,
+    faqId: restricted ? "powershell-execution-policy" : undefined,
+  };
+}
+
+export function checkEnvKeysPresent(
+  env: Record<string, string | undefined>,
+  keys: string[],
+): DoctorCheck {
+  const missing = keys.filter((k) => !env[k]);
+  return {
+    id: "env-incomplete",
+    status: missing.length === 0 ? "ok" : "warn",
+    summary:
+      missing.length === 0
+        ? ".env has every key this run needs"
+        : `.env is missing: ${missing.join(", ")}`,
+    fix:
+      missing.length === 0
+        ? undefined
+        : "`pnpm devtools setup` (or `pnpm devtools env init`) fills in the blanks.",
+    faqId: missing.length === 0 ? undefined : "env-incomplete",
+  };
+}
+
+export { validateSessionPoolerUrl };
+
+// ── Orchestrator ─────────────────────────────────────────────────────────────
+
+function has(cmd: string, args: string[]): string | null {
+  try {
+    return execFileSync(cmd, args, {
+      stdio: ["ignore", "pipe", "ignore"],
+      encoding: "utf8",
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
+function gitConfig(key: string): string | null {
+  return has("git", ["config", "--get", key]);
+}
+
+function readNvmrc(repoRoot: string): string | null {
+  try {
+    return readFileSync(join(repoRoot, ".nvmrc"), "utf8").trim();
+  } catch {
+    return null;
+  }
+}
+
+function readPackageManagerPin(repoRoot: string): string | null {
+  try {
+    const pkg = JSON.parse(
+      readFileSync(join(repoRoot, "package.json"), "utf8"),
+    ) as { packageManager?: string };
+    return pkg.packageManager ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function readShellProfile(): string | null {
+  const home = process.env.HOME;
+  if (!home) return null;
+  for (const file of [".bashrc", ".zshrc", ".config/fish/config.fish", ".bash_profile"]) {
+    const path = join(home, file);
+    if (existsSync(path)) {
+      try {
+        return readFileSync(path, "utf8");
+      } catch {
+        // try the next one
+      }
+    }
+  }
+  return null;
+}
+
+function renderCheck(app: string, check: DoctorCheck): string {
+  const icon = check.status === "ok" ? "OK  " : check.status === "skip" ? "SKIP" : "WARN";
+  const lines = [`${icon}  ${check.summary}`];
+  if (check.status === "warn") {
+    if (check.fix) lines.push(`      fix: ${check.fix}`);
+    if (check.faqId) lines.push(`      ${faqUrl(app, check.faqId)}`);
+  }
+  return lines.join("\n");
+}
+
+export interface RunDoctorOptions {
+  app?: string;
+  report?: boolean;
+}
+
+export async function runEnvironmentDoctor(
+  opts: RunDoctorOptions,
+): Promise<void> {
+  const app =
+    opts.app && TROUBLESHOOTING_APPS.includes(opts.app) ? opts.app : "platform";
+  const repoRoot = discoverRepoRoot();
+  const checks: DoctorCheck[] = [];
+
+  checks.push(checkNodeVersion(process.versions.node, app));
+  checks.push(checkFnmHookPresent(readShellProfile(), app));
+
+  const pnpmVersion = has("pnpm", ["--version"]);
+  const pin = repoRoot ? readPackageManagerPin(repoRoot) : null;
+  checks.push(
+    pin
+      ? checkPnpmVersion(pnpmVersion, pin, app)
+      : {
+          id: "pnpm-version",
+          status: pnpmVersion ? "ok" : "warn",
+          summary: pnpmVersion ? `pnpm ${pnpmVersion}` : "pnpm is not on PATH",
+          fix: pnpmVersion
+            ? undefined
+            : '`npm install -g pnpm` (never `corepack enable`).',
+          faqId: pnpmVersion ? undefined : "pnpm-missing",
+        },
+  );
+
+  checks.push(checkAutocrlf(gitConfig("core.autocrlf")));
+
+  if (repoRoot) checks.push(checkRepoUnderMntC(repoRoot));
+
+  if (process.platform === "win32") {
+    checks.push(
+      checkPowerShellExecutionPolicy(
+        has("powershell", ["-NoProfile", "-Command", "Get-ExecutionPolicy"]),
+      ),
+    );
+  }
+
+  // Local Docker stack — only relevant when the checkout has a local
+  // `.env.generated`, the signature of `db start` having run at least once.
+  if (repoRoot && existsSync(join(repoRoot, ".env.generated"))) {
+    const dockerUp = has("docker", ["info"]) !== null;
+    checks.push({
+      id: "docker-not-running",
+      status: dockerUp ? "ok" : "warn",
+      summary: dockerUp ? "Docker is running" : "Docker daemon is not answering",
+      fix: dockerUp
+        ? undefined
+        : "Start Docker Desktop or OrbStack (macOS: set DOCKER_HOST=unix://$HOME/.orbstack/run/docker.sock for OrbStack). Never Colima.",
+      faqId: dockerUp ? undefined : "docker-not-running",
+    });
+  }
+
+  if (!opts.app || opts.app === "study-group-finder") {
+    const flutter = has("flutter", ["--version"]) !== null;
+    checks.push({
+      id: "flutter-missing",
+      status: flutter ? "ok" : "skip",
+      summary: flutter ? "Flutter is installed" : "Flutter is not installed",
+      fix: flutter ? undefined : "Install the Flutter SDK for study-group-finder.",
+      faqId: flutter ? undefined : "flutter-missing",
+    });
+    if (flutter) {
+      const devices = has("adb", ["devices"]);
+      const hasDevice = Boolean(
+        devices
+          ?.split("\n")
+          .slice(1)
+          .some((line) => line.trim().endsWith("device")),
+      );
+      checks.push({
+        id: "adb-no-devices",
+        status: hasDevice ? "ok" : "skip",
+        summary: hasDevice
+          ? "adb sees a device or emulator"
+          : "adb sees no device or emulator",
+        fix: hasDevice
+          ? undefined
+          : "Start an Android Studio emulator (or plug in a device). On WSL2 with a Windows emulator, run `adb kill-server` on Windows first.",
+        faqId: hasDevice ? undefined : "adb-no-devices",
+      });
+    }
+  }
+
+  let env: Record<string, string | undefined> = {};
+  if (repoRoot) {
+    const envPath = join(repoRoot, ".env");
+    if (existsSync(envPath)) {
+      env = parseDotenv(readFileSync(envPath, "utf8"));
+    }
+    checks.push(checkEnvKeysPresent(env, ["API_URL", "PUBLISHABLE_KEY"]));
+  }
+
+  // ── Hosted checks — only when .env looks like a hosted project ───────────
+  const isHosted = Boolean(env.API_URL && !env.API_URL.includes("127.0.0.1") && !env.API_URL.includes("localhost"));
+  if (isHosted && env.API_URL) {
+    let reachable = false;
+    try {
+      const res = await fetch(`${env.API_URL}/auth/v1/settings`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      reachable = res.status < 500;
+    } catch {
+      reachable = false;
+    }
+    checks.push({
+      id: "supabase-unreachable",
+      status: reachable ? "ok" : "warn",
+      summary: reachable
+        ? "The hosted project answers"
+        : "The hosted project's API URL did not respond",
+      fix: reachable
+        ? undefined
+        : "Check the API URL in .env, and that the project is not paused.",
+      faqId: reachable ? undefined : "supabase-unreachable",
+    });
+
+    if (reachable && env.SECRET_KEY) {
+      let keysValid = false;
+      let paused = false;
+      try {
+        const res = await fetch(`${env.API_URL}/auth/v1/admin/users?page=1&per_page=1`, {
+          headers: { Authorization: `Bearer ${env.SECRET_KEY}`, apikey: env.SECRET_KEY },
+          signal: AbortSignal.timeout(5000),
+        });
+        keysValid = res.status !== 401 && res.status !== 403;
+        paused = res.status === 503 || res.status === 522;
+      } catch {
+        keysValid = false;
+      }
+      checks.push({
+        id: "supabase-keys-invalid",
+        status: keysValid ? "ok" : "warn",
+        summary: keysValid ? "SECRET_KEY is accepted" : "SECRET_KEY was rejected",
+        fix: keysValid
+          ? undefined
+          : "Copy the service_role secret key again from Project Settings -> API.",
+        faqId: keysValid ? undefined : "supabase-keys-invalid",
+      });
+      checks.push({
+        id: "supabase-paused",
+        status: paused ? "warn" : "ok",
+        summary: paused ? "The project looks paused" : "The project is not paused",
+        fix: paused
+          ? "Unpause it from the Supabase dashboard (free tier pauses after ~1 week idle)."
+          : undefined,
+        faqId: paused ? "supabase-paused" : undefined,
+      });
+    }
+  }
+
+  if (env.DB_URL) {
+    const validation = validateSessionPoolerUrl(env.DB_URL);
+    checks.push({
+      id: validation.faqId ?? "db-url-direct-connection",
+      status: validation.ok ? "ok" : "warn",
+      summary: validation.ok
+        ? "DB_URL is a Session pooler string"
+        : (validation.message ?? "DB_URL is not a Session pooler string"),
+      fix: validation.ok ? undefined : validation.message,
+      faqId: validation.faqId,
+    });
+  }
+
+  note(
+    checks.map((c) => renderCheck(app, c)).join("\n\n"),
+    opts.app ? `Doctor — ${opts.app}` : "Doctor",
+  );
+
+  const warnings = checks.filter((c) => c.status === "warn").length;
+  if (warnings === 0) log.success("Everything checked out.");
+  else log.warn(`${warnings} check${warnings === 1 ? "" : "s"} need attention.`);
+
+  if (opts.report) {
+    const redacted = [
+      `OS: ${process.platform} ${process.arch}`,
+      `Node: ${process.versions.node}`,
+      ...checks.map(
+        (c) => `${c.status.toUpperCase().padEnd(4)} ${c.id}: ${c.summary}`,
+      ),
+    ].join("\n");
+    note(redacted, "Paste this in Discord");
+  }
+}

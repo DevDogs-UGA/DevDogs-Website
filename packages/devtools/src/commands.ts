@@ -510,31 +510,39 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
     title: "Moderation",
     commands: [
       {
-        name: "catalog",
-        summary: "List the report reasons and content types in the database.",
-        hint: "what can be reported here",
-        needs: "instance-running",
-        options: [JSON_FLAG],
-      },
-      {
-        name: "doctor",
-        summary: "Check an app's moderation integration.",
-        hint: "and whether the catalog holds up",
-        needs: "instance-running",
-        options: [
+        name: "moderation",
+        summary: "An app's moderation integration: the catalog and its wiring.",
+        hint: "check, catalog, roundtrip",
+        subcommands: [
           {
-            flag: "--app",
-            value: "<slug>",
-            summary: "App to check. Asked for when absent.",
+            name: "check",
+            summary: "Check an app's moderation integration.",
+            hint: "and whether the catalog holds up",
+            needs: "instance-running",
+            options: [
+              {
+                flag: "--app",
+                value: "<slug>",
+                summary: "App to check. Asked for when absent.",
+              },
+              JSON_FLAG,
+            ],
           },
-          JSON_FLAG,
+          {
+            name: "catalog",
+            summary:
+              "List the report reasons and content types in the database.",
+            hint: "what can be reported here",
+            needs: "instance-running",
+            options: [JSON_FLAG],
+          },
+          {
+            name: "roundtrip",
+            summary: "File a report, quarantine it, and check the freeze.",
+            hint: "end to end, then cleans up",
+            needs: "instance-running",
+          },
         ],
-      },
-      {
-        name: "roundtrip",
-        summary: "File a report, quarantine it, and check the freeze.",
-        hint: "end to end, then cleans up",
-        needs: "instance-running",
       },
       {
         name: "grant-root",
@@ -545,6 +553,27 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
             flag: "--user",
             value: "<email>",
             summary: "Account to grant Root to. Asked for when absent.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Environment",
+    commands: [
+      {
+        name: "doctor",
+        summary: "Check this machine's environment against what the repo needs.",
+        hint: "node, pnpm, Docker, .env, hosted Supabase, OAuth — read-only",
+        options: [
+          {
+            flag: "--app",
+            value: "<slug>",
+            summary: "Scope checks to one app. Defaults to every app you have env for.",
+          },
+          {
+            flag: "--report",
+            summary: "Print a redacted, paste-able block (versions, OS, results — no secrets).",
           },
         ],
       },
@@ -1002,6 +1031,14 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
               {
                 name: "new",
                 summary: "Create an empty timestamped migration file.",
+                hint: "<timestamp>_<schema>_<description>.sql",
+                options: [
+                  {
+                    flag: "--app",
+                    value: "<slug>",
+                    summary: "Whose schema. Asked for when absent.",
+                  },
+                ],
               },
               {
                 name: "generate",
@@ -1281,7 +1318,11 @@ export const GROUPS: readonly CommandGroup[] = [
   },
   {
     title: "Moderation",
-    commands: commands("catalog", "doctor", "roundtrip", "grant-root"),
+    commands: commands("moderation", "grant-root"),
+  },
+  {
+    title: "Environment",
+    commands: commands("doctor"),
   },
   {
     title: "GitHub",

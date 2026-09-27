@@ -545,6 +545,13 @@ export async function runOAuthSetup(
   baseUrlOverride?: string,
   platformUrlOverride?: string,
   transportOverride?: ConnectTransport,
+  /**
+   * A target already resolved by a caller — `setup.ts`'s hosted wizard,
+   * chaining in with the same project/service-role key a contributor just
+   * typed, so they are not asked to pick "hosted" and paste the key a
+   * second time. Skips Step 1 entirely when given.
+   */
+  presetTarget?: ConnectTarget,
 ): Promise<void> {
   const cwd = process.cwd();
 
@@ -554,7 +561,7 @@ export async function runOAuthSetup(
 
   // ── Step 1: Choose target ────────────────────────────────────────────────
 
-  const target = await chooseTarget(cwd);
+  const target = presetTarget ?? (await chooseTarget(cwd));
 
   // ── Step 2: Connect ──────────────────────────────────────────────────────
 
@@ -710,9 +717,19 @@ export async function runOAuthSetup(
     }
   }
 
+  const redirectStep: string[] =
+    target.kind === "hosted"
+      ? [
+          `Add your app's localhost redirect URL in the dashboard:`,
+          `   Auth -> URL Configuration -> Redirect URLs -> add http://localhost:<port>/auth/callback`,
+        ]
+      : [
+          `Make sure your project's supabase/config.toml allows your app callback:`,
+          `   additional_redirect_urls = ["http://localhost:<port>/auth/callback"]`,
+        ];
+
   const nextSteps: string[] = [
-    `Make sure your project's supabase/config.toml allows your app callback:`,
-    `   additional_redirect_urls = ["http://localhost:<port>/auth/callback"]`,
+    ...redirectStep,
     ``,
     `Trigger sign-in from your app:`,
     ``,

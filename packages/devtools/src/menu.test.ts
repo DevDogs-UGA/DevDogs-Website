@@ -432,7 +432,7 @@ describe("adapts to the machine", () => {
   });
 
   it("says why a command will not work rather than hiding it", async () => {
-    const drawn = await screen(STOPPED, ["catalog"]);
+    const drawn = await screen(STOPPED, ["moderation", "catalog"]);
     const roundtrip = drawn.find((entry) => entry.label === "roundtrip");
 
     // Still on screen. `needs` explains, it does not remove.
@@ -443,10 +443,10 @@ describe("adapts to the machine", () => {
   });
 
   it("leaves the hint alone when nothing is in the way", async () => {
-    const drawn = await screen(RUNNING, ["catalog"]);
+    const drawn = await screen(RUNNING, ["moderation", "catalog"]);
     const roundtrip = drawn.find((entry) => entry.label === "roundtrip");
 
-    expect(roundtrip!.hint).toBe(findCommand(["roundtrip"])!.hint);
+    expect(roundtrip!.hint).toBe(findCommand(["moderation", "roundtrip"])!.hint);
   });
 
   /**
@@ -486,7 +486,7 @@ describe("adapts to the machine", () => {
   });
 
   it("leaves a group without scopes unlabelled", async () => {
-    const drawn = await screen(RUNNING, ["catalog"]);
+    const drawn = await screen(RUNNING, ["moderation", "catalog"]);
     for (const entry of drawn) {
       expect(entry.hint ?? "", entry.label).not.toContain(" · ");
     }
