@@ -665,7 +665,9 @@ Auto-imported globally in slide markdown (no `import` needed):
   frame).
 - **`<Track web>...</Track>`** / **`<Track mobile>...</Track>`** — see
   "Track mode" above.
-- **`<CodeTips>`** — a helper banner under a code window's code, with one
+- **`<CodeTips>`** — a helper banner below a `dual-code` column's window
+  (outside it: the window holds only code; all tips share one fixed-height
+  row, so the windows line up and never resize between clicks), with one
   numbered slot per click (`<template #0>`, `<template #1>`, …; markdown
   inside, with blank lines around it). A click without its own slot keeps
   the last tip. It follows the slide's clicks and adds none.

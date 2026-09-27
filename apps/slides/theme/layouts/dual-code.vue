@@ -52,7 +52,7 @@
 // `title: ...` here silently renders nothing (same gotcha as the `qr`
 // layout's `qrSrc` and the `terminal` layout's `titlebar` -- see those and
 // the git log for how this was found).
-import { computed } from 'vue'
+import { computed, useId } from 'vue'
 import { accentHex } from '../accents'
 import Wash from '../components/Wash.vue'
 import Chrome from '../components/Chrome.vue'
@@ -95,6 +95,10 @@ const slideAccent = computed(() =>
   (props.trackSplit || props.followTrack) && track.value ? TRACK_ACCENT[track.value] : props.accent)
 
 // A column's file can differ by track (lib/track.ts `PerTrack`).
+// Each column keeps a slot under its window for a <CodeTips> banner.
+const uid = useId()
+const leftTips = `dd-tips-${uid}-left`
+const rightTips = `dd-tips-${uid}-right`
 const leftFileText = computed(() => forTrack(props.leftFile))
 const rightFileText = computed(() => forTrack(props.rightFile))
 const style = computed(() => ({ '--accent': accentHex(slideAccent.value) }))
@@ -115,35 +119,39 @@ const showRight = computed(() => !props.trackSplit || track.value !== 'web')
     <div class="dd-content h-full flex flex-col">
       <h2 v-if="heading" class="dd-window-heading">{{ heading }}</h2>
       <div
-        class="grid gap-4 flex-1 min-h-0"
-        :style="{ gridTemplateColumns: showLeft && showRight ? '1fr 1fr' : '1fr' }"
+        class="dd-columns flex-1 min-h-0"
+        :style="{
+          gridTemplateColumns: showLeft && showRight ? '1fr 1fr' : '1fr',
+          '--dd-tip-height': showLeft && showRight ? '4.6rem' : '3.4rem',
+        }"
       >
-        <div v-if="showLeft" class="dd-window" :style="leftStyle">
-          <div class="dd-window-titlebar">
-            <span class="dd-window-label"><ArrowText :text="leftLabel" /></span>
-            <span v-if="leftFileText" class="dd-window-file">{{ leftFileText }}</span>
+        <div v-if="showLeft" class="dd-column" :style="leftStyle">
+          <div class="dd-window">
+            <div class="dd-window-titlebar">
+              <span class="dd-window-label"><ArrowText :text="leftLabel" /></span>
+              <span v-if="leftFileText" class="dd-window-file">{{ leftFileText }}</span>
+            </div>
+            <div class="dd-window-body dd-code-frame">
+              <SnippetScope :track="trackSplit ? 'web' : undefined" :file="leftFileText" :tips="leftTips">
+                <slot />
+              </SnippetScope>
+            </div>
           </div>
-          <div class="dd-window-body dd-code-frame">
-            <SnippetScope :track="trackSplit ? 'web' : undefined" :file="leftFileText">
-              <slot />
-            </SnippetScope>
-          </div>
+          <div :id="leftTips" class="dd-tips-slot" />
         </div>
-        <div
-          v-if="showRight"
-          class="dd-window"
-          :class="{ 'dd-dual-code-window-right': !trackSplit }"
-          :style="rightStyle"
-        >
-          <div class="dd-window-titlebar">
-            <span class="dd-window-label"><ArrowText :text="rightLabel" /></span>
-            <span v-if="rightFileText" class="dd-window-file">{{ rightFileText }}</span>
+        <div v-if="showRight" class="dd-column" :style="rightStyle">
+          <div class="dd-window" :class="{ 'dd-dual-code-window-right': !trackSplit }">
+            <div class="dd-window-titlebar">
+              <span class="dd-window-label"><ArrowText :text="rightLabel" /></span>
+              <span v-if="rightFileText" class="dd-window-file">{{ rightFileText }}</span>
+            </div>
+            <div class="dd-window-body dd-code-frame">
+              <SnippetScope :track="trackSplit ? 'mobile' : undefined" :file="rightFileText" :tips="rightTips">
+                <slot name="right" />
+              </SnippetScope>
+            </div>
           </div>
-          <div class="dd-window-body dd-code-frame">
-            <SnippetScope :track="trackSplit ? 'mobile' : undefined" :file="rightFileText">
-              <slot name="right" />
-            </SnippetScope>
-          </div>
+          <div :id="rightTips" class="dd-tips-slot" />
         </div>
       </div>
       <div v-if="$slots.bottom" class="dd-dual-code-bottom">
@@ -174,6 +182,43 @@ const showRight = computed(() => !props.trackSplit || track.value !== 'web')
   padding: 0;
   border: none;
   color: inherit;
+}
+
+/* Windows share the first row and tips the second, so both windows end at
+   the same height whatever each column's tip says. A column is
+   `display: contents`: its window and tip slot sit straight in the grid,
+   and still inherit its `--accent`. */
+.dd-columns {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-auto-flow: column;
+  column-gap: 1rem;
+}
+
+.dd-column {
+  display: contents;
+}
+
+.dd-tips-slot {
+  min-width: 0;
+  display: flex;
+  gap: 0.6rem;
+}
+
+/* A fixed height (room for three lines side by side, two full width), so
+   the window doesn't resize as the tip changes from click to click. */
+.dd-tips-slot:not(:empty) {
+  height: var(--dd-tip-height);
+  margin-top: 0.6rem;
+}
+
+/* Two tips land in one slot only when both tracks' content shows at once
+   (the PDF): side by side, not stacked past the slide's edge. */
+.dd-tips-slot :deep(.dd-code-tip) {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .dd-dual-code-window-right {
