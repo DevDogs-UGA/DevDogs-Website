@@ -43,6 +43,15 @@ const APP_CONFIGS: Record<string, AppIntrospectConfig> = {
     crossSchemaImport:
       'import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"',
   },
+  "schedule-builder": {
+    configs: ["drizzle-introspection.config.ts", "drizzle.config.ts"],
+    schemaFile: "src/server/db/schema/generated/schema.ts",
+    schemaSuffix: "InScheduleBuilder",
+    // schedule_builder's own tables carry no foreign keys into another
+    // schema (its `userId` columns are bare uuids, not FK-constrained to
+    // auth.users), so there is nothing to re-inject here.
+    crossSchemaImport: null,
+  },
 };
 
 // ── drizzle-kit pull ──────────────────────────────────────────────────────────
