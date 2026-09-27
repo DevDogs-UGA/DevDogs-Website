@@ -109,3 +109,9 @@ jobs:
         run: pnpm --filter @devdogsuga/devtools run test:contract
       - name: Patch-bump + publish changed packages
         run: node scripts/publish-changed-packages.mjs
+      # When the OIDC exchange fails, npm silently falls back to token auth
+      # and reports only ENEEDAUTH. The real reason (no trusted publisher,
+      # repo/workflow mismatch, ...) is only in npm's debug log.
+      - name: Show npm's OIDC diagnostics
+        if: failure()
+        run: grep -iE 'oidc|trusted|provenance' ~/.npm/_logs/*-debug-0.log || true
