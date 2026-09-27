@@ -41,8 +41,11 @@ jobs:
       # Build before typecheck/test: packages import each other's `dist/`
       # (workspace:* deps), so an unbuilt sibling makes a downstream
       # typecheck or test fail on a missing module, not a real error.
+      # Everything but apps/slides, whose build reads the private workshop
+      # submodules; it builds in slides.yaml instead, so a slides problem
+      # never blocks a publish (publish.yaml waits on this workflow).
       - name: Build (workspace)
-        run: pnpm -r --if-present run build
+        run: pnpm -r --filter '!slides' --if-present run build
       - name: Typecheck (workspace)
         run: pnpm -r --if-present run typecheck
       - name: Test (workspace)
@@ -62,10 +65,3 @@ jobs:
       # here, matching how it gates merges in the product repo's ci.yaml.
       - name: Events config passes its publishability checks
         run: pnpm --filter @devdogsuga/events check
-      # Redundant with the workspace build above (apps/slides has its own
-      # `build` script, so `pnpm -r build` already builds it) — kept as an
-      # explicit, separately-named step because the 9/28 deck lives here and
-      # nothing in this repo is allowed to break it silently inside a
-      # workspace-wide pass.
-      - name: Build the slides app
-        run: pnpm --filter slides build

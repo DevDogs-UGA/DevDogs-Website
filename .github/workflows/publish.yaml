@@ -50,8 +50,16 @@ name: Publish
 # pnpm never touches the registry in this pipeline. See
 # scripts/publish-changed-packages.mjs for the full mechanism and its
 # documented v1 limitations.
+#
+# WHY `workflow_run`: a `push` trigger starts this in parallel with CI, so a
+# commit could publish before (or despite) failing CI. Instead this starts
+# when CI completes and runs only if CI passed on a push to this repo's
+# `main`, then checks out exactly the commit CI validated. The job still runs
+# from this file, so Trusted Publishing's workflow filename is unchanged.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
 
 concurrency:
@@ -66,10 +74,18 @@ permissions:
 
 jobs:
   publish:
+    # `branches: [main]` above matches a PR from a fork's `main` too, so the
+    # event and repository are checked as well.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup-workspace
       # Trusted Publishing needs npm >=11.5.1 (the version it shipped in).
       # setup-node's bundled npm tracks the Node release, not a fixed npm
@@ -78,9 +94,11 @@ jobs:
         run: npm install -g npm@^11.5.1
       # Everything a publishable package might import from a sibling
       # workspace package needs to exist as real dist/ output before
-      # `pnpm pack` reads its `files` list.
-      - name: Build (workspace)
-        run: pnpm -r --if-present run build
+      # `pnpm pack` reads its `files` list. Only packages/*: apps/ never
+      # publishes, and apps/slides can't build without the private workshop
+      # submodules.
+      - name: Build (packages)
+        run: pnpm -r --filter './packages/**' --if-present run build
       # Plan §8's risk mitigation: "devtools CI must run its own contract
       # tests against a fixture repo before publish" — a bad devtools
       # publish reaches every contributor via dlx within ~24h with no

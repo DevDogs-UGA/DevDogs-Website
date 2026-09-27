@@ -1,0 +1,50 @@
+name: Slides
+
+# Builds the workshop deck. Separate from ci.yaml because the deck reads code
+# from the private workshop repos (apps/slides/workshops/{web,mobile}), which
+# the default GITHUB_TOKEN can't clone, and a slides failure shouldn't block
+# a publish (publish.yaml waits on CI only).
+#
+# Needs the WORKSHOPS_READ_TOKEN secret: a fine-grained PAT with Contents:
+# read on DevDogsUGA/Backstage, web-workshops-planning and
+# mobile-workshops-planning. Not available to PRs from forks, so those skip.
+on:
+  pull_request:
+    paths:
+      - apps/slides/**
+      - packages/brand/**
+      - packages/events/**
+      - .gitmodules
+      - pnpm-lock.yaml
+  push:
+    branches: [main]
+    paths:
+      - apps/slides/**
+      - packages/brand/**
+      - packages/events/**
+      - .gitmodules
+      - pnpm-lock.yaml
+
+concurrency:
+  group: slides-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # Full history: the deck resolves `step-N` imports by searching the
+      # workshop repos' commit messages (HEAD^{/step N,}).
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          token: ${{ secrets.WORKSHOPS_READ_TOKEN }}
+          submodules: true
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+      - name: Build the slides app and its workspace deps
+        run: pnpm -r --filter 'slides...' --if-present run build
