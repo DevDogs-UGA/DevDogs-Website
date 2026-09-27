@@ -582,7 +582,13 @@ chip: STEP 4
 
 # How Can We Fix This?
 
+<v-click>
+
 Store each person's name once, on the server, when they sign up. Every message then shows the name from their account, and the app stops sending a name at all.
+
+</v-click>
+
+<!-- Presenter notes: Let the room guess first, then click to reveal the plan. -->
 
 ---
 layout: terminal

@@ -27,7 +27,7 @@ import { accentHex } from '../accents'
 import Wash from '../components/Wash.vue'
 import Chrome from '../components/Chrome.vue'
 import SnippetScope from '../components/SnippetScope.vue'
-import ArrowText from '../components/ArrowText.vue'
+import WindowTitle from '../components/WindowTitle.vue'
 import { forTrack, track, TRACK_ACCENT, type PerTrack } from '../lib/track'
 
 const props = withDefaults(defineProps<{
@@ -68,8 +68,7 @@ const fileText = computed(() => forTrack(props.file))
         </div>
         <div class="dd-window">
           <div class="dd-window-titlebar">
-            <span class="dd-window-label"><ArrowText :text="label" /></span>
-            <span v-if="fileText" class="dd-window-file">{{ fileText }}</span>
+            <WindowTitle :label="label" :file="fileText" />
           </div>
           <div class="dd-window-body dd-code-frame">
             <SnippetScope :file="fileText">

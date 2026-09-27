@@ -33,7 +33,7 @@ import { accentHex } from '../accents'
 import Wash from '../components/Wash.vue'
 import Chrome from '../components/Chrome.vue'
 import SnippetScope from '../components/SnippetScope.vue'
-import ArrowText from '../components/ArrowText.vue'
+import WindowTitle from '../components/WindowTitle.vue'
 import { forTrack, track, TRACK_ACCENT, type PerTrack } from '../lib/track'
 
 const props = withDefaults(defineProps<{
@@ -85,8 +85,7 @@ const open = computed(() => !clicks || !info || clicks.current >= info.start)
       <div class="dd-split flex-1 min-h-0" :class="{ 'dd-split-open': open }">
         <div class="dd-window">
           <div class="dd-window-titlebar">
-            <span class="dd-window-label"><ArrowText :text="firstLabel" /></span>
-            <span v-if="firstFileText" class="dd-window-file">{{ firstFileText }}</span>
+            <WindowTitle :label="firstLabel" :file="firstFileText" />
           </div>
           <div class="dd-window-body dd-code-frame">
             <SnippetScope :file="firstFileText">
@@ -96,8 +95,7 @@ const open = computed(() => !clicks || !info || clicks.current >= info.start)
         </div>
         <div class="dd-window dd-split-second">
           <div class="dd-window-titlebar">
-            <span class="dd-window-label"><ArrowText :text="secondLabel" /></span>
-            <span v-if="secondFileText" class="dd-window-file">{{ secondFileText }}</span>
+            <WindowTitle :label="secondLabel" :file="secondFileText" />
           </div>
           <div class="dd-window-body dd-code-frame">
             <SnippetScope :file="secondFileText">

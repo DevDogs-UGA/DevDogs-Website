@@ -57,7 +57,7 @@ import { accentHex } from '../accents'
 import Wash from '../components/Wash.vue'
 import Chrome from '../components/Chrome.vue'
 import SnippetScope from '../components/SnippetScope.vue'
-import ArrowText from '../components/ArrowText.vue'
+import WindowTitle from '../components/WindowTitle.vue'
 import { forTrack, track, TRACK_ACCENT, type PerTrack } from '../lib/track'
 
 const props = withDefaults(defineProps<{
@@ -128,8 +128,7 @@ const showRight = computed(() => !props.trackSplit || track.value !== 'web')
         <div v-if="showLeft" class="dd-column" :style="leftStyle">
           <div class="dd-window">
             <div class="dd-window-titlebar">
-              <span class="dd-window-label"><ArrowText :text="leftLabel" /></span>
-              <span v-if="leftFileText" class="dd-window-file">{{ leftFileText }}</span>
+              <WindowTitle :label="leftLabel" :file="leftFileText" />
             </div>
             <div class="dd-window-body dd-code-frame">
               <SnippetScope :track="trackSplit ? 'web' : undefined" :file="leftFileText" :tips="leftTips">
@@ -142,8 +141,7 @@ const showRight = computed(() => !props.trackSplit || track.value !== 'web')
         <div v-if="showRight" class="dd-column" :style="rightStyle">
           <div class="dd-window" :class="{ 'dd-dual-code-window-right': !trackSplit }">
             <div class="dd-window-titlebar">
-              <span class="dd-window-label"><ArrowText :text="rightLabel" /></span>
-              <span v-if="rightFileText" class="dd-window-file">{{ rightFileText }}</span>
+              <WindowTitle :label="rightLabel" :file="rightFileText" />
             </div>
             <div class="dd-window-body dd-code-frame">
               <SnippetScope :track="trackSplit ? 'mobile' : undefined" :file="rightFileText" :tips="rightTips">
@@ -199,27 +197,7 @@ const showRight = computed(() => !props.trackSplit || track.value !== 'web')
   display: contents;
 }
 
-.dd-tips-slot {
-  min-width: 0;
-  display: flex;
-  gap: 0.6rem;
-}
 
-/* A fixed height (room for three lines side by side, two full width), so
-   the window doesn't resize as the tip changes from click to click. */
-.dd-tips-slot:not(:empty) {
-  height: var(--dd-tip-height);
-  margin-top: 0.6rem;
-}
-
-/* Two tips land in one slot only when both tracks' content shows at once
-   (the PDF): side by side, not stacked past the slide's edge. */
-.dd-tips-slot :deep(.dd-code-tip) {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  overflow: hidden;
-}
 
 .dd-dual-code-window-right {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--dd-muted) 40%, transparent);

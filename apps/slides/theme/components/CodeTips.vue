@@ -13,10 +13,15 @@
 //   </template>
 //   <template #2>…</template>
 //   </CodeTips>
+//
+// `accents` recolours a tip, by its slot number: `:accents="{ 2: 'amber' }"`
+// (e.g. a caution after a conflict is resolved).
 import { computed, useSlots } from 'vue'
+import { accentHex } from '../accents'
 import { useSlideContext } from '@slidev/client'
 import { useTipsTarget } from '../lib/tips'
 
+const props = defineProps<{ accents?: Record<number, string> }>()
 const slots = useSlots()
 const target = useTipsTarget()
 const { $clicks } = useSlideContext()
@@ -25,11 +30,16 @@ const shown = computed(() => {
   const numbered = Object.keys(slots).map(Number).filter(n => !Number.isNaN(n)).sort((a, b) => a - b)
   return numbered.filter(n => n <= $clicks.value).at(-1) ?? numbered[0]
 })
+
+const accent = computed(() => {
+  const name = shown.value === undefined ? undefined : props.accents?.[shown.value]
+  return name ? { '--accent': accentHex(name) } : undefined
+})
 </script>
 
 <template>
   <Teleport defer :to="`#${target}`" :disabled="!target">
-    <div v-if="shown !== undefined" class="dd-code-tip">
+    <div v-if="shown !== undefined" class="dd-code-tip" :style="accent">
       <ph-lightbulb-filament-bold class="dd-code-tip-icon" />
       <Transition name="dd-tip" mode="out-in">
         <div :key="shown" class="dd-code-tip-body">
@@ -44,7 +54,7 @@ const shown = computed(() => {
 .dd-code-tip {
   flex: none;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.6rem;
   padding: 0.55rem 0.8rem;
   border-radius: 0.6rem;
@@ -58,7 +68,7 @@ const shown = computed(() => {
 
 .dd-code-tip-icon {
   flex: none;
-  margin-top: 0.15em;
+  font-size: 1.1em;
   color: var(--accent);
 }
 
@@ -75,6 +85,10 @@ const shown = computed(() => {
 .dd-tip-enter-active,
 .dd-tip-leave-active {
   transition: opacity 0.2s ease;
+}
+
+.dd-code-tip {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .dd-tip-enter-from,

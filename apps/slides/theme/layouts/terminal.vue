@@ -21,18 +21,20 @@
 // the layout component, so a `title: ...` here would silently render as the
 // "shell" default instead. Same class of gotcha as the `qr` layout's
 // `qrSrc` (see that layout and the git log for how this was found).
-import { computed } from 'vue'
+import { computed, useId } from 'vue'
 import { accentHex } from '../accents'
 import Wash from '../components/Wash.vue'
 import Chrome from '../components/Chrome.vue'
 import SnippetScope from '../components/SnippetScope.vue'
-import ArrowText from '../components/ArrowText.vue'
+import WindowTitle from '../components/WindowTitle.vue'
+import { forTrack, track, TRACK_ACCENT, type PerTrack } from '../lib/track'
 
 const props = withDefaults(defineProps<{
   accent?: string
   heading?: string
-  file?: string
+  file?: PerTrack
   titlebar?: string
+  followTrack?: boolean
   chip?: string
   chrome?: boolean
   wash?: 'corner' | 'site' | 'template'
@@ -41,31 +43,40 @@ const props = withDefaults(defineProps<{
   heading: undefined,
   file: undefined,
   titlebar: 'shell',
+  followTrack: false,
   chip: undefined,
   chrome: true,
   wash: undefined,
 })
 
-const style = computed(() => ({ '--accent': accentHex(props.accent) }))
+// `followTrack`: the accent follows `?track=` (a slide whose code differs
+// by track, wrapped in <Track>). `file` may differ by track too.
+const slideAccent = computed(() =>
+  props.followTrack && track.value ? TRACK_ACCENT[track.value] : props.accent)
+const style = computed(() => ({ '--accent': accentHex(slideAccent.value) }))
+const fileText = computed(() => forTrack(props.file))
+
+// A <CodeTips> banner goes in the slot under the window, not in it.
+const tips = `dd-tips-${useId()}`
 </script>
 
 <template>
   <div class="slidev-layout dd-terminal relative overflow-hidden" :style="style">
-    <Wash :accent="accent" :wash="wash" />
-    <Chrome v-if="chrome" :accent="accent" :chip="chip" />
+    <Wash :accent="slideAccent" :wash="wash" />
+    <Chrome v-if="chrome" :accent="slideAccent" :chip="chip" />
     <div class="dd-content h-full flex flex-col">
       <h2 v-if="heading" class="dd-window-heading">{{ heading }}</h2>
       <div class="dd-window flex-1">
         <div class="dd-window-titlebar">
-          <span class="dd-window-label"><ArrowText :text="titlebar" /></span>
-          <span v-if="file" class="dd-window-file">{{ file }}</span>
+          <WindowTitle :label="titlebar" :file="fileText" />
         </div>
         <div class="dd-window-body dd-code-frame">
-          <SnippetScope :file="file">
+          <SnippetScope :file="fileText" :tips="tips">
             <slot />
           </SnippetScope>
         </div>
       </div>
+      <div :id="tips" class="dd-tips-slot" />
     </div>
   </div>
 </template>

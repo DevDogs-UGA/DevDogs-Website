@@ -72,10 +72,14 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
           <svg class="dd-preshow-arrow" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 3.5v16M5 12.5l7 7 7-7" />
           </svg>
-          <p class="dd-preshow-sub">
-            Designed for <span class="dd-preshow-name dd-preshow-dogdays"><DogDaysMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogDays</span></span> contributors<br>
-            and future web developers
-          </p>
+          <div class="dd-preshow-sub">
+            <p class="dd-preshow-sub-1">
+              Designed for <span class="dd-preshow-name dd-preshow-dogdays"><DogDaysMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogDays</span></span> contributors
+            </p>
+            <p class="dd-preshow-sub-2">
+              and future web developers
+            </p>
+          </div>
         </div>
         <div v-if="showMobile" class="dd-preshow-half dd-preshow-half-mobile">
           <div class="dd-preshow-half-wash" />
@@ -86,10 +90,14 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
           <svg class="dd-preshow-arrow" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 3.5v16M5 12.5l7 7 7-7" />
           </svg>
-          <p class="dd-preshow-sub">
-            Designed for <span class="dd-preshow-name dd-preshow-dogpack"><DogPackMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogPack</span></span> contributors<br>
-            and future mobile developers
-          </p>
+          <div class="dd-preshow-sub">
+            <p class="dd-preshow-sub-1">
+              Designed for <span class="dd-preshow-name dd-preshow-dogpack"><DogPackMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogPack</span></span> contributors
+            </p>
+            <p class="dd-preshow-sub-2">
+              and future mobile developers
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -240,20 +248,46 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
 
 /* Who the half is for, in its bottom-left corner. (With one track
    showing, the half is the whole slide, so that's the slide's corner.) */
+/* Who the half is for, down in the chrome's footer row: level with the GDG
+   on Campus footer in the other corner, and set the same way (two lines,
+   bold then secondary, at the footer's sizes). The half sits inside the
+   safe area, so the offsets reach back out to the chrome inset. */
 .dd-preshow-sub {
   position: absolute;
-  left: 0;
-  bottom: 0;
-  margin: 0;
-  font-size: 1rem;
-  line-height: 1.4;
+  left: calc(var(--dd-chrome-inset) - var(--dd-safe-x));
+  bottom: calc(var(--dd-chrome-inset) - var(--dd-safe-bottom));
+  height: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   text-align: left;
+  line-height: 1.15;
+}
+
+.dd-preshow-sub p {
+  margin: 0;
+  line-height: 1.15;
+}
+
+.dd-preshow-sub-1 {
+  font-size: 0.6rem;
+  font-weight: 700;
   color: var(--dd-ink);
+}
+
+.dd-preshow-sub-2 {
+  font-size: 0.55rem;
+  color: var(--dd-grey-secondary);
 }
 
 /* Off the divider when the mobile half sits beside the web one. */
 .dd-preshow-both .dd-preshow-half-mobile .dd-preshow-sub {
   left: 1.5rem;
+}
+
+/* The project mark scales with its (small) line here. */
+.dd-preshow-sub .dd-preshow-mark {
+  margin-right: 0.25em;
 }
 
 .dd-preshow-name {

@@ -258,7 +258,7 @@ function build(repo: string, rev: string | undefined, file: string, spec: string
       : rangeOf(f.hot)
     return `\`\`\`${lang} {${ranges}}{lines:true}\n${f.lines.join('\n')}\n\`\`\``
   })
-  return `\`\`\`\`md magic-move {lines:true}\n${blocks.join('\n')}\n\`\`\`\``
+  return `\`\`\`\`md magic-move {lines:true,overview:${groups.length > 1}}\n${blocks.join('\n')}\n\`\`\`\``
 }
 
 export function expandWorkshopImports(ctx: MarkdownTransformContext) {
@@ -293,7 +293,8 @@ export function phosphorArrows(ctx: MarkdownTransformContext) {
   }
   for (const m of code.matchAll(/ ?→ ?/g)) {
     if (skip.some(([a, b]) => m.index >= a && m.index < b)) continue
-    ctx.s.overwrite(m.index, m.index + m[0].length, ' <ph-arrow-right-bold class="dd-arrow" /> ')
+    // Non-breaking on both sides: "Settings → API" never wraps at the arrow.
+    ctx.s.overwrite(m.index, m.index + m[0].length, '&nbsp;<ph-arrow-right-bold class="dd-arrow" />&nbsp;')
   }
 }
 

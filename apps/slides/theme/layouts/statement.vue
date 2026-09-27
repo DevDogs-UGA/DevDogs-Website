@@ -38,3 +38,21 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
     </div>
   </div>
 </template>
+
+<style scoped>
+/* A statement with a heading reads the heading big and the paragraph under
+   it as supporting text: smaller, and balanced across its lines. A bare
+   statement (no heading) keeps the full size. */
+.dd-statement :deep(h1 ~ p),
+.dd-statement :deep(h1 ~ * p) {
+  max-width: 40rem;
+  margin: 1.1rem auto 0;
+  font-size: 1.4rem;
+  line-height: 1.5;
+  text-wrap: balance;
+}
+
+.dd-statement :deep(p) {
+  text-wrap: balance;
+}
+</style>

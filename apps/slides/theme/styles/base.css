@@ -127,13 +127,24 @@ body {
   height: var(--dd-chrome-band);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.43rem;
 }
 
+/* The website's lockup (platform TopNav): the mark at its natural 30.05px
+   beside 18px Alan Sans, which is the wordmark asset at 1x (16.1px), with
+   an 8px gap. Same ratios here, scaled to the chrome band: the mark is
+   1.87x the wordmark's height. */
 .dd-chrome-mark img {
   display: block;
-  height: 1.15rem;
   width: auto;
+}
+
+.dd-chrome-mark img:first-child {
+  height: 1.6rem;
+}
+
+.dd-chrome-mark img:last-child {
+  height: 0.855rem;
 }
 
 .dd-chrome-footer {
@@ -251,8 +262,9 @@ body {
 
 .dd-window-titlebar {
   flex: none;
+  min-width: 0;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.6rem;
   padding: 0.6rem 0.9rem;
   background: #0000002e;
@@ -267,10 +279,32 @@ body {
   color: var(--accent);
 }
 
+.dd-window-label {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.dd-window-icon {
+  font-size: 1rem;
+}
+
+/* Truncated from the left (right-to-left box, left-to-right text inside),
+   so a long path keeps its file name. */
 .dd-window-file {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
   font-family: 'Cascadia Code', monospace;
   font-size: 0.75rem;
   color: var(--dd-grey-dim);
+}
+
+.dd-window-file > span {
+  unicode-bidi: isolate;
 }
 
 /* The body is a code frame: its blocks share its height (lib/viewport.ts),
@@ -361,6 +395,30 @@ body {
   border-top: 1px dashed var(--dd-hairline);
 }
 
+/* Long lines wrap instead of running off the window (and no scrollbars):
+   like an editor's word wrap, a wrapped line's continuation rows start
+   past the gutter, and like a real terminal, a shell line's continue a
+   little indented. The indent is the gutter (2.2em + 1.4em), hung. */
+.dd-code-frame .slidev-code {
+  overflow: hidden !important;
+}
+
+.dd-code-frame .slidev-code code > .line {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.dd-code-frame .slidev-code-line-numbers .slidev-code code > .line,
+.dd-code-frame .dd-lines code > .line {
+  padding-left: 3.6em;
+  text-indent: -3.6em;
+}
+
+.dd-code-frame .dd-shell .slidev-code code > .line {
+  padding-left: 2ch;
+  text-indent: -2ch;
+}
+
 /* A gutter wide enough for three-digit line numbers. */
 .dd-code-frame .slidev-code-line-numbers .slidev-code code .line::before {
   width: 2.2em;
@@ -432,9 +490,8 @@ body {
    highlighted, and a bar down the whole block would mean nothing. */
 .slidev-code:has(.slidev-code-dishonored) .slidev-code-highlighted:not(.shiki-magic-move-item) {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
-  border-left: 2px solid var(--accent);
-  margin-left: -2px;
-  padding-left: 2px;
+  /* An inset bar, not a border: a line's padding is its wrap indent. */
+  box-shadow: inset 2px 0 var(--accent);
 }
 
 /* ── Line-level Magic Move (components/ShikiMagicMove.vue). Lines are
@@ -449,7 +506,8 @@ body {
 
 .slidev-code.dd-lines code > .line {
   display: block;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   transition: opacity 0.3s ease;
 }
 
@@ -489,7 +547,9 @@ body {
 /* "→" drawn as a Phosphor arrow (setup/transformers.ts, ArrowText.vue). */
 .dd-arrow {
   display: inline-block;
-  vertical-align: -0.1em;
+  vertical-align: middle;
+  position: relative;
+  top: -0.06em;
   font-size: 0.9em;
   color: var(--accent);
 }
@@ -503,4 +563,29 @@ body {
    clear of the window's soft edges. */
 .dd-code-frame .dd-code-track {
   padding: 0.6rem 0 1.4rem;
+}
+
+/* The slot a layout keeps under a code window for its <CodeTips> banner
+   (lib/tips.ts). A fixed height (room for three lines side by side, two
+   full width; layouts set --dd-tip-height), so the window doesn't resize
+   as the tip changes from click to click. */
+.dd-tips-slot {
+  flex: none;
+  min-width: 0;
+  display: flex;
+  gap: 0.6rem;
+}
+
+.dd-tips-slot:not(:empty) {
+  height: var(--dd-tip-height, 3.4rem);
+  margin-top: 0.6rem;
+}
+
+/* Two tips land in one slot only when both tracks' content shows at once
+   (the PDF): side by side, not stacked past the slide's edge. */
+.dd-tips-slot > .dd-code-tip {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
 }
