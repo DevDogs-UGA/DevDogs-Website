@@ -48,7 +48,7 @@ chip: ENTER
 layout: bullets-card
 accent: indigo
 chip: TEAMWORK
-cardTitle: Start of every session
+cardTitle: Start of Every Session
 ---
 
 # Working as a Team

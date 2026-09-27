@@ -232,8 +232,11 @@ mechanism as the built-in `two-cols` layout).
   `heading`, not `title`** — see the Gotchas note on Slidev's reserved
   `title:` frontmatter key), `leftLabel` (default `"Next.js"`),
   `rightLabel` (default `"Flutter"`), `leftFile` / `rightFile` (file path
-  shown in each column's titlebar, optional), `trackSplit` (default
-  `true` — see Track mode below)
+  shown in each column's titlebar, optional; either may differ by track:
+  `rightFile: { web: ~/lib/supabase.ts, mobile: ~/lib/main.dart }`),
+  `trackSplit` (default `true` — see Track mode below), `followTrack`
+  (with `trackSplit: false`, the accent still follows `?track=`: for
+  terminal | editor columns showing whichever track is up)
 - Slots: default = left column (Next.js), `right` = right column
   (Flutter). Code from the workshop repos comes in as a `<<<` line (see
   "Code blocks" below); a ` ````md magic-move ` block (four backticks for
@@ -287,6 +290,31 @@ file: ~/supabase/migrations/20260928000000_guestbook.sql
 
 <<< web@step-1:supabase/migrations/20260928000000_guestbook.sql {7-13|15|17-22}
 ```
+
+### `split-reveal`
+One code window that makes room for a second: the first fills the width,
+and on the slide's first click the second slides in beside it (the
+terminal that made the migration files, then the files in an editor; or
+config first, then the terminal). The reveal registers before the code
+inside either window, so their clicks start once they're on screen.
+- Frontmatter: `accent`, `heading`, `firstLabel` / `firstFile`,
+  `secondLabel` / `secondFile` (files may differ by track), `followTrack`
+- Slots: default (first window), `second`
+
+### `bullets-code`
+Bullets on the left, a full-height code window on the right (the wider
+share). For "do this, and here's the file" slides, e.g. project setup
+beside the env file.
+- Frontmatter: `accent`, `heading`, `label` (default `"Editor"`), `file`
+  (may differ by track), `followTrack`
+- Slots: default (bullets), `code`
+
+### `features`
+The week's competition features split by project: DogDays (web) on the
+left, DogPack (mobile) on the right, each under its mark and name in the
+platform's project colours. Track mode shows each laptop its own project.
+- Frontmatter: `accent`, `heading`
+- Slots: default (DogDays list), `mobile` (DogPack list)
 
 ## Colour meanings (Supabase deck, 2026-09-25)
 
@@ -451,10 +479,12 @@ caption: Scan to check in
 ```
 
 ### `events`
-Upcoming-events slide. Write normal markdown (`###` per event) in the
-default slot; wrap each event-type label in `<Chip type="workshop" />`
-(etc.) to get the site-legend accent automatically — this is independent
-of the slide's own `accent` (which just drives the corner wash).
+Upcoming-events slide: a centred heading, then usually `<UpcomingStack />`
+(the next three meetings from `@devdogsuga/events`, each card in its
+event kind's own colour from the platform, never the slide's accent, and
+each taking a turn in the spotlight on a loop). Hand-written markdown
+(`###` per event) still works: wrap each event-type label in
+`<Chip type="workshop" />` (etc.) to get the site-legend accent.
 - Frontmatter: `accent`
 ```md
 ---
@@ -462,11 +492,9 @@ layout: events
 accent: amber
 ---
 
-### Next Monday — Supabase Workshop
-<Chip type="workshop" /> DLW 124 · 6:00 PM
+# Upcoming Meetings
 
-### Next Thursday — Dev Session
-<Chip type="dev session" /> DLW 124 · 6:00 PM
+<UpcomingStack />
 ```
 
 ### `closing`
@@ -474,28 +502,31 @@ Exit / "before you go" slide — like `title` but meant to be the last
 content slide (pair it with a `qr` slide right after for attendance/
 Discord, or fold QR codes straight into this one via `footer`).
 - Frontmatter: `accent`, `subtitle`
-- Slots: default (the big heading), `footer` (optional — rendered below
-  the subtitle at normal scale rather than the heading's giant size; a
-  `.dd-close-qr-row` div around a couple of `<QRSlot compact>`s lays them
-  out side by side, and a `.dd-close-contact` paragraph gets the dim
-  secondary-grey contact-line styling)
+- Slots: default (the big heading), `footer` (optional, rendered below
+  the subtitle: a `.dd-close-qr-row` div lays `<QRSlot compact>`s side by
+  side, and wrapping each in `<Track>` shows one per laptop; a
+  `.dd-close-contact` div of `<p>` lines, each led by Phosphor icons,
+  gets the contact styling)
 ```md
 ---
 layout: closing
 accent: rose
-subtitle: See you Wednesday for the next dev session
+subtitle: See you Wednesday!
 ---
 
-# Before you go
+# Before You Go
 
 ::footer::
 
 <div class="dd-close-qr-row">
-  <QRSlot src="/qr/discord.svg" label="Discord" caption="Questions and help" accent="rose" compact />
-  <QRSlot src="/qr/devdogsuga-org.svg" label="devdogsuga.org" caption="Sign in, join a team" accent="rose" compact />
+  <Track web><QRSlot src="/qr/discord.svg" label="Discord" accent="rose" trim="9.76%" compact /></Track>
+  <Track mobile><QRSlot src="/qr/devdogsuga-org.svg" label="devdogsuga.org" accent="rose" trim="12.12%" compact /></Track>
 </div>
 
-<p class="dd-close-contact">devdogsuga.org · @devdogsuga · devdogs@uga.edu</p>
+<div class="dd-close-contact">
+  <p><ph-instagram-logo-bold /><ph-github-logo-bold /><ph-linkedin-logo-bold /><span class="dd-close-handle">@DevDogsUGA</span></p>
+  <p><ph-envelope-simple-bold />devdogs@uga.edu</p>
+</div>
 ```
 
 ### `default`
@@ -541,6 +572,18 @@ which are git submodules pinned to their `02-supabase` answer key:
   demo. Any other git revision works too.
 - Ranges are the file's own line numbers. `{*}` highlights nothing in
   particular and shows the top of the file.
+- `{build}` instead of ranges builds a step up from its diff: the file one
+  commit earlier (the lines about to change lit), then one chunk of the
+  commit per click, each lit as it lands, then one last click lighting the
+  whole step (what copy and Discord take). Hunks taller than the window
+  split at blank lines. `{build:1,2|3|4-5}` groups chunks into clicks (use
+  it to give both columns the same click count: the mobile laptop follows
+  the presenter's clicks); `{build:[3,6-10]1,2|4}` starts with chunks 3 and
+  6–10 already in (built on an earlier slide), so a commit can span
+  slides. `chunks()` in the transformer lists a commit's chunks.
+- Magic Move moves whole lines here, not words
+  (`components/ShikiMagicMove.vue`): a line that survives slides to its new
+  place, new lines fade in.
 - In a Magic Move block, one `<<<` line per step:
 
   `````md
@@ -622,6 +665,17 @@ Auto-imported globally in slide markdown (no `import` needed):
   frame).
 - **`<Track web>...</Track>`** / **`<Track mobile>...</Track>`** — see
   "Track mode" above.
+- **`<CodeTips>`** — a helper banner under a code window's code, with one
+  numbered slot per click (`<template #0>`, `<template #1>`, …; markdown
+  inside, with blank lines around it). A click without its own slot keeps
+  the last tip. It follows the slide's clicks and adds none.
+- **`<DiscordChannel name="tech-support" forum />`** — a channel mention
+  drawn the way Discord draws one (blurple pill; `forum` swaps `#` for the
+  forum icon).
+- **`→`** in slide text becomes a Phosphor arrow at build time (never in
+  code or notes); `ArrowText` does the same for frontmatter labels.
+- `QRSlot`'s `trim` crops the image's own quiet zone (percent of its
+  width, e.g. `"9.76%"` for segno's 4-module margin on a 33-module code).
 
 ## The three greys
 
