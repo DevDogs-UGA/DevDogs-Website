@@ -2,10 +2,13 @@
 
 Compiles a folder of markdown into a typed data module.
 
-Three modes, one binary. Bare `docs-compiler` compiles the markdown in the working
-directory into `dist/` — that is the whole of `docs/`'s build step, which is why
-that package holds no code. The other two are what you run by hand, both from
-`docs/`:
+Four modes, one binary. `docs-compiler build` is the whole of `docs/`'s build
+step, which is why that package holds no code: it runs `gen` and then the bare
+mode, and skips both when nothing either reads has changed since the last
+successful build. `--force` (or `DOCS_FORCE_REBUILD=1`) rebuilds anyway.
+
+Bare `docs-compiler` compiles the markdown in the working directory into
+`dist/`. The other two are what you run by hand, both from `docs/`:
 
 ```bash
 pnpm exec docs-compiler check   # lint the hand-written pages for length and collapsible defects
@@ -21,7 +24,7 @@ pnpm exec docs-compiler gen     # regenerate the reference sections from each so
 `gen` only covers shared packages (the `toolkit` project) — apps no longer
 get a generated reference.
 
-Bare `docs-compiler` also runs two checks that DO fail the build: broken
+The bare mode (and so `build`) also runs two checks that DO fail the build: broken
 internal links (`/docs/<project>/<path>#anchor` and relative `*.md` links have
 to resolve, mounting from `docs/_shared/**` included) and a documented
 `pnpm devtools …` / `pnpm --filter … <script>` / `pnpm run <script>` that does

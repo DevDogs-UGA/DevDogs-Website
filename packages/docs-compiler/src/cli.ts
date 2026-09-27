@@ -1,13 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * Three modes, one binary.
+ * Four modes, one binary.
  *
  * Bare `docs-compiler` compiles the markdown in the current working directory into
- * `dist/`. That is the `build` script of a content package (see
- * `docs/package.json`), which is what keeps that package free of any code: it
- * holds markdown and a manifest, and this does the work. It takes no arguments
- * and never will; anything added here has to leave it exactly as it was.
+ * `dist/`. It takes no arguments and never will; anything added here has to
+ * leave it exactly as it was.
  *
  * `docs-compiler gen` walks the monorepo's shared packages (the `toolkit`
  * project; apps no longer get a generated reference of their own) and writes
@@ -15,6 +13,14 @@
  * like any other page. It is a separate subcommand rather than a step of the
  * bare mode because it needs the whole repo, while the bare mode only ever
  * needs the folder it is run in.
+ *
+ * `docs-compiler build` is `gen` followed by the bare mode, behind a cache that
+ * skips both when none of their inputs changed (see `build-cache.ts`). It is
+ * what a content package's `build` script runs (see `docs/package.json`),
+ * which is what keeps that package free of any code: it holds markdown and a
+ * manifest, and this does the work. The cache is here rather than in the
+ * content package because `gen` costs ~13s and that script runs at the start
+ * of every `pnpm dev`.
  *
  * `docs-compiler check` lints the hand-written pages in the working directory for
  * length and collapsible defects and prints what it found. A subcommand for the
@@ -37,7 +43,50 @@ import { printFailingChecks, runFailingChecks } from "./failing-checks.js";
 const [subcommand, ...args] = process.argv.slice(2);
 
 if (subcommand === undefined) {
+  if (!(await compile(process.cwd()))) process.exitCode = 1;
+} else if (subcommand === "build") {
+  // `gen` then the bare mode, skipped entirely when nothing either would read
+  // has changed since the last successful run (see `build-cache.ts`).
   const contentRoot = process.cwd();
+  const force =
+    args.includes("--force") || process.env["DOCS_FORCE_REBUILD"] === "1";
+
+  const { openBuildCache } = await import("./build-cache.js");
+  const cache = openBuildCache(contentRoot);
+
+  if (!force && cache.hitFrom !== null) {
+    console.log(
+      `[docs-compiler] ${cache.inputs} input(s) unchanged since ${cache.hitFrom}, skipping the build (--force to rebuild)`,
+    );
+  } else {
+    await generate(false);
+    if (await compile(contentRoot)) cache.record();
+    else process.exitCode = 1;
+  }
+} else if (subcommand === "check") {
+  // Same contract as the bare mode: the working directory is the content root.
+  const contentRoot = process.cwd();
+
+  printCheckSummary(checkDocs(contentRoot), contentRoot);
+
+  // Exit 0, warnings or not, and that is the agreed behaviour rather than an
+  // oversight. See the head of check.ts for why a prose budget that could fail
+  // a build would make the docs worse instead of shorter.
+} else if (subcommand === "gen") {
+  await generate(args.includes("--dry-run"));
+} else {
+  console.error(`[docs-compiler] unknown command "${subcommand}"`);
+  console.error(
+    "[docs-compiler] usage: docs-compiler | docs-compiler build [--force] | docs-compiler check | docs-compiler gen [--dry-run]",
+  );
+  process.exitCode = 1;
+}
+
+/**
+ * The bare mode: compile `contentRoot` into `dist/`, then run the failing
+ * checks. Resolves false when one of those checks failed.
+ */
+async function compile(contentRoot: string): Promise<boolean> {
   const outDir = path.join(contentRoot, "dist");
 
   const count = emitDocsModule(contentRoot, outDir);
@@ -67,19 +116,11 @@ if (subcommand === undefined) {
   const { pages } = compileDocs(contentRoot);
   const failing = await runFailingChecks(contentRoot, pages);
   printFailingChecks(failing);
-  if (failing.linkErrors.length + failing.commandErrors.length > 0) {
-    process.exitCode = 1;
-  }
-} else if (subcommand === "check") {
-  // Same contract as the bare mode: the working directory is the content root.
-  const contentRoot = process.cwd();
+  return failing.linkErrors.length + failing.commandErrors.length === 0;
+}
 
-  printCheckSummary(checkDocs(contentRoot), contentRoot);
-
-  // Exit 0, warnings or not, and that is the agreed behaviour rather than an
-  // oversight. See the head of check.ts for why a prose budget that could fail
-  // a build would make the docs worse instead of shorter.
-} else if (subcommand === "gen") {
+/** `gen`: regenerate the reference trees under `<repo>/docs`. */
+async function generate(dryRun: boolean): Promise<void> {
   // Imported here rather than at the top of the file: the generator pulls in
   // the TypeScript compiler, and the bare mode, which every content build runs,
   // has no use for it.
@@ -95,12 +136,6 @@ if (subcommand === undefined) {
   generateReference({
     repoRoot,
     docsRoot: path.join(repoRoot, "docs"),
-    dryRun: args.includes("--dry-run"),
+    dryRun,
   });
-} else {
-  console.error(`[docs-compiler] unknown command "${subcommand}"`);
-  console.error(
-    "[docs-compiler] usage: docs-compiler | docs-compiler check | docs-compiler gen [--dry-run]",
-  );
-  process.exitCode = 1;
 }

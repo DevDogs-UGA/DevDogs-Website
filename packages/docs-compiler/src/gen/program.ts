@@ -12,6 +12,9 @@
 import * as fs from "node:fs";
 import * as ts from "typescript";
 import type { SourceRef } from "./model.js";
+import { sourceFilesUnder } from "./scope.js";
+
+export { isInScope } from "./scope.js";
 
 /** A `tsconfig` path alias, reduced to the prefix rewriting an import needs. */
 export interface AliasRule {
@@ -68,26 +71,6 @@ export interface ExportedSymbol {
 }
 
 /**
- * Directory names that end scope at any depth, no matter what encloses them.
- * A dependency's sources are somebody else's documentation.
- */
-const EXCLUDED_ANYWHERE = new Set(["node_modules"]);
-
-/**
- * Directory names that end scope only *below* a target's `src/`. Nested there
- * they hold machine-generated schema output: the `supabase/drizzle/` and
- * `server/db/schema/generated/` trees under `apps/platform/src`, which the
- * database reference already covers from `devtools`. Documenting a generated
- * file twice is how two references start disagreeing.
- *
- * The depth restriction is the point. `packages/drizzle` is a hand-written
- * client factory named after the tool it wraps, and testing these names against
- * every segment of a path excluded the whole package on the strength of its
- * directory name alone. A package named after a tool is not that tool's output.
- */
-const GENERATED_SEGMENTS = new Set(["generated", "drizzle"]);
-
-/**
  * A hard cap on a printed type. This is a guard against a pathological generic
  * blowing up a page, not a display choice: the emitter has its own, narrower
  * limit for what fits in a table cell.
@@ -114,42 +97,6 @@ export function repoRelative(repoRoot: string, absFile: string): string {
   return normalised.startsWith(`${root}/`)
     ? normalised.slice(root.length + 1)
     : normalised;
-}
-
-/**
- * The mechanical scope rule. `absFile` is absolute and posix-separated.
- *
- * Excluded: `*.test.ts(x)`, `*.db-test.ts`, `*.d.ts`, anything under a
- * `node_modules/` at any depth, and anything under a `generated/` or
- * `drizzle/` directory that lies *below* the target's `src/`, meaning in the
- * segments following the last `src` in the path.
- *
- * Where those two exclusions differ is the part that rots silently, so stated
- * as cases: `packages/drizzle/src/index.ts` is in scope, because a package
- * named after the tool it wraps is hand-written source and its directory name
- * says nothing about its contents. `packages/drizzle/src/generated/x.ts` and
- * `apps/platform/src/supabase/drizzle/schema.ts` are both out, because a
- * `drizzle/` or `generated/` folder *inside* a source tree really is machine
- * output that the database reference already covers.
- */
-export function isInScope(absFile: string): boolean {
-  const segments = toPosix(absFile).split("/");
-  const basename = segments.at(-1) ?? "";
-
-  if (!/\.tsx?$/.test(basename)) return false;
-  if (/\.d\.ts$/.test(basename)) return false;
-  if (/\.(?:test|db-test)\.tsx?$/.test(basename)) return false;
-
-  const directories = segments.slice(0, -1);
-  if (directories.some((segment) => EXCLUDED_ANYWHERE.has(segment))) {
-    return false;
-  }
-
-  // A path with no `src` at all sends `lastIndexOf` to -1 and the slice back to
-  // the front, reading every segment as nested. That is the conservative answer
-  // for a file no target's `src/` contains, and the walk never produces one.
-  const nested = directories.slice(directories.lastIndexOf("src") + 1);
-  return !nested.some((segment) => GENERATED_SEGMENTS.has(segment));
 }
 
 /** Every app and package that has a `src/` and a `tsconfig.json`. */
@@ -199,26 +146,7 @@ export function discoverTargets(repoRoot: string): Target[] {
 
 /** In-scope source files for one target, absolute, sorted. */
 export function sourceFilesFor(target: Target): string[] {
-  const files: string[] = [];
-
-  const walk = (dir: string): void => {
-    for (const entry of childEntries(dir)) {
-      const child = `${dir}/${entry.name}`;
-      if (entry.isDirectory()) {
-        // Redundant with `isInScope`, but it keeps the walk out of trees that
-        // can hold tens of thousands of files. The walk starts at `src/`, so
-        // every directory it reaches is nested and both sets apply.
-        if (EXCLUDED_ANYWHERE.has(entry.name)) continue;
-        if (GENERATED_SEGMENTS.has(entry.name)) continue;
-        walk(child);
-      } else if (entry.isFile() && isInScope(child)) {
-        files.push(child);
-      }
-    }
-  };
-
-  walk(toPosix(target.srcDir));
-  return files.sort(compareStrings);
+  return sourceFilesUnder(toPosix(target.srcDir));
 }
 
 /** A `ts.Program` over one target, using its own `tsconfig.json`. */
