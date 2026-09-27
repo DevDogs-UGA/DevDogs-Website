@@ -65,30 +65,30 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
       >
         <div v-if="showWeb" class="dd-preshow-half dd-preshow-half-web">
           <div class="dd-preshow-half-wash" />
-          <p class="dd-preshow-sub">
-            Designed for <span class="dd-preshow-name dd-preshow-dogdays"><DogDaysMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogDays</span></span> contributors<br>
-            and future web developers
-          </p>
-          <svg class="dd-preshow-arrow" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 3.5v16M5 12.5l7 7 7-7" />
-          </svg>
           <p class="dd-preshow-line">
             Working on web apps?<br>
             Sit on this side!
           </p>
+          <svg class="dd-preshow-arrow" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3.5v16M5 12.5l7 7 7-7" />
+          </svg>
+          <p class="dd-preshow-sub">
+            Designed for <span class="dd-preshow-name dd-preshow-dogdays"><DogDaysMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogDays</span></span> contributors<br>
+            and future web developers
+          </p>
         </div>
         <div v-if="showMobile" class="dd-preshow-half dd-preshow-half-mobile">
           <div class="dd-preshow-half-wash" />
-          <p class="dd-preshow-sub">
-            Designed for <span class="dd-preshow-name dd-preshow-dogpack"><DogPackMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogPack</span></span> contributors<br>
-            and future mobile developers
+          <p class="dd-preshow-line">
+            Working on mobile apps?<br>
+            Sit on this side!
           </p>
           <svg class="dd-preshow-arrow" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 3.5v16M5 12.5l7 7 7-7" />
           </svg>
-          <p class="dd-preshow-line">
-            Working on mobile apps?<br>
-            Sit on this side!
+          <p class="dd-preshow-sub">
+            Designed for <span class="dd-preshow-name dd-preshow-dogpack"><DogPackMark class="dd-preshow-mark" /><span class="dd-preshow-brand">DogPack</span></span> contributors<br>
+            and future mobile developers
           </p>
         </div>
       </div>
@@ -130,7 +130,6 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
 .dd-preshow-split {
   position: relative;
   display: grid;
-  align-items: center;
   min-height: 0;
 }
 
@@ -157,6 +156,7 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.6rem;
   padding: 1.5rem 2.5rem;
   text-align: center;
@@ -216,7 +216,7 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
 }
 
 /* Drawn rather than an icon font: even Phosphor's bold arrow is a hairline
-   next to the extra-bold line below it. At 1em of that line's size, a
+   next to the extra-bold line above it. At 1em of that line's size, a
    3.6-unit stroke is its own ~0.15em stem, with round ends
    like Alan Sans's terminals. It nudges down, over and over. */
 .dd-preshow-arrow {
@@ -238,19 +238,25 @@ const splitColumns = computed(() => (showBoth.value ? '1fr 1fr' : '1fr'))
   color: var(--dd-sky);
 }
 
+/* Who the half is for, in its bottom-left corner. (With one track
+   showing, the half is the whole slide, so that's the slide's corner.) */
 .dd-preshow-sub {
-  /* The extra space sits between the subtitle and the arrow. */
-  margin: 0 0 0.9rem;
-  font-size: 1.15rem;
-  font-style: italic;
-  /* A step lighter than --dd-grey-secondary. */
-  color: #e6e1e6;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.4;
+  text-align: left;
+  color: var(--dd-ink);
+}
+
+/* Off the divider when the mobile half sits beside the web one. */
+.dd-preshow-both .dd-preshow-half-mobile .dd-preshow-sub {
+  left: 1.5rem;
 }
 
 .dd-preshow-name {
-  /* A name, not part of the italic sentence around it (and Alan Sans has
-     no italic, so it would only be slanted). */
-  font-style: normal;
   display: inline-flex;
   align-items: baseline;
   white-space: nowrap;

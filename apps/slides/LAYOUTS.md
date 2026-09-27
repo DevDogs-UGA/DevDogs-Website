@@ -333,9 +333,10 @@ the same tab), not just the first page load. See `theme/lib/track.ts`.
 - **`preshow`** layout — the very first slide, shown while people find
   seats: the talk's header band (`logo` image, the `#` heading under it,
   `subtitle` for date/time/room), then "Working on web apps? Sit on this
-  side!" for DogDays and the mobile equivalent for DogPack, each with the
-  project's mark and name in its platform colour (DogDays red, DogPack
-  purple). `?track=web` / `?track=mobile` → that half only, full width; no
+  side!" over a looping arrow, and "Designed for DogDays contributors and
+  future web developers" in the half's bottom-left corner (the mobile
+  half the same for DogPack), with the project's mark and name in its
+  platform colour (DogDays red, DogPack purple). `?track=web` / `?track=mobile` → that half only, full width; no
   track → both halves side by side.
   ```md
   ---
