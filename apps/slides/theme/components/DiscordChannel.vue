@@ -18,20 +18,24 @@ defineProps<{
 
 <style scoped>
 /* Discord's own mention colours: blurple (#5865F2) at 30% behind a pale
-   blurple label. */
+   blurple label. Plain inline, not a flex box, so it sits on the text's
+   baseline and doesn't make its line taller (which would knock the list
+   number beside it out of line). */
 .dd-discord-channel {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2em;
-  padding: 0.05em 0.35em 0.05em 0.25em;
+  display: inline;
+  padding: 0.05em 0.3em 0.05em 0.2em;
   border-radius: 0.25em;
   background: rgb(88 101 242 / 30%);
   color: #c9cdfb;
   font-weight: 600;
   white-space: nowrap;
+  box-decoration-break: clone;
 }
 
 .dd-discord-channel-icon {
-  font-size: 0.95em;
+  display: inline-block;
+  margin-right: 0.15em;
+  font-size: 0.9em;
+  vertical-align: -0.12em;
 }
 </style>

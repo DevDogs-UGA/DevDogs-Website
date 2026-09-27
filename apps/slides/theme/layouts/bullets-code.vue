@@ -99,6 +99,7 @@ const fileText = computed(() => forTrack(props.file))
   margin: 0.6em 0;
   padding-left: 1.25em;
   font-size: 1.2rem;
+  text-wrap: balance;
 }
 
 .dd-bullets :deep(li)::before {

@@ -121,7 +121,7 @@ const showRight = computed(() => !props.trackSplit || track.value !== 'web')
       <div
         class="dd-columns flex-1 min-h-0"
         :style="{
-          gridTemplateColumns: showLeft && showRight ? '1fr 1fr' : '1fr',
+          gridTemplateColumns: showLeft && showRight ? 'minmax(0, 1fr) minmax(0, 1fr)' : 'minmax(0, 1fr)',
           '--dd-tip-height': showLeft && showRight ? '4.6rem' : '3.4rem',
         }"
       >

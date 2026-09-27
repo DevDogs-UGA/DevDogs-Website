@@ -40,8 +40,9 @@
      item's actual content is a single normal flowing block. */
   position: relative;
   margin-left: 0;
-  padding: 0.25em 0 0.25em 2.75em;
+  padding: 0.5em 0 0.5em 2.75em;
   font-size: 1.3rem;
+  line-height: 1.35;
   border-bottom: 1px solid var(--dd-hairline);
 }
 
@@ -65,7 +66,7 @@
   list-style: none;
   counter-reset: none;
   padding-left: 0;
-  margin: 0.15em 0 0;
+  margin: 0.1em 0 0;
 }
 
 .dd-numbered-list :deep(li) ul li {
@@ -74,6 +75,7 @@
   padding: 0;
   border-bottom: none;
   font-size: 1.05rem;
+  line-height: 1.35;
   font-weight: 400;
   color: var(--dd-grey-support);
 }
@@ -81,18 +83,32 @@
 .dd-numbered-list :deep(li) ul li::before {
   content: none;
 }
-/* A settings table in a sub-line (e.g. a dashboard form to fill in). */
+/* A settings table in a sub-line (e.g. a dashboard form to fill in), as a
+   card: filled, rounded, a hairline between rows. */
 .dd-numbered-list :deep(.dd-config-table) {
-  margin: 0.1em 0 0;
-  border-collapse: collapse;
+  margin: 0.35em 0 0.1em;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border-radius: 0.6rem;
+  background: var(--dd-card-fill);
+  box-shadow: 0 0 0 1px var(--dd-hairline), 0 0.5rem 1.2rem -0.7rem rgb(0 0 0 / 60%);
   font-size: 0.85rem;
 }
 
 .dd-numbered-list :deep(.dd-config-table th),
 .dd-numbered-list :deep(.dd-config-table td) {
-  padding: 0.1em 1.2em 0.1em 0;
+  padding: 0.3em 1.1em;
   text-align: left;
   border-bottom: 1px solid var(--dd-hairline);
+}
+
+.dd-numbered-list :deep(.dd-config-table tr:last-child > *) {
+  border-bottom: none;
+}
+
+.dd-numbered-list :deep(.dd-config-table th) {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .dd-numbered-list :deep(.dd-config-table th) {

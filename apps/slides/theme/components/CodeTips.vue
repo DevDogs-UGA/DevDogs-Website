@@ -52,7 +52,6 @@ const accent = computed(() => {
 
 <style scoped>
 .dd-code-tip {
-  flex: none;
   display: flex;
   align-items: center;
   gap: 0.6rem;

@@ -1,8 +1,7 @@
 <script setup lang="ts">
-// The next few meetings as a short stack: the soonest at full size, each one
-// after it scaled down a step, so the list recedes and the eye lands on the
-// first. Scale, not opacity -- the later nights are still real dates
-// somebody might plan around, just smaller.
+// The next few meetings as a short stack, walked with the slide's clicks:
+// the first is in the spotlight when the slide opens, and each click
+// (the presenter's "next") moves it to the next one while the rest recede.
 //
 // Ported from the platform homepage's
 // `apps/platform/src/components/EventsSection/UpcomingMeetings.tsx`
@@ -11,12 +10,13 @@
 // `@devdogsuga/events` via the `virtual:dd-meetings` Vite plugin
 // (`theme/vite/meetings.ts`), already filtered to meetings after this
 // workshop starts, cancelled/test rows dropped, sorted soonest-first.
-import { computed } from 'vue'
+import { computed, onUnmounted } from 'vue'
+import { useSlideContext } from '@slidev/client'
+import { makeId } from '@slidev/client/logic/utils.ts'
 import { meetings } from 'virtual:dd-meetings'
 import NextMeetingStrip from './NextMeetingStrip.vue'
 
 const UPCOMING_COUNT = 3
-const STACK_STEP = ['', 'dd-stack-95', 'dd-stack-90'] as const
 const STACK_EYEBROW = ['Next meeting', 'Then', 'After that'] as const
 
 const props = withDefaults(defineProps<{ count?: number }>(), {
@@ -25,9 +25,16 @@ const props = withDefaults(defineProps<{ count?: number }>(), {
 
 const shown = computed(() => meetings.slice(0, props.count))
 
-// Each card takes a turn in the spotlight, on a loop, so the eye walks the
-// whole list while the slide is up.
-const EMPHASIS_SECONDS = 2.5
+// One click per card after the first.
+const { $clicksContext: clicks } = useSlideContext()
+const id = makeId()
+const info = shown.value.length > 1 ? clicks?.calculateSince('+1', shown.value.length - 2) : undefined
+if (clicks && info) clicks.register(id, info)
+onUnmounted(() => clicks?.unregister(id))
+const active = computed(() => {
+  if (!clicks || !info) return 0
+  return Math.max(0, Math.min(shown.value.length - 1, clicks.current - info.start + 1))
+})
 </script>
 
 <template>
@@ -35,8 +42,7 @@ const EMPHASIS_SECONDS = 2.5
     <li
       v-for="(meeting, i) in shown"
       :key="meeting.id"
-      :class="STACK_STEP[i] ?? STACK_STEP[STACK_STEP.length - 1]"
-      :style="{ animationDelay: `${i * EMPHASIS_SECONDS}s`, animationDuration: `${shown.length * EMPHASIS_SECONDS}s` }"
+      :class="i === active ? 'dd-upcoming-active' : 'dd-upcoming-recessed'"
     >
       <NextMeetingStrip
         :meeting="meeting"
@@ -45,7 +51,7 @@ const EMPHASIS_SECONDS = 2.5
     </li>
   </ol>
   <p v-else class="dd-upcoming-empty">
-    Nothing on the calendar past tonight yet -- check devdogsuga.org/events.
+    Nothing on the calendar past tonight yet: check devdogsuga.org/events.
   </p>
 </template>
 
@@ -64,33 +70,18 @@ const EMPHASIS_SECONDS = 2.5
 
 .dd-upcoming-stack > li {
   width: 100%;
-  transform-origin: top center;
   border-radius: 0.75rem;
-  animation-name: dd-upcoming-spotlight;
-  animation-iteration-count: infinite;
-  animation-timing-function: ease-in-out;
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.45s ease, box-shadow 0.45s ease;
 }
 
-/* `scale` composes with the stack's `transform: scale(...)` steps. The
-   spotlight holds for a third of the cycle, one card at a time (each card's
-   delay is its turn). */
-@keyframes dd-upcoming-spotlight {
-  0%, 36%, 100% {
-    scale: 1;
-    box-shadow: 0 0 0 0 transparent;
-  }
-  6%, 30% {
-    scale: 1.05;
-    box-shadow: 0 0.6rem 1.8rem -0.6rem color-mix(in srgb, var(--dd-ink) 25%, transparent);
-  }
+.dd-upcoming-active {
+  transform: scale(1.03);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--dd-ink) 18%, transparent), 0 0.8rem 2rem -0.8rem rgb(0 0 0 / 70%);
 }
 
-.dd-stack-95 {
-  transform: scale(0.95);
-}
-
-.dd-stack-90 {
-  transform: scale(0.9);
+.dd-upcoming-recessed {
+  transform: scale(0.94);
+  opacity: 0.45;
 }
 
 .dd-upcoming-empty {

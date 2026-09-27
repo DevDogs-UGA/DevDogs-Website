@@ -291,6 +291,12 @@ file: ~/supabase/migrations/20260928000000_guestbook.sql
 <<< web@step-1:supabase/migrations/20260928000000_guestbook.sql {7-13|15|17-22}
 ```
 
+### `terminal` extras
+`followTrack: true` makes the accent follow `?track=`, and `file` may
+differ by track (`file: { web: ~/lib/supabase.ts, mobile: ~/lib/main.dart }`),
+for one window whose content is wrapped in `<Track>`. A `<CodeTips>` in the
+slot goes under the window, as on `dual-code`.
+
 ### `split-reveal`
 One code window that makes room for a second: the first fills the width,
 and on the slide's first click the second slides in beside it (the
@@ -481,8 +487,9 @@ caption: Scan to check in
 ### `events`
 Upcoming-events slide: a centred heading, then usually `<UpcomingStack />`
 (the next three meetings from `@devdogsuga/events`, each card in its
-event kind's own colour from the platform, never the slide's accent, and
-each taking a turn in the spotlight on a loop). Hand-written markdown
+event kind's own colour from the platform, never the slide's accent). The
+first card is in the spotlight, and each click moves it to the next while
+the others recede. Hand-written markdown
 (`###` per event) still works: wrap each event-type label in
 `<Chip type="workshop" />` (etc.) to get the site-legend accent.
 - Frontmatter: `accent`
@@ -502,11 +509,12 @@ Exit / "before you go" slide — like `title` but meant to be the last
 content slide (pair it with a `qr` slide right after for attendance/
 Discord, or fold QR codes straight into this one via `footer`).
 - Frontmatter: `accent`, `subtitle`
-- Slots: default (the big heading), `footer` (optional, rendered below
-  the subtitle: a `.dd-close-qr-row` div lays `<QRSlot compact>`s side by
-  side, and wrapping each in `<Track>` shows one per laptop; a
-  `.dd-close-contact` div of `<p>` lines, each led by Phosphor icons,
-  gets the contact styling)
+- Slots: default (the big heading), `footer` (optional: a
+  `.dd-close-qr-row` div of `<QRSlot compact plain>`s, each in a `<Track>`
+  to show one per laptop, and a `.dd-close-contact` div of `<p>` lines, each
+  led by Phosphor icons). With a footer, the heading sits at the top, the
+  contact lines at the bottom the same distance from the edge, and the QR
+  codes centre in the space between.
 ```md
 ---
 layout: closing
@@ -549,7 +557,15 @@ strength, everything else dimmed, and the code filling the window top to
 bottom. The file slides behind the window so the highlighted lines sit in
 the middle, and glides to the next range on each click
 (`theme/lib/viewport.ts`). A range taller than the window starts near its
-top, so split long ranges into clicks. Two blocks in one window split its
+top, so split long ranges into clicks. Long lines soft-wrap instead of
+running off the window: editor rows continue past the line-number gutter,
+shell rows a little indented, like a real terminal.
+
+Window titlebars (`components/WindowTitle.vue`): the labels "Terminal" and
+"Editor" draw as icons so the file path gets the room, and a path too long
+for the bar is cut from the left, so the file name always shows. A build's
+recap click (the last one) shrinks the whole file to fit the window, with
+every changed line lit. Two blocks in one window split its
 height, with a dashed rule between them; a shell block keeps its natural
 height and the file below it takes the rest.
 
@@ -665,7 +681,8 @@ Auto-imported globally in slide markdown (no `import` needed):
   frame).
 - **`<Track web>...</Track>`** / **`<Track mobile>...</Track>`** — see
   "Track mode" above.
-- **`<CodeTips>`** — a helper banner below a `dual-code` column's window
+- **`<CodeTips>`** — a helper banner below a `dual-code` column's or a
+  `terminal` slide's window
   (outside it: the window holds only code; all tips share one fixed-height
   row, so the windows line up and never resize between clicks), with one
   numbered slot per click (`<template #0>`, `<template #1>`, …; markdown
@@ -676,7 +693,7 @@ Auto-imported globally in slide markdown (no `import` needed):
   forum icon).
 - **`→`** in slide text becomes a Phosphor arrow at build time (never in
   code or notes); `ArrowText` does the same for frontmatter labels.
-- `QRSlot`'s `trim` crops the image's own quiet zone (percent of its
+- `QRSlot`'s `plain` drops the frame (bare code, grey label); `trim` crops the image's own quiet zone (percent of its
   width, e.g. `"9.76%"` for segno's 4-module margin on a 33-module code).
 
 ## The three greys

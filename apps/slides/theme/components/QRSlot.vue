@@ -24,6 +24,9 @@ const props = withDefaults(defineProps<{
   // 4-module margin on a 33-module code (4/41). The frame's padding is
   // margin enough on a dark slide.
   trim?: string
+  // No frame: the bare code on the slide, with a quiet grey label (the
+  // closing slide's look).
+  plain?: boolean
 }>(), {
   caption: undefined,
   accent: undefined,
@@ -31,27 +34,27 @@ const props = withDefaults(defineProps<{
   size: '14rem',
   compact: false,
   trim: undefined,
+  plain: false,
 })
 
 const ring = computed(() => accentHex(props.accent))
 </script>
 
 <template>
-  <div class="flex flex-col items-center" :class="compact ? 'gap-2' : 'gap-4'">
+  <div class="flex flex-col items-center" :class="plain ? 'gap-2.5' : compact ? 'gap-2' : 'gap-4'">
     <p
       v-if="label"
       class="font-600 uppercase tracking-widest"
-      :class="compact ? 'text-sm' : 'text-lg'"
-      :style="{ color: 'var(--accent)' }"
+      :class="[compact || plain ? 'text-sm' : 'text-lg', { 'm-0 leading-none': plain }]"
+      :style="plain ? { color: 'var(--dd-grey-secondary)', lineHeight: 1, margin: 0 } : { color: 'var(--accent)' }"
     >
       {{ label }}
     </p>
     <div
-      class="rounded-2xl"
-      :class="compact ? 'p-2.5' : 'p-6'"
-      :style="{ background: 'var(--dd-panel)', boxShadow: `0 0 0 2px ${ring}` }"
+      :class="plain ? '' : ['rounded-2xl', compact ? 'p-2.5' : 'p-6']"
+      :style="plain ? undefined : { background: 'var(--dd-panel)', boxShadow: `0 0 0 2px ${ring}` }"
     >
-      <img :src="src" :style="{ height: size, width: size, objectViewBox: trim ? `inset(${trim})` : undefined }" alt="QR code" />
+      <img :src="src" class="block" :style="{ height: size, width: size, objectViewBox: trim ? `inset(${trim})` : undefined }" alt="QR code" />
     </div>
     <div v-if="caption || $slots.default" class="text-center text-dd-muted" :class="compact ? 'text-sm max-w-[18rem]' : 'text-lg'">
       <slot>{{ caption }}</slot>

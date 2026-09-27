@@ -360,7 +360,7 @@ body {
   position: absolute;
   left: 0;
   right: 0;
-  height: 0.9rem;
+  height: 0.7rem;
   z-index: 1;
   pointer-events: none;
 }

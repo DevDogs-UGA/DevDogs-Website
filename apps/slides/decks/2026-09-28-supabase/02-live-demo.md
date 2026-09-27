@@ -88,25 +88,37 @@ accent: emerald
 chip: SQL
 heading: Create the Messages Table
 titlebar: Dashboard → SQL Editor
-file: ~/supabase/migrations/20260928000000_guestbook.sql
 ---
 
 <<< web@step-1:supabase/migrations/20260928000000_guestbook.sql {7-13|15|17-22}
 
-<!-- Presenter notes: Paste this into the dashboard's SQL editor on both laptops (shared project, so one paste covers everyone): the table, row-level security on, and one policy. Everyone can read; no sign-in required yet. The file in the titlebar is where this SQL ends up at the end of the night; it's not there yet. -->
+<CodeTips>
+<template #0>
+
+`create table` makes the `messages` table. `default auth.uid()` fills in `user_id` with whoever is signed in.
+
+</template>
+<template #1>
+
+Row-level security goes on: from now on, nobody can read or write a row unless a policy says so.
+
+</template>
+<template #2>
+
+The first policy: anyone, signed in (`authenticated`) or not (`anon`), can read every message.
+
+</template>
+</CodeTips>
+
+<!-- Presenter notes: Paste this into the dashboard's SQL editor on both laptops (shared project, so one paste covers everyone): the table, row-level security on, and one policy. Everyone can read; no sign-in required yet. This SQL ends up in a migration file at the end of the night, in the local bonus section. -->
 
 ---
-layout: dual-code
+layout: terminal
 accent: rose
-chip: CODE
-heading: Connect to Supabase
-trackSplit: false
+chip: SETUP
+heading: Install the Supabase Client
+titlebar: Terminal
 followTrack: true
-leftLabel: Terminal
-rightLabel: Editor
-rightFile:
-  web: ~/lib/supabase.ts
-  mobile: ~/lib/main.dart
 ---
 
 <Track web>
@@ -126,7 +138,19 @@ flutter pub add supabase_flutter gotrue
 
 </Track>
 
-::right::
+<!-- Presenter notes: One package each. gotrue is pinned directly on Flutter because custom OIDC providers need gotrue 2.20 or newer. -->
+
+---
+layout: terminal
+accent: rose
+chip: CODE
+heading: Connect to Supabase
+titlebar: Editor
+followTrack: true
+file:
+  web: ~/lib/supabase.ts
+  mobile: ~/lib/main.dart
+---
 
 <Track web>
 
@@ -185,7 +209,7 @@ That's the whole change: Supabase starts up before the app does.
 
 </Track>
 
-<!-- Presenter notes: One client for the whole app, built from the two values in the env file. Web reads them from .env.local through process.env; Flutter bakes them in at run time with --dart-define-from-file=.env.local and initializes Supabase before runApp. gotrue is pinned directly because custom OIDC providers need gotrue 2.20 or newer. -->
+<!-- Presenter notes: One client for the whole app, built from the two values in the env file. Web reads them from .env.local through process.env; Flutter bakes them in at run time with --dart-define-from-file=.env.local and initializes Supabase before runApp. -->
 
 ---
 layout: dual-code
@@ -325,7 +349,7 @@ chip: DASHBOARD
 
 # Add the Provider in Supabase
 
-- Authentication → **Sign In / Providers** → add a custom **OIDC** provider
+- Authentication → **Sign In / Providers** → Add a Custom **OIDC** Provider
 - Fill it in, save, and check that it's enabled:
   - <table class="dd-config-table"><tbody><tr><th>Identifier</th><td><code>custom:devdogsuga</code></td></tr><tr><th>Name</th><td><code>DevDogs</code></td></tr><tr><th>Issuer URL</th><td><code>https://api.devdogsuga.org/auth/v1</code></td></tr><tr><th>Client ID and secret</th><td>From the last slide</td></tr><tr><th>Scopes</th><td><code>openid email profile</code></td></tr></tbody></table>
 
@@ -448,10 +472,22 @@ accent: emerald
 chip: SQL
 heading: Allow Signed-In Posts
 titlebar: Dashboard → SQL Editor
-file: ~/supabase/migrations/20260928000000_guestbook.sql
 ---
 
 <<< web@step-3:supabase/migrations/20260928000000_guestbook.sql {build}
+
+<CodeTips>
+<template #0>
+
+The table and read policy from step 1. The new policy goes at the end.
+
+</template>
+<template #1>
+
+Only signed-in users can insert, and `with check (auth.uid() = user_id)` means only as themselves.
+
+</template>
+</CodeTips>
 
 <!-- Presenter notes: auth.uid() = user_id is the whole guard: Postgres itself refuses an insert claiming someone else's id. -->
 
@@ -596,10 +632,52 @@ accent: emerald
 chip: SQL
 heading: Move Names into Profiles
 titlebar: Dashboard → SQL Editor
-file: ~/supabase/migrations/20260928000100_profiles.sql
 ---
 
 <<< web@step-4:supabase/migrations/20260928000100_profiles.sql {6-11|13-19|25-30|31-37|38-44|46-48|50-61|63-70}
+
+<CodeTips>
+<template #0>
+
+A `profiles` table: one row per person, keyed by their `auth.users` id.
+
+</template>
+<template #1>
+
+Names are public, so everyone can read profiles. There's no write policy: only the trigger below writes here.
+
+</template>
+<template #2>
+
+A function that runs as its owner (`security definer`), so it can write a profile the signed-in user can't.
+
+</template>
+<template #3>
+
+It inserts one profile for each new user…
+
+</template>
+<template #4>
+
+…named by `coalesce`: the first of `name`, `full_name`, `preferred_username`, or the start of the email.
+
+</template>
+<template #5>
+
+The trigger runs that function every time someone signs up.
+
+</template>
+<template #6>
+
+The backfill gives everyone who signed up before tonight a profile too.
+
+</template>
+<template #7>
+
+Messages now point at profiles, and the `author_name` column goes away.
+
+</template>
+</CodeTips>
 
 <!-- Presenter notes: One paste, on one laptop (shared project); the clicks walk it. A profiles table with the same shape as messages: create, RLS on, one read-for-everyone policy. Then the trigger function: security definer + empty search_path so it can write to profiles even though the signed-in user has no write policy there, and can't be tricked by a planted function; the name comes from the first of name, full_name, preferred_username, or the email prefix. The trigger runs it on every sign-up, the backfill covers anyone who signed up before this ran, and the last change points messages at profiles and removes the author_name column. -->
 
@@ -763,10 +841,22 @@ accent: emerald
 chip: SQL
 heading: Let Users Delete Their Own Messages
 titlebar: Dashboard → SQL Editor
-file: ~/supabase/migrations/20260928000000_guestbook.sql
 ---
 
 <<< web@step-5:supabase/migrations/20260928000000_guestbook.sql {build}
+
+<CodeTips>
+<template #0>
+
+One more policy, at the end.
+
+</template>
+<template #1>
+
+Signed-in users can delete a message only when it's theirs. There's no update policy, on purpose.
+
+</template>
+</CodeTips>
 
 <!-- Presenter notes: No update policy on purpose: this workshop only supports post-and-delete. -->
 
@@ -908,7 +998,7 @@ pnpm dlx supabase db reset
 
 ::right::
 
-<<< web:supabase/migrations/20260928000100_profiles.sql {6-19|21-44|46-48|50-61|63-70}
+<<< web:supabase/migrations/20260928000100_profiles.sql {6-11|13-19|21-30|31-44|46-48|50-61|63-70}
 
 <!-- Presenter notes: The second file: the profiles recap (table and policy, the sign-up trigger function, the trigger, the backfill, the switch to profiles). Then run `db reset` and show Studio with both tables. -->
 

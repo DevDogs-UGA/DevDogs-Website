@@ -67,10 +67,12 @@ export function useCodeViewport(
     const tops = lit.map(el => topIn(el, t))
     const top = Math.min(...tops)
     const bottom = Math.max(...lit.map((el, i) => tops[i] + el.offsetHeight))
-    // Centred when the range fits; otherwise its first line near the top.
-    const lead = Math.min(24, height / 8)
-    const target = bottom - top > height - 2 * lead
-      ? top - lead
+    // Centred when the range fits between the window's soft edges
+    // (base.css, 0.7rem each); otherwise its first line just below the top
+    // edge.
+    const fade = 11.2
+    const target = bottom - top > height - 2 * fade
+      ? top - fade
       : (top + bottom) / 2 - height / 2
     offset.value = Math.round(Math.max(0, Math.min(target, total - height)))
   }

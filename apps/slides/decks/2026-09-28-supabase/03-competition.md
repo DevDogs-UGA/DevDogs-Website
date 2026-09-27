@@ -45,27 +45,30 @@ chip: ENTER
 <!-- Presenter notes: This maps 1:1 to docs/platform/guides/meetings-and-teams/competitions.md: a competition is a GitHub issue; merging the winning PR is the only "who won" the platform records. Entries close Monday, Oct 5, when the meeting starts; say it out loud. 2FA blocks every team action, so get it on tonight, before the mixer ends. `Closes`, `Fixes`, and `Resolves` are GitHub's closing keywords: in a PR description they link the issue, and merging the PR closes it. Stars only count if your entry PR opened before the issue closed, so open a draft PR early rather than waiting until it's polished. -->
 
 ---
-layout: bullets-card
+layout: bullets-code
 accent: indigo
 chip: TEAMWORK
-cardTitle: Start of Every Session
+heading: Working as a Team
+label: Terminal
+file: ~/DevDogsUGA
 ---
 
-# Working as a Team
-
 - Pull before you push
-- Merge `main` into your branch regularly: merge, never rebase, and never force-push the team branch
+- Merge `main` into your branch often: never rebase or force-push the team branch
 - Run lint, typecheck, and tests before you push
 - Split the work: smaller changes, fewer conflicts
 
-::card::
+::code::
 
-```bash {*}{cwd:'~/DevDogsUGA'}
-git pull               # latest team commits
-git fetch origin       # fetch main
-git merge origin/main  # merge main in
-pnpm install           # sync deps
-pnpm dev               # start dev server
+```bash {*}{cwd:'~/DevDogsUGA',branch:'team/our-slug'}
+# Start of every session: get your team's latest commits
+git pull
+# Bring main into your branch
+git fetch origin
+git merge origin/main
+# Sync dependencies, then start the dev server
+pnpm install
+pnpm dev
 ```
 
 <!-- Presenter notes: This routine card is what to run at the start of every work session on the team branch, in order: pull first so you're never pushing on top of stale history, then sync main in before you start new work so today's conflicts are small ones. -->
@@ -125,13 +128,20 @@ export function TeamCard({ team }: { team: Team }) {
 
 <ScreenshotOrPlaceholder src="/vscode-merge-conflict.png" alt="VS Code showing the two conflicts in TeamCard.tsx, each with Accept Current Change, Accept Incoming Change, and Accept Both Changes" />
 
+<CodeTips :accents="{ 2: 'amber' }">
+<template #0>
+
 Pick **Accept Current**, **Incoming**, or **Both** on each conflict, then save.
 
-::bottom::
+</template>
+<template #2>
 
-> Conflict in `pnpm-lock.yaml`? Don't edit it by hand. Run `pnpm install` and commit the result.
+Conflict in `pnpm-lock.yaml`? Don't edit it by hand. Run `pnpm install` and commit the result.
 
-<!-- Presenter notes: Two conflicts in one file: the imports and the card body. Walk the markers (HEAD is what's on your branch, the other side is what's coming in), then click through to the resolved file: keep both imports, the bolder heading, the member count, and the avatars. The right column is stock VS Code showing the same conflicts; point out the Accept buttons above each one. Emphasize the lockfile callout at the bottom: it's the single most common panic moment. -->
+</template>
+</CodeTips>
+
+<!-- Presenter notes: Two conflicts in one file: the imports and the card body. Walk the markers (HEAD is what's on your branch, the other side is what's coming in), then click through to the resolved file: keep both imports, the bolder heading, the member count, and the avatars. The right column is stock VS Code showing the same conflicts; point out the Accept buttons above each one. Once the file is resolved, the hint turns to the lockfile: it's the single most common panic moment. -->
 
 ---
 layout: numbered-list
@@ -175,7 +185,7 @@ chip: RECAP KAHOOT
 
 # Recap Kahoot (Optional)
 
-Get with your team. One phone per team is enough.
+Huddle up, grab one phone per team, and pick a name you'll regret later. Fastest fingers get bragging rights!
 
 <!-- Presenter notes: Optional recap round: Supabase, competition rules, and git, plus a few just-for-fun questions. Skip it entirely if you're short on time; nothing here is load-bearing for the competition. This is a DIFFERENT Kahoot from the warm-up one at the very start of the deck; don't confuse the two when scripting the night. Project the game PIN before starting, if you're running it. -->
 

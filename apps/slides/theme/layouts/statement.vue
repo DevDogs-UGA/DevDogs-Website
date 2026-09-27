@@ -46,8 +46,8 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
 .dd-statement :deep(h1 ~ p),
 .dd-statement :deep(h1 ~ * p) {
   max-width: 40rem;
-  margin: 1.1rem auto 0;
-  font-size: 1.4rem;
+  margin: 1rem auto 0;
+  font-size: 1.2rem;
   line-height: 1.5;
   text-wrap: balance;
 }

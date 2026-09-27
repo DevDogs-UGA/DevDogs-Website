@@ -47,8 +47,11 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
   <div class="slidev-layout dd-closing relative overflow-hidden" :style="style">
     <Wash :accent="accent" :wash="wash" />
     <Chrome v-if="chrome" :accent="accent" :chip="chip" />
-    <div class="dd-content h-full flex flex-col justify-center items-center text-center gap-5">
-      <div>
+    <div
+      class="dd-content h-full flex flex-col items-center text-center"
+      :class="$slots.footer ? 'dd-closing-full' : 'justify-center gap-5'"
+    >
+      <div class="dd-closing-head">
         <div :class="$slots.footer ? 'text-4xl' : 'text-6xl'">
           <slot />
         </div>
@@ -65,11 +68,31 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
 
 <style scoped>
 .dd-closing-subtitle {
-  margin: 0.75rem 0 0;
-  font-family: 'Alan Sans', 'Hanken Grotesk', sans-serif;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--dd-ink);
+  margin: 0.3rem 0 0;
+  font-size: 1.2rem;
+  color: var(--dd-grey-secondary);
+}
+
+/* With a footer: the heading at the top, the contact lines at the bottom
+   (the same distance from the slide's edge as the heading), and the QR
+   codes centred in the space between. The footer's own wrapper steps aside
+   (display: contents) so its QR row and contact lines are the column's
+   items. */
+.slidev-page .dd-closing:has(.dd-closing-full) {
+  padding-bottom: var(--dd-safe-top);
+}
+
+.dd-closing-full {
+  justify-content: space-between;
+}
+
+.dd-closing-full .dd-closing-footer {
+  display: contents;
+}
+
+.dd-closing-full :deep(.dd-close-qr-row) {
+  flex: 1;
+  align-items: center !important;
 }
 
 .dd-closing-footer {
@@ -106,7 +129,7 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
 }
 
 .dd-closing-footer :deep(.dd-close-contact svg) {
-  color: var(--accent);
+  color: var(--dd-ink);
   font-size: 1.15em;
 }
 
