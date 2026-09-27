@@ -69,7 +69,7 @@ import {
 } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -219,6 +219,88 @@ function topoSort(pkgs) {
   return order;
 }
 
+// ---------------------------------------------------------------------------
+// GitHub releases, one per published version, tagged `<name>@<version>`
+// (e.g. `@devdogsuga/devtools@0.1.5`). Created right after the npm publish,
+// on the commit this run checked out.
+//
+// ensureRelease is idempotent and also runs for UNCHANGED packages: if the
+// version npm has as latest has no release yet, it gets one. That backfills
+// packages published before this existed, and it repairs a run where npm
+// accepted the publish but the release step then failed (the next run sees
+// the package unchanged and creates the missing release). An unchanged
+// package's tarball matches this commit, so tagging it here is accurate.
+//
+// Needs `gh` and GH_TOKEN with contents: write (see publish.yaml), and the
+// full history and tags for the notes (fetch-depth: 0).
+// ---------------------------------------------------------------------------
+
+const RELEASE_NOTES_MAX_COMMITS = 50;
+
+function git(args) {
+  return execFileSync("git", args, { cwd: repoRoot, encoding: "utf8" }).trim();
+}
+
+function releaseExists(tag) {
+  try {
+    execFileSync("gh", ["release", "view", tag, "--json", "tagName"], {
+      cwd: repoRoot,
+      stdio: ["ignore", "ignore", "pipe"],
+      encoding: "utf8",
+    });
+    return true;
+  } catch (err) {
+    if (/release not found/i.test(String(err.stderr ?? ""))) return false;
+    throw err;
+  }
+}
+
+function releaseNotes(pkg, version) {
+  const name = pkg.json.name;
+  const dir = relative(repoRoot, dirname(pkg.path));
+  const previous = git(["tag", "--list", `${name}@*`, "--sort=-v:refname", "--merged", "HEAD"])
+    .split("\n")
+    .find((tag) => tag && tag !== `${name}@${version}`);
+  const range = previous ? [`${previous}..HEAD`] : [];
+  const commits = git(["log", "--format=- %s (%h)", ...range, "--", dir])
+    .split("\n")
+    .filter(Boolean);
+  const shown = commits.slice(0, RELEASE_NOTES_MAX_COMMITS);
+  if (commits.length > shown.length) {
+    shown.push(`- …and ${commits.length - shown.length} earlier commits`);
+  }
+  return [
+    `npm: https://www.npmjs.com/package/${name}/v/${version}`,
+    "",
+    previous ? `Changes to \`${dir}\` since ${previous}:` : `Changes to \`${dir}\`:`,
+    "",
+    ...(shown.length ? shown : ["- No changes to the package's own files (a dependency was bumped)."]),
+  ].join("\n");
+}
+
+function ensureRelease(pkg, version) {
+  const tag = `${pkg.json.name}@${version}`;
+  if (dryRun) {
+    console.log(`  [dry run] would ensure GitHub release ${tag}`);
+    return;
+  }
+  if (releaseExists(tag)) return;
+  execFileSync(
+    "gh",
+    [
+      "release", "create", tag,
+      "--target", git(["rev-parse", "HEAD"]),
+      "--title", tag,
+      "--notes", releaseNotes(pkg, version),
+      // Nine packages share one repo; "Latest" on whichever published last
+      // would mean nothing.
+      "--latest=false",
+    ],
+    { cwd: repoRoot, stdio: ["ignore", "inherit", "inherit"] },
+  );
+  console.log(`  GitHub release ${tag}`);
+}
+
 async function main() {
   const pkgs = discoverPackages()
     .map((dir) => readPackageJson(dir))
@@ -258,6 +340,7 @@ async function main() {
 
       if (state && state.shasum && state.shasum === shasum) {
         unchanged.push(name);
+        ensureRelease(pkg, state.latest);
         continue;
       }
 
@@ -278,6 +361,7 @@ async function main() {
         publishedVersion = publishWithRetry(repoRoot, pkg, finalTarball, tmp);
       }
       published.push(`${name}@${publishedVersion}`);
+      ensureRelease(pkg, publishedVersion);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }

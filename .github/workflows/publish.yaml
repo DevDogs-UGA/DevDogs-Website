@@ -69,7 +69,9 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  # write: the publish script tags each published version and creates its
+  # GitHub release (`<name>@<version>`, in step with npm).
+  contents: write
   id-token: write # required for npm OIDC / Trusted Publishing
 
 jobs:
@@ -86,6 +88,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+          # Full history and tags: release notes list each package's commits
+          # since its previous release tag.
+          fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
       # Trusted Publishing needs npm >=11.5.1 (the version it shipped in).
       # setup-node's bundled npm tracks the Node release, not a fixed npm
@@ -113,7 +118,9 @@ jobs:
       # that `ci.yaml` already ran it on the merged commit.
       - name: devtools contract tests
         run: pnpm --filter @devdogsuga/devtools run test:contract
-      - name: Patch-bump + publish changed packages
+      - name: Patch-bump + publish changed packages, with GitHub releases
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: node scripts/publish-changed-packages.mjs
       # When the OIDC exchange fails, npm silently falls back to token auth
       # and reports only ENEEDAUTH. The real reason (no trusted publisher,
