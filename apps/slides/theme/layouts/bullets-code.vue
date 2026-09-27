@@ -62,7 +62,7 @@ const fileText = computed(() => forTrack(props.file))
     <Chrome v-if="chrome" :accent="slideAccent" :chip="chip" />
     <div class="dd-content h-full flex flex-col">
       <h2 v-if="heading" class="dd-window-heading">{{ heading }}</h2>
-      <div class="grid grid-cols-2 gap-8 flex-1 min-h-0">
+      <div class="dd-bullets-code-grid flex-1 min-h-0">
         <div class="dd-bullets self-center">
           <slot />
         </div>
@@ -83,6 +83,13 @@ const fileText = computed(() => forTrack(props.file))
 </template>
 
 <style scoped>
+/* The window gets the wider share: a file's lines need the room. */
+.dd-bullets-code-grid {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: 2rem;
+}
+
 .dd-bullets :deep(ul) {
   list-style: none;
   padding-left: 0;

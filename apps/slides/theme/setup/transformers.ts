@@ -267,7 +267,8 @@ export function expandWorkshopImports(ctx: MarkdownTransformContext) {
     const [line, repo, rev, file, ranges = '', options = ''] = m
     const where = `${ctx.slide.source.filepath} (${line.trim()})`
     if (!REPOS.includes(repo as typeof REPOS[number])) continue
-    const lang = LANGS[file.split('.').pop() ?? ''] ?? ''
+    const base = file.split('/').pop() ?? file
+    const lang = base.startsWith('.env') ? 'dotenv' : LANGS[base.split('.').pop() ?? ''] ?? ''
     const buildSpec = ranges.match(/^build(?::(.+))?$/)
     if (buildSpec) {
       ctx.s.overwrite(m.index, m.index + line.length, build(repo, rev, file, buildSpec[1], lang, where))

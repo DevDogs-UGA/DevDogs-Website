@@ -494,6 +494,11 @@ body {
   color: var(--accent);
 }
 
+/* ArrowText trims the spaces around "→"; give the arrow its own. */
+.dd-window-label .dd-arrow {
+  margin: 0 0.35em;
+}
+
 /* Room past both ends of a file, so its first and last lines can scroll
    clear of the window's soft edges. */
 .dd-code-frame .dd-code-track {

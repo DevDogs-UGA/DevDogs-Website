@@ -1,33 +1,29 @@
 ---
 layout: section-divider
 accent: indigo
-kicker: "03 · Feature competition"
+kicker: "03 · Feature Competition"
 chip: COMPETITION
 ---
 
-# This week's competition
+# This Week's Competition
 
-<!-- Presenter notes: Transition into the competition block — this is the main way members contribute code to the real DevDogsUGA platform. -->
+<!-- Presenter notes: Transition into the competition block: this is the main way members contribute code to the real DevDogsUGA platform. -->
 
 ---
-layout: bullets-card
+layout: numbered-list
 accent: indigo
 chip: TEAM MIXER
-cardTitle: Right now
 ---
 
-# Team mixer
+# Team Mixer
 
-- The room is already split by track (you're sitting with your projector's people)
-- Corners, 2-minute rounds — meet a few people before you commit
-- Lock in a team: **2–4 members**
+- You're already sitting with your track, so your future teammates are right next to you
+- Two-minute rounds: say hi, share what you'd love to build, then swap seats
+- Found your people? Teams are 2 to 4, so lock it in!
+- Make it official at **devdogsuga.org/teams**
+- Still flying solo when time's up? A focus lead will match you with a crew
 
-::card::
-
-1. Create or join at **devdogsuga.org/teams**
-2. No team yet when we start? Find a focus lead — they'll place you
-
-<!-- Presenter notes: The room split already happened at the top of the night (preshow), so the mixer is inside each track, not across them. Point out the focus leads by name/location before starting the timer. -->
+<!-- Presenter notes: The room split already happened at the top of the night (preshow), so the mixer is inside each track, not across them. Point out the focus leads by name and location before starting the timer, and call time on each two-minute round. -->
 
 ---
 layout: numbered-list
@@ -35,28 +31,18 @@ accent: indigo
 chip: ENTER
 ---
 
-# Enter the competition
+# Enter the Competition
 
-- Entries close **Monday, Oct 5**, when the meeting starts
-- Turn on **GitHub 2FA**
+- Turn On GitHub 2FA
   - Settings → Password and authentication → Enable two-factor authentication
-- Get on a team at **devdogsuga.org/teams**
-- Feature requirements live in the **GitHub issues**: `github.com/DevDogsUGA/DevDogsUGA/issues`
+- Get on a Team
+  - Create one or join one at devdogsuga.org/teams
+- Work on Your Team's Branch
+  - Every team gets a `team/<your-team>` branch: commit and push there
+- Open a Pull Request into Main Linking the Issue
+  - Write `Closes #123` in the description: GitHub links the issue and closes it when your PR merges
 
-<!-- Presenter notes: This maps 1:1 to docs/platform/guides/meetings-and-teams/competitions.md — a competition is a GitHub issue; merging the winning PR is the only "who won" the platform records. Callout to say out loud: get 2FA on tonight, before the mixer ends -- it blocks every team action. Entries close when the meeting starts, not at some specific time during it, so there's no clock-watching. -->
-
----
-layout: numbered-list
-accent: indigo
-chip: ENTER
----
-
-# Enter the competition
-
-- Work on your team's branch, **`team/<slug>`**
-- Open an **early draft** pull request into `main` that links the issue — `Closes #123`
-
-<!-- Presenter notes: Stars only count if your entry PR opened before the issue closed, so open the draft PR early rather than waiting until it's polished. -->
+<!-- Presenter notes: This maps 1:1 to docs/platform/guides/meetings-and-teams/competitions.md: a competition is a GitHub issue; merging the winning PR is the only "who won" the platform records. Entries close Monday, Oct 5, when the meeting starts; say it out loud. 2FA blocks every team action, so get it on tonight, before the mixer ends. `Closes`, `Fixes`, and `Resolves` are GitHub's closing keywords: in a PR description they link the issue, and merging the PR closes it. Stars only count if your entry PR opened before the issue closed, so open a draft PR early rather than waiting until it's polished. -->
 
 ---
 layout: bullets-card
@@ -65,12 +51,12 @@ chip: TEAMWORK
 cardTitle: Start of every session
 ---
 
-# Working as a team
+# Working as a Team
 
 - Pull before you push
-- Merge `main` into your branch regularly — merge, never rebase, and never force-push the team branch
+- Merge `main` into your branch regularly: merge, never rebase, and never force-push the team branch
 - Run lint, typecheck, and tests before you push
-- Split the work — smaller changes, fewer conflicts
+- Split the work: smaller changes, fewer conflicts
 
 ::card::
 
@@ -82,44 +68,70 @@ pnpm install           # sync deps
 pnpm dev               # start dev server
 ```
 
-<!-- Presenter notes: This routine card is what to run at the start of every work session on the team branch, in order — pull first so you're never pushing on top of stale history, then sync main in before you start new work so today's conflicts are small ones. -->
+<!-- Presenter notes: This routine card is what to run at the start of every work session on the team branch, in order: pull first so you're never pushing on top of stale history, then sync main in before you start new work so today's conflicts are small ones. -->
 
 ---
 layout: dual-code
 accent: indigo
 chip: CONFLICTS
 heading: A Conflict, Then Resolved
-leftFile: ~/components/Feature.tsx
-rightFile: ~/components/Feature.tsx
-leftLabel: Before
-rightLabel: After
+leftLabel: In the File
+leftFile: ~/components/TeamCard.tsx
+rightLabel: In VS Code
+rightFile: ~/components/TeamCard.tsx
 trackSplit: false
 ---
 
-````md magic-move
-```ts
+````md magic-move {lines: true}
+```tsx {1-6|10-17}
 <<<<<<< HEAD
-export const greeting = "Hello from main";
+import { Avatar } from "./Avatar";
+import { formatMembers } from "../lib/format";
 =======
-export const greeting = "Hi from our branch";
+import { Avatar, AvatarGroup } from "./Avatar";
 >>>>>>> team/our-slug
+
+export function TeamCard({ team }: { team: Team }) {
+  return (
+    <div className="rounded-lg border p-4">
+<<<<<<< HEAD
+      <h3 className="font-semibold">{team.name}</h3>
+      <p className="text-sm text-gray-500">{formatMembers(team.members)}</p>
+=======
+      <h3 className="text-lg font-bold">{team.name}</h3>
+      <AvatarGroup members={team.members} max={4} />
+>>>>>>> team/our-slug
+    </div>
+  );
+}
 ```
-```ts
-export const greeting = "Hi from our branch";
+```tsx {1-2|7-9}
+import { Avatar, AvatarGroup } from "./Avatar";
+import { formatMembers } from "../lib/format";
+
+export function TeamCard({ team }: { team: Team }) {
+  return (
+    <div className="rounded-lg border p-4">
+      <h3 className="text-lg font-bold">{team.name}</h3>
+      <p className="text-sm text-gray-500">{formatMembers(team.members)}</p>
+      <AvatarGroup members={team.members} max={4} />
+    </div>
+  );
+}
 ```
 ````
 
 ::right::
 
-<ScreenshotOrPlaceholder src="/vscode-merge-editor.png" alt="VS Code's merge editor resolving the conflict in Feature.tsx" />
+<ScreenshotOrPlaceholder src="/vscode-merge-conflict.png" alt="VS Code showing the two conflicts in TeamCard.tsx, each with Accept Current Change, Accept Incoming Change, and Accept Both Changes" />
 
-VS Code's merge editor: **Accept Current**, **Accept Incoming**, or **Accept Both** — pick per block, then save.
+VS Code marks each conflict: **Accept Current Change**, **Accept Incoming Change**, or **Accept Both Changes**, then save.
 
 ::bottom::
 
-> Conflict in `pnpm-lock.yaml`? Don't edit it by hand — run `pnpm install` and commit the result.
+> Conflict in `pnpm-lock.yaml`? Don't edit it by hand. Run `pnpm install` and commit the result.
 
-<!-- Presenter notes: Walk through the conflict markers, then Magic Move to the resolved file. The right column is a live VS Code screenshot of the same conflict, resolved via the Merge Editor -- point out Accept Current / Incoming / Both. Emphasize the lockfile callout at the bottom — it's the single most common panic moment. -->
+<!-- Presenter notes: Two conflicts in one file: the imports and the card body. Walk the markers (HEAD is what's on your branch, the other side is what's coming in), then click through to the resolved file: keep both imports, the bolder heading, the member count, and the avatars. The right column is stock VS Code showing the same conflicts; point out the Accept buttons above each one. Emphasize the lockfile callout at the bottom: it's the single most common panic moment. -->
 
 ---
 layout: numbered-list
@@ -127,33 +139,33 @@ accent: indigo
 chip: AVOID CONFLICTS
 ---
 
-# Avoiding them in the first place
+# Avoiding Them in the First Place
 
-- Pull often — don't let your branch drift for days
+- Pull often, so your branch doesn't drift for days
 - Commit small, commit often
-- Split files where you can — two people editing the same function is where conflicts live
-- Ask on Discord before you're stuck for 20 minutes
+- Split files where you can: two people editing the same function is where conflicts live
+- Stuck for 20 minutes? Ask in <DiscordChannel name="tech-support" forum /> on Discord
 
-<!-- Presenter notes: Prevention is cheaper than resolution — most of this list is just "talk to your team." -->
+<!-- Presenter notes: Prevention is cheaper than resolution, and most of this list is just "talk to your team." The tech-support forum on the DevDogs Discord is the place to ask: one post per problem, so answers stay findable. -->
 
 ---
-layout: bullets-card
+layout: numbered-list
 accent: indigo
-chip: THIS WEEK
-cardTitle: Find the issues
+chip: PULL REQUESTS
 ---
 
-# This week's features
+# Making a Pull Request
 
-- The repo is private, so features live under its own **Issues** page, not a public projects board
-- Small PRs with screenshots review faster
-- Ask early — Wednesday dev sessions and Discord are both open all week
+- Link the Feature Issue
+  - Write `Closes #123` in the description, so reviewers know what it's for
+- Show It Working
+  - Add screenshots or a short screen recording of the feature
+- Run the Checks Before You Push
+  - `pnpm format:write`, `pnpm lint`, `pnpm typecheck`, `pnpm test`: the same checks CI runs
+- Keep It Small, and Explain It
+  - What changed, why, and how a reviewer can try it
 
-::card::
-
-**github.com/DevDogsUGA/DevDogsUGA/issues**
-
-<!-- Presenter notes: This link only resolves for signed-in members with repo access, which is expected -- the project is private. `gh issue list --repo DevDogsUGA/DevDogsUGA` is the live way to check what's open from a laptop with the right access, if this slide's list looks stale. -->
+<!-- Presenter notes: CI runs format:check, lint, typecheck, test, and build on every PR; running them locally first saves a red X and a round trip. Screenshots matter most for UI features: reviewers shouldn't have to check out your branch to see what it looks like. -->
 
 ---
 layout: statement
@@ -161,8 +173,27 @@ accent: indigo
 chip: RECAP KAHOOT
 ---
 
-# Recap Kahoot (optional)
+# Recap Kahoot (Optional)
 
-Get with your team — one phone per team is enough.
+Get with your team. One phone per team is enough.
 
-<!-- Presenter notes: Optional recap round -- Supabase, competition rules, and git, plus a few just-for-fun questions. Skip it entirely if you're short on time; nothing here is load-bearing for the competition, which is why it's the last slide of this section, right before Upcoming meetings, easy to jump past. This is a DIFFERENT Kahoot from the warm-up one at the very start of the deck -- don't confuse the two when scripting the night. Project the game PIN before starting, if you're running it. -->
+<!-- Presenter notes: Optional recap round: Supabase, competition rules, and git, plus a few just-for-fun questions. Skip it entirely if you're short on time; nothing here is load-bearing for the competition. This is a DIFFERENT Kahoot from the warm-up one at the very start of the deck; don't confuse the two when scripting the night. Project the game PIN before starting, if you're running it. -->
+
+---
+layout: features
+accent: indigo
+chip: THIS WEEK
+heading: This Week's Features
+---
+
+- Feature title (#issue)
+- Feature title (#issue)
+- Feature title (#issue)
+
+::mobile::
+
+- Feature title (#issue)
+- Feature title (#issue)
+- Feature title (#issue)
+
+<!-- Presenter notes: TEMPLATE: fill in this week's feature issues for each project before the meeting. Each links to its issue on github.com/DevDogsUGA/DevDogsUGA/issues (the repo is private, so members need to be signed in to see them). -->

@@ -13,7 +13,7 @@
 //   <template #2>…</template>
 //   </CodeTips>
 import { computed, useSlots } from 'vue'
-import { useSlideContext } from '@slidev/client/context'
+import { useSlideContext } from '@slidev/client'
 
 const slots = useSlots()
 const { $clicks } = useSlideContext()

@@ -1,13 +1,13 @@
 ---
 layout: section-divider
 accent: rose
-kicker: "02 · Live demo"
+kicker: "02 · Live Demo"
 chip: LIVE DEMO
 ---
 
-# Build it live
+# Build It Live
 
-<!-- Presenter notes: Sloan is back at the podium. Shruti's concepts map onto real code now — two laptops, one Supabase project, projected side by side. Both laptops type the code live (or paste it from the slides); if one presenter is alone, drive the web side and paste the Flutter side from the slides. -->
+<!-- Presenter notes: Sloan is back at the podium. Shruti's concepts map onto real code now: two laptops, one Supabase project, projected side by side. Both laptops type the code live (or paste it from the slides); if one presenter is alone, drive the web side and paste the Flutter side from the slides. Every code slide builds the step up one chunk per click, with a tip at the bottom; the last click lights the whole step, and that's what the Discord button posts. -->
 
 ---
 layout: dual-code
@@ -40,43 +40,35 @@ git switch 01-flutter-intro
 flutter pub get
 ```
 
-<!-- Presenter notes: Everyone already has this from Setup Night — this is just the Supabase branch point. Both branches are "what you built, plus the guestbook we didn't get to." -->
+<!-- Presenter notes: Everyone already has this from Setup Night; this is just the Supabase branch point. Both branches are "what you built, plus the guestbook we didn't get to." -->
 
 ---
-layout: bullets-card
+layout: bullets-code
 accent: rose
 chip: SETUP
-cardTitle: Where they go
+heading: Project Setup
+followTrack: true
+file: ~/.env.local
 ---
 
-# Project setup
+- Create a Supabase project at **supabase.com/dashboard** (it takes about a minute)
+- Copy the **Project URL** and the **publishable key** from Project Settings → API
+- Copy `.env.example` to `.env.local` and paste them in
 
-- Create a Supabase project at **supabase.com/dashboard**; it takes about a minute
-- Copy the **Project URL** and the **publishable** key from Project Settings → API
-- Paste them into your app's env file
-
-::card::
+::code::
 
 <Track web>
 
-```dotenv
-# .env.local
-NEXT_PUBLIC_SUPABASE_URL=…
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=…
-```
+<<< web:.env.example
 
 </Track>
 <Track mobile>
 
-```dotenv
-# demo.env
-SUPABASE_URL=…
-SUPABASE_PUBLISHABLE_KEY=…
-```
+<<< mobile:.env.example
 
 </Track>
 
-<!-- Presenter notes: Create the project live on both laptops. The URL looks like https://<ref>.supabase.co and the key starts with sb_publishable_. Web copies .env.example to .env.local; Flutter copies demo.env.example to demo.env and runs with `--dart-define-from-file=demo.env`. The publishable key is safe in the app; the secret key never is. This is the part most likely to eat time -- budget for it, and a lead can drive if the room lags. Sign-in setup waits until step 2. -->
+<!-- Presenter notes: Create the project live on both laptops. The URL looks like https://<ref>.supabase.co and the key starts with sb_publishable_. Both apps use a file called .env.local: Next.js loads it automatically, and Flutter reads it when you run with `--dart-define-from-file=.env.local`. The publishable key is safe in the app; the secret key never is. This is the part most likely to eat time, so budget for it; a lead can drive if the room lags. Sign-in setup waits until step 2. -->
 
 ---
 layout: statement
@@ -84,49 +76,116 @@ accent: rose
 chip: STEP 1
 ---
 
-# Read the guestbook
+# Read the Guestbook
 
-<!-- Presenter notes: First step — swap the in-memory array for a real Supabase table, read-only. -->
+The guestbook is the part we didn't get to at Setup Night. It's already in your starter code, keeping messages in memory. Now we'll give it a real database.
+
+<!-- Presenter notes: First step: swap the in-memory list for a real Supabase table, read-only. -->
 
 ---
 layout: terminal
 accent: emerald
 chip: SQL
 heading: Create the Messages Table
-titlebar: Dashboard → SQL editor
+titlebar: Dashboard → SQL Editor
 file: ~/supabase/migrations/20260928000000_guestbook.sql
 ---
 
 <<< web@step-1:supabase/migrations/20260928000000_guestbook.sql {7-13|15|17-22}
 
-<!-- Presenter notes: Paste this into the dashboard's SQL editor on both laptops (shared project, so one paste covers everyone): the table, row-level security on, and one policy. Everyone can read — no sign-in required yet. The file in the titlebar is where this SQL ends up at the end of the night; it's not there yet. -->
+<!-- Presenter notes: Paste this into the dashboard's SQL editor on both laptops (shared project, so one paste covers everyone): the table, row-level security on, and one policy. Everyone can read; no sign-in required yet. The file in the titlebar is where this SQL ends up at the end of the night; it's not there yet. -->
 
 ---
 layout: dual-code
 accent: rose
 chip: CODE
 heading: Connect to Supabase
-leftFile: ~/lib/supabase.ts
-rightFile: ~/lib/main.dart
+trackSplit: false
+followTrack: true
+leftLabel: Terminal
+rightLabel: Editor
+rightFile:
+  web: ~/lib/supabase.ts
+  mobile: ~/lib/main.dart
 ---
+
+<Track web>
 
 ```bash
 # Add the Supabase client
 pnpm add @supabase/supabase-js
 ```
 
-<<< web@step-1:lib/supabase.ts {5|7-8|10}
-
-::right::
+</Track>
+<Track mobile>
 
 ```bash
 # Add the Supabase client
 flutter pub add supabase_flutter gotrue
 ```
 
-<<< mobile@step-1:lib/main.dart {2|6-9|11-17}
+</Track>
 
-<!-- Presenter notes: One client for the whole app, built from the two values in the env file. Web reads them from .env.local through process.env; Flutter bakes them in at run time with --dart-define-from-file=demo.env and initializes Supabase before runApp. gotrue is pinned directly because custom OIDC providers need gotrue 2.20 or newer. -->
+::right::
+
+<Track web>
+
+<<< web@step-1:lib/supabase.ts {1-5|7-8|10|1-10}
+
+<CodeTips>
+<template #0>
+
+`"use client"` marks this module for the browser: the Supabase client runs in the page.
+
+</template>
+<template #1>
+
+`process.env.NEXT_PUBLIC_…` reads the values from `.env.local`. Next.js only hands the browser variables that start with `NEXT_PUBLIC_`.
+
+</template>
+<template #2>
+
+`createClient` builds one Supabase client, and every component imports this same one.
+
+</template>
+<template #3>
+
+That's the whole file: one shared client for the app.
+
+</template>
+</CodeTips>
+
+</Track>
+<Track mobile>
+
+<<< mobile@step-1:lib/main.dart {build:1,2|3,4}
+
+<CodeTips>
+<template #0>
+
+`main.dart` starts the app. Supabase has to be ready before the first screen draws.
+
+</template>
+<template #1>
+
+`main` is now `async`, so it can `await` setup before `runApp`. `ensureInitialized` readies Flutter's plugins first.
+
+</template>
+<template #2>
+
+`String.fromEnvironment` reads the values that `--dart-define-from-file=.env.local` baked in when you ran the app.
+
+</template>
+<template #3>
+
+That's the whole change: Supabase starts up before the app does.
+
+</template>
+</CodeTips>
+
+</Track>
+
+<!-- Presenter notes: One client for the whole app, built from the two values in the env file. Web reads them from .env.local through process.env; Flutter bakes them in at run time with --dart-define-from-file=.env.local and initializes Supabase before runApp. gotrue is pinned directly because custom OIDC providers need gotrue 2.20 or newer. -->
 
 ---
 layout: dual-code
@@ -137,19 +196,99 @@ leftFile: ~/components/Guestbook.tsx
 rightFile: ~/lib/guestbook.dart
 ---
 
-````md magic-move
-<<< web@step-0:components/Guestbook.tsx {12}
-<<< web@step-1:components/Guestbook.tsx {6-12|15|17-24|33-36}
-````
+<<< web@step-1:components/Guestbook.tsx {build:1|2|3|4,5|6,7|8,9}
+
+<CodeTips>
+<template #0>
+
+Setup Night's guestbook kept entries in memory, so they vanished on refresh. The lit lines are about to change.
+
+</template>
+<template #1>
+
+`type Message` describes one row of the `messages` table, so TypeScript can check how we use it.
+
+</template>
+<template #2>
+
+`useState` holds the messages this component shows; setting it re-renders the list.
+
+</template>
+<template #3>
+
+`useEffect` runs after the first render, and the empty `[]` means just once. It asks Supabase for the rows, newest first.
+
+</template>
+<template #4>
+
+The form goes away for now. Posting comes back in step 3, once people can sign in.
+
+</template>
+<template #5>
+
+`key={message.id}` gives React a stable id for each row, so it can update the list efficiently.
+
+</template>
+<template #6>
+
+Each field now comes from the database row: `author_name`, `created_at`, and `body`.
+
+</template>
+<template #7>
+
+That's step 1: every lit line is what changed.
+
+</template>
+</CodeTips>
 
 ::right::
 
-````md magic-move
-<<< mobile@step-0:lib/guestbook.dart {28}
-<<< mobile@step-1:lib/guestbook.dart {2-4|15-21|23-38|51-59}
-````
+<<< mobile@step-1:lib/guestbook.dart {build:1,2,3|4,5|6|7,8|9-12|13}
 
-<!-- Presenter notes: Magic Move animates the in-memory list into the Supabase query. Then the clicks walk the new code: the row type, loading the messages once on mount, and rendering them. The form goes away for now; posting comes back in step 3. -->
+<CodeTips>
+<template #0>
+
+Setup Night's guestbook kept entries in a list in memory, so they vanished on restart. The lit lines are about to change.
+
+</template>
+<template #1>
+
+`Supabase.instance.client` is the client `main.dart` set up, shared by the whole app.
+
+</template>
+<template #2>
+
+A `StatefulWidget` keeps data that changes in its `State`. `initState` runs once, when it's created: the place to start loading.
+
+</template>
+<template #3>
+
+A `Future` with `async`/`await` waits for the database without freezing the screen. `setState` redraws with the new rows.
+
+</template>
+<template #4>
+
+`try`/`catch` keeps one failed request from crashing the whole screen.
+
+</template>
+<template #5>
+
+The form goes away for now, and each row arrives as a `Map`: `message['body']`.
+
+</template>
+<template #6>
+
+`created_at` arrives as text, so `_formatTime` parses it before formatting.
+
+</template>
+<template #7>
+
+That's step 1: every lit line is what changed.
+
+</template>
+</CodeTips>
+
+<!-- Presenter notes: The in-memory list turns into the Supabase query one chunk per click; lines slide over as the new ones arrive. The form disappears for now and comes back in step 3. -->
 
 ---
 layout: statement
@@ -157,7 +296,9 @@ accent: rose
 chip: STEP 2
 ---
 
-# Sign in with DevDogs
+# Sign In with OAuth
+
+**OIDC** (OpenID Connect) is a standard built on OAuth 2.0. It lets your app send people to another service to sign in (here, DevDogs), then tells your app who they are.
 
 <!-- Presenter notes: No SQL this step. First register the app with DevDogs and add the provider in the Dashboard (next two slides), then the client code. -->
 
@@ -167,13 +308,14 @@ accent: rose
 chip: DEVDOGS
 ---
 
-# Register your app with DevDogs
+# Register Your App with DevDogs
 
 - Go to **devdogsuga.org/tools/oauth** and create a client
-- Redirect URI: `https://<ref>.supabase.co/auth/v1/callback`
+- Redirect URI: your **Project URL** + `/auth/v1/callback`
+  - For example, `https://abcdefghij.supabase.co/auth/v1/callback`
 - Copy the **client ID** and **client secret**
 
-<!-- Presenter notes: The redirect URI is the contributor's own Supabase project's auth callback (the project ref is in the Project URL). The secret is shown once -- keep the tab open until it's pasted into Supabase on the next slide. -->
+<!-- Presenter notes: The redirect URI is the Project URL everyone already saved in .env.local, plus /auth/v1/callback. The secret is shown once, so keep the tab open until it's pasted into Supabase on the next slide. -->
 
 ---
 layout: numbered-list
@@ -181,13 +323,13 @@ accent: rose
 chip: DASHBOARD
 ---
 
-# Add the provider in Supabase
+# Add the Provider in Supabase
 
 - Authentication → **Sign In / Providers** → add a custom **OIDC** provider
-- Identifier `devdogsuga` · Issuer `https://api.devdogsuga.org/auth/v1`
-- Scopes `openid email profile` · paste the client ID + secret · save
+- Fill it in, save, and check that it's enabled:
+  - <table class="dd-config-table"><tbody><tr><th>Identifier</th><td><code>custom:devdogsuga</code></td></tr><tr><th>Name</th><td><code>DevDogs</code></td></tr><tr><th>Issuer URL</th><td><code>https://api.devdogsuga.org/auth/v1</code></td></tr><tr><th>Client ID and secret</th><td>From the last slide</td></tr><tr><th>Scopes</th><td><code>openid email profile</code></td></tr></tbody></table>
 
-<!-- Presenter notes: Supabase prefixes custom provider IDs, so the app signs in with `custom:devdogsuga`. VERIFY ON THE 9/27 DRY RUN: the exact Dashboard labels, and the issuer -- Supabase refuses an issuer that disagrees with the discovery document (TASK-346/347); `devtools oauth` reads it from discovery, so if the dashboard rejects api.devdogsuga.org, use the issuer the discovery doc advertises. `devtools oauth` does all of this in one command; it comes back in the local bonus section at the end. -->
+<!-- Presenter notes: Supabase requires custom provider identifiers to start with `custom:`, which is why the app signs in with `custom:devdogsuga`. VERIFY ON THE 9/27 DRY RUN: the exact Dashboard labels, and the issuer. Supabase refuses an issuer that disagrees with the discovery document (TASK-346/347); `devtools oauth` reads it from discovery, so if the dashboard rejects api.devdogsuga.org, use the issuer the discovery doc advertises. `devtools oauth` does all of this in one command; it comes back in the local bonus section at the end. -->
 
 ---
 layout: dual-code
@@ -198,13 +340,99 @@ leftFile: ~/components/Guestbook.tsx
 rightFile: ~/lib/guestbook.dart
 ---
 
-<<< web@step-2:components/Guestbook.tsx {16|20-28|39-50|54-68}
+<<< web@step-2:components/Guestbook.tsx {build:1,2|3,4|5|6|7|8,9}
+
+<CodeTips>
+<template #0>
+
+Signing in only needs the client we already have: it's all under `supabase.auth`.
+
+</template>
+<template #1>
+
+`Session` is supabase-js's type for a signed-in user; `null` means nobody's signed in.
+
+</template>
+<template #2>
+
+`onAuthStateChange` calls back on every sign-in and sign-out. The function `useEffect` returns unsubscribes when the component goes away.
+
+</template>
+<template #3>
+
+`signInWithOAuth` sends the browser to DevDogs, then back to `redirectTo`. The cast is there because TypeScript only knows Supabase's built-in providers.
+
+</template>
+<template #4>
+
+`signOut` ends the session, and `onAuthStateChange` updates the page.
+
+</template>
+<template #5>
+
+`{session ? … : …}` in JSX picks which button to show.
+
+</template>
+<template #6>
+
+The note under the buttons now says what's coming next.
+
+</template>
+<template #7>
+
+That's step 2: every lit line is what changed.
+
+</template>
+</CodeTips>
 
 ::right::
 
-<<< mobile@step-2:lib/guestbook.dart {7-11|22-33|55-62|74-85}
+<<< mobile@step-2:lib/guestbook.dart {build:1,2|3|4|5|6|7,8}
 
-<!-- Presenter notes: The clicks walk the whole step: keep the session in state and follow sign-in and sign-out, the sign-in and sign-out calls, then the buttons. Because the contributor's own GoTrue is the relying party, sign-in mints a native session in auth.users -- auth.uid() just works with the RLS policies coming up. Flutter's OAuthProvider is a real class here (gotrue Dart >= 2.20), so no cast needed on that side; the redirect goes back to the page on web and to the app's deep link on mobile. -->
+<CodeTips>
+<template #0>
+
+Signing in only needs the client we already have: it's all under `_supabase.auth`.
+
+</template>
+<template #1>
+
+`kIsWeb` says whether we're in a browser: come back to this page on the web, or to the app's deep link on a phone.
+
+</template>
+<template #2>
+
+`Session?`: the `?` means it can be `null`, i.e. signed out.
+
+</template>
+<template #3>
+
+`onAuthStateChange` is a `Stream`. `listen` runs on every sign-in and sign-out, and `setState` redraws.
+
+</template>
+<template #4>
+
+`OAuthProvider('custom:devdogsuga')` is our custom provider, and `=>` is shorthand for a one-line function.
+
+</template>
+<template #5>
+
+`build` copies `_session` into a local, so Dart knows it can't change halfway through.
+
+</template>
+<template #6>
+
+`session == null ? … : …` picks which button to show.
+
+</template>
+<template #7>
+
+That's step 2: every lit line is what changed.
+
+</template>
+</CodeTips>
+
+<!-- Presenter notes: Because the contributor's own GoTrue is the relying party, sign-in mints a native session in auth.users, so auth.uid() just works with the RLS policies coming up. Flutter's OAuthProvider is a real class here (gotrue Dart >= 2.20), so no cast needed on that side; the redirect goes back to the page on web and to the app's deep link on mobile. -->
 
 ---
 layout: statement
@@ -212,37 +440,123 @@ accent: rose
 chip: STEP 3
 ---
 
-# Let signed-in users post
+# Let Signed-In Users Post
 
 ---
 layout: terminal
 accent: emerald
 chip: SQL
-heading: Let Signed-In Users Post
-titlebar: Dashboard → SQL editor
+heading: Allow Signed-In Posts
+titlebar: Dashboard → SQL Editor
 file: ~/supabase/migrations/20260928000000_guestbook.sql
 ---
 
-<<< web@step-3:supabase/migrations/20260928000000_guestbook.sql {24-29}
+<<< web@step-3:supabase/migrations/20260928000000_guestbook.sql {build}
 
-<!-- Presenter notes: auth.uid() = user_id is the whole guard -- Postgres itself refuses an insert claiming someone else's id. -->
+<!-- Presenter notes: auth.uid() = user_id is the whole guard: Postgres itself refuses an insert claiming someone else's id. -->
 
 ---
 layout: dual-code
 accent: rose
 chip: CODE
-heading: Naive Insert — Client Sends Its Own Name
+heading: Posting a Message
 leftFile: ~/components/Guestbook.tsx
 rightFile: ~/lib/guestbook.dart
 ---
 
-<<< web@step-3:components/Guestbook.tsx {18|53-65|67-77|97-112}
+<<< web@step-3:components/Guestbook.tsx {build:1|2|3|4|5|6,7}
+
+<CodeTips>
+<template #0>
+
+The form from Setup Night comes back, now saving to the database.
+
+</template>
+<template #1>
+
+Controlled inputs: each field's text lives in state (`useState`) and updates on every keystroke.
+
+</template>
+<template #2>
+
+`handleSubmit` is `async`, so it can `await` the database. `preventDefault` stops the browser's own page-reloading submit.
+
+</template>
+<template #3>
+
+The insert sends the typed name and the message; `.select().single()` hands back the saved row.
+
+</template>
+<template #4>
+
+Put the new row at the top of the list and clear the form.
+
+</template>
+<template #5>
+
+`{session && (…)}` shows the form only to signed-in users; `onChange` copies each keystroke into state.
+
+</template>
+<template #6>
+
+The message box works the same way, and signed-out visitors get a hint instead of the form.
+
+</template>
+<template #7>
+
+That's step 3: every lit line is what changed.
+
+</template>
+</CodeTips>
 
 ::right::
 
-<<< mobile@step-3:lib/guestbook.dart {22,40-44|72-83|85-91|116-131}
+<<< mobile@step-3:lib/guestbook.dart {build:1|2|3|4|5|6,7}
 
-<!-- Presenter notes: The clicks walk the step: state for the message box, the submit handler and its authorName lookup, the insert, then the form. Linger on the authorName lookup -- it reads straight off the client's own session data, which the client fully controls. -->
+<CodeTips>
+<template #0>
+
+The form from Setup Night comes back, now saving to the database.
+
+</template>
+<template #1>
+
+A `TextEditingController` holds what's typed in a text field.
+
+</template>
+<template #2>
+
+`dispose` frees the controllers when the widget goes away.
+
+</template>
+<template #3>
+
+`_submit` is `async`. It reads both fields and stops if either is empty.
+
+</template>
+<template #4>
+
+`await` the insert, then clear the fields and reload the list.
+
+</template>
+<template #5>
+
+`if (session != null) ...[ ]` adds the fields to the column only for signed-in users.
+
+</template>
+<template #6>
+
+Signed-out visitors get a hint instead of the form.
+
+</template>
+<template #7>
+
+That's step 3: every lit line is what changed.
+
+</template>
+</CodeTips>
+
+<!-- Presenter notes: The name is whatever the person types, just like at Setup Night. Don't point out the problem yet; the next slide asks the room. -->
 
 ---
 layout: statement
@@ -250,15 +564,15 @@ accent: rose
 chip: QUESTION
 ---
 
-# What's wrong with this?
+# What's Wrong with This?
 
 <v-click>
 
-The **app** decides whose name goes on each message. Anyone can send any `author_name` they like, and the database stores whatever it's told.
+The **app** decides whose name goes on each message: type any name you like, and the database stores it. Nothing ties the name to the person who's signed in.
 
 </v-click>
 
-<!-- Presenter notes: Ask the room first and take a few guesses before clicking to reveal. The insert trusts a name the client sends, and a client is just a program anyone can modify: edit the request, call the API directly, or change the app. RLS checks who you are (auth.uid() = user_id), but nothing checks the name. On the web laptop you can prove it: edit the insert request's author_name in the browser's network tools and resend. This sets up the profiles fix next. -->
+<!-- Presenter notes: Ask the room first and take a few guesses before clicking to reveal. The insert trusts a name the client sends, and a client is just a program anyone can change: type someone else's name, edit the request, or call the API directly. RLS checks who you are (auth.uid() = user_id), but nothing checks the name. This sets up the profiles fix next. -->
 
 ---
 layout: statement
@@ -266,43 +580,95 @@ accent: rose
 chip: STEP 4
 ---
 
-# Stop trusting the client for names
+# How Can We Fix This?
+
+Store each person's name once, on the server, when they sign up. Every message then shows the name from their account, and the app stops sending a name at all.
 
 ---
 layout: terminal
 accent: emerald
 chip: SQL
 heading: Move Names into Profiles
-titlebar: Dashboard → SQL editor
+titlebar: Dashboard → SQL Editor
 file: ~/supabase/migrations/20260928000100_profiles.sql
 ---
 
-<<< web@step-4:supabase/migrations/20260928000100_profiles.sql {6-11|13-19|25-30|31-44|46-48|50-61|63-70}
+<<< web@step-4:supabase/migrations/20260928000100_profiles.sql {6-11|13-19|25-30|31-37|38-44|46-48|50-61|63-70}
 
-<!-- Presenter notes: One paste, on one laptop (shared project); the clicks walk it. A profiles table with the same shape as messages: create, RLS on, one read-for-everyone policy. Then the trigger function: security definer + empty search_path so it can write to profiles even though the signed-in user has no write policy there, and can't be tricked by a planted function; the name comes from the first of name, full_name, preferred_username, or the email prefix. The trigger runs it on every sign-up, the backfill covers anyone who signed up before this ran, and the last change points messages at profiles and removes the naive author_name column. -->
+<!-- Presenter notes: One paste, on one laptop (shared project); the clicks walk it. A profiles table with the same shape as messages: create, RLS on, one read-for-everyone policy. Then the trigger function: security definer + empty search_path so it can write to profiles even though the signed-in user has no write policy there, and can't be tricked by a planted function; the name comes from the first of name, full_name, preferred_username, or the email prefix. The trigger runs it on every sign-up, the backfill covers anyone who signed up before this ran, and the last change points messages at profiles and removes the author_name column. -->
 
 ---
 layout: dual-code
 accent: rose
 chip: CODE
-heading: The Client Can No Longer Lie
+heading: One Name per Account
 leftFile: ~/components/Guestbook.tsx
 rightFile: ~/lib/guestbook.dart
 ---
 
-````md magic-move
-<<< web@step-3:components/Guestbook.tsx {67-71}
-<<< web@step-4:components/Guestbook.tsx {66-76}
-````
+<<< web@step-4:components/Guestbook.tsx {build:3,9,10|6|7,8}
+
+<CodeTips>
+<template #0>
+
+The lit lines are the name field and everything that feeds it: the database supplies names now.
+
+</template>
+<template #1>
+
+No more name field: its state, its reset, and the input all go.
+
+</template>
+<template #2>
+
+Only the message is required now.
+
+</template>
+<template #3>
+
+The insert sends just the message. `profiles(name)` embeds the author's profile in the row that comes back.
+
+</template>
+<template #4>
+
+That's the posting side of step 4.
+
+</template>
+</CodeTips>
 
 ::right::
 
-````md magic-move
-<<< mobile@step-3:lib/guestbook.dart {85-88}
-<<< mobile@step-4:lib/guestbook.dart {79-82}
-````
+<<< mobile@step-4:lib/guestbook.dart {build:1,2,4,7,8,9|5|6}
 
-<!-- Presenter notes: The insert drops author_name entirely -- the column doesn't exist anymore. Point out `profiles(name)` in the select: PostgREST embeds the related row through the new foreign key in one query. -->
+<CodeTips>
+<template #0>
+
+The lit lines are the name field and everything that feeds it: the database supplies names now.
+
+</template>
+<template #1>
+
+No more name field: its controller, its `dispose` call, and the `TextField` go.
+
+</template>
+<template #2>
+
+Only the message is required now.
+
+</template>
+<template #3>
+
+The insert sends just the message; the server knows who's signed in.
+
+</template>
+<template #4>
+
+That's the posting side of step 4.
+
+</template>
+</CodeTips>
+
+<!-- Presenter notes: People can still change their name (most sites with user-generated content let you), but every message from one account now shows that account's one name. Nobody can post under a different name from the same account. -->
 
 ---
 layout: dual-code
@@ -313,17 +679,67 @@ leftFile: ~/components/Guestbook.tsx
 rightFile: ~/lib/guestbook.dart
 ---
 
-````md magic-move
-<<< web@step-3:components/Guestbook.tsx {32-38}
-<<< web@step-4:components/Guestbook.tsx {35-45|7-16|129}
-````
+<<< web@step-4:components/Guestbook.tsx {build:[3,6,7,8,9,10]1,2|4,5|11}
+
+<CodeTips>
+<template #0>
+
+Names live in `profiles` now, so the page fetches them along with each message.
+
+</template>
+<template #1>
+
+`profiles` replaces `author_name` in the `Message` type: one object, or `null`.
+
+</template>
+<template #2>
+
+`profiles(name)` embeds the author's profile through the foreign key. `overrideTypes` tells TypeScript it's one object, not a list.
+
+</template>
+<template #3>
+
+`?.` and `??`: show the profile's name if there is one, otherwise "Unknown".
+
+</template>
+<template #4>
+
+That's step 4: every lit line is what changed.
+
+</template>
+</CodeTips>
 
 ::right::
 
-````md magic-move
-<<< mobile@step-3:lib/guestbook.dart {49-52}
-<<< mobile@step-4:lib/guestbook.dart {49-52|132-137|139-140}
-````
+<<< mobile@step-4:lib/guestbook.dart {build:[1,2,4,5,6,7,8,9]3|10|11}
+
+<CodeTips>
+<template #0>
+
+Names live in `profiles` now, so the app fetches them along with each message.
+
+</template>
+<template #1>
+
+`profiles(name)` embeds the author's profile through the foreign key, in the same query.
+
+</template>
+<template #2>
+
+The profile arrives as a `Map` (or `null`); `?.` and `??` fall back to "Unknown".
+
+</template>
+<template #3>
+
+The tile's title shows that name.
+
+</template>
+<template #4>
+
+That's step 4: every lit line is what changed.
+
+</template>
+</CodeTips>
 
 <!-- Presenter notes: `profiles(name)` embeds the author's profile through the new foreign key. Each message has exactly one author, so PostgREST returns a single object (or null), never a list. Without generated types supabase-js guesses an array, which is why web needs overrideTypes. Getting this wrong shows blank names on web and crashes Flutter. -->
 
@@ -333,20 +749,20 @@ accent: rose
 chip: STEP 5
 ---
 
-# Delete your own messages
+# Deleting Your Own Messages
 
 ---
 layout: terminal
 accent: emerald
 chip: SQL
 heading: Let Users Delete Their Own Messages
-titlebar: Dashboard → SQL editor
+titlebar: Dashboard → SQL Editor
 file: ~/supabase/migrations/20260928000000_guestbook.sql
 ---
 
-<<< web@step-5:supabase/migrations/20260928000000_guestbook.sql {31-37}
+<<< web@step-5:supabase/migrations/20260928000000_guestbook.sql {build}
 
-<!-- Presenter notes: No update policy on purpose -- this workshop only supports post-and-delete. -->
+<!-- Presenter notes: No update policy on purpose: this workshop only supports post-and-delete. -->
 
 ---
 layout: dual-code
@@ -357,24 +773,70 @@ leftFile: ~/components/Guestbook.tsx
 rightFile: ~/lib/guestbook.dart
 ---
 
-<<< web@step-5:components/Guestbook.tsx {84-89|142|143-149}
+<<< web@step-5:components/Guestbook.tsx {build:1|2}
+
+<CodeTips>
+<template #0>
+
+Deleting takes a handler and a button, shown only on your own messages.
+
+</template>
+<template #1>
+
+`.delete().eq("id", id)` deletes the matching row (RLS refuses anyone else's), then drops it from the list.
+
+</template>
+<template #2>
+
+`session?.user.id === message.user_id` shows the button only on your own messages.
+
+</template>
+<template #3>
+
+That's step 5: every lit line is what changed.
+
+</template>
+</CodeTips>
 
 ::right::
 
-<<< mobile@step-5:lib/guestbook.dart {90-93|139|150-155}
+<<< mobile@step-5:lib/guestbook.dart {build:1,2|3,4}
 
-<!-- Presenter notes: The delete button only renders for your own rows client-side, but the real guard is the RLS policy -- try deleting someone else's id from devtools/curl and Postgres refuses it regardless of what the UI shows. -->
+<CodeTips>
+<template #0>
+
+Deleting takes a handler and a button, shown only on your own messages.
+
+</template>
+<template #1>
+
+`_delete` removes the row, then reloads the list.
+
+</template>
+<template #2>
+
+`isOwnMessage` compares the signed-in user to the message's author; only then does the tile get a delete button.
+
+</template>
+<template #3>
+
+That's step 5: every lit line is what changed.
+
+</template>
+</CodeTips>
+
+<!-- Presenter notes: The delete button only renders for your own rows client-side, but the real guard is the RLS policy: try deleting someone else's id from devtools or curl and Postgres refuses it regardless of what the UI shows. -->
 
 ---
 layout: section-divider
 accent: rose
 chip: BONUS
-kicker: Run it locally
+kicker: Run It Locally
 ---
 
-# Everything we clicked, as files
+# Everything We Clicked, as Files
 
-<!-- Presenter notes: Demo only -- nobody needs to follow along, and it needs Docker. Everything so far ran in the shared project's Dashboard; this turns the same SQL into migration files in the repo, which is how the monorepo works. Before starting: `supabase stop` any other local stack on this laptop (same ports, 54321-54324). -->
+<!-- Presenter notes: Demo only: nobody needs to follow along, and it needs Docker. Everything so far ran in the shared project's Dashboard; this turns the same SQL into migration files in the repo, which is how the monorepo works. Before starting: `supabase stop` any other local stack on this laptop (same ports, 54321-54324). -->
 
 ---
 layout: terminal
@@ -386,47 +848,85 @@ titlebar: terminal
 
 ```bash
 # Start Postgres, Auth, and Studio in Docker
-npx supabase start
+pnpm dlx supabase start
 # Print the local API URL, Studio URL, and publishable key
-npx supabase status
+pnpm dlx supabase status
 ```
 
-<!-- Presenter notes: start boots Postgres, Auth, and Studio in Docker (first run downloads images -- do it before the meeting). status prints the local API URL (http://127.0.0.1:54321), Studio (http://127.0.0.1:54323), and the local publishable key. Open Studio: it's the same dashboard, empty. -->
+<!-- Presenter notes: start boots Postgres, Auth, and Studio in Docker (the first run downloads images, so do it before the meeting). status prints the local API URL (http://127.0.0.1:54321), Studio (http://127.0.0.1:54323), and the local publishable key. Open Studio: it's the same dashboard, empty. -->
 
 ---
-layout: terminal
+layout: split-reveal
 accent: amber
 chip: SHELL
 heading: Turn the SQL into Migrations
-titlebar: terminal
+firstLabel: Terminal
+secondLabel: Editor
+secondFile: ~/supabase/migrations/20260928000000_guestbook.sql
 ---
 
 ```bash
-# Create empty, timestamped files under supabase/migrations,
-# then paste in the SQL we ran in the Dashboard
-npx supabase migration new guestbook
-npx supabase migration new profiles
-# Rebuild the local database from those files
-npx supabase db reset
+# Create empty, timestamped files under supabase/migrations
+pnpm dlx supabase migration new guestbook
+pnpm dlx supabase migration new profiles
+# Paste in the SQL we ran in the Dashboard, then
+# rebuild the local database from those files
+pnpm dlx supabase db reset
 ```
 
-<!-- Presenter notes: Each `migration new` creates an empty, timestamped file under supabase/migrations -- paste in the SQL we ran in the Dashboard, in the same order (the guestbook table and policies into the first, the profiles table, trigger, and backfill into the second). `db reset` rebuilds the local database from those files, so anyone who clones the repo gets the same schema. -->
+::second::
+
+<<< web:supabase/migrations/20260928000000_guestbook.sql {7-13|15|17-22|24-29|31-37}
+
+<!-- Presenter notes: Show the commands first, then click: the editor opens beside the terminal with the first file, and the clicks recap every piece of guestbook SQL we ran tonight (table, RLS, read policy, insert policy, delete policy). Each `migration new` creates an empty, timestamped file under supabase/migrations; `db reset` rebuilds the local database from those files, so anyone who clones the repo gets the same schema. -->
 
 ---
-layout: terminal
+layout: dual-code
 accent: amber
 chip: SHELL
-heading: Sign In with DevDogs, Locally
-titlebar: terminal
+heading: Turn the SQL into Migrations
+trackSplit: false
+leftLabel: Terminal
+rightLabel: Editor
+rightFile: ~/supabase/migrations/20260928000100_profiles.sql
 ---
 
 ```bash
-# Register "Sign in with DevDogs" on the local stack in one step
-# (db reset wiped the provider we just set up by hand)
+# Create empty, timestamped files under supabase/migrations
+pnpm dlx supabase migration new guestbook
+pnpm dlx supabase migration new profiles
+# Paste in the SQL we ran in the Dashboard, then
+# rebuild the local database from those files
+pnpm dlx supabase db reset
+```
+
+::right::
+
+<<< web:supabase/migrations/20260928000100_profiles.sql {6-19|21-44|46-48|50-61|63-70}
+
+<!-- Presenter notes: The second file: the profiles recap (table and policy, the sign-up trigger function, the trigger, the backfill, the switch to profiles). Then run `db reset` and show Studio with both tables. -->
+
+---
+layout: split-reveal
+accent: amber
+chip: SHELL
+heading: Configure OAuth Sign-In
+firstLabel: Editor
+firstFile: ~/supabase/config.toml
+secondLabel: Terminal
+---
+
+<<< web:supabase/config.toml {321-334}
+
+::second::
+
+```bash
+# Register "Sign in with DevDogs" on the local stack
+# (a custom provider, so it isn't in config.toml)
 pnpm dlx @devdogsuga/devtools oauth
 ```
 
-<!-- Presenter notes: The DevDogs sign-in provider isn't part of the migrations, and `db reset` wipes it, so register it again against the local stack. Then point `.env.local` (web) or `demo.env` (mobile) at the local URL and publishable key from `supabase status`, restart the app, and sign in against your own machine. -->
+<!-- Presenter notes: Built-in providers like Apple, GitHub, or Google are just config: a block like this one in supabase/config.toml, with the secret in an env var. DevDogs is a custom OIDC provider, so it isn't in config.toml, and `db reset` wipes the one we set up by hand. Click: `devtools oauth` registers it on the local stack in one step. Then point `.env.local` at the local URL and publishable key from `supabase status`, restart the app, and sign in against your own machine. -->
 
 ---
 layout: statement

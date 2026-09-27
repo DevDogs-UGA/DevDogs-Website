@@ -65,7 +65,7 @@
   list-style: none;
   counter-reset: none;
   padding-left: 0;
-  margin: 0.35em 0 0;
+  margin: 0.15em 0 0;
 }
 
 .dd-numbered-list :deep(li) ul li {
@@ -80,5 +80,28 @@
 
 .dd-numbered-list :deep(li) ul li::before {
   content: none;
+}
+/* A settings table in a sub-line (e.g. a dashboard form to fill in). */
+.dd-numbered-list :deep(.dd-config-table) {
+  margin: 0.1em 0 0;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.dd-numbered-list :deep(.dd-config-table th),
+.dd-numbered-list :deep(.dd-config-table td) {
+  padding: 0.1em 1.2em 0.1em 0;
+  text-align: left;
+  border-bottom: 1px solid var(--dd-hairline);
+}
+
+.dd-numbered-list :deep(.dd-config-table th) {
+  font-weight: 600;
+  color: var(--dd-grey-secondary);
+  white-space: nowrap;
+}
+
+.dd-numbered-list :deep(.dd-config-table td) {
+  color: var(--dd-ink);
 }
 </style>

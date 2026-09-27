@@ -27,8 +27,8 @@
 //
 //   <<< web:supabase/migrations/20260928000000_guestbook.sql {7-13|15}
 import { computed, onUnmounted } from 'vue'
-import { useSlideContext } from '@slidev/client/context'
-import { makeId } from '@slidev/client/logic/utils'
+import { useSlideContext } from '@slidev/client'
+import { makeId } from '@slidev/client/logic/utils.ts'
 import { accentHex } from '../accents'
 import Wash from '../components/Wash.vue'
 import Chrome from '../components/Chrome.vue'

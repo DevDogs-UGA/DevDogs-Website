@@ -4,7 +4,7 @@ accent: amber
 chip: UPCOMING
 ---
 
-# Upcoming meetings
+# Upcoming Meetings
 
 <UpcomingStack />
 

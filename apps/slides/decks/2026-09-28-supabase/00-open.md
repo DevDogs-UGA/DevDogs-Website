@@ -19,10 +19,10 @@ chip: AGENDA
 
 # Tonight
 
-- Sign in & warm up
+- Sign In & Warm Up
 - Concepts
-- Live demo
-- Feature competition
-- What's next
+- Live Demo
+- Feature Competition
+- What's Next
 
 <!-- Presenter notes: After this slide, switch the projectors to the third computer: attendance QR code first, then the warm-up Kahoot (team mode, DogDays vs DogPack: the room's already split by track; about eight questions, a few for fun and the rest a Setup Night recap). Then hand off to Shruti for the concepts on her own slides, roughly 15 minutes. This deck picks back up at the "02 · Live demo" divider. -->
