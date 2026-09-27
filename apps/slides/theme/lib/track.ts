@@ -60,3 +60,13 @@ export function setTrack(next: TrackName | undefined) {
   else url.searchParams.delete('track')
   window.history.replaceState(window.history.state, '', url)
 }
+
+// A value that can differ by track, e.g. a window's file:
+// `{ web: '~/lib/supabase.ts', mobile: '~/lib/main.dart' }`. With no track
+// set (the PDF), both, joined.
+export type PerTrack = string | Partial<Record<TrackName, string>>
+
+export function forTrack(value: PerTrack | undefined): string | undefined {
+  if (!value || typeof value === 'string') return value
+  return track.value ? value[track.value] : [value.web, value.mobile].filter(Boolean).join(' · ')
+}

@@ -436,3 +436,66 @@ body {
   margin-left: -2px;
   padding-left: 2px;
 }
+
+/* ── Line-level Magic Move (components/ShikiMagicMove.vue). Lines are
+   blocks here (no newline text between them), each with its own gutter
+   number; surviving lines slide, new ones fade in after the slide, removed
+   ones fade out of the flow. ── */
+
+.dd-lines code {
+  position: relative;
+  display: block;
+}
+
+.slidev-code.dd-lines code > .line {
+  display: block;
+  white-space: pre;
+  transition: opacity 0.3s ease;
+}
+
+.dd-lines .dd-ln {
+  display: inline-block;
+  width: 2.2em;
+  margin-right: 1.4em;
+  text-align: right;
+  color: var(--dd-grey-dim);
+  user-select: none;
+}
+
+.dd-line-move {
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dd-line-enter-active {
+  transition: opacity 0.35s ease 0.35s, transform 0.35s ease 0.35s;
+}
+
+.dd-line-enter-from {
+  opacity: 0;
+  transform: translateX(-0.75rem);
+}
+
+.dd-line-leave-active {
+  position: absolute;
+  left: 0;
+  right: 0;
+  transition: opacity 0.25s ease;
+}
+
+.dd-line-leave-to {
+  opacity: 0;
+}
+
+/* "→" drawn as a Phosphor arrow (setup/transformers.ts, ArrowText.vue). */
+.dd-arrow {
+  display: inline-block;
+  vertical-align: -0.1em;
+  font-size: 0.9em;
+  color: var(--accent);
+}
+
+/* Room past both ends of a file, so its first and last lines can scroll
+   clear of the window's soft edges. */
+.dd-code-frame .dd-code-track {
+  padding: 0.6rem 0 1.4rem;
+}

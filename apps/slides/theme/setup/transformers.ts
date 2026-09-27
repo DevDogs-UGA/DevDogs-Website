@@ -18,6 +18,24 @@
 //
 // Missing submodules, unknown revisions, and ranges past the end of the file
 // fail the build rather than render stale or empty code.
+//
+// `{build}` in place of ranges builds the step up instead: a Magic Move that
+// starts from the file one commit earlier (the lines about to change lit)
+// and adds one chunk of the commit's diff per click, each new chunk lit as it
+// lands, then lights the whole step at once. Chunks are the diff's hunks,
+// with any hunk taller than the code window split at its blank lines. The
+// frames are generated from `git diff`, so they can't drift from the repo
+// either.
+//
+//   <<< web@step-3:components/Guestbook.tsx {build}
+//   <<< web@step-3:components/Guestbook.tsx {build:1,2|3|4-5}
+//   <<< web@step-4:components/Guestbook.tsx {build:[3,6-10]1,2|4,5|11}
+//
+// `1,2|3|4-5` groups chunks (numbered from 1 in file order) into frames,
+// e.g. to give the web and mobile columns the same number of clicks. A
+// `[…]` prefix names chunks already applied when the slide starts (built on
+// an earlier slide); chunks named nowhere never appear, so one commit can
+// span several slides.
 import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -42,6 +60,10 @@ const LANGS: Record<string, string> = {
 
 const RE_IMPORT = /^<<<[ \t]+(web|mobile)(?:@(\S+?))?:(\S+)(?:[ \t]+\{([^}]*)\})?(?:[ \t]+(\{.*\}))?[ \t]*$/gm
 
+// A chunk taller than this doesn't fit the code window beside the helper
+// banner, so it's split at its blank lines into pieces that do.
+const MAX_CHUNK = 10
+
 function revision(rev: string | undefined): string {
   if (!rev) return 'HEAD'
   const step = rev.match(/^step-(\d+)$/)
@@ -50,21 +72,31 @@ function revision(rev: string | undefined): string {
   return n === 0 ? 'HEAD^{/step 1,}^' : `HEAD^{/step ${n},}`
 }
 
-function show(repo: string, rev: string | undefined, file: string, where: string): string {
+function git(repo: string, args: string[], where: string): string {
   const dir = `${WORKSHOPS}${repo}`
   if (!existsSync(`${dir}/.git`)) {
     throw new Error(`${where}: workshops/${repo} is not checked out. Run \`git submodule update --init\` in Backstage.`)
   }
+  return execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+}
+
+function showAt(repo: string, gitRev: string, file: string, where: string, label = gitRev): string {
   try {
-    return execFileSync('git', ['-C', dir, 'show', `${revision(rev)}:${file}`], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    })
+    return git(repo, ['show', `${gitRev}:${file}`], where)
   }
   catch (e) {
+    if ((e as Error).message.includes('is not checked out')) throw e
     const stderr = (e as { stderr?: string }).stderr?.trim()
-    throw new Error(`${where}: can't read ${repo}@${rev ?? 'HEAD'}:${file} (${stderr || e})`)
+    throw new Error(`${where}: can't read ${repo}@${label}:${file} (${stderr || e})`)
   }
+}
+
+function show(repo: string, rev: string | undefined, file: string, where: string): string {
+  return showAt(repo, revision(rev), file, where, rev ?? 'HEAD')
+}
+
+function linesOf(text: string): string[] {
+  return text.replace(/\n+$/, '').split('\n')
 }
 
 function checkRanges(ranges: string, lines: number, where: string) {
@@ -75,24 +107,197 @@ function checkRanges(ranges: string, lines: number, where: string) {
   }
 }
 
+interface Hunk { oldStart: number, oldCount: number, newStart: number, newCount: number }
+
+function hunks(repo: string, rev: string | undefined, file: string, where: string): Hunk[] {
+  const r = revision(rev)
+  let out: string
+  try {
+    out = git(repo, ['diff', '--no-color', '-U0', `${r}^`, r, '--', file], where)
+  }
+  catch (e) {
+    throw new Error(`${where}: can't diff ${repo}@${rev ?? 'HEAD'}:${file} (${(e as { stderr?: string }).stderr?.trim() || e})`)
+  }
+  return Array.from(out.matchAll(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/gm), m => ({
+    oldStart: Number(m[1]),
+    oldCount: m[2] === undefined ? 1 : Number(m[2]),
+    newStart: Number(m[3]),
+    newCount: m[4] === undefined ? 1 : Number(m[4]),
+  }))
+}
+
+function split(all: Hunk[], after: string[]): Hunk[] {
+  return all.flatMap((h) => {
+    if (h.newCount <= MAX_CHUNK) return [h]
+    const pieces: { start: number, count: number }[] = []
+    let start = h.newStart
+    const end = h.newStart + h.newCount
+    while (start < end) {
+      let cut = Math.min(start + MAX_CHUNK, end)
+      if (cut < end) {
+        // Break after the last blank line that keeps the piece in size.
+        for (let k = cut - 1; k > start; k--) {
+          if (after[k - 1].trim() === '') {
+            cut = k + 1
+            break
+          }
+        }
+      }
+      pieces.push({ start, count: cut - start })
+      start = cut
+    }
+    // The first piece replaces the old lines; the rest insert after them.
+    const anchor = h.oldCount === 0 ? h.oldStart : h.oldStart + h.oldCount - 1
+    return pieces.map((piece, i) => i === 0
+      ? { ...h, newStart: piece.start, newCount: piece.count }
+      : { oldStart: anchor, oldCount: 0, newStart: piece.start, newCount: piece.count })
+  })
+}
+
+function numbers(spec: string): number[] {
+  return spec.split(',').map(p => p.trim()).filter(Boolean).flatMap((part) => {
+    const [a, b = a] = part.split('-').map(Number)
+    return Array.from({ length: b - a + 1 }, (_, i) => a + i)
+  })
+}
+
+function groupsOf(spec: string | undefined, count: number, where: string) {
+  if (!spec) return { done: [] as number[], groups: Array.from({ length: count }, (_, i) => [i + 1]) }
+  const m = spec.match(/^(?:\[([^\]]*)\])?(.*)$/)!
+  const done = numbers(m[1] ?? '')
+  const groups = m[2].split('|').map(numbers).filter(g => g.length)
+  const used = [...done, ...groups.flat()]
+  if (!groups.length || used.some(n => n < 1 || n > count) || new Set(used).size !== used.length) {
+    throw new Error(`${where}: build groups "${spec}" must name each of the ${count} chunks at most once`)
+  }
+  return { done, groups }
+}
+
+// The file with the chunks in `applied` taken from `after`, the rest from
+// `before`, plus the line numbers (in this frame) of `lit`'s new lines, or
+// of the old lines they replace for a chunk not yet applied.
+function frame(before: string[], after: string[], all: Hunk[], applied: Set<number>, lit: Set<number>) {
+  const lines: string[] = []
+  const hot: number[] = []
+  let oldPos = 1
+  all.forEach((h, i) => {
+    const n = i + 1
+    // Unchanged lines before the chunk. A pure insertion (oldCount 0) goes
+    // after line oldStart.
+    const copyTo = h.oldCount === 0 ? h.oldStart : h.oldStart - 1
+    while (oldPos <= copyTo) lines.push(before[oldPos++ - 1])
+    if (applied.has(n)) {
+      for (let k = 0; k < h.newCount; k++) {
+        lines.push(after[h.newStart - 1 + k])
+        if (lit.has(n)) hot.push(lines.length)
+      }
+      // A pure deletion leaves nothing to light: light the line it closed up on.
+      if (lit.has(n) && h.newCount === 0 && lines.length) hot.push(lines.length)
+    }
+    else {
+      for (let k = 0; k < h.oldCount; k++) {
+        lines.push(before[h.oldStart - 1 + k])
+        if (lit.has(n)) hot.push(lines.length)
+      }
+      // About to insert here: light the line it goes after.
+      if (lit.has(n) && h.oldCount === 0 && lines.length) hot.push(lines.length)
+    }
+    if (h.oldCount > 0) oldPos = h.oldStart + h.oldCount
+  })
+  while (oldPos <= before.length) lines.push(before[oldPos++ - 1])
+  return { lines, hot }
+}
+
+function rangeOf(lines: number[]): string {
+  const sorted = [...new Set(lines)].sort((a, b) => a - b)
+  const parts: string[] = []
+  for (let i = 0; i < sorted.length;) {
+    let j = i
+    while (j + 1 < sorted.length && sorted[j + 1] === sorted[j] + 1) j++
+    parts.push(sorted[i] === sorted[j] ? `${sorted[i]}` : `${sorted[i]}-${sorted[j]}`)
+    i = j + 1
+  }
+  return parts.join(',') || '*'
+}
+
+// For tooling (and picking groups): a commit's chunks for one file.
+export function chunks(repo: string, rev: string | undefined, file: string) {
+  const after = linesOf(show(repo, rev, file, file))
+  return split(hunks(repo, rev, file, file), after)
+    .map((h, i) => ({ n: i + 1, ...h, first: after[h.newStart - 1]?.trim() }))
+}
+
+function build(repo: string, rev: string | undefined, file: string, spec: string | undefined, lang: string, where: string): string {
+  const after = linesOf(show(repo, rev, file, where))
+  let before: string[] = []
+  try {
+    before = linesOf(showAt(repo, `${revision(rev)}^`, file, where))
+  }
+  catch {
+    // A file the commit creates starts empty.
+  }
+  const all = split(hunks(repo, rev, file, where), after)
+  if (!all.length) throw new Error(`${where}: the commit doesn't change ${file}`)
+  const { done, groups } = groupsOf(spec, all.length, where)
+  const applied = new Set<number>(done)
+  const frames = [frame(before, after, all, new Set(applied), new Set(groups[0]))]
+  const added = new Set<number>()
+  for (const group of groups) {
+    group.forEach((n) => {
+      added.add(n)
+      applied.add(n)
+    })
+    frames.push(frame(before, after, all, new Set(applied), new Set(group)))
+  }
+  // One last click lights the whole step at once: a recap to copy from, and
+  // what copy and the Discord button take (the final step's ranges).
+  const everything = frame(before, after, all, applied, added).hot
+  const blocks = frames.map((f, i) => {
+    const ranges = i === frames.length - 1 && groups.length > 1
+      ? `${rangeOf(f.hot)}|${rangeOf(everything)}`
+      : rangeOf(f.hot)
+    return `\`\`\`${lang} {${ranges}}{lines:true}\n${f.lines.join('\n')}\n\`\`\``
+  })
+  return `\`\`\`\`md magic-move {lines:true}\n${blocks.join('\n')}\n\`\`\`\``
+}
+
 export function expandWorkshopImports(ctx: MarkdownTransformContext) {
   const code = ctx.s.original
   for (const m of code.matchAll(RE_IMPORT)) {
     const [line, repo, rev, file, ranges = '', options = ''] = m
     const where = `${ctx.slide.source.filepath} (${line.trim()})`
     if (!REPOS.includes(repo as typeof REPOS[number])) continue
-    const content = show(repo, rev, file, where).replace(/\n+$/, '')
+    const lang = LANGS[file.split('.').pop() ?? ''] ?? ''
+    const buildSpec = ranges.match(/^build(?::(.+))?$/)
+    if (buildSpec) {
+      ctx.s.overwrite(m.index, m.index + line.length, build(repo, rev, file, buildSpec[1], lang, where))
+      continue
+    }
+    const content = linesOf(show(repo, rev, file, where)).join('\n')
     checkRanges(ranges, content.split('\n').length, where)
     if (/^`{3,}/m.test(content)) throw new Error(`${where}: the file contains a code fence`)
-    const lang = LANGS[file.split('.').pop() ?? ''] ?? ''
     const opts = options ? options.replace(/^\{/, '{lines:true,') : '{lines:true}'
-    const fence = `\`\`\`${lang} {${ranges || '*'}}${opts}\n${content}\n\`\`\``
-    ctx.s.overwrite(m.index, m.index + line.length, fence)
+    ctx.s.overwrite(m.index, m.index + line.length, `\`\`\`${lang} {${ranges || '*'}}${opts}\n${content}\n\`\`\``)
+  }
+}
+
+// "→" in slide text becomes a Phosphor arrow (never inside code: fenced
+// blocks, inline code, or HTML comments, i.e. presenter notes). Runs after
+// the imports expand, so their code is skipped too.
+export function phosphorArrows(ctx: MarkdownTransformContext) {
+  const code = ctx.s.original
+  const skip: [number, number][] = []
+  for (const m of code.matchAll(/^(`{3,})[^\n]*\n[\s\S]*?^\1[ \t]*$|`[^`\n]*`|<!--[\s\S]*?-->/gm)) {
+    skip.push([m.index, m.index + m[0].length])
+  }
+  for (const m of code.matchAll(/ ?→ ?/g)) {
+    if (skip.some(([a, b]) => m.index >= a && m.index < b)) continue
+    ctx.s.overwrite(m.index, m.index + m[0].length, ' <ph-arrow-right-bold class="dd-arrow" /> ')
   }
 }
 
 const setup: TransformersSetup = () => ({
-  pre: [expandWorkshopImports],
+  pre: [expandWorkshopImports, phosphorArrows],
 })
 
 export default setup

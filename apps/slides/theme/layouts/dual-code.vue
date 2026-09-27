@@ -57,16 +57,18 @@ import { accentHex } from '../accents'
 import Wash from '../components/Wash.vue'
 import Chrome from '../components/Chrome.vue'
 import SnippetScope from '../components/SnippetScope.vue'
-import { track, TRACK_ACCENT } from '../lib/track'
+import ArrowText from '../components/ArrowText.vue'
+import { forTrack, track, TRACK_ACCENT, type PerTrack } from '../lib/track'
 
 const props = withDefaults(defineProps<{
   accent?: string
   heading?: string
   leftLabel?: string
   rightLabel?: string
-  leftFile?: string
-  rightFile?: string
+  leftFile?: PerTrack
+  rightFile?: PerTrack
   trackSplit?: boolean
+  followTrack?: boolean
   chip?: string
   chrome?: boolean
   wash?: 'corner' | 'site' | 'template'
@@ -78,6 +80,7 @@ const props = withDefaults(defineProps<{
   leftFile: undefined,
   rightFile: undefined,
   trackSplit: true,
+  followTrack: false,
   chip: undefined,
   chrome: true,
   wash: undefined,
@@ -86,8 +89,14 @@ const props = withDefaults(defineProps<{
 // On a web/mobile split each column wears its stack's colour (TRACK_ACCENT),
 // and with a track chosen the whole slide (chip, wash) follows that column.
 // With both columns showing, the chip and wash keep the slide's `accent`.
+// `followTrack` does the same for a slide whose columns aren't the split
+// (e.g. terminal | editor for whichever track is showing).
 const slideAccent = computed(() =>
-  props.trackSplit && track.value ? TRACK_ACCENT[track.value] : props.accent)
+  (props.trackSplit || props.followTrack) && track.value ? TRACK_ACCENT[track.value] : props.accent)
+
+// A column's file can differ by track (lib/track.ts `PerTrack`).
+const leftFileText = computed(() => forTrack(props.leftFile))
+const rightFileText = computed(() => forTrack(props.rightFile))
 const style = computed(() => ({ '--accent': accentHex(slideAccent.value) }))
 const leftStyle = computed(() => props.trackSplit ? { '--accent': accentHex(TRACK_ACCENT.web) } : {})
 const rightStyle = computed(() => props.trackSplit ? { '--accent': accentHex(TRACK_ACCENT.mobile) } : {})
@@ -111,11 +120,11 @@ const showRight = computed(() => !props.trackSplit || track.value !== 'web')
       >
         <div v-if="showLeft" class="dd-window" :style="leftStyle">
           <div class="dd-window-titlebar">
-            <span class="dd-window-label">{{ leftLabel }}</span>
-            <span v-if="leftFile" class="dd-window-file">{{ leftFile }}</span>
+            <span class="dd-window-label"><ArrowText :text="leftLabel" /></span>
+            <span v-if="leftFileText" class="dd-window-file">{{ leftFileText }}</span>
           </div>
           <div class="dd-window-body dd-code-frame">
-            <SnippetScope :track="trackSplit ? 'web' : undefined" :file="leftFile">
+            <SnippetScope :track="trackSplit ? 'web' : undefined" :file="leftFileText">
               <slot />
             </SnippetScope>
           </div>
@@ -127,11 +136,11 @@ const showRight = computed(() => !props.trackSplit || track.value !== 'web')
           :style="rightStyle"
         >
           <div class="dd-window-titlebar">
-            <span class="dd-window-label">{{ rightLabel }}</span>
-            <span v-if="rightFile" class="dd-window-file">{{ rightFile }}</span>
+            <span class="dd-window-label"><ArrowText :text="rightLabel" /></span>
+            <span v-if="rightFileText" class="dd-window-file">{{ rightFileText }}</span>
           </div>
           <div class="dd-window-body dd-code-frame">
-            <SnippetScope :track="trackSplit ? 'mobile' : undefined" :file="rightFile">
+            <SnippetScope :track="trackSplit ? 'mobile' : undefined" :file="rightFileText">
               <slot name="right" />
             </SnippetScope>
           </div>

@@ -26,6 +26,7 @@ import { accentHex } from '../accents'
 import Wash from '../components/Wash.vue'
 import Chrome from '../components/Chrome.vue'
 import SnippetScope from '../components/SnippetScope.vue'
+import ArrowText from '../components/ArrowText.vue'
 
 const props = withDefaults(defineProps<{
   accent?: string
@@ -56,7 +57,7 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
       <h2 v-if="heading" class="dd-window-heading">{{ heading }}</h2>
       <div class="dd-window flex-1">
         <div class="dd-window-titlebar">
-          <span class="dd-window-label">{{ titlebar }}</span>
+          <span class="dd-window-label"><ArrowText :text="titlebar" /></span>
           <span v-if="file" class="dd-window-file">{{ file }}</span>
         </div>
         <div class="dd-window-body dd-code-frame">
