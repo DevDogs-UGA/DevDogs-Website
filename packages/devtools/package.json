@@ -25,7 +25,7 @@
     "env.ts"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/write-build-info.mjs",
     "cli": "node ./bin/devtools.mjs",
     "ci": "node ./dist/ci.js",
     "ci:env": "node ./bin/devtools-ci.mjs",

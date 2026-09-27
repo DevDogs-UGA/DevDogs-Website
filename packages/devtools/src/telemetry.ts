@@ -7,30 +7,50 @@
  *
  * ## Reporting is on by default
  *
- * Every other `*_SENTRY_DSN` in this workspace is optional-and-empty until
- * an org exists to receive it (see `@devdogsuga/telemetry`'s no-op-without-
- * DSN contract). `DEVTOOLS_SENTRY_DSN` follows the same contract — empty
- * means `buildSentryOptions` returns `undefined` and `Sentry.init` never
- * runs — but the DEFAULT here is reporting ON once a DSN exists, unlike a
- * feature a contributor opts into. `DEVTOOLS_TELEMETRY=0` is the one escape
- * hatch, checked before `Sentry.init` and before every capture call, so it
- * also works as a kill switch after init already ran (a long-lived `pnpm
- * devtools` menu session, for instance).
+ * Every other `*_SENTRY_DSN` in this org is optional-and-empty until
+ * configured (see `@devdogsuga/telemetry`'s no-op-without-DSN contract), and
+ * so is this one — empty means `buildSentryOptions` returns `undefined` and
+ * `Sentry.init` never runs — but the DEFAULT here is reporting ON once a DSN
+ * exists, unlike a feature a contributor opts into. `DEVTOOLS_TELEMETRY=0` is
+ * the one escape hatch, checked before `Sentry.init` and before every capture
+ * call, so it also works as a kill switch after init already ran (a
+ * long-lived `pnpm devtools` menu session, for instance).
  *
- * `PLACEHOLDER_DEVTOOLS_SENTRY_DSN` is committed empty on purpose: the
- * devtools Sentry project does not exist yet. Once it does, either replace
- * this constant with the real ingest DSN or — preferably — set
- * `DEVTOOLS_SENTRY_DSN` in the environment, which always wins over the
- * placeholder. Either way, an empty result here is indistinguishable from
- * "not configured": no init, no network call, no console spam, which is the
- * whole point of shipping this file before the org is onboarded.
+ * ## Where the DSN comes from
+ *
+ * Baked in at build time, not read from the consumer's environment: devtools
+ * runs on contributors' machines, where no `.env` could be relied on to carry
+ * it. `scripts/write-build-info.mjs` writes `dist/build-info.json` from the
+ * build's `DEVTOOLS_SENTRY_DSN`, which Backstage's `publish.yaml` sets from
+ * the repo's Actions variable of the same name. Every other build bakes ""
+ * and reports nothing. `DEVTOOLS_SENTRY_DSN` in the run-time environment still
+ * wins, for pointing a local build at a test project.
  */
+import { readFileSync } from "node:fs";
 import * as Sentry from "@sentry/node";
 import { buildSentryOptions } from "@devdogsuga/telemetry";
+import { ownVersion } from "./repo/preflight.js";
 
-// ⚠️ PLACEHOLDER — see this file's header. Leave empty until the devtools
-// Sentry project exists.
-const PLACEHOLDER_DEVTOOLS_SENTRY_DSN = "";
+/** The DSN baked into this build, or "" if there is none (a source run under
+ * tsx, or a build made without `DEVTOOLS_SENTRY_DSN`). */
+function bakedSentryDsn(): string {
+  try {
+    const info = JSON.parse(
+      readFileSync(new URL("./build-info.json", import.meta.url), "utf8"),
+    ) as { sentryDsn?: unknown };
+    return typeof info.sentryDsn === "string" ? info.sentryDsn : "";
+  } catch {
+    return "";
+  }
+}
+
+/** The run-time `DEVTOOLS_SENTRY_DSN` if set, else the baked one. */
+export function resolveDevtoolsDsn(
+  env: NodeJS.ProcessEnv,
+  baked: string,
+): string {
+  return env.DEVTOOLS_SENTRY_DSN || baked;
+}
 
 let initialized = false;
 
@@ -68,13 +88,13 @@ export function initDevtoolsTelemetry(command: string): void {
 
   if (!devtoolsTelemetryEnabled()) return;
 
-  const dsn =
-    process.env.DEVTOOLS_SENTRY_DSN || PLACEHOLDER_DEVTOOLS_SENTRY_DSN;
   const options = buildSentryOptions({
     service: "devtools",
     environment: devtoolsEnvironment(),
-    dsn,
-    release: process.env.SENTRY_RELEASE,
+    dsn: resolveDevtoolsDsn(process.env, bakedSentryDsn()),
+    // The published version, so an issue names the release it came from; a
+    // dlx run has no SENTRY_RELEASE of its own.
+    release: `devtools@${ownVersion()}`,
   });
   if (!options) return;
 

@@ -26,11 +26,11 @@ default, in both `pnpm devtools` and `devtools-ci`:
   naming the subcommand that threw (e.g. `db reset`, `deploy platform`).
   Nothing about a successful run is ever sent.
 - **When**: every run, unless `DEVTOOLS_TELEMETRY=0` is set (per-machine or
-  per-job opt-out) — or `DEVTOOLS_SENTRY_DSN` is unset, which is the state of
-  local development until an operator configures one and the state of every
-  environment until the devtools Sentry project exists at all (see the
-  committed placeholder in `src/telemetry.ts`). Either condition means no
-  `Sentry.init()` call happens: no network request, no console output.
+  per-job opt-out) — or the build has no DSN. The DSN is baked in when
+  Backstage's `publish.yaml` builds the package, from the repo's
+  `DEVTOOLS_SENTRY_DSN` Actions variable, so only published builds report;
+  local builds and `pnpm pack:local` tarballs don't. Either condition means
+  no `Sentry.init()` call happens: no network request, no console output.
 - **What's scrubbed**: this CLI touches local `.env` files, so every event
   passes through
   `@devdogsuga/telemetry`'s shared scrubbers before it leaves the process —
