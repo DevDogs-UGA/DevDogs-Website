@@ -10,7 +10,10 @@
  * hand-rolled reader is a dozen lines instead of a new dependency. An entry
  * shaped some other way (nested, a glob star anywhere but the last segment) is
  * read as "not a package this reader understands" rather than guessed at; a
- * line that is neither a list item nor blank ends the list, same as before.
+ * line that is neither a list item, a comment, nor blank ends the list — a
+ * commented explanation of why the next entry exists (this file has one, for
+ * `docs`) is common enough between two items that it does not get to end the
+ * list either.
  *
  * Separate from `gen/program.ts`'s own `findRepoRoot`/target discovery on
  * purpose: that module pulls in the TypeScript compiler, which the bare mode
@@ -56,12 +59,13 @@ function readGlobs(repoRoot: string): string[] {
     }
     if (!inPackages) continue;
 
-    const item = /^\s*-\s*["']?([^"'\s#]+)["']?\s*$/.exec(line);
+    const item = /^\s*-\s*["']?([^"'\s#]+)["']?\s*(#.*)?$/.exec(line);
     if (item) {
       globs.push(item[1]!);
       continue;
     }
-    if (line.trim() === "") continue;
+    const stripped = line.trim();
+    if (stripped === "" || stripped.startsWith("#")) continue; // blank or comment-only line — not the end of the list.
     break; // the next top-level key ends the list.
   }
 

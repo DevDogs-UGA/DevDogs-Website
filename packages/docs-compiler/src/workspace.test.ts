@@ -76,6 +76,19 @@ describe("workspace", () => {
     expect([...(docs?.scripts ?? [])]).toEqual(["build"]);
   });
 
+  it("does not let a comment line between list items end the packages list", () => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), "docs-build-workspace-"));
+    write(
+      "pnpm-workspace.yaml",
+      'packages:\n  - apps/*\n  # a bare entry, not a glob\n  - docs\n\nshellEmulator: true\n',
+    );
+    write("apps/foo/package.json", JSON.stringify({ name: "foo" }));
+    write("docs/package.json", JSON.stringify({ name: "@devdogsuga/docs" }));
+
+    const packages = discoverWorkspacePackages(root);
+    expect(packages.map((p) => p.name).sort()).toEqual(["@devdogsuga/docs", "foo"]);
+  });
+
   it("reads the workspace root's own scripts", () => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "docs-build-workspace-"));
     write("pnpm-workspace.yaml", "packages:\n  - \"apps/*\"\n");
