@@ -72,6 +72,7 @@ describe("devtools contract tests", () => {
   let packDir: string;
   let fixtureDir: string;
   let devtoolsBin: string;
+  let dlxBin: string;
 
   beforeAll(() => {
     requireBuilt(DEVTOOLS_ROOT, "launch.js");
@@ -135,7 +136,46 @@ describe("devtools contract tests", () => {
     if (!existsSync(devtoolsBin)) {
       throw new Error(`${devtoolsBin} was not created by the fixture install.`);
     }
-  }, INSTALL_TIMEOUT_MS + 2 * PACK_TIMEOUT_MS);
+
+    // A second install of the same tarball OUTSIDE the fixture, the shape
+    // `pnpm dlx` gives a real run: devtools alone in its own directory, with
+    // no `@devdogsuga/env` installed next to it (an optional peer nothing
+    // here depends on). The fixture install above cannot catch a bare peer
+    // import from devtools' own files, because the fixture supplies the peer.
+    const dlxDir = join(tmpRoot, "dlx");
+    mkdirSync(dlxDir);
+    writeFileSync(
+      join(dlxDir, "package.json"),
+      JSON.stringify({
+        name: "dlx",
+        private: true,
+        dependencies: { "@devdogsuga/devtools": `file:${devtoolsTgz}` },
+      }),
+    );
+    writeFileSync(
+      join(dlxDir, "pnpm-workspace.yaml"),
+      `overrides:\n` +
+        `  "@devdogsuga/telemetry": "file:${telemetryTgz}"\n` +
+        `allowBuilds:\n` +
+        `  core-js: false\n` +
+        `  esbuild: true\n`,
+    );
+    const dlxInstall = spawnSync("pnpm", ["install", "--no-frozen-lockfile"], {
+      cwd: dlxDir,
+      encoding: "utf8",
+      timeout: INSTALL_TIMEOUT_MS,
+    });
+    if (dlxInstall.status !== 0) {
+      throw new Error(
+        `pnpm install in the dlx directory failed (status ${dlxInstall.status}):\n` +
+          `${dlxInstall.stdout}\n${dlxInstall.stderr}`,
+      );
+    }
+    if (existsSync(join(dlxDir, "node_modules", "@devdogsuga", "env"))) {
+      throw new Error("The dlx directory installed @devdogsuga/env, so it no longer models pnpm dlx.");
+    }
+    dlxBin = join(dlxDir, "node_modules", ".bin", "devtools");
+  }, 2 * INSTALL_TIMEOUT_MS + 2 * PACK_TIMEOUT_MS);
 
   afterAll(() => {
     if (tmpRoot) rmSync(tmpRoot, { recursive: true, force: true });
@@ -145,10 +185,10 @@ describe("devtools contract tests", () => {
    * it exits. */
   function run(
     args: string[],
-    options?: { cwd?: string; env?: Record<string, string> },
+    options?: { cwd?: string; env?: Record<string, string>; bin?: string },
   ): Promise<{ status: number | null; stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
-      const child = spawn(devtoolsBin, args, {
+      const child = spawn(options?.bin ?? devtoolsBin, args, {
         cwd: options?.cwd ?? fixtureDir,
         env: {
           ...process.env,
@@ -213,6 +253,22 @@ describe("devtools contract tests", () => {
     // populated from a real dynamic import, not a mock.
     expect(written).toContain("DEMO_API_KEY");
     expect(written).toContain("DEMO_PUBLIC_URL");
+  });
+
+  it("env example loads devtools' own manifest from a dlx-shaped install", async () => {
+    // Regression: devtools' `env.ts` imports `@devdogsuga/env` by bare
+    // specifier, which does not resolve next to a dlx copy; every env
+    // command failed with "The env manifest at .../env.ts failed to import".
+    const { status, stdout, stderr } = await run(["env", "example", "--tier", "development"], {
+      bin: dlxBin,
+    });
+    expect(stderr).not.toContain("failed to import");
+    expect(status).toBe(0);
+    expect(stdout.toLowerCase()).toContain("wrote");
+    const written = readFileSync(join(fixtureDir, ".env.example"), "utf8");
+    expect(written).toContain("DEMO_API_KEY");
+    // Declared only in devtools' own manifest.
+    expect(written).toContain("CLOUDFLARE_API_TOKEN");
   });
 
   it("root discovery works from a nested subdirectory", async () => {

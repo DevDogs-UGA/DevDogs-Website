@@ -19,6 +19,11 @@ import { findDependent, resolveFromRepo } from "./resolve.js";
 
 const moduleCache = new Map<string, Promise<unknown>>();
 
+/** The file URL each peer resolved to through the target repo, set only on
+ *  that path (not on either plain bare-specifier fallback). See
+ *  `repoPeerUrl()`. */
+const resolvedUrls = new Map<string, string>();
+
 /**
  * Dynamically imports `specifier` as the repo would resolve it, memoized so
  * repeated calls in one process return the SAME module instance (required
@@ -62,7 +67,9 @@ function loadPeer<T>(specifier: string): Promise<T> {
       );
     }
     const { resolvedPath } = resolveFromRepo(repoRoot, resolutionBase, specifier);
-    return import(pathToFileURL(resolvedPath).href) as Promise<T>;
+    const url = pathToFileURL(resolvedPath).href;
+    resolvedUrls.set(specifier, url);
+    return import(url) as Promise<T>;
   })();
 
   moduleCache.set(specifier, promise);
@@ -72,6 +79,23 @@ function loadPeer<T>(specifier: string): Promise<T> {
 /** Test-only: clears the memoized peer modules so a test can re-resolve with a fresh mock. */
 export function resetPeerCacheForTests(): void {
   moduleCache.clear();
+  resolvedUrls.clear();
+}
+
+/**
+ * The file URL `specifier` was loaded from through the target repo, or
+ * undefined if it has not been loaded yet or came from a plain bare-specifier
+ * `import()` (the test-suite and not-in-a-repo fallbacks above).
+ *
+ * For code devtools imports that itself names a peer by bare specifier --
+ * today only devtools' own `env.ts` manifest. From an installed copy that
+ * specifier cannot resolve at all (an optional peer is never installed next
+ * to devtools under `pnpm dlx`), and even where it can, the only copy that
+ * keeps module identity is this one. `repo/peer-redirect.ts` uses it to
+ * point the import here.
+ */
+export function repoPeerUrl(specifier: string): string | undefined {
+  return resolvedUrls.get(specifier);
 }
 
 // ── @devdogsuga/env ─────────────────────────────────────────────────────────

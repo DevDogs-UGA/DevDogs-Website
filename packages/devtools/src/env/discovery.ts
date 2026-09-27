@@ -37,10 +37,11 @@
  * its `declare()`/`define()` calls landing in the SAME `@devdogsuga/env`
  * registry instance the target repo's manifests populate (module identity —
  * see `repo/peers.ts`'s header and the devtools-dlx prototype's
- * FINDINGS.md experiment 3): both resolve the `@devdogsuga/env` bare
- * specifier through pnpm's single physical store location for that one
- * installed version, not through devtools' own bundled copy (it ships
- * none — `@devdogsuga/env` is only ever an optional peer).
+ * FINDINGS.md experiment 3). Its bare `@devdogsuga/env` import is
+ * redirected to the copy `loadEnv()` resolved through the repo, because
+ * from a `pnpm dlx` copy the specifier does not resolve at all: devtools
+ * ships no copy of its own (`@devdogsuga/env` is only ever an optional
+ * peer), and nothing installs one next to it. See `repo/peer-redirect.ts`.
  *
  * Most workspace packages declare nothing, so "no env.ts found" means
  * not-a-manifest rather than an error.
@@ -58,8 +59,9 @@
  */
 import { existsSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { getEnvSync, loadEnv } from "../repo/peers.js";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { redirectPeer } from "../repo/peer-redirect.js";
+import { getEnvSync, loadEnv, repoPeerUrl } from "../repo/peers.js";
 import { findRepoRoot } from "../repo/root.js";
 import { importRepoTs } from "../repo/tsx-loader.js";
 
@@ -111,6 +113,18 @@ async function importManifests(): Promise<void> {
   // see `repo/peers.ts`'s header), and `assertRegistryLoaded()` /
   // `gh/environments.ts`'s getters read it back synchronously afterward.
   await loadEnv();
+
+  // devtools' own manifest imports `@devdogsuga/env` by bare specifier, which
+  // does not resolve at all from a `pnpm dlx` copy. Point it at the copy
+  // `loadEnv()` just resolved through the repo. See `repo/peer-redirect.ts`.
+  const envUrl = repoPeerUrl("@devdogsuga/env");
+  if (envUrl) {
+    redirectPeer({
+      parentURL: pathToFileURL(ownManifestPath()).href,
+      specifier: "@devdogsuga/env",
+      url: envUrl,
+    });
+  }
 
   // The Next apps' manifests run `createEnv` at import time. Without this flag
   // they would validate the AMBIENT environment, a devtools process rather than
