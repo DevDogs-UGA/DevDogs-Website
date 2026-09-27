@@ -13,18 +13,7 @@
  * either of those.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { stripPreflightFlags, stripTierFlag } from "./launch.js";
-
-// `launch()` now runs preflight unconditionally on every invocation (see
-// `repo/preflight.ts`) — mocked here so this file's `launch(...)` calls
-// stay hermetic (no real network fetch) and independent of preflight's own
-// behavior, which has its own dedicated coverage in `repo/preflight.test.ts`.
-const runPreflight = vi.fn(async () => ({ action: "up-to-date" as const, source: "cache" as const }));
-vi.mock("./repo/preflight.js", () => ({
-  runPreflight: (...args: unknown[]) => runPreflight(...args),
-  ownVersion: () => "0.0.0-dev",
-  isDevMode: () => true,
-}));
+import { stripTierFlag } from "./launch.js";
 
 const resolveSessionTier = vi.fn();
 const enterEnvironment = vi.fn(async (..._args: unknown[]) => ({
@@ -115,50 +104,6 @@ describe("stripTierFlag", () => {
     expect(stripTierFlag(["cf", "preview", "--app", "platform"])).toEqual({
       explicit: undefined,
       rest: ["cf", "preview", "--app", "platform"],
-    });
-  });
-});
-
-describe("stripPreflightFlags", () => {
-  const savedSkipEnv = process.env.DEVTOOLS_SKIP_PREFLIGHT;
-  afterEach(() => {
-    if (savedSkipEnv === undefined) delete process.env.DEVTOOLS_SKIP_PREFLIGHT;
-    else process.env.DEVTOOLS_SKIP_PREFLIGHT = savedSkipEnv;
-  });
-
-  it("leaves ordinary argv untouched", () => {
-    delete process.env.DEVTOOLS_SKIP_PREFLIGHT;
-    expect(stripPreflightFlags(["db", "status"])).toEqual({
-      skipPreflight: false,
-      refresh: false,
-      rest: ["db", "status"],
-    });
-  });
-
-  it("strips --skip-preflight from anywhere and sets the flag", () => {
-    delete process.env.DEVTOOLS_SKIP_PREFLIGHT;
-    expect(stripPreflightFlags(["db", "--skip-preflight", "status"])).toEqual({
-      skipPreflight: true,
-      refresh: false,
-      rest: ["db", "status"],
-    });
-  });
-
-  it("strips --refresh and sets the flag", () => {
-    delete process.env.DEVTOOLS_SKIP_PREFLIGHT;
-    expect(stripPreflightFlags(["--refresh", "cron", "list"])).toEqual({
-      skipPreflight: false,
-      refresh: true,
-      rest: ["cron", "list"],
-    });
-  });
-
-  it("DEVTOOLS_SKIP_PREFLIGHT=1 sets skipPreflight without a flag", () => {
-    process.env.DEVTOOLS_SKIP_PREFLIGHT = "1";
-    expect(stripPreflightFlags(["db", "status"])).toEqual({
-      skipPreflight: true,
-      refresh: false,
-      rest: ["db", "status"],
     });
   });
 });

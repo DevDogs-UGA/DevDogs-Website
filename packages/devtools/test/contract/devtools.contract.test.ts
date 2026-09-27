@@ -25,37 +25,10 @@
  */
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync, cpSync } from "node:fs";
-import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-
-/** Serves `json` at `/minimums.json` on an ephemeral local port for the
- * duration of `fn`, since `fetch()` has no `file://` support to fall back
- * on (confirmed: Node's built-in fetch rejects it outright) — this is the
- * one real HTTP round-trip in the whole suite, entirely loopback. */
-async function withManifestServer<T>(
-  json: unknown,
-  fn: (url: string) => Promise<T> | T,
-): Promise<T> {
-  const server: Server = createServer((_req, res) => {
-    res.setHeader("content-type", "application/json");
-    res.end(JSON.stringify(json));
-  });
-  const url = await new Promise<string>((resolve) => {
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      const port = typeof address === "object" && address ? address.port : 0;
-      resolve(`http://127.0.0.1:${port}/minimums.json`);
-    });
-  });
-  try {
-    return await fn(url);
-  } finally {
-    server.close();
-  }
-}
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DEVTOOLS_ROOT = join(HERE, "..", "..");
@@ -168,18 +141,8 @@ describe("devtools contract tests", () => {
     if (tmpRoot) rmSync(tmpRoot, { recursive: true, force: true });
   });
 
-  /**
-   * Runs the real installed `devtools` bin as a subprocess. Deliberately
-   * ASYNC (`spawn`, not `spawnSync`): the preflight tests below run a real
-   * loopback HTTP server IN THIS SAME TEST PROCESS
-   * (`withManifestServer`) that the child needs to reach — `spawnSync`
-   * blocks this process's entire event loop until the child exits, which
-   * would prevent that in-process server from ever accepting the child's
-   * connection. Confirmed the hard way: with `spawnSync`, every preflight
-   * fetch against the in-process server hung for the full 1.5s timeout and
-   * failed open, even though the identical server answered a totally
-   * separate process instantly.
-   */
+  /** Runs the real installed `devtools` bin as a subprocess, returning once
+   * it exits. */
   function run(
     args: string[],
     options?: { cwd?: string; env?: Record<string, string> },
@@ -189,7 +152,6 @@ describe("devtools contract tests", () => {
         cwd: options?.cwd ?? fixtureDir,
         env: {
           ...process.env,
-          DEVTOOLS_SKIP_PREFLIGHT: "1",
           ...options?.env,
         },
       });
@@ -209,50 +171,6 @@ describe("devtools contract tests", () => {
         clearTimeout(timer);
         resolve({ status, stdout, stderr });
       });
-    });
-  }
-
-  /**
-   * Like `run`, but resolves (killing the child) the moment its
-   * accumulated stderr contains `marker`, instead of waiting for the
-   * process to exit on its own — for the one case (the re-exec decision
-   * below) where the child's own eventual exit is both doomed and slow.
-   */
-  function runUntilStderrContains(
-    args: string[],
-    env: Record<string, string>,
-    marker: string,
-  ): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const child = spawn(devtoolsBin, args, {
-        cwd: fixtureDir,
-        env: { ...process.env, DEVTOOLS_SKIP_PREFLIGHT: "1", ...env },
-      });
-      let stderr = "";
-      let settled = false;
-      const finish = (fn: () => void) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        child.kill("SIGKILL");
-        fn();
-      };
-      child.stderr.on("data", (chunk: Buffer) => {
-        stderr += chunk.toString();
-        if (stderr.includes(marker)) finish(() => resolve(stderr));
-      });
-      const timer = setTimeout(() => {
-        finish(() =>
-          reject(
-            new Error(
-              `"${marker}" never appeared in stderr within ${RUN_TIMEOUT_MS}ms. ` +
-                `stderr so far:\n${stderr}`,
-            ),
-          ),
-        );
-      }, RUN_TIMEOUT_MS);
-      child.on("error", (err) => finish(() => reject(err)));
-      child.on("close", () => finish(() => resolve(stderr)));
     });
   }
 
@@ -312,77 +230,5 @@ describe("devtools contract tests", () => {
     });
     expect(status).not.toBe(0);
     expect(stderr).toContain("run this from inside a DevDogsUGA clone");
-  });
-
-  describe("preflight", () => {
-    it("fails open against a dead manifest URL and still runs the command", async () => {
-      const { status, stdout } = await run(["cron", "list", "--tier", "development"], {
-        env: {
-          DEVTOOLS_MINIMUMS_URL: "http://127.0.0.1:1/nope.json",
-          DEVTOOLS_SKIP_PREFLIGHT: "", // this block tests preflight itself
-        },
-      });
-      expect(status).toBe(0);
-      expect(stdout).toContain("demo-app");
-      // Fails open silently-or-one-dim-line, per repo/preflight.ts's header
-      // — either is acceptable; the real assertion is that the command
-      // still ran to completion despite the dead URL.
-    });
-
-    it("nudges (without refusing) when behind latest but at/above minimum", async () => {
-      await withManifestServer(
-        { devtools: { latest: "99.0.0", minimum: "0.0.0" } },
-        async (url) => {
-          const { status, stderr } = await run(["cron", "list", "--tier", "development"], {
-            env: { DEVTOOLS_MINIMUMS_URL: url, DEVTOOLS_SKIP_PREFLIGHT: "" },
-          });
-          expect(status).toBe(0);
-          expect(stderr).toContain("newer version");
-        },
-      );
-    });
-
-    it("decides to re-exec when below minimum (spawn pointed at an unreachable registry, so the decision is observable without waiting for a real dlx round-trip to fail)", async () => {
-      await withManifestServer(
-        { devtools: { latest: "99.0.0", minimum: "99.0.0" } },
-        async (url) => {
-          // `pnpm dlx --config.registry=<dead port>` does not fail fast —
-          // confirmed it hangs 40s+ retrying rather than an immediate
-          // ECONNREFUSED, which is far too slow for a test to wait out. So
-          // this reads stderr as it streams and resolves (killing the
-          // child) the moment the RE-EXEC DECISION line appears, rather
-          // than waiting for the doomed child `pnpm dlx` call to actually
-          // finish. The unit suite (`src/repo/preflight.test.ts`) covers
-          // the decision logic itself with an injected `reexec` stub; this
-          // is the subprocess-level confirmation that `launch()` really
-          // wires it up and attempts the real spawn.
-          const stderr = await runUntilStderrContains(
-            ["cron", "list", "--tier", "development"],
-            {
-              DEVTOOLS_MINIMUMS_URL: url,
-              DEVTOOLS_SKIP_PREFLIGHT: "",
-              DEVTOOLS_REGISTRY: "http://127.0.0.1:1",
-            },
-            "relaunching as 99.0.0",
-          );
-          expect(stderr).toContain("below the minimum supported version");
-          expect(stderr).toContain("relaunching as 99.0.0");
-        },
-      );
-    });
-
-    it("--skip-preflight bypasses the check entirely, even below minimum", async () => {
-      await withManifestServer(
-        { devtools: { latest: "99.0.0", minimum: "99.0.0" } },
-        async (url) => {
-          const { status, stdout } = await run(
-            ["cron", "list", "--tier", "development", "--skip-preflight"],
-            { env: { DEVTOOLS_MINIMUMS_URL: url, DEVTOOLS_SKIP_PREFLIGHT: "" } },
-          );
-          expect(status).toBe(0);
-          expect(stdout).toContain("demo-app");
-        },
-      );
-    });
   });
 });

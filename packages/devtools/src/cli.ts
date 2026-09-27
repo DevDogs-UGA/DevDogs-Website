@@ -104,7 +104,7 @@ import { runGithubSettings } from "./gh/settings/commands.js";
 import { runWorkflows } from "./workflows/commands.js";
 import { runCf } from "./cf/commands.js";
 import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
-import { ownVersion } from "./repo/preflight.js";
+import { ownVersion } from "./version.js";
 
 const MODERATION_COMMANDS = ["moderation", "grant-root"] as const;
 type ModerationCommand = (typeof MODERATION_COMMANDS)[number];
@@ -1219,9 +1219,7 @@ export async function main(argv: string[]): Promise<void> {
   }
 
   // Clean stdout, same reasoning as `completions` above: mostly useful for
-  // confirming which build actually ran, since a dlx self-refresh (see
-  // `repo/preflight.ts`) is otherwise invisible short of reading stderr's
-  // one-line nudge/refresh notice.
+  // confirming which build actually ran.
   if (argv[0] === "version") {
     process.stdout.write(`${ownVersion()}\n`);
     return;

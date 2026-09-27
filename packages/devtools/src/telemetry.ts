@@ -29,7 +29,7 @@
 import { readFileSync } from "node:fs";
 import * as Sentry from "@sentry/node";
 import { buildSentryOptions } from "@devdogsuga/telemetry";
-import { ownVersion } from "./repo/preflight.js";
+import { ownVersion } from "./version.js";
 
 /** The DSN baked into this build, or "" if there is none (a source run under
  * tsx, or a build made without `DEVTOOLS_SENTRY_DSN`). */

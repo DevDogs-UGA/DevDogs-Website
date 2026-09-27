@@ -285,6 +285,17 @@ are done.
         (§9) has no automated check that a deploy workflow's pin stays in
         sync with what's published — a manual/documentation concern for
         now.
+      - **2026-09-27: preflight + self-refresh removed.** Its premise — a
+        bare `pnpm dlx` serves a stale cached copy — no longer holds on
+        pnpm 11.8 (the pinned `packageManager`): dlx resolves the `latest`
+        dist-tag on every run and caches per resolved version (verified:
+        `0.1.8` published 16:49 was picked up by a default-settings run at
+        16:56 despite `0.1.7` cached at 14:00), and `@devdogsuga/*` is
+        excluded from `minimumReleaseAge`. `ownVersion` moved to
+        `src/version.ts`; everything else described above (`repo/
+        preflight.ts`, `--skip-preflight`/`--refresh`,
+        `DEVTOOLS_MINIMUMS_URL`/`DEVTOOLS_REEXEC_GUARD`, the contract
+        suite's four preflight cases) is gone.
 - [ ] Stage B: re-home the 11 tests `packages/devtools/MOVED-TESTS.md`
       lists, once devtools is consumed as a package inside DevDogsUGA.
 - [x] `packages/db` now has mocked unit tests for the client/server

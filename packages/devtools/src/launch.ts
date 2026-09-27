@@ -37,35 +37,7 @@ import type { TierChoice } from "@devdogsuga/env/session";
 import { findCommand } from "./commands.js";
 import { discoverRepoRoot, findRepoRoot, RepoNotFoundError } from "./repo/root.js";
 import { loadEnvLoad, loadEnvSession } from "./repo/peers.js";
-import { isDevMode, ownVersion, runPreflight } from "./repo/preflight.js";
 import { errorMessage, unwrap } from "./ui.js";
-
-/**
- * Pulls the two preflight-only boolean flags out of `argv`, wherever they
- * sit, the same way `stripTierFlag` does for `--tier` below. Neither takes
- * a value. `DEVTOOLS_SKIP_PREFLIGHT=1` is the env-var spelling of
- * `--skip-preflight`, for shells/CI wrappers that would rather set an env
- * var once than remember a flag on every invocation.
- */
-export function stripPreflightFlags(argv: readonly string[]): {
-  skipPreflight: boolean;
-  refresh: boolean;
-  rest: string[];
-} {
-  const rest: string[] = [];
-  let skipPreflight = process.env.DEVTOOLS_SKIP_PREFLIGHT === "1";
-  let refresh = false;
-  for (const arg of argv) {
-    if (arg === "--skip-preflight") {
-      skipPreflight = true;
-    } else if (arg === "--refresh") {
-      refresh = true;
-    } else {
-      rest.push(arg);
-    }
-  }
-  return { skipPreflight, refresh, rest };
-}
 
 /**
  * Pulls a global `--tier <t>` out of `argv`, wherever it sits, leaving every
@@ -99,8 +71,8 @@ export function stripTierFlag(argv: readonly string[]): {
  * Whether the command `rest` dispatches to is declared `envFree` in
  * `commands.ts`'s catalog — the leading run of non-flag tokens is the
  * command path (`["github", "rulesets"]` out of `["github", "rulesets",
- * "--apply"]`), the same convention `stripTierFlag`/`stripPreflightFlags`
- * already use for pulling a flag out of argv wherever it sits.
+ * "--apply"]`), the same convention `stripTierFlag` already uses for
+ * pulling a flag out of argv wherever it sits.
  *
  * Catalog-driven rather than a second hardcoded name list: `setup` and
  * `completions` below stay their own explicit branch (each skips tier
@@ -154,27 +126,7 @@ async function dispatch(argv: string[]): Promise<void> {
  * nothing this function could return that would mean anything.
  */
 export async function launch(argv: readonly string[]): Promise<void> {
-  // Preflight runs on EVERY command of this bin, including `--help` — see
-  // `repo/preflight.ts`'s header. It never requires a repo (the manifest
-  // fetch/cache/self-refresh logic is entirely repo-independent), so it
-  // runs before `findRepoRoot()` is anywhere near the picture, unlike tier
-  // resolution below. `devtools-ci` (`launch-ci.ts`) deliberately does not
-  // call this at all — CI pins an exact version on purpose.
-  const { skipPreflight, refresh, rest: afterPreflight } = stripPreflightFlags(argv);
-  await runPreflight({
-    currentVersion: ownVersion(),
-    argv: afterPreflight,
-    skipPreflight,
-    refresh,
-    devMode: isDevMode(),
-    // Set only for testing against a local Verdaccio (see the end-to-end
-    // self-refresh validation in CUTOVER.md); unset in production, where a
-    // bare `pnpm dlx @devdogsuga/devtools@<version>` resolves against the
-    // default npm registry with no flag needed at all.
-    registry: process.env.DEVTOOLS_REGISTRY,
-  });
-
-  const { explicit, rest } = stripTierFlag(afterPreflight);
+  const { explicit, rest } = stripTierFlag(argv);
 
   // `--help`/`-h` bypasses tier resolution entirely, BEFORE it can refuse.
   // `cli.ts`'s own `main()` already answers these with no env in play (see
