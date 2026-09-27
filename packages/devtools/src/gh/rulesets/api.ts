@@ -78,7 +78,7 @@ export async function getRuleset(r: Repo, id: number): Promise<LiveRuleset> {
  * either: stdin needs no cleanup and cannot be left behind by a crash.
  */
 async function writeJson(
-  method: "POST" | "PATCH" | "DELETE",
+  method: "POST" | "PUT" | "DELETE",
   apiPath: string,
   body: unknown,
 ): Promise<unknown> {
@@ -115,7 +115,9 @@ export async function updateRuleset(
   id: number,
   desired: DesiredRuleset,
 ): Promise<LiveRuleset> {
-  return writeJson("PATCH", path(r, `/${id}`), desired) as Promise<LiveRuleset>;
+  // PUT, not PATCH: GitHub's rulesets API has no PATCH route and answers one
+  // with a 404, which reads like a missing ruleset rather than a wrong verb.
+  return writeJson("PUT", path(r, `/${id}`), desired) as Promise<LiveRuleset>;
 }
 
 export async function deleteRuleset(r: Repo, id: number): Promise<void> {

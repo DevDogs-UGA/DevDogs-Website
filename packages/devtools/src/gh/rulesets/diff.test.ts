@@ -161,6 +161,67 @@ describe("idempotence", () => {
     expect(planHasChanges(plan)).toBe(false);
   });
 
+  it("matches GitHub's own copy of a ruleset it just created", () => {
+    // `production` exactly as GitHub returned it on 2026-09-27, moments after
+    // this reconciler created it (team id swapped for the fixture's): the
+    // `update` rule's default parameter dropped, three `pull_request`
+    // parameters added, and its own key order throughout.
+    const productionDesired = desired.find((d) => d.name === "production")!;
+    const live: LiveRuleset = {
+      id: 1,
+      name: "production",
+      target: "branch",
+      enforcement: "active",
+      conditions: { ref_name: { exclude: [], include: ["refs/heads/production"] } },
+      bypass_actors: [
+        { actor_id: actors.devopsTeamId, actor_type: "Team", bypass_mode: "pull_request" },
+      ],
+      rules: [
+        { type: "deletion" },
+        { type: "non_fast_forward" },
+        { type: "update" },
+        {
+          type: "pull_request",
+          parameters: {
+            allowed_merge_methods: ["merge"],
+            dismiss_stale_reviews_on_push: false,
+            dismissal_restriction: { allowed_actors: [], enabled: false },
+            require_code_owner_review: true,
+            require_extra_approval_for_unattributed_changes: true,
+            require_last_push_approval: false,
+            required_approving_review_count: 1,
+            required_review_thread_resolution: false,
+            required_reviewers: [],
+          },
+        } as unknown as LiveRuleset["rules"][number],
+      ],
+    };
+    const summaries: LiveRulesetSummary[] = [{ id: 1, name: "production", target: "branch" }];
+
+    const plan = planRulesets(summaries, new Map([[1, live]]), actors, [productionDesired]);
+
+    expect(plan.updates).toEqual([]);
+    expect(plan.noops).toEqual([{ name: "production", id: 1 }]);
+  });
+
+  it("still plans an update when a managed pull_request parameter differs", () => {
+    const mainDesired = desired.find((d) => d.name === "main")!;
+    const live: LiveRuleset = {
+      id: 1,
+      ...mainDesired,
+      rules: mainDesired.rules.map((rule) =>
+        rule.type === "pull_request"
+          ? { ...rule, parameters: { ...rule.parameters, allowed_merge_methods: ["merge"] } }
+          : rule,
+      ),
+    };
+    const summaries: LiveRulesetSummary[] = [{ id: 1, name: "main", target: "branch" }];
+
+    const plan = planRulesets(summaries, new Map([[1, live]]), actors, [mainDesired]);
+
+    expect(plan.updates).toHaveLength(1);
+  });
+
   it("is insensitive to rule and bypass-actor ORDER on the live side", () => {
     const mainDesired = desired.find((d) => d.name === "main")!;
     const reordered: LiveRuleset = {

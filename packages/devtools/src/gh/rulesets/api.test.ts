@@ -150,7 +150,7 @@ describe("writes", () => {
     expect(result).toEqual({ id: 1 });
   });
 
-  it("updates a ruleset by PATCHing /rulesets/{id}", async () => {
+  it("updates a ruleset by PUTting /rulesets/{id}", async () => {
     fake.state.spawnExit = { code: 0, stdout: '{"id":42}', stderr: "" };
     await updateRuleset(repo, 42, desired);
     const call = fake.state.spawnCalls.at(-1)!;
@@ -158,7 +158,7 @@ describe("writes", () => {
       "api",
       "repos/DevDogsUGA/DevDogsUGA/rulesets/42",
       "-X",
-      "PATCH",
+      "PUT",
       "--input",
       "-",
     ]);

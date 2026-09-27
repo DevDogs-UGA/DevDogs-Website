@@ -66,9 +66,22 @@ export interface RulesetPlan {
 }
 
 /**
- * Fills in defaults GitHub omits on the wire so an absent field and an
- * explicit default-valued one compare equal — see `UpdateRule.parameters`'s
- * doc in `types.ts`.
+ * Reduces a rule to the fields this reconciler manages, in a fixed key order,
+ * so a live rule and its desired twin compare equal whenever they protect
+ * the same way.
+ *
+ * Two ways GitHub's copy differs from what was sent, both seen live on
+ * 2026-09-27 right after creating `production`:
+ *
+ * - it omits parameters that hold their default, so `update` comes back with
+ *   no `update_allows_fetch_and_merge` (see `UpdateRule.parameters`' doc in
+ *   `types.ts`);
+ * - it adds `pull_request` parameters `desired.ts` never sets
+ *   (`dismissal_restriction`, `require_extra_approval_for_unattributed_changes`,
+ *   `required_reviewers`), in its own key order.
+ *
+ * Without this, every ruleset with a `pull_request` rule planned an update on
+ * every run, so the reconciler never settled.
  */
 function canonicalizeRule(rule: Rule): Rule {
   if (rule.type === "update") {
@@ -80,7 +93,21 @@ function canonicalizeRule(rule: Rule): Rule {
       },
     };
   }
-  return rule;
+  if (rule.type === "pull_request") {
+    const p = rule.parameters;
+    return {
+      type: "pull_request",
+      parameters: {
+        allowed_merge_methods: [...p.allowed_merge_methods].sort(),
+        dismiss_stale_reviews_on_push: p.dismiss_stale_reviews_on_push,
+        require_code_owner_review: p.require_code_owner_review,
+        require_last_push_approval: p.require_last_push_approval,
+        required_approving_review_count: p.required_approving_review_count,
+        required_review_thread_resolution: p.required_review_thread_resolution,
+      },
+    };
+  }
+  return { type: rule.type };
 }
 
 function sortRules(rules: readonly Rule[]): Rule[] {
@@ -89,10 +116,20 @@ function sortRules(rules: readonly Rule[]): Rule[] {
     .sort((a, b) => a.type.localeCompare(b.type));
 }
 
-function sortActors(actors: readonly { actor_id: number; actor_type: string }[]) {
-  return [...actors].sort(
-    (a, b) => a.actor_type.localeCompare(b.actor_type) || a.actor_id - b.actor_id,
-  );
+/** Sorted, and each actor rebuilt in a fixed key order for the same reason as `canonicalizeRule`. */
+function sortActors(
+  actors: readonly { actor_id: number; actor_type: string; bypass_mode: string }[],
+) {
+  return [...actors]
+    .sort(
+      (a, b) =>
+        a.actor_type.localeCompare(b.actor_type) || a.actor_id - b.actor_id,
+    )
+    .map((a) => ({
+      actor_id: a.actor_id,
+      actor_type: a.actor_type,
+      bypass_mode: a.bypass_mode,
+    }));
 }
 
 /**
