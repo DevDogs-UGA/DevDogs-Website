@@ -729,9 +729,15 @@ async function runDbCommand(rest: string[]): Promise<void> {
     const [msub, ...mrest] = subRest;
 
     if (msub === "new") {
+      // Skip `--app`'s own value, so `new --app <slug> "<description>"`
+      // doesn't take the slug for the description.
+      const appAt = mrest.indexOf("--app");
+      const positional = mrest.filter(
+        (arg, i) => !arg.startsWith("-") && !(appAt >= 0 && i === appAt + 1),
+      );
       const code = await runNewMigration(
         flagValue(mrest, "--app"),
-        mrest.find((arg) => !arg.startsWith("-")),
+        positional[0],
       );
       process.exitCode = code === 0 ? 0 : 1;
       return;

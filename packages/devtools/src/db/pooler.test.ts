@@ -9,6 +9,13 @@ describe("validateSessionPoolerUrl", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("accepts a URL-encoded password with special characters", () => {
+    const result = validateSessionPoolerUrl(
+      "postgresql://postgres.abcxyz:p%40ss%23w%3Ard@aws-0-us-east-1.pooler.supabase.com:5432/postgres",
+    );
+    expect(result.ok).toBe(true);
+  });
+
   it("rejects the direct connection host", () => {
     const result = validateSessionPoolerUrl(
       "postgresql://postgres:pw@db.abcxyz.supabase.co:5432/postgres",

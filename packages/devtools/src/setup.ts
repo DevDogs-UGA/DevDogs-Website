@@ -181,12 +181,14 @@ export async function runSetup(): Promise<void> {
 
   if (target === "hosted") {
     await runHostedWizard(repoRoot);
+    // A read-only check of what just happened.
+    await runEnvironmentDoctor({ app: chosenApps?.[0] });
   } else {
+    // .env stays blank until `db start`, so checking now would only report
+    // the expected gap. Point at doctor instead.
     printLocalNextSteps(chosenApps);
+    log.info("After `pnpm devtools db start`, run `pnpm devtools doctor` to check your setup.");
   }
-
-  // Every path ends the same way: a read-only check of what just happened.
-  await runEnvironmentDoctor({});
 }
 
 function printLocalNextSteps(chosenApps: string[] | null): void {
@@ -289,8 +291,10 @@ async function runHostedWizard(repoRoot: string): Promise<void> {
   } else {
     s.stop("Migrations failed — see the Supabase CLI output above");
     log.warn(
-      "You can re-run this with `pnpm devtools db migrate` once it's fixed.",
+      "Fix the problem above, then re-run `pnpm devtools setup` (your .env answers are kept), or run `pnpm devtools db migrate` and `pnpm devtools oauth` yourself.",
     );
+    process.exitCode = 1;
+    return;
   }
 
   log.info('Now configuring "Sign in with DevDogs" against the same project.');
@@ -301,16 +305,8 @@ async function runHostedWizard(repoRoot: string): Promise<void> {
   };
   await runOAuthSetup(undefined, undefined, undefined, hostedTarget);
 
-  note(
-    [
-      "Add your app's localhost redirect URL in the dashboard:",
-      "  Auth -> URL Configuration -> Redirect URLs -> add http://localhost:<port>/**",
-      "",
-      "Then:",
-      "  pnpm dev",
-    ].join("\n"),
-    "Next steps",
-  );
+  // runOAuthSetup already printed the dashboard redirect-URL step.
+  note("pnpm dev --filter <your app>", "Then run your app");
 }
 
 async function promptEnvValue(

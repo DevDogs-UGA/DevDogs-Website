@@ -268,8 +268,26 @@ export async function runEnvironmentDoctor(
   const repoRoot = discoverRepoRoot();
   const checks: DoctorCheck[] = [];
 
-  checks.push(checkNodeVersion(process.versions.node, app));
-  checks.push(checkFnmHookPresent(readShellProfile(), app));
+  const nodeCheck = checkNodeVersion(process.versions.node, app);
+  checks.push(nodeCheck);
+  // Only worth raising when Node is wrong: nvm, Volta or a system Node that
+  // already satisfies the floor is fine, and flagging a missing fnm hook there
+  // is a false alarm.
+  if (nodeCheck.status !== "ok") {
+    checks.push(checkFnmHookPresent(readShellProfile(), app));
+  } else {
+    const pinnedMajor = repoRoot ? readNvmrc(repoRoot)?.split(".")[0] : null;
+    const major = process.versions.node.split(".")[0];
+    if (pinnedMajor && /^\d+$/.test(pinnedMajor) && pinnedMajor !== major) {
+      checks.push({
+        id: "node-version",
+        status: "warn",
+        summary: `Node ${process.versions.node} works, but the repo pins Node ${pinnedMajor} (.nvmrc)`,
+        fix: "Run `fnm install && fnm use` in the repo.",
+        faqId: "node-version",
+      });
+    }
+  }
 
   const pnpmVersion = has("pnpm", ["--version"]);
   const pin = repoRoot ? readPackageManagerPin(repoRoot) : null;
@@ -358,10 +376,12 @@ export async function runEnvironmentDoctor(
   const isHosted = Boolean(env.API_URL && !env.API_URL.includes("127.0.0.1") && !env.API_URL.includes("localhost"));
   if (isHosted && env.API_URL) {
     let reachable = false;
+    let probeStatus: number | null = null;
     try {
       const res = await fetch(`${env.API_URL}/auth/v1/settings`, {
         signal: AbortSignal.timeout(5000),
       });
+      probeStatus = res.status;
       reachable = res.status < 500;
     } catch {
       reachable = false;
@@ -377,17 +397,24 @@ export async function runEnvironmentDoctor(
         : "Check the API URL in .env, and that the project is not paused.",
       faqId: reachable ? undefined : "supabase-unreachable",
     });
+    if (probeStatus === 503 || probeStatus === 522 || probeStatus === 540) {
+      checks.push({
+        id: "supabase-paused",
+        status: "warn",
+        summary: "The project looks paused",
+        fix: "Unpause it from the Supabase dashboard (free tier pauses after ~1 week idle).",
+        faqId: "supabase-paused",
+      });
+    }
 
     if (reachable && env.SECRET_KEY) {
       let keysValid = false;
-      let paused = false;
       try {
         const res = await fetch(`${env.API_URL}/auth/v1/admin/users?page=1&per_page=1`, {
           headers: { Authorization: `Bearer ${env.SECRET_KEY}`, apikey: env.SECRET_KEY },
           signal: AbortSignal.timeout(5000),
         });
         keysValid = res.status !== 401 && res.status !== 403;
-        paused = res.status === 503 || res.status === 522;
       } catch {
         keysValid = false;
       }
@@ -399,15 +426,6 @@ export async function runEnvironmentDoctor(
           ? undefined
           : "Copy the service_role secret key again from Project Settings -> API.",
         faqId: keysValid ? undefined : "supabase-keys-invalid",
-      });
-      checks.push({
-        id: "supabase-paused",
-        status: paused ? "warn" : "ok",
-        summary: paused ? "The project looks paused" : "The project is not paused",
-        fix: paused
-          ? "Unpause it from the Supabase dashboard (free tier pauses after ~1 week idle)."
-          : undefined,
-        faqId: paused ? "supabase-paused" : undefined,
       });
     }
   }

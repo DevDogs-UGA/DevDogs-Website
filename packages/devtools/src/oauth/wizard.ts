@@ -721,7 +721,8 @@ export async function runOAuthSetup(
     target.kind === "hosted"
       ? [
           `Add your app's localhost redirect URL in the dashboard:`,
-          `   Auth -> URL Configuration -> Redirect URLs -> add http://localhost:<port>/auth/callback`,
+          `   Auth -> URL Configuration -> Redirect URLs -> add http://localhost:<port>/**`,
+          `   (schedule-builder is 3001, platform is 3000)`,
         ]
       : [
           `Make sure your project's supabase/config.toml allows your app callback:`,
