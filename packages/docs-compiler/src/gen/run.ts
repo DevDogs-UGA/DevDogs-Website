@@ -2,55 +2,44 @@
  * The generator's orchestrator: discover the targets, run every extractor over
  * them, and write the markdown out under `docs/<project>/reference/`.
  *
- * Two invariants shape the whole file. Every target gets exactly one
- * `ts.Program`, shared by all three TypeScript extractors, because building it
- * is by far the slowest thing the docs build does. And every generated page
+ * Generated reference covers shared packages only, the `toolkit` project.
+ * Apps each got their own generated reference once, an App Router table
+ * (`gen/routes.ts`, since removed) and a components/functions pass over
+ * `src/`, and `study-group-finder`'s Dart sources got a JSON-artifact pass of
+ * their own (`gen/dart.ts`, also removed); the contract retired all of it, so
+ * `discoverTargets`'s app targets are filtered out below rather than walked.
+ *
+ * Two invariants shape what is left. Every target gets exactly one
+ * `ts.Program`, shared by both TypeScript extractors, because building it is
+ * by far the slowest thing the docs build does. And every generated page
  * lives inside a `reference/` tree that this module deletes before it writes,
  * so a renamed or deleted source file cannot leave a stale page behind.
  *
  * Nothing here is exported from `src/index.ts`. `@devdogsuga/docs` re-exports
  * that module's types, so anything on it widens the graph `apps/platform`
- * typechecks against. The generator is reachable as `docs-build gen` and
+ * typechecks against. The generator is reachable as `docs-compiler gen` and
  * through the `./gen` subpath, and that is all.
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { extractComponents } from "./components.js";
-import { extractDart } from "./dart.js";
-import { renderGroupPage, renderRoutesPage } from "./emit.js";
+import { renderGroupPage } from "./emit.js";
 import type { EmitOptions } from "./emit.js";
 import { extractFunctions } from "./functions.js";
-import { emptyResult, mergeResults } from "./model.js";
-import type {
-  CoverageRow,
-  DocGroup,
-  ExtractResult,
-  RouteEntry,
-} from "./model.js";
+import { mergeResults } from "./model.js";
+import type { CoverageRow, DocGroup, ExtractResult } from "./model.js";
 import { createProgram, discoverTargets } from "./program.js";
 import type { Target, TargetContext } from "./program.js";
-import { extractRoutes } from "./routes.js";
 
 /** Where "view source" points when nothing overrides it. */
 const DEFAULT_SOURCE_BASE_URL =
   "https://github.com/DevDogsUGA/DevDogsUGA/blob/main";
-
-/** The Flutter app. It has no `src/`, so `discoverTargets` never sees it. */
-const DART_APP_DIR = "apps/study-group-finder";
-const DART_DOCS_PROJECT = "study-group-finder";
 
 /** The one path segment a generated page is allowed to live under. */
 const REFERENCE_SEGMENT = "reference";
 
 /** Package machinery that sits alongside the content and is never a project. */
 const NOT_A_PROJECT = new Set(["dist", "node_modules"]);
-
-/**
- * The route pages come after a project's written index but before its symbol
- * groups, which start at 10.
- */
-const ROUTES_ORDER = 2;
-const API_ROUTES_ORDER = 3;
 
 export interface GenOptions {
   /** Absolute path to the monorepo root, the directory holding `docs/`. */
@@ -72,7 +61,6 @@ export interface GenSummary {
   /** Pages written, or that would be written under `dryRun`. */
   pages: number;
   symbols: number;
-  routes: number;
   /** One row per area, summed across targets that contribute to it. */
   coverage: CoverageRow[];
   warnings: string[];
@@ -90,12 +78,6 @@ interface PendingPage {
   symbols: number;
 }
 
-/** One extractor's output, tagged with the `docs/` project it belongs to. */
-interface ProjectResult {
-  docsProject: string;
-  result: ExtractResult;
-}
-
 /**
  * Generates the whole reference and prints a summary. Returns rather than
  * exiting: coverage is reported and never enforced, so nothing in here has any
@@ -109,21 +91,16 @@ export function generateReference(options: GenOptions): GenSummary {
     sourceBaseUrl: resolveSourceBaseUrl(options.sourceBaseUrl),
   };
 
-  const collected: ProjectResult[] = [];
+  // Packages only: every target shares the `toolkit` project (see
+  // `program.ts`'s `discoverTargets`), and an app's own generated reference is
+  // gone. `kind` is the same public/private line `discoverTargets` already
+  // draws between `apps/*` and `packages/*`, so filtering on it here needs no
+  // new judgment call.
+  const results = discoverTargets(repoRoot)
+    .filter((target) => target.kind === "package")
+    .map((target) => extractTarget(repoRoot, target));
 
-  for (const target of discoverTargets(repoRoot)) {
-    collected.push({
-      docsProject: target.docsProject,
-      result: extractTarget(repoRoot, target),
-    });
-  }
-
-  collected.push({
-    docsProject: DART_DOCS_PROJECT,
-    result: extractDartApp(repoRoot),
-  });
-
-  const merged = mergeResults(...collected.map((entry) => entry.result));
+  const merged = mergeResults(...results);
   const warnings = [...merged.warnings];
 
   const pages: PendingPage[] = merged.groups.map((group) => ({
@@ -131,8 +108,6 @@ export function generateReference(options: GenOptions): GenSummary {
     markdown: renderGroupPage(group, emit),
     symbols: group.symbols.length,
   }));
-
-  pages.push(...routePages(collected, emit));
 
   // Extraction is finished and every page is rendered before anything on disk
   // is touched, so an extractor that throws leaves the previous reference in
@@ -151,7 +126,6 @@ export function generateReference(options: GenOptions): GenSummary {
   const summary: GenSummary = {
     pages: accepted.length,
     symbols: accepted.reduce((sum, page) => sum + page.symbols, 0),
-    routes: merged.routes.length,
     coverage: aggregateCoverage(merged.coverage, merged.groups),
     warnings,
     files: accepted.map((page) => `${page.docsPath}.md`),
@@ -165,12 +139,12 @@ export function generateReference(options: GenOptions): GenSummary {
 /* Extraction ------------------------------------------------------------- */
 
 /**
- * One target, one program. The three TypeScript extractors all ask the same
- * checker: a second `ts.Program` over the same files would double the slowest
- * part of the docs build for nothing.
+ * One target, one program. Both extractors ask the same checker: a second
+ * `ts.Program` over the same files would double the slowest part of the docs
+ * build for nothing.
  *
  * A target that throws costs its own pages and warns; it does not take the
- * other twelve down with it. This generator is warn-only.
+ * rest down with it. This generator is warn-only.
  */
 function extractTarget(repoRoot: string, target: Target): ExtractResult {
   try {
@@ -182,114 +156,19 @@ function extractTarget(repoRoot: string, target: Target): ExtractResult {
       checker: program.getTypeChecker(),
     };
 
-    return mergeResults(
-      extractComponents(context),
-      extractFunctions(context),
-      target.hasAppRouter ? extractRoutes(context) : emptyResult(),
-    );
+    return mergeResults(extractComponents(context), extractFunctions(context));
   } catch (error) {
     return failed(`${target.dir}: ${describe(error)}`);
   }
 }
 
-/** The Dart pass, which reads a JSON artifact rather than a `ts.Program`. */
-function extractDartApp(repoRoot: string): ExtractResult {
-  const appDir = `${repoRoot}/${DART_APP_DIR}`;
-  if (!isDirectory(appDir)) {
-    return failed(`${DART_APP_DIR} is missing — skipping the Dart pass`);
-  }
-
-  try {
-    return extractDart(repoRoot, appDir);
-  } catch (error) {
-    return failed(`${DART_APP_DIR}: ${describe(error)}`);
-  }
-}
-
 /** An otherwise-empty result carrying one warning. */
 function failed(message: string): ExtractResult {
-  return { ...emptyResult(), warnings: [message] };
+  return { groups: [], coverage: [], warnings: [message] };
 }
 
 function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-/* Routes ----------------------------------------------------------------- */
-
-/**
- * Two pages per project, split on `isApi`. A page URL is somewhere to navigate
- * and a route handler is an HTTP entry point. The columns that describe them
- * differ too.
- *
- * Routes are bucketed by `docs/` project rather than by target because several
- * packages share the `toolkit` project, and two targets writing the same page
- * path would silently mean one of them losing.
- */
-function routePages(
-  collected: ProjectResult[],
-  emit: EmitOptions,
-): PendingPage[] {
-  const byProject = new Map<string, RouteEntry[]>();
-
-  for (const { docsProject, result } of collected) {
-    if (result.routes.length === 0) continue;
-    const bucket = byProject.get(docsProject);
-    if (bucket === undefined) byProject.set(docsProject, [...result.routes]);
-    else bucket.push(...result.routes);
-  }
-
-  const pages: PendingPage[] = [];
-
-  for (const project of [...byProject.keys()].sort(compareStrings)) {
-    const routes = byProject.get(project) ?? [];
-    const navigable = routes
-      .filter((route) => !route.isApi)
-      .sort((a, b) => compareStrings(a.url, b.url));
-    const handlers = routes
-      .filter((route) => route.isApi)
-      .sort((a, b) => compareStrings(a.url, b.url));
-
-    // An app with no `route.ts` should not get an empty API page, and a docs
-    // project that is all handlers should not get an empty routes page.
-    if (navigable.length > 0) {
-      pages.push({
-        docsPath: `${project}/${REFERENCE_SEGMENT}/routes`,
-        markdown: renderRoutesPage(
-          navigable,
-          {
-            title: "Routes",
-            description:
-              "Every URL this app serves and the file that renders it, enumerated from the App Router directory tree.",
-            order: ROUTES_ORDER,
-            isApi: false,
-          },
-          emit,
-        ),
-        symbols: 0,
-      });
-    }
-
-    if (handlers.length > 0) {
-      pages.push({
-        docsPath: `${project}/${REFERENCE_SEGMENT}/api-routes`,
-        markdown: renderRoutesPage(
-          handlers,
-          {
-            title: "API Routes",
-            description:
-              "Every route handler and the HTTP methods it exports. Each one is reachable over the network, so this table is a security surface as much as a reference.",
-            order: API_ROUTES_ORDER,
-            isApi: true,
-          },
-          emit,
-        ),
-        symbols: 0,
-      });
-    }
-  }
-
-  return pages;
 }
 
 /* Output ----------------------------------------------------------------- */
@@ -468,7 +347,7 @@ function percent(documented: number, symbols: number): string {
 }
 
 /**
- * The house `[docs-build]` line, then the coverage table, then every warning.
+ * The house `[docs-compiler]` line, then the coverage table, then every warning.
  *
  * Printing coverage on every run is the point of collecting it: it names the
  * thin spots by area. It is reported and never enforced, and nothing here
@@ -484,7 +363,7 @@ function printSummary(summary: GenSummary, docsRoot: string): void {
   const into = path.basename(docsRoot);
 
   console.log(
-    `[docs-build] ${verb} ${summary.pages} page(s), ${summary.symbols} symbol(s), ${summary.routes} route(s) in ${into}/`,
+    `[docs-compiler] ${verb} ${summary.pages} page(s), ${summary.symbols} symbol(s) in ${into}/`,
   );
 
   if (summary.coverage.length > 0) {
@@ -499,10 +378,10 @@ function printSummary(summary: GenSummary, docsRoot: string): void {
     const rows = [...summary.coverage, total];
     const width = Math.max(...rows.map((row) => row.area.length));
 
-    console.log("[docs-build] doc-comment coverage (reported, not enforced):");
+    console.log("[docs-compiler] doc-comment coverage (reported, not enforced):");
     for (const row of rows) {
       console.log(
-        `[docs-build]   ${row.area.padEnd(width)}  ${String(row.documented).padStart(5)} / ${String(row.symbols).padEnd(5)}  ${percent(row.documented, row.symbols).padStart(4)}`,
+        `[docs-compiler]   ${row.area.padEnd(width)}  ${String(row.documented).padStart(5)} / ${String(row.symbols).padEnd(5)}  ${percent(row.documented, row.symbols).padStart(4)}`,
       );
     }
   }
@@ -511,10 +390,10 @@ function printSummary(summary: GenSummary, docsRoot: string): void {
     // The count goes with the summary, where a reader is still looking, so the
     // block below is something they scroll into on purpose.
     console.log(
-      `[docs-build] ${summary.warnings.length} warning(s), all of them below:`,
+      `[docs-compiler] ${summary.warnings.length} warning(s), all of them below:`,
     );
     for (const warning of summary.warnings) {
-      console.log(`[docs-build] warn: ${warning}`);
+      console.log(`[docs-compiler] warn: ${warning}`);
     }
   }
 }
@@ -556,10 +435,6 @@ function trimSlash(value: string): string {
 function compareStrings(a: string, b: string): number {
   if (a < b) return -1;
   return a > b ? 1 : 0;
-}
-
-function isDirectory(dir: string): boolean {
-  return fs.statSync(dir, { throwIfNoEntry: false })?.isDirectory() ?? false;
 }
 
 function childEntries(dir: string): fs.Dirent[] {

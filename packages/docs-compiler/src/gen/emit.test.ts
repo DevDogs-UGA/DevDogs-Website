@@ -7,8 +7,8 @@
  * line printed for a symbol the package does not export is a lie.
  */
 import { describe, expect, it } from "vitest";
-import { renderGroupPage, renderRoutesPage, renderSymbol } from "./emit.js";
-import type { DocGroup, DocSymbol, RouteEntry } from "./model.js";
+import { renderGroupPage, renderSymbol } from "./emit.js";
+import type { DocGroup, DocSymbol } from "./model.js";
 
 const options = {
   sourceBaseUrl: "https://github.com/DevDogsUGA/DevDogsUGA/blob/main",
@@ -529,93 +529,5 @@ describe("renderGroupPage", () => {
       options,
     );
     expect(page).not.toMatch(/\n{3}/);
-  });
-});
-
-describe("renderRoutesPage", () => {
-  function route(overrides: Partial<RouteEntry> = {}): RouteEntry {
-    return {
-      url: "/meetings/[id]",
-      files: { page: "apps/platform/src/app/(site)/meetings/[id]/page.tsx" },
-      methods: [],
-      title: "Meeting",
-      config: {},
-      isApi: false,
-      source: {
-        file: "apps/platform/src/app/(site)/meetings/[id]/page.tsx",
-        line: 1,
-      },
-      ...overrides,
-    };
-  }
-
-  it("renders a page table with titles", () => {
-    const page = renderRoutesPage(
-      [route()],
-      {
-        title: "Routes",
-        description: "Every page the platform serves.",
-        order: 2,
-        isApi: false,
-      },
-      options,
-    );
-
-    expect(page).toContain("| Route | Title | File |");
-    expect(page).toContain("`/meetings/[id]`");
-    expect(page).toContain("Meeting");
-  });
-
-  it("renders methods instead of titles for API routes", () => {
-    const page = renderRoutesPage(
-      [
-        route({
-          url: "/api/webhooks/github",
-          methods: ["GET", "POST"],
-          isApi: true,
-          title: null,
-          files: {
-            route: "apps/platform/src/app/(api)/api/webhooks/github/route.ts",
-          },
-        }),
-      ],
-      {
-        title: "API Routes",
-        description: "Every handler the platform exposes.",
-        order: 3,
-        isApi: true,
-      },
-      options,
-    );
-
-    expect(page).toContain("| Route | Methods | File |");
-    expect(page).toContain("`GET` `POST`");
-  });
-
-  it("escapes a title that reads as a tag", () => {
-    const page = renderRoutesPage(
-      [route({ title: "Teams <beta>" })],
-      { title: "Routes", description: "d", order: 2, isApi: false },
-      options,
-    );
-
-    expect(page).toContain("Teams &lt;beta>");
-  });
-
-  it("adds a segment-config column only when some route sets one", () => {
-    const without = renderRoutesPage(
-      [route()],
-      { title: "Routes", description: "d", order: 2, isApi: false },
-      options,
-    );
-    expect(without).not.toContain("Segment config");
-
-    const with_ = renderRoutesPage(
-      [route({ config: { dynamic: '"force-dynamic"' } })],
-      { title: "Routes", description: "d", order: 2, isApi: false },
-      options,
-    );
-    expect(with_).toContain("Segment config");
-    expect(with_).toContain("dynamic =");
   });
 });

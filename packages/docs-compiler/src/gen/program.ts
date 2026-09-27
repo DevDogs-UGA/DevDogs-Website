@@ -49,8 +49,6 @@ export interface Target {
    * and the file name alone cannot recover it.
    */
   publicSubpaths: Map<string, string>;
-  /** Whether the target has an App Router at `src/app`. */
-  hasAppRouter: boolean;
 }
 
 /** A target plus the checker, handed to each extractor. */
@@ -191,7 +189,6 @@ export function discoverTargets(repoRoot: string): Target[] {
         aliases: readAliases(absDir, tsconfigPath),
         publicEntries: entries.publicEntries,
         publicSubpaths: entries.publicSubpaths,
-        hasAppRouter: isDirectory(`${srcDir}/app`),
       });
     }
   }

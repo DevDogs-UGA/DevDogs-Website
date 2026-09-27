@@ -124,7 +124,6 @@ export function extractFunctions(ctx: TargetContext): ExtractResult {
 
   return {
     groups,
-    routes: [],
     coverage: groups.map(coverageOf),
     warnings,
   };

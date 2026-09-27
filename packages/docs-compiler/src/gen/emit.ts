@@ -8,14 +8,7 @@
  * needs a renderer the site does not already have.
  */
 import { closesFence, opensFence } from "../fences.js";
-import type {
-  DocGroup,
-  DocSymbol,
-  ParamDoc,
-  RouteEntry,
-  SourceRef,
-  SymbolKind,
-} from "./model.js";
+import type { DocGroup, DocSymbol, ParamDoc, SourceRef, SymbolKind } from "./model.js";
 
 /** Where "view source" points. */
 export interface EmitOptions {
@@ -452,75 +445,3 @@ export function renderGroupPage(group: DocGroup, options: EmitOptions): string {
     .trimEnd()}\n`;
 }
 
-/**
- * The route table. The App Router's directory *is* the enumeration, and it is
- * the part no written page keeps current.
- */
-export function renderRoutesPage(
-  routes: RouteEntry[],
-  meta: { title: string; description: string; order: number; isApi: boolean },
-  options: EmitOptions,
-): string {
-  const out: string[] = [];
-  out.push(
-    frontmatter({
-      name: meta.title,
-      description: meta.description,
-      order: meta.order,
-      generated: true,
-    }),
-  );
-  out.push(`# ${meta.title}`);
-  out.push("");
-  out.push(generatedNotice("the App Router directory tree"));
-  out.push("");
-  out.push(meta.description);
-  out.push("");
-
-  const anyConfig = routes.some((r) => Object.keys(r.config).length > 0);
-  const header = meta.isApi
-    ? ["Route", "Methods", "File"]
-    : ["Route", "Title", "File"];
-  if (anyConfig) header.push("Segment config");
-
-  out.push(`| ${header.join(" | ")} |`);
-  out.push(`| ${header.map(() => "---").join(" | ")} |`);
-
-  for (const route of routes) {
-    const file = route.files.route ?? route.files.page ?? route.source.file;
-    const row = [
-      code(route.url),
-      meta.isApi
-        ? route.methods.map((m) => `\`${m}\``).join(" ") || "—"
-        : // A title is `export const metadata`'s, so it is prose a contributor
-          // wrote as surely as a doc comment is, and it lands in the cell as
-          // itself, with no backticks and no link around it. A parameter's
-          // description is the only other cell on a generated page that does,
-          // and it goes through the same `proseCell` for the same reason.
-          route.title === null
-          ? "—"
-          : proseCell(route.title),
-      `[\`${shortPath(file)}\`](${sourceLink({ file, line: 1 }, options)})`,
-    ];
-    if (anyConfig) {
-      const config = Object.entries(route.config)
-        .map(([key, value]) => `\`${key} = ${value}\``)
-        .join(" ");
-      row.push(config || "—");
-    }
-    out.push(`| ${row.join(" | ")} |`);
-  }
-
-  out.push("");
-  return `${out
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trimEnd()}\n`;
-}
-
-/** `apps/platform/src/app/(site)/page.tsx` → `(site)/page.tsx`. */
-function shortPath(file: string): string {
-  const marker = "/src/app/";
-  const at = file.indexOf(marker);
-  return at === -1 ? file : file.slice(at + marker.length);
-}

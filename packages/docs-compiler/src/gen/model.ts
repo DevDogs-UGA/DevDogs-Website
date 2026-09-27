@@ -1,11 +1,11 @@
 /**
  * The shape every extractor produces and the emitter consumes.
  *
- * Three extractors feed it, for TypeScript components/functions, the App
- * Router, and Dart via a JSON artifact, and exactly one emitter reads it. That
- * is the point of this file. A widget's constructor parameters are a props
- * table by another name, and a reader moving between the Flutter app and the
- * React apps should not have to learn a second page layout.
+ * Generated reference now covers shared packages only (the `toolkit`
+ * project): apps, the App Router table that came from their route trees, and
+ * the Dart pass over `study-group-finder` are no longer generated. The
+ * components and functions extractors still feed this shape, and exactly one
+ * emitter reads it.
  *
  * Nothing here is exported from `src/index.ts`. `@devdogsuga/docs` re-exports
  * that module's types, so anything on it widens the graph `apps/platform`
@@ -137,30 +137,6 @@ export interface DocGroup {
   symbols: DocSymbol[];
 }
 
-/** One row of the App Router table. */
-export interface RouteEntry {
-  /** Route groups contribute no segment; `[id]` and `[...slug]` survive. */
-  url: string;
-  /** Which files back it, repo-relative. */
-  files: {
-    page?: string;
-    layout?: string[];
-    route?: string;
-    loading?: string;
-    error?: string;
-    notFound?: string;
-    default?: string;
-  };
-  /** Exported HTTP methods, for a `route.ts`. Empty for a page. */
-  methods: string[];
-  /** `export const metadata`'s title, when statically analysable. */
-  title: string | null;
-  /** Route-segment config actually set: `dynamic`, `revalidate`, `runtime`… */
-  config: Record<string, string>;
-  isApi: boolean;
-  source: SourceRef;
-}
-
 /** Per-area doc-comment coverage, printed on every run and never enforced. */
 export interface CoverageRow {
   area: string;
@@ -171,7 +147,6 @@ export interface CoverageRow {
 /** Everything one extractor produced, ready for the emitter. */
 export interface ExtractResult {
   groups: DocGroup[];
-  routes: RouteEntry[];
   coverage: CoverageRow[];
   /** Non-fatal problems. Warn-only, per §9.5, never a build failure. */
   warnings: string[];
@@ -179,14 +154,13 @@ export interface ExtractResult {
 
 /** An empty result, so an extractor that is skipped composes like one that ran. */
 export function emptyResult(): ExtractResult {
-  return { groups: [], routes: [], coverage: [], warnings: [] };
+  return { groups: [], coverage: [], warnings: [] };
 }
 
 /** Merges extractor results in the order given. */
 export function mergeResults(...results: ExtractResult[]): ExtractResult {
   return {
     groups: results.flatMap((r) => r.groups),
-    routes: results.flatMap((r) => r.routes),
     coverage: results.flatMap((r) => r.coverage),
     warnings: results.flatMap((r) => r.warnings),
   };

@@ -131,7 +131,7 @@ export function extractComponents(ctx: TargetContext): ExtractResult {
       .length,
   }));
 
-  return { groups, routes: [], coverage, warnings };
+  return { groups, coverage, warnings };
 }
 
 /* Symbols ---------------------------------------------------------------- */
