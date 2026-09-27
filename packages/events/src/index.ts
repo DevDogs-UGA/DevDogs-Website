@@ -1,27 +1,9 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import meetings from "./data/meetings.json" with { type: "json" };
 import { clubConfigSchema, type ClubConfig } from "./schema.js";
 import { validateClubConfig, type ValidationIssue } from "./validator.js";
 
 export * from "./schema.js";
 export * from "./validator.js";
-
-/**
- * The one data file today. Read by path rather than a static `import … with
- * { type: "json" }`, so both this package's `src` (the `devdogs-source`
- * export condition) and its built `dist` resolve the SAME file on disk
- * without two copies to keep in sync -- `data/` sits one level up from both.
- *
- * Kept a plain constant rather than exported: a consumer wanting the raw path
- * has no legitimate reason to bypass `getClubConfig`'s validation.
- */
-const DATA_FILE = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "data",
-  "meetings.json",
-);
 
 export class ClubConfigError extends Error {
   constructor(public readonly issues: ValidationIssue[]) {
@@ -46,8 +28,11 @@ export class ClubConfigError extends Error {
  * read, rather than reconcile trusting a file CI would have rejected.
  */
 export function getClubConfig(): ClubConfig {
-  const raw: unknown = JSON.parse(readFileSync(DATA_FILE, "utf8"));
-  return parseClubConfig(raw);
+  // A static import, never a read from disk: a bundler inlines it, and the
+  // platform calls this from a Cloudflare Worker, which has no filesystem to
+  // read `dist/` from. The data file sits under `src/` so `tsc` copies it into
+  // `dist/` beside the module that imports it.
+  return parseClubConfig(meetings);
 }
 
 /** The same two-step validation `getClubConfig` runs, over an in-memory

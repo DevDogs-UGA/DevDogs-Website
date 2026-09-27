@@ -30,7 +30,7 @@ function main(): number {
     }
     if (error instanceof z.ZodError) {
       process.stderr.write(
-        "events: data/meetings.json does not match the schema:\n",
+        "events: src/data/meetings.json does not match the schema:\n",
       );
       for (const issue of error.issues) {
         process.stderr.write(`  ${issue.path.join(".")}: ${issue.message}\n`);

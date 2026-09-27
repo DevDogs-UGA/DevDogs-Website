@@ -2,12 +2,12 @@
 
 Config-as-code for the club's meetings and workshops: a Zod schema, a
 publishability validator, and the authored data itself
-(`data/meetings.json`).
+(`src/data/meetings.json`).
 
 ```ts
 import { getClubConfig } from "@devdogsuga/events";
 
-const config = getClubConfig(); // parses + validates data/meetings.json, or throws
+const config = getClubConfig(); // parses + validates src/data/meetings.json, or throws
 ```
 
 ## Two kinds of "is this config good"
@@ -37,7 +37,7 @@ both steps in order and throw a readable `ClubConfigError` if either fails.
 pnpm --filter @devdogsuga/events check
 ```
 
-Runs `getClubConfig()` against the committed `data/meetings.json` and prints
+Runs `getClubConfig()` against the committed `src/data/meetings.json` and prints
 a pass/fail summary. This is the only place a config author gets a readable
 validation error — the runtime reader trusts what it parses and refuses to
 partially apply a bad file rather than re-validating field by field. Wired

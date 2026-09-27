@@ -9,6 +9,7 @@
     // so emit is switched back on here. `typecheck` passes --noEmit itself.
     "noEmit": false,
     "declaration": true,
+    "resolveJsonModule": true,
     "outDir": "dist",
     "rootDir": "src"
   },
