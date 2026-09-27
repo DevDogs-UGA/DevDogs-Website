@@ -483,7 +483,7 @@ Discord, or fold QR codes straight into this one via `footer`).
 ---
 layout: closing
 accent: rose
-subtitle: See you Wednesday for the next build session
+subtitle: See you Wednesday for the next dev session
 ---
 
 # Before you go

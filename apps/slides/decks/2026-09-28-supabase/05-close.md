@@ -2,7 +2,7 @@
 layout: closing
 accent: rose
 chip: NEXT UP
-subtitle: See you Wednesday for the next build session
+subtitle: See you Wednesday for the next dev session
 ---
 
 # Before you go
