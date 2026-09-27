@@ -112,7 +112,7 @@ export async function runSetup(): Promise<void> {
       [
         "No DevDogsUGA checkout found in this directory or its parents.",
         "",
-        "1. git clone https://github.com/devdogsuga/DevDogsUGA.git",
+        "1. git clone https://github.com/DevDogsUGA/DevDogsUGA.git",
         "2. cd DevDogsUGA && pnpm install",
         "3. pnpm devtools setup   — run again from inside the clone to seed .env",
       ].join("\n"),
