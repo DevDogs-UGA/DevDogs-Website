@@ -245,7 +245,7 @@ function quote(value: string): string {
 function generatedNotice(sourceHint: string): string {
   return [
     "> [!NOTE]",
-    `> **Generated** from ${sourceHint} by \`docs-build gen\`. Edits to this page are overwritten on the next build — change the doc comments in the source instead.`,
+    `> **Generated** from ${sourceHint} by \`docs-compiler gen\`. Edits to this page are overwritten on the next build — change the doc comments in the source instead.`,
   ].join("\n");
 }
 

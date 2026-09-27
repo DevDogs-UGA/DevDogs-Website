@@ -9,7 +9,7 @@
  *
  * Nothing here is exported from `src/index.ts`. `@devdogsuga/docs` re-exports
  * that module's types, so anything on it widens the graph `apps/platform`
- * typechecks against; the generator stays behind the `docs-build gen` CLI.
+ * typechecks against; the generator stays behind the `docs-compiler gen` CLI.
  */
 
 /** A file and line in the repository, for the "view source" link. */
