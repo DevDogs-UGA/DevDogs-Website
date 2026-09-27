@@ -116,17 +116,63 @@ function patchBump(version) {
 }
 
 // Unauthenticated, read-only. Returns null for "never published".
+//
+// `latest` is the highest published X.Y.Z, not dist-tags.latest: the two
+// only differ if someone moved the tag by hand, and bumping past the highest
+// is what avoids a version collision. The registry's packument can still lag
+// a publish by minutes (it's CDN-cached), so publishing also retries on a
+// collision; see publishWithRetry.
 async function fetchRegistryState(name) {
-  const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(name)}`);
+  const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(name)}`, {
+    headers: { "cache-control": "no-cache" },
+    cache: "no-store",
+  });
   if (res.status === 404) return null;
   if (!res.ok) {
     throw new Error(`Registry lookup for ${name} failed: ${res.status} ${res.statusText}`);
   }
   const body = await res.json();
-  const latest = body["dist-tags"]?.latest;
+  const latest = highestVersion(Object.keys(body.versions ?? {}));
   if (!latest) return null;
-  const shasum = body.versions?.[latest]?.dist?.shasum;
+  const shasum = body.versions[latest].dist?.shasum;
   return { latest, shasum };
+}
+
+function highestVersion(versions) {
+  const plain = versions.filter((v) => /^\d+\.\d+\.\d+$/.test(v));
+  const key = (v) => v.split(".").map(Number);
+  plain.sort((a, b) => {
+    const [x, y] = [key(a), key(b)];
+    return x[0] - y[0] || x[1] - y[1] || x[2] - y[2];
+  });
+  return plain.at(-1) ?? null;
+}
+
+// npm answers 403 "cannot publish over the previously published versions"
+// when the version already exists, which happens when the registry read in
+// pass 1 was stale. Bump past it and re-pack rather than failing the run.
+function publishWithRetry(repoRoot, pkg, tarball, destDir, attempts = 5) {
+  for (let i = 1; ; i++) {
+    try {
+      execFileSync(
+        "npm",
+        ["publish", tarball, "--access", "public", "--provenance"],
+        { cwd: repoRoot, stdio: ["ignore", "inherit", "pipe"], encoding: "utf8" },
+      );
+      return pkg.json.version;
+    } catch (err) {
+      const stderr = String(err.stderr ?? "");
+      process.stderr.write(stderr);
+      if (!/cannot publish over the previously published version/i.test(stderr) || i >= attempts) {
+        throw err;
+      }
+      const taken = pkg.json.version;
+      pkg.json.version = patchBump(taken);
+      writePackageJson(pkg.path, pkg.json);
+      tarball = pnpmPack(repoRoot, pkg.json.name, destDir).tarballPath;
+      console.log(`${pkg.json.name}: ${taken} is already published; retrying as ${pkg.json.version}`);
+    }
+  }
 }
 
 function discoverPackages() {
@@ -225,16 +271,13 @@ async function main() {
 
       console.log(`${name}: ${state ? state.latest : "(unpublished)"} -> ${nextVersion}`);
 
+      let publishedVersion = nextVersion;
       if (dryRun) {
         console.log(`  [dry run] would publish ${finalTarball}`);
       } else {
-        execFileSync(
-          "npm",
-          ["publish", finalTarball, "--access", "public", "--provenance"],
-          { cwd: repoRoot, stdio: "inherit" },
-        );
+        publishedVersion = publishWithRetry(repoRoot, pkg, finalTarball, tmp);
       }
-      published.push(`${name}@${nextVersion}`);
+      published.push(`${name}@${publishedVersion}`);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
