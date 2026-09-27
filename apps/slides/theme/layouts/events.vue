@@ -46,7 +46,7 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
 <style scoped>
 .dd-events :deep(h1) {
   text-align: center;
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.25rem;
 }
 
 .dd-events :deep(h3) {

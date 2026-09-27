@@ -40,8 +40,8 @@
      item's actual content is a single normal flowing block. */
   position: relative;
   margin-left: 0;
-  padding: 0.45em 0 0.45em 2.75em;
-  font-size: 1.4rem;
+  padding: 0.25em 0 0.25em 2.75em;
+  font-size: 1.3rem;
   border-bottom: 1px solid var(--dd-hairline);
 }
 

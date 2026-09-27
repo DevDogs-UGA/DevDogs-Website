@@ -185,5 +185,7 @@ const showRight = computed(() => !props.trackSplit || track.value !== 'web')
 .dd-code-frame :deep(p) {
   flex: none;
   margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.4;
 }
 </style>

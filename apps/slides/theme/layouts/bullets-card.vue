@@ -67,7 +67,7 @@ const style = computed(() => ({ '--accent': accentHex(props.accent) }))
 
 .dd-bullets :deep(li) {
   position: relative;
-  margin: 0.6em 0;
+  margin: 0.45em 0;
   padding-left: 1.25em;
   font-size: 1.25rem;
 }

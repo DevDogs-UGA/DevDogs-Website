@@ -11,10 +11,10 @@ subtitle: See you Wednesday!
 
 <div class="dd-close-qr-row">
   <Track web>
-    <QRSlot src="/qr/discord.svg" label="Discord" caption="Questions, help, and Wednesday dev sessions" accent="rose" size="9rem" trim="9.76%" compact />
+    <QRSlot src="/qr/discord.svg" label="Discord" accent="rose" size="7.5rem" trim="9.76%" compact />
   </Track>
   <Track mobile>
-    <QRSlot src="/qr/devdogsuga-org.svg" label="devdogsuga.org" caption="Sign in, join a team, browse the competition" accent="rose" size="9rem" trim="12.12%" compact />
+    <QRSlot src="/qr/devdogsuga-org.svg" label="devdogsuga.org" accent="rose" size="7.5rem" trim="12.12%" compact />
   </Track>
 </div>
 

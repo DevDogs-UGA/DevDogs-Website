@@ -102,7 +102,7 @@ const showMobile = computed(() => track.value !== 'web')
 
 .dd-features-glow {
   position: absolute;
-  inset: -40% -20% auto;
+  inset: -40% 0 auto;
   height: 80%;
   z-index: -1;
   background: radial-gradient(closest-side, color-mix(in srgb, var(--project) 22%, transparent), transparent);
@@ -111,7 +111,9 @@ const showMobile = computed(() => track.value !== 'web')
 }
 
 .dd-features-name {
-  display: flex;
+  /* Inline-flex, as on the preshow: the mark is an SVG (block by default
+     here) that has to sit on the name's baseline. */
+  display: inline-flex;
   align-items: baseline;
   margin: 0 0 0.75rem;
   font-family: 'Alan Sans', 'Hanken Grotesk', sans-serif;

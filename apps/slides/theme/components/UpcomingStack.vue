@@ -54,7 +54,7 @@ const EMPHASIS_SECONDS = 2.5
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.6rem;
   width: 100%;
   max-width: 40rem;
   margin: 0 auto;

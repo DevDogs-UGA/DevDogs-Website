@@ -39,11 +39,12 @@ const failed = ref(false)
 </template>
 
 <style scoped>
-/* Bounded by height, not width: this sits above a caption in a dual-code
-   column whose total height is fixed by the OTHER column's content, so an
-   aspect-ratio box sized off 100% width (the column can be quite wide)
-   would blow past the space left for the caption below it. */
+/* Takes whatever height its column has left (a code window's frame is a
+   flex column, so a caption below keeps its natural size), and the image
+   fits inside it whole. */
 .dd-screenshot-slot {
+  flex: 1 1 0;
+  min-height: 0;
   width: 100%;
   display: flex;
   align-items: center;
@@ -51,9 +52,8 @@ const failed = ref(false)
 }
 
 .dd-screenshot-img {
-  max-width: 100%;
-  height: 7rem;
-  width: auto;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   border-radius: 0.5rem;
 }

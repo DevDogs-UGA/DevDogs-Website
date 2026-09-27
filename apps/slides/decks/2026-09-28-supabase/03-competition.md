@@ -38,9 +38,9 @@ chip: ENTER
 - Get on a Team
   - Create one or join one at devdogsuga.org/teams
 - Work on Your Team's Branch
-  - Every team gets a `team/<your-team>` branch: commit and push there
+  - Commit and push to your team's `team/<your-team>` branch
 - Open a Pull Request into Main Linking the Issue
-  - Write `Closes #123` in the description: GitHub links the issue and closes it when your PR merges
+  - `Closes #123` in the description links the issue and closes it when the PR merges
 
 <!-- Presenter notes: This maps 1:1 to docs/platform/guides/meetings-and-teams/competitions.md: a competition is a GitHub issue; merging the winning PR is the only "who won" the platform records. Entries close Monday, Oct 5, when the meeting starts; say it out loud. 2FA blocks every team action, so get it on tonight, before the mixer ends. `Closes`, `Fixes`, and `Resolves` are GitHub's closing keywords: in a PR description they link the issue, and merging the PR closes it. Stars only count if your entry PR opened before the issue closed, so open a draft PR early rather than waiting until it's polished. -->
 
@@ -125,7 +125,7 @@ export function TeamCard({ team }: { team: Team }) {
 
 <ScreenshotOrPlaceholder src="/vscode-merge-conflict.png" alt="VS Code showing the two conflicts in TeamCard.tsx, each with Accept Current Change, Accept Incoming Change, and Accept Both Changes" />
 
-VS Code marks each conflict: **Accept Current Change**, **Accept Incoming Change**, or **Accept Both Changes**, then save.
+Pick **Accept Current**, **Incoming**, or **Both** on each conflict, then save.
 
 ::bottom::
 
@@ -157,11 +157,11 @@ chip: PULL REQUESTS
 # Making a Pull Request
 
 - Link the Feature Issue
-  - Write `Closes #123` in the description, so reviewers know what it's for
+  - `Closes #123` in the description tells reviewers what it's for
 - Show It Working
   - Add screenshots or a short screen recording of the feature
 - Run the Checks Before You Push
-  - `pnpm format:write`, `pnpm lint`, `pnpm typecheck`, `pnpm test`: the same checks CI runs
+  - `pnpm format:write`, `lint`, `typecheck`, and `test`: what CI runs
 - Keep It Small, and Explain It
   - What changed, why, and how a reviewer can try it
 
