@@ -1025,25 +1025,13 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
           // ── repo — files in the repo, no live connection ───────────────
           {
             name: "migration",
-            summary: "Migration files, empty or drafted from schema drift.",
+            summary: "Empty timestamped migration files, hand-authored.",
             scope: "repo",
             subcommands: [
               {
                 name: "new",
                 summary: "Create an empty timestamped migration file.",
                 hint: "<timestamp>_<schema>_<description>.sql",
-                options: [
-                  {
-                    flag: "--app",
-                    value: "<slug>",
-                    summary: "Whose schema. Asked for when absent.",
-                  },
-                ],
-              },
-              {
-                name: "generate",
-                summary:
-                  "Generate a migration from an app's Drizzle schema drift.",
                 options: [
                   {
                     flag: "--app",

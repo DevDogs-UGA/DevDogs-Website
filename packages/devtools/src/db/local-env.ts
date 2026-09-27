@@ -1,6 +1,6 @@
 /**
- * The environment `db introspect` and `db migration generate` hand to the
- * `drizzle-kit` child process they spawn.
+ * The environment `db introspect` hands to the `drizzle-kit` child process
+ * it spawns.
  *
  * ## How this relates to `db/connection.ts`
  *
@@ -55,7 +55,7 @@ export interface ResolveLocalToolingEnvOptions {
 
 /**
  * Returns the environment a local-tooling child process (`drizzle-kit`,
- * spawned by `db introspect` / `db migration generate`) should inherit.
+ * spawned by `db introspect`) should inherit.
  *
  * Normal path (the process went through `launch.ts`, as `pnpm devtools`
  * always does): returns `process.env` unchanged — it already carries

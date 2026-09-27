@@ -53,7 +53,6 @@ import {
   type DbConnection,
 } from "./db/connection.js";
 import { runDbExec } from "./db/exec.js";
-import { runGenerateMigration } from "./db/generate-migration.js";
 import { runGenerateTypes } from "./db/generate-types.js";
 import { runIntrospect } from "./db/introspect.js";
 import { runNewMigration } from "./db/new-migration.js";
@@ -742,12 +741,6 @@ async function runDbCommand(rest: string[]): Promise<void> {
       process.exitCode = code === 0 ? 0 : 1;
       return;
     }
-    if (msub === "generate") {
-      const code = await runGenerateMigration(flagValue(mrest, "--app"));
-      process.exitCode = code === 0 ? 0 : 1;
-      return;
-    }
-
     log.error(
       msub
         ? `devtools db migration: unknown subcommand "${msub}". Try ${subcommandList(["db", "migration"])}.`

@@ -295,7 +295,7 @@ describe("coverage of what the CLI dispatches", () => {
       "planner",
       "exec",
     ]);
-    expect(subcommandNames(["db", "migration"])).toEqual(["new", "generate"]);
+    expect(subcommandNames(["db", "migration"])).toEqual(["new"]);
     expect(subcommandNames(["db", "seed"])).toEqual([
       "buckets",
       "roles",

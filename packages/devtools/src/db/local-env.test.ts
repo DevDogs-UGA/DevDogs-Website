@@ -1,7 +1,7 @@
 /**
  * Unit tests for `resolveLocalToolingEnv`, the fix for BUG 1: `db introspect`
- * and `db migration generate` used to parse `.env` directly with raw
- * `dotenv` and merge it OVER `process.env`, bypassing `.env.generated` and
+ * used to parse `.env` directly with raw `dotenv` and merge it OVER
+ * `process.env`, bypassing `.env.generated` and
  * inverting precedence against whatever tier `launch.ts` had already
  * entered. See `local-env.ts`'s header.
  *
