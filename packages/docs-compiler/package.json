@@ -15,7 +15,8 @@
     "provenance": true
   },
   "bin": {
-    "docs-compiler": "./bin/docs-build.mjs"
+    "docs-compiler": "./bin/docs-compiler.mjs",
+    "docs-build": "./bin/docs-build.mjs"
   },
   "exports": {
     ".": {

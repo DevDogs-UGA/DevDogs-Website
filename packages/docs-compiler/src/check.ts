@@ -1,5 +1,5 @@
 /**
- * `docs-build check`, a lint over the prose that warns and never fails.
+ * `docs-compiler check`, a lint over the prose that warns and never fails.
  *
  * Six rules, all the same rule in different hats: a page has grown past the
  * point where a reader will read it, and nothing in the build says so. Length
@@ -16,7 +16,7 @@
  *
  * The counterweight is where the count gets printed. A warning behind a command
  * someone has to think to run is a warning nobody reads, so the bare
- * `docs-build`, which every `pnpm dev` and every `pnpm build` already runs,
+ * `docs-compiler`, which every `pnpm dev` and every `pnpm build` already runs,
  * prints the number on its own summary line and points here for detail.
  *
  * `reference/` is skipped whole. A generated page is an enumeration: as long as
@@ -34,7 +34,7 @@ import { closesFence, opensFence } from "./fences.js";
 /** Package machinery that sits alongside the content and is never a page. */
 const NOT_A_PROJECT = new Set(["dist", "node_modules"]);
 
-/** The path segment `docs-build gen` writes into, and this lint reads past. */
+/** The path segment `docs-compiler gen` writes into, and this lint reads past. */
 const REFERENCE_SEGMENT = "reference";
 
 /**
@@ -79,7 +79,7 @@ export interface CheckSummary {
 
 /**
  * Lints every hand-written markdown file below `contentRoot`, which is the
- * working directory when this runs as `docs-build check`. That is the same
+ * working directory when this runs as `docs-compiler check`. That is the same
  * contract the bare mode has: the folder you are standing in is the content.
  */
 export function checkDocs(contentRoot: string): CheckSummary {
@@ -98,7 +98,7 @@ export function checkDocs(contentRoot: string): CheckSummary {
     // A lint that dies on the file it was pointed at is worse than no lint at
     // all. Front matter is parsed here and malformed YAML throws. Under the
     // bare mode the compiler has already read the same file and would have
-    // thrown first, but `docs-build check` on its own has no such shield.
+    // thrown first, but `docs-compiler check` on its own has no such shield.
     try {
       const source = fs.readFileSync(path.join(contentRoot, file), "utf-8");
       warnings.push(...checkDocFile(source, file));
@@ -239,7 +239,7 @@ export function checkDocFile(source: string, file: string): CheckWarning[] {
     // A sentence that names a tag is not that tag, and this repository writes
     // that sentence. The comments in this very file name `<details>` inside
     // code spans, and `gen` prints them back onto
-    // docs/toolkit/reference/api/docs-build.md, which carries them today with
+    // docs/toolkit/reference/api/docs-compiler.md, which carries them today with
     // no closing tag anywhere on it. Read as markup, one such mention opens a
     // collapsible nothing closes, and every rule below then reports on a page
     // that does not exist: one warning for the tag, and one more for every
@@ -384,7 +384,7 @@ export function checkDocFile(source: string, file: string): CheckWarning[] {
 /* Output ----------------------------------------------------------------- */
 
 /**
- * The house `[docs-build]` line, then every warning, each in the
+ * The house `[docs-compiler]` line, then every warning, each in the
  * `path:line: message` shape a terminal knows how to open.
  *
  * Every warning is printed and none are capped, which stays affordable because
@@ -402,17 +402,17 @@ export function printCheckSummary(
 
   if (summary.warnings.length === 0) {
     console.log(
-      `[docs-build] checked ${summary.pages} page(s) in ${into}/${skipped} — no warnings`,
+      `[docs-compiler] checked ${summary.pages} page(s) in ${into}/${skipped} — no warnings`,
     );
     return;
   }
 
   console.log(
-    `[docs-build] checked ${summary.pages} page(s) in ${into}/${skipped} — ${summary.warnings.length} warning(s), all of them below:`,
+    `[docs-compiler] checked ${summary.pages} page(s) in ${into}/${skipped} — ${summary.warnings.length} warning(s), all of them below:`,
   );
   for (const warning of summary.warnings) {
     const at = warning.line === null ? "" : `:${warning.line}`;
-    console.log(`[docs-build] warn: ${warning.file}${at}: ${warning.message}`);
+    console.log(`[docs-compiler] warn: ${warning.file}${at}: ${warning.message}`);
   }
 }
 

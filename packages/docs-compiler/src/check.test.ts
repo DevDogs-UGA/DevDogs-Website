@@ -240,7 +240,7 @@ describe("collapsibles", () => {
     // This is the shape that found the rule: a code span cannot open an
     // element, and this package's own doc comments name `<details>` in one.
     // `gen` prints those comments back onto
-    // docs/toolkit/reference/api/docs-build.md, which carries them today with
+    // docs/toolkit/reference/api/docs-compiler.md, which carries them today with
     // no closing tag anywhere on it. Counted as markup, one mention opens a
     // collapsible nothing closes and drags every heading below it in behind it.
     const page = [
