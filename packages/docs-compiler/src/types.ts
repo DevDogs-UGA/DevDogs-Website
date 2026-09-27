@@ -5,6 +5,20 @@ export interface DocHeading {
   depth: number;
 }
 
+/**
+ * Which block of a project's sidebar a page sits in. Fixed render order:
+ * Overview (a project's own `index.md`, which carries `section: null` rather
+ * than any of these four), Getting started, Guides, Infrastructure, Reference.
+ *
+ * "infrastructure" is maintainer/officer-only material: deploys, secrets,
+ * runbooks, OAuth/GitHub App setup, CI, the docs system itself.
+ */
+export type DocsSection =
+  | "getting-started"
+  | "guides"
+  | "infrastructure"
+  | "reference";
+
 /** Everything `parseDocFile` derives from one markdown source. */
 export interface ParsedDocFile {
   title: string;
@@ -30,6 +44,20 @@ export interface DocsPage extends ParsedDocFile {
   project: string;
   /** Path relative to `docs/`, project prefix included, no extension. */
   path: string;
+  /**
+   * The sidebar block this page renders under, or null for a project's own
+   * `index.md` (the Overview, which sits outside the four sections). See
+   * `DocsSection`.
+   */
+  section: DocsSection | null;
+  /**
+   * Set on a page emitted from `docs/_shared/**` (see `compileDocs`'s header):
+   * the path it was mounted from, relative to `_shared/`, extension stripped.
+   * Null for every page whose source lives directly under its own project.
+   * Carried through so an "edit this page" link can point at the one file
+   * that actually owns the content, not the copy a reader happened to land on.
+   */
+  mountedFrom: string | null;
 }
 
 /** A project, one immediate subfolder of `docs/`, as shown on the docs landing page. */

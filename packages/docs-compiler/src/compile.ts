@@ -1,10 +1,74 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { DocsBuildError } from "./errors.js";
 import { parseDocFile, toTitleCase } from "./parse.js";
-import type { DocsPage, DocsProject } from "./types.js";
+import type { DocsPage, DocsProject, DocsSection } from "./types.js";
 
 /** Package machinery that sits alongside the content and is never a project. */
 const NOT_A_PROJECT = new Set(["dist", "node_modules"]);
+
+/**
+ * `docs/_shared/**`: pages that are not a project of their own, only content
+ * mounted into others. See `compileDocs`'s header.
+ */
+const SHARED_DIR = "_shared";
+
+const VALID_SECTIONS = new Set<DocsSection>([
+  "getting-started",
+  "guides",
+  "infrastructure",
+  "reference",
+]);
+
+/** Any `reference/` segment, at any depth, is where `gen` writes. */
+function isUnderReference(rel: string): boolean {
+  return rel.split("/").includes("reference");
+}
+
+/**
+ * A page's `section`, from its own frontmatter or the default rule.
+ *
+ * A project's own `index.md` — the Overview — takes none: it is not one of
+ * the four sidebar blocks, it sits above them, so declaring a `section` on it
+ * is a contradiction rather than an instruction, and this refuses it rather
+ * than silently discarding it.
+ *
+ * Everywhere else, explicit frontmatter wins and has to name one of the four
+ * blocks; naming anything else is a typo a build should catch, not a page
+ * that quietly sorts into "guides". Absent frontmatter falls back to the one
+ * mechanical rule the contract gives: a generated reference page lives under
+ * a `reference/` segment and sorts there, everything else defaults to
+ * "guides".
+ */
+function deriveSection(
+  frontmatter: Record<string, unknown>,
+  rel: string,
+  isProjectIndex: boolean,
+  file: string,
+): DocsSection | null {
+  const raw = frontmatter["section"];
+
+  if (isProjectIndex) {
+    if (raw !== undefined) {
+      throw new DocsBuildError(
+        `${file}: a project's index.md is the Overview and takes no "section" (found ${JSON.stringify(raw)}) — remove it`,
+      );
+    }
+    return null;
+  }
+
+  if (raw === undefined) {
+    return isUnderReference(rel) ? "reference" : "guides";
+  }
+
+  if (typeof raw !== "string" || !VALID_SECTIONS.has(raw as DocsSection)) {
+    throw new DocsBuildError(
+      `${file}: invalid "section: ${JSON.stringify(raw)}" — must be one of ${[...VALID_SECTIONS].join(", ")}`,
+    );
+  }
+
+  return raw as DocsSection;
+}
 
 /**
  * Where something that declares no `order` sits. The middle of the range, so a
@@ -37,10 +101,59 @@ function isIndexPath(pagePath: string): boolean {
   return base === "index" || base === "readme";
 }
 
+/** `frontmatter.mount`, validated. Throws rather than warns: an author who */
+function readMountTargets(
+  frontmatter: Record<string, unknown>,
+  knownProjects: readonly string[],
+  file: string,
+): string[] {
+  const raw = frontmatter["mount"];
+  if (
+    !Array.isArray(raw) ||
+    raw.length === 0 ||
+    !raw.every((value) => typeof value === "string")
+  ) {
+    throw new DocsBuildError(
+      `${file}: "mount" must be a non-empty array of project slugs`,
+    );
+  }
+
+  const targets = raw as string[];
+  const seen = new Set<string>();
+
+  for (const project of targets) {
+    if (seen.has(project)) {
+      throw new DocsBuildError(`${file}: mounts "${project}" more than once`);
+    }
+    seen.add(project);
+
+    if (!knownProjects.includes(project)) {
+      throw new DocsBuildError(
+        `${file}: mounts into unknown project "${project}" — known projects are ${knownProjects.join(", ")}`,
+      );
+    }
+  }
+
+  return targets;
+}
+
 /**
  * Reads every markdown file under `contentRoot`, grouped by project. Each
  * immediate subfolder is one project, and the first segment of a page's path is
- * its project.
+ * its project — except `_shared`, which is never a project of its own.
+ *
+ * A page under `docs/_shared/<path>.md` declaring `mount: [<project>, ...]` is
+ * emitted as a copy into every listed project, at `<project>/<path>` (so it
+ * renders at `/docs/<project>/<path>`), with `mountedFrom` set to
+ * `_shared/<path>` for the emitted copy's "edit this page" link. A page that
+ * is partly app-specific is expected to split into a shared page plus a
+ * separate page under the app that needs more; this function only mounts
+ * what it is told to.
+ *
+ * Two things fail the build rather than warn, because a wrong copy silently
+ * shipped is worse than a build a contributor has to fix: mounting into a
+ * project this content root does not have, and a mount whose target path is
+ * already a real page.
  */
 export function compileDocs(contentRoot: string): {
   projects: DocsProject[];
@@ -52,6 +165,7 @@ export function compileDocs(contentRoot: string): {
       (entry) =>
         entry.isDirectory() &&
         !entry.name.startsWith(".") &&
+        entry.name !== SHARED_DIR &&
         !NOT_A_PROJECT.has(entry.name),
     )
     .map((entry) => entry.name)
@@ -59,6 +173,8 @@ export function compileDocs(contentRoot: string): {
 
   const pages: DocsPage[] = [];
   const projects: DocsProject[] = [];
+  /** Every emitted page's path, so a mount can be checked against it. */
+  const occupied = new Map<string, string>();
 
   for (const slug of projectSlugs) {
     const projectDir = path.join(contentRoot, slug);
@@ -73,20 +189,38 @@ export function compileDocs(contentRoot: string): {
     };
 
     for (const rel of relPaths) {
+      const file = `${slug}/${rel}.md`;
       const source = fs.readFileSync(
         path.join(projectDir, `${rel}.md`),
         "utf-8",
       );
       const parsed = parseDocFile(source, rel.split("/").at(-1)!);
-      pages.push({ ...parsed, project: slug, path: `${slug}/${rel}` });
 
       // The project's own index page seeds its display name, description and
       // position on the docs landing page. A nested folder's index page does
       // not; that one positions its own folder in the sidebar, which is
       // `buildDocsTree`'s business rather than this loop's.
-      if (isIndexPath(rel) && !rel.includes("/")) {
-        if (typeof parsed.frontmatter.name === "string") {
-          project.name = parsed.frontmatter.name;
+      const isProjectIndex = isIndexPath(rel) && !rel.includes("/");
+      const section = deriveSection(
+        parsed.frontmatter,
+        rel,
+        isProjectIndex,
+        file,
+      );
+
+      const docsPath = `${slug}/${rel}`;
+      pages.push({
+        ...parsed,
+        project: slug,
+        path: docsPath,
+        section,
+        mountedFrom: null,
+      });
+      occupied.set(docsPath, file);
+
+      if (isProjectIndex) {
+        if (typeof parsed.frontmatter["name"] === "string") {
+          project.name = parsed.frontmatter["name"];
         }
         project.description = parsed.description;
         project.order = parsed.order;
@@ -94,6 +228,36 @@ export function compileDocs(contentRoot: string): {
     }
 
     projects.push(project);
+  }
+
+  const sharedDir = path.join(contentRoot, SHARED_DIR);
+  if (fs.statSync(sharedDir, { throwIfNoEntry: false })?.isDirectory()) {
+    for (const rel of walk(sharedDir).sort()) {
+      const file = `${SHARED_DIR}/${rel}.md`;
+      const source = fs.readFileSync(path.join(sharedDir, `${rel}.md`), "utf-8");
+      const parsed = parseDocFile(source, rel.split("/").at(-1)!);
+      const targets = readMountTargets(parsed.frontmatter, projectSlugs, file);
+
+      for (const project of targets) {
+        const docsPath = `${project}/${rel}`;
+        const collision = occupied.get(docsPath);
+        if (collision !== undefined) {
+          throw new DocsBuildError(
+            `${file}: mounting into "${project}" collides with "${collision}" at ${docsPath}`,
+          );
+        }
+
+        const section = deriveSection(parsed.frontmatter, rel, false, file);
+        pages.push({
+          ...parsed,
+          project,
+          path: docsPath,
+          section,
+          mountedFrom: rel,
+        });
+        occupied.set(docsPath, file);
+      }
+    }
   }
 
   projects.sort(
@@ -147,6 +311,7 @@ export type {
   DocHeading,
   DocsPage,
   DocsProject,
+  DocsSection,
   ParsedDocFile,
 } from "@devdogsuga/docs-compiler";
 `,

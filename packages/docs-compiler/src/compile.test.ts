@@ -11,8 +11,9 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { compileDocs } from "./compile.js";
+import { DocsBuildError } from "./errors.js";
 
 let root: string;
 
@@ -20,6 +21,11 @@ function write(rel: string, source: string): void {
   const file = path.join(root, rel);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, source, "utf-8");
+}
+
+/** A fresh content root per test, so one test's fixture can't leak into another. */
+function freshRoot(prefix: string): string {
+  return fs.mkdtempSync(path.join(os.tmpdir(), `${prefix}-`));
 }
 
 beforeAll(() => {
@@ -86,5 +92,128 @@ describe("compileDocs ordering", () => {
       "platform/reference/components/index",
       "study-group-finder/index",
     ]);
+  });
+});
+
+describe("compileDocs section", () => {
+  afterEach(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it("gives a project's own index.md no section", () => {
+    root = freshRoot("docs-build-section");
+    write("platform/index.md", "---\nname: Platform\n---\n\n# Platform\n");
+    const { pages } = compileDocs(root);
+    expect(pages.find((p) => p.path === "platform/index")?.section).toBeNull();
+  });
+
+  it("refuses a section declared on a project's own index.md", () => {
+    root = freshRoot("docs-build-section");
+    write(
+      "platform/index.md",
+      "---\nname: Platform\nsection: guides\n---\n\n# Platform\n",
+    );
+    expect(() => compileDocs(root)).toThrow(DocsBuildError);
+  });
+
+  it("defaults a page under reference/ to the reference section", () => {
+    root = freshRoot("docs-build-section");
+    write("platform/index.md", "# Platform\n");
+    write("platform/reference/db.md", "# DB\n");
+    const { pages } = compileDocs(root);
+    expect(pages.find((p) => p.path === "platform/reference/db")?.section).toBe(
+      "reference",
+    );
+  });
+
+  it("defaults every other page to guides", () => {
+    root = freshRoot("docs-build-section");
+    write("platform/index.md", "# Platform\n");
+    write("platform/setup.md", "# Setup\n");
+    const { pages } = compileDocs(root);
+    expect(pages.find((p) => p.path === "platform/setup")?.section).toBe(
+      "guides",
+    );
+  });
+
+  it("takes an explicit section over the default", () => {
+    root = freshRoot("docs-build-section");
+    write("platform/index.md", "# Platform\n");
+    write(
+      "platform/deploys.md",
+      "---\nsection: infrastructure\n---\n\n# Deploys\n",
+    );
+    const { pages } = compileDocs(root);
+    expect(pages.find((p) => p.path === "platform/deploys")?.section).toBe(
+      "infrastructure",
+    );
+  });
+
+  it("rejects a section that is not one of the four", () => {
+    root = freshRoot("docs-build-section");
+    write("platform/index.md", "# Platform\n");
+    write("platform/setup.md", "---\nsection: onboarding\n---\n\n# Setup\n");
+    expect(() => compileDocs(root)).toThrow(DocsBuildError);
+  });
+});
+
+describe("compileDocs mounting", () => {
+  afterEach(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it("emits a _shared page into every listed project", () => {
+    root = freshRoot("docs-build-mount");
+    write("platform/index.md", "# Platform\n");
+    write("toolkit/index.md", "# Toolkit\n");
+    write(
+      "_shared/getting-started/troubleshooting.md",
+      "---\nmount: [platform, toolkit]\n---\n\n# Troubleshooting\n",
+    );
+
+    const { pages, projects } = compileDocs(root);
+
+    // _shared is never a project of its own.
+    expect(projects.map((p) => p.slug)).not.toContain("_shared");
+
+    const platformCopy = pages.find(
+      (p) => p.path === "platform/getting-started/troubleshooting",
+    );
+    const toolkitCopy = pages.find(
+      (p) => p.path === "toolkit/getting-started/troubleshooting",
+    );
+    expect(platformCopy?.mountedFrom).toBe(
+      "getting-started/troubleshooting",
+    );
+    expect(toolkitCopy?.mountedFrom).toBe("getting-started/troubleshooting");
+    expect(platformCopy?.title).toBe("Troubleshooting");
+  });
+
+  it("throws when a mount targets an unknown project", () => {
+    root = freshRoot("docs-build-mount");
+    write("platform/index.md", "# Platform\n");
+    write(
+      "_shared/faq.md",
+      "---\nmount: [sandbox-that-does-not-exist]\n---\n\n# FAQ\n",
+    );
+    expect(() => compileDocs(root)).toThrow(DocsBuildError);
+  });
+
+  it("throws when a mounted path collides with a real page", () => {
+    root = freshRoot("docs-build-mount");
+    write("platform/index.md", "# Platform\n");
+    write("platform/faq.md", "# Real FAQ\n");
+    write(
+      "_shared/faq.md",
+      "---\nmount: [platform]\n---\n\n# Shared FAQ\n",
+    );
+    expect(() => compileDocs(root)).toThrow(DocsBuildError);
+  });
+
+  it("throws when mount is missing or not an array", () => {
+    root = freshRoot("docs-build-mount");
+    write("platform/index.md", "# Platform\n");
+    write("_shared/faq.md", "# FAQ with no mount\n");
+    expect(() => compileDocs(root)).toThrow(DocsBuildError);
   });
 });
