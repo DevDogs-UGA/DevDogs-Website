@@ -44,6 +44,22 @@ vi.mock("./repo/peers.js", () => ({
 const main = vi.fn();
 vi.mock("./cli.js", () => ({ main: (...args: unknown[]) => main(...args) }));
 
+// A menu invocation needs `discoverRepoRoot()` to find a repo before it can
+// resolve a tier — real repo discovery walks up from `process.cwd()`, which
+// in THIS test run is Backstage's own checkout, not a DevDogsUGA clone (see
+// the "oauth" test below). Mocked here, unlike `findRepoRoot()` elsewhere in
+// this suite (which `vitest.config.ts` already stabilizes via
+// `DEVTOOLS_TEST_REPO_ROOT`), so a bare/resumed-group invocation can reach
+// its tier resolution instead of hitting the `RepoNotFoundError` exit.
+vi.mock("./repo/root.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./repo/root.js")>();
+  return {
+    ...actual,
+    discoverRepoRoot: () => "/fake/repo",
+    findRepoRoot: () => "/fake/repo",
+  };
+});
+
 describe("stripTierFlag", () => {
   it("returns argv untouched when --tier is absent", () => {
     expect(stripTierFlag(["db", "status", "--target", "remote"])).toEqual({
@@ -233,11 +249,11 @@ describe("launch", () => {
   });
 
   it("oauth skips tier resolution — catalog-marked envFree (TASK-345)", async () => {
-    // This module's cwd (Backstage's own checkout) is not a DevDogsUGA
-    // clone, so `discoverRepoRoot()` genuinely returns null here — the same
-    // condition a workshop repo with no DevDogsUGA checkout at all would
-    // hit. Reaching `main()` anyway, rather than the `RepoNotFoundError`
-    // exit, is what proves `oauth` runs outside a checkout.
+    // `envFree` short-circuits BEFORE the `discoverRepoRoot()` check below —
+    // `oauth` never calls it at all, so this passes regardless of what a real
+    // checkout would answer (`./repo/root.js` is mocked above for the
+    // menu-invocation tests, which genuinely do need it to find a repo).
+    // Reaching `main()` anyway is what proves `oauth` runs outside a checkout.
     const { launch } = await import("./launch.js");
     await launch(["oauth", "--base-url", "https://api.devdogsuga.org"]);
     expect(resolveSessionTier).not.toHaveBeenCalled();
@@ -251,4 +267,111 @@ describe("launch", () => {
     ]);
   });
 
+  describe("entering the environment: at launch, or deferred to the menu", () => {
+    const savedIsTTY = process.stdin.isTTY;
+    const savedDeployEnv = process.env.DEPLOY_ENV;
+    const savedDevDb = process.env.DEV_DB;
+
+    beforeEach(() => {
+      resolveSessionTier.mockResolvedValue({
+        ok: true,
+        tier: "development",
+        resolvedBy: "sole",
+      });
+      delete process.env.DEPLOY_ENV;
+      delete process.env.DEV_DB;
+    });
+
+    afterEach(() => {
+      Object.defineProperty(process.stdin, "isTTY", {
+        value: savedIsTTY,
+        configurable: true,
+      });
+      if (savedDeployEnv === undefined) delete process.env.DEPLOY_ENV;
+      else process.env.DEPLOY_ENV = savedDeployEnv;
+      if (savedDevDb === undefined) delete process.env.DEV_DB;
+      else process.env.DEV_DB = savedDevDb;
+    });
+
+    it("a bare invocation exports the tier but does not enter it before dispatching to the menu", async () => {
+      const { launch } = await import("./launch.js");
+      const { takeMenuEnvHook } = await import("./env-entry.js");
+
+      await launch([]);
+
+      // `main` (the menu's own entry point, mocked here) ran; the actual env
+      // files were never loaded to get there.
+      expect(main).toHaveBeenCalledWith([]);
+      expect(enterEnvironment).not.toHaveBeenCalled();
+      // The tier decision itself IS exported up front, same as `--tier` would be.
+      expect(process.env.DEPLOY_ENV).toBe("development");
+
+      // `runMenu` would call this, right before dispatching whatever the
+      // reader chose — simulated here since `main` is mocked and never
+      // really walks the tree in this file.
+      const hook = takeMenuEnvHook();
+      expect(hook).toBeTypeOf("function");
+      const dispatched = await hook!(["db", "status"], async () => "Done.");
+      expect(dispatched).toBe("Done.");
+      expect(enterEnvironment).toHaveBeenCalledWith("development", {
+        override: false,
+        devDatabase: undefined,
+      });
+    });
+
+    it("a bare group resumed at a TTY (devtools db) also defers entry", async () => {
+      Object.defineProperty(process.stdin, "isTTY", {
+        value: true,
+        configurable: true,
+      });
+      const { launch } = await import("./launch.js");
+      const { takeMenuEnvHook } = await import("./env-entry.js");
+
+      await launch(["db"]);
+
+      expect(main).toHaveBeenCalledWith(["db"]);
+      expect(enterEnvironment).not.toHaveBeenCalled();
+      expect(takeMenuEnvHook()).toBeTypeOf("function");
+    });
+
+    it("a bare group on a non-TTY does NOT defer — bareGroupStartPath never resumes off a terminal", async () => {
+      // `process.stdin.isTTY` defaults to falsy in this test run; explicit
+      // here so the test does not depend on that ambient default.
+      Object.defineProperty(process.stdin, "isTTY", {
+        value: false,
+        configurable: true,
+      });
+      const { launch } = await import("./launch.js");
+      const { takeMenuEnvHook } = await import("./env-entry.js");
+
+      await launch(["db"]);
+
+      // Entered eagerly, exactly as a typed command does — `main(["db"])`
+      // hits the dispatcher's own "which of …?" refusal, not the wizard.
+      expect(enterEnvironment).toHaveBeenCalledWith("development", {
+        override: false,
+        devDatabase: undefined,
+      });
+      expect(takeMenuEnvHook()).toBeUndefined();
+    });
+
+    it("a typed command still enters the environment before main() runs, unchanged", async () => {
+      const { launch } = await import("./launch.js");
+      const { takeMenuEnvHook } = await import("./env-entry.js");
+
+      await launch(["db", "status"]);
+
+      expect(enterEnvironment).toHaveBeenCalledWith("development", {
+        override: false,
+        devDatabase: undefined,
+      });
+      expect(main).toHaveBeenCalledWith(["db", "status"]);
+      // Entered, dispatched, and done — nothing left for a menu to run later.
+      expect(takeMenuEnvHook()).toBeUndefined();
+
+      const enterOrder = enterEnvironment.mock.invocationCallOrder[0]!;
+      const mainOrder = main.mock.invocationCallOrder[0]!;
+      expect(enterOrder).toBeLessThan(mainOrder);
+    });
+  });
 });

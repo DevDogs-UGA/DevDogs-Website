@@ -16,9 +16,27 @@
  * This module settles the tier ONCE, before any command's imports — let alone
  * its code — run, using the shared policy in `@devdogsuga/env/session`. By
  * the time `cli.ts` is imported, `process.env.DEPLOY_ENV` already names the
- * tier and its env files are already loaded, so `cli.ts`, `menu.ts` and every
- * runner underneath them just read `process.env` like any other command would
- * under `with-env` — this module IS the replacement for `with-env`'s job.
+ * tier, so `cli.ts`, `menu.ts` and every runner underneath them just read
+ * `process.env.DEPLOY_ENV`/`DEV_DB` like any other command would under
+ * `with-env` — this module IS the replacement for `with-env`'s job.
+ *
+ * ## Entering the environment: at launch, or deferred to the menu
+ *
+ * "Settling the tier" and "entering it" (loading `.env.<tier>` and its
+ * `DEV_DB` overlay onto `process.env`, via `@devdogsuga/env/session`'s
+ * `enterEnvironment`) are two different steps, and a MENU invocation —
+ * a bare `pnpm devtools`, or a bare group like `pnpm devtools db` resumed
+ * through `bareGroupStartPath` — only gets the first one here. Entering holds
+ * the env files hostage to whatever was true at the moment this process
+ * started; a contributor who starts the local stack in another terminal
+ * while still choosing from the wizard would otherwise have that missed
+ * entirely. So for a menu invocation this module resolves the tier, exports
+ * `DEPLOY_ENV`/`DEV_DB` directly (skipping `enterEnvironment` itself), and
+ * registers `env-entry.ts`'s menu hook instead of entering — `menu.ts`'s
+ * `runMenu` calls it right before dispatching the ONE command the reader
+ * chose, so the env files loaded are current as of that moment, not this
+ * one. A typed command line still enters right here, unchanged: there is no
+ * wizard delay to protect it from.
  *
  * ## `--tier`, a global flag
  *
@@ -30,11 +48,13 @@
  * already been made, and `resolveTier` (see `tier.ts`) falls back to reading
  * it off `process.env.DEPLOY_ENV` rather than asking again.
  */
-import { confirm, select } from "@clack/prompts";
+import { select } from "@clack/prompts";
 import type { DeployEnvironment } from "@devdogsuga/env";
 import type { DevDatabase } from "@devdogsuga/env/load";
 import type { TierChoice } from "@devdogsuga/env/session";
 import { findCommand } from "./commands.js";
+import { enterSessionEnvironment, setMenuEnvHook } from "./env-entry.js";
+import { bareGroupStartPath } from "./menu.js";
 import { discoverRepoRoot, findRepoRoot, RepoNotFoundError } from "./repo/root.js";
 import { loadEnvLoad, loadEnvSession } from "./repo/peers.js";
 import { errorMessage, unwrap } from "./ui.js";
@@ -119,7 +139,8 @@ async function dispatch(argv: string[]): Promise<void> {
 }
 
 /**
- * Resolves the session's deploy tier, enters it, and hands off to `cli.ts`.
+ * Resolves the session's deploy tier, enters it (or defers entry to the
+ * menu — see this file's header), and hands off to `cli.ts`.
  *
  * Exits the process directly on a refusal from `resolveSessionTier` — there
  * is no command dispatched yet for a caller to fall back to, so there is
@@ -127,6 +148,17 @@ async function dispatch(argv: string[]): Promise<void> {
  */
 export async function launch(argv: readonly string[]): Promise<void> {
   const { explicit, rest } = stripTierFlag(argv);
+
+  // Same test `cli.ts`'s own `main()` uses to decide whether a bare command
+  // group resumes the wizard instead of dispatching — computed here too so
+  // this function can decide, before resolving anything, whether entry gets
+  // deferred to `menu.ts`'s hook. A non-TTY caller never resumes the wizard
+  // (see `bareGroupStartPath`'s own doc), so `rest.length === 0` is the only
+  // menu shape it can hit — mirroring `main()`'s own `process.stdin.isTTY ?
+  // bareGroupStartPath(argv) : null`.
+  const isMenuInvocation =
+    rest.length === 0 ||
+    (process.stdin.isTTY === true && bareGroupStartPath(rest) !== null);
 
   // `--help`/`-h` bypasses tier resolution entirely, BEFORE it can refuse.
   // `cli.ts`'s own `main()` already answers these with no env in play (see
@@ -244,131 +276,38 @@ export async function launch(argv: readonly string[]): Promise<void> {
     devDatabase = resolution.devDatabase;
   }
 
-  // Mandatory, not chattiness: which database a command is about to touch
-  // must never be a guess. Names the QUALIFIED session (`development:local`)
-  // when one was resolved. See `session.ts`'s and `load.ts`'s own headers.
-  const reportEntered = (files: string[], label: string): void => {
-    process.stderr.write(
-      `devtools: loaded ${files.length > 0 ? files.join(", ") : "no env files"} (${label})\n`,
+  if (isMenuInvocation) {
+    // Export the decision, not the files: `DEPLOY_ENV`/`DEV_DB` name the
+    // session the same way `enterEnvironment` would set them, but loading
+    // `.env.<tier>` itself — and everything `enterSessionEnvironment` does
+    // around that, including the offline-stack offer — waits for a command to
+    // actually be chosen. See this file's header.
+    process.env.DEPLOY_ENV = tier;
+    if (devDatabase !== undefined) process.env.DEV_DB = devDatabase;
+
+    setMenuEnvHook((commandArgv, dispatchCommand) =>
+      enterSessionEnvironment(
+        tier,
+        devDatabase,
+        commandArgv,
+        { envLoad, envSession },
+        dispatchCommand,
+      ),
     );
-  };
-  const sessionLabel =
-    devDatabase === undefined ? tier : `${tier}:${devDatabase}`;
-
-  try {
-    // `override: false` — a fresh process, so an already-exported shell
-    // variable beats the file the same way `with-env` always let it, rather
-    // than a stale `.env.<tier>` value silently winning over what the caller
-    // just set for this one invocation. As of the `SHELL_KEYS_ENV` marker set
-    // above, "an already-exported shell variable" means exactly that — a key
-    // named in the marker — not merely "already present in `process.env`":
-    // this same call is what COPIES the loaded environment onto `process.env`
-    // in the first place, so on a nested/offer-to-restart path below, without
-    // the marker's narrowing, this line's own PREVIOUS run in this process
-    // would otherwise outrank the fresh file it is about to load.
-    const entered = await envSession.enterEnvironment(tier, {
-      override: false,
-      devDatabase,
-    });
-    for (const warning of entered.warnings) {
-      process.stderr.write(`devtools: ${warning}\n`);
-    }
-    reportEntered(entered.files, sessionLabel);
-  } catch (err) {
-    if (err instanceof envLoad.LocalStackOfflineError) {
-      // The session explicitly means the local database and the stack is not
-      // reachable.
-      process.stderr.write(`devtools: ${err.message}\n`);
-
-      // Rather than making the contributor stop, run `db start`, and re-run
-      // whatever they meant, offer to bring the stack up right here and then
-      // carry on with their original command. Only on a TTY (there is no one
-      // to answer otherwise), and not when the command is ITSELF a stack
-      // lifecycle command — `db start`/`stop`/`restart` do this on their own,
-      // and `db stop` against an already-down stack must not be interrupted by
-      // an offer to start it. The bare top menu is likewise left to its own
-      // Database → start entry.
-      const lifecycle =
-        rest[0] === "db" &&
-        (rest[1] === "start" || rest[1] === "stop" || rest[1] === "restart");
-      if (process.stdin.isTTY === true && rest.length !== 0 && !lifecycle) {
-        const start = unwrap(
-          await confirm({
-            message: "Start the local Supabase stack now?",
-          }),
-        );
-        if (start) {
-          // Keep the session's local qualifier set so the env refresh that
-          // `runStackCommand("start")` performs on success re-applies the
-          // overlay under it, and the command we dispatch next resolves the
-          // freshly-started local database.
-          if (devDatabase !== undefined) process.env.DEV_DB = devDatabase;
-          const { runStackCommand } = await import("./stack.js");
-          const { code, lines } = await runStackCommand("start", null);
-          for (const line of lines) {
-            process.stderr.write(`devtools: ${line}\n`);
-          }
-          if (code === 0) {
-            await dispatch(rest);
-            return;
-          }
-          process.stderr.write(
-            "devtools: the stack did not start — see the Supabase CLI output " +
-              "above.\n",
-          );
-          process.exit(1);
-        }
-      }
-
-      // Declined, or nobody to ask. `db` (whose `start` is the fix, and whose
-      // data commands re-check the connection themselves) and the bare menu
-      // (the road to `db start`) may continue in a degraded, unqualified
-      // entry; anything else stops here, with the error's own troubleshooting,
-      // instead of failing later against whatever `.env` happens to name.
-      if (rest.length !== 0 && rest[0] !== "db") process.exit(1);
-      process.stderr.write(
-        "devtools: continuing without the overlay so `db start` can fix this.\n",
-      );
-      const inherited = process.env.DEV_DB;
-      delete process.env.DEV_DB;
-      const entered = await envSession.enterEnvironment(tier, { override: false });
-      if (devDatabase !== undefined) {
-        // Children spawned AFTER `db start` succeeds should still inherit
-        // the session's answer; the refresh that follows a successful start
-        // re-applies the overlay under this same variable.
-        process.env.DEV_DB = devDatabase;
-      } else if (inherited !== undefined) {
-        process.env.DEV_DB = inherited;
-      }
-      for (const warning of entered.warnings) {
-        process.stderr.write(`devtools: ${warning}\n`);
-      }
-      reportEntered(entered.files, tier);
-      await dispatch(rest);
-      return;
-    }
-    if (!(err instanceof envLoad.MissingEnvFileError)) throw err;
-
-    if (tier === "development") {
-      // The clean-clone path: a fresh checkout has no `.env` at all, and
-      // `pnpm devtools setup` is how one gets created — `MissingEnvFileError`
-      // names it. Reporting and continuing here, rather than refusing, is
-      // what lets `setup` itself run through this same entry point. See
-      // `load.ts`'s `MissingEnvFileError` for the message this prints.
-      process.stderr.write(`devtools: ${err.message}\n`);
-    } else {
-      // An EXPLICITLY selected staging/production tier with no env file is
-      // not a first run — it is a real problem, and `env pull` is the fix
-      // `MissingEnvFileError`'s own message already names. Fatal.
-      process.stderr.write(`devtools: ${err.message}\n`);
-      process.exit(1);
-    }
+    await dispatch(rest);
+    return;
   }
 
   // Caught here rather than left to `bin/devtools.mjs`'s `child.on("error",
   // …)`, which only ever sees a spawn failure, never a rejection thrown
   // inside this process.
-  await dispatch(rest);
+  await enterSessionEnvironment(
+    tier,
+    devDatabase,
+    rest,
+    { envLoad, envSession },
+    () => dispatch(rest),
+  );
 }
 
 // `bin/devtools.mjs` runs this file directly through tsx — `tsx

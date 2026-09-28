@@ -69,6 +69,7 @@ const { runMenu, bareGroupStartPath } = await import("./menu.js");
 const { GROUPS, TOP_LEVEL, allPaths, findCommand, groupOf } =
   await import("./commands.js");
 const { UNKNOWN_ENVIRONMENT } = await import("./environment.js");
+const { setMenuEnvHook, takeMenuEnvHook } = await import("./env-entry.js");
 
 /**
  * Runs one walk with the given answers, returning the argv it dispatched.
@@ -377,6 +378,66 @@ describe("resuming at a node", () => {
 
   it("dispatches nothing when the reader backs out of the resumed screen", async () => {
     expect(await resume(["db"], [PICK_BACK])).toBeNull();
+  });
+});
+
+describe("the deferred env-entry hook", () => {
+  // `launch.ts` registers this (`env-entry.ts`'s `setMenuEnvHook`) instead of
+  // entering the environment itself for a menu invocation — see `runMenu`'s
+  // own header. This is the other half of that contract: `runMenu` must call
+  // it right before dispatch, with the CHOSEN leaf's argv, and never call the
+  // injected dispatcher twice.
+  afterEach(() => {
+    // Leftover from a test that never got read (a failure before the walk's
+    // end) must not leak into the next one.
+    takeMenuEnvHook();
+  });
+
+  it("calls the registered hook with the chosen leaf's argv right before dispatch", async () => {
+    const seen: { argv?: readonly string[] } = {};
+    setMenuEnvHook(async (commandArgv, dispatchCommand) => {
+      seen.argv = commandArgv;
+      return dispatchCommand();
+    });
+
+    const argv = await walk(answersFor(["db", "status"]));
+
+    expect(argv).toEqual(["db", "status"]);
+    expect(seen.argv).toEqual(["db", "status"]);
+  });
+
+  it("uses the hook's own return value as runMenu's result", async () => {
+    setMenuEnvHook(async () => "hook decided this.");
+
+    let dispatched: string[] | null = null;
+    answers.length = 0;
+    answers.push(...answersFor(["db", "status"]));
+    const result = await runMenu((argv) => {
+      dispatched = argv;
+      return Promise.resolve("dispatcher's own answer");
+    }, UNKNOWN_ENVIRONMENT);
+
+    expect(result).toBe("hook decided this.");
+    // The hook in this test never calls its `dispatchCommand` argument, so
+    // the injected dispatcher itself must never run.
+    expect(dispatched).toBeNull();
+  });
+
+  it("clears the hook after one use — a nested walk does not inherit it", async () => {
+    setMenuEnvHook(async (_argv, dispatchCommand) => dispatchCommand());
+
+    await walk(answersFor(["db", "status"]));
+
+    expect(takeMenuEnvHook()).toBeUndefined();
+  });
+
+  it("dispatches directly when no hook is registered — a typed command already entered", async () => {
+    // Every other test in this file relies on exactly this: none of them set
+    // a hook, and `walk()`'s own dispatcher still runs. This just says so
+    // explicitly.
+    expect(takeMenuEnvHook()).toBeUndefined();
+    const argv = await walk(answersFor(["db", "status"]));
+    expect(argv).toEqual(["db", "status"]);
   });
 });
 

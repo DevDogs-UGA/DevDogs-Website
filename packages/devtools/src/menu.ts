@@ -26,6 +26,7 @@ import {
   type CommandNode,
   type CommandOption,
 } from "./commands.js";
+import { takeMenuEnvHook } from "./env-entry.js";
 import {
   blockedBecause,
   describeEnvironment,
@@ -319,11 +320,23 @@ export function bareGroupStartPath(argv: readonly string[]): string[] | null {
  * `options.startPath`, from `bareGroupStartPath`, skips straight to that
  * node's subcommand screen — see `walk`'s `startPath` branch.
  *
- * The deploy tier is NOT asked here any more. `src/launch.ts` resolves and
- * enters it before `cli.ts` — and therefore this module — is even imported,
- * so by the time the wizard opens the whole session is already running under
- * it, exactly as if `--tier` had been typed. Recording it for the "run it
- * directly next time" line only needs to read `process.env.DEPLOY_ENV` back.
+ * The deploy tier is NOT asked here any more. `src/launch.ts` resolves it
+ * before `cli.ts` — and therefore this module — is even imported, and
+ * exports `DEPLOY_ENV`/`DEV_DB` right away, so by the time the wizard opens
+ * `process.env` already names the session exactly as if `--tier` had been
+ * typed. Recording it for the "run it directly next time" line only needs to
+ * read `process.env.DEPLOY_ENV` back.
+ *
+ * Entering that tier — loading its `.env.<tier>` file onto `process.env` —
+ * is what's deferred: `launch.ts` registers a hook (`env-entry.ts`'s
+ * `setMenuEnvHook`) instead of entering up front, so whatever changed while
+ * the reader was still walking the menu (the local stack coming up in
+ * another terminal, `.env.generated` being rewritten) is picked up rather
+ * than missed. `takeMenuEnvHook()` below runs it right before the chosen
+ * command dispatches — the ONE place in a menu walk an env value is ever
+ * actually read. `undefined` (no hook registered — a typed command entered
+ * already, or a test drives `runMenu` directly) just dispatches straight
+ * through, unchanged from before this existed.
  */
 export async function runMenu(
   dispatch: (argv: string[]) => Promise<string | null>,
@@ -360,5 +373,14 @@ export async function runMenu(
       ? `development:${devDb}`
       : enteredTier,
   );
+
+  // The deferred entry, if `launch.ts` registered one — see this function's
+  // header. Read-and-cleared in one call so a nested launcher (this same
+  // command re-dispatching through its own `launch()`, e.g. `db start`'s
+  // offline-stack offer) never inherits a hook meant for this walk.
+  const enterEnvironment = takeMenuEnvHook();
+  if (enterEnvironment) {
+    return enterEnvironment(chosen.argv, () => dispatch(chosen.argv));
+  }
   return dispatch(chosen.argv);
 }
