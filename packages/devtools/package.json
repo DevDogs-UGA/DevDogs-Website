@@ -53,18 +53,21 @@
   "peerDependencies": {
     "@devdogsuga/brand": "*",
     "@devdogsuga/db": "*",
-    "@devdogsuga/env": "*"
+    "@devdogsuga/env": "*",
+    "@devdogsuga/events": "*"
   },
   "peerDependenciesMeta": {
     "@devdogsuga/brand": { "optional": true },
     "@devdogsuga/db": { "optional": true },
-    "@devdogsuga/env": { "optional": true }
+    "@devdogsuga/env": { "optional": true },
+    "@devdogsuga/events": { "optional": true }
   },
   "devDependencies": {
     "@devdogsuga/brand": "workspace:*",
     "@devdogsuga/config": "workspace:*",
     "@devdogsuga/db": "workspace:*",
     "@devdogsuga/env": "workspace:*",
+    "@devdogsuga/events": "workspace:*",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@vitest/coverage-v8": "catalog:",

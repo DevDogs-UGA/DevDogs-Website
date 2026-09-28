@@ -1022,10 +1022,10 @@ async function dispatch(argv: string[]): Promise<string | null> {
   }
 
   if (first === "images") {
-    // `connect` is passed rather than called: only event graphics need a
-    // database, and `images page/*` must not demand a running stack to draw
-    // pictures that come entirely out of this repo.
-    await runImages(rest, { connect });
+    // No database dependency to pass through any more: event graphics read
+    // `@devdogsuga/events`'s committed config directly (see
+    // `images/events.ts`), so `images` never needs a running stack at all.
+    await runImages(rest);
     return DONE;
   }
 

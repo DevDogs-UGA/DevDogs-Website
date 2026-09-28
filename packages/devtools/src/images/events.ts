@@ -1,22 +1,21 @@
-import { loadBrandEvent } from "../repo/peers.js";
-import type { DevtoolsClient } from "../instance.js";
+import { loadBrandEvent, loadEvents } from "../repo/peers.js";
+import type { Meeting, Workshop } from "@devdogsuga/events";
 import type { EventGraphicSource } from "./graphics.js";
 
 /**
- * Meetings, for the one group of graphics that cannot be drawn from the repo.
+ * Meetings, for the one group of graphics that cannot be drawn from files
+ * alone.
  *
- * Every other graphic is a function of committed files. An event poster is a
- * function of meetings reconciled into the database from
- * `@devdogsuga/events`, so `devtools images event/*` needs a running
- * database that has that config loaded into it — and there is nothing about
- * typing a command that makes that obvious. Making it obvious is most of what
- * this file is for: the reads are small, and {@link EventReader} is the seam
- * the command talks to, so tests never open a socket.
- *
- * Reads go through `adminClient`, against the local instance resolved by the
- * command. `platform` is exposed to PostgREST (`supabase/config.toml`),
- * and the service role bypasses the RLS that otherwise keeps `meetings` and
- * `workshops` closed to every client.
+ * Every other graphic is a function of committed files. An event poster used
+ * to be a function of meetings RECONCILED into the database from
+ * `@devdogsuga/events` — which meant `devtools images event/*` needed a
+ * running local stack just to draw a picture that comes entirely out of this
+ * repo. It no longer does: `@devdogsuga/events`'s `getClubConfig()` is the
+ * authored source those database rows were always reconciled FROM (see
+ * `apps/platform/src/server/config/reconcile.ts` in the target repo), so
+ * reading it directly here skips the round trip through Postgres rather than
+ * duplicating it. {@link EventReader} is the seam the command talks to, so
+ * tests never touch the filesystem or the network.
  */
 
 /** The seam the command talks to, so tests never open a socket. */
@@ -24,67 +23,36 @@ export interface EventReader {
   meetings(): Promise<EventGraphicSource[]>;
 }
 
-interface MeetingRow {
-  id: string;
-  slug: string;
-  nameOverride: string | null;
-  kind: string | null;
-  building: string | null;
-  location: string | null;
-  startsAt: string;
-  endsAt: string;
-  cancelledAt: string | null;
-  cancellationReason: string | null;
-}
-
-interface WorkshopRow {
-  id: string;
-  meetingId: string;
-  title: string | null;
-  projects: { displayName: string; sortOrder: number | null } | null;
-}
-
-export function supabaseEvents(client: DevtoolsClient): EventReader {
+/**
+ * Builds the reader from `@devdogsuga/events`'s committed data file.
+ *
+ * Replaces `supabaseEvents`, which read the `meetings`/`workshops` tables a
+ * reconcile job had already copied this same config into. The config's shape
+ * (`schema.ts`) is deliberately a near-mirror of those tables' columns for
+ * exactly this reason — see that file's header — so the mapping below is
+ * closer to a rename than a translation: `Meeting.id` is the row's `slug`,
+ * `Meeting.title` is what the DB called `nameOverride`, and a workshop's
+ * `project` (free text in the config) stands in for the DB's
+ * `projects.displayName` join.
+ */
+export function configEvents(): EventReader {
   return {
     async meetings() {
-      // Cancelled nights are included deliberately: a cancellation is exactly
-      // when somebody needs a fresh graphic, and the card has a layout for it.
-      // Deleted ones are not.
-      //
-      // No competitions query any more: a competition is a mirrored GitHub
-      // issue now (see apps/platform/src/server/github/competitions.ts), not
-      // something a meeting kicks off or judges, so there is no "kickoff" or
-      // "judging" segment left for a meeting poster to draw. Every workshop
-      // item is plain "workshop".
-      const [meetings, workshops] = await Promise.all([
-        client
-          .from("meetings")
-          .select(
-            "id, slug, nameOverride, kind, building, location, startsAt, endsAt, cancelledAt, cancellationReason",
-          )
-          .is("deletedAt", null)
-          .order("startsAt", { ascending: false }),
-        client
-          .from("workshops")
-          .select("id, meetingId, title, projects(displayName, sortOrder)")
-          .is("deletedAt", null),
-      ]);
-
-      if (meetings.error)
-        throw new Error(`Could not read meetings: ${meetings.error.message}`);
-      if (workshops.error) {
-        throw new Error(`Could not read workshops: ${workshops.error.message}`);
-      }
-
-      const workshopRows = (workshops.data ?? []) as unknown as WorkshopRow[];
-      const agendas = groupAgendas(workshopRows);
+      const { getClubConfig } = await loadEvents();
       const { EVENT_SEGMENT_VISUALS, meetingCardDetail, meetingLocation } =
         await loadBrandEvent();
 
-      return ((meetings.data ?? []) as unknown as MeetingRow[]).map((row) => {
-        const agenda = agendas.get(row.id) ?? [];
+      // Newest first, matching the DB reader's `order("startsAt", {
+      // ascending: false })` — the picker should offer the most recent
+      // meeting first, not whatever order the config file happens to list
+      // them in.
+      const meetings = [...getClubConfig().meetings].sort(
+        (a, b) => Date.parse(b.startsAt) - Date.parse(a.startsAt),
+      );
+
+      return meetings.map((row) => {
         const meeting = {
-          slug: row.slug,
+          slug: row.id,
           startsAt: new Date(row.startsAt),
           endsAt: new Date(row.endsAt),
           building: row.building,
@@ -94,23 +62,24 @@ export function supabaseEvents(client: DevtoolsClient): EventReader {
           cancellationReason: row.cancellationReason,
         };
 
+        // No competitions here either, for the same reason `supabaseEvents`
+        // dropped them: a competition is a mirrored GitHub issue now, not
+        // config a meeting kicks off. Every agenda item is plain "workshop".
         const items: Array<{
           label: string;
           segment: keyof typeof EVENT_SEGMENT_VISUALS;
-        }> = workshopRows
-          .filter((workshop) => workshop.meetingId === row.id)
-          .map((workshop) => ({
-            label: workshopLabel(workshop),
-            segment: "workshop",
-          }));
+        }> = row.agenda.map((workshop) => ({
+          label: workshopLabel(workshop),
+          segment: "workshop",
+        }));
 
         const detail = meetingCardDetail({
           meeting,
           title: meetingTitle(
-            row.nameOverride,
+            row.title,
             row.kind,
             meeting.startsAt,
-            agenda,
+            items.map((item) => item.label),
           ),
           agenda: items.map(
             (item) =>
@@ -120,7 +89,7 @@ export function supabaseEvents(client: DevtoolsClient): EventReader {
         });
 
         return {
-          slug: row.slug,
+          slug: row.id,
           hint: describeMeeting(meeting),
           detail,
           items: items.map((item) => {
@@ -152,49 +121,11 @@ function slugPart(label: string): string {
   );
 }
 
-function workshopLabel(row: WorkshopRow): string {
-  return row.title ?? row.projects?.displayName ?? "Workshop";
-}
-
-/**
- * Workshop labels per meeting, in the order the app shows them.
- *
- * `projects.sortOrder` first, then the project's name, then the workshop's own
- * title — the ordering `getMeetingWorkshops` uses, so an agenda here reads the
- * same way it does on the page. A workshop with no project keeps its own title
- * and sorts last, which is what `nulls last` does there.
- */
-function groupAgendas(rows: readonly WorkshopRow[]): Map<string, string[]> {
-  const byMeeting = new Map<string, WorkshopRow[]>();
-
-  for (const row of rows) {
-    const list = byMeeting.get(row.meetingId) ?? [];
-    list.push(row);
-    byMeeting.set(row.meetingId, list);
-  }
-
-  const agendas = new Map<string, string[]>();
-
-  for (const [meetingId, list] of byMeeting) {
-    const labels = list
-      .sort((a, b) => {
-        const order =
-          (a.projects?.sortOrder ?? Number.MAX_SAFE_INTEGER) -
-          (b.projects?.sortOrder ?? Number.MAX_SAFE_INTEGER);
-        if (order !== 0) return order;
-
-        return (
-          (a.projects?.displayName ?? "").localeCompare(
-            b.projects?.displayName ?? "",
-          ) || (a.title ?? "").localeCompare(b.title ?? "")
-        );
-      })
-      .map(workshopLabel);
-
-    agendas.set(meetingId, labels);
-  }
-
-  return agendas;
+/** Unlike the old DB `WorkshopRow`, `Workshop.title` is non-nullable in the
+ * config schema (`workshopSchema`), so there is no `projects.displayName`
+ * fallback left to reach for. */
+function workshopLabel(row: Workshop): string {
+  return row.title;
 }
 
 /**
@@ -211,7 +142,7 @@ function groupAgendas(rows: readonly WorkshopRow[]): Map<string, string[]> {
  */
 export function meetingTitle(
   nameOverride: string | null,
-  kind: string | null,
+  kind: Meeting["kind"],
   startsAt: Date,
   agenda: readonly string[],
 ): string {

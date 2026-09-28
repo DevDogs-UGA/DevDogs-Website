@@ -161,6 +161,13 @@ export function loadBrandEvent(): Promise<typeof BrandEventModule> {
   return loadPeer<typeof BrandEventModule>("@devdogsuga/brand/event");
 }
 
+// ── @devdogsuga/events ───────────────────────────────────────────────────────
+import type * as EventsModule from "@devdogsuga/events";
+
+export function loadEvents(): Promise<typeof EventsModule> {
+  return loadPeer<typeof EventsModule>("@devdogsuga/events");
+}
+
 // `@devdogsuga/newsletter` used to be an optional peer here, read by
 // devtools' own `newsletter` command. Wave 2, stage A2 moved that command to
 // a plain Backstage script (`packages/newsletter-cli`) — see its README —

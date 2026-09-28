@@ -12,9 +12,14 @@
  * not. So an officer can type `pnpm devtools images` and be walked through it,
  * and a script can pass every flag and never see a prompt.
  *
- * Event graphics are the one group backed by a database rather than by files in
- * this repo, and the one group that can therefore be unavailable. See
- * {@link loadEvents} for what the command says when it is.
+ * Event graphics used to be the one group backed by a database rather than by
+ * files in this repo — and the one group that could therefore be unavailable
+ * without one. They no longer are: `configEvents()` (`events.ts`) reads
+ * `@devdogsuga/events`'s committed config directly, the same source a
+ * reconcile job used to copy into the database first, so this command needs
+ * no running stack at all any more. See {@link loadEvents} for what remains
+ * of the "unavailable" branch — a repo `@devdogsuga/events` cannot resolve
+ * in, rather than a database that is not up.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -24,9 +29,8 @@ import type { Format } from "./open-graph-types.js";
 import { loadOpenGraph } from "../repo/source.js";
 import { findRepoRoot } from "../repo/root.js";
 import { positionals } from "../args.js";
-import { adminClient, type Instance } from "../instance.js";
 import { errorMessage, explain } from "../ui.js";
-import { supabaseEvents, type EventReader } from "./events.js";
+import { configEvents, type EventReader } from "./events.js";
 import {
   assertUniqueStems,
   eventGraphics,
@@ -116,23 +120,23 @@ export function namesEvents(patterns: readonly string[]): boolean {
 }
 
 export interface ImagesDeps {
-  /** Resolves the database, printing its own diagnosis on failure. */
-  connect: () => Promise<Instance | null>;
-  /** Overridden in tests so nothing opens a socket. */
-  reader?: (instance: Instance) => EventReader;
+  /** Overridden in tests so nothing reads the peer package or the filesystem. */
+  reader?: () => EventReader;
 }
 
 /**
  * Meetings, or a clear account of why there are none.
  *
- * The database is the one dependency of this command that a contributor cannot
- * see, so every failure here says which database it looked at and what to run.
- * Two failures, treated differently, matching what each one means:
+ * `@devdogsuga/events` is an optional peer (see `repo/peers.ts`'s header), so
+ * loading it can still fail — outside a DevDogsUGA checkout, or one where
+ * nothing depends on it. That is the one way this command still needs an
+ * account of what went wrong, and two failures are treated differently,
+ * matching what each one means:
  *
- *   - **Unreachable, under a wildcard.** `images *` means "everything", and
+ *   - **Unavailable, under a wildcard.** `images *` means "everything", and
  *     everything else is renderable. It renders, and reports the events it
  *     could not.
- *   - **Unreachable, named.** `images 'event/*'` asked for exactly the thing
+ *   - **Unavailable, named.** `images 'event/*'` asked for exactly the thing
  *     that is missing. Nothing to degrade to, so it fails.
  */
 async function loadEvents(
@@ -140,24 +144,7 @@ async function loadEvents(
   deps: ImagesDeps,
 ): Promise<{ graphics: Graphic[]; skipped: string | null }> {
   const required = namesEvents(patterns);
-  const instance = await deps.connect();
-
-  if (!instance) {
-    if (required) {
-      throw new Error(
-        "Event images come from the database, and there is no database to read.",
-      );
-    }
-
-    return {
-      graphics: [],
-      skipped: "no database reachable — run `pnpm devtools db start`",
-    };
-  }
-
-  const reader = (deps.reader ?? ((i) => supabaseEvents(adminClient(i))))(
-    instance,
-  );
+  const reader = (deps.reader ?? configEvents)();
 
   let meetings;
   try {
@@ -197,7 +184,7 @@ function display(file: string): string {
 
 export async function runImages(
   argv: string[],
-  deps: ImagesDeps,
+  deps: ImagesDeps = {},
 ): Promise<void> {
   const options = parseImagesArgs(argv);
 
