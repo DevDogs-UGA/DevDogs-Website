@@ -22,6 +22,8 @@ secrets, or user-facing content.
   service, it's the source for officer/workshop slide decks (Slidev),
   currently including the 9/28 Supabase workshop deck. It builds static
   output; nothing here serves it.
+- `competitions/TEMPLATE.md` is the officer template for weekly competition
+  briefs: copy it into a new draft in the private Competitions project.
 
 Full design rationale (principles, mechanism, the package ledger) and
 migration-specific detail live outside this repo, in Sloan's planning notes
