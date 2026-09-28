@@ -3,9 +3,45 @@
  * config reconcile route. Both `reachable` and `fetch` are injected (see
  * `ReconcileConfigDeps`) so these run with no real dev server and no
  * `vi.stubGlobal` on the network.
+ *
+ * Also `runStackCommand("start", …)`'s interaction with a failing bucket
+ * seed: `startLocalStack` writes `.env.generated` BEFORE `seedBuckets` runs,
+ * so a nonzero `seedBuckets` exit must still refresh this process's entered
+ * environment (`refreshSessionEnv`) — the file on disk genuinely changed —
+ * while still reporting the failing code. `./db/run.js`, `./repo/root.js`
+ * and `./db/session-refresh.js` are mocked so this never spawns the real
+ * Supabase CLI or touches the real filesystem/`process.env`.
  */
-import { describe, expect, it, vi } from "vitest";
-import { reconcileConfigAfterReset } from "./stack.js";
+import { mkdtempSync, rmSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const supabase = vi.fn(async (..._args: string[]) => 0);
+const supabaseCapture = vi.fn(
+  async (..._args: string[]) => "API_URL=http://127.0.0.1:54321\n",
+);
+const seedBuckets = vi.fn(async () => 0);
+vi.mock("./db/run.js", () => ({
+  dbPush: vi.fn(),
+  generateTypes: vi.fn(),
+  seedBuckets: (...args: Parameters<typeof seedBuckets>) => seedBuckets(...args),
+  supabase: (...args: string[]) => supabase(...args),
+  supabaseCapture: (...args: string[]) => supabaseCapture(...args),
+}));
+
+let repoRoot = "";
+vi.mock("./repo/root.js", () => ({
+  findRepoRoot: () => repoRoot,
+}));
+
+const refreshSessionEnv = vi.fn(async () => ["refreshed .env.generated"]);
+vi.mock("./db/session-refresh.js", () => ({
+  refreshSessionEnv: () => refreshSessionEnv(),
+}));
+
+import { reconcileConfigAfterReset, runStackCommand } from "./stack.js";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -80,5 +116,69 @@ describe("reconcileConfigAfterReset", () => {
     });
 
     expect(lines.join(" ")).toContain("ECONNRESET");
+  });
+});
+
+describe('runStackCommand("start", …)', () => {
+  beforeEach(() => {
+    repoRoot = mkdtempSync(join(tmpdir(), "stack-start-"));
+    supabase.mockReset().mockResolvedValue(0);
+    supabaseCapture
+      .mockReset()
+      .mockResolvedValue("API_URL=http://127.0.0.1:54321\n");
+    seedBuckets.mockReset().mockResolvedValue(0);
+    refreshSessionEnv.mockClear();
+  });
+
+  afterEach(() => {
+    rmSync(repoRoot, { recursive: true, force: true });
+  });
+
+  it("refreshes the session and reports success when the buckets seed succeeds", async () => {
+    const { code, lines } = await runStackCommand("start", null);
+
+    expect(code).toBe(0);
+    expect(refreshSessionEnv).toHaveBeenCalledTimes(1);
+    expect(lines).toContain("refreshed .env.generated");
+    // `.env.generated` really was written, independent of the mock.
+    await expect(readFile(join(repoRoot, ".env.generated"), "utf8")).resolves
+      .toContain("API_URL=http://127.0.0.1:54321");
+  });
+
+  it("still refreshes when seedBuckets fails AFTER .env.generated was already written", async () => {
+    // This is BUG 3: `.env.generated` is on disk with fresh values the
+    // instant `supabaseCapture` returns, well before `seedBuckets` runs — a
+    // failure there must not leave the session's entered environment (and
+    // hence every child `with-env` in it) pointed at whatever was loaded
+    // before `db start` ran.
+    seedBuckets.mockResolvedValue(1);
+
+    const { code, lines } = await runStackCommand("start", null);
+
+    // The failure is still reported...
+    expect(code).toBe(1);
+    // ...but the environment was refreshed anyway, because the file changed.
+    expect(refreshSessionEnv).toHaveBeenCalledTimes(1);
+    expect(lines).toContain("refreshed .env.generated");
+  });
+
+  it("does not refresh when `supabase start` itself fails — nothing on disk changed", async () => {
+    supabase.mockResolvedValue(1);
+
+    const { code, lines } = await runStackCommand("start", null);
+
+    expect(code).toBe(1);
+    expect(refreshSessionEnv).not.toHaveBeenCalled();
+    expect(lines).toEqual([]);
+  });
+
+  it("does not refresh when `supabase status -o env` throws before the file is written", async () => {
+    supabaseCapture.mockRejectedValue(new Error("supabase CLI crashed"));
+
+    const { code, lines } = await runStackCommand("start", null);
+
+    expect(code).toBe(1);
+    expect(refreshSessionEnv).not.toHaveBeenCalled();
+    expect(lines).toEqual([]);
   });
 });

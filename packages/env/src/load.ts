@@ -62,6 +62,42 @@ export function isDevDatabase(value: string): value is DevDatabase {
 export const DEV_DB_ENV = "DEV_DB";
 
 /**
+ * The environment variable that carries the FULL list of key NAMES (comma-
+ * separated, values never included) the devtools launcher's own process
+ * inherited from the calling shell BEFORE it entered any tier at all — the
+ * ONE signal `loadEnvironment`'s default `applyEnvFiles` (below) uses to
+ * tell "the user genuinely exported this in their shell" apart from "this
+ * looks set only because an EARLIER `enterEnvironment` call in the same
+ * session already copied a file value — possibly a stale one, loaded before
+ * the local stack was up, or before a failed `db start` finished writing
+ * `.env.generated` — onto `process.env`, and every process since has just
+ * been inheriting that copy". Only the former is meant to outrank a freshly
+ * loaded file, mirroring `with-env`'s classic "a shell var beats the file";
+ * the latter is exactly the staleness bug this marker exists to close (see
+ * `packages/devtools/src/launch.ts`'s header for the full mechanism).
+ *
+ * Set exactly once, by the devtools launcher, at the very top of the FIRST
+ * process in a session — before it calls `enterEnvironment` at all — from a
+ * snapshot of `process.env`'s keys at that moment. Every child (an
+ * `enterEnvironment`-entered `next dev`, a nested `pnpm devtools` spawning
+ * another launcher, …) re-exports the SAME list unchanged rather than
+ * recomputing it: by the time a nested launcher runs, `process.env` no
+ * longer reflects "what the shell had", it already holds this session's
+ * entered values, and recomputing from it would misclassify every one of
+ * them as a genuine shell export.
+ *
+ * Absence means "outside a devtools session" — a bare `with-env` run with no
+ * launcher in front of it, or any caller that never went through
+ * `launch.ts` — and `applyEnvFiles` falls back to its long-standing,
+ * unqualified "anything already set in the base snapshot wins" rule. Only
+ * `override: false` callers ever consult it; an explicit `override: true`
+ * (a re-entrant load of a DIFFERENT tier than the process runs under, see
+ * `LoadEnvironmentOptions.override`) already overrides everything and has no
+ * use for a narrower exemption list.
+ */
+export const SHELL_KEYS_ENV = "DEVTOOLS_SHELL_KEYS";
+
+/**
  * An explicitly `local` development session, but the local Supabase stack is
  * not actually reachable. Thrown instead of falling back to `.env` alone,
  * because that fallback is how a hosted `DB_URL` ends up behind a command
@@ -422,13 +458,26 @@ export interface LoadEnvironmentOptions {
   /**
    * When true, the selected files OVERRIDE values already present in the base
    * snapshot; when false (the default) existing values win (dotenvx's
-   * first-file-wins, which `with-env` relies on so a shell var beats the file).
+   * first-file-wins, which `with-env` relies on so a shell var beats the file)
+   * — EXCEPT inside a devtools session (the base snapshot carries
+   * `SHELL_KEYS_ENV`), where that rule narrows to just the keys the marker
+   * names. See `SHELL_KEYS_ENV`'s own doc for why: without the narrowing, a
+   * launcher process that entered a tier before the local stack finished
+   * booting hands every child a `.env.generated`-shaped value that is
+   * permanently stale for the rest of the session, because "existing values
+   * win" makes the session's OWN earlier copy outrank the fresh file on every
+   * later load. With the marker, only a key the user's shell genuinely
+   * exported keeps that power; everything else — including a key this same
+   * session copied onto `process.env` a moment ago — loses to the file, same
+   * as a first load would have gotten it.
    *
    * Re-entrant callers loading a DIFFERENT tier than the process already runs
    * under MUST pass true: `pnpm devtools` itself runs under `with-env`
    * (development), so its process.env already holds development's values, and
    * without override a `loadEnvironment("staging")` would keep development's
-   * BASE_URL/DB_URL instead of staging's.
+   * BASE_URL/DB_URL instead of staging's. An explicit `true` here always wins
+   * outright and never consults `SHELL_KEYS_ENV` — it already asks for
+   * everything to be overridden, so there is no narrower exemption to apply.
    */
   override?: boolean;
   /**
@@ -577,17 +626,58 @@ export async function loadEnvironment(
           }
         }
 
+        // `SHELL_KEYS_ENV` narrows "a shell var beats the file" to the keys
+        // it actually names, but ONLY for the default `!overrideExisting`
+        // case: an explicit `override: true` already means "override
+        // everything" and has no use for a narrower exemption (see
+        // `LoadEnvironmentOptions.override`). `undefined` — no marker, so
+        // this call is not inside a devtools session at all — falls back to
+        // the original, unqualified rule below.
+        const shellKeysMarker = target[SHELL_KEYS_ENV];
+        const shellKeys =
+          !overrideExisting && shellKeysMarker !== undefined
+            ? new Set(shellKeysMarker.split(",").filter((k) => k !== ""))
+            : undefined;
+
         // Which of those keys `target` already held BEFORE this call, when
-        // that is supposed to win (`!overrideExisting`, with-env's own
-        // "a shell var beats the file"). dotenvx leaves such a key alone
-        // entirely — see `loadEnvironment`'s `override` doc — so the
-        // correction pass below must skip it too, or it would make the file
-        // win a precedence fight dotenvx itself just lost on purpose.
+        // that is supposed to win. Two different rules produce this set:
+        //
+        //   * inside a session (`shellKeys` defined): only a key the marker
+        //     actually names — the user's own shell export — wins. Every
+        //     other already-set key is presumed to be this session's OWN
+        //     earlier copy (see `SHELL_KEYS_ENV`'s doc) and must lose to the
+        //     file below instead of perpetuating a stale value forever.
+        //   * outside a session (`shellKeys` undefined) or under
+        //     `overrideExisting`: the original, unqualified rule —
+        //     `with-env`'s classic "a shell var beats the file", which
+        //     dotenvx enforces below by leaving such a key alone entirely
+        //     (see `loadEnvironment`'s `override` doc) — so the correction
+        //     pass further down must skip it too, or it would make the file
+        //     win a precedence fight dotenvx itself just lost on purpose.
         const shellWins = new Set<string>();
-        if (!overrideExisting) {
+        if (shellKeys) {
+          for (const key of raw.keys()) {
+            if (shellKeys.has(key) && target[key] !== undefined) {
+              shellWins.add(key);
+            }
+          }
+        } else if (!overrideExisting) {
           for (const key of raw.keys()) {
             if (target[key] !== undefined) shellWins.add(key);
           }
+        }
+
+        // Inside a session, dotenvx itself still has to be told to override
+        // — its `overload: false` leaves EVERY already-set key alone, shell
+        // export or stale session copy alike, which is exactly the
+        // distinction `shellWins` above draws that dotenvx cannot. So it
+        // runs as if overriding everything, and the values `shellWins` says
+        // should have survived are restored onto `target` right after,
+        // undoing dotenvx's overwrite for exactly those keys and no others.
+        const sessionOverride = shellKeys !== undefined;
+        const preserved = new Map<string, string>();
+        if (sessionOverride) {
+          for (const key of shellWins) preserved.set(key, target[key]!);
         }
 
         dx.config({
@@ -598,11 +688,13 @@ export async function loadEnvironment(
           // clobber that overlay — pointing a local wrangler session at the
           // hosted database. Reverse under overload so the first file still
           // wins while the files as a group still override the ambient env.
-          path: overrideExisting ? [...paths].reverse() : paths,
+          path: overrideExisting || sessionOverride ? [...paths].reverse() : paths,
           processEnv: target,
           quiet: true,
-          overload: overrideExisting,
+          overload: overrideExisting || sessionOverride,
         });
+
+        for (const [key, value] of preserved) target[key] = value;
 
         // Recompute exactly the keys whose OWN raw value contains a `$NAME`
         // reference — a real derivation, not just any double-quoted or bare
@@ -611,6 +703,13 @@ export async function loadEnvironment(
         // quoting, encryption and multiline values correctly, and this
         // module's own line reader is deliberately too simple to trust for
         // anything beyond "does this value contain a reference".
+        //
+        // A derived key (e.g. `NEXT_PUBLIC_SUPABASE_URL="$API_URL"`) is never
+        // itself in `shellWins` unless the marker names it directly, so
+        // inside a session it is recomputed from the FRESH values dotenvx
+        // (and the restore pass above) just settled on `target` — never from
+        // whatever stale derivation an earlier `enterEnvironment` call left
+        // behind.
         for (const [key, value] of raw) {
           if (shellWins.has(key)) continue;
           if (envReferences(value).length === 0) continue;

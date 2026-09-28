@@ -12,6 +12,7 @@ import {
   MissingEnvFileError,
   parseRawAssignments,
   selectEnvFiles,
+  SHELL_KEYS_ENV,
   type SelectionContext,
 } from "./load.js";
 
@@ -636,6 +637,133 @@ describe("loadEnvironment resolves $NAME references order-independently", () => 
         expect(loaded.env.API_URL).toBe("https://from-shell.supabase.co");
       },
     );
+  });
+});
+
+/**
+ * `SHELL_KEYS_ENV` ("DEVTOOLS_SHELL_KEYS"): the fix for the reported bug —
+ * every value `.env.generated` supplies coming out empty/stale on a fresh
+ * clone, because the devtools launcher's OWN earlier copy of a stale load
+ * (entered before the local stack was up) was indistinguishable, to
+ * `override: false`, from a value the contributor's shell had genuinely
+ * exported. See `launch.ts`'s header and `SHELL_KEYS_ENV`'s own doc for the
+ * full mechanism. Run through the REAL dotenvx, like the two blocks above,
+ * since the bug is in dotenvx's own already-set-wins semantics.
+ */
+describe("devtools session mode (SHELL_KEYS_ENV)", () => {
+  async function withOverlayAndBase<T>(
+    run: (dir: string) => Promise<T>,
+  ): Promise<T> {
+    const dir = mkdtempSync(join(tmpdir(), "load-session-"));
+    try {
+      // Mirrors the real repro: `.env` alone (PROJECT_REF empty) derives a
+      // broken API_URL; `.env.generated` — written once the local stack is
+      // actually up — carries the real one.
+      writeFileSync(
+        join(dir, ".env"),
+        'PROJECT_REF=""\nAPI_URL="https://$PROJECT_REF.supabase.co"\n' +
+          'PUBLISHABLE_KEY=""\n' +
+          'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$PUBLISHABLE_KEY"\n',
+      );
+      writeFileSync(
+        join(dir, GENERATED_FILE),
+        'API_URL="http://127.0.0.1:54321"\nPUBLISHABLE_KEY="sb_publishable_fresh"\n',
+      );
+      return await run(dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  function realCtx(dir: string, baseEnv: NodeJS.ProcessEnv) {
+    return {
+      root: dir,
+      exists: (file: string) => existsSync(join(dir, file)),
+      // Selecting development with the probe up prepends `.env.generated`,
+      // the same as a genuinely running local stack.
+      probeLocalStack: () => true,
+      baseEnv,
+    };
+  }
+
+  it("replaces a stale inherited overlay value when the session marker is present", async () => {
+    await withOverlayAndBase(async (dir) => {
+      const loaded = await loadEnvironment(
+        undefined,
+        { override: false },
+        realCtx(dir, {
+          // What a launcher process that entered BEFORE the stack was up
+          // left behind: the broken derivation, copied onto process.env by
+          // its own earlier `enterEnvironment` call.
+          API_URL: "https://.supabase.co",
+          PUBLISHABLE_KEY: "",
+          [SHELL_KEYS_ENV]: "", // present, but names no genuine shell export.
+        }),
+      );
+      expect(loaded.env.API_URL).toBe("http://127.0.0.1:54321");
+      expect(loaded.env.PUBLISHABLE_KEY).toBe("sb_publishable_fresh");
+    });
+  });
+
+  it("recomputes a derived key from the fresh values, not a stale copy", async () => {
+    await withOverlayAndBase(async (dir) => {
+      const loaded = await loadEnvironment(
+        undefined,
+        { override: false },
+        realCtx(dir, {
+          PUBLISHABLE_KEY: "",
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "", // stale derivation, copied over.
+          [SHELL_KEYS_ENV]: "",
+        }),
+      );
+      expect(loaded.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY).toBe(
+        "sb_publishable_fresh",
+      );
+    });
+  });
+
+  it("still lets a key the marker actually names win — a genuine shell export", async () => {
+    await withOverlayAndBase(async (dir) => {
+      const loaded = await loadEnvironment(
+        undefined,
+        { override: false },
+        realCtx(dir, {
+          API_URL: "https://user-exported-this.example",
+          [SHELL_KEYS_ENV]: "API_URL",
+        }),
+      );
+      expect(loaded.env.API_URL).toBe("https://user-exported-this.example");
+      // PUBLISHABLE_KEY was NOT named by the marker, so it still gets the
+      // fresh overlay value rather than falling back to legacy behaviour.
+      expect(loaded.env.PUBLISHABLE_KEY).toBe("sb_publishable_fresh");
+    });
+  });
+
+  it("with no marker at all, behaviour is unchanged: the stale value still wins", async () => {
+    await withOverlayAndBase(async (dir) => {
+      const loaded = await loadEnvironment(
+        undefined,
+        { override: false },
+        realCtx(dir, { API_URL: "https://.supabase.co" }),
+      );
+      expect(loaded.env.API_URL).toBe("https://.supabase.co");
+    });
+  });
+
+  it("an explicit override: true ignores the marker and overrides everything, as before", async () => {
+    await withOverlayAndBase(async (dir) => {
+      const loaded = await loadEnvironment(
+        undefined,
+        { override: true },
+        realCtx(dir, {
+          API_URL: "https://user-exported-this.example",
+          [SHELL_KEYS_ENV]: "API_URL",
+        }),
+      );
+      // Even a marker-named key loses under an explicit full override — the
+      // caller already asked for everything to be overridden.
+      expect(loaded.env.API_URL).toBe("http://127.0.0.1:54321");
+    });
   });
 });
 

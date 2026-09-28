@@ -12,7 +12,7 @@
  * surgery and the one branch of `launch()` that is safe to exercise without
  * either of those.
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stripTierFlag } from "./launch.js";
 
 const resolveSessionTier = vi.fn();
@@ -37,6 +37,7 @@ vi.mock("./repo/peers.js", () => ({
     probeLocalStack: vi.fn(),
     MissingEnvFileError,
     LocalStackOfflineError,
+    SHELL_KEYS_ENV: "DEVTOOLS_SHELL_KEYS",
   }),
 }));
 
@@ -183,6 +184,52 @@ describe("launch", () => {
     await launch(["github", "settings", "--json"]);
     expect(resolveSessionTier).not.toHaveBeenCalled();
     expect(main).toHaveBeenCalledWith(["github", "settings", "--json"]);
+  });
+
+  describe("DEVTOOLS_SHELL_KEYS marker", () => {
+    const MARKER = "DEVTOOLS_SHELL_KEYS";
+    let hadMarker: boolean;
+    let previousMarker: string | undefined;
+
+    beforeEach(() => {
+      hadMarker = MARKER in process.env;
+      previousMarker = process.env[MARKER];
+      delete process.env[MARKER];
+    });
+
+    afterEach(() => {
+      if (hadMarker) process.env[MARKER] = previousMarker!;
+      else delete process.env[MARKER];
+    });
+
+    it("records the shell's own keys before entering, when no marker is inherited", async () => {
+      process.env.DEVTOOLS_TEST_SHELL_PROBE = "1";
+      try {
+        const { launch } = await import("./launch.js");
+        await launch(["setup"]);
+        expect(process.env[MARKER]).toBeDefined();
+        expect(process.env[MARKER]!.split(",")).toContain(
+          "DEVTOOLS_TEST_SHELL_PROBE",
+        );
+      } finally {
+        delete process.env.DEVTOOLS_TEST_SHELL_PROBE;
+      }
+    });
+
+    it("keeps an inherited marker unchanged — a nested launcher must not recompute it", async () => {
+      process.env[MARKER] = "ORIGINAL_ONLY";
+      process.env.DEVTOOLS_TEST_SHELL_PROBE = "1";
+      try {
+        const { launch } = await import("./launch.js");
+        await launch(["setup"]);
+        // Recomputing here would have picked up DEVTOOLS_TEST_SHELL_PROBE (and
+        // everything else this process now holds) as if it were a genuine
+        // shell export — exactly the staleness bug the guard exists to avoid.
+        expect(process.env[MARKER]).toBe("ORIGINAL_ONLY");
+      } finally {
+        delete process.env.DEVTOOLS_TEST_SHELL_PROBE;
+      }
+    });
   });
 
   it("oauth skips tier resolution — catalog-marked envFree (TASK-345)", async () => {

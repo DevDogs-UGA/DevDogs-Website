@@ -147,6 +147,25 @@ export async function launch(argv: readonly string[]): Promise<void> {
   const envLoad = await loadEnvLoad();
   const envSession = await loadEnvSession();
 
+  // Records, once, which keys THIS shell actually exported before devtools
+  // touched anything — the fix for the staleness bug `enterEnvironment`'s own
+  // `override: false` comment below describes. `Object.keys(process.env)` at
+  // this exact point is still a faithful snapshot of the calling shell: the
+  // imports above load code, not env; nothing before this line has mutated
+  // `process.env`. See `SHELL_KEYS_ENV` (`@devdogsuga/env/load`) for how
+  // `loadEnvironment` narrows "a shell var beats the file" to just this list.
+  //
+  // Guarded on absence so a NESTED devtools launcher (one `pnpm devtools`
+  // command spawning another, e.g. the `db start` offer below re-dispatching
+  // through `dispatch()`) keeps the ORIGINAL list instead of recomputing one:
+  // by the time a nested launcher's `launch()` runs, `process.env` already
+  // holds this session's entered values, not the outer shell's, and
+  // recomputing from it would misclassify every one of them as a genuine
+  // shell export — the exact bug this marker exists to prevent, one layer in.
+  if (process.env[envLoad.SHELL_KEYS_ENV] === undefined) {
+    process.env[envLoad.SHELL_KEYS_ENV] = Object.keys(process.env).join(",");
+  }
+
   let tier: DeployEnvironment;
   let devDatabase: DevDatabase | undefined;
   if (rest[0] === "setup" || rest[0] === "completions" || isEnvFreeCommand(rest)) {
@@ -240,7 +259,13 @@ export async function launch(argv: readonly string[]): Promise<void> {
     // `override: false` — a fresh process, so an already-exported shell
     // variable beats the file the same way `with-env` always let it, rather
     // than a stale `.env.<tier>` value silently winning over what the caller
-    // just set for this one invocation.
+    // just set for this one invocation. As of the `SHELL_KEYS_ENV` marker set
+    // above, "an already-exported shell variable" means exactly that — a key
+    // named in the marker — not merely "already present in `process.env`":
+    // this same call is what COPIES the loaded environment onto `process.env`
+    // in the first place, so on a nested/offer-to-restart path below, without
+    // the marker's narrowing, this line's own PREVIOUS run in this process
+    // would otherwise outrank the fresh file it is about to load.
     const entered = await envSession.enterEnvironment(tier, {
       override: false,
       devDatabase,

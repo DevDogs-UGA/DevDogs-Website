@@ -53,18 +53,33 @@ export type StackCommand = (typeof STACK_COMMANDS)[number];
 
 // ── Implementations ──────────────────────────────────────────────────────────
 
-async function startLocalStack(): Promise<number> {
+/**
+ * `wroteEnvFile` is split out from `code` on purpose: `.env.generated` is
+ * written to disk BEFORE `seedBuckets` runs, so a nonzero `code` from
+ * `seedBuckets` alone does not mean the file on disk is unchanged — the
+ * fresh connection block is already there, a later `db start` retry or the
+ * probe table would already see it, and this process's OWN entered
+ * environment is now the stale one. `afterLocalStackChange` below refreshes
+ * whenever the file changed, independently of whether the command as a whole
+ * succeeded, and still reports the failing code so the caller does not
+ * mistake a seed failure for success.
+ */
+async function startLocalStack(): Promise<{
+  code: number;
+  wroteEnvFile: boolean;
+}> {
   const code = await supabase("start");
-  if (code !== 0) return code;
+  if (code !== 0) return { code, wroteEnvFile: false };
   // Write the local stack's connection details so with-env can load them.
   let env: string;
   try {
     env = await supabaseCapture("status", "-o", "env");
   } catch {
-    return 1;
+    return { code: 1, wroteEnvFile: false };
   }
   await writeFile(join(findRepoRoot(), ".env.generated"), env);
-  return seedBuckets({ kind: "local" });
+  const bucketsCode = await seedBuckets({ kind: "local" });
+  return { code: bucketsCode, wroteEnvFile: true };
 }
 
 async function stopLocalStack(): Promise<number> {
@@ -258,10 +273,22 @@ export async function reconcileConfigAfterReset(
  * (see `db/session-refresh.ts`) so the rest of the session — including a
  * `db introspect` run right after this one — sees the stack's CURRENT
  * connection, not whatever `process.env` held at launch. A failed stack
- * command changed nothing on disk, so there is nothing to refresh.
+ * command USUALLY changed nothing on disk, so by default there is nothing to
+ * refresh.
+ *
+ * `wroteEnvFile` is the one exception: `startLocalStack` writes
+ * `.env.generated` BEFORE the buckets-seed step that can still fail
+ * afterwards, so a nonzero `code` from THAT failure does not mean the file on
+ * disk is unchanged — see `startLocalStack`'s own doc. Passing `true` here
+ * refreshes regardless of `code`, while the failing code itself still reaches
+ * the caller untouched, so `db start` is still reported as failed even though
+ * the session's environment was brought current.
  */
-async function afterLocalStackChange(code: number): Promise<string[]> {
-  if (code !== 0) return [];
+async function afterLocalStackChange(
+  code: number,
+  wroteEnvFile = false,
+): Promise<string[]> {
+  if (code !== 0 && !wroteEnvFile) return [];
   return refreshSessionEnv();
 }
 
@@ -290,8 +317,8 @@ async function restartLocal(): Promise<{ code: number; lines: string[] }> {
       ],
     };
   }
-  const code = await startLocalStack();
-  return { code, lines: await afterLocalStackChange(code) };
+  const { code, wroteEnvFile } = await startLocalStack();
+  return { code, lines: await afterLocalStackChange(code, wroteEnvFile) };
 }
 
 /**
@@ -339,8 +366,8 @@ export async function runStackCommand(
   }
 
   if (command === "start") {
-    const code = await startLocalStack();
-    return { code, lines: await afterLocalStackChange(code) };
+    const { code, wroteEnvFile } = await startLocalStack();
+    return { code, lines: await afterLocalStackChange(code, wroteEnvFile) };
   }
 
   if (command === "status") {
