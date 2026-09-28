@@ -103,6 +103,12 @@ const env = readEnvFile()
 const repo = repoArg ? resolve(process.env.INIT_CWD ?? process.cwd(), repoArg) : env.SLIDES_DEMO_REPO
 if (!repo) fail('give the workshop clone the demo is typed into, or set SLIDES_DEMO_REPO in apps/slides/.env.')
 
+// Checkpoints switch this clone to earlier steps; the deck reads its code
+// from the submodules at the finished commit, so they can't be the demo clone.
+if (resolve(repo).startsWith(join(appDir, 'workshops'))) {
+  fail('that\'s the deck\'s own workshop submodule. Give the separate clone you type the demo into (e.g. a clone of Web-Workshops or Mobile-Workshops).')
+}
+
 try {
   execFileSync('git', ['-C', repo, 'rev-parse', '--git-dir'], { stdio: 'ignore' })
 }
