@@ -416,6 +416,9 @@ importers:
       '@devdogsuga/brand':
         specifier: workspace:*
         version: link:../brand
+      '@devdogsuga/events':
+        specifier: workspace:*
+        version: link:../events
       react:
         specifier: 'catalog:'
         version: 19.3.0

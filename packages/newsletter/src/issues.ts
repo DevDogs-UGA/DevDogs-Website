@@ -1,13 +1,13 @@
 /**
- * The Changelog's content: event data authored in `@devdogsuga/events`'s
- * meetings (times converted to ET) and the dated sends themselves.
+ * The Changelog's content: the dated sends themselves, listing events read
+ * from the club config in `@devdogsuga/events` (see `./events.ts`).
  *
- * Issues are versioned with semver — a send is a release. Event copy lives
+ * Issues are versioned with semver — a send is a release. Issue copy lives
  * here rather than in the components so a copy pass before a send touches one
  * file, and so the platform's archive pages and the exported emails can never
  * disagree about what an issue said.
  */
-import { KIND } from "./theme.js";
+import { configEvent } from "./events.js";
 
 export interface ChangelogEvent {
   /** The chip label — the calendar's event-type vocabulary. */
@@ -48,106 +48,26 @@ export interface ChangelogIssue {
   signoff: string;
 }
 
-const BUILD_SESSION_BLURB =
-  "Catch up on workshop materials, meet your teammates for hackathons, get unblocked by focus leads and officers, or just come hang out and get work done.";
-
+/**
+ * Every event an issue lists, by its id in the club config. Dates, rooms,
+ * titles, RSVP links and copy come from there; an override here is only for
+ * what the config has no field for.
+ */
 const EVENTS = {
-  interest: {
-    chip: "Interest Meeting",
-    color: KIND.interest,
-    title: "Interest Meeting",
-    dow: "WED",
-    date: "Sep 9",
-    time: "6:00 – 7:00 PM",
-    loc: "DLW 110",
-    rsvp: "https://uga.campuslabs.com/engage/event/12664203",
-    blurb:
-      "Come meet the new leadership team and get the details on all things DevDogs. Returning? Learn what's changing, what's staying the same, and how to get involved this year. Free food, too.",
-  },
-  coldstart: {
+  coldstart: configEvent("rectaW4iGmfDA3uwQ", {
+    // The calendar has no kind for the year's first night.
     chip: "Kickoff",
-    color: KIND.workshop,
-    title: "Cold Start",
-    dow: "MON",
-    date: "Sep 14",
-    time: "6:00 – 7:30 PM",
-    loc: "DLW 124",
-    rsvp: "https://uga.campuslabs.com/engage/event/12664196",
+    // The config's summary predates the workshop being on the agenda.
     blurb:
       "The inaugural meeting for the 2026–2027 year. Get set up to contribute to this year's projects. Plus, a collaborative coding workshop: an introduction to Git, GitHub, and how to contribute to a team project.",
-  },
-  dev1: {
-    chip: "Build Session",
-    color: KIND.build,
-    title: "Build Session #1",
-    dow: "WED",
-    date: "Sep 16",
-    time: "6:00 – 7:00 PM",
-    loc: "DLW 124",
-    rsvp: "https://uga.campuslabs.com/engage/event/12664183",
-    blurb: BUILD_SESSION_BLURB,
-  },
-  // The three workshop nights have no summary in events yet — these
-  // blurbs are authored from their linked workshop topics; swap in the real
-  // copy once it lands in the meetings config.
-  nextflutter: {
-    chip: "Workshop",
-    color: KIND.workshop,
-    title: "Workshops: Next.js & Flutter",
-    dow: "MON",
-    date: "Sep 21",
-    time: "6:00 – 7:30 PM",
-    loc: "DLW 124",
-    rsvp: null,
-    blurb:
-      "A framework double-header: build for the web with Next.js and go cross-platform with Flutter.",
-  },
-  dev2: {
-    chip: "Build Session",
-    color: KIND.build,
-    title: "Build Session #2",
-    dow: "WED",
-    date: "Sep 23",
-    time: "6:00 – 7:00 PM",
-    loc: "DLW 124",
-    rsvp: "https://uga.campuslabs.com/engage/event/12664184",
-    blurb: BUILD_SESSION_BLURB,
-  },
-  supabase: {
-    chip: "Workshop",
-    color: KIND.workshop,
-    title: "Workshop: Supabase",
-    dow: "MON",
-    date: "Sep 28",
-    time: "6:00 – 7:30 PM",
-    loc: "DLW 124",
-    rsvp: null,
-    blurb:
-      "Get hands-on with Supabase: Postgres, auth, and realtime data for this year's projects.",
-  },
-  dev3: {
-    chip: "Build Session",
-    color: KIND.build,
-    title: "Build Session #3",
-    dow: "WED",
-    date: "Sep 30",
-    time: "6:00 – 7:00 PM",
-    loc: "DLW 124",
-    rsvp: "https://uga.campuslabs.com/engage/event/12664184",
-    blurb: BUILD_SESSION_BLURB,
-  },
-  career: {
-    chip: "Workshop",
-    color: KIND.workshop,
-    title: "Workshop: Career Fair Readiness",
-    dow: "MON",
-    date: "Oct 5",
-    time: "6:00 – 8:00 PM",
-    loc: "DLW 110",
-    rsvp: null,
-    blurb:
-      "Get ready for the fall career fair: resume polish, portfolio pointers, and how to talk about what you've built.",
-  },
+  }),
+  build1: configEvent("rec1BrdXl7u8bYGXH"),
+  nextflutter: configEvent("recBF3KxHMKsT4Mz8"),
+  build2: configEvent("recGqvQqUDFlrXPRc"),
+  supabase: configEvent("recqDUR1D3CQNBVe5"),
+  build3: configEvent("rec6aLjA2ZhT45xuh"),
+  career: configEvent("recljv0crLDtLIBPc"),
+  touchgrass1: configEvent("touch-grass-1-2026"),
 } satisfies Record<string, ChangelogEvent>;
 
 export const ISSUES: ChangelogIssue[] = [
@@ -166,11 +86,11 @@ export const ISSUES: ChangelogIssue[] = [
     featured: EVENTS.coldstart,
     cta: "RSVP for Cold Start",
     upcoming: [
-      EVENTS.dev1,
+      EVENTS.build1,
       EVENTS.nextflutter,
-      EVENTS.dev2,
+      EVENTS.build2,
       EVENTS.supabase,
-      EVENTS.dev3,
+      EVENTS.build3,
       EVENTS.career,
     ],
     signoff:
@@ -190,9 +110,27 @@ export const ISSUES: ChangelogIssue[] = [
     featuredLabel: "happening_tonight",
     featured: EVENTS.nextflutter,
     cta: "RSVP for Cold Start",
-    upcoming: [EVENTS.dev2, EVENTS.supabase, EVENTS.dev3, EVENTS.career],
+    upcoming: [EVENTS.build2, EVENTS.supabase, EVENTS.build3, EVENTS.career],
     signoff:
       "Doors tonight at 6 in DLW 124. Bring a laptop if you have one, but we'll get you set up to ship either way.",
+  },
+  {
+    version: "3.0.2",
+    term: "Fall 2026",
+    sendLabel: "Mon · Sep 28",
+    command: "changelog --date 2026-09-28",
+    title: "Give Your App a Backend Tonight (DevDogs Changelog v3.0.2)",
+    preview:
+      "Tonight at 6: the Supabase workshop, plus this week's feature competition. Auth, a database, and your first real data.",
+    tagline: "Your app gets a backend tonight.",
+    intro:
+      "Tonight's workshop adds Supabase to the app you started at the Next.js and Flutter workshops: sign-in, a Postgres database, and row-level security. Web and mobile tracks share one project. After the demo we kick off this week's feature competition. Teams are 2 to 4, and entries close when next Monday's meeting starts.",
+    featuredLabel: "happening_tonight",
+    featured: EVENTS.supabase,
+    cta: "See the schedule",
+    upcoming: [EVENTS.build3, EVENTS.career, EVENTS.touchgrass1],
+    signoff:
+      "Doors tonight at 6 in DLW 124. Turn on GitHub two-factor before you come: you need it to join a team.",
   },
 ];
 

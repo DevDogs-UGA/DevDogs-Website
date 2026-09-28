@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "@devdogsuga/brand": "workspace:*",
+    "@devdogsuga/events": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:"
   },
