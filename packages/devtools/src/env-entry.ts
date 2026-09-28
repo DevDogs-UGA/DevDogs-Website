@@ -32,17 +32,68 @@
  * for a menu invocation before handing off to `cli.ts`; `runMenu` takes it
  * (reading clears it) right before its own dispatch, so a nested launcher
  * never inherits a stale one.
+ *
+ * ## Regenerating `.env.generated` before entry
+ *
+ * Before either caller's `enterEnvironment` call, this also gives a running
+ * local stack a chance to fix its own absence: `deps.ensureGeneratedEnv`
+ * (`db/generated-env.ts`'s `ensureGeneratedEnvFile`, wired by
+ * `realEnvEntryDeps`) writes `.env.generated` from `supabase status -o env`
+ * when the port is listening but the file is missing — the common shape of
+ * a local stack another workspace started, sharing this repo's
+ * `project_id` — so the entry below usually just succeeds instead of
+ * throwing `LocalStackOfflineError` or warning about a file nobody wrote.
+ * A `"foreign"` result (the stack on the port belongs to a DIFFERENT
+ * project) prints its own hint and then falls through to the unchanged
+ * error handling below, since the file is still missing either way.
  */
 import { confirm } from "@clack/prompts";
 import type { DeployEnvironment } from "@devdogsuga/env";
 import type { DevDatabase } from "@devdogsuga/env/load";
 import type * as EnvLoadModule from "@devdogsuga/env/load";
 import type * as EnvSessionModule from "@devdogsuga/env/session";
+import {
+  ensureGeneratedEnvFile,
+  realEnsureGeneratedEnvDeps,
+  type EnsureGeneratedEnvResult,
+} from "./db/generated-env.js";
 import { unwrap } from "./ui.js";
 
 export interface EnvEntryDeps {
   envLoad: typeof EnvLoadModule;
   envSession: typeof EnvSessionModule;
+  /**
+   * Regenerates `.env.generated` from a running local stack when this
+   * checkout's own copy is missing, right before the session's env files
+   * load — see this module's header and `db/generated-env.ts`. Required
+   * (not defaulted here) so every caller is explicit about it: `launch.ts`
+   * uses `realEnvEntryDeps` for the real wiring, tests inject a stub that
+   * never touches a real filesystem, Docker daemon, or the Supabase CLI.
+   */
+  ensureGeneratedEnv: (
+    tier: DeployEnvironment,
+    devDatabase: DevDatabase | undefined,
+  ) => Promise<EnsureGeneratedEnvResult>;
+}
+
+/**
+ * The production wiring for `EnvEntryDeps`, shared by both call sites in
+ * `launch.ts`.
+ */
+export function realEnvEntryDeps(
+  envLoad: typeof EnvLoadModule,
+  envSession: typeof EnvSessionModule,
+): EnvEntryDeps {
+  return {
+    envLoad,
+    envSession,
+    ensureGeneratedEnv: (tier, devDatabase) =>
+      ensureGeneratedEnvFile(
+        tier,
+        devDatabase,
+        realEnsureGeneratedEnvDeps(envLoad.probeLocalStack),
+      ),
+  };
 }
 
 /**
@@ -63,6 +114,11 @@ export async function enterSessionEnvironment<T>(
   dispatchCommand: () => Promise<T>,
 ): Promise<T> {
   const { envLoad, envSession } = deps;
+
+  const generated = await deps.ensureGeneratedEnv(tier, devDatabase);
+  if (generated.outcome === "wrote" || generated.outcome === "foreign") {
+    process.stderr.write(`${generated.line}\n`);
+  }
 
   // Mandatory, not chattiness: which database a command is about to touch
   // must never be a guess. Names the QUALIFIED session (`development:local`)

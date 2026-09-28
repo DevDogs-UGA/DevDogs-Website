@@ -16,11 +16,17 @@
  * the session targets staging is odd but harmless, and refusing it would
  * block the one command that fixes an offline-local session.
  */
-import { rmSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describeEnvironment, probeEnvironment } from "./environment.js";
 import { findRepoRoot } from "./repo/root.js";
+import {
+  foreignStackMessage,
+  foreignStackProjectId,
+  listContainerNames,
+  readProjectId,
+} from "./repo/supabase-project.js";
 import {
   dbPush,
   generateTypes,
@@ -36,6 +42,11 @@ import {
 import { refreshSessionEnv } from "./db/session-refresh.js";
 import { runSeedProduction } from "./db/seed-production.js";
 import { originReachable, resolveBaseUrl } from "./cron/commands.js";
+import {
+  ensureGeneratedEnvFile,
+  realEnsureGeneratedEnvDeps,
+} from "./db/generated-env.js";
+import { loadEnvLoad } from "./repo/peers.js";
 
 // Scope order, matching `db`'s subcommands in `commands.ts`: the four that
 // act on the Supabase stack (`connect` is handled separately below — it
@@ -54,6 +65,22 @@ export type StackCommand = (typeof STACK_COMMANDS)[number];
 // ── Implementations ──────────────────────────────────────────────────────────
 
 /**
+ * A running Docker container whose name says it belongs to a DIFFERENT
+ * Supabase project than this checkout's own `config.toml` — the signature
+ * of a foreign stack holding the shared ports (see
+ * `repo/supabase-project.ts`'s header). `undefined` when nothing points
+ * that way, including when Docker or `config.toml` could not be read at
+ * all: with no signal either way, `startLocalStack`'s own failure and the
+ * Supabase CLI's own output are still the reader's best explanation.
+ */
+function foreignStackHint(): string | undefined {
+  const names = listContainerNames();
+  if (names === null) return undefined;
+  const foreign = foreignStackProjectId(names, readProjectId(findRepoRoot()));
+  return foreign === null ? undefined : foreignStackMessage(foreign);
+}
+
+/**
  * `wroteEnvFile` is split out from `code` on purpose: `.env.generated` is
  * written to disk BEFORE `seedBuckets` runs, so a nonzero `code` from
  * `seedBuckets` alone does not mean the file on disk is unchanged — the
@@ -63,13 +90,25 @@ export type StackCommand = (typeof STACK_COMMANDS)[number];
  * whenever the file changed, independently of whether the command as a whole
  * succeeded, and still reports the failing code so the caller does not
  * mistake a seed failure for success.
+ *
+ * `hint` is set when `supabase start` itself fails (before anything here
+ * could have written `.env.generated`) AND a foreign project's stack is
+ * holding the ports — the same signal `db/generated-env.ts` surfaces for a
+ * failed `supabase status -o env`, named here too so `db start` explains
+ * itself instead of leaving only the bare Supabase CLI error.
  */
 async function startLocalStack(): Promise<{
   code: number;
   wroteEnvFile: boolean;
+  hint?: string;
 }> {
   const code = await supabase("start");
-  if (code !== 0) return { code, wroteEnvFile: false };
+  if (code !== 0) {
+    const hint = foreignStackHint();
+    return hint === undefined
+      ? { code, wroteEnvFile: false }
+      : { code, wroteEnvFile: false, hint };
+  }
   // Write the local stack's connection details so with-env can load them.
   let env: string;
   try {
@@ -317,31 +356,79 @@ async function restartLocal(): Promise<{ code: number; lines: string[] }> {
       ],
     };
   }
-  const { code, wroteEnvFile } = await startLocalStack();
-  return { code, lines: await afterLocalStackChange(code, wroteEnvFile) };
+  const { code, wroteEnvFile, hint } = await startLocalStack();
+  const lines = await afterLocalStackChange(code, wroteEnvFile);
+  return { code, lines: hint === undefined ? lines : [hint, ...lines] };
 }
 
 /**
  * What `status` says for a local session, now that it can answer for itself.
  *
- * `environment.ts` already reads the two facts that question is really asking
- * about, so this reports them and names the next step.
+ * `environment.ts` already reads the two facts that question is really
+ * asking about, so this reports them and names the next step. When the
+ * stack's containers are up but this checkout's own `.env.generated` is
+ * missing — most often a stack another workspace started, sharing this
+ * repo's `project_id` — this also attempts the same regeneration
+ * `enterSessionEnvironment` (`env-entry.ts`) runs before every command, so
+ * `db status` reports the file's ACTUAL state after trying to fix it,
+ * rather than a stale "the stack is up" that leaves the absence a mystery.
  */
-function localStatus(): { code: number; lines: string[] } {
+async function localStatus(): Promise<{ code: number; lines: string[] }> {
   const env = probeEnvironment();
+  const lines = [describeEnvironment(env)];
 
-  let next: string;
   if (env.docker === "no") {
-    next = "Start Docker, then `pnpm devtools db start` to bring the stack up.";
-  } else if (env.stack === "yes") {
-    next = "The stack is up. `supabase status` prints its URLs and keys.";
-  } else if (env.stack === "no") {
-    next = "Nothing is running. `pnpm devtools db start` starts it.";
-  } else {
-    next = "Could not read Docker. `supabase status` asks the stack directly.";
+    lines.push(
+      "Start Docker, then `pnpm devtools db start` to bring the stack up.",
+    );
+    return { code: 0, lines };
   }
 
-  return { code: 0, lines: [describeEnvironment(env), next] };
+  if (env.stack === "no") {
+    lines.push("Nothing is running. `pnpm devtools db start` starts it.");
+    return { code: 0, lines };
+  }
+
+  if (env.stack === "unknown") {
+    lines.push("Could not read Docker. `supabase status` asks the stack directly.");
+    return { code: 0, lines };
+  }
+
+  // env.stack === "yes"
+  const repoRoot = findRepoRoot();
+  if (existsSync(join(repoRoot, ".env.generated"))) {
+    lines.push("The stack is up. `supabase status` prints its URLs and keys.");
+    return { code: 0, lines };
+  }
+
+  const envLoad = await loadEnvLoad();
+  const generated = await ensureGeneratedEnvFile(
+    "development",
+    undefined,
+    realEnsureGeneratedEnvDeps(envLoad.probeLocalStack),
+  );
+  if (generated.outcome === "wrote") {
+    lines.push(
+      generated.line.replace(/^devtools: /, ""),
+      "The stack is up. `supabase status` prints its URLs and keys.",
+    );
+  } else if (generated.outcome === "foreign") {
+    lines.push(generated.line.replace(/^devtools: /, ""));
+  } else if (generated.outcome === "unreachable") {
+    lines.push(
+      "The stack's containers are up but .env.generated could not be " +
+        "regenerated — run `supabase status -o env` yourself to see why.",
+    );
+  } else {
+    // "skipped": Docker's container list said the stack is up, but nothing
+    // answered the port probe — a race right after `db start`/`db restart`,
+    // most likely. Nothing to regenerate from yet.
+    lines.push(
+      "Docker reports the stack's containers running, but nothing is " +
+        "answering on 127.0.0.1:54321 yet — try again in a moment.",
+    );
+  }
+  return { code: 0, lines };
 }
 
 /**
@@ -366,8 +453,9 @@ export async function runStackCommand(
   }
 
   if (command === "start") {
-    const { code, wroteEnvFile } = await startLocalStack();
-    return { code, lines: await afterLocalStackChange(code, wroteEnvFile) };
+    const { code, wroteEnvFile, hint } = await startLocalStack();
+    const lines = await afterLocalStackChange(code, wroteEnvFile);
+    return { code, lines: hint === undefined ? lines : [hint, ...lines] };
   }
 
   if (command === "status") {

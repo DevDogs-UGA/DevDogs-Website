@@ -53,7 +53,11 @@ import type { DeployEnvironment } from "@devdogsuga/env";
 import type { DevDatabase } from "@devdogsuga/env/load";
 import type { TierChoice } from "@devdogsuga/env/session";
 import { findCommand } from "./commands.js";
-import { enterSessionEnvironment, setMenuEnvHook } from "./env-entry.js";
+import {
+  enterSessionEnvironment,
+  realEnvEntryDeps,
+  setMenuEnvHook,
+} from "./env-entry.js";
 import { bareGroupStartPath } from "./menu.js";
 import { discoverRepoRoot, findRepoRoot, RepoNotFoundError } from "./repo/root.js";
 import { loadEnvLoad, loadEnvSession } from "./repo/peers.js";
@@ -290,7 +294,7 @@ export async function launch(argv: readonly string[]): Promise<void> {
         tier,
         devDatabase,
         commandArgv,
-        { envLoad, envSession },
+        realEnvEntryDeps(envLoad, envSession),
         dispatchCommand,
       ),
     );
@@ -305,7 +309,7 @@ export async function launch(argv: readonly string[]): Promise<void> {
     tier,
     devDatabase,
     rest,
-    { envLoad, envSession },
+    realEnvEntryDeps(envLoad, envSession),
     () => dispatch(rest),
   );
 }

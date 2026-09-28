@@ -20,10 +20,11 @@
  * for.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Condition } from "./commands.js";
 import { findRepoRoot } from "./repo/root.js";
+import { containerPrefix, readProjectId } from "./repo/supabase-project.js";
 
 /**
  * The repo root, which is where `supabase/config.toml` and `.env` live.
@@ -87,32 +88,6 @@ function run(file: string, args: string[]): string | null {
 }
 
 /**
- * The container name prefix the Supabase CLI gives this project's stack.
- *
- * Read with a regex rather than a TOML parser: it is one line, the shape has
- * been stable across every CLI version this repo has seen, and a parser on a
- * menu's startup path to read one string is a cost that stays invisible until
- * it is why the tool feels slow.
- *
- * Falling back to the bare `supabase_db_` prefix means a machine whose
- * `config.toml` cannot be read still detects *a* stack. That over-match is
- * deliberate: over-matching offers `stop` to someone running a different
- * Supabase project, which they can decline, while under-matching tells someone
- * their running stack is down.
- */
-function containerPrefix(): string {
-  try {
-    const path = join(findRepoRoot(), "supabase", "config.toml");
-    const id = /^\s*project_id\s*=\s*"([^"]+)"/m.exec(
-      readFileSync(path, "utf8"),
-    );
-    return id?.[1] ? `supabase_db_${id[1]}` : "supabase_db_";
-  } catch {
-    return "supabase_db_";
-  }
-}
-
-/**
  * Reads the machine.
  *
  * Two subprocesses at worst, one when Docker is down, plus an `existsSync`.
@@ -144,7 +119,7 @@ export function probeEnvironment(
   const names = execute("docker", ["ps", "--format", "{{.Names}}"]);
   if (names === null) return { docker, stack: "unknown", envFile };
 
-  const prefix = containerPrefix();
+  const prefix = containerPrefix(readProjectId(findRepoRoot()));
   const running = names
     .split("\n")
     .some((name) => name.trim().startsWith(prefix));

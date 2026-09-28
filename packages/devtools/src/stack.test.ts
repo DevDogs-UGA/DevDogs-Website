@@ -8,9 +8,12 @@
  * seed: `startLocalStack` writes `.env.generated` BEFORE `seedBuckets` runs,
  * so a nonzero `seedBuckets` exit must still refresh this process's entered
  * environment (`refreshSessionEnv`) — the file on disk genuinely changed —
- * while still reporting the failing code. `./db/run.js`, `./repo/root.js`
+ * while still reporting the failing code; and a failed `supabase start`
+ * surfacing a foreign-stack hint (see `./repo/supabase-project.ts`'s
+ * header). `./db/run.js`, `./repo/root.js`, `./repo/supabase-project.js`
  * and `./db/session-refresh.js` are mocked so this never spawns the real
- * Supabase CLI or touches the real filesystem/`process.env`.
+ * Supabase CLI, a real `docker ps`, or touches the real
+ * filesystem/`process.env`.
  */
 import { mkdtempSync, rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -35,6 +38,19 @@ let repoRoot = "";
 vi.mock("./repo/root.js", () => ({
   findRepoRoot: () => repoRoot,
 }));
+
+const listContainerNames = vi.fn((): string[] | null => []);
+const readProjectId = vi.fn((): string | null => "DevDogsUGA");
+vi.mock("./repo/supabase-project.js", async () => {
+  const actual = await vi.importActual<
+    typeof import("./repo/supabase-project.js")
+  >("./repo/supabase-project.js");
+  return {
+    ...actual,
+    listContainerNames: () => listContainerNames(),
+    readProjectId: (root: string) => readProjectId(root),
+  };
+});
 
 const refreshSessionEnv = vi.fn(async () => ["refreshed .env.generated"]);
 vi.mock("./db/session-refresh.js", () => ({
@@ -128,6 +144,8 @@ describe('runStackCommand("start", …)', () => {
       .mockResolvedValue("API_URL=http://127.0.0.1:54321\n");
     seedBuckets.mockReset().mockResolvedValue(0);
     refreshSessionEnv.mockClear();
+    listContainerNames.mockReset().mockReturnValue([]);
+    readProjectId.mockReset().mockReturnValue("DevDogsUGA");
   });
 
   afterEach(() => {
@@ -169,6 +187,31 @@ describe('runStackCommand("start", …)', () => {
 
     expect(code).toBe(1);
     expect(refreshSessionEnv).not.toHaveBeenCalled();
+    expect(lines).toEqual([]);
+  });
+
+  it("surfaces a foreign-stack hint when `supabase start` fails with another project's containers up", async () => {
+    supabase.mockResolvedValue(1);
+    listContainerNames.mockReturnValue(["supabase_db_DevDogs-Website"]);
+    readProjectId.mockReturnValue("DevDogsUGA");
+
+    const { code, lines } = await runStackCommand("start", null);
+
+    expect(code).toBe(1);
+    expect(refreshSessionEnv).not.toHaveBeenCalled();
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('project "DevDogs-Website"');
+    expect(lines[0]).toContain("supabase stop --project-id DevDogs-Website");
+  });
+
+  it("does not surface a hint when the failure has no foreign container to explain it", async () => {
+    supabase.mockResolvedValue(1);
+    listContainerNames.mockReturnValue(["supabase_db_DevDogsUGA"]);
+    readProjectId.mockReturnValue("DevDogsUGA");
+
+    const { code, lines } = await runStackCommand("start", null);
+
+    expect(code).toBe(1);
     expect(lines).toEqual([]);
   });
 

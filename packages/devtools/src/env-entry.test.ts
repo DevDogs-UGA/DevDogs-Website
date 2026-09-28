@@ -36,6 +36,8 @@ const {
 class MissingEnvFileError extends Error {}
 class LocalStackOfflineError extends Error {}
 
+const ensureGeneratedEnv = vi.fn(async () => ({ outcome: "skipped" as const }));
+
 function fakeDeps(enterEnvironment: (...args: unknown[]) => unknown) {
   return {
     envLoad: {
@@ -45,6 +47,9 @@ function fakeDeps(enterEnvironment: (...args: unknown[]) => unknown) {
     envSession: {
       enterEnvironment,
     } as unknown as Parameters<typeof enterSessionEnvironment>[3]["envSession"],
+    ensureGeneratedEnv: (
+      ...args: Parameters<typeof ensureGeneratedEnv>
+    ) => ensureGeneratedEnv(...args),
   };
 }
 
@@ -117,6 +122,118 @@ describe("enterSessionEnvironment", () => {
       ),
     ).toBe(true);
     writeSpy.mockRestore();
+  });
+
+  describe("the .env.generated regeneration step", () => {
+    it("calls ensureGeneratedEnv with the session's tier and devDatabase, before entering", async () => {
+      const calls: string[] = [];
+      ensureGeneratedEnv.mockImplementation(async () => {
+        calls.push("ensureGeneratedEnv");
+        return { outcome: "skipped" as const };
+      });
+      const enterEnvironment = vi.fn(async () => {
+        calls.push("enterEnvironment");
+        return { files: [".env"], warnings: [], environment: {} };
+      });
+
+      await enterSessionEnvironment(
+        "development",
+        "local",
+        ["db", "status"],
+        fakeDeps(enterEnvironment),
+        vi.fn(async () => "Done."),
+      );
+
+      expect(ensureGeneratedEnv).toHaveBeenCalledWith("development", "local");
+      expect(calls).toEqual(["ensureGeneratedEnv", "enterEnvironment"]);
+    });
+
+    it("prints the line and proceeds when a file was written", async () => {
+      const writeSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+      ensureGeneratedEnv.mockResolvedValue({
+        outcome: "wrote" as const,
+        line: "devtools: wrote .env.generated from the running local stack",
+      });
+      const enterEnvironment = vi.fn(async () => ({
+        files: [".env.generated", ".env"],
+        warnings: [],
+        environment: {},
+      }));
+      const dispatchCommand = vi.fn(async () => "Done.");
+
+      const result = await enterSessionEnvironment(
+        "development",
+        undefined,
+        ["db", "status"],
+        fakeDeps(enterEnvironment),
+        dispatchCommand,
+      );
+
+      expect(result).toBe("Done.");
+      expect(dispatchCommand).toHaveBeenCalledTimes(1);
+      expect(
+        writeSpy.mock.calls.some(([line]) =>
+          String(line).includes("wrote .env.generated"),
+        ),
+      ).toBe(true);
+      writeSpy.mockRestore();
+    });
+
+    it("prints the hint for a foreign stack and still falls through to normal entry", async () => {
+      const writeSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+      ensureGeneratedEnv.mockResolvedValue({
+        outcome: "foreign" as const,
+        projectId: "DevDogs-Website",
+        line: 'devtools: The stack on port 54321 belongs to project "DevDogs-Website"…',
+      });
+      const enterEnvironment = vi.fn(async () => ({
+        files: [".env"],
+        warnings: [],
+        environment: {},
+      }));
+
+      await enterSessionEnvironment(
+        "development",
+        undefined,
+        ["db", "status"],
+        fakeDeps(enterEnvironment),
+        vi.fn(async () => "Done."),
+      );
+
+      expect(
+        writeSpy.mock.calls.some(([line]) =>
+          String(line).includes('project "DevDogs-Website"'),
+        ),
+      ).toBe(true);
+      // Falls through to the unchanged entry — still called normally.
+      expect(enterEnvironment).toHaveBeenCalledTimes(1);
+      writeSpy.mockRestore();
+    });
+
+    it("prints nothing for a plain skip", async () => {
+      const writeSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+      ensureGeneratedEnv.mockResolvedValue({ outcome: "skipped" as const });
+      const enterEnvironment = vi.fn(async () => ({
+        files: [".env"],
+        warnings: [],
+        environment: {},
+      }));
+
+      await enterSessionEnvironment(
+        "development",
+        undefined,
+        ["db", "status"],
+        fakeDeps(enterEnvironment),
+        vi.fn(async () => "Done."),
+      );
+
+      expect(
+        writeSpy.mock.calls.some(([line]) =>
+          /wrote \.env\.generated|belongs to project/.test(String(line)),
+        ),
+      ).toBe(false);
+      writeSpy.mockRestore();
+    });
   });
 
   describe("MissingEnvFileError", () => {
