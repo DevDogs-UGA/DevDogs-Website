@@ -448,8 +448,10 @@ Presenter: open `https://slides-sync.devdogsuga.org/presenter/` and sign
 in through Access. Open `/presenter/` directly: a tab that only goes to the
 presenter view later still follows instead of driving.
 
-Each demo laptop, from `apps/slides/` in its Backstage checkout (with the
-workshop submodules checked out):
+Each demo laptop, from `apps/slides/` in its Backstage checkout, signed in
+to GitHub with an account that can read the planning repos (`gh auth login`,
+then `gh auth setup-git`), since the workshop submodules and checkpoint tags
+come from them:
 
 ```sh
 pnpm follow web ~/Web-Workshops      # or: pnpm follow mobile ~/Mobile-Workshops

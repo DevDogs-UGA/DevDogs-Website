@@ -85,6 +85,20 @@ function buildWorkspaceDeps() {
   }
 }
 
+// The deck's code comes from the workshop submodules (theme/setup/
+// transformers.ts). A fresh clone of Backstage hasn't checked them out.
+function checkOutWorkshops() {
+  const missing = ['web', 'mobile'].filter(name => !existsSync(join(appDir, 'workshops', name, '.git')))
+  if (!missing.length) return
+  console.log(`\nfollow: checking out the workshop submodules (${missing.join(', ')})\n`)
+  try {
+    execFileSync('git', ['submodule', 'update', '--init', '--', ...missing.map(name => `workshops/${name}`)], { cwd: appDir, stdio: 'inherit' })
+  }
+  catch {
+    fail('checking out the workshop submodules failed (see above). They clone the private planning repos, so this machine needs a GitHub login that can read them.')
+  }
+}
+
 const env = readEnvFile()
 const repo = repoArg ? resolve(process.env.INIT_CWD ?? process.cwd(), repoArg) : env.SLIDES_DEMO_REPO
 if (!repo) fail('give the workshop clone the demo is typed into, or set SLIDES_DEMO_REPO in apps/slides/.env.')
@@ -115,6 +129,7 @@ if (checkpoints.some(tag => !tags.includes(tag))) {
   tags = demoTags()
 }
 
+checkOutWorkshops()
 buildWorkspaceDeps()
 
 const live = env.SLIDES_LIVE_URL || 'https://slides-relay.devdogsuga.org'
