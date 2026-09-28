@@ -59,6 +59,13 @@ export const EVENT_KIND_VISUALS = {
     chipDark: "border-rose-400/30 bg-rose-500/10 text-rose-300",
     dotDark: "bg-rose-400",
   },
+  "Demo Night": {
+    accent: "#7c86ff",
+    bg: "bg-indigo-400",
+    dot: "bg-indigo-500",
+    chipDark: "border-indigo-400/30 bg-indigo-500/10 text-indigo-300",
+    dotDark: "bg-indigo-400",
+  },
 } as const;
 
 /**

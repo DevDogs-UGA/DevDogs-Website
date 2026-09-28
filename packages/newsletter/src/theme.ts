@@ -27,6 +27,7 @@ export const KIND = {
   build: EVENT_KIND_VISUALS["Build Session"].accent,
   study: EVENT_KIND_VISUALS["Study Session"].accent,
   social: EVENT_KIND_VISUALS.Social.accent,
+  demo: EVENT_KIND_VISUALS["Demo Night"].accent,
   workshop: EVENT_SEGMENT_VISUALS.workshop.accent,
 } as const;
 

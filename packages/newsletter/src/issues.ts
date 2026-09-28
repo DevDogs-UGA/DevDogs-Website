@@ -52,6 +52,7 @@ const EVENTS = {
   build2: meeting("recGqvQqUDFlrXPRc"),
   supabase: meeting("recqDUR1D3CQNBVe5"),
   build3: meeting("rec6aLjA2ZhT45xuh"),
+  judging1: meeting("feature-competition-1-judging-2026"),
   career: meeting("recljv0crLDtLIBPc"),
   touchgrass1: meeting("touch-grass-1-2026"),
 };
@@ -107,14 +108,19 @@ export const ISSUES: ChangelogIssue[] = [
     command: "changelog --date 2026-09-28",
     title: "Give Your App a Backend Tonight (DevDogs Changelog v3.0.2)",
     preview:
-      "Tonight at 6: the Supabase workshop, plus this week's feature competition. Auth, a database, and your first real data.",
+      "Tonight at 6: the Supabase workshop, then our first feature competition of the year kicks off.",
     tagline: "Your app gets a backend tonight.",
     intro:
-      "Tonight's workshop adds Supabase to the app you started at the Next.js and Flutter workshops: sign-in, a Postgres database, and row-level security. Web and mobile tracks share one project. After the demo we kick off this week's feature competition. Teams are 2 to 4, and entries close when next Monday's meeting starts.",
+      "Tonight's workshop adds Supabase to the app you started at the Next.js and Flutter workshops: sign-in, a Postgres database, and row-level security. Web and mobile tracks share one project. Then our first feature competition of the year kicks off: form a team of 2 to 4 and build a feature for the club's own platform. Entries close at 6 PM next Monday, when teams present their work.",
     featuredLabel: "happening_tonight",
     featured: EVENTS.supabase,
     cta: "See the schedule",
-    upcoming: [EVENTS.build3, EVENTS.career, EVENTS.touchgrass1],
+    upcoming: [
+      EVENTS.build3,
+      EVENTS.judging1,
+      EVENTS.career,
+      EVENTS.touchgrass1,
+    ],
     signoff:
       "Doors tonight at 6 in DLW 124. Turn on GitHub two-factor before you come: you need it to join a team.",
   },

@@ -232,6 +232,7 @@ const KIND_COLOR: Record<string, string> = {
   "Build Session": KIND.build,
   "Study Session": KIND.study,
   Social: KIND.social,
+  "Demo Night": KIND.demo,
 };
 
 function inEventZone(at: Date, options: Intl.DateTimeFormatOptions): string {

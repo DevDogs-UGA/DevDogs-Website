@@ -71,6 +71,7 @@ export const MEETING_KIND_CHOICES = [
   "Study Session",
   "Interest Meeting",
   "Social",
+  "Demo Night",
 ] as const;
 
 /** Mirrors `meetings_building_choices`. */
