@@ -25,6 +25,8 @@
  * SVG, which is also why og ships its email signature as PNG).
  */
 import type { CSSProperties, ReactNode } from "react";
+import { EVENT_TZ, meetingLocation } from "@devdogsuga/brand/event";
+import type { Meeting } from "@devdogsuga/events";
 
 import { MARK_SIZES, type RenderContext } from "./assets.js";
 import {
@@ -36,7 +38,7 @@ import {
   SLANTS_CLASS,
   tc,
 } from "./darkmode.js";
-import type { ChangelogEvent, ChangelogIssue } from "./issues.js";
+import type { ChangelogIssue } from "./issues.js";
 import {
   blockShadow,
   chipColors,
@@ -224,20 +226,54 @@ function CtaButton({
   );
 }
 
+/** The chip accent for each kind, from `KIND` so `darkModeCss()` pins it. */
+const KIND_COLOR: Record<string, string> = {
+  "Interest Meeting": KIND.interest,
+  "Build Session": KIND.build,
+  "Study Session": KIND.study,
+  Social: KIND.social,
+};
+
+function inEventZone(at: Date, options: Intl.DateTimeFormatOptions): string {
+  return at.toLocaleString("en-US", { timeZone: EVENT_TZ, ...options });
+}
+
+/** `"6:00 – 7:30 PM"`, or `"11:00 AM – 1:00 PM"` across noon. */
+function timeRange(startsAt: Date, endsAt: Date): string {
+  const clock = (at: Date) =>
+    inEventZone(at, { hour: "numeric", minute: "2-digit" }).split(" ");
+  const [start, startMeridiem] = clock(startsAt);
+  const [end, endMeridiem] = clock(endsAt);
+  return startMeridiem === endMeridiem
+    ? `${start} – ${end} ${endMeridiem}`
+    : `${start} ${startMeridiem} – ${end} ${endMeridiem}`;
+}
+
+/**
+ * What a card prints for a meeting, in Eastern time. A night with no kind is
+ * a workshop night, the same reading the site's calendar gives it.
+ */
+function eventCard(meeting: Meeting) {
+  const startsAt = new Date(meeting.startsAt);
+  return {
+    chip: meeting.kind ?? "Workshop",
+    color: (meeting.kind && KIND_COLOR[meeting.kind]) ?? KIND.workshop,
+    dow: inEventZone(startsAt, { weekday: "short" }).toUpperCase(),
+    month: inEventZone(startsAt, { month: "short" }),
+    day: inEventZone(startsAt, { day: "numeric" }),
+    time: timeRange(startsAt, new Date(meeting.endsAt)),
+    loc: meetingLocation(meeting.building, meeting.location) ?? "TBA",
+  };
+}
+
 /**
  * An upcoming-event row, drawn the way the site's schedule list draws one: a
  * stacked weekday / day-number date column, a chip pill, a display-face
  * title, and the time + room in quiet sans.
  */
-function EventRow({
-  event,
-  ctx,
-}: {
-  event: ChangelogEvent;
-  ctx: RenderContext;
-}) {
+function EventRow({ meeting, ctx }: { meeting: Meeting; ctx: RenderContext }) {
   const { fonts } = ctx;
-  const [month, day] = event.date.split(" ");
+  const card = eventCard(meeting);
   return (
     <table
       {...TABLE_RESET}
@@ -269,7 +305,7 @@ function EventRow({
                 textTransform: "uppercase",
               }}
             >
-              {event.dow}
+              {card.dow}
             </div>
             <div
               className={tc(PALETTE.ink)}
@@ -280,7 +316,7 @@ function EventRow({
                 padding: "3px 0 2px",
               }}
             >
-              {day}
+              {card.day}
             </div>
             <div
               className={tc(PALETTE.dim)}
@@ -291,7 +327,7 @@ function EventRow({
                 textTransform: "uppercase",
               }}
             >
-              {month}
+              {card.month}
             </div>
           </td>
           <DividerCell vertical />
@@ -300,11 +336,7 @@ function EventRow({
               <tbody>
                 <tr>
                   <td valign="middle">
-                    <Chip
-                      label={event.chip}
-                      color={event.color}
-                      fonts={fonts}
-                    />
+                    <Chip label={card.chip} color={card.color} fonts={fonts} />
                     <div
                       className={tc(PALETTE.ink)}
                       style={{
@@ -314,7 +346,7 @@ function EventRow({
                         padding: "9px 0 5px",
                       }}
                     >
-                      {event.title}
+                      {meeting.title}
                     </div>
                     <div
                       className={tc(PALETTE.mute)}
@@ -323,29 +355,27 @@ function EventRow({
                         color: PALETTE.mute,
                       }}
                     >
-                      {event.time}{" "}
+                      {card.time}{" "}
                       <span
                         className={tc(PALETTE.dim)}
                         style={{ color: PALETTE.dim }}
                       >
                         ·
                       </span>{" "}
-                      {event.loc}
+                      {card.loc}
                     </div>
-                    {event.blurb ? (
-                      <div
-                        className={tc(PALETTE.dim)}
-                        style={{
-                          ...font(400, 13, 1.55, fonts.sans),
-                          color: PALETTE.dim,
-                          paddingTop: "7px",
-                        }}
-                      >
-                        {event.blurb}
-                      </div>
-                    ) : null}
+                    <div
+                      className={tc(PALETTE.dim)}
+                      style={{
+                        ...font(400, 13, 1.55, fonts.sans),
+                        color: PALETTE.dim,
+                        paddingTop: "7px",
+                      }}
+                    >
+                      {meeting.summary}
+                    </div>
                   </td>
-                  {event.rsvp ? (
+                  {meeting.rsvpUrl ? (
                     <td
                       valign="middle"
                       align="right"
@@ -354,8 +384,8 @@ function EventRow({
                     >
                       <CtaButton
                         label="RSVP"
-                        url={event.rsvp}
-                        color={event.color}
+                        url={meeting.rsvpUrl}
+                        color={card.color}
                         ground={PALETTE.card}
                         fonts={fonts}
                         compact
@@ -433,6 +463,7 @@ export function ChangelogEmail({
 }) {
   const { fonts, assets } = ctx;
   const featured = issue.featured;
+  const featuredCard = eventCard(featured);
   const arrowLinkStyle: CSSProperties = {
     color: PALETTE.ink,
     textDecoration: "none",
@@ -668,26 +699,26 @@ export function ChangelogEmail({
         {/* featured / hero event */}
         <tr>
           <td style={{ padding: "20px 22px 6px" }}>
-            <SectionHeading color={featured.color} fonts={fonts}>
+            <SectionHeading color={featuredCard.color} fonts={fonts}>
               {issue.featuredLabel}
             </SectionHeading>
             <table
               {...TABLE_RESET}
               width="100%"
               bgcolor={PALETTE.card2}
-              className={`${bc(PALETTE.card2)} ${brc(featured.color)}`}
+              className={`${bc(PALETTE.card2)} ${brc(featuredCard.color)}`}
               style={{
-                border: `1px solid ${featured.color}`,
+                border: `1px solid ${featuredCard.color}`,
                 borderRadius: "10px",
-                ...blockShadow(featured.color),
+                ...blockShadow(featuredCard.color),
               }}
             >
               <tbody>
                 <tr>
                   <td style={{ padding: "22px 22px 24px" }}>
                     <Chip
-                      label={featured.chip}
-                      color={featured.color}
+                      label={featuredCard.chip}
+                      color={featuredCard.color}
                       ground={PALETTE.card2}
                       fonts={fonts}
                     />
@@ -713,7 +744,8 @@ export function ChangelogEmail({
                               paddingRight: "8px",
                             }}
                           >
-                            {featured.dow}, {featured.date}
+                            {featuredCard.dow}, {featuredCard.month}{" "}
+                            {featuredCard.day}
                           </td>
                           <DividerCell vertical />
                           <td
@@ -724,7 +756,7 @@ export function ChangelogEmail({
                               padding: "0 8px",
                             }}
                           >
-                            {featured.time}
+                            {featuredCard.time}
                           </td>
                           <DividerCell vertical />
                           <td
@@ -735,7 +767,7 @@ export function ChangelogEmail({
                               padding: "0 8px",
                             }}
                           >
-                            {featured.loc}
+                            {featuredCard.loc}
                           </td>
                         </tr>
                       </tbody>
@@ -748,7 +780,7 @@ export function ChangelogEmail({
                         paddingTop: "10px",
                       }}
                     >
-                      {featured.blurb}
+                      {featured.summary}
                     </div>
                     <div
                       style={{
@@ -761,7 +793,7 @@ export function ChangelogEmail({
                     </div>
                     <CtaButton
                       label={issue.cta}
-                      url={featured.rsvp ?? `${SITE}/events`}
+                      url={featured.rsvpUrl ?? `${SITE}/events`}
                       color={UGA}
                       fonts={fonts}
                     />
@@ -778,12 +810,8 @@ export function ChangelogEmail({
             <SectionHeading color={PALETTE.ink} fonts={fonts}>
               upcoming
             </SectionHeading>
-            {issue.upcoming.map((event, index) => (
-              <EventRow
-                key={`${event.date}-${index}`}
-                event={event}
-                ctx={ctx}
-              />
+            {issue.upcoming.map((meeting) => (
+              <EventRow key={meeting.id} meeting={meeting} ctx={ctx} />
             ))}
             <div style={{ padding: "2px 0 4px", textAlign: "center" }}>
               <a

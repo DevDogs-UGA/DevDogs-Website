@@ -146,11 +146,15 @@ export type Workshop = z.infer<typeof workshopSchema>;
 export const meetingSchema = z
   .object({
     id: stableId,
-    title: z.string().max(MEETING_TITLE_MAX_LENGTH).nullable(),
-    summary: z.string().max(MEETING_SUMMARY_MAX_LENGTH).nullable(),
+    // Title, summary and location are required even though their columns
+    // are nullable: every meeting is also a newsletter card, and a card needs
+    // a heading, copy and a place ("TBA" until there is one). Stricter than
+    // the database is allowed; looser is not.
+    title: z.string().min(1).max(MEETING_TITLE_MAX_LENGTH),
+    summary: z.string().min(1).max(MEETING_SUMMARY_MAX_LENGTH),
     kind: z.enum(MEETING_KIND_CHOICES).nullable(),
     building: z.enum(MEETING_BUILDING_CHOICES).nullable(),
-    location: z.string().nullable(),
+    location: z.string().min(1),
     startsAt: isoInstant,
     endsAt: isoInstant,
     rsvpUrl: z.url().nullable(),

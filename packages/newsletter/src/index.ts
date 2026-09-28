@@ -16,12 +16,7 @@ export {
   type NewsletterAssets,
   type RenderContext,
 } from "./assets.js";
-export {
-  type ChangelogEvent,
-  type ChangelogIssue,
-  ISSUES,
-  issueByVersion,
-} from "./issues.js";
+export { type ChangelogIssue, ISSUES, issueByVersion } from "./issues.js";
 export {
   SOCIAL_ICON_NAMES,
   socialIconDataUri,

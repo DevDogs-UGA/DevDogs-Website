@@ -125,10 +125,7 @@ function checkMeeting(meeting: Meeting, issues: ValidationIssue[]): void {
   // because this validator's contract is "call it on any parsed ClubConfig",
   // and a future caller that relaxes the schema without reading this file
   // must not silently lose the check.
-  if (
-    meeting.title !== null &&
-    meeting.title.length > MEETING_TITLE_MAX_LENGTH
-  ) {
+  if (meeting.title.length > MEETING_TITLE_MAX_LENGTH) {
     issues.push({
       id: meeting.id,
       code: "meeting_title_too_long",
@@ -136,10 +133,7 @@ function checkMeeting(meeting: Meeting, issues: ValidationIssue[]): void {
     });
   }
 
-  if (
-    meeting.summary !== null &&
-    meeting.summary.length > MEETING_SUMMARY_MAX_LENGTH
-  ) {
+  if (meeting.summary.length > MEETING_SUMMARY_MAX_LENGTH) {
     issues.push({
       id: meeting.id,
       code: "meeting_summary_too_long",

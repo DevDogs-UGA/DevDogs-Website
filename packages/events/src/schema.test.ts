@@ -15,7 +15,7 @@ function meeting(overrides: Record<string, unknown> = {}) {
   return {
     id: "cold-start",
     title: "Cold Start",
-    summary: null,
+    summary: "The first meeting of the year.",
     kind: null,
     building: "DLW",
     location: "124",
@@ -64,6 +64,14 @@ describe("meetingSchema", () => {
       "rectaW4iGmfDA3uwQ",
     );
   });
+
+  it.each(["title", "summary", "location"])(
+    "requires %s, which every newsletter card draws",
+    (field) => {
+      expect(() => meetingSchema.parse(meeting({ [field]: null }))).toThrow();
+      expect(() => meetingSchema.parse(meeting({ [field]: "" }))).toThrow();
+    },
+  );
 
   it("rejects endsAt at or before startsAt", () => {
     expect(() =>

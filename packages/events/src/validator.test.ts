@@ -16,7 +16,7 @@ function meeting(overrides: Partial<Meeting> = {}): Meeting {
   return {
     id: "cold-start",
     title: "Cold Start",
-    summary: null,
+    summary: "The first meeting of the year.",
     kind: null,
     building: "DLW",
     location: "124",

@@ -1,29 +1,13 @@
 /**
  * The Changelog's content: the dated sends themselves, listing events read
- * from the club config in `@devdogsuga/events` (see `./events.ts`).
+ * from the club config in `@devdogsuga/events`.
  *
  * Issues are versioned with semver — a send is a release. Issue copy lives
  * here rather than in the components so a copy pass before a send touches one
  * file, and so the platform's archive pages and the exported emails can never
  * disagree about what an issue said.
  */
-import { configEvent } from "./events.js";
-
-export interface ChangelogEvent {
-  /** The chip label — the calendar's event-type vocabulary. */
-  chip: string;
-  /** The event-type accent from `KIND`. */
-  color: string;
-  title: string;
-  /** Three-letter weekday, uppercase. */
-  dow: string;
-  /** `"Sep 9"` — month then day, split for the stacked date column. */
-  date: string;
-  time: string;
-  loc: string;
-  rsvp: string | null;
-  blurb: string;
-}
+import { getClubConfig, type Meeting } from "@devdogsuga/events";
 
 export interface ChangelogIssue {
   /** Semver, doubling as the URL segment and the export filename. */
@@ -41,34 +25,36 @@ export interface ChangelogIssue {
   intro: string;
   /** The `##` heading over the hero card, e.g. `"happening_today"`. */
   featuredLabel: string;
-  featured: ChangelogEvent;
+  featured: Meeting;
   /** The hero card's button label. */
   cta: string;
-  upcoming: ChangelogEvent[];
+  upcoming: Meeting[];
   signoff: string;
 }
 
-/**
- * Every event an issue lists, by its id in the club config. Dates, rooms,
- * titles, RSVP links and copy come from there; an override here is only for
- * what the config has no field for.
- */
+const MEETINGS = new Map(getClubConfig().meetings.map((m) => [m.id, m]));
+
+/** A meeting from the club config, by id. Throws on a typo rather than
+ * rendering an issue with a hole in it. */
+function meeting(id: string): Meeting {
+  const found = MEETINGS.get(id);
+  if (found === undefined) {
+    throw new Error(`No meeting "${id}" in the club config.`);
+  }
+  return found;
+}
+
+/** Every event an issue lists, by its id in the club config. */
 const EVENTS = {
-  coldstart: configEvent("rectaW4iGmfDA3uwQ", {
-    // The calendar has no kind for the year's first night.
-    chip: "Kickoff",
-    // The config's summary predates the workshop being on the agenda.
-    blurb:
-      "The inaugural meeting for the 2026–2027 year. Get set up to contribute to this year's projects. Plus, a collaborative coding workshop: an introduction to Git, GitHub, and how to contribute to a team project.",
-  }),
-  build1: configEvent("rec1BrdXl7u8bYGXH"),
-  nextflutter: configEvent("recBF3KxHMKsT4Mz8"),
-  build2: configEvent("recGqvQqUDFlrXPRc"),
-  supabase: configEvent("recqDUR1D3CQNBVe5"),
-  build3: configEvent("rec6aLjA2ZhT45xuh"),
-  career: configEvent("recljv0crLDtLIBPc"),
-  touchgrass1: configEvent("touch-grass-1-2026"),
-} satisfies Record<string, ChangelogEvent>;
+  coldstart: meeting("rectaW4iGmfDA3uwQ"),
+  build1: meeting("rec1BrdXl7u8bYGXH"),
+  nextflutter: meeting("recBF3KxHMKsT4Mz8"),
+  build2: meeting("recGqvQqUDFlrXPRc"),
+  supabase: meeting("recqDUR1D3CQNBVe5"),
+  build3: meeting("rec6aLjA2ZhT45xuh"),
+  career: meeting("recljv0crLDtLIBPc"),
+  touchgrass1: meeting("touch-grass-1-2026"),
+};
 
 export const ISSUES: ChangelogIssue[] = [
   {
