@@ -26,17 +26,12 @@
  *
  * ## The hook `runMenu` calls
  *
- * `setMenuEnvHook`/`getMenuEnvHook` are the injection point `launch.ts` and
- * `menu.ts` share without either importing the other: `cli.ts` (which is
- * someone else's in-flight work, see the WIP note at this task's call site)
- * calls `runMenu(dispatch)` / `runMenu(dispatch, undefined, { startPath })`
- * with a fixed signature that has no room for a per-invocation callback, so a
- * module-level slot is the only wiring available that does not touch it.
- * `launch.ts` sets the hook for a menu invocation, right before handing off
- * to `cli.ts`; `runMenu` reads it back, right before its own dispatch call,
- * and calls `resetMenuEnvHook()` after so a NESTED devtools launcher (`db
- * start` re-dispatching through its own `launch()`) does not inherit a stale
- * one.
+ * `setMenuEnvHook`/`takeMenuEnvHook` are a module-level slot shared by
+ * `launch.ts` and `menu.ts`: `cli.ts` calls `runMenu` with a fixed signature
+ * that has no room for a per-invocation callback. `launch.ts` sets the hook
+ * for a menu invocation before handing off to `cli.ts`; `runMenu` takes it
+ * (reading clears it) right before its own dispatch, so a nested launcher
+ * never inherits a stale one.
  */
 import { confirm } from "@clack/prompts";
 import type { DeployEnvironment } from "@devdogsuga/env";
