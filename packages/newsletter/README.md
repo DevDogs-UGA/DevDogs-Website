@@ -103,8 +103,8 @@ file; the platform archive and the exported email can never disagree.
 ## Exporting
 
 ```bash
-# the CLI runs dist/, and issues read the club config from @devdogsuga/events
-pnpm --filter @devdogsuga/newsletter-cli... build
+# rebuilds brand, events and newsletter first, so the export carries the
+# checkout's current issues and club config
 pnpm newsletter                     # pick issues interactively
 pnpm newsletter '*' --out ~/changelog
 ```
