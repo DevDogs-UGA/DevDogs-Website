@@ -31,5 +31,41 @@ to resolve, mounting from `docs/_shared/**` included) and a documented
 not match a real command or script. Opt a fenced sample out with a `nocheck`
 fence-info word (` ```sh nocheck `).
 
+Each page ships as HTML rendered at build time (Shiki, KaTeX, GitHub alerts),
+along with its headings and search text.
+
+## Variants
+
+A page can differ by project and by the reader's setup, written as
+`remark-directive` blocks:
+
+````md
+:::only{project="study-group-finder"}
+Build for Android first.
+:::
+
+:::tabs{group="os"}
+::tab{value="macos"}
+Install Homebrew.
+::tab{value="linux wsl"}
+Use apt.
+:::
+
+```bash os=macos
+brew install fnm
+```
+```bash os="linux wsl"
+curl -fsSL https://fnm.vercel.app/install | bash
+```
+````
+
+`only{project=…}` is settled per mounted copy at build time. `tabs` and
+`only{os=…}`/`only{supabase=…}` ship every variant, and the site shows the
+reader's pick. Groups are `os` (`macos`, `linux`, `wsl`, `windows`) and
+`supabase` (`hosted`, `local`). `windows` means native Windows and only exists
+in a project whose `index.md` lists it under `os:`. The build fails when a
+tab set leaves a value uncovered, covers one twice, or puts a heading inside
+a tab.
+
 [API reference](https://devdogsuga.org/docs/toolkit/reference/api/docs-compiler) ·
-[Docs system](../../docs/monorepo/guides/docs-system/index.md)
+[Docs system](https://devdogsuga.org/docs/toolkit/guides/docs-compiler)

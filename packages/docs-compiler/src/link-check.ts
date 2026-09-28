@@ -32,8 +32,8 @@
  * read as a link to some other kind of asset this check has no opinion about,
  * not a page, and is left alone.
  *
- * Pages are read as markdown (`remark-parse` + `remark-gfm`, matching
- * `parse.ts`) rather than scanned line by line, so a link written inside a
+ * Pages are read as markdown, through `parse.ts`'s `parseBody` with each
+ * copy's variants resolved, rather than scanned line by line, so a link written inside a
  * fenced sample or a code span is never mistaken for a real one: the parser
  * already drew that line for `parse.ts`'s heading extraction, and a second,
  * looser reading here would only be a second place for the two to disagree.
@@ -44,13 +44,10 @@
  * page depending which project's tree it lands in.
  */
 import type { Link } from "mdast";
-import remarkGfm from "remark-gfm";
-import remarkParse from "remark-parse";
-import { unified } from "unified";
 import { visit } from "unist-util-visit";
-import type { DocsPage } from "./types.js";
+import { parseBody } from "./parse.js";
+import type { CompiledPage } from "./types.js";
 
-const processor = unified().use(remarkParse).use(remarkGfm);
 
 export interface LinkCheckError {
   /** The page the broken link was found on, `.md` included. */
@@ -71,13 +68,13 @@ interface Target {
  * Every internal link that does not resolve, across every page (mounted
  * copies included, each checked against the project it landed in).
  */
-export function checkLinks(pages: readonly DocsPage[]): LinkCheckError[] {
+export function checkLinks(pages: readonly CompiledPage[]): LinkCheckError[] {
   const byPath = new Map(pages.map((page) => [page.path, page]));
   const errors: LinkCheckError[] = [];
 
   for (const page of pages) {
     const file = labelFor(page);
-    const tree = processor.parse(page.content);
+    const tree = parseBody(page.content, page.variants);
 
     visit(tree, "link", (node: Link) => {
       const target = resolveTarget(node.url, page);
@@ -119,13 +116,13 @@ export function checkLinks(pages: readonly DocsPage[]): LinkCheckError[] {
 
 /** Where `path` resolves: an exact page, a folder (index page or listing), or nothing. */
 type Resolved =
-  | { kind: "page"; page: DocsPage }
-  | { kind: "folder"; indexPage: DocsPage | null };
+  | { kind: "page"; page: CompiledPage }
+  | { kind: "folder"; indexPage: CompiledPage | null };
 
 function resolvePath(
   path: string,
-  byPath: ReadonlyMap<string, DocsPage>,
-  pages: readonly DocsPage[],
+  byPath: ReadonlyMap<string, CompiledPage>,
+  pages: readonly CompiledPage[],
 ): Resolved | null {
   const direct = byPath.get(path);
   if (direct !== undefined) return { kind: "page", page: direct };
@@ -140,7 +137,7 @@ function resolvePath(
   return null;
 }
 
-function labelFor(page: DocsPage): string {
+function labelFor(page: CompiledPage): string {
   return page.mountedFrom !== null
     ? `_shared/${page.mountedFrom}.md`
     : `${page.path}.md`;
@@ -151,7 +148,7 @@ function labelFor(page: DocsPage): string {
  * (external, a mailto, an image-only anchor, or a page that carries no
  * anchor at all to be wrong about).
  */
-function resolveTarget(url: string, page: DocsPage): Target | null {
+function resolveTarget(url: string, page: CompiledPage): Target | null {
   const hash = url.indexOf("#");
   const bare = hash === -1 ? url : url.slice(0, hash);
   const anchor = hash === -1 ? null : url.slice(hash + 1) || null;
@@ -199,7 +196,7 @@ function stripMdSuffix(bare: string): string | null {
   return bare.slice(0, bare.length - (lastSegment.length - dot));
 }
 
-/* Posix-style path helpers, deliberately not `node:path`: every `DocsPage`
+/* Posix-style path helpers, deliberately not `node:path`: every `CompiledPage`
  * path is already posix-separated and relative, so pulling in the platform's
  * own path module would only risk it disagreeing with itself on Windows. */
 

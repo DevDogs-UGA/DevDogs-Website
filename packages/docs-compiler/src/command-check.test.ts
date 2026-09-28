@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { checkCommands } from "./command-check.js";
 import type { CommandCheckOptions } from "./command-check.js";
-import type { DocsPage } from "./types.js";
+import type { CompiledPage } from "./types.js";
 import type { WorkspacePackage } from "./workspace.js";
 
-function page(overrides: Partial<DocsPage> = {}): DocsPage {
+function page(overrides: Partial<CompiledPage> = {}): CompiledPage {
   return {
     title: "Untitled",
     description: null,
@@ -17,6 +17,12 @@ function page(overrides: Partial<DocsPage> = {}): DocsPage {
     path: "schedule-builder/setup",
     section: "getting-started",
     mountedFrom: null,
+    variants: {
+      project: overrides.project ?? "schedule-builder",
+      projects: [],
+      os: ["macos", "linux", "wsl"],
+      file: "test.md",
+    },
     ...overrides,
   };
 }

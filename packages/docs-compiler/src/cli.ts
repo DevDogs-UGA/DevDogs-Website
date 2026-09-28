@@ -89,7 +89,7 @@ if (subcommand === undefined) {
 async function compile(contentRoot: string): Promise<boolean> {
   const outDir = path.join(contentRoot, "dist");
 
-  const count = emitDocsModule(contentRoot, outDir);
+  const count = await emitDocsModule(contentRoot, outDir);
 
   // The lint runs here too, and only its count is printed. This line is in
   // front of everyone on every `pnpm dev` and every `pnpm build`, which is the

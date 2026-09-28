@@ -3,9 +3,9 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { printFailingChecks, runFailingChecks } from "./failing-checks.js";
-import type { DocsPage } from "./types.js";
+import type { CompiledPage } from "./types.js";
 
-function page(overrides: Partial<DocsPage> = {}): DocsPage {
+function page(overrides: Partial<CompiledPage> = {}): CompiledPage {
   return {
     title: "Untitled",
     description: null,
@@ -18,6 +18,12 @@ function page(overrides: Partial<DocsPage> = {}): DocsPage {
     path: "toolkit/index",
     section: null,
     mountedFrom: null,
+    variants: {
+      project: overrides.project ?? "toolkit",
+      projects: [],
+      os: ["macos", "linux", "wsl"],
+      file: "test.md",
+    },
     ...overrides,
   };
 }

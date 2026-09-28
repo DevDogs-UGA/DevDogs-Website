@@ -1,12 +1,15 @@
 import GithubSlugger from "github-slugger";
 import matter from "gray-matter";
-import type { Heading, Node, Parent } from "mdast";
+import type { Heading, Node, Parent, Root } from "mdast";
 import { toString } from "mdast-util-to-string";
+import remarkDirective from "remark-directive";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import type { DocHeading, ParsedDocFile } from "./types.js";
+import { resolveVariants, type VariantContext } from "./variants.js";
 
 export function toTitleCase(name: string): string {
   return name
@@ -15,7 +18,50 @@ export function toTitleCase(name: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-const processor = unified().use(remarkParse).use(remarkGfm);
+/**
+ * How every module in this package reads markdown. The renderer (`render.ts`)
+ * starts from the same three syntax extensions, so a heading, link or command
+ * this reader finds is one the reader of the page sees: directives so a
+ * `:::tabs` block is a block and not a paragraph of colons, math so a `$` in
+ * a formula is not taken for anything else.
+ */
+export const markdownReader = unified()
+  .use(remarkParse)
+  .use(remarkDirective)
+  .use(remarkGfm)
+  .use(remarkMath);
+
+const processor = markdownReader;
+
+/**
+ * One emitted copy's body as a tree, variants resolved for its project: what
+ * the link and command checks walk, and what headings and search text come
+ * from. Throws a `DocsBuildError` on a malformed variant (see `variants.ts`).
+ */
+export function parseBody(content: string, ctx: VariantContext): Root {
+  const tree = markdownReader.parse(content);
+  resolveVariants(tree, ctx);
+  return tree;
+}
+
+/**
+ * Heading ids use github-slugger, which is what rehype-slug runs at render
+ * time, so a TOC entry and the anchor it jumps to agree.
+ */
+export function headingsOf(tree: Root): DocHeading[] {
+  const slugger = new GithubSlugger();
+  const headings: DocHeading[] = [];
+  visit(tree, "heading", (node: Heading) => {
+    const text = toString(node);
+    headings.push({ id: slugger.slug(text), title: text, depth: node.depth });
+  });
+  return headings;
+}
+
+/** The body flattened to plain text, for full-text search and snippets. */
+export function plainTextOf(tree: Root): string {
+  return stripAlertMarkers(blockText(tree));
+}
 
 /** mdast node types that occupy their own block, as opposed to inline content. */
 const BLOCK_TYPES = new Set([
@@ -85,17 +131,7 @@ export function parseDocFile(source: string, fileName: string): ParsedDocFile {
   const { data: frontmatter, content } = matter(source);
 
   const tree = processor.parse(content);
-  const slugger = new GithubSlugger();
-
-  const headings: DocHeading[] = [];
-  visit(tree, "heading", (node: Heading) => {
-    const text = toString(node);
-    headings.push({
-      id: slugger.slug(text),
-      title: text,
-      depth: node.depth,
-    });
-  });
+  const headings = headingsOf(tree);
 
   // Explicit frontmatter wins; otherwise the document's own `# ` heading, which
   // is what docs/platform/documentation-system/writing-docs.md tells authors to
@@ -127,6 +163,6 @@ export function parseDocFile(source: string, fileName: string): ParsedDocFile {
     frontmatter,
     headings,
     content,
-    plainText: stripAlertMarkers(blockText(tree)),
+    plainText: plainTextOf(tree),
   };
 }

@@ -8,7 +8,14 @@
 export { compileDocs, emitDocsModule } from "./compile.js";
 export { DocsBuildError } from "./errors.js";
 export { parseDocFile, toTitleCase } from "./parse.js";
+export {
+  DEFAULT_OS,
+  VARIANT_GROUPS,
+  type VariantContext,
+  type VariantGroup,
+} from "./variants.js";
 export type {
+  CompiledPage,
   DocHeading,
   DocsPage,
   DocsProject,

@@ -217,3 +217,63 @@ describe("compileDocs mounting", () => {
     expect(() => compileDocs(root)).toThrow(DocsBuildError);
   });
 });
+
+describe("compileDocs variants", () => {
+  afterEach(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  const osTabs = [
+    "---",
+    "mount: [platform, study-group-finder]",
+    "---",
+    "",
+    "# Install",
+    "",
+    "```bash os=macos",
+    "brew install fnm",
+    "```",
+    '```bash os="linux wsl"',
+    "curl -fsSL https://fnm.vercel.app/install | bash",
+    "```",
+    "",
+  ];
+
+  it("reads a project's platforms from its index, in canonical order", () => {
+    root = freshRoot("docs-build-variants");
+    write("platform/index.md", "# Platform\n");
+    write(
+      "study-group-finder/index.md",
+      "---\nos: [windows, macos, linux, wsl]\n---\n\n# SGF\n",
+    );
+    const { projects } = compileDocs(root);
+    expect(projects.find((p) => p.slug === "platform")?.os).toEqual([
+      "macos",
+      "linux",
+      "wsl",
+    ]);
+    expect(projects.find((p) => p.slug === "study-group-finder")?.os).toEqual(
+      ["macos", "linux", "wsl", "windows"],
+    );
+  });
+
+  it("holds each mounted copy to its own project's platforms", () => {
+    root = freshRoot("docs-build-variants");
+    write("platform/index.md", "# Platform\n");
+    write(
+      "study-group-finder/index.md",
+      "---\nos: [macos, linux, wsl, windows]\n---\n\n# SGF\n",
+    );
+    write("_shared/install.md", osTabs.join("\n"));
+    // Covers platform, but not study-group-finder's native Windows.
+    expect(() => compileDocs(root)).toThrow(
+      /_shared\/install\.md:\d+ \(in study-group-finder\).*Windows \(native\)/,
+    );
+  });
+
+  it("refuses an os value no project can have", () => {
+    root = freshRoot("docs-build-variants");
+    write("platform/index.md", "---\nos: [macos, beos]\n---\n\n# Platform\n");
+    expect(() => compileDocs(root)).toThrow(DocsBuildError);
+  });
+});

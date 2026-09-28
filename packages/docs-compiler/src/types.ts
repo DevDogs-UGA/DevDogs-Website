@@ -1,3 +1,5 @@
+import type { VariantContext } from "./variants.js";
+
 /** A heading extracted from a markdown document, used to build a page's TOC. */
 export interface DocHeading {
   id: string;
@@ -39,7 +41,13 @@ export interface ParsedDocFile {
 }
 
 /** One documentation page, keyed by its path relative to `docs/`. */
-export interface DocsPage extends ParsedDocFile {
+export interface DocsPage extends Omit<ParsedDocFile, "content"> {
+  /**
+   * The body rendered to HTML at build time (see `render.ts`), variants
+   * resolved for this page's project. Headings and `plainText` are this copy's
+   * too: a `_shared` page's `only{project=…}` blocks differ per mount.
+   */
+  html: string;
   /** The immediate subfolder of `docs/` this page belongs to, e.g. "platform". */
   project: string;
   /** Path relative to `docs/`, project prefix included, no extension. */
@@ -60,6 +68,17 @@ export interface DocsPage extends ParsedDocFile {
   mountedFrom: string | null;
 }
 
+/**
+ * A page as `compileDocs` returns it: everything but the HTML, which is
+ * rendered asynchronously by `emitDocsModule`, plus what rendering and the
+ * failing checks need and the emitted module does not carry.
+ */
+export interface CompiledPage extends Omit<DocsPage, "html"> {
+  /** Markdown with frontmatter stripped, variants unresolved. */
+  content: string;
+  variants: VariantContext;
+}
+
 /** A project, one immediate subfolder of `docs/`, as shown on the docs landing page. */
 export interface DocsProject {
   slug: string;
@@ -67,4 +86,10 @@ export interface DocsProject {
   description: string | null;
   /** Where the project sits in the listing, from its own `index.md`. */
   order: number | null;
+  /**
+   * The platforms the project supports, from `os:` in its `index.md`: the
+   * values its `os` tabs must cover and its platform switcher offers. See
+   * `variants.ts`.
+   */
+  os: string[];
 }

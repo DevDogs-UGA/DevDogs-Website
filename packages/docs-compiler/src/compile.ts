@@ -1,8 +1,22 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { DocsBuildError } from "./errors.js";
-import { parseDocFile, toTitleCase } from "./parse.js";
-import type { DocsPage, DocsProject, DocsSection } from "./types.js";
+import {
+  headingsOf,
+  parseBody,
+  parseDocFile,
+  plainTextOf,
+  toTitleCase,
+} from "./parse.js";
+import { renderBody } from "./render.js";
+import type {
+  CompiledPage,
+  DocsPage,
+  DocsProject,
+  DocsSection,
+  ParsedDocFile,
+} from "./types.js";
+import { DEFAULT_OS, VARIANT_GROUPS, type VariantContext } from "./variants.js";
 
 /** Package machinery that sits alongside the content and is never a project. */
 const NOT_A_PROJECT = new Set(["dist", "node_modules"]);
@@ -101,6 +115,48 @@ function isIndexPath(pagePath: string): boolean {
   return base === "index" || base === "readme";
 }
 
+/** A project index's `os:` list, validated; `DEFAULT_OS` when absent. */
+function readProjectOs(
+  frontmatter: Record<string, unknown>,
+  file: string,
+): string[] {
+  const raw = frontmatter["os"];
+  if (raw === undefined) return [...DEFAULT_OS];
+  const known = VARIANT_GROUPS.os.values;
+  if (
+    !Array.isArray(raw) ||
+    raw.length === 0 ||
+    !raw.every((value) => typeof value === "string" && known.includes(value))
+  ) {
+    throw new DocsBuildError(
+      `${file}: "os" must be a non-empty list drawn from ${known.join(", ")}`,
+    );
+  }
+  // Canonical order, so the switcher and every tab strip agree.
+  return known.filter((value) => raw.includes(value));
+}
+
+/**
+ * One emitted copy's per-project fields. Headings and search text come from
+ * the resolved body, because an `only{project=…}` block can add or remove a
+ * heading, and a panel's text belongs in the index of every copy that ships
+ * it.
+ */
+function emitCopy(
+  parsed: ParsedDocFile,
+  fields: Pick<CompiledPage, "project" | "path" | "section" | "mountedFrom">,
+  variants: VariantContext,
+): CompiledPage {
+  const tree = parseBody(parsed.content, variants);
+  return {
+    ...parsed,
+    ...fields,
+    headings: headingsOf(tree),
+    plainText: plainTextOf(tree),
+    variants,
+  };
+}
+
 /** `frontmatter.mount`, validated. Throws rather than warns: an author who */
 function readMountTargets(
   frontmatter: Record<string, unknown>,
@@ -157,7 +213,7 @@ function readMountTargets(
  */
 export function compileDocs(contentRoot: string): {
   projects: DocsProject[];
-  pages: DocsPage[];
+  pages: CompiledPage[];
 } {
   const projectSlugs = fs
     .readdirSync(contentRoot, { withFileTypes: true })
@@ -171,10 +227,11 @@ export function compileDocs(contentRoot: string): {
     .map((entry) => entry.name)
     .sort();
 
-  const pages: DocsPage[] = [];
+  const pages: CompiledPage[] = [];
   const projects: DocsProject[] = [];
   /** Every emitted page's path, so a mount can be checked against it. */
   const occupied = new Map<string, string>();
+  const projectOs = new Map<string, string[]>();
 
   for (const slug of projectSlugs) {
     const projectDir = path.join(contentRoot, slug);
@@ -186,7 +243,30 @@ export function compileDocs(contentRoot: string): {
       name: toTitleCase(slug),
       description: null,
       order: null,
+      os: [...DEFAULT_OS],
     };
+
+    // The project's own index seeds its display name, description, position
+    // on the docs landing page and platforms. Read first, because every page
+    // below needs the platforms to resolve its `os` tabs. A nested folder's
+    // index page does not count; that one positions its own folder in the
+    // sidebar, which is `buildDocsTree`'s business rather than this loop's.
+    const indexRel = relPaths.find(
+      (rel) => isIndexPath(rel) && !rel.includes("/"),
+    );
+    if (indexRel !== undefined) {
+      const { frontmatter, description, order } = parseDocFile(
+        fs.readFileSync(path.join(projectDir, `${indexRel}.md`), "utf-8"),
+        indexRel,
+      );
+      if (typeof frontmatter["name"] === "string") {
+        project.name = frontmatter["name"];
+      }
+      project.description = description;
+      project.order = order;
+      project.os = readProjectOs(frontmatter, `${slug}/${indexRel}.md`);
+    }
+    projectOs.set(slug, project.os);
 
     for (const rel of relPaths) {
       const file = `${slug}/${rel}.md`;
@@ -196,10 +276,6 @@ export function compileDocs(contentRoot: string): {
       );
       const parsed = parseDocFile(source, rel.split("/").at(-1)!);
 
-      // The project's own index page seeds its display name, description and
-      // position on the docs landing page. A nested folder's index page does
-      // not; that one positions its own folder in the sidebar, which is
-      // `buildDocsTree`'s business rather than this loop's.
       const isProjectIndex = isIndexPath(rel) && !rel.includes("/");
       const section = deriveSection(
         parsed.frontmatter,
@@ -209,22 +285,14 @@ export function compileDocs(contentRoot: string): {
       );
 
       const docsPath = `${slug}/${rel}`;
-      pages.push({
-        ...parsed,
-        project: slug,
-        path: docsPath,
-        section,
-        mountedFrom: null,
-      });
+      pages.push(
+        emitCopy(
+          parsed,
+          { project: slug, path: docsPath, section, mountedFrom: null },
+          { project: slug, projects: projectSlugs, os: project.os, file },
+        ),
+      );
       occupied.set(docsPath, file);
-
-      if (isProjectIndex) {
-        if (typeof parsed.frontmatter["name"] === "string") {
-          project.name = parsed.frontmatter["name"];
-        }
-        project.description = parsed.description;
-        project.order = parsed.order;
-      }
     }
 
     projects.push(project);
@@ -248,13 +316,18 @@ export function compileDocs(contentRoot: string): {
         }
 
         const section = deriveSection(parsed.frontmatter, rel, false, file);
-        pages.push({
-          ...parsed,
-          project,
-          path: docsPath,
-          section,
-          mountedFrom: rel,
-        });
+        pages.push(
+          emitCopy(
+            parsed,
+            { project, path: docsPath, section, mountedFrom: rel },
+            {
+              project,
+              projects: projectSlugs,
+              os: projectOs.get(project) ?? [...DEFAULT_OS],
+              file,
+            },
+          ),
+        );
         occupied.set(docsPath, file);
       }
     }
@@ -278,14 +351,33 @@ export function compileDocs(contentRoot: string): {
 }
 
 /**
+ * Renders every compiled page's HTML, dropping what only the build needed.
+ * Sequential: Shiki loads grammars lazily into one highlighter, and a hundred
+ * pages racing to load the same grammar gain nothing over taking turns.
+ */
+export async function renderPages(
+  compiled: readonly CompiledPage[],
+): Promise<DocsPage[]> {
+  const pages: DocsPage[] = [];
+  for (const { content, variants, ...page } of compiled) {
+    pages.push({ ...page, html: await renderBody(content, variants) });
+  }
+  return pages;
+}
+
+/**
  * Writes the compiled content as an ESM module plus its declarations.
  *
  * The output is written directly rather than run through tsc, so the content
  * package needs no TypeScript toolchain: `docs/` stays markdown plus a
  * package.json, with none of this code sitting alongside it.
  */
-export function emitDocsModule(contentRoot: string, outDir: string): number {
-  const { projects, pages } = compileDocs(contentRoot);
+export async function emitDocsModule(
+  contentRoot: string,
+  outDir: string,
+): Promise<number> {
+  const { projects, pages: compiled } = compileDocs(contentRoot);
+  const pages = await renderPages(compiled);
 
   fs.mkdirSync(outDir, { recursive: true });
 
@@ -293,6 +385,8 @@ export function emitDocsModule(contentRoot: string, outDir: string): number {
     path.join(outDir, "index.js"),
     `// GENERATED by @devdogsuga/docs-compiler — do not edit.
 export const projects = ${JSON.stringify(projects, null, 2)};
+
+export const variantGroups = ${JSON.stringify(VARIANT_GROUPS, null, 2)};
 
 export const pages = ${JSON.stringify(pages, null, 2)};
 `,
@@ -302,9 +396,15 @@ export const pages = ${JSON.stringify(pages, null, 2)};
   fs.writeFileSync(
     path.join(outDir, "index.d.ts"),
     `// GENERATED by @devdogsuga/docs-compiler — do not edit.
-import type { DocsPage, DocsProject } from "@devdogsuga/docs-compiler";
+import type {
+  DocsPage,
+  DocsProject,
+  VARIANT_GROUPS,
+} from "@devdogsuga/docs-compiler";
 
 export declare const projects: DocsProject[];
+/** The setup axes a page can vary by, their values and labels. */
+export declare const variantGroups: typeof VARIANT_GROUPS;
 export declare const pages: DocsPage[];
 
 export type {
@@ -313,6 +413,7 @@ export type {
   DocsProject,
   DocsSection,
   ParsedDocFile,
+  VariantGroup,
 } from "@devdogsuga/docs-compiler";
 `,
     "utf-8",

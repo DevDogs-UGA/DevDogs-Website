@@ -45,14 +45,11 @@
  * for the rare page that shows a command exactly to say it is wrong.
  */
 import type { Code } from "mdast";
-import remarkGfm from "remark-gfm";
-import remarkParse from "remark-parse";
-import { unified } from "unified";
 import { visit } from "unist-util-visit";
-import type { DocsPage } from "./types.js";
+import { parseBody } from "./parse.js";
+import type { CompiledPage } from "./types.js";
 import type { WorkspacePackage } from "./workspace.js";
 
-const processor = unified().use(remarkParse).use(remarkGfm);
 
 const SHELL_LANGS = new Set([
   "sh",
@@ -90,7 +87,7 @@ export interface CommandCheckOptions {
 }
 
 export function checkCommands(
-  pages: readonly DocsPage[],
+  pages: readonly CompiledPage[],
   options: CommandCheckOptions,
 ): CommandCheckError[] {
   const byPackageName = new Map<string, WorkspacePackage>();
@@ -109,7 +106,7 @@ export function checkCommands(
       page.mountedFrom !== null
         ? `_shared/${page.mountedFrom}.md`
         : `${page.path}.md`;
-    const tree = processor.parse(page.content);
+    const tree = parseBody(page.content, page.variants);
 
     visit(tree, "code", (node: Code) => {
       const lang = (node.lang ?? "").toLowerCase();
@@ -161,7 +158,7 @@ function joinContinuations(
 function checkLine(
   raw: string,
   line: number | null,
-  page: DocsPage,
+  page: CompiledPage,
   file: string,
   options: CommandCheckOptions,
   byPackageName: ReadonlyMap<string, WorkspacePackage>,
@@ -190,7 +187,7 @@ function hasPlaceholder(token: string): boolean {
 function checkSegment(
   segment: string,
   line: number | null,
-  page: DocsPage,
+  page: CompiledPage,
   file: string,
   options: CommandCheckOptions,
   byPackageName: ReadonlyMap<string, WorkspacePackage>,

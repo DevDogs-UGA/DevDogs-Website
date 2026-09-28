@@ -15,7 +15,7 @@ import type { CommandCheckError } from "./command-check.js";
 import { loadDevtoolsCommands } from "./devtools-catalog.js";
 import { checkLinks } from "./link-check.js";
 import type { LinkCheckError } from "./link-check.js";
-import type { DocsPage } from "./types.js";
+import type { CompiledPage } from "./types.js";
 import {
   appPackagesBySlug,
   discoverWorkspacePackages,
@@ -47,7 +47,7 @@ export interface FailingChecksResult {
  */
 export async function runFailingChecks(
   contentRoot: string,
-  pages: readonly DocsPage[],
+  pages: readonly CompiledPage[],
 ): Promise<FailingChecksResult> {
   const linkErrors = checkLinks(pages);
 

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { checkLinks } from "./link-check.js";
-import type { DocsPage } from "./types.js";
+import type { CompiledPage } from "./types.js";
 
-function page(overrides: Partial<DocsPage> = {}): DocsPage {
+function page(overrides: Partial<CompiledPage> = {}): CompiledPage {
   return {
     title: "Untitled",
     description: null,
@@ -15,6 +15,12 @@ function page(overrides: Partial<DocsPage> = {}): DocsPage {
     path: "platform/index",
     section: null,
     mountedFrom: null,
+    variants: {
+      project: overrides.project ?? "platform",
+      projects: [],
+      os: ["macos", "linux", "wsl"],
+      file: "test.md",
+    },
     ...overrides,
   };
 }
