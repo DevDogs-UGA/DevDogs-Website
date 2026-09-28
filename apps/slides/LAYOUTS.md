@@ -434,8 +434,11 @@ throwing away whatever was typed live. Each laptop's result (✓, or ⚠ with
 git's error on hover) shows beside the flag. It never runs on its own when
 a slide comes up.
 
-The tags live in the workshop clones, one per demo step (`demo/01-read` …
-`demo/05-delete`). Only `demo/*` tags are accepted, and a missing tag fails
+The tags live in the planning repos (web-workshops-planning,
+mobile-workshops-planning), one per demo step (`demo/01-read` …
+`demo/05-delete`), on the step commits of `02-supabase`. `pnpm follow`
+fetches any the laptop's clone is missing, so a clone of the public repo
+works too. Only `demo/*` tags are accepted, and a missing tag fails
 with a message rather than switching to anything else. After a switch,
 Next.js reloads by itself; the Flutter laptop needs a hot restart (`R`).
 

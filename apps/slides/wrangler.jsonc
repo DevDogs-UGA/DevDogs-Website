@@ -38,8 +38,8 @@
     // domain (e.g. "devdogs.cloudflareaccess.com") and its Application
     // Audience (AUD) tag. Until both are set, the Worker refuses everything
     // but /follow.
-    "ACCESS_TEAM_DOMAIN": "",
-    "ACCESS_AUD": ""
+    "ACCESS_TEAM_DOMAIN": "devdogs.cloudflareaccess.com",
+    "ACCESS_AUD": "e2d8b18514e731d3b29fbba1538ad4084f8081b1610ca7f7f275cacc008a299d"
   },
   // Secrets, set with `wrangler secret put` (typed in worker/env.d.ts; not
   // `secrets.required`, which would block deploying until they're set):
