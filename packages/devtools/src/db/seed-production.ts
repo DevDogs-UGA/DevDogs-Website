@@ -5,12 +5,18 @@
  * (the role catalogue and the officer board — content every tier needs)
  * and `supabase/seed/development/` (password-login personas and a worked
  * moderation report — local-dev-only, never meant to reach a hosted
- * target). `db reset` runs both, but only ever against a LOCAL stack,
- * because a reset erases everything else on whatever it points at.
- * `production/` is what a staging or production target needs applied on
- * its own, without erasing anything: `db reset --no-seed` (or an
- * already-migrated database) plus this command, instead of hand-picking
- * files with `db query --file`.
+ * target). `db reset` used to run both, but only ever against a LOCAL
+ * stack, back when `detectLocalInstance()` was the only way this CLI found
+ * a database at all. The session system changed that: `db reset` now runs
+ * against any tier, including staging and production, so a reset there
+ * explicitly passes `--no-seed` to the Supabase CLI and calls this function
+ * itself afterward (see `stack.ts`'s `reset()`) — the config-derived
+ * `[db.seed]` list is no longer trusted to keep development's seeds off a
+ * hosted target on its own. `production/` is also what a staging or
+ * production target needs applied WITHOUT a reset — an already-migrated
+ * database that only needs this content refreshed — which is this command's
+ * other, still-current use: run it directly, instead of hand-picking files
+ * with `db query --file`.
  *
  * That is a deliberate departure from `runSeedRoles` (`seed-roles.ts`),
  * which pipes its one file through `supabase db query --file --db-url`.

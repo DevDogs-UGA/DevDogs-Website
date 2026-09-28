@@ -34,6 +34,7 @@ import {
   type DbConnection,
 } from "./db/connection.js";
 import { refreshSessionEnv } from "./db/session-refresh.js";
+import { runSeedProduction } from "./db/seed-production.js";
 import { originReachable, resolveBaseUrl } from "./cron/commands.js";
 
 // Scope order, matching `db`'s subcommands in `commands.ts`: the four that
@@ -116,30 +117,66 @@ async function pushMigrations(connection: DbConnection): Promise<number> {
  * (`cli.ts`'s `runStack`) has already confirmed the session target —
  * including the hard production gate — before this ever runs.
  *
+ * A non-development target gets `--no-seed` on the reset itself, followed by
+ * an explicit `runSeedProduction` — the same two steps `db seed production`
+ * runs on its own (see `seed-production.ts`) — rather than letting the bare
+ * `supabase db reset` apply whatever `config.toml`'s `[db.seed]` happens to
+ * list. That is deliberately belt-and-suspenders: `[db.seed]` today lists
+ * only `supabase/seed/production`, so the bare reset would already do the
+ * right thing, but that is a property of the CURRENT config, not of this
+ * function. An older checkout, or a config edited to add
+ * `supabase/seed/development` back for some local-only reason, must still be
+ * structurally unable to run development's password-login seeds against a
+ * hosted, non-dev database — the one seed directory that must never reach
+ * staging or production, named in that directory's own header. Development
+ * resets are untouched: they keep applying whatever `[db.seed]` lists, same
+ * as always.
+ *
  * Meetings and workshops are NOT among the tables `supabase/seed/*.sql`
  * populates -- they come from `@devdogsuga/events` via
  * `reconcileFromConfig`, an authenticated platform route rather than a
  * devtools-side function this CLI can call directly (it needs the app's
  * Drizzle client, relations and Sentry wiring, none of which belong in this
- * package). On a local reset this calls that route itself, over the same
- * origin `cron run` would use, once the reset and rebuild finish -- see
+ * package). On any DEVELOPMENT reset -- local Docker or the shared remote dev
+ * project alike -- this calls that route itself, over the same origin `cron
+ * run` would use, once the reset and rebuild finish -- see
  * `reconcileConfigAfterReset` for what happens when nothing is listening yet.
  */
 async function reset(connection: DbConnection): Promise<{
   code: number;
   lines: string[];
 }> {
-  const code = await supabase("db", "reset", "--db-url", connection.dbUrl);
+  const isDev = connection.tier === "development";
+  const code = await supabase(
+    "db",
+    "reset",
+    "--db-url",
+    connection.dbUrl,
+    ...(isDev ? [] : ["--no-seed"]),
+  );
   if (code !== 0) return { code, lines: [] };
   const types = await generateTypes(connection.dbUrl);
   if (types !== 0) return { code: types, lines: [] };
   const bucketsCode = await seedBuckets(bucketsShape(connection));
   if (bucketsCode !== 0) return { code: bucketsCode, lines: [] };
+
+  if (!isDev) {
+    const seedCode = await runSeedProduction(connection.dbUrl);
+    if (seedCode !== 0) return { code: seedCode, lines: [] };
+    return { code: 0, lines: [] };
+  }
+
   return {
     code: 0,
-    lines: isLocalConnection(connection)
-      ? await reconcileConfigAfterReset()
-      : [],
+    // Both development databases — local Docker and the shared remote dev
+    // project (`--tier development:remote`) — rather than gated on
+    // `isLocalConnection`. The platform dev server this hits is always local
+    // (`resolveBaseUrl("platform", "development", …)` inside
+    // `reconcileConfigAfterReset`); what varies with `devDatabase` is only
+    // which Postgres that local server happens to be pointed at, and a
+    // remote-dev reset leaves meetings and workshops just as unseeded as a
+    // local one.
+    lines: await reconcileConfigAfterReset(),
   };
 }
 
