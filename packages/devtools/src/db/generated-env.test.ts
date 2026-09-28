@@ -112,7 +112,7 @@ describe("ensureGeneratedEnvFile", () => {
       captureStatus: vi.fn(async () => {
         throw new Error("failed to connect");
       }),
-      listContainerNames: vi.fn(() => ["supabase_db_DevDogs-Website", "other"]),
+      listContainerNames: vi.fn(() => ["supabase_kong_DevDogs-Website", "other"]),
       projectId: vi.fn(() => "DevDogsUGA"),
     });
 
@@ -133,7 +133,7 @@ describe("ensureGeneratedEnvFile", () => {
       captureStatus: vi.fn(async () => {
         throw new Error("connection refused");
       }),
-      listContainerNames: vi.fn(() => ["supabase_db_DevDogsUGA"]),
+      listContainerNames: vi.fn(() => ["supabase_kong_DevDogsUGA"]),
       projectId: vi.fn(() => "DevDogsUGA"),
     });
 
@@ -160,7 +160,7 @@ describe("ensureGeneratedEnvFile", () => {
       captureStatus: vi.fn(async () => {
         throw new Error("failed to connect");
       }),
-      listContainerNames: vi.fn(() => ["supabase_db_DevDogs-Website"]),
+      listContainerNames: vi.fn(() => ["supabase_kong_DevDogs-Website"]),
       projectId: vi.fn(() => null),
     });
 

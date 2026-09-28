@@ -25,6 +25,7 @@ import {
   foreignStackMessage,
   foreignStackProjectId,
   listContainerNames,
+  STACK_API_PORT,
   readProjectId,
 } from "./repo/supabase-project.js";
 import {
@@ -74,7 +75,7 @@ export type StackCommand = (typeof STACK_COMMANDS)[number];
  * Supabase CLI's own output are still the reader's best explanation.
  */
 function foreignStackHint(): string | undefined {
-  const names = listContainerNames();
+  const names = listContainerNames(STACK_API_PORT);
   if (names === null) return undefined;
   const foreign = foreignStackProjectId(names, readProjectId(findRepoRoot()));
   return foreign === null ? undefined : foreignStackMessage(foreign);

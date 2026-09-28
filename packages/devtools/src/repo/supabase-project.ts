@@ -52,6 +52,13 @@ export function containerPrefix(projectId: string | null): string {
   return projectId ? `supabase_db_${projectId}` : "supabase_db_";
 }
 
+/**
+ * The local stack's API port, published by its Kong container. Mirrors
+ * `@devdogsuga/env/load`'s `LOCAL_STACK_PORT`, which this module cannot import
+ * statically (that package is an optional peer, loaded on demand).
+ */
+export const STACK_API_PORT = 54321;
+
 function defaultExec(file: string, args: string[]): string | null {
   try {
     return execFileSync(file, args, {
@@ -67,13 +74,17 @@ function defaultExec(file: string, args: string[]): string | null {
 /**
  * `docker ps --format '{{.Names}}'`, split into trimmed, non-empty names —
  * or `null` when Docker could not be read at all (no daemon, not
- * installed, timed out). `execute` is injectable for tests, mirroring
- * `environment.ts`'s own probes.
+ * installed, timed out). With `publish`, only the containers publishing that
+ * host port. `execute` is injectable for tests, mirroring `environment.ts`'s
+ * own probes.
  */
 export function listContainerNames(
+  publish?: number,
   execute: (file: string, args: string[]) => string | null = defaultExec,
 ): string[] | null {
-  const out = execute("docker", ["ps", "--format", "{{.Names}}"]);
+  const filter =
+    publish === undefined ? [] : ["--filter", `publish=${publish}`];
+  const out = execute("docker", ["ps", ...filter, "--format", "{{.Names}}"]);
   if (out === null) return null;
   return out
     .split("\n")
@@ -82,11 +93,13 @@ export function listContainerNames(
 }
 
 /**
- * Finds a running `supabase_db_<id>` container whose id differs from
- * `projectId` — the signature of a stack started from a DIFFERENT Supabase
- * project (commonly a sibling workspace's checkout sharing this repo's
- * `project_id`, or this same repo before/after a rename) holding the
- * shared ports.
+ * Finds the `supabase_kong_<id>` container among `names` whose id differs
+ * from `projectId` — the signature of a stack started from a DIFFERENT
+ * Supabase project (this same repo before/after a rename, or another
+ * project entirely) holding the shared ports. Kong is the container that
+ * publishes the API port, so callers pass the names `listContainerNames`
+ * returns for `STACK_API_PORT`: that names the stack actually on 54321,
+ * not just any Supabase stack on the machine.
  *
  * Returns that foreign id, or `null` when every matching container belongs
  * to this project, none match at all, or `projectId` itself could not be
@@ -100,7 +113,7 @@ export function foreignStackProjectId(
 ): string | null {
   if (projectId === null) return null;
   for (const name of names) {
-    const match = /^supabase_db_(.+)$/.exec(name);
+    const match = /^supabase_kong_(.+)$/.exec(name);
     if (!match) continue;
     const id = match[1]!;
     if (id !== projectId) return id;
@@ -116,7 +129,7 @@ export function foreignStackProjectId(
  */
 export function foreignStackMessage(foreignProjectId: string): string {
   return (
-    `The stack on port 54321 belongs to project "${foreignProjectId}", not ` +
+    `The stack on port ${STACK_API_PORT} belongs to project "${foreignProjectId}", not ` +
     "this checkout's. Stop it with `supabase stop --project-id " +
     `${foreignProjectId}\` then \`pnpm devtools db start\`.`
   );

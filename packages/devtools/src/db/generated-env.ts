@@ -40,6 +40,7 @@ import {
   foreignStackMessage,
   foreignStackProjectId,
   listContainerNames,
+  STACK_API_PORT,
   readProjectId,
 } from "../repo/supabase-project.js";
 
@@ -151,7 +152,7 @@ export function realEnsureGeneratedEnvDeps(
     exists: (file) => existsSync(join(repoRoot, file)),
     captureStatus: () => supabaseCapture("status", "-o", "env"),
     write: (path, contents) => writeFile(path, contents),
-    listContainerNames: () => listContainerNames(),
+    listContainerNames: () => listContainerNames(STACK_API_PORT),
     projectId: () => readProjectId(repoRoot),
     repoRoot,
   };

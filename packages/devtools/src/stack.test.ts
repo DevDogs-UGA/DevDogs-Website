@@ -192,7 +192,7 @@ describe('runStackCommand("start", …)', () => {
 
   it("surfaces a foreign-stack hint when `supabase start` fails with another project's containers up", async () => {
     supabase.mockResolvedValue(1);
-    listContainerNames.mockReturnValue(["supabase_db_DevDogs-Website"]);
+    listContainerNames.mockReturnValue(["supabase_kong_DevDogs-Website"]);
     readProjectId.mockReturnValue("DevDogsUGA");
 
     const { code, lines } = await runStackCommand("start", null);
@@ -206,7 +206,7 @@ describe('runStackCommand("start", …)', () => {
 
   it("does not surface a hint when the failure has no foreign container to explain it", async () => {
     supabase.mockResolvedValue(1);
-    listContainerNames.mockReturnValue(["supabase_db_DevDogsUGA"]);
+    listContainerNames.mockReturnValue(["supabase_kong_DevDogsUGA"]);
     readProjectId.mockReturnValue("DevDogsUGA");
 
     const { code, lines } = await runStackCommand("start", null);
