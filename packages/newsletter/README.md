@@ -5,8 +5,9 @@ components with two callers:
 
 - **`apps/platform`** renders issues as pages at `/changelog` and
   `/changelog/<version>`, straight from `ChangelogEmail`.
-- **`@devdogsuga/devtools`** exports issues as files — `pnpm devtools
-newsletter` — an `.html` preview and an Outlook-importable `.eml` per issue.
+- **`@devdogsuga/newsletter-cli`** exports issues as files — `pnpm
+newsletter` from the Backstage root — an `.html` preview and an
+Outlook-importable `.eml` per issue, and pushes or sends them.
 
 It deliberately does not go through `@devdogsuga/email`. That package's
 compiled-slot pipeline exists to prove a template cannot branch on its inputs,
@@ -102,9 +103,10 @@ file; the platform archive and the exported email can never disagree.
 ## Exporting
 
 ```bash
-pnpm --filter @devdogsuga/newsletter build   # the CLI consumes dist/
-pnpm devtools newsletter                     # pick issues interactively
-pnpm devtools newsletter '*' --out ~/changelog
+# the CLI runs dist/, and issues read the club config from @devdogsuga/events
+pnpm --filter @devdogsuga/newsletter-cli... build
+pnpm newsletter                     # pick issues interactively
+pnpm newsletter '*' --out ~/changelog
 ```
 
 The `.eml` carries `X-Unsent: 1` and no `Message-ID`, so **classic Outlook
@@ -117,7 +119,7 @@ does. Either way the draft is a review copy: the send happens with `--send`
 ## Pushing a draft
 
 ```bash
-pnpm devtools newsletter 3.0.1 --push
+pnpm newsletter 3.0.1 --push
 ```
 
 appends the issue — same MIME as the `.eml`, minus `X-Unsent` — straight into
@@ -136,7 +138,7 @@ differently, into Word HTML, with the same result.)
 ## Sending
 
 ```bash
-pnpm devtools newsletter 3.0.1 --send --to listserv@listserv.uga.edu
+pnpm newsletter 3.0.1 --send --to listserv@listserv.uga.edu
 ```
 
 submits the issue over SMTP as the club mailbox, byte-for-byte as authored —
