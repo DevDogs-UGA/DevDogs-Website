@@ -327,7 +327,7 @@ export async function runEnvironmentDoctor(
       summary: dockerUp ? "Docker is running" : "Docker daemon is not answering",
       fix: dockerUp
         ? undefined
-        : "Start Docker Desktop or OrbStack (macOS: set DOCKER_HOST=unix://$HOME/.orbstack/run/docker.sock for OrbStack). Never Colima.",
+        : "Start Docker Desktop, or Docker Engine in WSL2. Never Colima.",
       faqId: dockerUp ? undefined : "docker-not-running",
     });
   }

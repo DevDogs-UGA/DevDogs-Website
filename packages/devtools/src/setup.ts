@@ -172,7 +172,7 @@ export async function runSetup(): Promise<void> {
         {
           value: "local" as const,
           label: "Local (Docker)",
-          hint: "needs Docker Desktop, OrbStack, or Docker Engine in WSL2",
+          hint: "needs Docker Desktop, or Docker Engine in WSL2",
         },
       ],
       initialValue: "hosted" as const,
