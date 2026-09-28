@@ -395,7 +395,8 @@ presenter's machine.
 
 ```
 presenter view ──/drive──▶ live relay ──/follow──▶ web laptop    (pnpm follow web)
-(hosted, Access)           (Worker + DO)    └────▶ mobile laptop (pnpm follow mobile)
+(slides-sync, Access)      (Worker + DO)    └────▶ mobile laptop (pnpm follow mobile)
+                           /follow via slides-relay (no Access)
 ```
 
 The pieces:
@@ -405,7 +406,9 @@ The pieces:
   holding the current slide), and posts to Discord for the presenter view.
   It checks the Access token itself on everything but `/follow`
   (`worker/access.ts`), so the deck stays private even if Access is
-  misconfigured.
+  misconfigured. The same Worker answers on slides-relay.devdogsuga.org,
+  which has no Access application: that's where the laptops connect to
+  `/follow` from localhost, and anything else there is refused.
 - `theme/lib/live.ts`: the deck's socket to the relay. The relay is plugged
   into Slidev's own sync (`theme/setup/root.ts`), so a laptop follows the
   presenter exactly as a second tab would.
@@ -450,8 +453,9 @@ pnpm follow web ~/Web-Workshops      # or: pnpm follow mobile ~/Mobile-Workshops
 ```
 
 then open `http://localhost:3030/` on that laptop's projector. The path is
-the clone the demo is typed into (or set `SLIDES_DEMO_REPO` in `.env`); the
-script lists the checkpoint tags it found there. Check the presenter's nav
+the clone the demo is typed into (or set `SLIDES_DEMO_REPO` in `.env`). The
+script lists every checkpoint in the deck, ✓ if the clone has the tag and ✗
+if not, so fetch any missing tags before the talk. Check the presenter's nav
 bar reads `1·1` before starting.
 
 Arrow keys on a laptop only move that laptop's view until the presenter's
@@ -466,12 +470,11 @@ comes back.
 fallback does its job), and deploys the Worker (it needs the workshop submodules and `wrangler login` to the
 DevDogs account). The Worker needs:
 
-- An Access application covering `slides-sync.devdogsuga.org`, with a
-  Bypass policy (or a second application) for the path `/follow`, which
-  the laptops connect to from localhost. Put its team domain and
-  Application Audience (AUD) tag in `wrangler.jsonc` (`ACCESS_TEAM_DOMAIN`,
-  `ACCESS_AUD`) and redeploy. Until then the Worker refuses everything but
-  `/follow`.
+- An Access application covering `slides-sync.devdogsuga.org` only (not
+  slides-relay, and not a `*.devdogsuga.org` wildcard, or the laptops
+  can't connect). Put its team domain and Application Audience (AUD) tag
+  in `wrangler.jsonc` (`ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`) and redeploy.
+  Until then the Worker refuses everything but `/follow`.
 - The Discord webhooks as secrets: `wrangler secret put
   DISCORD_SNIPPETS_WEBHOOK_WEB` and `..._MOBILE`.
 

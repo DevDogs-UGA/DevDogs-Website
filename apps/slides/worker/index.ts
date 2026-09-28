@@ -3,7 +3,8 @@
 // presenter view's post buttons. See LAYOUTS.md, "Presenting".
 //
 //   /follow   websocket, public: any deck following the presenter (the demo
-//             laptops' local decks connect here from localhost)
+//             laptops' local decks connect here from localhost, through
+//             slides-relay.devdogsuga.org, which Access doesn't cover)
 //   /drive    websocket, Access: the hosted presenter view
 //   /discord  POST, Access: post a snippet to its track's channel
 //   *         Access: the deck itself

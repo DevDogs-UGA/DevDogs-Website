@@ -17,9 +17,16 @@
     // checked against Cloudflare Access too (worker/access.ts).
     "run_worker_first": true
   },
-  "routes": [{ "pattern": "slides-sync.devdogsuga.org", "custom_domain": true }],
-  // Only the custom domain, which Access covers: no *.workers.dev or preview
-  // URLs to reach the Worker around it.
+  // slides-sync is the deck, behind Access. slides-relay has no Access
+  // application: it's where the demo laptops reach /follow from localhost.
+  // Anything else there is refused by the Worker's own Access check
+  // (worker/access.ts), since no Access token comes with it.
+  "routes": [
+    { "pattern": "slides-sync.devdogsuga.org", "custom_domain": true },
+    { "pattern": "slides-relay.devdogsuga.org", "custom_domain": true }
+  ],
+  // Only the custom domains: no *.workers.dev or preview URLs to reach the
+  // Worker around Access.
   "workers_dev": false,
   "preview_urls": false,
   "durable_objects": {

@@ -6,7 +6,7 @@
 //
 //   SLIDES_TRACK      the track given here
 //   SLIDES_DEMO_REPO  the clone given here, else SLIDES_DEMO_REPO from .env
-//   SLIDES_LIVE_URL   from .env, else https://slides-sync.devdogsuga.org
+//   SLIDES_LIVE_URL   from .env, else https://slides-relay.devdogsuga.org
 //
 // Plain Node, not TypeScript, so it runs without Vite. The .env parser
 // matches theme/vite/snippets.ts's readEnv.
@@ -16,7 +16,24 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const appDir = join(dirname(fileURLToPath(import.meta.url)), '..')
+const DECK = 'decks/2026-09-28-supabase.md'
 const PORT = 3030
+
+// Every `checkpoint:` in the deck's frontmatter, in slide order (following
+// the deck's `src:` imports), without repeats.
+function deckCheckpoints() {
+  const seen = new Set()
+  function walk(file) {
+    for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
+      const src = line.match(/^src:\s*(\S+)\s*$/)
+      if (src) walk(join(dirname(file), src[1]))
+      const checkpoint = line.match(/^checkpoint:\s*(\S+)\s*$/)
+      if (checkpoint) seen.add(checkpoint[1])
+    }
+  }
+  walk(join(appDir, DECK))
+  return [...seen]
+}
 
 function readEnvFile() {
   const file = join(appDir, '.env')
@@ -51,18 +68,20 @@ catch {
   fail(`${repo} is not a git repository.`)
 }
 
-const live = env.SLIDES_LIVE_URL || 'https://slides-sync.devdogsuga.org'
+const live = env.SLIDES_LIVE_URL || 'https://slides-relay.devdogsuga.org'
 
 console.log(`\nfollow: ${track} laptop, following ${live}`)
 console.log(`  workshop clone: ${repo}`)
-console.log(tags.length
-  ? `  checkpoints:    ${tags.join(', ')}`
-  : '  checkpoints:    none yet: no demo/* tags in the clone (git fetch --tags?)')
+const checkpoints = deckCheckpoints()
+const missing = checkpoints.filter(tag => !tags.includes(tag))
+console.log('\n  checkpoints in the deck:')
+for (const tag of checkpoints) console.log(`    ${tags.includes(tag) ? '✓' : '✗'} ${tag}`)
+if (missing.length) console.log(`\n  ✗ ${missing.length} missing from the clone (git fetch --tags?); those checkpoints will fail.`)
 console.log(`\n  open http://localhost:${PORT}/ on this laptop's projector\n`)
 
 const slidev = spawn(
   'pnpm',
-  ['exec', 'slidev', 'decks/2026-09-28-supabase.md', '--port', String(PORT)],
+  ['exec', 'slidev', DECK, '--port', String(PORT)],
   {
     cwd: appDir,
     stdio: 'inherit',

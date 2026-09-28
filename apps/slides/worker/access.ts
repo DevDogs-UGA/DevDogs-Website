@@ -1,5 +1,5 @@
 // Cloudflare Access in front of the hosted deck. Access itself sits on
-// slides-sync.devdogsuga.org, but the Worker checks its token on every
+// slides-sync.devdogsuga.org (not slides-relay, which serves only /follow), but the Worker checks its token on every
 // request too, so the deck stays private if the Access application is
 // missing, misconfigured, or not set up yet: with ACCESS_TEAM_DOMAIN or
 // ACCESS_AUD unset, everything but `/follow` is refused.
