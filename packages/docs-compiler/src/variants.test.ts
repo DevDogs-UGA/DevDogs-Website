@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { DocsBuildError } from "./errors.js";
 import { headingsOf, parseBody, plainTextOf } from "./parse.js";
 import { renderBody } from "./render.js";
@@ -18,6 +18,12 @@ const sgf = ctx({
   project: "study-group-finder",
   os: ["macos", "linux", "wsl", "windows"],
 });
+
+// The first render loads Shiki's highlighter, which alone can outlast
+// vitest's 5s per-test timeout on a cold CI runner.
+beforeAll(async () => {
+  await renderBody("", ctx());
+}, 60_000);
 
 const tabs = `
 :::tabs{group="os"}
