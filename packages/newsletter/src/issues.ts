@@ -48,7 +48,7 @@ export interface ChangelogIssue {
   signoff: string;
 }
 
-const DEV_SESSION_BLURB =
+const BUILD_SESSION_BLURB =
   "Catch up on workshop materials, meet your teammates for hackathons, get unblocked by focus leads and officers, or just come hang out and get work done.";
 
 const EVENTS = {
@@ -77,15 +77,15 @@ const EVENTS = {
       "The inaugural meeting for the 2026–2027 year. Get set up to contribute to this year's projects. Plus, a collaborative coding workshop: an introduction to Git, GitHub, and how to contribute to a team project.",
   },
   dev1: {
-    chip: "Dev Session",
+    chip: "Build Session",
     color: KIND.build,
-    title: "Dev Session #1",
+    title: "Build Session #1",
     dow: "WED",
     date: "Sep 16",
     time: "6:00 – 7:00 PM",
     loc: "DLW 124",
     rsvp: "https://uga.campuslabs.com/engage/event/12664183",
-    blurb: DEV_SESSION_BLURB,
+    blurb: BUILD_SESSION_BLURB,
   },
   // The three workshop nights have no summary in events yet — these
   // blurbs are authored from their linked workshop topics; swap in the real
@@ -103,15 +103,15 @@ const EVENTS = {
       "A framework double-header: build for the web with Next.js and go cross-platform with Flutter.",
   },
   dev2: {
-    chip: "Dev Session",
+    chip: "Build Session",
     color: KIND.build,
-    title: "Dev Session #2",
+    title: "Build Session #2",
     dow: "WED",
     date: "Sep 23",
     time: "6:00 – 7:00 PM",
     loc: "DLW 124",
     rsvp: "https://uga.campuslabs.com/engage/event/12664184",
-    blurb: DEV_SESSION_BLURB,
+    blurb: BUILD_SESSION_BLURB,
   },
   supabase: {
     chip: "Workshop",
@@ -126,15 +126,15 @@ const EVENTS = {
       "Get hands-on with Supabase: Postgres, auth, and realtime data for this year's projects.",
   },
   dev3: {
-    chip: "Dev Session",
+    chip: "Build Session",
     color: KIND.build,
-    title: "Dev Session #3",
+    title: "Build Session #3",
     dow: "WED",
     date: "Sep 30",
     time: "6:00 – 7:00 PM",
     loc: "DLW 124",
     rsvp: "https://uga.campuslabs.com/engage/event/12664184",
-    blurb: DEV_SESSION_BLURB,
+    blurb: BUILD_SESSION_BLURB,
   },
   career: {
     chip: "Workshop",

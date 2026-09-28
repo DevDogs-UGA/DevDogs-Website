@@ -667,7 +667,7 @@ Auto-imported globally in slide markdown (no `import` needed):
   emerald if omitted.
 - **`<Chip type="workshop" />`** or **`<Chip color="cyan">Custom
   label</Chip>`** — pill used on the `events` layout. Known `type`
-  values and their accent: `workshop`=emerald, `dev session`=cyan,
+  values and their accent: `workshop`=emerald, `build session`=cyan,
   `social`=purple, `hackathon`=amber, `meeting`=red. Pass an explicit
   `color` to override.
 - **`<QRSlot src="/qr/attendance.svg" caption="Scan to check in"

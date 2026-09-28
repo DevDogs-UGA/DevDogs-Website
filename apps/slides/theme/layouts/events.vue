@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Upcoming-events slide. Write markdown headings/lists in the default slot;
 // wrap each event's type label in <Chip type="workshop"> to get the
-// site-legend accent automatically (workshop=emerald, dev session=cyan, ...).
+// site-legend accent automatically (workshop=emerald, build session=cyan, ...).
 // Frontmatter: accent (slide-level wash; independent of each Chip's color),
 // chip, chrome, wash (see LAYOUTS.md)
 //   ---
@@ -11,8 +11,8 @@
 //   ### Next Monday — Supabase Workshop
 //   <Chip type="workshop" /> DLW 124 · 6:00 PM
 //
-//   ### Next Thursday — Dev Session
-//   <Chip type="dev session" /> DLW 124 · 6:00 PM
+//   ### Next Thursday — Build Session
+//   <Chip type="build session" /> DLW 124 · 6:00 PM
 import { computed } from 'vue'
 import { accentHex } from '../accents'
 import Wash from '../components/Wash.vue'

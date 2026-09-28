@@ -7,7 +7,7 @@ import { accentHex } from '../accents'
 
 const TYPE_ACCENT: Record<string, string> = {
   workshop: 'emerald',
-  'dev session': 'cyan',
+  'build session': 'cyan',
   social: 'purple',
   hackathon: 'amber',
   meeting: 'red',
