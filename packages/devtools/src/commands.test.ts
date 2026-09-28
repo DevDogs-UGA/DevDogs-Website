@@ -201,6 +201,11 @@ describe("prompts", () => {
       // the same question the auto-detection already answered.
       "--device",
       "--loopback",
+      // `oauth`'s endpoint overrides. Every contributor wants the canonical
+      // API and platform, so the defaults are preset; these exist only for
+      // testing against another project or a platform dev server.
+      "--base-url",
+      "--platform-url",
       // `doctor --report`: a write-gate for stdout, not a question — same
       // reasoning as `--apply`/`--json` above.
       "--report",

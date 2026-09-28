@@ -73,7 +73,6 @@ import {
   resolveHostedTargetInRepo,
   type ConnectTarget,
 } from "./target.js";
-import { recordResolved } from "../invocation.js";
 import { loadEnvSession } from "../repo/peers.js";
 import { discoverRepoRoot } from "../repo/root.js";
 import { resolveTier } from "../tier.js";
@@ -436,35 +435,15 @@ export async function connectViaOneClick(
   return connectOneClick(target, platformUrl, cwd, decision.reason, listener);
 }
 
-/** Step 2 (paste branch): the original manual flow — DevDogs API URL, then client ID/secret. */
+/** Step 2 (paste branch): the original manual flow — client ID/secret against the DevDogs API. */
 async function connectByPasting(
   baseUrlOverride?: string,
 ): Promise<ExchangeResult> {
-  let baseUrl =
-    baseUrlOverride ?? process.env[ENV_KEYS.baseUrl] ?? DEFAULT_API_URL;
-
-  if (!baseUrlOverride) {
-    baseUrl = unwrap(
-      await text({
-        message: "DevDogs API URL",
-        initialValue: baseUrl,
-        validate: (v) => {
-          if (!v) return;
-          try {
-            new URL(v);
-          } catch {
-            return "Enter a valid URL (e.g. https://api.devdogsuga.org)";
-          }
-        },
-      }),
-    );
-  }
-
-  baseUrl = baseUrl.replace(/\/+$/, "");
-
-  // A base URL entered at the prompt (not passed as --base-url) is what the
-  // rerun line needs to skip this step next time.
-  if (!baseUrlOverride) recordResolved("--base-url", baseUrl);
+  // Not prompted: contributors always want the canonical API. `--base-url` /
+  // `OAUTH_BASE_URL` stay as overrides for testing against another project.
+  const baseUrl = (
+    baseUrlOverride ?? process.env[ENV_KEYS.baseUrl] ?? DEFAULT_API_URL
+  ).replace(/\/+$/, "");
 
   let clientId: string | undefined = process.env[ENV_KEYS.clientId] || undefined;
   let clientSecret: string | undefined =
@@ -531,8 +510,8 @@ async function connectByPasting(
 }
 
 /**
- * The wizard. `baseUrlOverride`/`platformUrlOverride`, when given, skip
- * their respective prompts (only reachable via "Paste credentials instead"
+ * The wizard. `baseUrlOverride`/`platformUrlOverride`, when given, replace
+ * the canonical API and platform URLs (used by "Paste credentials instead"
  * and the one-click flow respectively). `transportOverride` (`--device`/
  * `--loopback`) forces the one-click flow's transport — see
  * `connectViaOneClick` — and is ignored on the "Paste credentials instead"

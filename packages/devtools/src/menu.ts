@@ -166,8 +166,7 @@ async function pickSubcommand(
  *
  * An empty array is a real answer, not a failure: a declined confirm adds no
  * flag, and a blank optional text means "let the command decide", which is
- * how `--db-url` falls back to `.env.production` and `--base-url` falls
- * through to the OAuth wizard's own prompt.
+ * how `--db-url` falls back to `.env.production`.
  */
 async function askOption(option: CommandOption): Promise<string[]> {
   const prompt = option.prompt;
