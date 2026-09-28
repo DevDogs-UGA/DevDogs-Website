@@ -9,6 +9,7 @@ import {
   createTemporaryWranglerEnv,
   renderWranglerEnvFile,
 } from "../cf/local-env.js";
+import { buildWorkerApp } from "../cf/build.js";
 import { runWithStderr } from "../db/run.js";
 import { findRepoRoot } from "../repo/root.js";
 import { recordResolved } from "../invocation.js";
@@ -56,9 +57,11 @@ interface TemporaryWranglerSession {
 
 export { renderWranglerEnvFile } from "../cf/local-env.js";
 
-// A clean OpenNext checkout builds before Wrangler can boot. Keep showing that
-// build's inherited output and allow enough time for a production Next build.
-const WRANGLER_READY_TIMEOUT_MS = 5 * 60_000;
+// The app is built (see `buildWorkerApp`) before Wrangler starts, so this only
+// covers Wrangler bundling the built output and booting workerd. It also bounds
+// how long a broken bundle stalls the command: Wrangler reports the bundling
+// error but keeps watching for changes instead of exiting.
+const WRANGLER_READY_TIMEOUT_MS = 2 * 60_000;
 const LOCAL_WORKFLOW_TIMEOUT_MS = 60 * 60_000;
 const WRANGLER_PROBE_PATH = "/cdn-cgi/local/explorer/api/workflows";
 
@@ -379,6 +382,17 @@ async function startTemporaryWrangler(
     throw err;
   }
 
+  // Without this, a fresh clone has no `dist/` for `wrangler dev` to boot
+  // (see `cf/build.ts`). Built before the credential-bearing env file exists,
+  // for the same reasons `cf preview` orders them that way.
+  const buildCode = await buildWorkerApp(app, loaded.env);
+  if (buildCode !== 0) {
+    process.stderr.write(
+      `devtools workflows: building ${app} failed (exit ${buildCode}); not starting Wrangler.\n`,
+    );
+    return null;
+  }
+
   const runtimeEnv = await createTemporaryWranglerEnv(app, loaded.env);
   const child = spawn(
     "pnpm",
@@ -432,7 +446,7 @@ async function startTemporaryWrangler(
   await stopTemporaryWrangler(child);
   runtimeEnv.remove();
   process.stderr.write(
-    `devtools workflows run: Wrangler did not become ready on port ${port} within 5 minutes.\n`,
+    `devtools workflows run: Wrangler did not become ready on port ${port} within ${WRANGLER_READY_TIMEOUT_MS / 60_000} minutes.\n`,
   );
   return null;
 }

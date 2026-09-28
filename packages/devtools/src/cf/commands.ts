@@ -8,6 +8,7 @@ import { confirm } from "@clack/prompts";
 import type * as EnvLoadModule from "@devdogsuga/env/load";
 import { loadEnvLoad } from "../repo/peers.js";
 import { run } from "../db/run.js";
+import { buildWorkerApp } from "./build.js";
 import { resolveTier } from "../tier.js";
 import { unwrap } from "../ui.js";
 import { isWorkerApp, workerApps } from "../workers.js";
@@ -107,25 +108,6 @@ export async function runCf(argv: readonly string[]): Promise<number> {
       }
     }
 
-    if (app === "sandbox") {
-      // No build step for the sandbox app: the tier only needs to reach
-      // Wrangler's materialized `--env-file`, below.
-      return withWranglerEnv(
-        app,
-        (envFile) =>
-          run([
-            "--filter",
-            app,
-            "exec",
-            "wrangler",
-            "dev",
-            "--env-file",
-            envFile,
-          ]),
-        { env: loaded?.env },
-      );
-    }
-
     // The build bakes tier-scoped values (NEXT_PUBLIC_* and anything else
     // read at build time) into the bundle, exactly like `cf:build:<tier>`'s
     // `DEPLOY_ENV=<tier> with-env` does — so it gets both the tier's loaded
@@ -140,9 +122,11 @@ export async function runCf(argv: readonly string[]): Promise<number> {
     // `CLOUDFLARE_ENV=<tier>` (see each app's `cf:build:<tier>` script) —
     // vinext bakes the target environment in at BUILD time, and `wrangler
     // dev` cross-checks it against `-e`/the env it resolves, erroring loudly
-    // on a mismatch rather than silently running the wrong tier.
-    const build = await run(
-      ["--filter", app, "exec", "vinext", "build"],
+    // on a mismatch rather than silently running the wrong tier. The sandbox
+    // app has no framework build; `buildWorkerApp` only builds its workspace
+    // dependencies.
+    const build = await buildWorkerApp(
+      app,
       tier && loaded
         ? { ...loaded.env, DEPLOY_ENV: tier, CLOUDFLARE_ENV: tier }
         : undefined,
@@ -155,7 +139,7 @@ export async function runCf(argv: readonly string[]): Promise<number> {
     return withWranglerEnv(
       app,
       (envFile) =>
-        // `wrangler dev` auto-redirects to the just-built
+        // For a vinext app, `wrangler dev` auto-redirects to the just-built
         // `dist/server/wrangler.json` (a "config redirect" vinext writes to
         // `.wrangler/deploy/config.json`), so no `--config` flag is needed.
         // The bundle is already built above; invoke the project's Wrangler
