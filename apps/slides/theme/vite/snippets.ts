@@ -1,7 +1,9 @@
 // Dev-server endpoint behind the deck's "post to Discord" buttons (see
-// lib/snippets.ts). The browser POSTs a snippet to `/__snippets`; this
-// forwards it to the Discord webhook for its track, so webhook URLs stay on
-// the presenting machine and never reach the client bundle.
+// lib/snippets.ts), for trying them out locally. The hosted deck posts
+// through its Worker instead (worker/index.ts). The browser POSTs a snippet
+// to `/__snippets`; this forwards it to the Discord webhook for its track
+// (lib/discord.ts), so webhook URLs stay on this machine and never reach the
+// client bundle.
 //
 // Webhook URLs come from apps/slides/.env (gitignored; see .env.example):
 //   DISCORD_SNIPPETS_WEBHOOK_WEB     DogDays (Next.js) channel
@@ -13,32 +15,16 @@ import { join } from 'node:path'
 // Type-only: `vite` isn't a direct dependency of this app (it arrives
 // through @slidev/cli), so nothing here may import it at runtime.
 import type { Plugin } from 'vite'
-
-type Track = 'web' | 'mobile'
-
-interface Snippet {
-  code: string
-  lang?: string
-  file?: string
-  startLine?: number
-  endLine?: number
-  track?: Track
-}
+import { parseSnippet, sendSnippet, tracksOf, type Snippet, type Track } from '../lib/discord'
 
 const ENV_KEYS: Record<Track, string> = {
   web: 'DISCORD_SNIPPETS_WEBHOOK_WEB',
   mobile: 'DISCORD_SNIPPETS_WEBHOOK_MOBILE',
 }
 
-// Discord's message limit is 2000 characters; past this the code goes up as
-// a file attachment instead, which Discord previews and lets people download.
-const MAX_INLINE = 1900
-
 // KEY="value" lines from apps/slides/.env, if it exists. Real environment
-// variables win. Exported so theme/vite.config.ts can read the same .env
-// (for SLIDES_TUNNEL_HOSTNAME) without re-parsing it. scripts/present.mjs
-// needs its own copy of this parser instead — it runs directly under `node`,
-// outside Vite's transform pipeline, so it can't import a .ts file here.
+// variables win. Exported so theme/vite.config.ts and the other dev-server
+// plugins read the same .env.
 export function readEnv(envDir: string): Record<string, string | undefined> {
   const file = join(envDir, '.env')
   const vars: Record<string, string> = {}
@@ -51,7 +37,7 @@ export function readEnv(envDir: string): Record<string, string | undefined> {
   return { ...vars, ...process.env }
 }
 
-function readBody(req: IncomingMessage): Promise<string> {
+export function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     let body = ''
     req.setEncoding('utf8')
@@ -64,49 +50,7 @@ function readBody(req: IncomingMessage): Promise<string> {
   })
 }
 
-function parse(body: string): Snippet {
-  const s = JSON.parse(body) as Partial<Snippet>
-  if (typeof s.code !== 'string' || !s.code.trim()) throw new Error('snippet has no code')
-  if (s.track !== undefined && s.track !== 'web' && s.track !== 'mobile') throw new Error('bad track')
-  return s as Snippet
-}
-
-function header(s: Snippet): string {
-  if (!s.file) return ''
-  const lines = s.startLine && s.endLine
-    ? s.startLine === s.endLine ? ` · line ${s.startLine}` : ` · lines ${s.startLine}–${s.endLine}`
-    : ''
-  return `**\`${s.file}\`**${lines}`
-}
-
-function filename(s: Snippet): string {
-  const base = s.file?.split('/').pop()
-  return base || `snippet.${s.lang || 'txt'}`
-}
-
-async function send(url: string, s: Snippet): Promise<void> {
-  const head = header(s)
-  const fenced = `${head ? `${head}\n` : ''}\`\`\`${s.lang ?? ''}\n${s.code}\n\`\`\``
-  const payload = { allowed_mentions: { parse: [] as string[] } }
-
-  let res: Response
-  if (fenced.length <= MAX_INLINE) {
-    res = await fetch(`${url}?wait=true`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...payload, content: fenced }),
-    })
-  }
-  else {
-    const form = new FormData()
-    form.append('payload_json', JSON.stringify({ ...payload, content: head || undefined }))
-    form.append('files[0]', new Blob([`${s.code}\n`], { type: 'text/plain' }), filename(s))
-    res = await fetch(`${url}?wait=true`, { method: 'POST', body: form })
-  }
-  if (!res.ok) throw new Error(`Discord ${res.status}: ${(await res.text()).slice(0, 200)}`)
-}
-
-function reply(res: ServerResponse, status: number, text: string) {
+export function reply(res: ServerResponse, status: number, text: string) {
   res.statusCode = status
   res.setHeader('Content-Type', 'text/plain; charset=utf-8')
   res.end(text)
@@ -129,20 +73,20 @@ export function snippetsWebhook(envDir: string): Plugin {
 
         let snippet: Snippet
         try {
-          snippet = parse(await readBody(req))
+          snippet = parseSnippet(await readBody(req))
         }
         catch (e) {
           return reply(res, 400, e instanceof Error ? e.message : String(e))
         }
 
-        const tracks: Track[] = snippet.track ? [snippet.track] : ['web', 'mobile']
+        const tracks = tracksOf(snippet)
         const missing = tracks.filter(t => !env[ENV_KEYS[t]]).map(t => ENV_KEYS[t])
         if (missing.length) return reply(res, 503, `set ${missing.join(' and ')} in apps/slides/.env`)
 
         // One post per distinct URL, in case both tracks share a channel.
         const urls = [...new Set(tracks.map(t => env[ENV_KEYS[t]]!))]
         try {
-          await Promise.all(urls.map(url => send(url, snippet)))
+          await Promise.all(urls.map(url => sendSnippet(url, snippet)))
         }
         catch (e) {
           server.config.logger.error(`[snippets] ${e instanceof Error ? e.message : String(e)}`)

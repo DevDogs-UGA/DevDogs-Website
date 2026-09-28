@@ -1,0 +1,44 @@
+// The hosted deck and live relay at slides-sync.devdogsuga.org (see
+// worker/index.ts and LAYOUTS.md, "Presenting"). Deployed by hand from this
+// app with `pnpm run deploy`, which builds the deck first.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "devdogs-slides",
+  "account_id": "61d185ff419ef7bd5bd4b3d314081a49",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-16",
+  "compatibility_flags": ["global_fetch_strictly_public"],
+  "assets": {
+    "directory": "decks/dist",
+    "binding": "ASSETS",
+    // Slidev's routes (/3, /presenter/12, ...) are client-side.
+    "not_found_handling": "single-page-application",
+    // Every request goes through the Worker first, so the deck itself is
+    // checked against Cloudflare Access too (worker/access.ts).
+    "run_worker_first": true
+  },
+  "routes": [{ "pattern": "slides-sync.devdogsuga.org", "custom_domain": true }],
+  // Only the custom domain, which Access covers: no *.workers.dev or preview
+  // URLs to reach the Worker around it.
+  "workers_dev": false,
+  "preview_urls": false,
+  "durable_objects": {
+    "bindings": [{ "name": "RELAY", "class_name": "Relay" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Relay"] }],
+  "vars": {
+    // From the Access application for slides-sync.devdogsuga.org: the team
+    // domain (e.g. "devdogs.cloudflareaccess.com") and its Application
+    // Audience (AUD) tag. Until both are set, the Worker refuses everything
+    // but /follow.
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": ""
+  },
+  // Secrets, set with `wrangler secret put`:
+  //   DISCORD_SNIPPETS_WEBHOOK_WEB     DogDays (Next.js) channel
+  //   DISCORD_SNIPPETS_WEBHOOK_MOBILE  DogPack (Flutter) channel
+  "secrets": {
+    "required": ["DISCORD_SNIPPETS_WEBHOOK_WEB", "DISCORD_SNIPPETS_WEBHOOK_MOBILE"]
+  },
+  "observability": { "logs": { "enabled": true } }
+}

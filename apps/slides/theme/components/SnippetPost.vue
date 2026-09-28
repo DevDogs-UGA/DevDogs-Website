@@ -4,14 +4,14 @@
 // (setup/shortcuts.ts). See lib/snippets.ts.
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useSlideContext } from '@slidev/client'
-import { canPost, postSnippet, registerSnippet, type Snippet } from '../lib/snippets'
+import { postSnippet, registerSnippet, type Snippet } from '../lib/snippets'
 
 const props = defineProps<{
   snippet: () => Snippet
 }>()
 
 const { $renderContext, $page } = useSlideContext()
-const active = computed(() => canPost && $renderContext.value === 'presenter')
+const active = computed(() => $renderContext.value === 'presenter')
 
 const state = ref<'idle' | 'posting' | 'posted' | 'failed'>('idle')
 const error = ref('')

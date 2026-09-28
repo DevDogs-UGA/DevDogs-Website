@@ -384,86 +384,99 @@ the same tab), not just the first page load. See `theme/lib/track.ts`.
   # Workshop: Backend Integration
   ```
 
-## Presenting across two laptops
+## Presenting
 
-Track mode (above) needs both laptops to actually be *following the same
-deck state* — one laptop advances slides and click-steps, the other two
-(web follower, mobile follower) update live. That's Slidev's built-in
-presenter/remote-control feature, riding the same HMR websocket Vite uses
-for live-reload, reached over a named Cloudflare Tunnel so it works over
-whatever network the venue has, behind Cloudflare Access so only officers
-can open it.
+Three machines, one deck. The presenter drives from the hosted deck at
+`https://slides-sync.devdogsuga.org/presenter/`, from any browser (behind
+Cloudflare Access, officers only). Each demo laptop runs the deck locally
+and follows along: every slide and click the presenter makes reaches both
+laptops, each showing only its own track. Nothing has to stay up on the
+presenter's machine.
 
-**The three URLs** (presenter laptop runs `pnpm present`; the other two
-just open a URL in a browser):
+```
+presenter view ──/drive──▶ live relay ──/follow──▶ web laptop    (pnpm follow web)
+(hosted, Access)           (Worker + DO)    └────▶ mobile laptop (pnpm follow mobile)
+```
 
-- Presenter (this laptop only, never shared): `https://<tunnel-host>/presenter/?password=<SLIDES_PRESENTER_PASSWORD>`
-- Web follower: `https://<tunnel-host>/?track=web`
-- Mobile follower: `https://<tunnel-host>/?track=mobile`
+The pieces:
 
-`<tunnel-host>` is `SLIDES_TUNNEL_HOSTNAME` from `.env` (defaults to
-`slides.devdogsuga.org`). Advancing slides or click-steps from the
-presenter view moves both followers; each follower keeps the track it
-opened with (`?track=...`, remembered in that tab's `sessionStorage` per
-"Track mode" above) even as slides advance. Arrow keys pressed in a
-follower tab only move that tab's local view — followers can't drive the
-deck or each other, only the presenter can.
+- `worker/`: the Worker behind slides-sync.devdogsuga.org. It serves the
+  built deck, runs the live relay (`worker/relay.ts`, one Durable Object
+  holding the current slide), and posts to Discord for the presenter view.
+  It checks the Access token itself on everything but `/follow`
+  (`worker/access.ts`), so the deck stays private even if Access is
+  misconfigured.
+- `theme/lib/live.ts`: the deck's socket to the relay. The relay is plugged
+  into Slidev's own sync (`theme/setup/root.ts`), so a laptop follows the
+  presenter exactly as a second tab would.
+- `theme/custom-nav-controls.vue`: in the presenter view's nav bar, a dot
+  for the relay connection, how many laptops are following (web·mobile),
+  and the checkpoint button.
 
-### One-time setup (Sloan; officers-only via Cloudflare Access)
+### Checkpoints
 
-This part is infrastructure, not app code — done once outside this repo,
-by whoever holds the Cloudflare account:
+A slide can name the demo tag its step ends at:
 
-1. `cloudflared tunnel login` — authorizes this machine against the
-   DevDogsUGA Cloudflare account. Writes a cert under `~/.cloudflared/`.
-2. `cloudflared tunnel create devdogs-slides` — creates the named tunnel
-   and writes its credentials JSON to `~/.cloudflared/<tunnel-id>.json`.
-3. `cloudflared tunnel route dns devdogs-slides slides.devdogsuga.org` —
-   points the DNS record at the tunnel.
-4. In the Cloudflare Zero Trust dashboard, add a **self-hosted Access
-   application** for `slides.devdogsuga.org` with a policy scoped to
-   officers only (e.g. an email-domain or group rule), so the tunnel
-   itself is reachable but nobody outside that policy gets past the
-   Access login page.
-5. Fill in `apps/slides/.env` (copy from `.env.example`):
-   `SLIDES_PRESENTER_PASSWORD`, and `SLIDES_TUNNEL_NAME` /
-   `SLIDES_TUNNEL_HOSTNAME` if they differ from the defaults
-   (`devdogs-slides` / `slides.devdogsuga.org`).
+```md
+---
+layout: dual-code
+checkpoint: demo/03-insert-naive
+---
+```
 
-Tunnel credentials live only in `~/.cloudflared/` on the machine that ran
-`tunnel login`/`tunnel create` — never commit them, and they never touch
-this repo.
+On such a slide the presenter's nav bar shows a flag. Click it, then
+**Web**, **Mobile**, or **Both**, and those laptops' workshop clones run
+`git switch --detach --discard-changes <tag>` (`theme/vite/checkpoint.ts`),
+throwing away whatever was typed live. Each laptop's result (✓, or ⚠ with
+git's error on hover) shows beside the flag. It never runs on its own when
+a slide comes up.
 
-### Running it
+The tags live in the workshop clones, one per demo step (`demo/01-read` …
+`demo/05-delete`). Only `demo/*` tags are accepted, and a missing tag fails
+with a message rather than switching to anything else. After a switch,
+Next.js reloads by itself; the Flutter laptop needs a hot restart (`R`).
 
-From `apps/slides/`: `pnpm present`. It fails fast with a message
-pointing back to this section if `SLIDES_PRESENTER_PASSWORD` is missing
-from `.env`, or if the named tunnel isn't set up yet (`cloudflared tunnel
-info <name>` fails — e.g. setup above hasn't been done on this machine).
-Otherwise it starts the Slidev dev server (`--remote`, bound to
-`127.0.0.1` — only `cloudflared` on the same machine needs to reach it)
-and `cloudflared tunnel run` together, prints the three URLs above, and
-stops both on Ctrl-C or if either one exits unexpectedly.
+### On the night
 
-`pnpm dev` is unaffected — it still just starts the plain local dev
-server on `http://localhost:3030`, tunnel or no tunnel, and works exactly
-as before.
+Presenter: open `https://slides-sync.devdogsuga.org/presenter/` and sign
+in through Access. Open `/presenter/` directly: a tab that only goes to the
+presenter view later still follows instead of driving.
 
-### Manual-advance fallback
+Each demo laptop, from `apps/slides/` in its Backstage checkout (with the
+workshop submodules checked out):
 
-If the tunnel, Access, or the network at the venue isn't cooperating,
-fall back to no sync at all: each laptop runs its own `pnpm dev` and
-opens its own `?track=web` / `?track=mobile` URL, and the presenter
-advances their copy while quietly saying "next slide" for the other
-laptop to follow along by hand. The PDF export goes out afterwards
-either way, so nobody's missing anything by the next day.
+```sh
+pnpm follow web ~/Web-Workshops      # or: pnpm follow mobile ~/Mobile-Workshops
+```
 
-### What syncs and what doesn't
+then open `http://localhost:3030/` on that laptop's projector. The path is
+the clone the demo is typed into (or set `SLIDES_DEMO_REPO` in `.env`); the
+script lists the checkpoint tags it found there. Check the presenter's nav
+bar reads `1·1` before starting.
 
-Only the **dev server** (`pnpm dev` / `pnpm present`) has the
-presenter/remote-control websocket. The static build (`pnpm build`, what
-actually gets deployed/exported) has no server to sync through — it's
-just static files. Always present off the dev server, not a build.
+Arrow keys on a laptop only move that laptop's view until the presenter's
+next click. If the relay or the venue network drops, the laptops keep the
+whole deck locally: advance them by hand and they rejoin when the network
+comes back.
+
+### Setup and deploy
+
+`pnpm run deploy` from `apps/slides/` builds the deck and deploys the
+Worker (it needs the workshop submodules and `wrangler login` to the
+DevDogs account). The Worker needs:
+
+- An Access application covering `slides-sync.devdogsuga.org`, with a
+  Bypass policy (or a second application) for the path `/follow`, which
+  the laptops connect to from localhost. Put its team domain and
+  Application Audience (AUD) tag in `wrangler.jsonc` (`ACCESS_TEAM_DOMAIN`,
+  `ACCESS_AUD`) and redeploy. Until then the Worker refuses everything but
+  `/follow`.
+- The Discord webhooks as secrets: `wrangler secret put
+  DISCORD_SNIPPETS_WEBHOOK_WEB` and `..._MOBILE`.
+
+To try it all locally: `pnpm build`, then `pnpm run dev:worker` (the Worker
+on `http://localhost:8787`, with the Access check off), and
+`SLIDES_LIVE_URL=http://localhost:8787 pnpm follow web <clone>`.
 
 ### `qr`
 Big centered QR + caption. Use for the attendance/Discord/exit slides.
@@ -635,7 +648,7 @@ Env files aren't commands: fence them as `dotenv`.
 
 ### Posting to Discord
 
-In the presenter view (`/presenter/`, dev server only), every code block gets
+In the presenter view (`/presenter/`), every code block gets
 a Discord button beside its copy button, and `p` posts every block on the
 current slide. A post is the block's focus: the contiguous span its highlight
 ranges cover (the whole block if a range is `all` or it has none; the final
@@ -648,9 +661,11 @@ anything inside `<Track web>` go to DogDays, the Flutter column and
 `dual-code` slide with `trackSplit: false` isn't a web/mobile split, so it
 posts to both.
 
-The browser never sees a webhook URL. The buttons POST to the dev server's
-`/__snippets` endpoint (`theme/vite/snippets.ts`), which reads the two
-webhook URLs from `apps/slides/.env` (gitignored; copy `.env.example`):
+The browser never sees a webhook URL. On the hosted deck the buttons POST
+to the Worker's `/discord` (`worker/index.ts`), which holds the two webhook
+URLs as secrets (see "Presenting"). Under `pnpm dev` they POST to the dev
+server's `/__snippets` (`theme/vite/snippets.ts`), which reads them from
+`apps/slides/.env` (gitignored; copy `.env.example`):
 `DISCORD_SNIPPETS_WEBHOOK_WEB` and `DISCORD_SNIPPETS_WEBHOOK_MOBILE`.
 Restart the dev server after editing `.env`. A missing URL makes the button
 show an error naming the variable.

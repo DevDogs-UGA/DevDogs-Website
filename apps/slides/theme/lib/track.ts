@@ -16,6 +16,9 @@ export const TRACK_ACCENT = { web: 'purple', mobile: 'sky' } as const satisfies 
 
 const STORAGE_KEY = 'dd-track'
 
+// Set by theme/vite.config.ts: SLIDES_TRACK on a demo laptop, else ''.
+declare const __DD_TRACK__: string
+
 function isTrackName(value: string | null): value is TrackName {
   return value === 'web' || value === 'mobile'
 }
@@ -23,7 +26,8 @@ function isTrackName(value: string | null): value is TrackName {
 // Read once, in this order: the URL wins (so a shared link always sets the
 // track it names), then whatever this tab remembered last time (so clicking
 // "next slide" — which never re-runs this file — doesn't lose it), then
-// nothing (both tracks show, which is what the PDF export needs).
+// the demo laptop's track, then nothing (both tracks show, which is what the
+// PDF export needs).
 function readInitialTrack(): TrackName | undefined {
   if (typeof window === 'undefined') return undefined
 
@@ -34,7 +38,10 @@ function readInitialTrack(): TrackName | undefined {
   }
 
   const fromStorage = window.sessionStorage.getItem(STORAGE_KEY)
-  return isTrackName(fromStorage) ? fromStorage : undefined
+  if (isTrackName(fromStorage)) return fromStorage
+
+  // A demo laptop's deck (`pnpm follow web`) defaults to its own track.
+  return isTrackName(__DD_TRACK__) ? __DD_TRACK__ : undefined
 }
 
 // One shared ref for the whole deck — every slide and every layout reads

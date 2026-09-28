@@ -2,10 +2,10 @@
 //
 // The presenter view shows a Discord button beside each code block's copy
 // button (and `p` posts every block on the current slide). The browser never
-// sees a webhook URL: it POSTs the snippet to the Slidev dev server's
-// `/__snippets` endpoint (vite/snippets.ts), which picks the channel by track
-// and forwards it to Discord. The static build has no such endpoint, so
-// nothing here renders outside `slidev` dev mode.
+// sees a webhook URL: it POSTs the snippet to the hosted deck's Worker
+// (`/discord`, worker/index.ts) or, under `slidev` dev, the dev server's
+// `/__snippets` (vite/snippets.ts), which picks the channel by track and
+// forwards it to Discord.
 //
 // What gets posted is the block's *focus*: the span covering every line its
 // highlight ranges name (the surrounding context lines, dimmed on the slide,
@@ -89,10 +89,8 @@ export function lineText(line: Element): string {
   return text
 }
 
-export const canPost = import.meta.env.DEV
-
 export async function postSnippet(snippet: Snippet): Promise<void> {
-  const res = await fetch('/__snippets', {
+  const res = await fetch(import.meta.env.DEV ? '/__snippets' : '/discord', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(snippet),

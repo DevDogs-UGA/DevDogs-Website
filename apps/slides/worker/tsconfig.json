@@ -1,0 +1,15 @@
+{
+  // The hosted deck's Worker (worker/*.ts), plus the theme modules it shares
+  // with the deck. Runtime types come from `pnpm run types`
+  // (worker-configuration.d.ts, generated from wrangler.jsonc; commit it).
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "es2024",
+    "lib": ["es2024"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "types": [],
+    "noEmit": true
+  },
+  "include": ["*.ts", "../theme/lib/discord.ts", "../theme/lib/liveProtocol.ts"]
+}

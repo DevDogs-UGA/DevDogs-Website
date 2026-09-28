@@ -6,6 +6,7 @@ dist/
 *.log
 .turbo/
 .cache/
+.wrangler/
 .packs/
 .env
 .env.*

@@ -2,10 +2,9 @@
 // Discord (see lib/snippets.ts). The base shortcuts pass through untouched.
 import type { ShortcutOptions } from '@slidev/types'
 import { useNav } from '@slidev/client'
-import { canPost, postPage } from '../lib/snippets'
+import { postPage } from '../lib/snippets'
 
 export default function setupShortcuts(_nav: unknown, base: ShortcutOptions[]): ShortcutOptions[] {
-  if (!canPost) return base
   const { isPresenter, currentSlideNo } = useNav()
   return [
     ...base,

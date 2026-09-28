@@ -84,6 +84,7 @@ The guestbook is the part we didn't get to at Setup Night. It's already in your 
 
 ---
 layout: terminal
+checkpoint: demo/01-read
 accent: emerald
 chip: SQL
 heading: Create the Messages Table
@@ -142,6 +143,7 @@ flutter pub add supabase_flutter gotrue
 
 ---
 layout: terminal
+checkpoint: demo/01-read
 accent: rose
 chip: CODE
 heading: Connect to Supabase
@@ -203,6 +205,7 @@ file:
 
 ---
 layout: dual-code
+checkpoint: demo/01-read
 accent: rose
 chip: CODE
 heading: From In-Memory to Supabase
@@ -337,6 +340,7 @@ chip: DASHBOARD
 
 ---
 layout: dual-code
+checkpoint: demo/02-sign-in
 accent: rose
 chip: CODE
 heading: Sign In / Sign Out
@@ -438,6 +442,7 @@ chip: STEP 3
 
 ---
 layout: terminal
+checkpoint: demo/03-insert-naive
 accent: emerald
 chip: SQL
 heading: Allow Signed-In Posts
@@ -463,6 +468,7 @@ Only signed-in users can insert, and `with check (auth.uid() = user_id)` means o
 
 ---
 layout: dual-code
+checkpoint: demo/03-insert-naive
 accent: rose
 chip: CODE
 heading: Posting a Message
@@ -588,6 +594,7 @@ Store each person's name once, on the server, when they sign up. Every message t
 
 ---
 layout: terminal
+checkpoint: demo/04-profiles
 accent: emerald
 chip: SQL
 heading: Move Names into Profiles
@@ -643,6 +650,7 @@ Messages now point at profiles, and the `author_name` column goes away.
 
 ---
 layout: dual-code
+checkpoint: demo/04-profiles
 accent: rose
 chip: CODE
 heading: One Name per Account
@@ -706,6 +714,7 @@ The insert sends just the message; the server knows who's signed in.
 
 ---
 layout: dual-code
+checkpoint: demo/04-profiles
 accent: rose
 chip: CODE
 heading: Showing the Author's Name
@@ -777,6 +786,7 @@ chip: STEP 5
 
 ---
 layout: terminal
+checkpoint: demo/05-delete
 accent: emerald
 chip: SQL
 heading: Let Users Delete Their Own Messages
@@ -802,6 +812,7 @@ Signed-in users can delete a message only when it's theirs. There's no update po
 
 ---
 layout: dual-code
+checkpoint: demo/05-delete
 accent: rose
 chip: CODE
 heading: Only Your Own Delete Button

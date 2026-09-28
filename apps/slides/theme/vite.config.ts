@@ -4,21 +4,21 @@
 // can't import it at runtime.
 import { fileURLToPath } from 'node:url'
 import { readEnv, snippetsWebhook } from './vite/snippets'
+import { checkpoints } from './vite/checkpoint'
 import { meetingsData } from './vite/meetings'
 
-// apps/slides/, where the gitignored .env (webhook URLs, tunnel hostname,
-// presenter password) lives.
+// apps/slides/, where the gitignored .env (webhook URLs, demo laptop setup)
+// lives.
 const envDir = fileURLToPath(new URL('..', import.meta.url))
-
-// The Cloudflare Tunnel hostname the follower laptops reach this dev server
-// through (LAYOUTS.md, "Presenting across two laptops"). Vite rejects Host
-// headers it doesn't recognize, so the tunnel's host has to be allow-listed.
-const tunnelHostname =
-  readEnv(envDir).SLIDES_TUNNEL_HOSTNAME || 'slides.devdogsuga.org'
+const env = readEnv(envDir)
 
 export default {
-  plugins: [snippetsWebhook(envDir), meetingsData()],
-  server: {
-    allowedHosts: [tunnelHostname],
+  plugins: [snippetsWebhook(envDir), checkpoints(envDir), meetingsData()],
+  // A demo laptop's deck (`pnpm follow`) follows the live relay at
+  // SLIDES_LIVE_URL as SLIDES_TRACK (lib/live.ts). The hosted build ignores
+  // both: it uses its own origin.
+  define: {
+    __DD_LIVE_URL__: JSON.stringify(env.SLIDES_LIVE_URL ?? ''),
+    __DD_TRACK__: JSON.stringify(env.SLIDES_TRACK ?? ''),
   },
 }
