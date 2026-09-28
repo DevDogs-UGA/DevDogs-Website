@@ -21,6 +21,25 @@ const DEFAULT_HOST = "smtp.office365.com";
 const TIMEOUT_MS = 30_000;
 
 /**
+ * The name recipients see beside the club address. Without one, clients fall
+ * back to the bare address, and Outlook shows it as the tenant stores it:
+ * "devdogs@UGA.EDU".
+ */
+export const SENDER_NAME = "DevDogs";
+
+/**
+ * An RFC 5322 mailbox with a display name. Quoted so any punctuation is safe;
+ * a name outside ASCII travels as an RFC 2047 encoded word, which is never
+ * quoted.
+ */
+export function namedMailbox(name: string, address: string): string {
+  const display = /^[\x20-\x7e]*$/.test(name)
+    ? `"${name.replace(/(["\\])/g, "\\$1")}"`
+    : `=?UTF-8?B?${Buffer.from(name, "utf8").toString("base64")}?=`;
+  return `${display} <${address}>`;
+}
+
+/**
  * RFC 5322 origination headers for a message built as a draft. `buildEml`
  * deliberately emits none of these — draft-ness is their absence — so the
  * send path prepends them. The submission server stamps `Message-ID`.
@@ -29,9 +48,10 @@ export function originationHeaders(
   from: string,
   to: readonly string[],
   date = new Date(),
+  fromName = SENDER_NAME,
 ): string {
   return [
-    `From: <${from}>`,
+    `From: ${namedMailbox(fromName, from)}`,
     `To: ${to.map((address) => `<${address}>`).join(", ")}`,
     // toUTCString is RFC 5322's fixed-length date form, save the zone name.
     `Date: ${date.toUTCString().replace(/GMT$/, "+0000")}`,

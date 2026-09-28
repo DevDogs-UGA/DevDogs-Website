@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { dotStuff, endsReply, originationHeaders } from "./smtp.js";
+import {
+  dotStuff,
+  endsReply,
+  namedMailbox,
+  originationHeaders,
+} from "./smtp.js";
 
 describe("originationHeaders", () => {
   it("stamps From, To and an RFC 5322 date ahead of the draft headers", () => {
@@ -9,9 +14,23 @@ describe("originationHeaders", () => {
       new Date(Date.UTC(2026, 8, 11, 6, 15, 23)),
     );
     expect(headers).toBe(
-      "From: <devdogs@uga.edu>\r\n" +
+      'From: "DevDogs" <devdogs@uga.edu>\r\n' +
         "To: <a@uga.edu>, <b@uga.edu>\r\n" +
         "Date: Fri, 11 Sep 2026 06:15:23 +0000\r\n",
+    );
+  });
+});
+
+describe("namedMailbox", () => {
+  it("quotes the display name and escapes quotes and backslashes in it", () => {
+    expect(namedMailbox('Dev "Dogs" \\ UGA', "devdogs@uga.edu")).toBe(
+      '"Dev \\"Dogs\\" \\\\ UGA" <devdogs@uga.edu>',
+    );
+  });
+
+  it("encodes a name outside ASCII as an RFC 2047 word", () => {
+    expect(namedMailbox("DevDogs × GDGC", "devdogs@uga.edu")).toBe(
+      `=?UTF-8?B?${Buffer.from("DevDogs × GDGC").toString("base64")}?= <devdogs@uga.edu>`,
     );
   });
 });
