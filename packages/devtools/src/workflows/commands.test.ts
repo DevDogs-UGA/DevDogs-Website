@@ -1,4 +1,7 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -78,6 +81,7 @@ const {
   isWranglerDevRunning,
   renderWranglerEnvFile,
   runWorkflowsRun,
+  runningVinextDevPort,
   waitForLocalWorkflow,
   workflowChoices,
   workflowTriggerArgs,
@@ -478,5 +482,32 @@ describe("port probing", () => {
       // A one-slot scan starting at the occupied port cannot succeed.
       expect(await findFreePort(port, 1)).toBeNull();
     });
+  });
+});
+
+describe("runningVinextDevPort", () => {
+  function appWithLock(lock: unknown): string {
+    const dir = mkdtempSync(join(tmpdir(), "vinext-lock-"));
+    mkdirSync(join(dir, ".vinext", "dev"), { recursive: true });
+    writeFileSync(join(dir, ".vinext", "dev", "lock.json"), JSON.stringify(lock));
+    return dir;
+  }
+
+  it("returns the port of a live vinext dev from its lock file", () => {
+    const dir = appWithLock({ pid: 4242, port: 3001 });
+    expect(runningVinextDevPort(dir, (pid) => pid === 4242)).toBe("3001");
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("ignores a lock whose process is gone", () => {
+    const dir = appWithLock({ pid: 4242, port: 3001 });
+    expect(runningVinextDevPort(dir, () => false)).toBeUndefined();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("returns undefined with no lock file", () => {
+    const dir = mkdtempSync(join(tmpdir(), "vinext-lock-"));
+    expect(runningVinextDevPort(dir, () => true)).toBeUndefined();
+    rmSync(dir, { recursive: true, force: true });
   });
 });

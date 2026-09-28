@@ -218,7 +218,7 @@ function printLocalNextSteps(chosenApps: string[] | null): void {
         ? [
             "",
             "   schedule-builder starts with an empty catalog. Populate it by",
-            "   triggering the registrar scrape workflow (starts Wrangler for you):",
+            "   triggering the registrar scrape workflow (starts vinext dev for you):",
             "     pnpm devtools workflows run --app schedule-builder --tier development",
           ]
         : []),

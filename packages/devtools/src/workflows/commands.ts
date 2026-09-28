@@ -1,7 +1,9 @@
 /** Config-derived listing and manual triggering for Cloudflare Workflows. */
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createServer } from "node:net";
+import { basename, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { confirm, select, text } from "@clack/prompts";
 import { loadEnvLoad } from "../repo/peers.js";
@@ -13,6 +15,7 @@ import {
 import { buildWorkspaceDeps, needsFrameworkBuild } from "../cf/build.js";
 import { runWithStderr } from "../db/run.js";
 import { findRepoRoot } from "../repo/root.js";
+import { workerPaths } from "../workers.js";
 import { recordResolved } from "../invocation.js";
 import { resolveTier } from "../tier.js";
 import { unwrap } from "../ui.js";
@@ -275,6 +278,45 @@ export function vinextDevArgs(app: string, port: string): string[] {
   ];
 }
 
+/**
+ * The port of a `vinext dev` already running for `app`, from the lock file
+ * vinext keeps at `<app>/.vinext/dev/lock.json` — or undefined when there is
+ * none, or its process is gone. vinext refuses a second dev server in the same
+ * app directory, so starting one beside it fails ("Another vinext dev server
+ * is already running"); reusing it is the only way through.
+ */
+export function runningVinextDevPort(
+  appDir: string,
+  isAlive: (pid: number) => boolean = pidIsAlive,
+): string | undefined {
+  try {
+    const lock = JSON.parse(
+      readFileSync(join(appDir, ".vinext", "dev", "lock.json"), "utf8"),
+    ) as { pid?: unknown; port?: unknown };
+    if (typeof lock.pid !== "number" || typeof lock.port !== "number") {
+      return undefined;
+    }
+    return isAlive(lock.pid) ? String(lock.port) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function pidIsAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    // EPERM: alive, just not ours to signal.
+    return (error as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+function appDir(app: string): string | undefined {
+  const path = workerPaths().find((candidate) => basename(candidate) === app);
+  return path === undefined ? undefined : join(findRepoRoot(), path);
+}
+
 /** Probe Wrangler's Workflow explorer API, rather than merely checking a port. */
 export async function isWranglerDevRunning(
   port: string,
@@ -366,12 +408,12 @@ async function startTemporaryWrangler(
     if (free === null) {
       process.stderr.write(
         `devtools workflows: port ${requestedPort} is in use and no free port ` +
-          `was found near it for a temporary Wrangler session.\n`,
+          `was found near it for a temporary dev session.\n`,
       );
       return null;
     }
     process.stdout.write(
-      `Port ${requestedPort} is in use; starting the temporary Wrangler session on ${free} instead.\n`,
+      `Port ${requestedPort} is in use; starting the temporary dev session on ${free} instead.\n`,
     );
     port = String(free);
   }
@@ -459,10 +501,15 @@ async function startTemporaryWrangler(
       };
     }
     if (startupError || child.exitCode !== null || child.signalCode !== null) {
+      // Name the exit status: a silent early exit is otherwise undiagnosable,
+      // since the runtime itself may print nothing on the way out.
+      const how = startupError
+        ? `: ${startupError.message}`
+        : child.signalCode !== null
+          ? ` (killed by ${child.signalCode}).`
+          : ` (exit ${child.exitCode}).`;
       process.stderr.write(
-        `devtools workflows run: ${runtime} stopped before it became ready${
-          startupError ? `: ${startupError.message}` : "."
-        }\n`,
+        `devtools workflows run: ${runtime} stopped before it became ready${how}\n`,
       );
       runtimeEnv?.remove();
       return null;
@@ -485,6 +532,16 @@ async function prepareLocalWrangler(
   initialPort: string,
 ): Promise<{ port: string; temporary?: TemporaryWranglerSession } | undefined> {
   let port = initialPort;
+  if (!(await isWranglerDevRunning(port))) {
+    const dir = appDir(app);
+    const running = dir === undefined ? undefined : runningVinextDevPort(dir);
+    if (running !== undefined && (await isWranglerDevRunning(running))) {
+      process.stdout.write(
+        `Using the vinext dev session already running for ${app} on port ${running}.\n`,
+      );
+      return { port: running };
+    }
+  }
   while (!(await isWranglerDevRunning(port))) {
     if (!process.stdin.isTTY) {
       process.stderr.write(wranglerDevNotRunningHint(app, port));
@@ -493,17 +550,17 @@ async function prepareLocalWrangler(
 
     const action = unwrap(
       await select<MissingWranglerAction>({
-        message: `No Wrangler dev session was found on port ${port}.`,
+        message: `No Workflow runtime (vinext dev or wrangler dev) was found on port ${port}.`,
         options: [
           {
             value: "start",
-            label: "Start Wrangler temporarily",
+            label: "Start one temporarily",
             hint: "stop it after this Workflow is triggered",
           },
           {
             value: "port",
             label: "Use another port",
-            hint: "Wrangler may already be running there",
+            hint: "a dev session may already be running there",
           },
           { value: "cancel", label: "Cancel" },
         ],
@@ -810,7 +867,7 @@ export async function runWorkflowsRun(
   } finally {
     uninstallSignalCleanup?.();
     if (local?.temporary) {
-      process.stdout.write("Stopping the temporary session…\n");
+      process.stdout.write("Stopping the temporary dev session…\n");
       await local.temporary.stop();
     }
   }
@@ -866,7 +923,16 @@ export async function runWorkflowsServe(
 
   if (await isWranglerDevRunning(port)) {
     process.stderr.write(
-      `devtools workflows serve: Wrangler is already running on port ${port}.\n`,
+      `devtools workflows serve: a Workflow runtime is already running on port ${port}.\n`,
+    );
+    return 1;
+  }
+  const dir = appDir(app);
+  const running = dir === undefined ? undefined : runningVinextDevPort(dir);
+  if (running !== undefined) {
+    process.stderr.write(
+      `devtools workflows serve: vinext dev is already running for ${app} on port ${running}; ` +
+        "vinext allows one per app, and `workflows run` reuses it.\n",
     );
     return 1;
   }
@@ -876,7 +942,7 @@ export async function runWorkflowsServe(
   // `session.port`, not `port`: the session auto-picks a free port when the
   // requested one is taken, so this line must report where it actually landed.
   process.stdout.write(
-    `Wrangler will keep running on port ${session.port}. Press Ctrl+C to stop it.\n`,
+    `The dev session will keep running on port ${session.port}. Press Ctrl+C to stop it.\n`,
   );
   await new Promise<void>((resolve) => {
     // `process.on`, not `once`: `once` unregisters itself after the first
@@ -892,7 +958,7 @@ export async function runWorkflowsServe(
       if (stopping) {
         process.off("SIGINT", onSignal);
         process.off("SIGTERM", onSignal);
-        process.stdout.write("Stopping Wrangler (forced)…\n");
+        process.stdout.write("Stopping the dev session (forced)…\n");
         session.forceStop();
         process.kill(process.pid, signal);
         return;
@@ -903,7 +969,7 @@ export async function runWorkflowsServe(
     process.on("SIGINT", onSignal);
     process.on("SIGTERM", onSignal);
   });
-  process.stdout.write("Stopping Wrangler…\n");
+  process.stdout.write("Stopping the dev session…\n");
   await session.stop();
   return 0;
 }

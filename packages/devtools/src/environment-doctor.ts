@@ -171,6 +171,27 @@ export function checkPowerShellExecutionPolicy(
   };
 }
 
+/**
+ * The checkout's development env the way every other command loads it:
+ * `.env.generated` (the local stack's connection block, written by `db
+ * start`) first and winning, then `.env`. Reading `.env` alone reported a
+ * working local-Docker checkout as missing PUBLISHABLE_KEY, and took the
+ * blank hosted template's `https://$PROJECT_REF.supabase.co` for a real
+ * hosted project that "did not respond".
+ */
+export function readCheckoutEnv(
+  repoRoot: string,
+): Record<string, string | undefined> {
+  const read = (name: string): Record<string, string> => {
+    const path = join(repoRoot, name);
+    return existsSync(path) ? parseDotenv(readFileSync(path, "utf8")) : {};
+  };
+  const generated = Object.fromEntries(
+    Object.entries(read(".env.generated")).filter(([, value]) => value !== ""),
+  );
+  return { ...read(".env"), ...generated };
+}
+
 export function checkEnvKeysPresent(
   env: Record<string, string | undefined>,
   keys: string[],
@@ -365,10 +386,7 @@ export async function runEnvironmentDoctor(
 
   let env: Record<string, string | undefined> = {};
   if (repoRoot) {
-    const envPath = join(repoRoot, ".env");
-    if (existsSync(envPath)) {
-      env = parseDotenv(readFileSync(envPath, "utf8"));
-    }
+    env = readCheckoutEnv(repoRoot);
     checks.push(checkEnvKeysPresent(env, ["API_URL", "PUBLISHABLE_KEY"]));
   }
 
