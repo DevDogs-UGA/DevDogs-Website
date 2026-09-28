@@ -8,8 +8,9 @@ import { loadEnvLoad } from "../repo/peers.js";
 import {
   createTemporaryWranglerEnv,
   renderWranglerEnvFile,
+  scopedProcessEnv,
 } from "../cf/local-env.js";
-import { buildWorkerApp } from "../cf/build.js";
+import { buildWorkspaceDeps, needsFrameworkBuild } from "../cf/build.js";
 import { runWithStderr } from "../db/run.js";
 import { findRepoRoot } from "../repo/root.js";
 import { recordResolved } from "../invocation.js";
@@ -57,11 +58,10 @@ interface TemporaryWranglerSession {
 
 export { renderWranglerEnvFile } from "../cf/local-env.js";
 
-// The app is built (see `buildWorkerApp`) before Wrangler starts, so this only
-// covers Wrangler bundling the built output and booting workerd. It also bounds
-// how long a broken bundle stalls the command: Wrangler reports the bundling
-// error but keeps watching for changes instead of exiting.
-const WRANGLER_READY_TIMEOUT_MS = 2 * 60_000;
+// Covers `vinext dev`'s first-run dependency optimization and workerd boot. It
+// also bounds how long a broken bundle stalls the command: both runtimes report
+// a bundling error but keep watching for changes instead of exiting.
+const WRANGLER_READY_TIMEOUT_MS = 3 * 60_000;
 const LOCAL_WORKFLOW_TIMEOUT_MS = 60 * 60_000;
 const WRANGLER_PROBE_PATH = "/cdn-cgi/local/explorer/api/workflows";
 
@@ -260,6 +260,21 @@ export function wranglerDevArgs(app: string, port: string): string[] {
   ];
 }
 
+/** `vinext dev` bound to loopback, where `isWranglerDevRunning` probes. */
+export function vinextDevArgs(app: string, port: string): string[] {
+  return [
+    "--filter",
+    app,
+    "exec",
+    "vinext",
+    "dev",
+    "--port",
+    port,
+    "--hostname",
+    "127.0.0.1",
+  ];
+}
+
 /** Probe Wrangler's Workflow explorer API, rather than merely checking a port. */
 export async function isWranglerDevRunning(
   port: string,
@@ -361,8 +376,9 @@ async function startTemporaryWrangler(
     port = String(free);
   }
 
+  const runtime = needsFrameworkBuild(app) ? "vinext dev" : "Wrangler";
   process.stdout.write(
-    `Preparing and starting a temporary Wrangler session for ${app} on port ${port}…\n`,
+    `Preparing and starting a temporary ${runtime} session for ${app} on port ${port}…\n`,
   );
 
   // Both callers of this function (`workflows serve`, `workflows run --tier
@@ -382,25 +398,36 @@ async function startTemporaryWrangler(
     throw err;
   }
 
-  // Without this, a fresh clone has no `dist/` for `wrangler dev` to boot
-  // (see `cf/build.ts`). Built before the credential-bearing env file exists,
-  // for the same reasons `cf preview` orders them that way.
-  const buildCode = await buildWorkerApp(app, loaded.env);
+  // Their `exports` point at gitignored `dist/`, so on a fresh clone the
+  // app's `next.config.ts` can't load without this (see `cf/build.ts`).
+  const buildCode = await buildWorkspaceDeps(app);
   if (buildCode !== 0) {
     process.stderr.write(
-      `devtools workflows: building ${app} failed (exit ${buildCode}); not starting Wrangler.\n`,
+      `devtools workflows: building ${app}'s workspace dependencies failed (exit ${buildCode}); not starting ${runtime}.\n`,
     );
     return null;
   }
 
-  const runtimeEnv = await createTemporaryWranglerEnv(app, loaded.env);
+  // A vinext app runs on `vinext dev`: the Cloudflare Vite plugin serves the
+  // same Workflow bindings and local explorer API as `wrangler dev`, straight
+  // from source. A bare `wrangler dev` against its pre-build wrangler.jsonc
+  // cannot bundle it at all (see `cf/build.ts`). The plugin takes no env file,
+  // so the scoped env rides the child's own environment instead.
+  const runtimeEnv = needsFrameworkBuild(app)
+    ? undefined
+    : await createTemporaryWranglerEnv(app, loaded.env);
   const child = spawn(
     "pnpm",
-    [...wranglerDevArgs(app, port), "--env-file", runtimeEnv.path],
+    runtimeEnv
+      ? [...wranglerDevArgs(app, port), "--env-file", runtimeEnv.path]
+      : vinextDevArgs(app, port),
     {
       cwd: findRepoRoot(),
       stdio: "inherit",
       detached: process.platform !== "win32",
+      ...(runtimeEnv
+        ? {}
+        : { env: await scopedProcessEnv(app, loaded.env, "development") }),
     },
   );
   let startupError: Error | undefined;
@@ -411,42 +438,42 @@ async function startTemporaryWrangler(
   const deadline = Date.now() + WRANGLER_READY_TIMEOUT_MS;
   while (Date.now() < deadline) {
     if (await isWranglerDevRunning(port)) {
-      process.stdout.write("Wrangler is ready.\n");
+      process.stdout.write(`${runtime} is ready.\n`);
       const stopOnParentExit = () => {
         signalProcessGroup(child, "SIGTERM");
-        runtimeEnv.remove();
+        runtimeEnv?.remove();
       };
       process.once("exit", stopOnParentExit);
       return {
         stop: async () => {
           process.off("exit", stopOnParentExit);
           await stopTemporaryWrangler(child);
-          runtimeEnv.remove();
+          runtimeEnv?.remove();
         },
         forceStop: () => {
           process.off("exit", stopOnParentExit);
           signalProcessGroup(child, "SIGKILL");
-          runtimeEnv.remove();
+          runtimeEnv?.remove();
         },
         port,
       };
     }
     if (startupError || child.exitCode !== null || child.signalCode !== null) {
       process.stderr.write(
-        `devtools workflows run: Wrangler stopped before it became ready${
+        `devtools workflows run: ${runtime} stopped before it became ready${
           startupError ? `: ${startupError.message}` : "."
         }\n`,
       );
-      runtimeEnv.remove();
+      runtimeEnv?.remove();
       return null;
     }
     await delay(250);
   }
 
   await stopTemporaryWrangler(child);
-  runtimeEnv.remove();
+  runtimeEnv?.remove();
   process.stderr.write(
-    `devtools workflows run: Wrangler did not become ready on port ${port} within ${WRANGLER_READY_TIMEOUT_MS / 60_000} minutes.\n`,
+    `devtools workflows run: ${runtime} did not become ready on port ${port} within ${WRANGLER_READY_TIMEOUT_MS / 60_000} minutes.\n`,
   );
   return null;
 }
@@ -783,7 +810,7 @@ export async function runWorkflowsRun(
   } finally {
     uninstallSignalCleanup?.();
     if (local?.temporary) {
-      process.stdout.write("Stopping the temporary Wrangler session…\n");
+      process.stdout.write("Stopping the temporary session…\n");
       await local.temporary.stop();
     }
   }

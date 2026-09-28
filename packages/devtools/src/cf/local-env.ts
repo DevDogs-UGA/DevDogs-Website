@@ -59,6 +59,40 @@ async function scopedKeys(
   ].sort();
 }
 
+/**
+ * The process env for a `vinext dev` child, scoped the way the temp
+ * `.dev.vars` is for `wrangler dev`.
+ *
+ * `@cloudflare/vite-plugin` has no `--env-file`: it reads the app dir's own
+ * `.dev.vars`/`.env`, or — with `CLOUDFLARE_INCLUDE_PROCESS_ENV` — its whole
+ * `process.env`, as Worker vars that override wrangler.jsonc's `vars`. So the
+ * scoping happens on the child's env instead: every key some OTHER app
+ * declares (and this app doesn't) is dropped, `NODE_ENV` is left to Vite, and
+ * `DEPLOY_ENV` is pinned to the tier rather than dropped, because the Vite
+ * process's own `next.config.ts` reads it too. Undeclared keys (PATH, HOME,
+ * pnpm's own) stay; the child needs them and they carry no app secrets.
+ */
+export async function scopedProcessEnv(
+  app: string,
+  environment: NodeJS.ProcessEnv,
+  tier: string,
+  entries?: readonly EnvEntry[],
+): Promise<NodeJS.ProcessEnv> {
+  if (!entries) {
+    await loadRegistry();
+    entries = (await loadEnv()).declarations();
+  }
+  const own = new Set(await scopedKeys(app, entries));
+  const scoped: NodeJS.ProcessEnv = { ...environment };
+  for (const entry of entries) {
+    if (entry.source !== app && !own.has(entry.key)) delete scoped[entry.key];
+  }
+  delete scoped.NODE_ENV;
+  scoped.DEPLOY_ENV = tier;
+  scoped.CLOUDFLARE_INCLUDE_PROCESS_ENV = "true";
+  return scoped;
+}
+
 /** Writes the mode-0600 `.dev.vars` into a fresh private temp directory. */
 function materializeEnvFile(
   keys: readonly string[],

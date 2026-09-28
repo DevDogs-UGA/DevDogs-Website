@@ -15,6 +15,9 @@
  * a checkout from running a stale bundle — or one a previous `cf preview
  * --tier staging` baked for another tier.
  *
+ * `workflows run`/`serve` use `vinext dev` instead and need none of this
+ * except the dependency build (`buildWorkspaceDeps`).
+ *
  * The app's workspace dependencies build first, the way `devtools run build`
  * orders them (see `run/pick.ts`): their `exports` resolve to gitignored
  * `dist/` output, so on a fresh clone `vinext build` fails to load
@@ -29,11 +32,19 @@ export function needsFrameworkBuild(app: string): boolean {
   return !NO_FRAMEWORK_BUILD.has(app);
 }
 
+function workspaceDepsBuildCommand(app: string): string[] {
+  return ["-r", "--if-present", "--filter", `${app}^...`, "run", "build"];
+}
+
+/** Build only `app`'s workspace dependencies — all `vinext dev` needs, since
+ * it compiles the app itself on demand. */
+export function buildWorkspaceDeps(app: string): Promise<number> {
+  return run(workspaceDepsBuildCommand(app));
+}
+
 /** The pnpm invocations `buildWorkerApp` runs, in order. */
 export function workerBuildCommands(app: string): string[][] {
-  const commands = [
-    ["-r", "--if-present", "--filter", `${app}^...`, "run", "build"],
-  ];
+  const commands = [workspaceDepsBuildCommand(app)];
   if (needsFrameworkBuild(app)) {
     commands.push(["--filter", app, "exec", "vinext", "build"]);
   }
@@ -50,8 +61,8 @@ export async function buildWorkerApp(
   app: string,
   env?: NodeJS.ProcessEnv,
 ): Promise<number> {
-  const [deps, ...framework] = workerBuildCommands(app);
-  const depsCode = await run(deps!);
+  const [, ...framework] = workerBuildCommands(app);
+  const depsCode = await buildWorkspaceDeps(app);
   if (depsCode !== 0) return depsCode;
   for (const command of framework) {
     const code = await run(command, env);

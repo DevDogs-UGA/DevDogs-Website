@@ -2,7 +2,11 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { z } from "zod";
 import { describe, expect, it, vi } from "vitest";
 import type { EnvEntry } from "@devdogsuga/env";
-import { createTemporaryWranglerEnv, withWranglerEnv } from "./local-env.js";
+import {
+  createTemporaryWranglerEnv,
+  scopedProcessEnv,
+  withWranglerEnv,
+} from "./local-env.js";
 
 /** The fields `withWranglerEnv` reads are `key`, `source`, and `meta`; the rest
  * exist only to satisfy `EnvEntry`'s shape. */
@@ -267,5 +271,42 @@ describe("createTemporaryWranglerEnv", () => {
       if (previous === undefined) delete process.env.PLATFORM_REST_URL;
       else process.env.PLATFORM_REST_URL = previous;
     }
+  });
+});
+
+describe("scopedProcessEnv", () => {
+  const entries = [
+    entry("DB_URL", "schedule-builder"),
+    entry("DB_URL", "platform"), // shared: this app declares it too
+    entry("GITHUB_APP_PRIVATE_KEY", "platform"),
+    entry("DEPLOY_ENV", "schedule-builder", { scope: "default" }),
+  ];
+
+  it("drops keys only other apps declare and keeps shared and undeclared ones", async () => {
+    const env = await scopedProcessEnv(
+      "schedule-builder",
+      {
+        DB_URL: "postgres://local",
+        GITHUB_APP_PRIVATE_KEY: "secret",
+        PATH: "/usr/bin",
+      },
+      "development",
+      entries,
+    );
+    expect(env.DB_URL).toBe("postgres://local");
+    expect(env.PATH).toBe("/usr/bin");
+    expect(env).not.toHaveProperty("GITHUB_APP_PRIVATE_KEY");
+  });
+
+  it("leaves NODE_ENV to Vite, pins DEPLOY_ENV, and exposes the env to the Worker", async () => {
+    const env = await scopedProcessEnv(
+      "schedule-builder",
+      { NODE_ENV: "production", DEPLOY_ENV: "" },
+      "development",
+      entries,
+    );
+    expect(env).not.toHaveProperty("NODE_ENV");
+    expect(env.DEPLOY_ENV).toBe("development");
+    expect(env.CLOUDFLARE_INCLUDE_PROCESS_ENV).toBe("true");
   });
 });

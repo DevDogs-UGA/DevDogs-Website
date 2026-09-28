@@ -81,6 +81,7 @@ const {
   waitForLocalWorkflow,
   workflowChoices,
   workflowTriggerArgs,
+  vinextDevArgs,
   wranglerDevArgs,
   wranglerDevConnectionHint,
   wranglerDevNotRunningHint,
@@ -289,6 +290,20 @@ describe("local Wrangler connection diagnostics", () => {
       "--port",
       "9999",
       "--show-interactive-dev-session=false",
+    ]);
+  });
+
+  it("binds vinext dev to the loopback address the readiness probe uses", () => {
+    expect(vinextDevArgs("schedule-builder", "9999")).toEqual([
+      "--filter",
+      "schedule-builder",
+      "exec",
+      "vinext",
+      "dev",
+      "--port",
+      "9999",
+      "--hostname",
+      "127.0.0.1",
     ]);
   });
 
