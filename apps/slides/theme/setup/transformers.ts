@@ -22,7 +22,8 @@
 // `{build}` in place of ranges builds the step up instead: a Magic Move that
 // starts from the file one commit earlier (the lines about to change lit)
 // and adds one chunk of the commit's diff per click, each new chunk lit as it
-// lands, then lights the whole step at once. Chunks are the diff's hunks,
+// lands. Copy and the Discord button take every line the step changed, not
+// just the last click's. Chunks are the diff's hunks,
 // with any hunk taller than the code window split at its blank lines. The
 // frames are generated from `git diff`, so they can't drift from the repo
 // either.
@@ -249,16 +250,10 @@ function build(repo: string, rev: string | undefined, file: string, spec: string
     })
     frames.push(frame(before, after, all, new Set(applied), new Set(group)))
   }
-  // One last click lights the whole step at once: a recap to copy from, and
-  // what copy and the Discord button take (the final step's ranges).
-  const everything = frame(before, after, all, applied, added).hot
-  const blocks = frames.map((f, i) => {
-    const ranges = i === frames.length - 1 && groups.length > 1
-      ? `${rangeOf(f.hot)}|${rangeOf(everything)}`
-      : rangeOf(f.hot)
-    return `\`\`\`${lang} {${ranges}}{lines:true}\n${f.lines.join('\n')}\n\`\`\``
-  })
-  return `\`\`\`\`md magic-move {lines:true,overview:${groups.length > 1}}\n${blocks.join('\n')}\n\`\`\`\``
+  // Copy and the Discord button take the whole step, not the last click.
+  const focus = rangeOf(frame(before, after, all, applied, added).hot)
+  const blocks = frames.map(f => `\`\`\`${lang} {${rangeOf(f.hot)}}{lines:true}\n${f.lines.join('\n')}\n\`\`\``)
+  return `\`\`\`\`md magic-move {lines:true,focus:'${focus}'}\n${blocks.join('\n')}\n\`\`\`\``
 }
 
 export function expandWorkshopImports(ctx: MarkdownTransformContext) {

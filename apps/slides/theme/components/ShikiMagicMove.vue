@@ -9,7 +9,8 @@
 //
 // Also, as CodeBlockWrapper.vue does for plain blocks: the editor viewport
 // inside a code window (lib/viewport.ts), and copy + the Discord button,
-// both taking the final step's focus (lib/snippets.ts).
+// both taking the final step's focus, or a build's whole step
+// (setup/transformers.ts sets `focus`) (lib/snippets.ts).
 import { computed, nextTick, onMounted, onUnmounted, ref, useAttrs, watch } from 'vue'
 import lz from 'lz-string'
 import { useNav } from '@slidev/client'
@@ -32,10 +33,7 @@ const scope = useSnippetScope()
 const root = ref<HTMLElement>()
 const track = ref<HTMLElement>()
 const preEl = ref<HTMLElement>()
-// A build's recap (setup/transformers.ts sets `overview`): on the last
-// click, the whole file shrinks to fit so the step shows in context.
-const overview = ref(false)
-const { offset, scale, animate } = useCodeViewport(root, track, overview)
+const { offset, animate } = useCodeViewport(root, track)
 const { $clicksContext: clicks } = useSlideContext()
 const { isPrintMode } = useNav()
 
@@ -130,8 +128,6 @@ onMounted(() => {
       }
       stepIndex.value = step
       rangeStr.value = range
-      overview.value = Boolean(attrs.overview) && step === steps.length - 1
-        && ranges[step].length > 1 && range === ranges[step].at(-1)
       nextTick(highlight)
     },
     { immediate: true },
@@ -141,7 +137,7 @@ onMounted(() => {
 function snippet(): Snippet {
   const last = steps.length - 1
   return {
-    ...focusOf(steps[last].code, 1, stepRanges[last] ?? []),
+    ...focusOf(steps[last].code, 1, attrs.focus ? [String(attrs.focus)] : stepRanges[last] ?? []),
     lang: steps[last].lang,
     file: scope.file,
     track: scope.track,
@@ -155,7 +151,7 @@ function snippet(): Snippet {
       ref="track"
       class="dd-code-track"
       :class="{ 'dd-code-track-animate': animate }"
-      :style="{ transform: `translateY(${-offset}px) scale(${scale})`, transformOrigin: 'top left' }"
+      :style="{ transform: `translateY(${-offset}px)` }"
     >
       <div class="slidev-code-wrapper">
         <pre ref="preEl" class="slidev-code shiki dd-lines" :style="rootStyle"><TransitionGroup

@@ -24,7 +24,7 @@ const attrs = useAttrs()
 const scope = useSnippetScope()
 const root = ref<HTMLElement>()
 const track = ref<HTMLElement>()
-const { offset, scale, animate } = useCodeViewport(root, track)
+const { offset, animate } = useCodeViewport(root, track)
 
 const ranges = computed(() => (attrs.ranges as string[] | undefined) ?? [])
 const startLine = computed(() => Number(attrs.startLine ?? attrs['start-line'] ?? 1))
@@ -67,7 +67,7 @@ function snippet(): Snippet {
       ref="track"
       class="dd-code-track"
       :class="{ 'dd-code-track-animate': animate }"
-      :style="{ transform: `translateY(${-offset}px) scale(${scale})`, transformOrigin: 'top left' }"
+      :style="{ transform: `translateY(${-offset}px)` }"
     >
       <Builtin v-bind="passthrough">
         <slot />

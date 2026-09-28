@@ -7,7 +7,7 @@ chip: LIVE DEMO
 
 # Build It Live
 
-<!-- Presenter notes: Sloan is back at the podium. Shruti's concepts map onto real code now: two laptops, one Supabase project, projected side by side. Both laptops type the code live (or paste it from the slides); if one presenter is alone, drive the web side and paste the Flutter side from the slides. Every code slide builds the step up one chunk per click, with a tip at the bottom; the last click lights the whole step, and that's what the Discord button posts. -->
+<!-- Presenter notes: Sloan is back at the podium. Shruti's concepts map onto real code now: two laptops, one Supabase project, projected side by side. Both laptops type the code live (or paste it from the slides); if one presenter is alone, drive the web side and paste the Flutter side from the slides. Every code slide builds the step up one chunk per click, with a tip at the bottom; the Discord button posts the whole step, whichever click you're on. -->
 
 ---
 layout: dual-code
@@ -172,11 +172,6 @@ file:
 `createClient` builds one Supabase client, and every component imports this same one.
 
 </template>
-<template #3>
-
-That's the whole file: one shared client for the app.
-
-</template>
 </CodeTips>
 
 </Track>
@@ -198,11 +193,6 @@ That's the whole file: one shared client for the app.
 <template #2>
 
 `String.fromEnvironment` reads the values that `--dart-define-from-file=.env.local` baked in when you ran the app.
-
-</template>
-<template #3>
-
-That's the whole change: Supabase starts up before the app does.
 
 </template>
 </CodeTips>
@@ -258,11 +248,6 @@ The form goes away for now. Posting comes back in step 3, once people can sign i
 Each field now comes from the database row: `author_name`, `created_at`, and `body`.
 
 </template>
-<template #7>
-
-That's step 1: every lit line is what changed.
-
-</template>
 </CodeTips>
 
 ::right::
@@ -303,11 +288,6 @@ The form goes away for now, and each row arrives as a `Map`: `message['body']`.
 <template #6>
 
 `created_at` arrives as text, so `_formatTime` parses it before formatting.
-
-</template>
-<template #7>
-
-That's step 1: every lit line is what changed.
 
 </template>
 </CodeTips>
@@ -402,11 +382,6 @@ Signing in only needs the client we already have: it's all under `supabase.auth`
 The note under the buttons now says what's coming next.
 
 </template>
-<template #7>
-
-That's step 2: every lit line is what changed.
-
-</template>
 </CodeTips>
 
 ::right::
@@ -447,11 +422,6 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 <template #6>
 
 `session == null ? … : …` picks which button to show.
-
-</template>
-<template #7>
-
-That's step 2: every lit line is what changed.
 
 </template>
 </CodeTips>
@@ -538,11 +508,6 @@ Put the new row at the top of the list and clear the form.
 The message box works the same way, and signed-out visitors get a hint instead of the form.
 
 </template>
-<template #7>
-
-That's step 3: every lit line is what changed.
-
-</template>
 </CodeTips>
 
 ::right::
@@ -583,11 +548,6 @@ A `TextEditingController` holds what's typed in a text field.
 <template #6>
 
 Signed-out visitors get a hint instead of the form.
-
-</template>
-<template #7>
-
-That's step 3: every lit line is what changed.
 
 </template>
 </CodeTips>
@@ -713,11 +673,6 @@ Only the message is required now.
 The insert sends just the message. `profiles(name)` embeds the author's profile in the row that comes back.
 
 </template>
-<template #4>
-
-That's the posting side of step 4.
-
-</template>
 </CodeTips>
 
 ::right::
@@ -743,11 +698,6 @@ Only the message is required now.
 <template #3>
 
 The insert sends just the message; the server knows who's signed in.
-
-</template>
-<template #4>
-
-That's the posting side of step 4.
 
 </template>
 </CodeTips>
@@ -786,11 +736,6 @@ Names live in `profiles` now, so the page fetches them along with each message.
 `?.` and `??`: show the profile's name if there is one, otherwise "Unknown".
 
 </template>
-<template #4>
-
-That's step 4: every lit line is what changed.
-
-</template>
 </CodeTips>
 
 ::right::
@@ -816,11 +761,6 @@ The profile arrives as a `Map` (or `null`); `?.` and `??` fall back to "Unknown"
 <template #3>
 
 The tile's title shows that name.
-
-</template>
-<template #4>
-
-That's step 4: every lit line is what changed.
 
 </template>
 </CodeTips>
@@ -887,11 +827,6 @@ Deleting takes a handler and a button, shown only on your own messages.
 `session?.user.id === message.user_id` shows the button only on your own messages.
 
 </template>
-<template #3>
-
-That's step 5: every lit line is what changed.
-
-</template>
 </CodeTips>
 
 ::right::
@@ -912,11 +847,6 @@ Deleting takes a handler and a button, shown only on your own messages.
 <template #2>
 
 `isOwnMessage` compares the signed-in user to the message's author; only then does the tile get a delete button.
-
-</template>
-<template #3>
-
-That's step 5: every lit line is what changed.
 
 </template>
 </CodeTips>

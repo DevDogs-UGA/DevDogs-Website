@@ -7,7 +7,7 @@
 // dimmed code around them filling the rest, and it glides to the next range
 // on each click. Outside a frame the block is its natural height and nothing
 // moves.
-import { onMounted, onUnmounted, ref, watch, type Ref } from 'vue'
+import { onMounted, onUnmounted, ref, type Ref } from 'vue'
 
 // Top of `el` in `ancestor`'s box. offsetTop ignores transforms, so this is
 // where a Magic Move token lands, not where its animation currently has it.
@@ -21,15 +21,11 @@ function topIn(el: HTMLElement, ancestor: HTMLElement): number {
   return y
 }
 
-// `overview` (a build's recap click): instead of panning, shrink the whole
-// file to fit the window, so the step's changes show in context at once.
 export function useCodeViewport(
   root: Ref<HTMLElement | undefined>,
   track: Ref<HTMLElement | undefined>,
-  overview?: Ref<boolean>,
 ) {
   const offset = ref(0)
-  const scale = ref(1)
   // No glide into the first position, only between clicks. A Magic Move
   // block highlights its first step a few ticks after mounting, so the
   // first position isn't known on mount either; give it a moment.
@@ -51,8 +47,7 @@ export function useCodeViewport(
     }
     shown = height > 0
     const total = t.offsetHeight
-    scale.value = overview?.value && height && total > height ? height / total : 1
-    if (!height || total <= height || overview?.value) {
+    if (!height || total <= height) {
       offset.value = 0
       return
     }
@@ -104,7 +99,6 @@ export function useCodeViewport(
     if (root.value) resizes.observe(root.value)
     if (track.value) resizes.observe(track.value)
   })
-  if (overview) watch(overview, schedule)
 
   onUnmounted(() => {
     cancelAnimationFrame(frame)
@@ -113,5 +107,5 @@ export function useCodeViewport(
     resizes?.disconnect()
   })
 
-  return { offset, scale, animate }
+  return { offset, animate }
 }

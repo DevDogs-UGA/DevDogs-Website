@@ -563,9 +563,7 @@ shell rows a little indented, like a real terminal.
 
 Window titlebars (`components/WindowTitle.vue`): the labels "Terminal" and
 "Editor" draw as icons so the file path gets the room, and a path too long
-for the bar is cut from the left, so the file name always shows. A build's
-recap click (the last one) shrinks the whole file to fit the window, with
-every changed line lit. Two blocks in one window split its
+for the bar is cut from the left, so the file name always shows. Two blocks in one window split its
 height, with a dashed rule between them; a shell block keeps its natural
 height and the file below it takes the rest.
 
@@ -590,8 +588,8 @@ which are git submodules pinned to their `02-supabase` answer key:
   particular and shows the top of the file.
 - `{build}` instead of ranges builds a step up from its diff: the file one
   commit earlier (the lines about to change lit), then one chunk of the
-  commit per click, each lit as it lands, then one last click lighting the
-  whole step (what copy and Discord take). Hunks taller than the window
+  commit per click, each lit as it lands. Copy and Discord take every line
+  the step changed, not just the last click's. Hunks taller than the window
   split at blank lines. `{build:1,2|3|4-5}` groups chunks into clicks (use
   it to give both columns the same click count: the mobile laptop follows
   the presenter's clicks); `{build:[3,6-10]1,2|4}` starts with chunks 3 and
