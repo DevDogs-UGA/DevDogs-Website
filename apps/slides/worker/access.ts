@@ -21,7 +21,7 @@ function keysFor(team: string) {
 
 // undefined when the request may go on, otherwise the response refusing it.
 export async function checkAccess(request: Request, env: Env): Promise<Response | undefined> {
-  if ((env as { ACCESS_LOCAL_DEV?: string }).ACCESS_LOCAL_DEV === 'true') return undefined
+  if (env.ACCESS_LOCAL_DEV === 'true') return undefined
 
   const team = env.ACCESS_TEAM_DOMAIN
   const aud = env.ACCESS_AUD

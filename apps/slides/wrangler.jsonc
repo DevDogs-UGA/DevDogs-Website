@@ -34,11 +34,9 @@
     "ACCESS_TEAM_DOMAIN": "",
     "ACCESS_AUD": ""
   },
-  // Secrets, set with `wrangler secret put`:
+  // Secrets, set with `wrangler secret put` (typed in worker/env.d.ts; not
+  // `secrets.required`, which would block deploying until they're set):
   //   DISCORD_SNIPPETS_WEBHOOK_WEB     DogDays (Next.js) channel
   //   DISCORD_SNIPPETS_WEBHOOK_MOBILE  DogPack (Flutter) channel
-  "secrets": {
-    "required": ["DISCORD_SNIPPETS_WEBHOOK_WEB", "DISCORD_SNIPPETS_WEBHOOK_MOBILE"]
-  },
   "observability": { "logs": { "enabled": true } }
 }

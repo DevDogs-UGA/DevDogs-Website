@@ -461,8 +461,9 @@ comes back.
 
 ### Setup and deploy
 
-`pnpm run deploy` from `apps/slides/` builds the deck and deploys the
-Worker (it needs the workshop submodules and `wrangler login` to the
+`pnpm run deploy` from `apps/slides/` builds the deck, drops the
+`_redirects` file Slidev writes (Workers rejects it; the Worker's SPA
+fallback does its job), and deploys the Worker (it needs the workshop submodules and `wrangler login` to the
 DevDogs account). The Worker needs:
 
 - An Access application covering `slides-sync.devdogsuga.org`, with a
