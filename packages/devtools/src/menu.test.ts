@@ -431,23 +431,19 @@ describe("adapts to the machine", () => {
     }
   });
 
-  it("says why a command will not work rather than hiding it", async () => {
-    const drawn = await screen(STOPPED, ["moderation", "catalog"]);
-    const roundtrip = drawn.find((entry) => entry.label === "roundtrip");
-
-    // Still on screen. `needs` explains, it does not remove.
-    expect(roundtrip).toBeDefined();
-    expect(roundtrip!.hint).toContain(
-      "Supabase is not running on this machine",
-    );
-  });
-
-  it("leaves the hint alone when nothing is in the way", async () => {
-    const drawn = await screen(RUNNING, ["moderation", "catalog"]);
-    const roundtrip = drawn.find((entry) => entry.label === "roundtrip");
-
-    expect(roundtrip!.hint).toBe(findCommand(["moderation", "roundtrip"])!.hint);
-  });
+  /**
+   * `needs` itself is unit-tested directly against `blockedBecause`
+   * (`environment.test.ts`) — this integration pair used to exercise it
+   * through the real tree too, via `moderation roundtrip`. That command is
+   * gone (the app repo's CI covers the same round trip more thoroughly), and
+   * nothing left in the tree carries `needs` any more: `moderation
+   * check`/`grant-root` moved onto the session system alongside `db
+   * migrate`/`db reset`, which never gated on the local Docker stack either
+   * — a hosted session has no local stack to be "not running" in the first
+   * place. There is deliberately no replacement fixture command here; adding
+   * one back just to keep this integration pair alive would be testing the
+   * test, not the tree.
+   */
 
   /**
    * The "Database" group now holds exactly one command, `db`, and a group
@@ -486,7 +482,7 @@ describe("adapts to the machine", () => {
   });
 
   it("leaves a group without scopes unlabelled", async () => {
-    const drawn = await screen(RUNNING, ["moderation", "catalog"]);
+    const drawn = await screen(RUNNING, ["moderation", "check"]);
     for (const entry of drawn) {
       expect(entry.hint ?? "", entry.label).not.toContain(" · ");
     }

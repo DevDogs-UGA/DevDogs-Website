@@ -172,10 +172,16 @@ export interface CommandNode {
   /**
    * Offer this always, but say on the line why it will not work right now.
    *
-   * The four moderation commands carry it: each one opens a client against
-   * Supabase on this machine and has no remote path at all, so with it down
-   * they are a spinner followed by a connection error. The hint turns that
-   * into a sentence the reader sees before choosing.
+   * Nothing in the tree carries it at the moment — the four moderation
+   * commands were the only ones that ever did, back when each opened a
+   * client against Supabase on this machine with no remote path at all, so
+   * with it down they were a spinner followed by a connection error. They
+   * moved onto the session system alongside `db migrate`/`db reset`, neither
+   * of which has ever gated on a local probe (a hosted session has no local
+   * stack to probe), so nothing here needs the hint any more. Left declared
+   * rather than deleted: a future local-only command is exactly the shape of
+   * thing that would want it back, and `blockedBecause`
+   * (`environment.test.ts`) still exercises the mechanism directly.
    */
   needs?: Condition;
   /**
@@ -512,47 +518,65 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
       {
         name: "moderation",
         summary: "An app's moderation integration: the catalog and its wiring.",
-        hint: "check, catalog, roundtrip",
+        hint: "check",
         subcommands: [
           {
             name: "check",
-            summary: "Check an app's moderation integration.",
-            hint: "and whether the catalog holds up",
-            needs: "instance-running",
+            summary:
+              "List the catalog, or check one app's moderation integration.",
+            hint: "reasons and content types with no --app; per-app wiring with one",
+            // No `needs: "instance-running"` any more — this resolves through
+            // the session system now (`resolveInstance`, `instance.ts`), the
+            // same as `db migrate`/`db reset`, so it works against a hosted
+            // development database with no local stack at all. Refuses
+            // staging/production itself, with its own message, rather than a
+            // menu-only hint.
             options: [
               {
                 flag: "--app",
                 value: "<slug>",
-                summary: "App to check. Asked for when absent.",
+                summary: "App to check. Prints the catalog when absent.",
               },
               JSON_FLAG,
             ],
-          },
-          {
-            name: "catalog",
-            summary:
-              "List the report reasons and content types in the database.",
-            hint: "what can be reported here",
-            needs: "instance-running",
-            options: [JSON_FLAG],
-          },
-          {
-            name: "roundtrip",
-            summary: "File a report, quarantine it, and check the freeze.",
-            hint: "end to end, then cleans up",
-            needs: "instance-running",
           },
         ],
       },
       {
         name: "grant-root",
         summary: "Give an account every permission on your own database.",
-        needs: "instance-running",
+        // Also on the session system now — every tier, not just local. See
+        // `check`'s note above; production additionally gets `YES`'s stern
+        // confirmation, the same treatment `db reset` gives it.
         options: [
           {
             flag: "--user",
             value: "<email>",
             summary: "Account to grant Root to. Asked for when absent.",
+          },
+          YES,
+        ],
+      },
+    ],
+  },
+  {
+    title: "Personas",
+    commands: [
+      {
+        name: "persona",
+        summary: "A throwaway member or moderator account for development.",
+        hint: "member, moderator, or --clean",
+        options: [
+          {
+            flag: "--clean",
+            summary:
+              "Delete every account this command has created, instead of making one.",
+            prompt: {
+              kind: "confirm",
+              message:
+                "Clean up every persona this command created, instead of making one?",
+              initial: false,
+            },
           },
         ],
       },
@@ -1307,6 +1331,10 @@ export const GROUPS: readonly CommandGroup[] = [
   {
     title: "Moderation",
     commands: commands("moderation", "grant-root"),
+  },
+  {
+    title: "Personas",
+    commands: commands("persona"),
   },
   {
     title: "Environment",

@@ -26,13 +26,9 @@ import {
   select,
   spinner,
 } from "@clack/prompts";
-import {
-  assertMigrated,
-  detectLocalInstance,
-  PERSONAS,
-  type Instance,
-} from "./instance.js";
-import { conformance, listApps, quarantineRoundTrip } from "./moderation.js";
+import { resolveInstance, type Instance } from "./instance.js";
+import { conformance, withTemporaryModerator } from "./moderation.js";
+import { runPersona, refuseUnlessDevelopment } from "./persona.js";
 import { runEnvironmentDoctor } from "./environment-doctor.js";
 import {
   currentRootHolder,
@@ -106,13 +102,6 @@ import { runCf } from "./cf/commands.js";
 import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
 import { ownVersion } from "./version.js";
 
-const MODERATION_COMMANDS = ["moderation", "grant-root"] as const;
-type ModerationCommand = (typeof MODERATION_COMMANDS)[number];
-
-function isModerationCommand(value: string): value is ModerationCommand {
-  return (MODERATION_COMMANDS as readonly string[]).includes(value);
-}
-
 function flagValue(rest: string[], flag: string): string | undefined {
   const index = rest.indexOf(flag);
   if (index === -1) return undefined;
@@ -141,49 +130,6 @@ function refuseRetiredDbFlags(rest: readonly string[]): boolean {
     }
   }
   return false;
-}
-
-// ── Connecting ───────────────────────────────────────────────────────────────
-
-/**
- * Finds the local stack and checks it has been migrated.
- *
- * These commands only ever run against a local stack, and that is structural
- * rather than a rule they follow: `detectLocalInstance` reads `supabase
- * status`, which describes the Docker stack on this machine and nothing else.
- * There is no remote project for it to return, so the tier check that used to
- * sit here, reading a `production` flag out of the database, bought nothing and
- * has been removed along with the table it read.
- */
-async function connect(): Promise<Instance | null> {
-  const s = spinner();
-  s.start("Looking for your database");
-
-  let instance: Instance;
-  try {
-    instance = detectLocalInstance();
-  } catch (err) {
-    s.stop("Could not find a running database");
-    explain("The local Supabase stack is not reachable.", errorMessage(err), [
-      "1. Make sure Docker is running",
-      "2. Run `pnpm devtools db start` (or choose Database → start in the menu)",
-      "3. Confirm with `supabase status`",
-    ]);
-    return null;
-  }
-
-  try {
-    await assertMigrated(instance);
-    s.stop(`Connected to your database at ${instance.apiUrl}`);
-  } catch (err) {
-    s.stop("Connected, but the schema is not there");
-    explain("That instance cannot be used here.", errorMessage(err), [
-      "Run `pnpm devtools db reset` to rebuild your own database from migrations and seeds.",
-    ]);
-    return null;
-  }
-
-  return instance;
 }
 
 // ── Commands ─────────────────────────────────────────────────────────────────
@@ -296,49 +242,59 @@ async function runStack(command: StackCommand, rest: string[]): Promise<void> {
   }
 }
 
-async function runModerationCatalog(instance: Instance): Promise<void> {
-  const catalog = await readCatalog(instance);
-  note(renderCatalog(catalog), "Moderation catalog");
-}
-
+/**
+ * `moderation check [--app <slug>]`.
+ *
+ * With no app, this is what `moderation catalog` used to be on its own: the
+ * report reasons and every app's moderatable content types, the two halves
+ * of "what can be reported here" that used to have no answer anywhere but
+ * the database. With one, it runs `platform.conformance_check()` for that
+ * app, as it always did. Folded into one command because they were always
+ * the same question at two different zoom levels, asked through two
+ * differently-named commands for no reason better than history.
+ *
+ * Both halves run inside ONE `withTemporaryModerator` — one throwaway
+ * account, created and torn down around whichever half ran, rather than a
+ * separate one per RPC call.
+ */
 async function runModerationCheck(
   instance: Instance,
   appSlug?: string,
 ): Promise<void> {
-  let slug = appSlug;
-
-  if (!slug) {
-    const apps = await listApps(instance);
-    slug = unwrap(
-      await select({
-        message: "Which app should I check?",
-        options: apps.map((value) => ({
-          value,
-          label: value,
-          hint: value === "platform" ? "the worked example" : undefined,
-        })),
-      }),
-    );
+  if (!appSlug) {
+    const s = spinner();
+    s.start("Signing in as a temporary moderator");
+    try {
+      const catalog = await withTemporaryModerator(instance, readCatalog);
+      s.stop("Read the catalog");
+      note(renderCatalog(catalog), "Moderation catalog");
+    } catch (err) {
+      s.stop("Could not read the catalog");
+      explain("Reading the catalog failed.", errorMessage(err));
+      process.exitCode = 1;
+    }
+    return;
   }
 
   const s = spinner();
-  s.start(`Checking ${slug}`);
+  s.start(`Checking ${appSlug}`);
 
   let types: Awaited<ReturnType<typeof conformance>>;
   try {
-    types = await conformance(instance, slug);
-    s.stop(`Checked ${slug}`);
+    types = await withTemporaryModerator(instance, (client) =>
+      conformance(client, appSlug),
+    );
+    s.stop(`Checked ${appSlug}`);
   } catch (err) {
     s.stop("The check could not run");
-    explain("conformance_check() failed.", errorMessage(err), [
-      `Signing in as ${PERSONAS.moderator} needs the seeds — try \`pnpm devtools db reset\`.`,
-    ]);
+    explain("conformance_check() failed.", errorMessage(err));
+    process.exitCode = 1;
     return;
   }
 
   if (types.length === 0) {
     note(
-      `${slug} has no moderatable content types.\n\n` +
+      `${appSlug} has no moderatable content types.\n\n` +
         "A table becomes one by carrying a foreign key to\n" +
         'platform."reportResolutions" -- adding that column is the whole\n' +
         "registration. See docs/platform/reporting-and-feedback.md.",
@@ -358,45 +314,12 @@ async function runModerationCheck(
   }
 
   if (failures === 0) {
-    log.success(`${slug} looks correctly integrated.`);
+    log.success(`${appSlug} looks correctly integrated.`);
   } else {
     log.warn(
       `${failures} check${failures === 1 ? "" : "s"} failed. The last two are ` +
         "heuristics over policy text, so a failure there is worth reading rather " +
         "than trusting outright.",
-    );
-  }
-}
-
-async function runModerationRoundTrip(instance: Instance): Promise<void> {
-  const s = spinner();
-  s.start("Filing a report, quarantining it, and looking again");
-
-  try {
-    const steps = await quarantineRoundTrip(instance);
-    s.stop("Round-trip finished");
-
-    note(renderChecks(steps), "What happened");
-
-    const failed = steps.filter((step) => !step.ok);
-    if (failed.length === 0) {
-      log.success(
-        "Quarantine freezes a reported profile and resets the display name, and the fixtures were cleaned up.",
-      );
-    } else {
-      log.warn(
-        `${failed.length} step${failed.length === 1 ? "" : "s"} did not hold. ` +
-          "The fixtures were still cleaned up.",
-      );
-    }
-  } catch (err) {
-    s.stop("The round-trip could not run");
-    explain(
-      "Something went wrong before the checks could finish.",
-      errorMessage(err),
-      [
-        "`pnpm devtools db reset` rebuilds the database with the seeded personas and the open report they act on.",
-      ],
     );
   }
 }
@@ -408,10 +331,18 @@ async function runModerationRoundTrip(instance: Instance): Promise<void> {
  * different actions wearing the same name: one gives you a console you did not
  * have, the other takes somebody else's away. `userRoles_root_singleton` means
  * there is no state where both hold it, so the release cannot be skipped.
+ *
+ * Runs on any tier the session resolves to now — `resolveInstance` (see
+ * `instance.ts`) replaced the local-only `supabase status` probe this used
+ * to go through — so a PRODUCTION target gets the same `--yes`/stern-confirm
+ * treatment `db reset` does: this is a privilege escalation on whatever
+ * database it runs against, and on production that database is live.
  */
 async function runGrantRoot(
+  connection: DbConnection,
   instance: Instance,
-  userEmail?: string,
+  userEmail: string | undefined,
+  rest: string[],
 ): Promise<void> {
   let holder: Awaited<ReturnType<typeof currentRootHolder>>;
   let candidates: Awaited<ReturnType<typeof listCandidates>>;
@@ -430,7 +361,9 @@ async function runGrantRoot(
   if (candidates.length === 0) {
     explain("There are no accounts on this database yet.", "", [
       "Sign in once through the app, then run this again.",
-      `Or use a seeded persona: ${PERSONAS.member}, password \`password\`.`,
+      ...(connection.tier === "development"
+        ? ["Or create one: `pnpm devtools persona member`."]
+        : []),
     ]);
     return;
   }
@@ -463,15 +396,45 @@ async function runGrantRoot(
     return;
   }
 
-  try {
-    if (holder) {
+  const action = holder
+    ? `Take Root away from ${holder.email} and give it to ${target.email}`
+    : `Give ${target.email} Root, which confers every permission`;
+
+  if (connection.tier === "production") {
+    // ⚠️ SAFETY: same gate `runStack` uses for `db reset`/`migrate` — see
+    // that function's header for why `--yes` is checked before anything
+    // TTY-dependent runs.
+    if (!rest.includes("--yes")) {
+      if (!process.stdin.isTTY) {
+        process.stderr.write(
+          "devtools grant-root: --yes is required to run non-interactively.\n",
+        );
+        process.exitCode = 1;
+        return;
+      }
       const confirmed = unwrap(
         await confirm({
-          message: `Root is held by ${holder.email}. Take it away and give it to ${target.email}?`,
+          message: `${action} on the PRODUCTION database. Continue?`,
           initialValue: false,
         }),
       );
       if (!confirmed) bail("Left Root where it was.");
+    }
+  } else if (holder) {
+    // Transferring away from someone still asks, even off production —
+    // taking a console away from an existing holder is worth a question
+    // granting to nobody-yet-holding is not.
+    const confirmed = unwrap(
+      await confirm({
+        message: `Root is held by ${holder.email}. Take it away and give it to ${target.email}?`,
+        initialValue: false,
+      }),
+    );
+    if (!confirmed) bail("Left Root where it was.");
+  }
+
+  try {
+    if (holder) {
       await transferRoot(instance, holder.userId, target.userId);
     } else {
       await grantRoot(instance, target.userId);
@@ -482,7 +445,8 @@ async function runGrantRoot(
     );
   } catch (err) {
     explain("Could not grant Root.", errorMessage(err), [
-      "Seeds create the Root role definition — try `pnpm devtools db reset` first.",
+      "Seeds create the Root role definition — try `pnpm devtools db reset` " +
+        "(development) or `pnpm devtools db seed production` (staging/production) first.",
     ]);
     process.exitCode = 1;
   }
@@ -1113,12 +1077,24 @@ async function dispatch(argv: string[]): Promise<string | null> {
 
   // The old moderation names, refused with the new namespace rather than
   // falling into "Unknown command" — same rationale as `secrets` above.
-  // `doctor` itself is NOT here: that name now belongs to the environment
-  // checker below, a deliberate reuse rather than a collision.
-  if (first === "catalog" || first === "roundtrip") {
-    explain(`\`${first}\` is now \`devtools moderation ${first}\`.`, "", [
-      `pnpm devtools moderation ${first}`,
+  // `catalog` still has an answer (`moderation check`, now folded together —
+  // see that function's header); `roundtrip` does not, because the command it
+  // named is gone outright, not renamed. `doctor` itself is NOT here: that
+  // name now belongs to the environment checker below, a deliberate reuse
+  // rather than a collision.
+  if (first === "catalog") {
+    explain("`catalog` is now `devtools moderation check`.", "", [
+      "pnpm devtools moderation check",
     ]);
+    process.exitCode = 1;
+    return null;
+  }
+  if (first === "roundtrip") {
+    explain(
+      "`roundtrip` is gone. The app repo's own CI covers the file/quarantine/check round trip more thoroughly than this command ever did.",
+      "",
+      ["pnpm devtools moderation check --app <slug>"],
+    );
     process.exitCode = 1;
     return null;
   }
@@ -1131,30 +1107,27 @@ async function dispatch(argv: string[]): Promise<string | null> {
     return DONE;
   }
 
-  if (!isModerationCommand(first)) {
-    log.error(`Unknown command: ${first}`);
-    // The top level only. The command is unknown, so there is no level below
-    // it to describe, and reprinting the whole tree here is what made the old
-    // help unreadable in the first place.
-    log.message(renderHelp());
-    process.exitCode = 1;
-    return null;
-  }
-
-  const instance = await connect();
-  if (!instance) {
-    process.exitCode = 1;
-    return null;
+  if (first === "persona") {
+    await runPersona(rest);
+    return DONE;
   }
 
   if (first === "moderation") {
+    const resolved = await resolveInstance({ label: "devtools moderation" });
+    if (!resolved) {
+      process.exitCode = 1;
+      return null;
+    }
+    if (
+      refuseUnlessDevelopment(resolved.connection, "devtools moderation check")
+    ) {
+      process.exitCode = 1;
+      return null;
+    }
+
     const [msub, ...mrest] = rest;
     if (msub === "check") {
-      await runModerationCheck(instance, flagValue(mrest, "--app"));
-    } else if (msub === "catalog") {
-      await runModerationCatalog(instance);
-    } else if (msub === "roundtrip") {
-      await runModerationRoundTrip(instance);
+      await runModerationCheck(resolved.instance, flagValue(mrest, "--app"));
     } else {
       log.error(
         msub
@@ -1163,11 +1136,31 @@ async function dispatch(argv: string[]): Promise<string | null> {
       );
       process.exitCode = 1;
     }
-  } else {
-    await runGrantRoot(instance, flagValue(rest, "--user"));
+    return DONE;
   }
 
-  return DONE;
+  if (first === "grant-root") {
+    const resolved = await resolveInstance({ label: "devtools grant-root" });
+    if (!resolved) {
+      process.exitCode = 1;
+      return null;
+    }
+    await runGrantRoot(
+      resolved.connection,
+      resolved.instance,
+      flagValue(rest, "--user"),
+      rest,
+    );
+    return DONE;
+  }
+
+  log.error(`Unknown command: ${first}`);
+  // The top level only. The command is unknown, so there is no level below
+  // it to describe, and reprinting the whole tree here is what made the old
+  // help unreadable in the first place.
+  log.message(renderHelp());
+  process.exitCode = 1;
+  return null;
 }
 
 // ── Entry ────────────────────────────────────────────────────────────────────

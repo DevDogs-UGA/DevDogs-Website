@@ -124,8 +124,8 @@ function containerPrefix(): string {
  * takes the better part of a second: it shells out through `pnpm exec` and
  * then talks to every service in the stack. `docker ps` answers the only
  * question the menu has (is it up?) in a fraction of that, and the commands
- * that need real credentials still go through `detectLocalInstance`, which
- * asks the authority at the moment it matters.
+ * that need real credentials go through `resolveInstance` (`instance.ts`),
+ * which reads the session's already-entered env at the moment it matters.
  */
 export function probeEnvironment(
   execute: (file: string, args: string[]) => string | null = run,

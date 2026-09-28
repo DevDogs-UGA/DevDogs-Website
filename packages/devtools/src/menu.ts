@@ -65,10 +65,13 @@ function offered(
 /**
  * The line beside a name, with whatever is standing in this command's way.
  *
- * The reader learns that `roundtrip` needs a stack that is not up *before*
- * choosing it, instead of after a spinner and a connection error. The command
- * stays selectable: the check is a probe, the probe can be wrong, and the
- * command's own failure message is the authority on whether it can run.
+ * The reader learns a command needs something standing in its way *before*
+ * choosing it, instead of after a spinner and a connection error — `db
+ * start`'s `when: "instance-stopped"` is the one still in the tree today. The
+ * command stays selectable when it merely `needs` rather than requires the
+ * condition to be shown at all: the check is a probe, the probe can be
+ * wrong, and the command's own failure message is the authority on whether
+ * it can run.
  */
 function hintFor(node: CommandNode, env: Environment): string {
   const base = node.hint ?? node.summary;

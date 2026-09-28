@@ -14,13 +14,15 @@
  * a copy of the reason list for people who are not at a terminal, but that copy
  * is maintained by hand and says so. This is what settles a disagreement.
  *
- * Both calls run as the seeded moderator rather than through an admin client.
+ * Both calls run through a moderator client rather than an admin client.
  * `list_content_types` is `security definer` behind a `canModerate` check, so
  * an anonymous or ordinary client sees nothing, and `list_report_reasons` is
- * `security invoker` and subject to RLS. Using a persona means what prints here
- * is what a moderator would actually see, rather than what a superuser can.
+ * `security invoker` and subject to RLS. Using a moderator means what prints
+ * here is what a moderator would actually see, rather than what a superuser
+ * can. `moderation.ts`'s `withTemporaryModerator` is what supplies that
+ * client — this module reads with it, it does not sign in on its own.
  */
-import { personaClient, PERSONAS, type Instance } from "./instance.js";
+import type { DevtoolsClient } from "./instance.js";
 
 export interface CatalogReason {
   reason: string;
@@ -47,9 +49,7 @@ export interface Catalog {
   contentTypes: CatalogContentType[];
 }
 
-export async function readCatalog(instance: Instance): Promise<Catalog> {
-  const client = await personaClient(instance, PERSONAS.moderator);
-
+export async function readCatalog(client: DevtoolsClient): Promise<Catalog> {
   const [reasons, contentTypes] = await Promise.all([
     client.rpc("list_report_reasons"),
     client.rpc("list_content_types"),

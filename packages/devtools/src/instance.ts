@@ -1,12 +1,23 @@
 /**
  * Finding the instance to work against, and signing in to it.
  *
- * Detection is automatic where possible: `supabase status -o env` already
- * prints everything needed, so nobody has to copy a URL and a key from one
- * terminal into another.
+ * `resolveInstance()` is the one entry point every command that needs a
+ * Supabase client — `db`'s own commands excepted, which only ever need a
+ * Postgres URL — should call. It goes through the SAME session
+ * (`resolveDbConnection()`, `db/connection.ts`) `db migrate`/`db reset` do,
+ * rather than a local-only `supabase status` probe: every session's env
+ * carries `API_URL`/`PUBLISHABLE_KEY`/`SECRET_KEY` alongside `DB_URL` (see
+ * `.env.example`), so whichever tier `--tier` named is exactly the instance
+ * this resolves to, local Docker included.
+ *
+ * This replaces `detectLocalInstance()`+`assertMigrated()`, which read
+ * `supabase status -o env` directly and therefore only ever found the Docker
+ * stack on this machine — the reason `moderation check` and `grant-root`
+ * used to be local-only long after `db reset`/`db migrate` moved onto the
+ * session system.
  */
-import { execFileSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
+import { resolveDbConnection, type DbConnection } from "./db/connection.js";
 import { findRepoRoot } from "./repo/root.js";
 
 /**
@@ -44,93 +55,58 @@ export interface Instance {
   secretKey: string;
 }
 
-/** The seeded personas, from `supabase/seed/development/02_moderation.sql`. */
-export const PERSONAS = {
-  member: "member@devdogs.test",
-  author: "author@devdogs.test",
-  moderator: "moderator@devdogs.test",
-} as const;
-
 /** The built-in Root role, from `supabase/seed/production/01_roles.sql`. */
 export const ROOT_ROLE_ID = "00000000-0000-0000-0000-000000000002";
 
-export const PERSONA_PASSWORD = "password";
+export interface ResolvedInstance {
+  connection: DbConnection;
+  instance: Instance;
+}
 
-/**
- * Reads the local stack's credentials from the Supabase CLI.
- *
- * `-o env` rather than parsing the human-readable table: the table's labels
- * have changed between CLI versions, the env output has not.
- */
-export function detectLocalInstance(cwd: string = findRepoRoot()): Instance {
-  let output: string;
-  try {
-    // Through `pnpm exec` because the Supabase CLI is a workspace devDependency
-    // rather than a global install. Invoking `supabase` directly works only on
-    // machines that happen to have it on PATH.
-    output = execFileSync("pnpm", ["exec", "supabase", "status", "-o", "env"], {
-      cwd,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-  } catch (err) {
-    throw new Error(
-      `Could not read the local Supabase stack.\n${
-        err instanceof Error ? err.message : String(err)
-      }`,
-    );
-  }
-
-  // The CLI prefixes the block with a "Stopped services: [...]" line whenever
-  // any optional service is down, which is the normal state here. Lines that do
-  // not parse as KEY="value" are skipped rather than treated as an error.
-  const values = new Map<string, string>();
-  for (const line of output.split("\n")) {
-    const match = /^([A-Z0-9_]+)="?([^"]*)"?$/.exec(line.trim());
-    if (match?.[1]) values.set(match[1], match[2] ?? "");
-  }
-
-  const apiUrl = values.get("API_URL");
-  // Newer CLI versions print PUBLISHABLE_KEY/SECRET_KEY; older ones print the
-  // ANON_KEY/SERVICE_ROLE_KEY names. Both are accepted so the tool does not
-  // break on whichever the contributor happens to have installed.
-  const publishableKey =
-    values.get("PUBLISHABLE_KEY") ?? values.get("ANON_KEY");
-  const secretKey = values.get("SECRET_KEY") ?? values.get("SERVICE_ROLE_KEY");
-
-  if (!apiUrl || !publishableKey || !secretKey) {
-    throw new Error(
-      "`supabase status` did not report an API URL and keys. Is the stack running?",
-    );
-  }
-
-  return { apiUrl, publishableKey, secretKey };
+export interface ResolveInstanceOptions {
+  /** Stderr prefix, e.g. "devtools grant-root". */
+  label?: string;
+  /** Injectable for tests; defaults to `process.env`. */
+  env?: NodeJS.ProcessEnv;
 }
 
 /**
- * Confirms the instance has actually been migrated.
+ * Resolves the session's database AND the Supabase client credentials for it.
  *
- * This used to be `assertNotProduction()`, which read a tier out of a singleton
- * `platform."instance"` table and refused anything reporting itself as
- * production. That table is gone, and the tier column was guarding a door that
- * was already walled up: `detectLocalInstance()` above reads `supabase status`,
- * which only ever describes the Docker stack on this machine, so a remote
- * project cannot reach these commands in the first place.
+ * Goes through `resolveDbConnection()` first — the exact check `db
+ * migrate`/`db reset` run, including the local-stack-offline and
+ * inherited-development-values guards — so a caller here refuses in exactly
+ * the same situations and with the same messages those commands already do.
+ * What this adds is reading `API_URL`/`PUBLISHABLE_KEY`/`SECRET_KEY` out of
+ * the same already-entered session env `DB_URL` came from (see this file's
+ * header), rather than shelling out to `supabase status` — which is what
+ * makes hosted tiers reachable here at all.
  *
- * What was useful was its error message, because "have you run migrations?" is
- * the failure a contributor actually hits. That is all this does now.
+ * Returns `null` after reporting the reason on stderr, same contract as
+ * `resolveDbConnection` — never throws for an expected failure.
  */
-export async function assertMigrated(instance: Instance): Promise<void> {
-  const client = makeClient(instance.apiUrl, instance.secretKey, "platform");
+export async function resolveInstance(
+  opts: ResolveInstanceOptions = {},
+): Promise<ResolvedInstance | null> {
+  const label = opts.label ?? "devtools";
+  const connection = await resolveDbConnection({ label: opts.label });
+  if (!connection) return null;
 
-  const { error } = await client.from("apps").select("slug").limit(1);
+  const env = opts.env ?? process.env;
+  const apiUrl = env.API_URL;
+  const publishableKey = env.PUBLISHABLE_KEY;
+  const secretKey = env.SECRET_KEY;
 
-  if (error) {
-    throw new Error(
-      `Could not read platform."apps": ${error.message}. ` +
-        "Have migrations been applied? `pnpm devtools db reset` rebuilds from scratch.",
+  if (!apiUrl || !publishableKey || !secretKey) {
+    process.stderr.write(
+      `${label}: this session has a DB_URL but no API_URL/PUBLISHABLE_KEY/` +
+        "SECRET_KEY — run `pnpm devtools env pull` for this tier, or " +
+        "`pnpm devtools db start` for the local stack.\n",
     );
+    return null;
   }
+
+  return { connection, instance: { apiUrl, publishableKey, secretKey } };
 }
 
 /** A service-role client. Bypasses RLS, so setup and teardown only. */
@@ -142,28 +118,26 @@ export function adminClient(
 }
 
 /**
- * A client signed in as a seeded persona, subject to RLS.
+ * A client signed in with a real email/password, subject to RLS.
  *
  * Signs in for real rather than hand-signing a JWT, so the token path exercised
  * is the one production uses, with whatever claims Supabase Auth actually puts
- * in a token rather than the ones we assume.
+ * in a token rather than the ones we assume. Takes the password explicitly —
+ * there is no fixed persona password any more (see `persona.ts` and
+ * `moderation.ts`'s `withTemporaryModerator`, both of which generate a fresh
+ * random one per account).
  */
-export async function personaClient(
+export async function signedInClient(
   instance: Instance,
   email: string,
+  password: string,
   schema = "platform",
 ): Promise<DevtoolsClient> {
   const client = makeClient(instance.apiUrl, instance.publishableKey, schema);
 
-  const { error } = await client.auth.signInWithPassword({
-    email,
-    password: PERSONA_PASSWORD,
-  });
+  const { error } = await client.auth.signInWithPassword({ email, password });
   if (error) {
-    throw new Error(
-      `Could not sign in as ${email}: ${error.message}. ` +
-        "Seeded personas come from `pnpm devtools` → Reset database.",
-    );
+    throw new Error(`Could not sign in as ${email}: ${error.message}.`);
   }
   return client;
 }
