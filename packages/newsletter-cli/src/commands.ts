@@ -1,6 +1,6 @@
 /**
  * `pnpm newsletter [version…] [--format eml,html] [--out dir]
- * [--push] [--send --to addresses] [--mailbox address]`.
+ * [--push] [--send addresses] [--mailbox address]`.
  *
  * Ported from `@devdogsuga/devtools`' `src/newsletter/commands.ts` (Wave 2,
  * stage A2 — see the carve-out plan's §9: "`newsletter` (preview + send) ->
@@ -21,7 +21,13 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { randomBytes } from "node:crypto";
-import { isTTY, log, multiselect, spinner, text as askText } from "@clack/prompts";
+import {
+  isTTY,
+  log,
+  multiselect,
+  spinner,
+  text as askText,
+} from "@clack/prompts";
 import { Resvg } from "@resvg/resvg-js";
 import { ISSUES, issueByVersion } from "@devdogsuga/newsletter";
 import {
@@ -66,7 +72,7 @@ export interface NewsletterOptions {
   out: string;
   /** Append each issue as a draft in the club mailbox. */
   push: boolean;
-  /** Send each issue over SMTP, to `to`, byte-for-byte as authored. */
+  /** Send each issue over SMTP, to `to` (--send's value), byte-for-byte as authored. */
   send: boolean;
   to: string[];
   mailbox: string;
@@ -84,17 +90,25 @@ export function parseNewsletterArgs(
 ): NewsletterOptions | Error {
   const push = argv.includes("--push");
   const send = argv.includes("--send");
-  const to = (flagValue(argv, "--to") ?? "")
+  const to = (flagValue(argv, "--send") ?? "")
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
-  // A send is deliberate twice over: the flag names the act and --to names
-  // who receives it. Neither is inferred and neither is prompted for.
-  if (send && !to.length) {
-    return new Error("--send needs --to, a comma-separated recipient list.");
+  // A send names its recipients in the same breath: there is no default
+  // audience a bare --send could reach, and nothing is prompted for.
+  if (argv.includes("--to")) {
+    return new Error("--to is gone: pass the recipients to --send itself.");
   }
-  if (to.length && !send) {
-    return new Error("--to only means something with --send.");
+  if (send && !to.length) {
+    return new Error("--send needs a comma-separated recipient list.");
+  }
+  // Catches `--send 3.0.2`, which would otherwise take the version for a
+  // recipient and leave no issue to send.
+  const notAddresses = to.filter((value) => !value.includes("@"));
+  if (notAddresses.length) {
+    return new Error(
+      `--send takes email addresses, not ${notAddresses.join(", ")}.`,
+    );
   }
   // Both formats by default: the .eml is the point of the command, and the
   // .html is how it gets proofread before an officer opens Outlook. Except
@@ -110,14 +124,19 @@ export function parseNewsletterArgs(
     (value) => !NEWSLETTER_FORMATS.includes(value as NewsletterFormat),
   );
   if (badFormats.length)
-    return new Error(`Unknown format ${badFormats.join(", ")}. Try eml or html.`);
+    return new Error(
+      `Unknown format ${badFormats.join(", ")}. Try eml or html.`,
+    );
 
   return {
     // Versions can only be validated against the built package, which loads
     // lazily inside the run — so they pass through here unchecked.
     versions: positionals(argv),
     formats: [...new Set(rawFormats)] as NewsletterFormat[],
-    out: resolve(cwd, expandHome(flagValue(argv, "--out") ?? "changelog-exports")),
+    out: resolve(
+      cwd,
+      expandHome(flagValue(argv, "--out") ?? "changelog-exports"),
+    ),
     push,
     send,
     to,
@@ -139,7 +158,9 @@ async function interactive(
 ): Promise<NewsletterOptions> {
   if (options.versions.length) return options;
   if (!isTTY(process.stdout)) {
-    throw new Error("No terminal to choose issues. Name one, or pass * for all.");
+    throw new Error(
+      "No terminal to choose issues. Name one, or pass * for all.",
+    );
   }
   const versions = unwrap(
     await multiselect({
@@ -216,7 +237,10 @@ async function signInViaLoopback(
   try {
     const timeout = new Promise<never>((_, rejectLate) => {
       setTimeout(
-        () => rejectLate(new Error("Five minutes passed with no sign-in. Run it again.")),
+        () =>
+          rejectLate(
+            new Error("Five minutes passed with no sign-in. Run it again."),
+          ),
         5 * 60_000,
       ).unref();
     });
@@ -278,7 +302,9 @@ async function mailboxAccessToken(mailbox: string): Promise<string> {
     ? await signInViaLoopback(mailbox, server, state)
     : await signInViaPaste(mailbox);
   await writeGrant({ mailbox, refreshToken: tokens.refreshToken });
-  log.info(`Signed in. The grant lives in ${grantPath()} — mode 600, keep it that way.`);
+  log.info(
+    `Signed in. The grant lives in ${grantPath()} — mode 600, keep it that way.`,
+  );
   return tokens.accessToken;
 }
 
@@ -341,7 +367,11 @@ export async function runNewsletter(argv: string[]): Promise<void> {
         await writeFile(
           file,
           format === "eml"
-            ? buildEml({ subject: issue.title, html: renderIssueDocument(issue), images })
+            ? buildEml({
+                subject: issue.title,
+                html: renderIssueDocument(issue),
+                images,
+              })
             : renderIssueDocument(issue, previewRenderContext()),
         );
         written.push(file);

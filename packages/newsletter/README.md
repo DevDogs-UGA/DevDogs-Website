@@ -7,7 +7,7 @@ components with two callers:
   `/changelog/<version>`, straight from `ChangelogEmail`.
 - **`@devdogsuga/newsletter-cli`** exports issues as files — `pnpm
 newsletter` from the Backstage root — an `.html` preview and an
-Outlook-importable `.eml` per issue, and pushes or sends them.
+  Outlook-importable `.eml` per issue, and pushes or sends them.
 
 It deliberately does not go through `@devdogsuga/email`. That package's
 compiled-slot pipeline exists to prove a template cannot branch on its inputs,
@@ -138,12 +138,12 @@ differently, into Word HTML, with the same result.)
 ## Sending
 
 ```bash
-pnpm newsletter 3.0.1 --send --to listserv@listserv.uga.edu
+pnpm newsletter 3.0.1 --send listserv@listserv.uga.edu
 ```
 
 submits the issue over SMTP as the club mailbox, byte-for-byte as authored —
 no composer touches it, so recipients get the document with its stylesheet,
-pins and gradient underlays intact. `--to` is required and comma-separated;
+pins and gradient underlays intact. `--send` takes the recipients, comma-separated;
 there is deliberately no interactive path to a send.
 
 The first `--push` or `--send` opens a browser; sign in as the mailbox and

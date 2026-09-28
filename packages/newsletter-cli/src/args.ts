@@ -7,7 +7,7 @@
  * set also covered a couple dozen unrelated devtools commands that do not
  * exist in this standalone script.
  */
-const VALUE_FLAGS = new Set(["--format", "--out", "--mailbox", "--to"]);
+const VALUE_FLAGS = new Set(["--format", "--out", "--mailbox", "--send"]);
 
 export function positionals(argv: readonly string[]): string[] {
   const found: string[] = [];

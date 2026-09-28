@@ -30,16 +30,20 @@ describe("parseNewsletterArgs", () => {
     expect(options.formats).toEqual(["html"]);
   });
 
-  it("refuses --send without recipients, and --to without --send", () => {
+  it("refuses --send without recipients, and the old --to flag", () => {
     expect(parseNewsletterArgs(["3.0.0", "--send"], CWD)).toBeInstanceOf(Error);
     expect(
-      parseNewsletterArgs(["3.0.0", "--to", "a@uga.edu"], CWD),
+      parseNewsletterArgs(["3.0.0", "--send", "--to", "a@uga.edu"], CWD),
     ).toBeInstanceOf(Error);
   });
 
-  it("reads --to as a recipient list and writes no files under --send", () => {
+  it("refuses a version where the recipients belong", () => {
+    expect(parseNewsletterArgs(["--send", "3.0.2"], CWD)).toBeInstanceOf(Error);
+  });
+
+  it("reads --send's value as a recipient list and writes no files", () => {
     const options = parseNewsletterArgs(
-      ["3.0.1", "--send", "--to", "a@uga.edu, b@uga.edu"],
+      ["3.0.1", "--send", "a@uga.edu, b@uga.edu"],
       CWD,
     );
     if (options instanceof Error) throw options;

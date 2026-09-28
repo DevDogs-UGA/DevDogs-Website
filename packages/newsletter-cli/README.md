@@ -19,7 +19,7 @@ pnpm newsletter                                  # interactive: pick issues + ou
 pnpm newsletter '*'                              # export every issue, both formats
 pnpm newsletter 3.0.1 --format eml,html --out ~/changelog
 pnpm newsletter 3.0.1 --push                     # append as a Drafts item in the club mailbox
-pnpm newsletter 3.0.1 --send --to a@uga.edu,b@uga.edu
+pnpm newsletter 3.0.1 --send a@uga.edu,b@uga.edu
 ```
 
 `--push`/`--send` skip file export by default (pass `--format` explicitly if
