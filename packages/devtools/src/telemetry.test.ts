@@ -1,5 +1,18 @@
-import { describe, expect, it } from "vitest";
-import { resolveDevtoolsDsn } from "./telemetry.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const sentry = vi.hoisted(() => ({
+  captureException: vi.fn(),
+  captureMessage: vi.fn(),
+  flush: vi.fn(async () => true),
+}));
+vi.mock("@sentry/node", () => sentry);
+
+import {
+  reportDevtoolsError,
+  reportDevtoolsFailure,
+  resolveDevtoolsDsn,
+} from "./telemetry.js";
+import { explainError, UsageError } from "./ui.js";
 
 describe("resolveDevtoolsDsn", () => {
   const baked = "https://key@o1.ingest.sentry.io/1";
@@ -17,5 +30,42 @@ describe("resolveDevtoolsDsn", () => {
 
   it("is empty when neither is set, so Sentry never initializes", () => {
     expect(resolveDevtoolsDsn({ DEVTOOLS_SENTRY_DSN: "" }, "")).toBe("");
+  });
+});
+
+describe("reporting a caught failure", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("captures the error explainError prints", () => {
+    const err = new Error("boom");
+    explainError("It broke.", err);
+    expect(sentry.captureException).toHaveBeenCalledWith(err);
+    expect(sentry.flush).not.toHaveBeenCalled();
+  });
+
+  it("keeps a UsageError out of Sentry", () => {
+    explainError("Nothing called nope.", new UsageError("Nothing called nope."));
+    expect(sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  it("captures a non-zero exit as an error-level message", () => {
+    reportDevtoolsFailure("step failed", { exitCode: 2 });
+    expect(sentry.captureMessage).toHaveBeenCalledWith("step failed", {
+      level: "error",
+      extra: { exitCode: 2 },
+    });
+  });
+
+  it("reports nothing under DEVTOOLS_TELEMETRY=0", () => {
+    vi.stubEnv("DEVTOOLS_TELEMETRY", "0");
+    reportDevtoolsError(new Error("boom"));
+    reportDevtoolsFailure("step failed");
+    expect(sentry.captureException).not.toHaveBeenCalled();
+    expect(sentry.captureMessage).not.toHaveBeenCalled();
   });
 });

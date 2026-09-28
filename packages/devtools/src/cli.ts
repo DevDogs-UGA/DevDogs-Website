@@ -83,7 +83,7 @@ import { loadEnv } from "./repo/peers.js";
 import { setExplicitAccessToken } from "./bws/client.js";
 import { positionals } from "./args.js";
 import { resolveVaultTarget } from "./pick.js";
-import { bail, errorMessage, explain, renderChecks, unwrap } from "./ui.js";
+import { bail, errorMessage, explain, explainError, renderChecks, unwrap } from "./ui.js";
 import { helpPath, renderHelp } from "./help.js";
 import { subcommandList, subcommandNames } from "./commands.js";
 import { bareGroupStartPath, runMenu } from "./menu.js";
@@ -237,7 +237,7 @@ async function runStack(command: StackCommand, rest: string[]): Promise<void> {
       process.exitCode = code;
     }
   } catch (err) {
-    explain(`\`${command}\` failed.`, errorMessage(err));
+    explainError(`\`${command}\` failed.`, err);
     process.exitCode = 1;
   }
 }
@@ -270,7 +270,7 @@ async function runModerationCheck(
       note(renderCatalog(catalog), "Moderation catalog");
     } catch (err) {
       s.stop("Could not read the catalog");
-      explain("Reading the catalog failed.", errorMessage(err));
+      explainError("Reading the catalog failed.", err);
       process.exitCode = 1;
     }
     return;
@@ -287,7 +287,7 @@ async function runModerationCheck(
     s.stop(`Checked ${appSlug}`);
   } catch (err) {
     s.stop("The check could not run");
-    explain("conformance_check() failed.", errorMessage(err));
+    explainError("conformance_check() failed.", err);
     process.exitCode = 1;
     return;
   }
@@ -353,7 +353,7 @@ async function runGrantRoot(
       listCandidates(instance),
     ]);
   } catch (err) {
-    explain("Could not read the current roles.", errorMessage(err));
+    explainError("Could not read the current roles.", err);
     process.exitCode = 1;
     return;
   }
@@ -444,7 +444,7 @@ async function runGrantRoot(
         "Sign out and back in if the console was already open.",
     );
   } catch (err) {
-    explain("Could not grant Root.", errorMessage(err), [
+    explainError("Could not grant Root.", err, [
       "Seeds create the Root role definition — try `pnpm devtools db reset` " +
         "(development) or `pnpm devtools db seed production` (staging/production) first.",
     ]);
@@ -511,7 +511,7 @@ async function runEnvCommand(rest: string[]): Promise<void> {
         yes: rest.includes("--yes"),
       });
     } catch (err) {
-      explain("The reset failed.", errorMessage(err));
+      explainError("The reset failed.", err);
       process.exitCode = 1;
     }
     return;
@@ -534,7 +534,7 @@ async function runEnvCommand(rest: string[]): Promise<void> {
     try {
       await runEnvExample({ check: rest.includes("--check") });
     } catch (err) {
-      explain("Generating .env.example failed.", errorMessage(err));
+      explainError("Generating .env.example failed.", err);
       process.exitCode = 1;
     }
     return;
@@ -561,7 +561,7 @@ async function runEnvCommand(rest: string[]): Promise<void> {
       // everything, which is what every pre-picker caller got.
       await runEnvInit(given, flagValue(rest, "--apps") ?? undefined);
     } catch (err) {
-      explain("env init failed.", errorMessage(err));
+      explainError("env init failed.", err);
       process.exitCode = 1;
     }
     return;
@@ -602,7 +602,7 @@ async function runEnvCommand(rest: string[]): Promise<void> {
     else if (sub === "push") await runEnvPush(options);
     else await runEnvAudit(options);
   } catch (err) {
-    explain("The env command failed.", errorMessage(err), [
+    explainError("The env command failed.", err, [
       "The access token is read from --access-token, then BWS_ACCESS_TOKEN,",
       "then your Bitwarden vault, and finally by asking.",
       "`gh auth status` shows whether the GitHub CLI is signed in.",

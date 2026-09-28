@@ -30,7 +30,7 @@
  */
 import { confirm, log, spinner } from "@clack/prompts";
 import postgres from "postgres";
-import { bail, errorMessage, explain, unwrap } from "../ui.js";
+import { bail, errorMessage, explain, explainError, unwrap } from "../ui.js";
 import { loadDocs } from "../repo/source.js";
 
 /** One row of the artifact `@devdogsuga/docs` builds. */
@@ -236,7 +236,7 @@ export async function runDocsIndex(
     s.stop(`Indexed ${count} page(s)`);
   } catch (err) {
     s.stop("The index was not written");
-    explain("Writing the docs index failed.", errorMessage(err), [
+    explainError("Writing the docs index failed.", err, [
       "`pnpm devtools db migrate` applies any migration the table is missing.",
     ]);
     process.exitCode = 1;

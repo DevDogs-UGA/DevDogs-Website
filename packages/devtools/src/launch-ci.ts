@@ -31,9 +31,14 @@
 import { findRepoRoot } from "./repo/root.js";
 import { loadEnvLoad, loadEnvSession } from "./repo/peers.js";
 import { stripTierFlag } from "./launch.js";
+import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
 
 export async function launchCi(argv: readonly string[]): Promise<void> {
   const { explicit, rest } = stripTierFlag(argv);
+
+  // See `launch.ts`'s matching call: early, so tier resolution and env entry
+  // are covered too. Same tag `ci.ts`'s `main()` would compute.
+  initDevtoolsTelemetry(rest.slice(0, 2).join(" ") || "help");
   const envLoad = await loadEnvLoad();
   const envSession = await loadEnvSession();
 
@@ -77,11 +82,7 @@ export async function launchCi(argv: readonly string[]): Promise<void> {
     process.stderr.write(
       `devtools-ci: ${err instanceof Error ? err.message : String(err)}\n`,
     );
-    // Report BEFORE exiting — see `captureDevtoolsError`'s header. `ci.ts`'s
-    // own `main()` already initialized telemetry (it does so at its own
-    // bootstrap, before this throw could happen), so this call only needs to
-    // capture and flush.
-    const { captureDevtoolsError } = await import("./telemetry.js");
+    // Report BEFORE exiting — see `captureDevtoolsError`'s header.
     await captureDevtoolsError(err);
     process.exit(1);
   }

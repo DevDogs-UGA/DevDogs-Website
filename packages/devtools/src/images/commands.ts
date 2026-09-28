@@ -29,7 +29,7 @@ import type { Format } from "./open-graph-types.js";
 import { loadOpenGraph } from "../repo/source.js";
 import { findRepoRoot } from "../repo/root.js";
 import { positionals } from "../args.js";
-import { errorMessage, explain } from "../ui.js";
+import { errorMessage, explain, explainError, UsageError } from "../ui.js";
 import { configEvents, type EventReader } from "./events.js";
 import {
   assertUniqueStems,
@@ -204,7 +204,7 @@ export async function runImages(
   try {
     await images(options, deps);
   } catch (err) {
-    explain("Could not render that.", errorMessage(err), [
+    explainError("Could not render that.", err, [
       "pnpm devtools images                      # pick from a list",
       "pnpm devtools images 'event/*' --all-formats --out ~/images",
       "pnpm devtools images '*' --default-out",
@@ -232,7 +232,7 @@ async function images(options: ImagesOptions, deps: ImagesDeps): Promise<void> {
       : resolvePatterns(options.patterns, registry);
 
   if (graphics.length === 0) {
-    throw new Error("Nothing to render.");
+    throw new UsageError("Nothing to render.");
   }
 
   // ── At what sizes ─────────────────────────────────────────────────────────
@@ -245,7 +245,7 @@ async function images(options: ImagesOptions, deps: ImagesDeps): Promise<void> {
 
   const unknown = requested.filter((name) => !FORMATS[name]);
   if (unknown.length > 0) {
-    throw new Error(
+    throw new UsageError(
       `No format called ${unknown.join(", ")}. Try one of ${Object.keys(FORMATS).join(", ")}.`,
     );
   }
@@ -256,13 +256,13 @@ async function images(options: ImagesOptions, deps: ImagesDeps): Promise<void> {
   // out loud; sweeping up combinations that do not exist under a wildcard is
   // not, and reporting every one of those would bury the output.
   if (selections.length === 0 && unsupported.length > 0) {
-    throw new Error(
+    throw new UsageError(
       unsupported
         .map((miss) => `${miss.graphic} has no ${miss.format} rendition`)
         .join("; "),
     );
   }
-  if (selections.length === 0) throw new Error("Nothing to render.");
+  if (selections.length === 0) throw new UsageError("Nothing to render.");
 
   // ── Where ─────────────────────────────────────────────────────────────────
   const out = options.defaultOut
@@ -326,7 +326,7 @@ function resolvePatterns(patterns: string[], registry: Graphic[]): Graphic[] {
   const haveEvents = registry.some((graphic) => graphic.group === "event");
 
   if (askedForEvents && !haveEvents) {
-    throw new Error(
+    throw new UsageError(
       "This database has no meetings, so there are no event images to render. " +
         "Reconcile it from `@devdogsuga/events`, or point at a database that has been.",
     );
@@ -334,7 +334,7 @@ function resolvePatterns(patterns: string[], registry: Graphic[]): Graphic[] {
 
   const groups = [...new Set(registry.map((graphic) => `${graphic.group}/*`))];
 
-  throw new Error(
+  throw new UsageError(
     `Nothing called ${unmatched.join(", ")}. Names are group/name — try ` +
       `${groups.join(", ")}, or * for all of them.`,
   );

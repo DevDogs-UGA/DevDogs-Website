@@ -5,6 +5,7 @@ import type {
   OpenGraphModule,
 } from "./open-graph-types.js";
 import { loadOpenGraph } from "../repo/source.js";
+import { UsageError } from "../ui.js";
 import type { ReactElement } from "react";
 
 /**
@@ -311,7 +312,7 @@ export function assertUniqueStems(graphics: Graphic[]): void {
   for (const graphic of graphics) {
     const clash = seen.get(graphic.stem);
     if (clash) {
-      throw new Error(
+      throw new UsageError(
         `${graphic.name} and ${clash} share the leaf "${graphic.stem}", so a flat --out would overwrite one with the other.`,
       );
     }

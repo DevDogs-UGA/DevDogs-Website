@@ -61,6 +61,7 @@ import {
 import { bareGroupStartPath } from "./menu.js";
 import { discoverRepoRoot, findRepoRoot, RepoNotFoundError } from "./repo/root.js";
 import { loadEnvLoad, loadEnvSession } from "./repo/peers.js";
+import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
 import { errorMessage, unwrap } from "./ui.js";
 
 /**
@@ -138,6 +139,8 @@ async function dispatch(argv: string[]): Promise<void> {
     await main(argv);
   } catch (err) {
     process.stderr.write(`devtools: ${errorMessage(err)}\n`);
+    // Report BEFORE exiting — see `captureDevtoolsError`'s header.
+    await captureDevtoolsError(err);
     process.exit(1);
   }
 }
@@ -152,6 +155,12 @@ async function dispatch(argv: string[]): Promise<void> {
  */
 export async function launch(argv: readonly string[]): Promise<void> {
   const { explicit, rest } = stripTierFlag(argv);
+
+  // Here rather than only in `cli.ts`'s `main()`, so a failure while
+  // resolving or entering the tier below is reported too. `main()`'s own
+  // call is then a no-op (`initDevtoolsTelemetry` is idempotent) and this
+  // tag, computed from the same argv `main()` receives, stands.
+  initDevtoolsTelemetry(rest[0] ?? "menu");
 
   // Same test `cli.ts`'s own `main()` uses to decide whether a bare command
   // group resumes the wizard instead of dispatching — computed here too so

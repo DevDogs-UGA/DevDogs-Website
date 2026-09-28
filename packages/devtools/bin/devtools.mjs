@@ -24,4 +24,18 @@ const launchEntry = join(
 );
 
 const { launch } = await import(launchEntry);
-await launch(process.argv.slice(2));
+try {
+  await launch(process.argv.slice(2));
+} catch (err) {
+  // Whatever escapes before a command is dispatched (repo discovery, tier
+  // resolution, env entry) — the dispatch itself reports its own. See
+  // `bin/devtools-ci-bare.mjs` for the same shape.
+  process.stderr.write(
+    `devtools: ${err instanceof Error ? err.message : String(err)}\n`,
+  );
+  const { captureDevtoolsError } = await import(
+    join(dirname(fileURLToPath(import.meta.url)), "..", "dist", "telemetry.js")
+  );
+  await captureDevtoolsError(err);
+  process.exitCode = 1;
+}

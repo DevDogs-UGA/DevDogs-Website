@@ -10,6 +10,7 @@
  *     ends at a stack trace.
  */
 import { cancel, isCancel, log, note } from "@clack/prompts";
+import { reportDevtoolsError } from "./telemetry.js";
 
 export function bail(message = "Cancelled."): never {
   cancel(message);
@@ -37,6 +38,30 @@ export function explain(
   log.error(summary);
   if (detail) log.message(detail);
   if (hints.length > 0) note(hints.join("\n"), "Try this");
+}
+
+/**
+ * A refusal the reader can fix themselves — a name that matches nothing, a
+ * flag missing where there is no terminal to ask. Thrown from deep enough
+ * that the command's catch can't tell it from a real failure any other way;
+ * `explainError` prints it like any other error but keeps it out of Sentry.
+ */
+export class UsageError extends Error {
+  override name = "UsageError";
+}
+
+/**
+ * `explain()` for a caught error rather than a refusal: prints the same way,
+ * with `err`'s message as the detail, and reports `err` to Sentry unless it
+ * is a {@link UsageError}. Only failures nobody anticipated belong there.
+ */
+export function explainError(
+  summary: string,
+  err: unknown,
+  hints: string[] = [],
+): void {
+  if (!(err instanceof UsageError)) reportDevtoolsError(err);
+  explain(summary, errorMessage(err), hints);
 }
 
 export function errorMessage(err: unknown): string {

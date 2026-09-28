@@ -103,11 +103,11 @@ export function initDevtoolsTelemetry(command: string): void {
 }
 
 /**
- * Reports an uncaught error from the top-level `main().catch` in `cli.ts`
- * and `ci.ts` alike, then flushes before the process exits. Node's event
- * loop dies with `process.exit`, taking any in-flight request to Sentry's
- * ingest endpoint with it, so the flush must be awaited BEFORE that call —
- * never after.
+ * Reports an error nothing below the entry points caught — `launch.ts`'s
+ * `dispatch`, `launch-ci.ts`, and the bins — then flushes before the process
+ * exits. Node's event loop dies with `process.exit`, taking any in-flight
+ * request to Sentry's ingest endpoint with it, so the flush must be awaited
+ * BEFORE that call — never after.
  *
  * A short timeout: a CLI exiting on error should not hang perceptibly longer
  * because Sentry's ingest is slow or unreachable.
@@ -116,4 +116,28 @@ export async function captureDevtoolsError(err: unknown): Promise<void> {
   if (!devtoolsTelemetryEnabled()) return;
   Sentry.captureException(err);
   await Sentry.flush(2000);
+}
+
+/**
+ * Reports an error a command caught and explained to the reader itself
+ * (`explainError` in `ui.ts`, `devtools-ci deploy`'s catch), then carried on
+ * to a normal exit. Not flushed: the SDK's in-flight request keeps the event
+ * loop alive until it lands, so a natural exit waits for it on its own. A
+ * path that ends in `process.exit` instead must use `captureDevtoolsError`.
+ */
+export function reportDevtoolsError(err: unknown): void {
+  if (!devtoolsTelemetryEnabled()) return;
+  Sentry.captureException(err);
+}
+
+/**
+ * Reports a failure that has no error object — a subprocess or deploy step
+ * that exited non-zero. Same no-flush contract as `reportDevtoolsError`.
+ */
+export function reportDevtoolsFailure(
+  message: string,
+  extra: Record<string, unknown> = {},
+): void {
+  if (!devtoolsTelemetryEnabled()) return;
+  Sentry.captureMessage(message, { level: "error", extra });
 }

@@ -47,7 +47,12 @@ import { loadRegistry } from "./env/discovery.js";
 import { positionals } from "./args.js";
 import { findCiCommand, subcommandCiNames } from "./commands.js";
 import { isWorkerApp, workerApps } from "./workers.js";
-import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
+import {
+  captureDevtoolsError,
+  initDevtoolsTelemetry,
+  reportDevtoolsError,
+  reportDevtoolsFailure,
+} from "./telemetry.js";
 
 function flagValue(rest: string[], flag: string): string | undefined {
   const index = rest.indexOf(flag);
@@ -206,6 +211,13 @@ async function runAppDeploy(app: App, rest: string[]): Promise<void> {
   for (const step of steps) {
     const code = await step.fn();
     if (code !== 0) {
+      // A step is a subprocess (`pnpm … wrangler deploy`) whose output
+      // already explains itself in the job log; this is only the signal that
+      // a deploy broke, grouped per app and step.
+      reportDevtoolsFailure(
+        `devtools-ci deploy ${app}: "${step.label}" failed`,
+        { tier, exitCode: code },
+      );
       process.exitCode = code;
       return;
     }
@@ -308,6 +320,9 @@ async function runDeployCommand(rest: string[]): Promise<void> {
             `devtools-ci deploy ${sub}: ${err instanceof Error ? err.message : String(err)}`,
           ],
     );
+    // Caught here, so `launch-ci.ts`'s capture never sees it. Every deploy
+    // step runs in CI, where a failure is never the reader's typo to fix.
+    reportDevtoolsError(err);
     process.exitCode = 1;
   }
 }

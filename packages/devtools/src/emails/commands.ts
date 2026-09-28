@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { isTTY, log, multiselect, note, text as askText } from "@clack/prompts";
 import { positionals } from "../args.js";
-import { errorMessage, explain, unwrap } from "../ui.js";
+import { explain, explainError, unwrap, UsageError } from "../ui.js";
 import { EMAIL_FIXTURES } from "./fixtures.js";
 import { loadEmail } from "../repo/source.js";
 
@@ -73,7 +73,7 @@ export function parseEmailArgs(
 async function interactive(options: EmailOptions): Promise<EmailOptions> {
   if (options.names.length) return options;
   if (!isTTY(process.stdout)) {
-    throw new Error(
+    throw new UsageError(
       "No terminal to choose templates. Name one, or pass * for all.",
     );
   }
@@ -168,7 +168,7 @@ export async function runEmails(argv: string[]): Promise<void> {
       `${written.length} preview file${written.length === 1 ? "" : "s"} written.`,
     );
   } catch (err) {
-    explain("Could not render those emails.", errorMessage(err), [
+    explainError("Could not render those emails.", err, [
       "Build the email package with `pnpm --filter @devdogsuga/email build`.",
       "Then try `pnpm devtools emails '*' --out ~/emails`.",
     ]);
