@@ -10,8 +10,10 @@
 // - `<Track>` content and `dual-code` columns for the page's track only.
 // - A `{build}` import (theme/setup/transformers.ts) becomes one diff per
 //   click group, each after the tip for that click, then a link to the whole
-//   file on GitHub at that commit. A ranged import becomes one excerpt per
-//   range that has a tip, or every range's lines at once when none do.
+//   file on GitHub at that commit. Each diff holds the whole file, so the docs
+//   can expand its context, and links to the commit's compare view. A ranged
+//   import becomes one excerpt per range that has a tip, or every range's
+//   lines at once when none do, each linking to its lines on GitHub.
 // - `<CodeTips>` become the prose between the code; presenter notes are
 //   dropped.
 //
@@ -24,6 +26,7 @@
 //
 // Anything else the exporter doesn't know how to write down (a Vue component,
 // a layout slot) fails the export rather than leaking into the page.
+import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -81,10 +84,11 @@ function numbersIn(range: string, total: number): number[] {
 }
 
 // The given lines of a file, numbered as the file numbers them: the docs
-// mark each skip.
-function excerpt(lines: string[], numbers: number[], lang: string, file: string): string {
+// mark each skip. `blob` is the file on GitHub; the link picks out the lines.
+function excerpt(lines: string[], numbers: number[], lang: string, file: string, blob: string): string {
   const sorted = [...new Set(numbers)].sort((a, b) => a - b)
-  return fence(lang, sorted.map(n => lines[n - 1]), `file=${file} lines=${rangesOf(sorted)}`)
+  const href = sorted.length === lines.length ? blob : `${blob}#L${sorted[0]}-L${sorted.at(-1)}`
+  return fence(lang, sorted.map(n => lines[n - 1]), `file=${file} lines=${rangesOf(sorted)} href=${href}`)
 }
 
 type Chunk = ReturnType<typeof buildPlan>['all'][number]
@@ -92,9 +96,6 @@ type Chunk = ReturnType<typeof buildPlan>['all'][number]
 interface Op {
   kind: ' ' | '-' | '+'
   line: string
-  /** The line numbers this op sits at in the old and new file. */
-  oldAt: number
-  newAt: number
   /** The chunk a change belongs to (numbered from 1), none for context. */
   chunk?: number
 }
@@ -107,49 +108,50 @@ function commitOps(before: string[], after: string[], all: Chunk[]): Op[] {
   let oldPos = 1
   let newPos = 1
   const context = (to: number) => {
-    while (oldPos <= to) ops.push({ kind: ' ', line: before[oldPos - 1], oldAt: oldPos++, newAt: newPos++ })
+    while (oldPos <= to) {
+      ops.push({ kind: ' ', line: before[oldPos++ - 1] })
+      newPos++
+    }
   }
   all.forEach((h, i) => {
     // A pure insertion (oldCount 0) goes after old line oldStart.
     context(h.oldCount === 0 ? h.oldStart : h.oldStart - 1)
-    for (let k = 0; k < h.oldCount; k++) ops.push({ kind: '-', line: before[oldPos - 1], oldAt: oldPos++, newAt: newPos, chunk: i + 1 })
-    for (let k = 0; k < h.newCount; k++) ops.push({ kind: '+', line: after[newPos - 1], oldAt: oldPos, newAt: newPos++, chunk: i + 1 })
+    for (let k = 0; k < h.oldCount; k++) ops.push({ kind: '-', line: before[oldPos++ - 1], chunk: i + 1 })
+    for (let k = 0; k < h.newCount; k++) ops.push({ kind: '+', line: after[newPos++ - 1], chunk: i + 1 })
   })
   context(before.length)
   return ops
 }
 
-// A real unified diff of one click group: the commit's changes that belong to
-// the group's chunks, with up to three lines of real context either side, and
-// the real line numbers of both files in each hunk header. Another group's
-// change is never shown; context stops where one begins.
-function groupPatch(ops: Op[], group: number[], file: string, isNew: boolean): string {
-  const CONTEXT = 3
-  const keep = ops.map(() => false)
-  ops.forEach((op, k) => {
-    if (op.chunk === undefined || !group.includes(op.chunk)) return
-    keep[k] = true
-    for (const step of [-1, 1]) {
-      for (let c = k + step, n = 0; n < CONTEXT && c >= 0 && c < ops.length && ops[c].kind === ' '; c += step, n++) keep[c] = true
-    }
-  })
-  const hunks: Op[][] = []
-  ops.forEach((op, k) => {
-    if (!keep[k]) return
-    if (k === 0 || !keep[k - 1]) hunks.push([])
-    hunks.at(-1)!.push(op)
-  })
-  const header = (at: number, count: number) => `${count === 0 ? at - 1 : at},${count}`
-  const body = hunks.flatMap((hunk) => {
-    const oldCount = hunk.filter(op => op.kind !== '+').length
-    const newCount = hunk.filter(op => op.kind !== '-').length
-    return [
-      `@@ -${header(hunk[0].oldAt, oldCount)} +${header(hunk[0].newAt, newCount)} @@`,
-      // Trimmed, as the docs repo's Prettier leaves a blank context line.
-      ...hunk.map(op => `${op.kind}${op.line}`.trimEnd()),
-    ]
-  })
-  return [isNew ? '--- /dev/null' : `--- a/${file}`, `+++ b/${file}`, ...body].join('\n')
+// Unchanged lines the docs show around each change; the reader can expand
+// the rest of the file.
+const DIFF_CONTEXT = 6
+
+// One click group as a whole-file diff: the file as it stands before the
+// click (the chunks in `prior` applied) against the file after it. The docs
+// compiler (`context=`) cuts it down to the lines around the change and keeps
+// both versions for expanding. Line numbers are the file's at that click,
+// which is what a reader following along has in their editor.
+function groupPatch(ops: Op[], prior: Set<number>, group: number[], file: string): string {
+  const lines: string[] = []
+  for (const op of ops) {
+    const mine = op.chunk !== undefined && group.includes(op.chunk)
+    // Another chunk's line is context if it's in the file at this click:
+    // an applied chunk's new line, or a pending chunk's old one.
+    const present = op.kind === ' ' || (op.chunk !== undefined && prior.has(op.chunk) ? op.kind === '+' : op.kind === '-')
+    if (mine) lines.push(op.kind + op.line)
+    else if (present) lines.push(' ' + op.line)
+  }
+  const oldCount = lines.filter(l => l[0] !== '+').length
+  const newCount = lines.filter(l => l[0] !== '-').length
+  const range = (count: number) => (count === 0 ? '0,0' : `1,${count}`)
+  return [
+    `--- a/${file}`,
+    `+++ b/${file}`,
+    `@@ -${range(oldCount)} +${range(newCount)} @@`,
+    // Trimmed, as the docs repo's Prettier leaves a blank context line.
+    ...lines.map(l => l.trimEnd()),
+  ].join('\n')
 }
 
 // The public GitHub repo each workshop submodule publishes to, from the deck
@@ -157,13 +159,30 @@ function groupPatch(ops: Op[], group: number[], file: string, isNew: boolean): s
 // with the same commits).
 let REPOS: Partial<Record<Track, string>> = {}
 
+function repoSlug(repo: Track, where: string): string {
+  const slug = REPOS[repo]
+  if (!slug) throw new Error(`${where}: the headmatter's docs.repos names no GitHub repo for ${repo}`)
+  return slug
+}
+
+// The file on GitHub as of the imported commit.
+function blobUrl(repo: Track, rev: string | undefined, file: string, where: string): string {
+  return `https://github.com/${repoSlug(repo, where)}/blob/${commitOf(repo, rev, where)}/${file}`
+}
+
+// The imported commit's change to the file, in GitHub's compare view.
+// GitHub anchors a file in the view by the SHA-256 of its path.
+function compareUrl(repo: Track, rev: string | undefined, file: string, where: string): string {
+  const commit = commitOf(repo, rev, where)
+  const parent = commitOf(repo, `${commit}^`, where)
+  const anchor = createHash('sha256').update(file).digest('hex')
+  return `https://github.com/${repoSlug(repo, where)}/compare/${parent}...${commit}#diff-${anchor}`
+}
+
 // A link to the whole file as of the imported commit: the reader's way to
 // catch up, costing the page no words.
 function wholeFile(repo: Track, rev: string | undefined, file: string, where: string): string {
-  const slug = REPOS[repo]
-  if (!slug) throw new Error(`${where}: the headmatter's docs.repos names no GitHub repo for ${repo}`)
-  const url = `https://github.com/${slug}/blob/${commitOf(repo, rev, where)}/${file}`
-  return `[The whole \`${file}\` at this point](${url})`
+  return `[The whole \`${file}\` at this point](${blobUrl(repo, rev, file, where)})`
 }
 
 // The tips' click-0 text on a build slide points at the lit lines, which a
@@ -190,13 +209,17 @@ function codeImport(line: string, tips: string[], caption: string): string {
     const ops = commitOps(before, after, all)
     const intro = tips[0] && dropLitLines(tips[0])
     if (intro) parts.push(intro)
+    const track = repo as Track
+    const compare = before.length ? compareUrl(track, rev, file, where) : ''
+    const blob = blobUrl(track, rev, file, where)
     groups.forEach((group, g) => {
+      const prior = new Set(applied)
       group.forEach(n => applied.add(n))
       if (tips[g + 1]) parts.push(tips[g + 1])
       // A new file reads better whole, as it stands after this click.
       parts.push(before.length
-        ? `\`\`\`diff file=${file} lang=${lang}\n${groupPatch(ops, group, file, false)}\n\`\`\``
-        : fence(lang, frame(before, after, all, new Set(applied), new Set()).lines, `file=${file}`))
+        ? fence('diff', [groupPatch(ops, prior, group, file)], `file=${file} lang=${lang} context=${DIFF_CONTEXT} href=${compare}`)
+        : fence(lang, frame(before, after, all, new Set(applied), new Set()).lines, `file=${file} href=${blob}`))
     })
     if (applied.size === all.length && before.length) {
       parts.push(wholeFile(repo as Track, rev, file, where))
@@ -206,9 +229,10 @@ function codeImport(line: string, tips: string[], caption: string): string {
 
   const lines = linesOf(show(repo, rev, file, where))
   checkRanges(ranges, lines.length, where)
+  const blob = blobUrl(repo as Track, rev, file, where)
   const steps = ranges ? ranges.split('|') : ['*']
   if (!tips.some(Boolean)) {
-    parts.push(excerpt(lines, steps.flatMap(r => numbersIn(r, lines.length)), lang, file))
+    parts.push(excerpt(lines, steps.flatMap(r => numbersIn(r, lines.length)), lang, file, blob))
   }
   else {
     const shown = new Set<number>()
@@ -218,7 +242,7 @@ function codeImport(line: string, tips: string[], caption: string): string {
       // (a "the whole thing" click at the end) adds nothing on paper.
       if (!tips[k] && numbers.every(n => shown.has(n))) return
       if (tips[k]) parts.push(tips[k])
-      parts.push(excerpt(lines, numbers, lang, file))
+      parts.push(excerpt(lines, numbers, lang, file, blob))
       numbers.forEach(n => shown.add(n))
     })
     if (shown.size < lines.length) {
