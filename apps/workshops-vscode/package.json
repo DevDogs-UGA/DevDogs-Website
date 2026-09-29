@@ -1,0 +1,20 @@
+{
+  "name": "workshops-vscode",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "DevDogs Workshops VS Code extension. src/core is the pure-Node merge engine (no vscode imports); the extension shell wraps it.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "node-diff3": "^3.1.2"
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
