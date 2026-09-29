@@ -32,6 +32,11 @@
  *   branch. A `#` line is an annotation, dimmed and with no prompt; a line
  *   after one ending in `\` continues the command. An idle prompt closes it.
  *
+ * Every literal `<github-username>` in a block, and in a prompt's branch, is
+ * wrapped in `<span data-github-username>` (the tokens the highlighter split it
+ * into stay inside). The platform swaps in the signed-in reader's GitHub login
+ * after hydration; the rendered HTML always has the literal.
+ *
  * Line numbers ride a `data-line` attribute and prompts are `aria-hidden`
  * elements, so neither is part of the code's own text: the platform's copy
  * button skips prompts and annotations and copies the commands alone.
@@ -108,10 +113,34 @@ function text(value: string): ElementContent {
   return { type: "text", value };
 }
 
+/** The placeholder a page writes where the reader's GitHub login goes. */
+export const GITHUB_USERNAME = "<github-username>";
+
+function marker(children: ElementContent[]): Element {
+  return {
+    type: "element",
+    tagName: "span",
+    properties: { dataGithubUsername: "" },
+    children,
+  };
+}
+
+/** Plain text, with each `<github-username>` in it marked. */
+function markedText(value: string): ElementContent[] {
+  return value
+    .split(GITHUB_USERNAME)
+    .flatMap((part, i): ElementContent[] => [
+      ...(i > 0 ? [marker([text(GITHUB_USERNAME)])] : []),
+      ...(part ? [text(part)] : []),
+    ]);
+}
+
 function prompt(cwd: string | undefined, branch: string | undefined): Element {
   const parts: ElementContent[] = [];
   if (cwd) parts.push(span("docs-prompt-cwd", [text(cwd)]));
-  if (branch) parts.push(span("docs-prompt-git", [text(` ${branch}`)]));
+  if (branch) {
+    parts.push(span("docs-prompt-git", [text(" "), ...markedText(branch)]));
+  }
   parts.push(span("docs-prompt-arrow", [text(cwd || branch ? " ❯ " : "❯ ")]));
   const el = span("docs-prompt", parts);
   el.properties["ariaHidden"] = "true";
@@ -149,6 +178,106 @@ function addClass(el: Element, className: string): void {
   el.properties["className"] = [...classes, className];
 }
 
+/**
+ * The branch a `git switch`/`checkout` lands on. `-c`/`-C`/`--create`/
+ * `--force-create` (and `-b`/`-B`) name a new branch, whose start point, if
+ * any, follows it; otherwise the last word that isn't a flag is the target.
+ */
+function switchTarget(args: string[]): string | undefined {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]!;
+    const long = /^--(?:create|force-create)=(.+)$/.exec(arg);
+    if (long) return long[1];
+    if (/^(?:-[cCbB]|--create|--force-create)$/.test(arg)) {
+      const name = args[i + 1];
+      if (name && !name.startsWith("-")) return name;
+    }
+    const attached = /^-[cCbB](.+)$/.exec(arg);
+    if (attached) return attached[1];
+  }
+  return args.filter((w) => !w.startsWith("-")).pop();
+}
+
+/**
+ * Wraps every `<github-username>` in a line in one `<span data-github-username>`,
+ * however the highlighter split it into tokens: the tokens are cut at the
+ * placeholder's edges, then the ones inside are gathered under the wrapper.
+ * The platform swaps the wrapper's text for the reader's GitHub login.
+ */
+function markPlaceholders(line: Element): void {
+  const whole = textOf(line);
+  if (!whole.includes(GITHUB_USERNAME)) return;
+
+  const cuts = new Set<number>();
+  for (
+    let at = whole.indexOf(GITHUB_USERNAME);
+    at !== -1;
+    at = whole.indexOf(GITHUB_USERNAME, at + GITHUB_USERNAME.length)
+  ) {
+    cuts.add(at);
+    cuts.add(at + GITHUB_USERNAME.length);
+  }
+
+  // Split tokens that straddle a cut.
+  const pieces: { node: ElementContent; from: number; to: number }[] = [];
+  let offset = 0;
+  for (const node of line.children) {
+    const value = textOf(node);
+    const inside = [...cuts].filter(
+      (c) => c > offset && c < offset + value.length,
+    );
+    if (
+      inside.length === 0 ||
+      (node.type === "element" && !isPlainToken(node))
+    ) {
+      pieces.push({ node, from: offset, to: offset + value.length });
+    } else {
+      const bounds = [
+        offset,
+        ...inside.sort((a, b) => a - b),
+        offset + value.length,
+      ];
+      for (let i = 0; i < bounds.length - 1; i++) {
+        const part = value.slice(bounds[i]! - offset, bounds[i + 1]! - offset);
+        pieces.push({
+          node:
+            node.type === "element"
+              ? { ...node, children: [text(part)] }
+              : text(part),
+          from: bounds[i]!,
+          to: bounds[i + 1]!,
+        });
+      }
+    }
+    offset += value.length;
+  }
+
+  const out: ElementContent[] = [];
+  let group: ElementContent[] | null = null;
+  let end = 0;
+  for (const piece of pieces) {
+    const start = piece.from;
+    if (
+      !group &&
+      [...cuts].includes(start) &&
+      whole.startsWith(GITHUB_USERNAME, start)
+    ) {
+      group = [];
+      end = start + GITHUB_USERNAME.length;
+      out.push(marker(group));
+    }
+    if (group && piece.from < end) group.push(piece.node);
+    else out.push(piece.node);
+    if (group && piece.to >= end) group = null;
+  }
+  line.children = out;
+}
+
+/** A Shiki token: an element holding nothing but text. */
+function isPlainToken(el: Element): boolean {
+  return el.children.every((child) => child.type === "text");
+}
+
 /** Prompts, annotations and the idle line, per `shell.ts` in the slides. */
 function decorateShell(
   code: Element,
@@ -181,7 +310,11 @@ function decorateShell(
     );
     if (clone) {
       const name =
-        clone[2] ?? clone[1]!.replace(/\.git$/, "").split("/").pop()!;
+        clone[2] ??
+        clone[1]!
+          .replace(/\.git$/, "")
+          .split("/")
+          .pop()!;
       clones.set(cdTo(cwd, name), "main");
     } else if (words[0] === "cd") {
       cwd = cdTo(cwd, words[1] ?? "~");
@@ -190,15 +323,15 @@ function decorateShell(
       words[0] === "git" &&
       (words[1] === "switch" || words[1] === "checkout")
     ) {
-      const target = words
-        .slice(2)
-        .filter((w) => !w.startsWith("-"))
-        .pop();
+      const target = switchTarget(words.slice(2));
       if (target) branch = target;
     }
   }
 
-  const idle = span("line", [prompt(cwd, branch), span("docs-shell-cursor", [])]);
+  const idle = span("line", [
+    prompt(cwd, branch),
+    span("docs-shell-cursor", []),
+  ]);
   addClass(idle, "docs-shell-idle");
   idle.properties["ariaHidden"] = "true";
   code.children.push(text("\n"), idle);
@@ -261,6 +394,7 @@ export function docsCodeBlocks(): ShikiTransformer {
         (node): node is Element =>
           node.type === "element" && classesOf(node).includes("line"),
       );
+      lines.forEach(markPlaceholders);
       if (SHELL_LANGS.has(this.options.lang)) {
         decorateShell(code, lines, {
           cwd: metaAttribute(meta, "cwd"),
@@ -316,7 +450,10 @@ export function docsCodeBlocks(): ShikiTransformer {
               rel: ["noopener", "noreferrer"],
               ariaLabel: "View on GitHub",
             },
-            children: [GITHUB_ICON, span("docs-code-link-label", [text("GitHub")])],
+            children: [
+              GITHUB_ICON,
+              span("docs-code-link-label", [text("GitHub")]),
+            ],
           }
         : null;
       root.children = [

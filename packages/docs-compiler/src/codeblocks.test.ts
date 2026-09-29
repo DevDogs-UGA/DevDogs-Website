@@ -84,3 +84,98 @@ describe("code block links", () => {
     expect(html).not.toContain("docs-code-link");
   });
 });
+
+/** The text inside each `<span data-github-username>`, tags and entities dropped. */
+function markedTexts(html: string): string[] {
+  const out: string[] = [];
+  const open = '<span data-github-username="">';
+  for (
+    let at = html.indexOf(open);
+    at !== -1;
+    at = html.indexOf(open, at + 1)
+  ) {
+    let depth = 1;
+    let i = at + open.length;
+    while (depth > 0) {
+      const next = /<(\/?)span\b/g;
+      next.lastIndex = i;
+      const m = next.exec(html)!;
+      depth += m[1] ? -1 : 1;
+      i = m.index + 1;
+    }
+    out.push(
+      html
+        .slice(at + open.length, i - 1)
+        .replace(/<[^>]*>/g, "")
+        .replace(/&#x3C;/g, "<"),
+    );
+  }
+  return out;
+}
+
+describe("git switch -c / -C in a terminal", () => {
+  const branches = (html: string) =>
+    [
+      ...html.matchAll(
+        /<span class="docs-prompt-git">(.*?)<\/span><span class="docs-prompt-arrow">/g,
+      ),
+    ].map((m) =>
+      m[1]!
+        .replace(/<[^>]*>/g, "")
+        .replace(/&#x3C;/g, "<")
+        .trim(),
+    );
+
+  it("follows -c and -C onto the new branch, not its start point", async () => {
+    const html = await renderBody(
+      "```bash cwd=~/Web-Workshops branch=main\ngit switch -c ada/02-supabase origin/01-nextjs-intro\ngit switch -C ada/03-x 02-supabase/01-read --discard-changes\ngit switch --create ada/04\ngit switch main\n```\n",
+      ctx,
+    );
+    expect(branches(html)).toEqual([
+      "main",
+      "ada/02-supabase",
+      "ada/03-x",
+      "ada/04",
+      "main",
+    ]);
+  });
+
+  it("follows a branch named with <github-username>, and marks the label", async () => {
+    const html = await renderBody(
+      "```bash cwd=~/Web-Workshops branch=main\ngit switch -c <github-username>/02-supabase origin/01-nextjs-intro\ngit switch -C <github-username>/02-supabase 02-supabase/01-read --discard-changes\n```\n",
+      ctx,
+    );
+    expect(branches(html)).toEqual([
+      "main",
+      "<github-username>/02-supabase",
+      "<github-username>/02-supabase",
+    ]);
+    expect(html).toContain(
+      '<span class="docs-prompt-git"> <span data-github-username="">&#x3C;github-username></span>/02-supabase</span>',
+    );
+  });
+});
+
+describe("<github-username> placeholder", () => {
+  it("wraps each placeholder in one marker, however the highlighter split it", async () => {
+    const html = await renderBody(
+      "```bash\ngit switch -c <github-username>/02-supabase origin/01-nextjs-intro\necho <github-username> <github-username>\n```\n",
+      ctx,
+    );
+    // Three in the commands, plus the branch label on the echo's prompt and the idle one.
+    expect(markedTexts(html)).toEqual(Array(5).fill("<github-username>"));
+  });
+
+  it("marks it in non-shell blocks too, and nothing else", async () => {
+    const html = await renderBody(
+      '```ts\nconst me = "<github-username>";\nconst you = 1;\n```\n',
+      ctx,
+    );
+    expect(markedTexts(html)).toEqual(["<github-username>"]);
+  });
+
+  it("leaves blocks without the placeholder unmarked", async () => {
+    const html = await renderBody("```bash\ngit switch main\n```\n", ctx);
+    expect(html).not.toContain("data-github-username");
+  });
+});
