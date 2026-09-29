@@ -8,6 +8,8 @@
 //   pans to the highlighted lines (lib/viewport.ts).
 // - Shell blocks get prompts and an idle cursor (lib/shell.ts). Two extra
 //   options set where the session starts: ```bash {*}{cwd:'~/DevDogsUGA',branch:'main'}
+//   A third, `{run: false}`, is for the scripts, not the slide: a command
+//   readers see but that isn't one of the step's (scripts/deck.ts).
 // - Copy and the Discord button take the block's focus, not the whole file.
 import { computed, onMounted, ref, useAttrs } from 'vue'
 import Builtin from '@slidev/client/builtin/CodeBlockWrapper.vue'
@@ -29,7 +31,7 @@ const { offset, animate } = useCodeViewport(root, track)
 const ranges = computed(() => (attrs.ranges as string[] | undefined) ?? [])
 const startLine = computed(() => Number(attrs.startLine ?? attrs['start-line'] ?? 1))
 const passthrough = computed(() => {
-  const { cwd: _cwd, branch: _branch, ...rest } = attrs
+  const { cwd: _cwd, branch: _branch, run: _run, ...rest } = attrs
   return rest
 })
 

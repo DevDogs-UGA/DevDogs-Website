@@ -116,23 +116,27 @@ catch {
   fail(`${repo} is not a git repository.`)
 }
 
-function demoTags() {
-  return execFileSync('git', ['-C', repo, 'tag', '--list', 'demo/*'], { encoding: 'utf8' }).split('\n').filter(Boolean)
+// The step tags checkpoints name are `<workshop>/<NN>-<slug>`: every tag
+// under the deck's workshops.
+const checkpoints = deckCheckpoints()
+const prefixes = [...new Set(checkpoints.map(tag => tag.split('/')[0]))]
+
+function stepTags() {
+  return execFileSync('git', ['-C', repo, 'tag', '--list', ...prefixes.map(p => `${p}/*`)], { encoding: 'utf8' }).split('\n').filter(Boolean)
 }
 
-// A clone of the public repo doesn't have the checkpoint tags: fetch the
-// missing ones from the planning repo.
-const checkpoints = deckCheckpoints()
-let tags = demoTags()
+// A clone of the public repo may not have the checkpoint tags yet: fetch
+// the missing ones from the planning repo.
+let tags = stepTags()
 if (checkpoints.some(tag => !tags.includes(tag))) {
   console.log(`\nfollow: fetching checkpoint tags from ${PLANNING_REPO[track]}`)
   try {
-    execFileSync('git', ['-C', repo, 'fetch', '--no-tags', PLANNING_REPO[track], '+refs/tags/demo/*:refs/tags/demo/*'], { stdio: 'inherit' })
+    execFileSync('git', ['-C', repo, 'fetch', '--no-tags', PLANNING_REPO[track], ...prefixes.map(p => `+refs/tags/${p}/*:refs/tags/${p}/*`)], { stdio: 'inherit' })
   }
   catch {
     console.log('follow: couldn\'t fetch them; checkpoints without a tag will fail.')
   }
-  tags = demoTags()
+  tags = stepTags()
 }
 
 checkOutWorkshops()

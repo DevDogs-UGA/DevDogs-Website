@@ -394,9 +394,10 @@ both tracks share. See `scripts/export-md.ts`. Each `{build}` import becomes
 one diff per click group with its `<CodeTips>` tip before it, then a link to
 the whole file on GitHub; presenter notes are dropped.
 
-- The headmatter's `docs` key: `description`, `repos` (the public GitHub repo
-  per track, for the file links), and `tracks` (each track's folder `dir`,
-  `name` and `order`).
+- The headmatter's `docs` key: `description`, `url` (where the pages are on
+  the docs site), `repos` (the public GitHub repo per track, for the file
+  links), and `tracks` (each track's folder `dir`, `name`, `order`, and
+  `start`, the branch its demo starts from).
 - `docsPage` on a slide starts a page: `file`, optional `title` (else the
   slide's heading), `description`, and `shared: true` + `order` for a page
   both tracks read the same, written once beside the track folders.
@@ -404,6 +405,42 @@ the whole file on GitHub; presenter notes are dropped.
   (the preshow, the competition, upcoming events).
 - A component with no markdown form (`<UpcomingStack>`, `<QRSlot>`, …) on an
   exported slide fails the export: add `docs: false` or teach the script.
+
+### Step tags: `pnpm tag-steps`
+
+Each `checkpoint:` is a tag in the workshop repos, `<workshop>/<NN>-<slug>`,
+that attendees' clones read their steps from (the workshops VS Code
+extension, the docs' catch-up commands). You pick each step's commit by
+tagging it while building the demo; `pnpm tag-steps` then annotates every
+tag in place (it never moves one) with the step's docs page title, a `Run:`
+line per command in the step's shell blocks, and a `Docs:` line (the
+headmatter's `docs.url`). It also tags `<workshop>/00-start` at the track's
+`start` branch the first time. See `scripts/tag-steps.ts`.
+
+- A shell block readers see but shouldn't run as part of the step (`pnpm
+  dev`, which never exits) says so: ```` ```bash {*}{run: false} ````.
+- It works on the deck's submodules (`workshops/web`, `workshops/mobile`) by
+  default, or `--web`/`--mobile <clone>`. Push the tags to the planning
+  repos from there: `git push --force origin 'refs/tags/02-supabase/*'`.
+- `pnpm tag-steps --check` changes nothing and fails on any difference. The
+  Slides workflow runs it, so a deck change that alters a step's title or
+  commands needs a re-run and a push.
+
+### Publishing a workshop
+
+The docs pages cite exact commits and tags in the public repos, and the
+extension fetches them from there, so before the pages' scheduled time:
+
+1. `pnpm tag-steps --check`.
+2. From your workshop clone (Web-Workshops, Mobile-Workshops), with the
+   annotated tags fetched (`git fetch origin --tags --force`), push the
+   branch and its tags to the public repo:
+   `git push public 02-supabase 'refs/tags/02-supabase/*'`.
+3. `pnpm tag-steps --check --remote public`: every tag is there, at the
+   same commit, with the same message.
+
+Never rebase or amend a workshop branch after exporting: the pages would
+cite commits nobody can fetch. The last check catches it.
 
 ## Presenting
 
@@ -439,12 +476,12 @@ The pieces:
 
 ### Checkpoints
 
-A slide can name the demo tag its step ends at:
+A slide can name the step tag its step ends at:
 
 ```md
 ---
 layout: dual-code
-checkpoint: demo/03-insert-naive
+checkpoint: 02-supabase/03-insert-naive
 ---
 ```
 
@@ -456,11 +493,12 @@ git's error on hover) shows beside the flag. It never runs on its own when
 a slide comes up.
 
 The tags live in the planning repos (web-workshops-planning,
-mobile-workshops-planning), one per demo step (`demo/01-read` …
-`demo/05-delete`), on the step commits of `02-supabase`. `pnpm follow`
+mobile-workshops-planning), one per demo step (`02-supabase/01-read` …
+`02-supabase/05-delete`), on the step commits of `02-supabase`, and are
+pushed to the public repos with the handout (see Handouts). `pnpm follow`
 fetches any the laptop's clone is missing, so a clone of the public repo
-works too. Only `demo/*` tags are accepted, and a missing tag fails
-with a message rather than switching to anything else. After a switch,
+works too. Only step tags (`<workshop>/<NN>-<slug>`) are accepted, and a
+missing tag fails with a message rather than switching to anything else. After a switch,
 Next.js reloads by itself; the Flutter laptop needs a hot restart (`R`).
 
 ### On the night

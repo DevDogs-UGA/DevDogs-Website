@@ -8,6 +8,7 @@
     "build": "slidev build decks/2026-09-28-supabase.md",
     "follow": "node scripts/follow.mjs",
     "export:md": "node scripts/export-md.ts",
+    "tag-steps": "node scripts/tag-steps.ts",
     "dev:worker": "wrangler dev --var ACCESS_LOCAL_DEV:true",
     "deploy": "slidev build decks/2026-09-28-supabase.md && node scripts/strip-redirects.mjs && wrangler deploy",
     "types": "wrangler types --strict-vars=false worker/worker-configuration.d.ts",

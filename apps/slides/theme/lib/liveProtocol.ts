@@ -10,10 +10,11 @@ import type { Track } from './discord'
 
 export type Role = 'drive' | 'follow'
 
-// A checkpoint is a tag in the demo laptops' workshop clones, e.g.
-// `demo/03-insert-naive`. Anything else is refused at the relay and again on
-// the laptop, since the laptop runs `git switch` on it.
-export const CHECKPOINT_REF = /^demo\/[\w.-]+$/
+// A checkpoint is a step tag in the workshop repos, `<workshop>/<NN>-<slug>`,
+// e.g. `02-supabase/03-insert-naive` (scripts/tag-steps.ts). Anything else is
+// refused at the relay and again on the laptop, since the laptop runs
+// `git switch` on it.
+export const CHECKPOINT_REF = /^[\w.-]+\/\d\d-[\w.-]+$/
 
 export interface Checkpoint {
   id: string

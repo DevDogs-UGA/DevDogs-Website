@@ -5,7 +5,7 @@
 //
 //   ---
 //   layout: dual-code
-//   checkpoint: demo/03-insert-naive
+//   checkpoint: 02-supabase/03-insert-naive
 //   ---
 //
 // A checkpoint throws away whatever was typed live on that laptop, so it

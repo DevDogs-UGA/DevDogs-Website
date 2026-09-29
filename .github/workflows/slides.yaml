@@ -46,5 +46,12 @@ jobs:
           submodules: true
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
+      # The step tags must match the deck (titles, commands, docs pages):
+      # a deck change that alters them needs `pnpm tag-steps` and a push.
+      - name: Check the workshop step tags
+        run: |
+          git -C apps/slides/workshops/web fetch --tags --force origin
+          git -C apps/slides/workshops/mobile fetch --tags --force origin
+          pnpm --filter slides tag-steps --check
       - name: Build the slides app and its workspace deps
         run: pnpm -r --filter 'slides...' --if-present run build

@@ -64,7 +64,7 @@ export function checkpoints(envDir: string): Plugin {
           const { id, ref } = checkpoint
           const result = (async (): Promise<CheckpointStatus> => {
             if (typeof ref !== 'string' || !CHECKPOINT_REF.test(ref)) {
-              return { id, ref: String(ref), track, ok: false, message: 'not a demo/* tag' }
+              return { id, ref: String(ref), track, ok: false, message: 'not a step tag' }
             }
             try {
               const message = await switchTo(repo, ref)
