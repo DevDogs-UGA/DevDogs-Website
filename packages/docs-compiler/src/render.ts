@@ -10,8 +10,8 @@
  * finished HTML rather than a markdown pipeline.
  *
  * The plugin list is the one the platform ran, in the same order, so a page
- * renders the same; `remarkVariants` and `rehypeScrollTables` are the only
- * additions.
+ * renders the same; `remarkVariants`, `remarkDiffs` and `rehypeScrollTables`
+ * are the only additions.
  */
 import rehypeShiki from "@shikijs/rehype";
 import type { Element, Root as HastRoot } from "hast";
@@ -32,6 +32,7 @@ import remarkSmartypants from "remark-smartypants";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import { VFile } from "vfile";
+import { remarkDiffs } from "./diffs.js";
 import { remarkVariants, type VariantContext } from "./variants.js";
 
 /**
@@ -62,6 +63,9 @@ const processor = unified()
   // Before remark-emoji: it puts back the `:word` text directives an emoji
   // shortcode parses as, which remark-emoji then needs to see as text.
   .use(remarkVariants)
+  // After the variants, so a diff inside a resolved variant is still nested
+  // (and left alone), and before Shiki could ever see the block.
+  .use(remarkDiffs)
   .use(remarkSmartypants)
   .use(remarkEmoji)
   .use(remarkAlert)

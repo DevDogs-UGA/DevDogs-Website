@@ -84,46 +84,69 @@ function excerpt(lines: string[], numbers: number[], lang: string): string {
   return fence(lang, out)
 }
 
-// A unified diff of two versions of a file, three lines of context, hunks
-// separated by an `@@` line. Files here are a few hundred lines, so a plain
-// LCS table is plenty.
-function diff(a: string[], b: string[]): string {
-  const lcs = Array.from({ length: a.length + 1 }, () => new Array<number>(b.length + 1).fill(0))
-  for (let i = a.length - 1; i >= 0; i--) {
-    for (let j = b.length - 1; j >= 0; j--) {
-      lcs[i][j] = a[i] === b[j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1])
-    }
+type Chunk = ReturnType<typeof buildPlan>['all'][number]
+
+interface Op {
+  kind: ' ' | '-' | '+'
+  line: string
+  /** The line numbers this op sits at in the old and new file. */
+  oldAt: number
+  newAt: number
+  /** The chunk a change belongs to (numbered from 1), none for context. */
+  chunk?: number
+}
+
+// The commit's real diff of one file as a run of ops, rebuilt from git's own
+// hunks (`buildPlan`'s chunks) rather than recomputed, so its changes are
+// exactly the ones the slides build up.
+function commitOps(before: string[], after: string[], all: Chunk[]): Op[] {
+  const ops: Op[] = []
+  let oldPos = 1
+  let newPos = 1
+  const context = (to: number) => {
+    while (oldPos <= to) ops.push({ kind: ' ', line: before[oldPos - 1], oldAt: oldPos++, newAt: newPos++ })
   }
-  const ops: { kind: ' ' | '-' | '+', line: string }[] = []
-  let i = 0
-  let j = 0
-  while (i < a.length || j < b.length) {
-    if (i < a.length && j < b.length && a[i] === b[j]) {
-      ops.push({ kind: ' ', line: a[i++] })
-      j++
-    }
-    // Removals before additions, as `git diff` prints them.
-    else if (i < a.length && (j === b.length || lcs[i + 1][j] >= lcs[i][j + 1])) {
-      ops.push({ kind: '-', line: a[i++] })
-    }
-    else {
-      ops.push({ kind: '+', line: b[j++] })
-    }
-  }
+  all.forEach((h, i) => {
+    // A pure insertion (oldCount 0) goes after old line oldStart.
+    context(h.oldCount === 0 ? h.oldStart : h.oldStart - 1)
+    for (let k = 0; k < h.oldCount; k++) ops.push({ kind: '-', line: before[oldPos - 1], oldAt: oldPos++, newAt: newPos, chunk: i + 1 })
+    for (let k = 0; k < h.newCount; k++) ops.push({ kind: '+', line: after[newPos - 1], oldAt: oldPos, newAt: newPos++, chunk: i + 1 })
+  })
+  context(before.length)
+  return ops
+}
+
+// A real unified diff of one click group: the commit's changes that belong to
+// the group's chunks, with up to three lines of real context either side, and
+// the real line numbers of both files in each hunk header. Another group's
+// change is never shown; context stops where one begins.
+function groupPatch(ops: Op[], group: number[], file: string, isNew: boolean): string {
   const CONTEXT = 3
   const keep = ops.map(() => false)
   ops.forEach((op, k) => {
-    if (op.kind === ' ') return
-    for (let c = Math.max(0, k - CONTEXT); c <= Math.min(ops.length - 1, k + CONTEXT); c++) keep[c] = true
+    if (op.chunk === undefined || !group.includes(op.chunk)) return
+    keep[k] = true
+    for (const step of [-1, 1]) {
+      for (let c = k + step, n = 0; n < CONTEXT && c >= 0 && c < ops.length && ops[c].kind === ' '; c += step, n++) keep[c] = true
+    }
   })
-  const out: string[] = []
+  const hunks: Op[][] = []
   ops.forEach((op, k) => {
     if (!keep[k]) return
-    if (out.length && !keep[k - 1]) out.push('@@')
-    // Trimmed, as the docs repo's Prettier leaves a blank context line.
-    out.push(`${op.kind}${op.line}`.trimEnd())
+    if (k === 0 || !keep[k - 1]) hunks.push([])
+    hunks.at(-1)!.push(op)
   })
-  return fence('diff', out)
+  const header = (at: number, count: number) => `${count === 0 ? at - 1 : at},${count}`
+  const body = hunks.flatMap((hunk) => {
+    const oldCount = hunk.filter(op => op.kind !== '+').length
+    const newCount = hunk.filter(op => op.kind !== '-').length
+    return [
+      `@@ -${header(hunk[0].oldAt, oldCount)} +${header(hunk[0].newAt, newCount)} @@`,
+      // Trimmed, as the docs repo's Prettier leaves a blank context line.
+      ...hunk.map(op => `${op.kind}${op.line}`.trimEnd()),
+    ]
+  })
+  return [isNew ? '--- /dev/null' : `--- a/${file}`, `+++ b/${file}`, ...body].join('\n')
 }
 
 // The public GitHub repo each workshop submodule publishes to, from the deck
@@ -159,15 +182,18 @@ function codeImport(line: string, tips: string[], caption: string): string {
   if (buildSpec) {
     const { before, after, all, done, groups } = buildPlan(repo, rev, file, buildSpec[1], where)
     const applied = new Set(done)
+    const ops = commitOps(before, after, all)
     const intro = tips[0] && dropLitLines(tips[0])
     if (intro) parts.push(intro)
-    parts.push(`${head}:`)
+    // Each diff names its own file; a caption only adds where it goes.
+    if (caption || !before.length) parts.push(`${head}:`)
     groups.forEach((group, g) => {
-      const was = frame(before, after, all, new Set(applied), new Set()).lines
       group.forEach(n => applied.add(n))
-      const now = frame(before, after, all, new Set(applied), new Set()).lines
       if (tips[g + 1]) parts.push(tips[g + 1])
-      parts.push(was.length ? diff(was, now) : fence(lang, now))
+      // A new file reads better whole, as it stands after this click.
+      parts.push(before.length
+        ? `\`\`\`diff file=${file} lang=${lang}\n${groupPatch(ops, group, file, false)}\n\`\`\``
+        : fence(lang, frame(before, after, all, new Set(applied), new Set()).lines))
     })
     if (applied.size === all.length && before.length) {
       parts.push(wholeFile(repo as Track, rev, file, where))
