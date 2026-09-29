@@ -88,6 +88,27 @@ declare({
         example: "61d185ff419ef7bd5bd4b3d314081a49",
       },
     ),
+    // Read only by the deploy workflow's Sentry release step and the deploy
+    // smoke test, never by an app. Without the token, deploys skip the release
+    // and its source-map upload with a warning. With it, a failed upload fails
+    // the deploy.
+    SENTRY_AUTH_TOKEN: define(z.string().min(1).optional(), {
+      doc:
+        "A Sentry organization auth token. Deploys use it to create each " +
+        "release and upload its source maps, and the smoke test uses it to " +
+        "read cron check-ins. One token serves every environment.",
+      scope: "environment",
+      secrecy: "secret",
+      commented: true,
+    }),
+    SENTRY_ORG: define(z.string().min(1).optional(), {
+      doc:
+        "The Sentry organization slug the release step and smoke test " +
+        "address. Identifies, does not authorize.",
+      scope: "default",
+      secrecy: "public",
+      example: "devdogsuga",
+    }),
     // Developer-scoped even though the VALUE is org-wide: only operators
     // running `env pull/push/audit` on their own machines read it, no app and
     // no CI job does, and developer scope is what keeps a purely local input
