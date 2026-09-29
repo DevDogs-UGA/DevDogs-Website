@@ -47,6 +47,7 @@ import { loadRegistry } from "./env/discovery.js";
 import { positionals } from "./args.js";
 import { findCiCommand, subcommandCiNames } from "./commands.js";
 import { isWorkerApp, workerApps } from "./workers.js";
+import { ignoreClosedPipes } from "./pipes.js";
 import {
   captureDevtoolsError,
   initDevtoolsTelemetry,
@@ -336,6 +337,7 @@ export async function main(argv: string[]): Promise<void> {
   // any dispatch below. `[first, rest[0]]` names the step (`deploy
   // secrets-file`, `deploy platform`, …) as the `command` tag rather than just
   // "deploy", which every invocation here would otherwise share.
+  ignoreClosedPipes();
   initDevtoolsTelemetry([first, rest[0]].filter(Boolean).join(" ") || "help");
 
   if (!first || first === "--help" || first === "-h") {

@@ -8,6 +8,7 @@ const sentry = vi.hoisted(() => ({
 vi.mock("@sentry/node", () => sentry);
 
 import {
+  hasRealCaller,
   reportDevtoolsError,
   reportDevtoolsFailure,
   resolveDevtoolsDsn,
@@ -30,6 +31,21 @@ describe("resolveDevtoolsDsn", () => {
 
   it("is empty when neither is set, so Sentry never initializes", () => {
     expect(resolveDevtoolsDsn({ DEVTOOLS_SENTRY_DSN: "" }, "")).toBe("");
+  });
+});
+
+describe("hasRealCaller", () => {
+  it("reports from a checkout, with or without a terminal", () => {
+    expect(hasRealCaller(true, false)).toBe(true);
+    expect(hasRealCaller(true, true)).toBe(true);
+  });
+
+  it("reports from a terminal outside a checkout, where setup runs", () => {
+    expect(hasRealCaller(false, true)).toBe(true);
+  });
+
+  it("stays quiet with neither, the shape of a registry scanner", () => {
+    expect(hasRealCaller(false, false)).toBe(false);
   });
 });
 

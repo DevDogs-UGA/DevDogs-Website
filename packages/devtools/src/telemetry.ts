@@ -29,6 +29,7 @@
 import { readFileSync } from "node:fs";
 import * as Sentry from "@sentry/node";
 import { buildSentryOptions } from "@devdogsuga/telemetry";
+import { discoverRepoRoot } from "./repo/root.js";
 import { ownVersion } from "./version.js";
 
 /** The DSN baked into this build, or "" if there is none (a source run under
@@ -74,6 +75,19 @@ export function devtoolsTelemetryEnabled(): boolean {
 }
 
 /**
+ * Whether anyone is actually using devtools in this process. Package-registry
+ * scanners install every published version within minutes and run it in a
+ * throwaway sandbox (random `DESKTOP-xxxxxx` hosts, Firecracker VMs, a fuzzer
+ * that turns `process.exit` into a throw). Left unfiltered, each release filed
+ * the same two issues from them. They run with no DevDogsUGA checkout and no
+ * terminal. A person has at least one of the two (`setup` runs outside a
+ * checkout, but in a terminal), and CI always has a checkout.
+ */
+export function hasRealCaller(inRepo: boolean, isTTY: boolean): boolean {
+  return inRepo || isTTY;
+}
+
+/**
  * Initializes `@sentry/node` for this CLI process. Safe to call more than
  * once (idempotent) and safe to call with no DSN configured (no-ops via
  * `buildSentryOptions`, see its header).
@@ -87,6 +101,9 @@ export function initDevtoolsTelemetry(command: string): void {
   initialized = true;
 
   if (!devtoolsTelemetryEnabled()) return;
+  if (!hasRealCaller(discoverRepoRoot() !== null, process.stdin.isTTY === true)) {
+    return;
+  }
 
   const options = buildSentryOptions({
     service: "devtools",

@@ -62,6 +62,7 @@ import { bareGroupStartPath } from "./menu.js";
 import { discoverRepoRoot, findRepoRoot, RepoNotFoundError } from "./repo/root.js";
 import { loadEnvLoad, loadEnvSession } from "./repo/peers.js";
 import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
+import { ignoreClosedPipes } from "./pipes.js";
 import { errorMessage, unwrap } from "./ui.js";
 
 /**
@@ -160,6 +161,7 @@ export async function launch(argv: readonly string[]): Promise<void> {
   // resolving or entering the tier below is reported too. `main()`'s own
   // call is then a no-op (`initDevtoolsTelemetry` is idempotent) and this
   // tag, computed from the same argv `main()` receives, stands.
+  ignoreClosedPipes();
   initDevtoolsTelemetry(rest[0] ?? "menu");
 
   // Same test `cli.ts`'s own `main()` uses to decide whether a bare command

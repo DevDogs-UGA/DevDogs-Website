@@ -32,12 +32,14 @@ import { findRepoRoot } from "./repo/root.js";
 import { loadEnvLoad, loadEnvSession } from "./repo/peers.js";
 import { stripTierFlag } from "./launch.js";
 import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
+import { ignoreClosedPipes } from "./pipes.js";
 
 export async function launchCi(argv: readonly string[]): Promise<void> {
   const { explicit, rest } = stripTierFlag(argv);
 
   // See `launch.ts`'s matching call: early, so tier resolution and env entry
   // are covered too. Same tag `ci.ts`'s `main()` would compute.
+  ignoreClosedPipes();
   initDevtoolsTelemetry(rest.slice(0, 2).join(" ") || "help");
   const envLoad = await loadEnvLoad();
   const envSession = await loadEnvSession();
