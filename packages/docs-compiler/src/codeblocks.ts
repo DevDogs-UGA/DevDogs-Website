@@ -6,6 +6,7 @@
  *   <div class="docs-code-bar">
  *     <span class="docs-code-tab">lib/supabase.ts</span>
  *     <div class="docs-code-actions">
+ *       <a class="docs-code-vscode" href="vscode://…">…</a>
  *       <a class="docs-code-link" href="…">…</a>
  *       <button class="docs-code-copy" data-copy>…</button>
  *     </div>
@@ -23,6 +24,12 @@
  *   line, or the build fails.
  * - `href=<url>` puts a GitHub link in the bar, beside the copy button: where
  *   the code lives in its repository.
+ * - `vscode=<uri>` puts a VS Code icon link in the bar, before the GitHub link:
+ *   a `vscode://devdogsuga.workshops/review?…` or `…/open?…` link for the
+ *   workshops extension (Backstage apps/workshops-vscode). Anything else
+ *   fails the build, and a terminal block ignores it. The platform adds the
+ *   tab's `session` to the link on click. A `diff file=…` block takes the same
+ *   attribute (see `diffs.ts`).
  * - A shell block (`bash`, `sh`, …) is a terminal instead: no line numbers,
  *   and every command gets a prompt, the working directory (`cwd=`, else
  *   none), the git branch once there is one (`branch=`), then ❯. The prompt
@@ -361,6 +368,45 @@ const GITHUB_ICON: Element = {
   ],
 };
 
+/** Every link to the workshops extension starts here. */
+export const VSCODE_LINK_PREFIX = "vscode://devdogsuga.workshops/";
+
+/** The fence's `vscode=` link, checked, or undefined when it names none. */
+export function vscodeLink(meta: string, file: string | undefined): string | undefined {
+  const uri = metaAttribute(meta, "vscode");
+  if (uri === undefined) return undefined;
+  if (!uri.startsWith(VSCODE_LINK_PREFIX) || uri.length === VSCODE_LINK_PREFIX.length) {
+    throw new DocsBuildError(
+      `code block${file ? ` ${file}` : ""}: vscode=${uri} isn't a ${VSCODE_LINK_PREFIX}review?… or …open?… link`,
+    );
+  }
+  return uri;
+}
+
+const VSCODE_ICON: Element = {
+  type: "element",
+  tagName: "svg",
+  properties: {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    width: "14",
+    height: "14",
+    fill: "currentColor",
+    ariaHidden: "true",
+  },
+  children: [
+    {
+      type: "element",
+      tagName: "path",
+      properties: {
+        // Simple Icons' "Visual Studio Code".
+        d: "M23.15 2.587L18.21.21a1.494 1.494 0 0 0-1.705.29l-9.46 8.63-4.12-3.128a.999.999 0 0 0-1.276.057L.327 7.261A1 1 0 0 0 .326 8.74L3.899 12 .326 15.26a1 1 0 0 0 .001 1.479L1.65 17.94a.999.999 0 0 0 1.276.057l4.12-3.128 9.46 8.63a1.492 1.492 0 0 0 1.704.29l4.942-2.377A1.5 1.5 0 0 0 24 20.06V3.939a1.5 1.5 0 0 0-.85-1.352zm-5.146 14.861L10.826 12l7.178-5.448v10.896z",
+      },
+      children: [],
+    },
+  ],
+};
+
 const COPY_ICON: Element = {
   type: "element",
   tagName: "svg",
@@ -456,6 +502,23 @@ export function docsCodeBlocks(): ShikiTransformer {
             ],
           }
         : null;
+      const vscodeUri = terminal
+        ? undefined
+        : vscodeLink(meta, metaAttribute(meta, "file"));
+      const isOpen = vscodeUri?.startsWith(`${VSCODE_LINK_PREFIX}open`);
+      const vscode: Element | null = vscodeUri
+        ? {
+            type: "element",
+            tagName: "a",
+            properties: {
+              className: ["docs-code-vscode"],
+              href: vscodeUri,
+              ariaLabel: isOpen ? "Open in VS Code" : "Review in VS Code",
+              title: isOpen ? "Open in VS Code" : "Review in VS Code",
+            },
+            children: [VSCODE_ICON],
+          }
+        : null;
       root.children = [
         {
           type: "element",
@@ -475,7 +538,7 @@ export function docsCodeBlocks(): ShikiTransformer {
                   type: "element",
                   tagName: "div",
                   properties: { className: ["docs-code-actions"] },
-                  children: link ? [link, copy] : [copy],
+                  children: [...(vscode ? [vscode] : []), ...(link ? [link] : []), copy],
                 },
               ],
             },

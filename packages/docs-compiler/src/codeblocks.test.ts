@@ -85,6 +85,47 @@ describe("code block links", () => {
   });
 });
 
+describe("VS Code links", () => {
+  const review =
+    "vscode://devdogsuga.workshops/review?repo=DevDogsUGA%2FWeb-Workshops&from=02-supabase%2F00-start&to=02-supabase%2F01-read&file=lib%2Fa.ts";
+  const open =
+    "vscode://devdogsuga.workshops/open?repo=DevDogsUGA%2FWeb-Workshops&ref=02-supabase%2F01-read&file=lib%2Fa.ts&lines=7-8";
+
+  it("puts a VS Code icon before the copy button", async () => {
+    const html = await renderBody(
+      `\`\`\`ts file=lib/a.ts vscode=${review}\nconst a = 1;\n\`\`\`\n`,
+      ctx,
+    );
+    expect(html).toContain(`<a class="docs-code-vscode" href="${review.replaceAll("&", "&#x26;")}"`);
+    expect(html).toContain('aria-label="Review in VS Code"');
+    expect(html.indexOf("docs-code-vscode")).toBeLessThan(html.indexOf("data-copy"));
+  });
+
+  it("says Open for an /open link", async () => {
+    const html = await renderBody(
+      `\`\`\`ts file=lib/a.ts vscode=${open}\nconst a = 1;\n\`\`\`\n`,
+      ctx,
+    );
+    expect(html).toContain('aria-label="Open in VS Code"');
+  });
+
+  it("gives a terminal no button", async () => {
+    const html = await renderBody(`\`\`\`bash vscode=${review}\nls\n\`\`\`\n`, ctx);
+    expect(html).not.toContain("docs-code-vscode");
+  });
+
+  it("adds none without one", async () => {
+    const html = await renderBody("```ts\nconst a = 1;\n```\n", ctx);
+    expect(html).not.toContain("docs-code-vscode");
+  });
+
+  it("fails the build on any other link", async () => {
+    await expect(
+      renderBody("```ts vscode=https://example.com/\nconst a = 1;\n```\n", ctx),
+    ).rejects.toThrow(/vscode=https:\/\/example\.com\//);
+  });
+});
+
 /** The text inside each `<span data-github-username>`, tags and entities dropped. */
 function markedTexts(html: string): string[] {
   const out: string[] = [];

@@ -31,7 +31,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { basename, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
-import { fence, loadDeck, pageContent, pagesOf, TRACK_CWD, TRACKS, type PageStart, type Track } from './deck.ts'
+import { fence, loadDeck, pageContent, pagesOf, reviewLink, TRACK_CWD, TRACKS, type PageStart, type Track } from './deck.ts'
 
 const APP = fileURLToPath(new URL('..', import.meta.url))
 const { values, positionals } = parseArgs({
@@ -54,10 +54,13 @@ function frontmatter(fields: Record<string, string | number | boolean | undefine
 // Catching up merges the tag into their branch, keeping their work, which
 // leaves the same history as the VS Code extension's review. Starting over
 // throws their work away, as the flag does on a demo laptop.
-function catchUp(ref: string, cwd: string | undefined): string {
+function catchUp(ref: string, cwd: string | undefined, review: string | undefined): string {
   const branch = `<github-username>/${ref.split('/')[0]}`
   const attributes = cwd ? `cwd=${cwd}` : ''
+  // The review button sits beside "Behind?": it opens this step's changes in
+  // the VS Code extension. The docs site adds the tab's session on click.
   return [
+    ...(review ? ['<div class="docs-step-actions">', '', `[Review in VS Code](${review})`, ''] : []),
     '<details>',
     '<summary>Behind? Catch up to where the last step ended</summary>',
     '',
@@ -81,6 +84,7 @@ function catchUp(ref: string, cwd: string | undefined): string {
     ], attributes),
     '',
     '</details>',
+    ...(review ? ['', '</div>'] : []),
   ].join('\n')
 }
 
@@ -128,7 +132,9 @@ for (const track of Object.keys(TRACKS) as Track[]) {
     // A shared page reads the same for both tracks, so its terminals start
     // nowhere in particular.
     const from = reached ?? (checkpoint ? `${checkpoint.split('/')[0]}/00-start` : undefined)
-    const lead = from ? catchUp(from, start.shared ? undefined : TRACK_CWD[track]) : ''
+    // A shared page reads the same for both tracks, so it has no one repo.
+    const review = checkpoint && from && !start.shared ? reviewLink(track, from, checkpoint, undefined, `${start.file} (${track})`) : undefined
+    const lead = from ? catchUp(from, start.shared ? undefined : TRACK_CWD[track], review) : ''
     reached = checkpoint ?? reached
     const content = pageContent(page, track)
     const body = lead ? `${lead}\n\n${content.body}` : content.body

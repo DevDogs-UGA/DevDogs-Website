@@ -5,7 +5,7 @@
 import { createHash } from 'node:crypto'
 import { dirname } from 'node:path'
 import { load } from '@slidev/parser/fs'
-import { buildPlan, checkRanges, commitOf, frame, langOf, linesOf, RE_IMPORT, show } from '../theme/setup/transformers.ts'
+import { buildPlan, checkRanges, commitOf, frame, langOf, linesOf, RE_IMPORT, show, stepTagsAt } from '../theme/setup/transformers.ts'
 
 export type Track = 'web' | 'mobile'
 export const TRACKS: Record<Track, string> = { web: 'Next.js', mobile: 'Flutter' }
@@ -32,6 +32,39 @@ export function fence(lang: string, lines: string[], attributes = ''): string {
   return `\`\`\`${lang}${attributes ? ` ${attributes}` : ''}\n${lines.join('\n')}\n\`\`\``
 }
 
+// Links that open the docs' code in the VS Code extension (Backstage
+// apps/workshops-vscode: `vscode://devdogsuga.workshops/<action>?<query>`, the
+// values percent-encoded). The compiler renders a fence's `vscode=` link as an
+// icon in its bar; the exporter writes the whole link, minus the `session`
+// the docs site adds on click.
+const VSCODE = 'vscode://devdogsuga.workshops'
+
+function query(params: Record<string, string | undefined>): string {
+  // Parentheses too, which would end a markdown link early.
+  return Object.entries(params)
+    .filter((entry): entry is [string, string] => entry[1] !== undefined)
+    .map(([key, value]) => `${key}=${encodeURIComponent(value).replace(/\(/g, '%28').replace(/\)/g, '%29')}`)
+    .join('&')
+}
+
+// A commit as the extension wants it named: its step tag when it has one,
+// else the commit itself.
+function refOf(repo: Track, rev: string | undefined, where: string): string {
+  const commit = commitOf(repo, rev, where)
+  return stepTagsAt(repo, commit, where)[0] ?? commit
+}
+
+// Review the changes from one step tag to another (or the commits either side
+// of a change), optionally limited to one file.
+export function reviewLink(repo: Track, from: string | undefined, to: string, file: string | undefined, where: string): string {
+  return `${VSCODE}/review?${query({ repo: repoSlug(repo, where), to, from, file })}`
+}
+
+// Open a file at a ref, with some lines selected.
+export function openLink(repo: Track, ref: string, file: string, lines: string | undefined, where: string): string {
+  return `${VSCODE}/open?${query({ repo: repoSlug(repo, where), ref, file, lines })}`
+}
+
 // `[7, 8, 9, 11]` → `7-9,11`.
 function rangesOf(numbers: number[]): string {
   const parts: string[] = []
@@ -52,10 +85,13 @@ function numbersIn(range: string, total: number): number[] {
 
 // The given lines of a file, numbered as the file numbers them: the docs
 // mark each skip. `blob` is the file on GitHub; the link picks out the lines.
-function excerpt(lines: string[], numbers: number[], lang: string, file: string, blob: string): string {
+function excerpt(lines: string[], numbers: number[], lang: string, file: string, blob: string, open: (lines: string | undefined) => string): string {
   const sorted = [...new Set(numbers)].sort((a, b) => a - b)
-  const href = sorted.length === lines.length ? blob : `${blob}#L${sorted[0]}-L${sorted.at(-1)}`
-  return fence(lang, sorted.map(n => lines[n - 1]), `file=${file} lines=${rangesOf(sorted)} href=${href}`)
+  const whole = sorted.length === lines.length
+  const href = whole ? blob : `${blob}#L${sorted[0]}-L${sorted.at(-1)}`
+  // VS Code selects one run, from the first line to the last.
+  const selection = whole ? undefined : sorted.length === 1 ? String(sorted[0]) : `${sorted[0]}-${sorted.at(-1)}`
+  return fence(lang, sorted.map(n => lines[n - 1]), `file=${file} lines=${rangesOf(sorted)} href=${href} vscode=${open(selection)}`)
 }
 
 type Chunk = ReturnType<typeof buildPlan>['all'][number]
@@ -179,14 +215,17 @@ function codeImport(line: string, tips: string[], caption: string): string {
     const track = repo as Track
     const compare = before.length ? compareUrl(track, rev, file, where) : ''
     const blob = blobUrl(track, rev, file, where)
+    const to = refOf(track, rev, where)
+    const review = before.length ? reviewLink(track, refOf(track, `${commitOf(track, rev, where)}^`, where), to, file, where) : ''
+    const open = openLink(track, to, file, undefined, where)
     groups.forEach((group, g) => {
       const prior = new Set(applied)
       group.forEach(n => applied.add(n))
       if (tips[g + 1]) parts.push(tips[g + 1])
       // A new file reads better whole, as it stands after this click.
       parts.push(before.length
-        ? fence('diff', [groupPatch(ops, prior, group, file)], `file=${file} lang=${lang} context=${DIFF_CONTEXT} href=${compare}`)
-        : fence(lang, frame(before, after, all, new Set(applied), new Set()).lines, `file=${file} href=${blob}`))
+        ? fence('diff', [groupPatch(ops, prior, group, file)], `file=${file} lang=${lang} context=${DIFF_CONTEXT} href=${compare} vscode=${review}`)
+        : fence(lang, frame(before, after, all, new Set(applied), new Set()).lines, `file=${file} href=${blob} vscode=${open}`))
     })
     if (applied.size === all.length && before.length) {
       parts.push(wholeFile(repo as Track, rev, file, where))
@@ -197,9 +236,11 @@ function codeImport(line: string, tips: string[], caption: string): string {
   const lines = linesOf(show(repo, rev, file, where))
   checkRanges(ranges, lines.length, where)
   const blob = blobUrl(repo as Track, rev, file, where)
+  const ref = refOf(repo as Track, rev, where)
+  const open = (selection: string | undefined) => openLink(repo as Track, ref, file, selection, where)
   const steps = ranges ? ranges.split('|') : ['*']
   if (!tips.some(Boolean)) {
-    parts.push(excerpt(lines, steps.flatMap(r => numbersIn(r, lines.length)), lang, file, blob))
+    parts.push(excerpt(lines, steps.flatMap(r => numbersIn(r, lines.length)), lang, file, blob, open))
   }
   else {
     const shown = new Set<number>()
@@ -209,7 +250,7 @@ function codeImport(line: string, tips: string[], caption: string): string {
       // (a "the whole thing" click at the end) adds nothing on paper.
       if (!tips[k] && numbers.every(n => shown.has(n))) return
       if (tips[k]) parts.push(tips[k])
-      parts.push(excerpt(lines, numbers, lang, file, blob))
+      parts.push(excerpt(lines, numbers, lang, file, blob, open))
       numbers.forEach(n => shown.add(n))
     })
     if (shown.size < lines.length) {

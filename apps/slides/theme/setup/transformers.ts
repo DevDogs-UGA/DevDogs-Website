@@ -103,6 +103,11 @@ export function commitOf(repo: string, rev: string | undefined, where: string): 
   return git(repo, ['rev-parse', `${revision(rev)}^{commit}`], where).trim()
 }
 
+// The step tags (`<workshop>/<NN>-<slug>`) that name a commit, if any.
+export function stepTagsAt(repo: string, commit: string, where: string): string[] {
+  return git(repo, ['tag', '--points-at', commit], where).split('\n').filter(t => /^[^/\s]+\/\d+-[^/\s]+$/.test(t))
+}
+
 export function show(repo: string, rev: string | undefined, file: string, where: string): string {
   return showAt(repo, revision(rev), file, where, rev ?? 'HEAD')
 }

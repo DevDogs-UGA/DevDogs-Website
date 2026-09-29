@@ -17,7 +17,7 @@
  * markdown still reads as a diff anywhere else (GitHub renders it as one).
  * `lang` is the file's language, for highlighting its lines; it defaults to
  * the file's extension. `href` is a link to the change on GitHub (a compare
- * view), shown in the viewer's bar.
+ * view), shown in the viewer's bar; `vscode` is the block's `vscode=` link (see codeblocks.ts).
  *
  * `context=N` says the body is the whole file: one hunk from line 1 to the
  * end, every unchanged line as context. The placeholder then carries both
@@ -33,7 +33,7 @@
  * nested one stays an ordinary `diff` code block.
  */
 import type { Code, Root } from "mdast";
-import { metaAttribute as attribute } from "./codeblocks.js";
+import { metaAttribute as attribute, vscodeLink } from "./codeblocks.js";
 import { DocsBuildError } from "./errors.js";
 
 /** What a placeholder carries, and what the platform's viewer needs. */
@@ -46,6 +46,8 @@ export interface DocsDiff {
   oldContent?: string;
   newContent?: string;
   href?: string;
+  /** The `vscode://devdogsuga.workshops/review?…` link for this change. */
+  vscode?: string;
 }
 
 interface Op {
@@ -129,7 +131,14 @@ export function readDiff(node: Code): DocsDiff | null {
   }
   const lang = attribute(node.meta, "lang") ?? file.split(".").pop() ?? "text";
   const href = attribute(node.meta, "href");
-  const diff: DocsDiff = { file, lang, patch, ...(href ? { href } : {}) };
+  const vscode = vscodeLink(node.meta, file);
+  const diff: DocsDiff = {
+    file,
+    lang,
+    patch,
+    ...(href ? { href } : {}),
+    ...(vscode ? { vscode } : {}),
+  };
 
   const context = attribute(node.meta, "context");
   if (context === undefined) return diff;

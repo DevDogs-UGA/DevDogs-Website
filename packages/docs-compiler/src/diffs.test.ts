@@ -83,6 +83,15 @@ describe("whole-file diff blocks", () => {
     ...before.slice(10).map((l) => ` ${l}`.trimEnd()),
   ];
 
+  it("carries a vscode= link", async () => {
+    const link = "vscode://devdogsuga.workshops/review?repo=o%2Fr&to=t&file=a.ts";
+    const html = await renderBody(
+      `\`\`\`diff file=a.ts context=2 vscode=${link}\n${whole.join("\n")}\n\`\`\`\n`,
+      ctx,
+    );
+    expect(placeholders(html)[0]?.vscode).toBe(link);
+  });
+
   it("carries both files and a patch cut to the given context", async () => {
     const html = await renderBody(
       `\`\`\`diff file=a.ts context=2 href=https://github.com/o/r/compare/a...b\n${whole.join("\n")}\n\`\`\`\n`,
