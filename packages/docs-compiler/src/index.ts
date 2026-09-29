@@ -17,6 +17,7 @@ export {
 export type {
   CompiledPage,
   DocHeading,
+  DocsFolder,
   DocsPage,
   DocsProject,
   DocsSection,

@@ -21,6 +21,29 @@ export type DocsSection =
   | "infrastructure"
   | "reference";
 
+/**
+ * A folder's own settings, from an `index.md` that has frontmatter and no
+ * body. Such a file is not a page: it names and places the folder it sits in,
+ * and the folder's route shows what the folder holds. See `compileDocs`.
+ */
+export interface DocsFolder {
+  /** The immediate subfolder of `docs/` this folder belongs to. */
+  project: string;
+  /** Path relative to `docs/`, project prefix included: "workshops/supabase". */
+  path: string;
+  /** From `name:`, else the title-cased folder name. */
+  name: string;
+  description: string | null;
+  /** Where the folder sits among its siblings, from `order:`. */
+  order: number | null;
+  /**
+   * `steps: true`: the folder's pages are an ordered course, read one after
+   * another, so the platform links each to the next and tracks which ones a
+   * reader has finished.
+   */
+  steps: boolean;
+}
+
 /** Everything `parseDocFile` derives from one markdown source. */
 export interface ParsedDocFile {
   title: string;

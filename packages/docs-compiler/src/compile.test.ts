@@ -277,3 +277,79 @@ describe("compileDocs variants", () => {
     expect(() => compileDocs(root)).toThrow(DocsBuildError);
   });
 });
+
+describe("compileDocs folder settings", () => {
+  afterEach(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  function workshops(): void {
+    root = freshRoot("docs-build-folders");
+    write("workshops/index.md", "---\nname: Workshops\n---\n\n# Workshops\n");
+    write(
+      "workshops/supabase/index.md",
+      '---\nname: "Workshop: Supabase"\norder: 3\n---\n',
+    );
+    write(
+      "workshops/supabase/nextjs/index.md",
+      "---\nname: Integrate with Next.js\nsteps: true\n---\n\n",
+    );
+    write("workshops/supabase/nextjs/01-read.md", "# Read the Guestbook\n");
+    write("workshops/unnamed/index.md", "---\norder: 1\n---\n");
+    write("workshops/unnamed/page.md", "# Page\n");
+    write("workshops/with-body/index.md", "---\nname: Body\n---\n\n# Hi\n");
+  }
+
+  it("reads a body-less nested index.md as folder settings, not a page", () => {
+    workshops();
+    const { pages, folders } = compileDocs(root);
+    expect(pages.map((page) => page.path)).not.toContain(
+      "workshops/supabase/index",
+    );
+    expect(folders).toEqual([
+      {
+        project: "workshops",
+        path: "workshops/supabase",
+        name: "Workshop: Supabase",
+        description: null,
+        order: 3,
+        steps: false,
+      },
+      {
+        project: "workshops",
+        path: "workshops/supabase/nextjs",
+        name: "Integrate with Next.js",
+        description: null,
+        order: null,
+        steps: true,
+      },
+      {
+        project: "workshops",
+        path: "workshops/unnamed",
+        name: "Unnamed",
+        description: null,
+        order: 1,
+        steps: false,
+      },
+    ]);
+  });
+
+  it("keeps a nested index.md with a body, and a project index, as pages", () => {
+    workshops();
+    const paths = compileDocs(root).pages.map((page) => page.path);
+    expect(paths).toContain("workshops/with-body/index");
+    expect(paths).toContain("workshops/index");
+  });
+
+  it("refuses steps on a page", () => {
+    root = freshRoot("docs-build-steps-page");
+    write("p/page.md", "---\nsteps: true\n---\n\n# P\n");
+    expect(() => compileDocs(root)).toThrow(/belongs on a folder's settings/);
+  });
+
+  it("refuses a steps value that is not a boolean", () => {
+    root = freshRoot("docs-build-steps-type");
+    write("p/f/index.md", "---\nsteps: yes please\n---\n");
+    expect(() => compileDocs(root)).toThrow(/must be true or false/);
+  });
+});
