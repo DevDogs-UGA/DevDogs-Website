@@ -12,12 +12,33 @@
  * `pnpm --filter @devdogsuga/devtools exec bw`, the last script at the
  * workspace root whose whole job was to reach into this package.
  *
- * ⚠️ `cwd` is deliberately NOT overridden, unlike the pnpm spawn in
- * `run/pick.ts`. pnpm puts this package's `node_modules/.bin` on PATH as a
- * relative entry, so moving the working directory would make `bw` unresolvable
- * from the very place it is installed. Bitwarden does not care where it runs.
+ * ⚠️ The binary is resolved from `@bitwarden/cli` itself, never looked up on
+ * PATH. A dependency's bin is only linked into the `node_modules/.bin` of the
+ * package that depends on it, so under `pnpm dlx`, or with devtools installed
+ * in a clone, nothing puts `bw` on PATH and a bare `spawn("bw")` is ENOENT.
  */
 import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+
+/**
+ * The `[command, args]` pair that runs the bundled Bitwarden CLI.
+ *
+ * Runs `build/bw.js` under this Node rather than through a shim, so it works
+ * the same wherever devtools is installed. Falls back to `bw` on PATH when the
+ * package cannot be resolved, which keeps a missing install surfacing as the
+ * ENOENT every caller already handles.
+ */
+export function bwCommand(args: string[]): [string, string[]] {
+  try {
+    const require_ = createRequire(import.meta.url);
+    const pkgPath = require_.resolve("@bitwarden/cli/package.json");
+    const pkg = require_(pkgPath) as { bin: { bw: string } };
+    return [process.execPath, [join(dirname(pkgPath), pkg.bin.bw), ...args]];
+  } catch {
+    return ["bw", args];
+  }
+}
 
 /**
  * Runs the Bitwarden CLI with `args`, then exits with its status.
@@ -29,7 +50,7 @@ import { spawn } from "node:child_process";
  */
 export function runBw(args: string[]): Promise<never> {
   return new Promise<never>(() => {
-    const child = spawn("bw", args, { stdio: "inherit" });
+    const child = spawn(...bwCommand(args), { stdio: "inherit" });
 
     child.on("error", (err: Error) => {
       // ENOENT here means the dependency is not installed rather than that the

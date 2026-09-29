@@ -21,6 +21,7 @@ import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import { confirm, log, spinner } from "@clack/prompts";
 import { unwrap } from "../ui.js";
+import { bwCommand } from "./bw.js";
 
 const run = promisify(execFile);
 
@@ -39,7 +40,7 @@ export type VaultStatus =
 /** `bw status`, or `unavailable` when the CLI is not installed. */
 export async function vaultStatus(): Promise<VaultStatus> {
   try {
-    const { stdout } = await run("bw", bwArgs(["status", "--response"]), {
+    const { stdout } = await run(...bwCommand(bwArgs(["status", "--response"])), {
       shell: false,
     });
     // `--response` wraps the payload; the bare form is also accepted, so read
@@ -88,7 +89,7 @@ async function session(status: VaultStatus): Promise<string | undefined> {
   return new Promise<string | undefined>((resolve) => {
     // stdin inherited so the master password goes to `bw` and not through here;
     // stdout piped so the session key can be captured rather than printed.
-    const child = spawn("bw", ["unlock", "--raw"], {
+    const child = spawn(...bwCommand(["unlock", "--raw"]), {
       stdio: ["inherit", "pipe", "inherit"],
       shell: false,
     });
@@ -142,8 +143,7 @@ export async function readTokenFromVault(): Promise<string | undefined> {
   s.start("Looking in your Bitwarden vault");
   try {
     const { stdout } = await run(
-      "bw",
-      bwArgs(["get", "password", VAULT_ITEM_NAME, "--raw"], key),
+      ...bwCommand(bwArgs(["get", "password", VAULT_ITEM_NAME, "--raw"], key)),
       { shell: false },
     );
     const token = stdout.trim();
@@ -192,7 +192,7 @@ export async function saveTokenToVault(token: string): Promise<boolean> {
   };
 
   return new Promise<boolean>((resolve) => {
-    const child = spawn("bw", bwArgs(["create", "item"], key), {
+    const child = spawn(...bwCommand(bwArgs(["create", "item"], key)), {
       stdio: ["pipe", "ignore", "pipe"],
       shell: false,
     });
