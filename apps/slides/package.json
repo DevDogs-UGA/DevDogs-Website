@@ -7,6 +7,7 @@
     "dev": "slidev decks/2026-09-28-supabase.md",
     "build": "slidev build decks/2026-09-28-supabase.md",
     "follow": "node scripts/follow.mjs",
+    "export:md": "node scripts/export-md.ts",
     "dev:worker": "wrangler dev --var ACCESS_LOCAL_DEV:true",
     "deploy": "slidev build decks/2026-09-28-supabase.md && node scripts/strip-redirects.mjs && wrangler deploy",
     "types": "wrangler types --strict-vars=false worker/worker-configuration.d.ts",
@@ -17,14 +18,15 @@
     "@devdogsuga/events": "workspace:*",
     "@slidev/cli": "^53.0.0",
     "@slidev/theme-default": "^0.25.0",
+    "jose": "^6.1.0",
     "lz-string": "1.5.0",
-    "vue": "^3.5.43",
-    "jose": "^6.1.0"
+    "vue": "^3.5.43"
   },
   "devDependencies": {
+    "@slidev/parser": "^53.0.0",
     "playwright-chromium": "^1.63.0",
-    "unocss": "^66.10.5",
     "typescript": "catalog:",
+    "unocss": "^66.10.5",
     "wrangler": "^4.135.0"
   }
 }

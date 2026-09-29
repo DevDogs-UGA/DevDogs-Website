@@ -59,7 +59,13 @@ const LANGS: Record<string, string> = {
   md: 'md',
 }
 
-const RE_IMPORT = /^<<<[ \t]+(web|mobile)(?:@(\S+?))?:(\S+)(?:[ \t]+\{([^}]*)\})?(?:[ \t]+(\{.*\}))?[ \t]*$/gm
+// The fence language for a workshop file, by its name.
+export function langOf(file: string): string {
+  const base = file.split('/').pop() ?? file
+  return base.startsWith('.env') ? 'dotenv' : LANGS[base.split('.').pop() ?? ''] ?? ''
+}
+
+export const RE_IMPORT = /^<<<[ \t]+(web|mobile)(?:@(\S+?))?:(\S+)(?:[ \t]+\{([^}]*)\})?(?:[ \t]+(\{.*\}))?[ \t]*$/gm
 
 // A chunk taller than this doesn't fit the code window beside the helper
 // banner, so it's split at its blank lines into pieces that do.
@@ -92,15 +98,15 @@ function showAt(repo: string, gitRev: string, file: string, where: string, label
   }
 }
 
-function show(repo: string, rev: string | undefined, file: string, where: string): string {
+export function show(repo: string, rev: string | undefined, file: string, where: string): string {
   return showAt(repo, revision(rev), file, where, rev ?? 'HEAD')
 }
 
-function linesOf(text: string): string[] {
+export function linesOf(text: string): string[] {
   return text.replace(/\n+$/, '').split('\n')
 }
 
-function checkRanges(ranges: string, lines: number, where: string) {
+export function checkRanges(ranges: string, lines: number, where: string) {
   for (const n of ranges.match(/\d+/g) ?? []) {
     if (Number(n) < 1 || Number(n) > lines) {
       throw new Error(`${where}: line ${n} is outside the file (${lines} lines)`)
@@ -177,7 +183,7 @@ function groupsOf(spec: string | undefined, count: number, where: string) {
 // The file with the chunks in `applied` taken from `after`, the rest from
 // `before`, plus the line numbers (in this frame) of `lit`'s new lines, or
 // of the old lines they replace for a chunk not yet applied.
-function frame(before: string[], after: string[], all: Hunk[], applied: Set<number>, lit: Set<number>) {
+export function frame(before: string[], after: string[], all: Hunk[], applied: Set<number>, lit: Set<number>) {
   const lines: string[] = []
   const hot: number[] = []
   let oldPos = 1
@@ -228,7 +234,10 @@ export function chunks(repo: string, rev: string | undefined, file: string) {
     .map((h, i) => ({ n: i + 1, ...h, first: after[h.newStart - 1]?.trim() }))
 }
 
-function build(repo: string, rev: string | undefined, file: string, spec: string | undefined, lang: string, where: string): string {
+// A `{build}` import's pieces: the file before and after the commit, its
+// chunks, and the spec's already-applied chunks and click groups. Also read
+// by scripts/export-md.ts, which writes each group as a diff.
+export function buildPlan(repo: string, rev: string | undefined, file: string, spec: string | undefined, where: string) {
   const after = linesOf(show(repo, rev, file, where))
   let before: string[] = []
   try {
@@ -239,7 +248,11 @@ function build(repo: string, rev: string | undefined, file: string, spec: string
   }
   const all = split(hunks(repo, rev, file, where), after)
   if (!all.length) throw new Error(`${where}: the commit doesn't change ${file}`)
-  const { done, groups } = groupsOf(spec, all.length, where)
+  return { before, after, all, ...groupsOf(spec, all.length, where) }
+}
+
+function build(repo: string, rev: string | undefined, file: string, spec: string | undefined, lang: string, where: string): string {
+  const { before, after, all, done, groups } = buildPlan(repo, rev, file, spec, where)
   const applied = new Set<number>(done)
   const frames = [frame(before, after, all, new Set(applied), new Set(groups[0]))]
   const added = new Set<number>()
@@ -262,8 +275,7 @@ export function expandWorkshopImports(ctx: MarkdownTransformContext) {
     const [line, repo, rev, file, ranges = '', options = ''] = m
     const where = `${ctx.slide.source.filepath} (${line.trim()})`
     if (!REPOS.includes(repo as typeof REPOS[number])) continue
-    const base = file.split('/').pop() ?? file
-    const lang = base.startsWith('.env') ? 'dotenv' : LANGS[base.split('.').pop() ?? ''] ?? ''
+    const lang = langOf(file)
     const buildSpec = ranges.match(/^build(?::(.+))?$/)
     if (buildSpec) {
       ctx.s.overwrite(m.index, m.index + line.length, build(repo, rev, file, buildSpec[1], lang, where))
