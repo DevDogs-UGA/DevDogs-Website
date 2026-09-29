@@ -24,10 +24,10 @@ rightFile: terminal
 
 ```bash {*}{cwd:'~'}
 # Download the workshop repo
-gh repo clone DevDogsUGA/Web-Workshops
+git clone https://github.com/DevDogsUGA/Web-Workshops
 cd Web-Workshops
-# Start from Setup Night's code
-git switch 01-nextjs-intro
+# Your own branch, starting from Setup Night's code
+git switch -c <github-username>/02-supabase origin/01-nextjs-intro
 # Install dependencies
 pnpm install
 ```
@@ -36,10 +36,10 @@ pnpm install
 
 ```bash {*}{cwd:'~'}
 # Download the workshop repo
-gh repo clone DevDogsUGA/Mobile-Workshops
+git clone https://github.com/DevDogsUGA/Mobile-Workshops
 cd Mobile-Workshops
-# Start from Setup Night's code
-git switch 01-flutter-intro
+# Your own branch, starting from Setup Night's code
+git switch -c <github-username>/02-supabase origin/01-flutter-intro
 # Install dependencies
 flutter pub get
 ```

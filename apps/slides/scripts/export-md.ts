@@ -30,7 +30,6 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { basename, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
-import { CHECKPOINT_REF } from '../theme/lib/liveProtocol.ts'
 import { fence, loadDeck, pageContent, pagesOf, TRACK_CWD, TRACKS, type PageStart, type Track } from './deck.ts'
 
 const APP = fileURLToPath(new URL('..', import.meta.url))
@@ -49,21 +48,36 @@ function frontmatter(fields: Record<string, string | number | boolean | undefine
   return ['---', ...lines, '---'].join('\n')
 }
 
-// The docs' version of the slides' checkpoint flag: the commands that put a
-// reader's clone where the previous step ended (a step tag, or the track's
-// starting branch), for anyone who fell behind. It throws their changes away,
-// as the flag does on a demo laptop.
+// The docs' version of the slides' checkpoint flag, for anyone who fell
+// behind: how to get to where the previous step ended (`ref`, its step tag).
+// Catching up merges the tag into their branch, keeping their work, which
+// leaves the same history as the VS Code extension's review. Starting over
+// throws their work away, as the flag does on a demo laptop.
 function catchUp(ref: string, cwd: string | undefined): string {
-  const commands = CHECKPOINT_REF.test(ref)
-    ? ['# Get the checkpoint tags', 'git fetch origin --tags', '# Throws away your changes to the workshop code', `git switch --detach --discard-changes ${ref}`]
-    : ['# Throws away your changes to the workshop code', `git switch --discard-changes ${ref}`]
+  const branch = `<github-username>/${ref.split('/')[0]}`
+  const attributes = cwd ? `cwd=${cwd}` : ''
   return [
     '<details>',
-    '<summary>Behind? Start from where the last step ended</summary>',
+    '<summary>Behind? Catch up to where the last step ended</summary>',
     '',
-    'These put your copy of the workshop code exactly where the previous step left it.',
+    '**Catch up, keeping your work.** This saves your changes, then brings in the code from the end of the last step. Where you changed the same lines, git asks you which to keep.',
     '',
-    fence('bash', commands, cwd ? `cwd=${cwd}` : ''),
+    fence('bash', [
+      'git fetch origin --tags',
+      '# Save your own changes first',
+      'git add -A',
+      'git commit -m "My work"',
+      '# Bring in the code from the end of the last step',
+      `git merge --no-edit ${ref}`,
+    ], attributes),
+    '',
+    '**Or start over from the last step.** This moves your branch to the end of the last step. Your changes are lost.',
+    '',
+    fence('bash', [
+      'git fetch origin --tags',
+      '# Moves your branch to the end of the last step',
+      `git switch --discard-changes -C ${branch} ${ref}`,
+    ], attributes),
     '',
     '</details>',
   ].join('\n')
@@ -104,11 +118,12 @@ for (const track of Object.keys(TRACKS) as Track[]) {
   let reached: string | undefined
   for (const page of pages) {
     const { start, checkpoint } = page
-    // Where this page begins: the last checkpoint before it, or the track's
-    // starting branch for the first page that has one of its own.
+    // Where this page begins: the last checkpoint before it, or the start
+    // tag (`<workshop>/00-start`, see tag-steps.ts) for the first page that
+    // has one of its own.
     // A shared page reads the same for both tracks, so its terminals start
     // nowhere in particular.
-    const from = reached ?? (checkpoint ? config.start : undefined)
+    const from = reached ?? (checkpoint ? `${checkpoint.split('/')[0]}/00-start` : undefined)
     const lead = from ? catchUp(from, start.shared ? undefined : TRACK_CWD[track]) : ''
     reached = checkpoint ?? reached
     const content = pageContent(page, track)
