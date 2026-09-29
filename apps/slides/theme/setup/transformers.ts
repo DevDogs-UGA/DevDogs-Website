@@ -98,6 +98,11 @@ function showAt(repo: string, gitRev: string, file: string, where: string, label
   }
 }
 
+// The commit a revision names, e.g. for a link to the file on GitHub.
+export function commitOf(repo: string, rev: string | undefined, where: string): string {
+  return git(repo, ['rev-parse', `${revision(rev)}^{commit}`], where).trim()
+}
+
 export function show(repo: string, rev: string | undefined, file: string, where: string): string {
   return showAt(repo, revision(rev), file, where, rev ?? 'HEAD')
 }

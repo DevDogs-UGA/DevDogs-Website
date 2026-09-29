@@ -3,6 +3,10 @@ layout: section-divider
 accent: rose
 kicker: "02 · Live Demo"
 chip: LIVE DEMO
+docsPage:
+  file: setup
+  title: Get Set Up
+  description: Clone the workshop repo, create a Supabase project, and point the app at it.
 ---
 
 # Build It Live
@@ -74,6 +78,9 @@ file: ~/.env.local
 layout: statement
 accent: rose
 chip: STEP 1
+docsPage:
+  file: 01-read
+  description: Create the messages table with row-level security, and load the guestbook from Supabase.
 ---
 
 # Read the Guestbook
@@ -301,6 +308,9 @@ The form goes away for now, and each row arrives as a `Map`: `message['body']`.
 layout: statement
 accent: rose
 chip: STEP 2
+docsPage:
+  file: 02-sign-in
+  description: Register the app with DevDogs, add it as an OIDC provider in Supabase, and add sign-in and sign-out.
 ---
 
 # Sign In with OAuth
@@ -334,7 +344,7 @@ chip: DASHBOARD
 
 - Authentication → **Sign In / Providers** → Add a Custom **OIDC** Provider
 - Fill it in, save, and check that it's enabled:
-  - <table class="dd-config-table"><tbody><tr><th>Identifier</th><td><code>custom:devdogsuga</code></td></tr><tr><th>Name</th><td><code>DevDogs</code></td></tr><tr><th>Issuer URL</th><td><code>https://api.devdogsuga.org/auth/v1</code></td></tr><tr><th>Client ID and secret</th><td>From the last slide</td></tr><tr><th>Scopes</th><td><code>openid email profile</code></td></tr></tbody></table>
+  - <table class="dd-config-table"><tbody><tr><th>Identifier</th><td><code>custom:devdogsuga</code></td></tr><tr><th>Name</th><td><code>DevDogs</code></td></tr><tr><th>Issuer URL</th><td><code>https://api.devdogsuga.org/auth/v1</code></td></tr><tr><th>Client ID and secret</th><td>From your DevDogs client</td></tr><tr><th>Scopes</th><td><code>openid email profile</code></td></tr></tbody></table>
 
 <!-- Presenter notes: Supabase requires custom provider identifiers to start with `custom:`, which is why the app signs in with `custom:devdogsuga`. VERIFY ON THE 9/27 DRY RUN: the exact Dashboard labels, and the issuer. Supabase refuses an issuer that disagrees with the discovery document (TASK-346/347); `devtools oauth` reads it from discovery, so if the dashboard rejects api.devdogsuga.org, use the issuer the discovery doc advertises. `devtools oauth` does all of this in one command; it comes back in the local bonus section at the end. -->
 
@@ -436,6 +446,9 @@ Signing in only needs the client we already have: it's all under `_supabase.auth
 layout: statement
 accent: rose
 chip: STEP 3
+docsPage:
+  file: 03-post
+  description: Let signed-in users post, with a policy that only lets them post as themselves.
 ---
 
 # Let Signed-In Users Post
@@ -580,6 +593,10 @@ The **app** decides whose name goes on each message: type any name you like, and
 layout: statement
 accent: rose
 chip: STEP 4
+docsPage:
+  file: 04-profiles
+  title: Store Names on the Server
+  description: Move display names into a profiles table the server fills in, so the app stops trusting the client.
 ---
 
 # How Can We Fix This?
@@ -780,6 +797,9 @@ The tile's title shows that name.
 layout: statement
 accent: rose
 chip: STEP 5
+docsPage:
+  file: 05-delete
+  description: Let people delete only their own messages, enforced by a row-level security policy.
 ---
 
 # Deleting Your Own Messages
@@ -869,6 +889,12 @@ layout: section-divider
 accent: rose
 chip: BONUS
 kicker: Run It Locally
+docsPage:
+  file: run-locally
+  title: Run It Locally
+  description: Turn the workshop's SQL into migration files and run the whole stack on your own machine.
+  shared: true
+  order: 4
 ---
 
 # Everything We Clicked, as Files

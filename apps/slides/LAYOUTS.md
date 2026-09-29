@@ -387,14 +387,19 @@ the same tab), not just the first page load. See `theme/lib/track.ts`.
 ## Handouts: `pnpm export:md`
 
 A PDF export only catches one frame of each code window, so the handout is
-markdown instead: `pnpm export:md [decks/<deck>.md] [--out <dir>]` writes
-`<deck>.web.md` and `<deck>.mobile.md` (default `apps/slides/export/`,
-gitignored), one page per track, for the docs site. See
-`scripts/export-md.ts`. Each `{build}` import becomes one diff per click
-group with its `<CodeTips>` tip before it, plus the whole file once the step
-is complete; presenter notes are dropped.
+markdown for the docs site instead:
+`pnpm export:md [decks/<deck>.md] --out <DevDogsUGA>/docs/workshops/<workshop>`
+writes one folder of step pages per track (a docs "course"), plus any pages
+both tracks share. See `scripts/export-md.ts`. Each `{build}` import becomes
+one diff per click group with its `<CodeTips>` tip before it, then a link to
+the whole file on GitHub; presenter notes are dropped.
 
-- The headmatter's `docs: { title, description }` names the pages.
+- The headmatter's `docs` key: `description`, `repos` (the public GitHub repo
+  per track, for the file links), and `tracks` (each track's folder `dir`,
+  `name` and `order`).
+- `docsPage` on a slide starts a page: `file`, optional `title` (else the
+  slide's heading), `description`, and `shared: true` + `order` for a page
+  both tracks read the same, written once beside the track folders.
 - `docs: false` on a slide, or on a fragment's `src:` slide, leaves it out
   (the preshow, the competition, upcoming events).
 - A component with no markdown form (`<UpcomingStack>`, `<QRSlot>`, …) on an
