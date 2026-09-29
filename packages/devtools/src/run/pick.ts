@@ -59,7 +59,7 @@
  * typecheck/lint/test/dev run has no business doing (see `passthroughApps`'s
  * doc comment for why that is more than just wasted work).
  */
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -110,7 +110,7 @@ const NEEDS_DEPS_BUILT = new Set([
   "test:coverage",
 ]);
 
-interface App {
+export interface App {
   name: string;
   script: string;
 }
@@ -376,6 +376,158 @@ function passthroughApps(
   passthrough(commands, extraEnv);
 }
 
+// ── dev on vinext ────────────────────────────────────────────────────────────
+
+/** A `dev` script that starts `vinext dev` (platform's `with-env vinext dev`). */
+const VINEXT_DEV = /(^|[\s;&|])vinext\s+dev\b/;
+
+export interface DevPlan {
+  /** Apps whose dev server is `vinext dev`, started directly, one each. */
+  vinext: string[];
+  /** The `pnpm` args for every other selected app's `dev`, or null for none. */
+  others: string[] | null;
+}
+
+/**
+ * Splits a `dev` run between apps whose dev server is `vinext dev` and the
+ * rest.
+ *
+ * A vinext app's server code runs in workerd, which only sees what
+ * `@cloudflare/vite-plugin` hands it: the app dir's own `.dev.vars`/`.env`, or
+ * with `CLOUDFLARE_INCLUDE_PROCESS_ENV` the whole `process.env`. The repo's
+ * `.env` is at the root, so through the app's own `with-env vinext dev` script
+ * the Worker gets nothing and env validation fails. So a vinext app skips its
+ * script and runs `pnpm --filter <app> exec vinext dev` with the env
+ * `scopedProcessEnv` builds, the same way `workflows run` starts one: the
+ * flag set, and every other app's variables left out. Its script's own
+ * `with-env` would load the whole `.env` back in, so it is not used.
+ *
+ * Everything else still runs its own `dev` script under one `pnpm --parallel`.
+ * `apps` is every app with a `dev` script; `filters` the selection (empty for
+ * all of them). Only apps are named here: no other package has a `dev`
+ * script.
+ */
+export function planDev(
+  apps: readonly App[],
+  filters: readonly string[],
+  rest: readonly string[],
+): DevPlan {
+  const selected =
+    filters.length > 0
+      ? apps.filter((app) => filters.includes(app.name))
+      : [...apps];
+  const vinext = selected
+    .filter((app) => VINEXT_DEV.test(app.script))
+    .map((app) => app.name);
+  const otherFilters =
+    filters.length > 0
+      ? filters.filter((f) => !vinext.includes(f))
+      : apps.map((app) => app.name).filter((name) => !vinext.includes(name));
+  const others =
+    otherFilters.length > 0
+      ? [
+          "-r",
+          "--if-present",
+          "--parallel",
+          ...otherFilters.flatMap((f) => ["--filter", f]),
+          "run",
+          "dev",
+          ...rest,
+        ]
+      : null;
+  return { vinext, others };
+}
+
+/**
+ * `dev` when at least one selected app runs `vinext dev`: builds every
+ * selected app's workspace dependencies, then starts the vinext apps (each
+ * with its own scoped env, see `planDev`) and the rest side by side, and
+ * exits when the first of them does, stopping the others.
+ *
+ * The env is the session's: `launch.ts` has already entered the tier into
+ * `process.env` (or `--tier` loaded one into `tierEnv`).
+ */
+async function runDev(
+  plan: DevPlan,
+  filters: string[],
+  rest: string[],
+  tierEnv: NodeJS.ProcessEnv | undefined,
+): Promise<never> {
+  const depsOfTargets = filters.length > 0 ? filters : allAppNames();
+  runOne(
+    [
+      "-r",
+      "--if-present",
+      ...depsOfTargets.flatMap((f) => ["--filter", `${f}^...`]),
+      "run",
+      "build",
+    ],
+    tierEnv,
+    { final: false },
+  );
+
+  // Dynamic, like `loadEnvLoad`: the env registry is no business of a plain
+  // `pnpm build`.
+  const { scopedProcessEnv } = await import("../cf/local-env.js");
+  const environment = { ...process.env, ...tierEnv };
+  const tier = environment.DEPLOY_ENV ?? "development";
+
+  const children = [
+    ...(await Promise.all(
+      plan.vinext.map(async (app) => ({
+        args: ["--filter", app, "exec", "vinext", "dev", ...rest],
+        env: await scopedProcessEnv(app, environment, tier),
+      })),
+    )),
+    ...(plan.others ? [{ args: plan.others, env: environment }] : []),
+  ].map(({ args, env }) =>
+    spawn("pnpm", args, {
+      cwd: findRepoRoot(),
+      stdio: "inherit",
+      env: { ...env, DEVDOGS_PICK: "0" },
+    }),
+  );
+
+  // Ctrl-C reaches every child through the terminal's process group; this
+  // process waits for them to finish rather than dying first.
+  const ignore = () => {};
+  process.on("SIGINT", ignore);
+  process.on("SIGTERM", ignore);
+
+  const first = await Promise.race(
+    children.map(
+      (child) =>
+        new Promise<number>((resolve) => {
+          child.once("error", () => resolve(1));
+          child.once("exit", (code, signal) =>
+            resolve(code ?? (signal ? 130 : 1)),
+          );
+        }),
+    ),
+  );
+  for (const child of children) {
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill("SIGTERM");
+    }
+  }
+  process.exit(first);
+}
+
+/** `passthroughApps`, except that a `dev` selecting a vinext app goes to
+ * `runDev`. */
+async function dispatch(
+  task: string,
+  filters: string[],
+  rest: string[],
+  tierEnv: NodeJS.ProcessEnv | undefined,
+): Promise<never> {
+  if (task === "dev") {
+    const plan = planDev(appsWith("dev"), filters, rest);
+    if (plan.vinext.length > 0) return runDev(plan, filters, rest, tierEnv);
+  }
+  passthroughApps(task, filters, rest, tierEnv);
+}
+
 // ── Tier ─────────────────────────────────────────────────────────────────────
 
 /** The tiers a loaded env can select. `preflight` is not a deploy environment
@@ -584,14 +736,14 @@ export async function runTask(argv: string[]): Promise<never> {
   // to the underlying script rather than treating it as its own flag.
   if (all || !shouldAsk(rest)) {
     const { filters, rest: cleanRest } = extractFilters(rest);
-    passthroughApps(task, filters, cleanRest, tierEnv);
+    return dispatch(task, filters, cleanRest, tierEnv);
   }
 
   const apps = appsWith(task);
 
   // Nothing to choose between: one app, or none that define this task (pnpm
   // will say so better than a picker with a single option would).
-  if (apps.length < 2) passthroughApps(task, [], rest, tierEnv);
+  if (apps.length < 2) return dispatch(task, [], rest, tierEnv);
 
   const previous = remembered(task);
 
@@ -634,5 +786,5 @@ export async function runTask(argv: string[]): Promise<never> {
 
   remember(task, chosen);
 
-  passthroughApps(task, chosen, rest, tierEnv);
+  return dispatch(task, chosen, rest, tierEnv);
 }

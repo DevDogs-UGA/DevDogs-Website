@@ -43,7 +43,7 @@ vi.mock("../repo/peers.js", () => ({
   loadEnvLoad: async () => ({ loadEnvironment, MissingEnvFileError }),
 }));
 
-const { extractFilters, parseTierArg, runTask, shouldAsk } =
+const { extractFilters, parseTierArg, planDev, runTask, shouldAsk } =
   await import("./pick.js");
 const { spawnSync } = await import("node:child_process");
 const { cancel, confirm } = await import("@clack/prompts");
@@ -531,5 +531,55 @@ describe("passthroughApps command shapes", () => {
       "--max-warnings",
       "0",
     ]);
+  });
+});
+
+/**
+ * Which apps `dev` starts as `vinext dev` directly (their Worker needs the
+ * session's env through `CLOUDFLARE_INCLUDE_PROCESS_ENV`, see `planDev`) and
+ * which keep running their own `dev` script. Pure, so no spawn is involved.
+ */
+describe("planDev", () => {
+  const apps = [
+    { name: "platform", script: "with-env vinext dev" },
+    { name: "schedule-builder", script: "with-env next dev" },
+    { name: "sandbox", script: "wrangler dev" },
+  ];
+
+  it("starts a vinext app directly and the rest through their scripts", () => {
+    expect(planDev(apps, [], ["--port", "3300"])).toEqual({
+      vinext: ["platform"],
+      others: [
+        "-r",
+        "--if-present",
+        "--parallel",
+        "--filter",
+        "schedule-builder",
+        "--filter",
+        "sandbox",
+        "run",
+        "dev",
+        "--port",
+        "3300",
+      ],
+    });
+  });
+
+  it("runs nothing else when only the vinext app is selected", () => {
+    expect(planDev(apps, ["platform"], [])).toEqual({
+      vinext: ["platform"],
+      others: null,
+    });
+  });
+
+  it("leaves a selection without a vinext app to the scripts alone", () => {
+    expect(planDev(apps, ["schedule-builder"], []).vinext).toEqual([]);
+  });
+
+  it("does not mistake a script that merely mentions vinext", () => {
+    expect(
+      planDev([{ name: "x", script: "vinext build && next dev" }], [], [])
+        .vinext,
+    ).toEqual([]);
   });
 });
