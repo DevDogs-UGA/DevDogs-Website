@@ -48,21 +48,28 @@ interface Frontmatter {
   titlebar?: string
   trackSplit?: boolean
   docs?: boolean
+  /** The demo tag this slide's step ends at (see LAYOUTS.md, Checkpoints). */
+  checkpoint?: string
   hide?: boolean
   disabled?: boolean
 }
 
 // ---------------------------------------------------------------- code ----
 
-// A line comment for the gap between excerpts, in the file's own language.
-function gapLine(lang: string): string {
-  if (['sql'].includes(lang)) return '-- …'
-  if (['bash', 'dotenv', 'yaml', 'toml'].includes(lang)) return '# …'
-  return '// …'
+// A fence, with the docs compiler's info-string attributes (`file=`,
+// `lines=`, `cwd=`) after the language.
+function fence(lang: string, lines: string[], attributes = ''): string {
+  return `\`\`\`${lang}${attributes ? ` ${attributes}` : ''}\n${lines.join('\n')}\n\`\`\``
 }
 
-function fence(lang: string, lines: string[]): string {
-  return `\`\`\`${lang}\n${lines.join('\n')}\n\`\`\``
+// `[7, 8, 9, 11]` → `7-9,11`.
+function rangesOf(numbers: number[]): string {
+  const parts: string[] = []
+  numbers.forEach((n, i) => {
+    if (i > 0 && n === numbers[i - 1] + 1) parts[parts.length - 1] = parts.at(-1)!.replace(/-\d+$/, '') + `-${n}`
+    else parts.push(String(n))
+  })
+  return parts.join(',')
 }
 
 function numbersIn(range: string, total: number): number[] {
@@ -73,15 +80,11 @@ function numbersIn(range: string, total: number): number[] {
   })
 }
 
-// The given line numbers of a file, with a gap marker wherever they skip.
-function excerpt(lines: string[], numbers: number[], lang: string): string {
+// The given lines of a file, numbered as the file numbers them: the docs
+// mark each skip.
+function excerpt(lines: string[], numbers: number[], lang: string, file: string): string {
   const sorted = [...new Set(numbers)].sort((a, b) => a - b)
-  const out: string[] = []
-  sorted.forEach((n, i) => {
-    if (i > 0 && n !== sorted[i - 1] + 1) out.push(gapLine(lang))
-    out.push(lines[n - 1])
-  })
-  return fence(lang, out)
+  return fence(lang, sorted.map(n => lines[n - 1]), `file=${file} lines=${rangesOf(sorted)}`)
 }
 
 type Chunk = ReturnType<typeof buildPlan>['all'][number]
@@ -175,8 +178,10 @@ function codeImport(line: string, tips: string[], caption: string): string {
   const where = `${file} (${line.trim()})`
   if (options) throw new Error(`${where}: import options aren't supported in the export`)
   const lang = langOf(file)
-  const head = caption ? `${caption} — \`${file}\`` : `\`${file}\``
   const parts: string[] = []
+  // Every block names its own file in its tab; a caption only adds where it
+  // goes (Dashboard → SQL Editor).
+  if (caption) parts.push(`${caption}:`)
 
   const buildSpec = ranges.match(/^build(?::(.+))?$/)
   if (buildSpec) {
@@ -185,15 +190,13 @@ function codeImport(line: string, tips: string[], caption: string): string {
     const ops = commitOps(before, after, all)
     const intro = tips[0] && dropLitLines(tips[0])
     if (intro) parts.push(intro)
-    // Each diff names its own file; a caption only adds where it goes.
-    if (caption || !before.length) parts.push(`${head}:`)
     groups.forEach((group, g) => {
       group.forEach(n => applied.add(n))
       if (tips[g + 1]) parts.push(tips[g + 1])
       // A new file reads better whole, as it stands after this click.
       parts.push(before.length
         ? `\`\`\`diff file=${file} lang=${lang}\n${groupPatch(ops, group, file, false)}\n\`\`\``
-        : fence(lang, frame(before, after, all, new Set(applied), new Set()).lines))
+        : fence(lang, frame(before, after, all, new Set(applied), new Set()).lines, `file=${file}`))
     })
     if (applied.size === all.length && before.length) {
       parts.push(wholeFile(repo as Track, rev, file, where))
@@ -204,9 +207,8 @@ function codeImport(line: string, tips: string[], caption: string): string {
   const lines = linesOf(show(repo, rev, file, where))
   checkRanges(ranges, lines.length, where)
   const steps = ranges ? ranges.split('|') : ['*']
-  parts.push(`${head}:`)
   if (!tips.some(Boolean)) {
-    parts.push(excerpt(lines, steps.flatMap(r => numbersIn(r, lines.length)), lang))
+    parts.push(excerpt(lines, steps.flatMap(r => numbersIn(r, lines.length)), lang, file))
   }
   else {
     const shown = new Set<number>()
@@ -216,7 +218,7 @@ function codeImport(line: string, tips: string[], caption: string): string {
       // (a "the whole thing" click at the end) adds nothing on paper.
       if (!tips[k] && numbers.every(n => shown.has(n))) return
       if (tips[k]) parts.push(tips[k])
-      parts.push(excerpt(lines, numbers, lang))
+      parts.push(excerpt(lines, numbers, lang, file))
       numbers.forEach(n => shown.add(n))
     })
     if (shown.size < lines.length) {
@@ -251,13 +253,35 @@ function htmlTable(html: string, indent: string): string {
 
 const RE_FENCE = /^(?<ticks>`{3,})[^\n]*\n[\s\S]*?^\k<ticks>[ \t]*$/gm
 
-function prose(text: string, fm: Frontmatter, level: number): string {
-  // Fenced code passes through untouched, bar Slidev's own fence options
-  // (`{*}{cwd:'~'}`), which mean nothing here.
+const SHELL_LANGS = new Set(['bash', 'sh', 'zsh', 'shell', 'shellscript'])
+
+// Where each track's laptop has its repo, as the slides' terminals assume
+// for a block that doesn't say (theme/lib/shell.ts).
+const TRACK_CWD: Record<Track, string> = { web: '~/Web-Workshops', mobile: '~/Mobile-Workshops' }
+
+// A fence's opening line with Slidev's own options (`{*}{cwd:'~'}`) swapped
+// for the docs compiler's attributes: a terminal keeps its `cwd`/`branch`,
+// and starts in `cwd` when it names none.
+function fenceOpening(line: string, cwd: string | undefined): string {
+  return line.replace(/^(`{3,})(\w*)([ \t]+\{.*)?$/, (_, ticks: string, lang: string, options = '') => {
+    if (!SHELL_LANGS.has(lang)) return `${ticks}${lang}`
+    const dir = /cwd:\s*'([^']*)'/.exec(options)?.[1] ?? cwd
+    const branch = /branch:\s*'([^']*)'/.exec(options)?.[1]
+    const attributes = [dir && `cwd=${dir}`, branch && `branch=${branch}`].filter(Boolean).join(' ')
+    return `${ticks}${lang}${attributes ? ` ${attributes}` : ''}`
+  })
+}
+
+function prose(text: string, fm: Frontmatter, level: number, cwd?: string): string {
+  // Fenced code passes through untouched, bar its opening line
+  // (`fenceOpening`).
   // split() also returns the fence's own backreference group: every third
   // piece, dropped at the end.
   return text.split(new RegExp(`(${RE_FENCE.source})`, 'm')).map((part, i) => {
-    if (i % 3 === 1) return part.replace(/^(`{3,})(\w*)[ \t]+\{.*$/m, '$1$2')
+    if (i % 3 === 1) {
+      const [opening, ...rest] = part.split('\n')
+      return [fenceOpening(opening, cwd), ...rest].join('\n')
+    }
     let out = part
       .replace(/<\/?v-clicks?>/g, '')
       .replace(/^(\s*)- <table[^>]*>([\s\S]*?)<\/table>/gm, (_, indent: string, body: string) => `\n${htmlTable(body, `${indent} `)}\n`)
@@ -275,7 +299,7 @@ function forTrack(content: string, track: Track): string {
   return content.replace(/<Track (web|mobile)>([\s\S]*?)<\/Track>/g, (_, which: Track, body: string) => which === track ? body : '')
 }
 
-function slideToMarkdown(content: string, note: string | undefined, fm: Frontmatter, track: Track): string {
+function slideToMarkdown(content: string, note: string | undefined, fm: Frontmatter, track: Track, cwd: string | undefined): string {
   let body = content.replace(/<!--[\s\S]*?-->/g, '')
   if (note) body = body.replace(note, '')
 
@@ -306,13 +330,13 @@ function slideToMarkdown(content: string, note: string | undefined, fm: Frontmat
         tips = tipsOf(tokens[k + 1 + next])
         tokens[k + 1 + next] = ''
       }
-      parts.push(codeImport(token, tips.map(t => prose(t, {}, level + 1)), caption))
+      parts.push(codeImport(token, tips.map(t => prose(t, {}, level + 1, cwd)), caption))
     }
     else if (token.startsWith('<CodeTips>')) {
       throw new Error(`${fm.heading ?? 'a slide'}: <CodeTips> without an import before it`)
     }
     else if (token.trim()) {
-      const text = prose(token.trim(), fm, level)
+      const text = prose(token.trim(), fm, level, cwd)
       const component = text.replace(RE_FENCE, '').match(/<[A-Z][\w-]*|<ph-[\w-]+/)
       if (component) throw new Error(`${fm.heading ?? text.split('\n')[0]}: ${component[0]}> has no markdown form`)
       parts.push(text)
@@ -350,7 +374,9 @@ interface PageStart {
 interface DocsConfig {
   description?: string
   repos?: Partial<Record<Track, string>>
-  tracks?: Partial<Record<Track, { dir: string, name: string, order?: number }>>
+  /** Per track: its folder, name and order, and `start`, the branch the
+   * demo starts from before the first checkpoint. */
+  tracks?: Partial<Record<Track, { dir: string, name: string, order?: number, start?: string }>>
 }
 
 const GENERATED = `<!-- Generated from Backstage apps/slides/${entry.slice(APP.length)} by \`pnpm export:md\`; edit the deck, not this file. -->`
@@ -367,9 +393,29 @@ function frontmatter(fields: Record<string, string | number | boolean | undefine
   return ['---', ...lines, '---'].join('\n')
 }
 
+// The docs' version of the slides' checkpoint flag: the commands that put a
+// reader's clone where the previous step ended (a demo tag, or the track's
+// starting branch), for anyone who fell behind. It throws their changes away,
+// as the flag does on a demo laptop.
+function catchUp(ref: string, cwd: string | undefined): string {
+  const commands = ref.startsWith('demo/')
+    ? ['# Get the checkpoint tags', 'git fetch origin --tags', '# Throws away your changes to the workshop code', `git switch --detach --discard-changes ${ref}`]
+    : ['# Throws away your changes to the workshop code', `git switch --discard-changes ${ref}`]
+  return [
+    '<details>',
+    '<summary>Behind? Start from where the last step ended</summary>',
+    '',
+    'These put your copy of the workshop code exactly where the previous step left it.',
+    '',
+    fence('bash', commands, cwd ? `cwd=${cwd}` : ''),
+    '',
+    '</details>',
+  ].join('\n')
+}
+
 // One page's markdown: its slides, the first slide's `##` heading taken for
 // the title, and every deeper heading moved up a level to sit under it.
-function pageMarkdown(start: PageStart, slides: string[], order: number | undefined): { text: string, body: string } {
+function pageMarkdown(start: PageStart, slides: string[], order: number | undefined, lead = ''): { text: string, body: string } {
   let body = slides.filter(Boolean).map(dropRepeats).join('\n\n')
   let title = start.title
   const first = body.match(/^## (.*)\n?/)
@@ -379,6 +425,7 @@ function pageMarkdown(start: PageStart, slides: string[], order: number | undefi
   }
   if (!title) throw new Error(`docsPage ${start.file}: no title, and its first slide has no heading`)
   body = body.replace(/^(#{3,6}) /gm, (_, hashes: string) => `${hashes.slice(1)} `).replace(/\n{3,}/g, '\n\n').trim()
+  if (lead) body = `${lead}\n\n${body}`
   const head = frontmatter({ name: title, description: start.description, order })
   // The code is the workshop repos' own, formatted their way, so the docs
   // repo's Prettier (which formats code blocks too) is told to leave it.
@@ -420,17 +467,28 @@ for (const track of Object.keys(TRACKS) as Track[]) {
   writeFileSync(join(dir, 'index.md'), `${frontmatter({ name: config.name, description: docs.description, order: config.order, steps: true })}\n`)
 
   // Slides in order, cut into pages wherever a slide says docsPage.
-  const pages: { start: PageStart, slides: string[] }[] = []
+  // A shared page reads the same for both tracks, so its terminals start
+  // nowhere in particular.
+  const pages: { start: PageStart, slides: string[], checkpoint?: string }[] = []
   for (const s of slides) {
+    const fm = s.frontmatter as Frontmatter
     const start = pageStartOf(s.frontmatter)
     if (start) pages.push({ start, slides: [] })
-    pages.at(-1)!.slides.push(slideToMarkdown(s.content, s.note, s.frontmatter as Frontmatter, track))
+    const page = pages.at(-1)!
+    page.slides.push(slideToMarkdown(s.content, s.note, fm, track, page.start.shared ? undefined : TRACK_CWD[track]))
+    if (fm.checkpoint) page.checkpoint = fm.checkpoint
   }
 
   let step = 0
-  for (const { start, slides: parts } of pages) {
+  let reached: string | undefined
+  for (const { start, slides: parts, checkpoint } of pages) {
+    // Where this page begins: the last checkpoint before it, or the track's
+    // starting branch for the first page that has one of its own.
+    const from = reached ?? (checkpoint ? config.start : undefined)
+    const lead = from ? catchUp(from, start.shared ? undefined : TRACK_CWD[track]) : ''
+    reached = checkpoint ?? reached
     if (start.shared) {
-      const { body, text } = pageMarkdown(start, parts, start.order)
+      const { body, text } = pageMarkdown(start, parts, start.order, lead)
       const seen = shared.get(start.file)
       if (seen !== undefined && seen !== body) {
         throw new Error(`docsPage ${start.file}: shared, but it reads differently for ${track}`)
@@ -440,7 +498,7 @@ for (const track of Object.keys(TRACKS) as Track[]) {
       continue
     }
     const file = join(dir, `${start.file}.md`)
-    writeFileSync(file, pageMarkdown(start, parts, step++).text)
+    writeFileSync(file, pageMarkdown(start, parts, step++, lead).text)
     console.log(`wrote ${file}`)
   }
 }
