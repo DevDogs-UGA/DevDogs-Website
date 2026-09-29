@@ -89,8 +89,10 @@ function catchUp(ref: string, cwd: string | undefined, review: string | undefine
 }
 
 // A page's file: frontmatter, the title, then the body.
-function pageFile(start: PageStart, title: string, body: string, order: number | undefined, scheduled?: string): string {
-  const head = frontmatter({ name: title, description: start.description, order, scheduled })
+function pageFile(start: PageStart, title: string, body: string, order: number | undefined, scheduled?: string, checkpoint?: string): string {
+  // `checkpoint` is the step tag the page ends at: the docs site marks a step
+  // done from the tags a finished VS Code review reports.
+  const head = frontmatter({ name: title, description: start.description, order, scheduled, checkpoint })
   // The code is the workshop repos' own, formatted their way, so the docs
   // repo's Prettier (which formats code blocks too) is told to leave it.
   return `${head}\n\n${GENERATED}\n\n# ${title}\n\n<!-- prettier-ignore-start -->\n\n${body}\n\n<!-- prettier-ignore-end -->\n`
@@ -148,7 +150,7 @@ for (const track of Object.keys(TRACKS) as Track[]) {
       continue
     }
     const file = join(dir, `${start.file}.md`)
-    writeFileSync(file, pageFile(start, content.title, body, step++))
+    writeFileSync(file, pageFile(start, content.title, body, step++, undefined, checkpoint))
     console.log(`wrote ${file}`)
   }
 }
