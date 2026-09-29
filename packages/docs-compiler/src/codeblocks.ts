@@ -15,8 +15,8 @@
  *
  * - `file=<path>` (or `title=<text>`) names the tab; else the language does.
  * - `lines=7-13,15` numbers the lines as those of the file they come from, so
- *   an excerpt keeps its real line numbers; each skip is marked
- *   (`data-gap`). Absent, lines count from 1. It must name one number per
+ *   an excerpt keeps its real line numbers; each skip gets an empty
+ *   `docs-code-gap` row. Absent, lines count from 1. It must name one number per
  *   line, or the build fails.
  * - A shell block (`bash`, `sh`, …) is a terminal instead: no line numbers,
  *   and every command gets a prompt, the working directory (`cwd=`, else
@@ -243,7 +243,11 @@ export function docsCodeBlocks(): ShikiTransformer {
       lines.forEach((line, i) => {
         line.properties["dataLine"] = String(numbers[i]);
         if (i > 0 && numbers[i] !== numbers[i - 1]! + 1) {
-          line.properties["dataGap"] = "";
+          // A separator row where the excerpt skips lines of the file.
+          const gap = span("line", []);
+          addClass(gap, "docs-code-gap");
+          gap.properties["ariaHidden"] = "true";
+          code.children.splice(code.children.indexOf(line), 0, gap, text("\n"));
         }
       });
     },

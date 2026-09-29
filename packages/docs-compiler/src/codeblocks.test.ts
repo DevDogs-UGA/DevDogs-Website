@@ -28,7 +28,7 @@ describe("code block frame", () => {
       "8",
       "10",
     ]);
-    expect(html.match(/data-gap/g)).toHaveLength(1);
+    expect(html.match(/docs-code-gap/g)).toHaveLength(1);
     expect(html).toContain("data-copy");
   });
 
