@@ -27,6 +27,7 @@
  * nested one stays an ordinary `diff` code block.
  */
 import type { Code, Root } from "mdast";
+import { metaAttribute as attribute } from "./codeblocks.js";
 import { DocsBuildError } from "./errors.js";
 
 /** What a placeholder carries, and what the platform's viewer needs. */
@@ -36,10 +37,6 @@ export interface DocsDiff {
   patch: string;
 }
 
-function attribute(meta: string, name: string): string | undefined {
-  const match = new RegExp(`(?:^|\\s)${name}=(?:"([^"]*)"|(\\S+))`).exec(meta);
-  return match ? (match[1] ?? match[2]) : undefined;
-}
 
 /** The `{ file, lang, patch }` a `diff file=…` block describes, or null for
  * any other code block. */

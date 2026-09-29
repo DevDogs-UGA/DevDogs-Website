@@ -32,6 +32,7 @@ import remarkSmartypants from "remark-smartypants";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import { VFile } from "vfile";
+import { docsCodeBlocks, remarkKeepMeta } from "./codeblocks.js";
 import { remarkDiffs } from "./diffs.js";
 import { remarkVariants, type VariantContext } from "./variants.js";
 
@@ -66,6 +67,7 @@ const processor = unified()
   // After the variants, so a diff inside a resolved variant is still nested
   // (and left alone), and before Shiki could ever see the block.
   .use(remarkDiffs)
+  .use(remarkKeepMeta)
   .use(remarkSmartypants)
   .use(remarkEmoji)
   .use(remarkAlert)
@@ -84,6 +86,8 @@ const processor = unified()
     defaultColor: false,
     lazy: true,
     fallbackLanguage: "text",
+    // The frame, line numbers and terminal prompts (codeblocks.ts).
+    transformers: [docsCodeBlocks()],
   })
   .use(rehypeKatex)
   .use(rehypeScrollTables)
