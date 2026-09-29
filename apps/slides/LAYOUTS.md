@@ -395,7 +395,9 @@ one diff per click group with its `<CodeTips>` tip before it, then a link to
 the whole file on GitHub; presenter notes are dropped.
 
 - The headmatter's `docs` key: `description`, `url` (where the pages are on
-  the docs site), `repos` (the public GitHub repo per track, for the file
+  the docs site), `scheduled` (optional: an ISO time with a zone, before
+  which the docs hide the workshop's pages; written onto the track folders
+  and the shared pages), `repos` (the public GitHub repo per track, for the file
   links), and `tracks` (each track's folder `dir`, `name`, `order`, and
   `start`, the branch its demo starts from).
 - `docsPage` on a slide starts a page: `file`, optional `title` (else the

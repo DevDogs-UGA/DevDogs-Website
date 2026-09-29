@@ -20,7 +20,8 @@
 // A slide with `docsPage` starts a new page (`file`, and optionally `title`,
 // `description`, and `shared: true` for one page beside the track folders).
 // Each track's folder gets a body-less index.md naming it a course (`steps:
-// true`, see the docs compiler). The deck headmatter's `docs` key names the
+// true`, see the docs compiler), and the headmatter's `docs.scheduled`, which
+// the shared pages get too: the docs hide them all until then. The deck headmatter's `docs` key names the
 // track folders and the public repos the file links point at. Slides with
 // `docs: false` are left out: the preshow, the competition, upcoming events.
 //
@@ -84,8 +85,8 @@ function catchUp(ref: string, cwd: string | undefined): string {
 }
 
 // A page's file: frontmatter, the title, then the body.
-function pageFile(start: PageStart, title: string, body: string, order: number | undefined): string {
-  const head = frontmatter({ name: title, description: start.description, order })
+function pageFile(start: PageStart, title: string, body: string, order: number | undefined, scheduled?: string): string {
+  const head = frontmatter({ name: title, description: start.description, order, scheduled })
   // The code is the workshop repos' own, formatted their way, so the docs
   // repo's Prettier (which formats code blocks too) is told to leave it.
   return `${head}\n\n${GENERATED}\n\n# ${title}\n\n<!-- prettier-ignore-start -->\n\n${body}\n\n<!-- prettier-ignore-end -->\n`
@@ -101,6 +102,9 @@ function clearGenerated(dir: string) {
 }
 
 const { docs, slides } = await loadDeck(entry)
+// YAML reads an unquoted timestamp as a Date.
+const scheduled: unknown = docs.scheduled
+if (scheduled instanceof Date) docs.scheduled = scheduled.toISOString()
 const pages = pagesOf(slides)
 const out = resolve(values.out ?? join(APP, 'export', basename(entry, '.md')))
 mkdirSync(out, { recursive: true })
@@ -112,7 +116,7 @@ for (const track of Object.keys(TRACKS) as Track[]) {
   const dir = join(out, config.dir)
   clearGenerated(dir)
   mkdirSync(dir, { recursive: true })
-  writeFileSync(join(dir, 'index.md'), `${frontmatter({ name: config.name, description: docs.description, order: config.order, steps: true })}\n`)
+  writeFileSync(join(dir, 'index.md'), `${frontmatter({ name: config.name, description: docs.description, order: config.order, steps: true, scheduled: docs.scheduled })}\n`)
 
   let step = 0
   let reached: string | undefined
@@ -134,7 +138,7 @@ for (const track of Object.keys(TRACKS) as Track[]) {
         throw new Error(`docsPage ${start.file}: shared, but it reads differently for ${track}`)
       }
       shared.set(start.file, body)
-      writeFileSync(join(out, `${start.file}.md`), pageFile(start, content.title, body, start.order))
+      writeFileSync(join(out, `${start.file}.md`), pageFile(start, content.title, body, start.order, docs.scheduled))
       continue
     }
     const file = join(dir, `${start.file}.md`)

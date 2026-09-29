@@ -372,6 +372,9 @@ export interface DocsConfig {
   description?: string
   /** Where the pages are on the docs site, e.g. `/docs/workshops/supabase`. */
   url?: string
+  /** When the pages go live (an ISO time with a zone): the docs hide them
+   * until then. Written onto each track's folder and the shared pages. */
+  scheduled?: string
   repos?: Partial<Record<Track, string>>
   /** Per track: its folder, name and order, and `start`, the branch the
    * demo starts from before the first checkpoint. */
