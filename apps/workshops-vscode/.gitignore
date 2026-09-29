@@ -1,1 +1,3 @@
 *.vsix
+dist-test/
+.vscode-test/

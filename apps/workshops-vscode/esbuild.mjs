@@ -19,7 +19,18 @@ const options = {
   logLevel: "info",
 };
 
-if (process.argv.includes("--watch")) {
+if (process.argv.includes("--tests")) {
+  // The real-VS Code smoke test: the runner (plain Node) and the suite that
+  // runs inside the editor. Not part of the .vsix.
+  await build({
+    ...options,
+    entryPoints: { run: "src/vscode-test/run.ts", suite: "src/vscode-test/suite.ts" },
+    outdir: "dist-test",
+    outfile: undefined,
+    sourcemap: true,
+    minify: false,
+  });
+} else if (process.argv.includes("--watch")) {
   const ctx = await context(options);
   await ctx.watch();
 } else {
