@@ -21,6 +21,13 @@ export class GitError extends Error {
   }
 }
 
+export interface GitOptions {
+  /** Extra environment for this call (`GIT_TERMINAL_PROMPT=0` for network calls). */
+  env?: Readonly<Record<string, string>>;
+  /** Kill the process after this long; git then fails like any other error. */
+  timeoutMs?: number;
+}
+
 export interface GitResult {
   /** Exit code; 0 unless the caller listed it in `okCodes`. */
   code: number;
@@ -36,12 +43,19 @@ export function gitRaw(
   cwd: string,
   args: readonly string[],
   okCodes: readonly number[] = [],
+  options: GitOptions = {},
 ): Promise<GitResult> {
   return new Promise((resolve, reject) => {
     execFile(
       "git",
       ["-C", cwd, ...args],
-      { encoding: "buffer", maxBuffer: MAX_BUFFER, windowsHide: true },
+      {
+        encoding: "buffer",
+        maxBuffer: MAX_BUFFER,
+        windowsHide: true,
+        ...(options.env ? { env: { ...process.env, ...options.env } } : {}),
+        ...(options.timeoutMs ? { timeout: options.timeoutMs } : {}),
+      },
       (error, stdout, stderr) => {
         if (!error) return resolve({ code: 0, stdout });
         const code = typeof error.code === "number" ? error.code : null;
@@ -53,8 +67,12 @@ export function gitRaw(
 }
 
 /** `gitRaw`, decoded as UTF-8 text. */
-export async function git(cwd: string, args: readonly string[]): Promise<string> {
-  return (await gitRaw(cwd, args)).stdout.toString("utf8");
+export async function git(
+  cwd: string,
+  args: readonly string[],
+  options: GitOptions = {},
+): Promise<string> {
+  return (await gitRaw(cwd, args, [], options)).stdout.toString("utf8");
 }
 
 /**

@@ -1,0 +1,6 @@
+# Only dist/, media/, README.md and package.json belong in the .vsix.
+**
+!dist/extension.js
+!media/**
+!README.md
+!package.json

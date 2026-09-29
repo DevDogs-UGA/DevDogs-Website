@@ -1,12 +1,141 @@
 {
-  "name": "workshops-vscode",
-  "version": "0.0.0",
+  "name": "workshops",
+  "displayName": "DevDogs Workshops",
+  "publisher": "devdogsuga",
+  "version": "0.0.1",
   "private": true,
-  "type": "module",
-  "description": "DevDogs Workshops VS Code extension. src/core is the pure-Node merge engine (no vscode imports); the extension shell wraps it.",
+  "description": "Follow DevDogs workshops in your own clone: review each step's changes against your code and accept or reject them.",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DevDogsUGA/Backstage.git",
+    "directory": "apps/workshops-vscode"
+  },
+  "engines": {
+    "vscode": "^1.93.0"
+  },
+  "categories": [
+    "Education",
+    "SCM Providers"
+  ],
+  "icon": "media/icon.png",
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "workspaceContains:.git",
+    "onUri"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "devdogsWorkshops",
+          "title": "Workshop",
+          "icon": "media/activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "devdogsWorkshops": [
+        {
+          "id": "devdogsWorkshops.steps",
+          "name": "Steps"
+        },
+        {
+          "id": "devdogsWorkshops.review",
+          "name": "Review"
+        },
+        {
+          "id": "devdogsWorkshops.live",
+          "name": "● Live",
+          "when": "devdogsWorkshops.live"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "devdogsWorkshops.steps",
+        "contents": "Open a DevDogs workshop repository to see its steps here.\n[Refresh](command:devdogsWorkshops.refresh)",
+        "when": "!devdogsWorkshops.hasWorkshop"
+      },
+      {
+        "view": "devdogsWorkshops.review",
+        "contents": "No review in progress. Pick a step above to review its changes against your code.",
+        "when": "!devdogsWorkshops.reviewActive"
+      }
+    ],
+    "commands": [
+      {
+        "command": "devdogsWorkshops.reviewToStep",
+        "title": "Review changes up to this step",
+        "category": "Workshop",
+        "icon": "$(git-compare)"
+      },
+      {
+        "command": "devdogsWorkshops.goToStep",
+        "title": "Go to step…",
+        "category": "Workshop"
+      },
+      {
+        "command": "devdogsWorkshops.refresh",
+        "title": "Refresh steps",
+        "category": "Workshop",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "devdogsWorkshops.moveMyWork",
+        "title": "Move my work to my own branch",
+        "category": "Workshop"
+      },
+      {
+        "command": "devdogsWorkshops.jumpToStep",
+        "title": "Jump to step (discard my changes)…",
+        "category": "Workshop"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "devdogsWorkshops.reviewToStep",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "devdogsWorkshops.refresh",
+          "when": "view == devdogsWorkshops.steps",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "devdogsWorkshops.reviewToStep",
+          "when": "view == devdogsWorkshops.steps && viewItem == step",
+          "group": "inline"
+        },
+        {
+          "command": "devdogsWorkshops.reviewToStep",
+          "when": "view == devdogsWorkshops.steps && viewItem == step",
+          "group": "1_review"
+        },
+        {
+          "command": "devdogsWorkshops.jumpToStep",
+          "when": "view == devdogsWorkshops.steps && viewItem == step",
+          "group": "9_danger"
+        },
+        {
+          "command": "devdogsWorkshops.moveMyWork",
+          "when": "view == devdogsWorkshops.steps && viewItem == warning",
+          "group": "inline"
+        }
+      ]
+    }
+  },
   "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "package": "pnpm run build && vsce package --no-dependencies"
   },
   "dependencies": {
     "node-diff3": "^3.1.2"
@@ -14,6 +143,9 @@
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",
     "@types/node": "catalog:",
+    "@types/vscode": "1.93.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

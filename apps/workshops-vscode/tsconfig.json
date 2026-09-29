@@ -1,11 +1,14 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "lib": ["ES2025"],
+    // The package is not "type": "module": VS Code require()s dist/extension.js,
+    // which esbuild emits as CommonJS. tsc only type-checks (esbuild bundles),
+    // so resolution follows the bundler.
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023"],
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "vitest.config.ts"]
+  "include": ["src/**/*.ts", "vitest.config.mts"]
 }

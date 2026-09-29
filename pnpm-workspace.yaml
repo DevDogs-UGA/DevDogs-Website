@@ -14,6 +14,8 @@ allowBuilds:
   # the product repo's own, not an omission.
   core-js: false
   esbuild: true
+  # vsce-sign only verifies signatures on `vsce publish`; packaging does not need it.
+  "@vscode/vsce-sign": false
   playwright-chromium: true
   sharp: true
   unrs-resolver: true
