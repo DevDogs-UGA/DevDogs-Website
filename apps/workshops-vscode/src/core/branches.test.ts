@@ -49,6 +49,9 @@ describe("workshopOfBranch / latestWorkshop / usernames", () => {
   it("picks the highest-numbered workshop", () => {
     expect(latestWorkshop(["02-supabase", "01-nextjs-intro"])).toBe("02-supabase");
     expect(latestWorkshop([])).toBeUndefined();
+    // Legacy `demo/*` tags sort after the numbered names but are not a workshop line.
+    expect(latestWorkshop(["02-supabase", "demo"])).toBe("02-supabase");
+    expect(latestWorkshop(["bonus"])).toBe("bonus");
   });
 
   it("accepts GitHub logins and refuses anything git could misread", () => {

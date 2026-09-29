@@ -4,7 +4,10 @@ import * as vscode from "vscode";
 export const output = vscode.window.createOutputChannel("DevDogs Workshops");
 
 export function logError(context: string, error: unknown): void {
-  output.appendLine(`${context}: ${error instanceof Error ? error.message : String(error)}`);
+  const line = `${context}: ${error instanceof Error ? error.message : String(error)}`;
+  output.appendLine(line);
+  // The integration test can't see the output channel; it sets this to read errors from stdout.
+  if (process.env["DEVDOGS_WORKSHOPS_DEBUG"]) console.error(`[workshops] ${line}`);
 }
 
 export function errorText(error: unknown): string {

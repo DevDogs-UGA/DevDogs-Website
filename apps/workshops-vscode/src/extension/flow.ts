@@ -154,6 +154,7 @@ export class Flow {
         root,
         repo,
         session: options.session,
+        line,
         ensurePersonalBranch: () => this.branches.ensurePersonalBranch(root, target.workshop),
       });
     } catch (error) {

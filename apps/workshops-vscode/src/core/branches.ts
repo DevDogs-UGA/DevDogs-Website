@@ -49,9 +49,15 @@ export function workshopOfBranch(
   return workshops.includes(last) ? last : undefined;
 }
 
-/** The newest workshop: names lead with `NN-`, so the last one sorted. */
+/**
+ * The newest workshop: names lead with `NN-`, so the last one sorted. Only
+ * names of that shape count, so leftover tags from before the rename
+ * (`demo/01-read`) can't be mistaken for the newest workshop; if none has the
+ * shape, any workshop will do.
+ */
 export function latestWorkshop(workshops: readonly string[]): string | undefined {
-  return [...workshops].sort().at(-1);
+  const numbered = workshops.filter((w) => /^\d\d-/.test(w));
+  return [...(numbered.length > 0 ? numbered : workshops)].sort().at(-1);
 }
 
 /** `sloan/02-supabase`. Throws on a name git could read as a flag or a range. */

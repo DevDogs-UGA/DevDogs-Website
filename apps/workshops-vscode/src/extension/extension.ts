@@ -5,7 +5,7 @@ import { Flow, REF_SCHEME, refContentProvider } from "./flow.js";
 import { errorText, logError, output } from "./log.js";
 import { isPendingFresh } from "./pending.js";
 import { CMD, StepsProvider, tagOf } from "./panel.js";
-import { StubReviewController } from "./review.js";
+import { CMD as REVIEW_CMD, WorkshopReviewController, commandIndexOf, fileIndexOf } from "./review-controller.js";
 import { State } from "./state.js";
 import { stepLabel } from "./steps-model.js";
 
@@ -17,17 +17,23 @@ import { stepLabel } from "./steps-model.js";
  * Seams for later tasks: `review` (TASK-376 diff review), the "Live" view
  * declared in package.json but hidden (TASK-379).
  */
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
+export async function activate(context: vscode.ExtensionContext): Promise<WorkshopsApi> {
   const state = new State(context.globalState);
   const branches = new Branches(state);
-  const review = new StubReviewController();
   const steps = new StepsProvider();
   const refresh = () => void steps.refresh();
+  const review = new WorkshopReviewController(refresh);
   const flow = new Flow(state, branches, review, refresh);
 
+  const api: WorkshopsApi = { handleLink: (path, query) => flow.handleLink(path, query),
+    review,
+    setUsername: (name) => Promise.resolve(state.setUsername(name)),
+    steps,
+  };
   const stepsView = vscode.window.createTreeView("devdogsWorkshops.steps", { treeDataProvider: steps });
   context.subscriptions.push(
     output,
+    review,
     stepsView,
     vscode.window.createTreeView("devdogsWorkshops.review", { treeDataProvider: review.treeDataProvider }),
     vscode.workspace.registerTextDocumentContentProvider(REF_SCHEME, refContentProvider),
@@ -112,6 +118,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     refresh();
   });
 
+  // Review commands (TASK-376) and step commands (TASK-377).
+  register(REVIEW_CMD.acceptChange, (thread) => review.decideThread(thread as vscode.CommentThread, "accept"));
+  register(REVIEW_CMD.rejectChange, (thread) => review.decideThread(thread as vscode.CommentThread, "reject"));
+  register(REVIEW_CMD.acceptAtCursor, () => review.decideAtCursor("accept"));
+  register(REVIEW_CMD.rejectAtCursor, () => review.decideAtCursor("reject"));
+  register(REVIEW_CMD.acceptFile, (arg) => review.decideFile("accept", fileIndexOf(arg)));
+  register(REVIEW_CMD.rejectFile, (arg) => review.decideFile("reject", fileIndexOf(arg)));
+  register(REVIEW_CMD.nextFile, () => review.nextFile());
+  register(REVIEW_CMD.acceptAll, () => review.decideAll("accept"));
+  register(REVIEW_CMD.rejectAll, () => review.decideAll("reject"));
+  register(REVIEW_CMD.finish, () => review.finish());
+  register(REVIEW_CMD.cancel, () => review.cancel());
+  register(REVIEW_CMD.openFile, (arg) => {
+    const index = fileIndexOf(arg);
+    return index === undefined ? undefined : review.openFile(index);
+  });
+  register(REVIEW_CMD.runCommand, (arg) => {
+    const index = commandIndexOf(arg);
+    return index === undefined ? undefined : review.runCommand(index);
+  });
+  register(REVIEW_CMD.runAll, () => review.runAll());
+  register(REVIEW_CMD.confirmCommand, (arg) => {
+    const index = commandIndexOf(arg);
+    return index === undefined ? undefined : review.confirmCommand(index);
+  });
+  register(REVIEW_CMD.skipCommands, () => review.skipCommands());
+
   await steps.refresh();
 
   // A link parked before a folder-open reload resumes now (expired ones are dropped).
@@ -123,6 +156,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       void flow.resume(pending.path, pending.query);
     }
   }
+  return api;
 }
 
 export function deactivate(): void {}
+
+/**
+ * What `activate` returns. Not a public contract: the integration tests use it
+ * to drive the same paths a link or a click does and to read state back.
+ */
+export interface WorkshopsApi {
+  /** Handles a `vscode://devdogsuga.workshops/...` link's path and (decoded) query. */
+  handleLink(path: string, query: string): Promise<void>;
+  review: WorkshopReviewController;
+  /** Stores the GitHub username as if the attendee had typed it (skips the prompt). */
+  setUsername(name: string): Promise<void>;
+  steps: StepsProvider;
+}

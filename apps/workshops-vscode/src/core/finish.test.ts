@@ -137,6 +137,20 @@ describe("finishReview", () => {
     expect(repo.git("cat-file", "-p", "HEAD^{tree}")).not.toContain("gone.ts");
   });
 
+  it("adds a file the .gitignore matches when the step tracks it", async () => {
+    repo = TestRepo.init();
+    repo.commit({ ".gitignore": ".env*\n", "a.txt": "a\n" });
+    repo.tag("w/00-start", "Start: ");
+    repo.commit({ ".env.example": "KEY=\n" });
+    repo.git("add", "-f", ".env.example");
+    repo.git("commit", "-q", "--amend", "--no-edit");
+    repo.tag("w/01-one", "One");
+    repo.git("checkout", "-q", "--detach", "w/00-start");
+    await review(repo, "w/00-start", "w/01-one", () => "accept");
+    expect(repo.git("ls-files").split("\n")).toContain(".env.example");
+    expect(repo.git("status", "--porcelain")).toBe("");
+  });
+
   it("keeps their own version when everything is rejected", async () => {
     repo = build();
     repo.write("a.ts", lines({ 3: "MINE" }));

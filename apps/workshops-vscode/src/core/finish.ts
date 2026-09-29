@@ -131,6 +131,8 @@ export async function finishReview(input: FinishInput): Promise<FinishResult | n
     }
     if (file.oldPath && file.oldPath !== file.path) await remove(file.oldPath);
   }
+  // `-f`: a step may ship a file the repo's .gitignore matches (`.env.example`
+  // under `.env*`); it is tracked at the tag, so it must be tracked here too.
   const list = [...paths];
   const literal = { env: { GIT_LITERAL_PATHSPECS: "1" } };
 
@@ -138,7 +140,7 @@ export async function finishReview(input: FinishInput): Promise<FinishResult | n
     // Stage the result and leave a merge in progress: their own `git commit`
     // (or the Source Control panel) then records a merge with the step as
     // second parent.
-    if (list.length > 0) await git(root, ["add", "-A", "--", ...list], literal);
+    if (list.length > 0) await git(root, ["add", "-A", "-f", "--", ...list], literal);
     const gitDir = (await git(root, ["rev-parse", "--absolute-git-dir"])).trim();
     await writeFile(join(gitDir, "MERGE_HEAD"), `${targetCommit}\n`);
     // "no-ff" is what `git merge --no-ff --no-commit` writes: without it `git commit`
@@ -156,7 +158,7 @@ export async function finishReview(input: FinishInput): Promise<FinishResult | n
   try {
     const env = { GIT_INDEX_FILE: join(dir, "index"), GIT_LITERAL_PATHSPECS: "1" };
     await git(root, ["read-tree", "--end-of-options", head], { env });
-    if (list.length > 0) await git(root, ["add", "-A", "--", ...list], { env });
+    if (list.length > 0) await git(root, ["add", "-A", "-f", "--", ...list], { env });
     const tree = (await git(root, ["write-tree"], { env })).trim();
     const commit = (
       await git(root, ["commit-tree", tree, "-p", head, "-p", targetCommit, "-m", input.message])

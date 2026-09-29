@@ -42,6 +42,8 @@ export function proposalDecision(decisions: ReadonlyMap<number, Decision>, id: n
 
 export function fileStatus(state: Pick<ReviewFileState, "merge" | "decisions">): FileStatus {
   const total = state.merge.changes.length;
+  // Nothing to decide (a pure rename): applied as the step has it.
+  if (total === 0) return "accepted";
   const decided = [...state.decisions.values()];
   if (decided.length === 0) return "pending";
   const accepted = decided.filter((d) => d === "accept").length;

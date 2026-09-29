@@ -90,6 +90,100 @@
         "command": "devdogsWorkshops.jumpToStep",
         "title": "Jump to step (discard my changes)…",
         "category": "Workshop"
+      },
+      {
+        "command": "devdogsWorkshops.review.acceptChange",
+        "title": "Accept this change",
+        "category": "Workshop",
+        "icon": "$(check)"
+      },
+      {
+        "command": "devdogsWorkshops.review.rejectChange",
+        "title": "Reject this change",
+        "category": "Workshop",
+        "icon": "$(close)"
+      },
+      {
+        "command": "devdogsWorkshops.review.acceptAtCursor",
+        "title": "Accept change at cursor",
+        "category": "Workshop",
+        "icon": "$(check)"
+      },
+      {
+        "command": "devdogsWorkshops.review.rejectAtCursor",
+        "title": "Reject change at cursor",
+        "category": "Workshop",
+        "icon": "$(close)"
+      },
+      {
+        "command": "devdogsWorkshops.review.acceptFile",
+        "title": "Accept file",
+        "category": "Workshop",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "devdogsWorkshops.review.rejectFile",
+        "title": "Reject file",
+        "category": "Workshop",
+        "icon": "$(close-all)"
+      },
+      {
+        "command": "devdogsWorkshops.review.nextFile",
+        "title": "Next file",
+        "category": "Workshop",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "devdogsWorkshops.review.acceptAll",
+        "title": "Accept all changes",
+        "category": "Workshop",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "devdogsWorkshops.review.rejectAll",
+        "title": "Reject all changes",
+        "category": "Workshop",
+        "icon": "$(close-all)"
+      },
+      {
+        "command": "devdogsWorkshops.review.finish",
+        "title": "Finish review",
+        "category": "Workshop",
+        "icon": "$(git-merge)"
+      },
+      {
+        "command": "devdogsWorkshops.review.cancel",
+        "title": "Cancel review",
+        "category": "Workshop",
+        "icon": "$(close)"
+      },
+      {
+        "command": "devdogsWorkshops.review.openFile",
+        "title": "Open file in review",
+        "category": "Workshop"
+      },
+      {
+        "command": "devdogsWorkshops.review.runCommand",
+        "title": "Run in terminal",
+        "category": "Workshop",
+        "icon": "$(play)"
+      },
+      {
+        "command": "devdogsWorkshops.review.runAllCommands",
+        "title": "Run all commands",
+        "category": "Workshop",
+        "icon": "$(run-all)"
+      },
+      {
+        "command": "devdogsWorkshops.review.confirmCommand",
+        "title": "I ran it",
+        "category": "Workshop",
+        "icon": "$(check)"
+      },
+      {
+        "command": "devdogsWorkshops.review.skipCommands",
+        "title": "Skip the commands",
+        "category": "Workshop"
       }
     ],
     "menus": {
@@ -97,6 +191,70 @@
         {
           "command": "devdogsWorkshops.reviewToStep",
           "when": "false"
+        },
+        {
+          "command": "devdogsWorkshops.review.acceptChange",
+          "when": "false"
+        },
+        {
+          "command": "devdogsWorkshops.review.rejectChange",
+          "when": "false"
+        },
+        {
+          "command": "devdogsWorkshops.review.openFile",
+          "when": "false"
+        },
+        {
+          "command": "devdogsWorkshops.review.runCommand",
+          "when": "false"
+        },
+        {
+          "command": "devdogsWorkshops.review.confirmCommand",
+          "when": "false"
+        },
+        {
+          "command": "devdogsWorkshops.review.acceptAtCursor",
+          "when": "devdogsWorkshops.reviewActive"
+        },
+        {
+          "command": "devdogsWorkshops.review.rejectAtCursor",
+          "when": "devdogsWorkshops.reviewActive"
+        },
+        {
+          "command": "devdogsWorkshops.review.acceptFile",
+          "when": "devdogsWorkshops.reviewActive"
+        },
+        {
+          "command": "devdogsWorkshops.review.rejectFile",
+          "when": "devdogsWorkshops.reviewActive"
+        },
+        {
+          "command": "devdogsWorkshops.review.nextFile",
+          "when": "devdogsWorkshops.reviewActive"
+        },
+        {
+          "command": "devdogsWorkshops.review.acceptAll",
+          "when": "devdogsWorkshops.reviewActive"
+        },
+        {
+          "command": "devdogsWorkshops.review.rejectAll",
+          "when": "devdogsWorkshops.reviewActive"
+        },
+        {
+          "command": "devdogsWorkshops.review.finish",
+          "when": "devdogsWorkshops.reviewActive"
+        },
+        {
+          "command": "devdogsWorkshops.review.cancel",
+          "when": "devdogsWorkshops.reviewActive"
+        },
+        {
+          "command": "devdogsWorkshops.review.runAllCommands",
+          "when": "devdogsWorkshops.reviewActive"
+        },
+        {
+          "command": "devdogsWorkshops.review.skipCommands",
+          "when": "devdogsWorkshops.reviewActive"
         }
       ],
       "view/title": [
@@ -104,6 +262,11 @@
           "command": "devdogsWorkshops.refresh",
           "when": "view == devdogsWorkshops.steps",
           "group": "navigation"
+        },
+        {
+          "command": "devdogsWorkshops.review.cancel",
+          "group": "navigation",
+          "when": "view == devdogsWorkshops.review && devdogsWorkshops.reviewActive"
         }
       ],
       "view/item/context": [
@@ -126,8 +289,79 @@
           "command": "devdogsWorkshops.moveMyWork",
           "when": "view == devdogsWorkshops.steps && viewItem == warning",
           "group": "inline"
+        },
+        {
+          "command": "devdogsWorkshops.review.runCommand",
+          "group": "inline",
+          "when": "view == devdogsWorkshops.review && viewItem =~ /^command-(pending|failed|sent)$/"
+        },
+        {
+          "command": "devdogsWorkshops.review.confirmCommand",
+          "group": "inline",
+          "when": "view == devdogsWorkshops.review && viewItem == command-sent"
+        },
+        {
+          "command": "devdogsWorkshops.review.acceptFile",
+          "group": "inline@1",
+          "when": "view == devdogsWorkshops.review && viewItem == reviewFile"
+        },
+        {
+          "command": "devdogsWorkshops.review.rejectFile",
+          "group": "inline@2",
+          "when": "view == devdogsWorkshops.review && viewItem == reviewFile"
+        }
+      ],
+      "comments/commentThread/title": [
+        {
+          "command": "devdogsWorkshops.review.acceptChange",
+          "group": "inline@1",
+          "when": "commentController == devdogsWorkshops.review && commentThread != accept"
+        },
+        {
+          "command": "devdogsWorkshops.review.rejectChange",
+          "group": "inline@2",
+          "when": "commentController == devdogsWorkshops.review && commentThread != reject"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "devdogsWorkshops.review.acceptFile",
+          "group": "navigation@1",
+          "when": "devdogsWorkshops.inReviewFile"
+        },
+        {
+          "command": "devdogsWorkshops.review.rejectFile",
+          "group": "navigation@2",
+          "when": "devdogsWorkshops.inReviewFile"
+        },
+        {
+          "command": "devdogsWorkshops.review.nextFile",
+          "group": "navigation@3",
+          "when": "devdogsWorkshops.inReviewFile"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "devdogsWorkshops.review.acceptAtCursor",
+          "group": "9_workshop@1",
+          "when": "resourceScheme == devdogs-review"
+        },
+        {
+          "command": "devdogsWorkshops.review.rejectAtCursor",
+          "group": "9_workshop@2",
+          "when": "resourceScheme == devdogs-review"
         }
       ]
+    },
+    "configuration": {
+      "title": "DevDogs Workshops",
+      "properties": {
+        "devdogsWorkshops.autoCommit": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Commit the result of a finished review as a merge commit. When off, the result is staged and left as a merge in progress, so your own commit records the merge."
+        }
+      }
     }
   },
   "scripts": {
@@ -135,7 +369,8 @@
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "package": "pnpm run build && vsce package --no-dependencies"
+    "package": "pnpm run build && vsce package --no-dependencies",
+    "test:vscode": "node esbuild.mjs && node esbuild.mjs --tests && node dist-test/run.js"
   },
   "dependencies": {
     "node-diff3": "^3.1.2"
@@ -147,6 +382,7 @@
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@vscode/test-electron": "^2.5.2"
   }
 }

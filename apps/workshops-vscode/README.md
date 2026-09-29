@@ -29,6 +29,34 @@ on your machine (VS Code global state) and nowhere else.
 It never writes to your files until you accept a change. The only thing that
 runs by itself when a link opens is `git fetch origin --tags`.
 
+## Reviewing a step
+
+Picking a step (or opening a `/review` link) opens the Review panel:
+
+1. **Commands first.** Each `Run:` command of the step is listed with a
+   **Run in terminal** button. They run in the extension's own "Workshop"
+   terminal, always bash (Git Bash on Windows). With VS Code's shell
+   integration it waits for the exit code and moves on only on success. Without
+   bash or shell integration the line is typed into your default shell and you
+   press **I ran it**. Already ran them yourself? **Skip** them.
+2. **Then the files.** Each changed file opens in a diff: your code on the left,
+   the step's version on the right. Every change has an **Accept / Reject** bar;
+   there is also Accept file / Reject file in the editor title, Accept / Reject
+   change at cursor in the right-click menu, and Next file. Files already
+   matching the step drop out. Lockfiles and binaries are taken from the step.
+3. **Finish.** Writes the files you decided and records a **merge commit**
+   whose second parent is the step's tag, so a later `git merge <next step>`
+   agrees with the extension and a rejected change stays rejected. Uncommitted
+   work in other files stays uncommitted. On a workshop branch, your work first
+   moves to `<github-username>/<workshop>`.
+
+Nothing is written before Finish. Setting `devdogsWorkshops.autoCommit` (on by
+default): turn it off to stage the result and leave a merge in progress, so your
+own commit records the merge.
+
+If the review came from a docs link with a `session`, Finish opens the next
+step's docs page: `https://devdogsuga.org<docs path>#done=<step tags>&session=<id>`.
+
 ## Links
 
 Docs pages open the extension with `vscode://devdogsuga.workshops/<action>?<query>`.
@@ -84,7 +112,13 @@ it is at `ref`.
 pnpm --filter workshops build      # dist/extension.js
 pnpm --filter workshops test
 pnpm --filter workshops package    # .vsix
+xvfb-run -a pnpm --filter workshops test:vscode   # real VS Code (see below)
 ```
+
+`test:vscode` downloads VS Code once (`.vscode-test/`), clones the web workshop
+submodule into a temp dir, and drives a `/review` link through activation, the
+step list, a command in the Workshop terminal, the diff review and Finish. It
+needs the slides submodules checked out; `xvfb-run` is only for headless hosts.
 
 `src/core` is pure Node (merge engine, tags, branch decisions) and never imports
 `vscode`; `src/extension` is the thin VS Code shell around it.
