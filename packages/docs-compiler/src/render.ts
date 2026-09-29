@@ -10,8 +10,8 @@
  * finished HTML rather than a markdown pipeline.
  *
  * The plugin list is the one the platform ran, in the same order, so a page
- * renders the same; `remarkVariants`, `remarkDiffs` and `rehypeScrollTables`
- * are the only additions.
+ * renders the same; `remarkVariants`, `remarkDiffs`, `rehypeScrollTables` and
+ * `rehypeRefuseScript` (sanitize.ts) are the only additions.
  */
 import rehypeShiki from "@shikijs/rehype";
 import type { Element, Root as HastRoot } from "hast";
@@ -34,6 +34,7 @@ import { visit } from "unist-util-visit";
 import { VFile } from "vfile";
 import { docsCodeBlocks, remarkKeepMeta } from "./codeblocks.js";
 import { remarkDiffs } from "./diffs.js";
+import { rehypeRefuseScript } from "./sanitize.js";
 import { remarkVariants, type VariantContext } from "./variants.js";
 
 /**
@@ -73,6 +74,7 @@ const processor = unified()
   .use(remarkAlert)
   .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypeRaw)
+  .use(rehypeRefuseScript)
   .use(rehypeSlug)
   .use(rehypeAutolinkHeadings, { behavior: "wrap" })
   .use(rehypeUnwrapImages)
