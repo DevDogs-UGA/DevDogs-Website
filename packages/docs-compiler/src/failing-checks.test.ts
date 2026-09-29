@@ -18,6 +18,7 @@ function page(overrides: Partial<CompiledPage> = {}): CompiledPage {
     path: "toolkit/index",
     section: null,
     mountedFrom: null,
+    publishAt: null,
     variants: {
       project: overrides.project ?? "toolkit",
       projects: [],

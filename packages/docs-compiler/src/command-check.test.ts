@@ -17,6 +17,7 @@ function page(overrides: Partial<CompiledPage> = {}): CompiledPage {
     path: "schedule-builder/setup",
     section: "getting-started",
     mountedFrom: null,
+    publishAt: null,
     variants: {
       project: overrides.project ?? "schedule-builder",
       projects: [],
