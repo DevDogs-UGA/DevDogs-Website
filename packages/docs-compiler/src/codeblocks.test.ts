@@ -67,3 +67,20 @@ describe("code block frame", () => {
     ]);
   });
 });
+
+describe("code block links", () => {
+  it("puts an href= link beside the copy button", async () => {
+    const html = await renderBody(
+      "```ts file=lib/a.ts href=https://github.com/o/r/blob/abc/lib/a.ts#L1\nconst a = 1;\n```\n",
+      ctx,
+    );
+    expect(html).toContain(
+      '<a class="docs-code-link" href="https://github.com/o/r/blob/abc/lib/a.ts#L1" target="_blank" rel="noopener noreferrer"',
+    );
+  });
+
+  it("adds no link without one", async () => {
+    const html = await renderBody("```ts\nconst a = 1;\n```\n", ctx);
+    expect(html).not.toContain("docs-code-link");
+  });
+});

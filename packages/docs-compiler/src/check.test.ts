@@ -72,6 +72,20 @@ describe("page length", () => {
     expect(rules(check(filler(1500)))).not.toContain("page-length");
   });
 
+  it("counts prose, not code", () => {
+    const page = [
+      filler(1400),
+      "",
+      "```ts file=lib/a.ts",
+      filler(300),
+      "```",
+      "",
+      "    " + filler(300),
+    ].join("\n");
+
+    expect(rules(check(page))).not.toContain("page-length");
+  });
+
   it("counts nothing inside a collapsible as visible", () => {
     const page = [
       filler(200),

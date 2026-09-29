@@ -66,3 +66,50 @@ describe("diff blocks", () => {
     ).rejects.toThrow(/needs a unified diff/);
   });
 });
+
+describe("whole-file diff blocks", () => {
+  // Line 11 is blank, and its context line trimmed the way Prettier leaves it.
+  const before = Array.from({ length: 20 }, (_, i) =>
+    i === 10 ? "" : `line ${i + 1}`,
+  );
+  const whole = [
+    "--- a/a.ts",
+    "+++ b/a.ts",
+    "@@ -1,20 +1,21 @@",
+    ...before.slice(0, 9).map((l) => ` ${l}`),
+    "-line 10",
+    "+line ten",
+    "+line ten and a half",
+    ...before.slice(10).map((l) => ` ${l}`.trimEnd()),
+  ];
+
+  it("carries both files and a patch cut to the given context", async () => {
+    const html = await renderBody(
+      `\`\`\`diff file=a.ts context=2 href=https://github.com/o/r/compare/a...b\n${whole.join("\n")}\n\`\`\`\n`,
+      ctx,
+    );
+    const [diff] = placeholders(html);
+    expect(diff?.href).toBe("https://github.com/o/r/compare/a...b");
+    expect(diff?.patch.split("\n")).toEqual([
+      "--- a/a.ts",
+      "+++ b/a.ts",
+      "@@ -8,5 +8,6 @@",
+      " line 8",
+      " line 9",
+      "-line 10",
+      "+line ten",
+      "+line ten and a half",
+      " ",
+      " line 12",
+    ]);
+    expect(diff?.oldContent?.split("\n")).toHaveLength(20);
+    expect(diff?.newContent?.split("\n")).toHaveLength(21);
+    expect(diff?.newContent?.split("\n")[9]).toBe("line ten");
+  });
+
+  it("refuses context= on a diff that is not the whole file", async () => {
+    await expect(
+      renderBody(`\`\`\`diff file=a.ts context=3\n${patch.replace("-1,2 +1,2", "-5,2 +5,2")}\n\`\`\`\n`, ctx),
+    ).rejects.toThrow(/whole file/);
+  });
+});

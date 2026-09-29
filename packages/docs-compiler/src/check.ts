@@ -276,7 +276,9 @@ export function checkDocFile(source: string, file: string): CheckWarning[] {
     // The line that opens a collapsible belongs to it, so neither `<details>`
     // nor the `<summary>` beside it is ever counted as words a reader can see.
     const inside = depth > 0 || opens > 0;
-    const here = countWords(text);
+    // A fence's own lines count as code too: the opening one has just set
+    // `fence`, and the closing one was read inside it.
+    const here = inCode || fence !== null ? 0 : countWords(text);
     words += here;
 
     depth += opens;
@@ -490,11 +492,10 @@ function bodyStart(lines: string[]): number {
  * or digit, with HTML tags dropped first so that `<summary>` is markup rather
  * than a word while the text inside it still counts.
  *
- * Code counts like everything else, fenced or indented. A page does not get
- * shorter by moving its bulk into a fence, the reader scrolls past it either
- * way, and a budget that skipped code would be a budget anything could duck
- * under. Tracking the code forms is about what is markup, never about what is
- * long.
+ * The caller skips code, fenced or indented: a budget in words is a budget
+ * for prose, and a walkthrough whose steps each show a file would otherwise
+ * run out of words on the code it exists to show. A page that is mostly code
+ * is long in lines, which the budget was never measuring.
  */
 function countWords(text: string): number {
   return text
