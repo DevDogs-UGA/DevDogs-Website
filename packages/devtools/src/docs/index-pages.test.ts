@@ -28,6 +28,7 @@ const PAGES: DocsPage[] = [
     title: "Environment",
     description: null,
     plainText: "One file per target.",
+    publishAt: "2026-10-05T22:00:00.000Z",
   },
 ];
 
@@ -41,7 +42,7 @@ function recordingDb(fail?: Error): DocsDb & { log: string[] } {
       log.push(head);
       if (fail && head === "insert") throw fail;
       // Proves nothing is interpolated: every value arrives as a parameter.
-      if (head === "insert") expect(params.length).toBe(PAGES.length * 4);
+      if (head === "insert") expect(params.length).toBe(PAGES.length * 5);
       return [];
     },
     async end() {

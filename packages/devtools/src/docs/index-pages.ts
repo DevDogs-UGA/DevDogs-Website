@@ -25,7 +25,7 @@
  * clone. Four columns of one table do not need an ORM, and this package
  * already talks to Postgres exactly this way (see `planner/db.ts`).
  *
- * `search` is a generated column, so this writes title/description/plainText
+ * `search` is a generated column, so this writes title/description/plainText/publishAt
  * and Postgres recomputes the vector.
  */
 import { confirm, log, spinner } from "@clack/prompts";
@@ -39,6 +39,8 @@ export interface DocsPage {
   title: string;
   description: string | null;
   plainText: string;
+  /** When the page goes live (UTC ISO); absent or null for a visible page. */
+  publishAt?: string | null;
 }
 
 /**
@@ -101,7 +103,8 @@ export async function indexPages(
 ): Promise<number> {
   const values = pages
     .map(
-      (_, i) => `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`,
+      (_, i) =>
+        `($${i * 5 + 1}, $${i * 5 + 2}, $${i * 5 + 3}, $${i * 5 + 4}, $${i * 5 + 5}::timestamptz)`,
     )
     .join(", ");
 
@@ -110,17 +113,19 @@ export async function indexPages(
     page.title,
     page.description,
     page.plainText,
+    page.publishAt ?? null,
   ]);
 
   await db.run("begin", []);
   try {
     await db.run(
-      `insert into platform."docsPages" (path, title, description, "plainText")
+      `insert into platform."docsPages" (path, title, description, "plainText", "publishAt")
        values ${values}
        on conflict (path) do update set
          title = excluded.title,
          description = excluded.description,
          "plainText" = excluded."plainText",
+         "publishAt" = excluded."publishAt",
          "updatedAt" = now()`,
       params,
     );
