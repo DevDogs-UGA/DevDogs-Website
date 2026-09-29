@@ -18,6 +18,7 @@ import { REVIEW_ACTIVE, type ReviewController, type ReviewStartOptions } from ".
 import { changeAtLine, leftText, ReviewModel, type FileStatus } from "./review-model.js";
 import { parseReviewUri, reviewUri, REVIEW_SCHEME, ReviewFs } from "./review-fs.js";
 import { rangeLabel, reviewTitle } from "./scope.js";
+import { captureError } from "./telemetry.js";
 import { WorkshopTerminal } from "./workshop-terminal.js";
 
 /**
@@ -490,6 +491,7 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
         }
       }
     } catch (error) {
+      captureError("finish", error);
       logError("finish", error);
       void vscode.window.showErrorMessage(`Couldn't finish the review: ${errorText(error)}`);
     }

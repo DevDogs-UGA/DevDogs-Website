@@ -35,14 +35,37 @@ Mobile). It only listens for the presenter finishing a step.
 
 ## What it sends
 
-There is no telemetry and no account. It talks to GitHub only through
-your own `git` (`git fetch origin --tags`, and a clone if you ask for one). With
-`devdogsWorkshops.followLive` on, it also tells the relay which step number
-you've reached, so the presenter can see "17/23 at Step 3": a small integer and
-nothing else, with no name, no username and no code. The relay sees your IP
-address as any server does, and keeps nothing after you disconnect. Your
-GitHub username, if it has to ask for it, and where your clone lives are stored
-on your machine (VS Code global state) and nowhere else.
+There is no account. It talks to GitHub only through your own `git`
+(`git fetch origin --tags`, and a clone if you ask for one). Your GitHub
+username, if it has to ask for it, and where your clone lives are stored on your
+machine (VS Code global state) and nowhere else.
+
+**Live workshops.** With `devdogsWorkshops.followLive` on, it tells the relay
+which step number you've reached, so the presenter can see "17/23 at Step 3": a
+small integer and nothing else, with no name, no username and no code. The relay
+sees your IP address as any server does, and keeps nothing after you disconnect.
+
+**Error reports.** When the extension itself fails (a bug, not a refused link or
+git declining because of your edits), it can send an error report to the club's
+Sentry project. It sends only while VS Code's telemetry setting
+(`telemetry.telemetryLevel`) is on, and stops when you turn it off. A report has:
+
+- the error's message (cut to 300 characters) and its stack trace (function
+  names, file names inside the extension, line numbers),
+- the extension's version, VS Code's version, your operating system (its name,
+  such as Linux) and platform (`win32`, `darwin`, `linux`), the track (web or
+  mobile) of the open workshop repo, and which command failed.
+
+Before sending, your home folder, your clone's path and your open folders are
+replaced with `<path>`, other absolute paths shrink to a file name, and email
+addresses, tokens, credentials in URLs and your GitHub username are removed.
+
+It never sends file contents, diffs, source code lines, git output beyond the
+error message, breadcrumbs, your name, your IP address (Sentry receives it as any
+server does, and the project is set to not store it), performance data, or
+anything about other extensions. It does not install any global error handler,
+so it cannot see other extensions' errors. Builds made from source send nothing:
+the destination is added only to the published extension.
 
 It never writes to your files until you accept a change. The only thing that
 runs by itself when a link opens (or, with live workshops on, when the presenter

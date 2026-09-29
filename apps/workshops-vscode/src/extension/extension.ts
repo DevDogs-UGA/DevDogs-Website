@@ -1,8 +1,10 @@
+import { homedir } from "node:os";
 import * as vscode from "vscode";
 import { workshopOfBranch, latestWorkshop } from "../core/index.js";
 import { Branches } from "./branches.js";
 import { Flow, REF_SCHEME, refContentProvider } from "./flow.js";
 import { errorText, logError, output } from "./log.js";
+import { Telemetry, captureError, guarded, useTelemetry } from "./telemetry.js";
 import { LiveWorkshops } from "./live.js";
 import { isPendingFresh } from "./pending.js";
 import { CMD, StepsProvider, tagOf } from "./panel.js";
@@ -20,6 +22,8 @@ import { stepLabel } from "./steps-model.js";
  */
 export async function activate(context: vscode.ExtensionContext): Promise<WorkshopsApi> {
   const state = new State(context.globalState);
+  const telemetry = new Telemetry(context);
+  useTelemetry(telemetry);
   const branches = new Branches(state);
   const steps = new StepsProvider();
   const refresh = () => void steps.refresh();
@@ -28,6 +32,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<Worksh
 
   const stepsView = vscode.window.createTreeView("devdogsWorkshops.steps", { treeDataProvider: steps });
   const live = new LiveWorkshops(steps, flow, review, stepsView);
+  telemetry.setScrubContext(() => ({
+    paths: [
+      homedir(),
+      ...(steps.open ? [steps.open.root] : []),
+      ...(vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath),
+    ],
+    username: state.username,
+  }));
+  steps.onDidChangeTreeData(() => telemetry.setRepo(steps.open?.repo));
 
   const api: WorkshopsApi = { handleLink: (path, query) => flow.handleLink(path, query),
     live,
@@ -37,6 +50,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Worksh
   };
   context.subscriptions.push(
     output,
+    telemetry,
     review,
     live,
     stepsView,
@@ -45,6 +59,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Worksh
     vscode.workspace.registerTextDocumentContentProvider(REF_SCHEME, refContentProvider),
     vscode.window.registerUriHandler({
       handleUri: (uri) => flow.handleLink(uri.path, uri.query).catch((e) => {
+        captureError("handleUri", e);
         logError("handleUri", e);
         void vscode.window.showErrorMessage(`DevDogs Workshops: ${errorText(e)}`);
       }),
@@ -86,7 +101,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Worksh
   };
 
   const register = (command: string, handler: (...args: unknown[]) => unknown) =>
-    context.subscriptions.push(vscode.commands.registerCommand(command, handler));
+    context.subscriptions.push(vscode.commands.registerCommand(command, guarded(command, handler)));
 
   register(CMD.refresh, () => steps.refresh());
 

@@ -15,6 +15,7 @@ import {
   type OfferState,
   type Step,
 } from "../core/index.js";
+import { captureError } from "./telemetry.js";
 import { LiveClient } from "./live-client.js";
 import { logError, output } from "./log.js";
 import { CMD, type StepsProvider } from "./panel.js";
@@ -187,13 +188,18 @@ export class LiveWorkshops implements vscode.Disposable {
 
   private onMessage(raw: string): void {
     if (!this.track) return;
-    const event = parseRelayMessage(raw, this.track);
+    let event;
+    try {
+      event = parseRelayMessage(raw, this.track);
+    } catch (error) {
+      return this.failed("message", error);
+    }
     if (!event) return;
     if (event.kind === "live") {
       this.live = event.live;
       void this.updateContext();
     } else {
-      void this.onCheckpoint(event.ref).catch((error) => logError("checkpoint", error));
+      void this.onCheckpoint(event.ref).catch((error) => this.failed("checkpoint", error));
     }
   }
 
@@ -236,12 +242,17 @@ export class LiveWorkshops implements vscode.Disposable {
     this.showBadge();
   }
 
+  private failed(source: string, error: unknown): void {
+    captureError(`live ${source}`, error);
+    logError(source, error);
+  }
+
   private async reviewEnded(finished: boolean): Promise<void> {
     await this.steps.refresh();
     const result = afterReview(this.offers, finished, this.line);
     this.offers = result.state;
     this.showBadge();
-    if (result.offer) await this.onCheckpoint(result.offer).catch((error) => logError("checkpoint", error));
+    if (result.offer) await this.onCheckpoint(result.offer).catch((error) => this.failed("checkpoint", error));
   }
 
   /** The badge on the Workshop view: a step they put off. */

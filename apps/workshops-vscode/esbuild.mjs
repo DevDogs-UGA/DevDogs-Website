@@ -6,7 +6,17 @@ import { build, context } from "esbuild";
  * core) is inlined, which is what lets `vsce package --no-dependencies` work.
  * Node 20 is what VS Code 1.93 ships.
  */
+// The Sentry DSN, baked in at publish from WORKSHOPS_VSCODE_SENTRY_DSN (an
+// Actions variable, like devtools' DEVTOOLS_SENTRY_DSN). Unset, as in every
+// local and CI build, it is "" and the extension reports nothing.
+const dsn = process.env.WORKSHOPS_VSCODE_SENTRY_DSN ?? "";
+if (dsn && !URL.canParse(dsn)) {
+  console.error("WORKSHOPS_VSCODE_SENTRY_DSN is set but is not a URL.");
+  process.exit(1);
+}
+
 const options = {
+  define: { __WORKSHOPS_SENTRY_DSN__: JSON.stringify(dsn) },
   entryPoints: ["src/extension/extension.ts"],
   outfile: "dist/extension.js",
   bundle: true,

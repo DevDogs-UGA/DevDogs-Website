@@ -383,6 +383,7 @@
     "test:vscode": "node esbuild.mjs && node esbuild.mjs --tests && node dist-test/run.js"
   },
   "dependencies": {
+    "@sentry/node": "catalog:",
     "node-diff3": "^3.1.2",
     "ws": "^8.21.3"
   },

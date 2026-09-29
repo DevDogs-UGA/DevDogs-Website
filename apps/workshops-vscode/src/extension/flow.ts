@@ -17,6 +17,7 @@ import type { ReviewController } from "./review.js";
 import { decideBase, planIsEmpty, rangeLabel, restrictPlanToFile } from "./scope.js";
 import type { State } from "./state.js";
 import { stepLabel } from "./steps-model.js";
+import { captureError } from "./telemetry.js";
 import { parseWorkshopUri, type OpenLink, type ReviewLink } from "./uri.js";
 
 /**
@@ -158,6 +159,7 @@ export class Flow {
         ensurePersonalBranch: () => this.branches.ensurePersonalBranch(root, target.workshop),
       });
     } catch (error) {
+      captureError("reviewTo", error);
       logError("reviewTo", error);
       void vscode.window.showErrorMessage(`Couldn't start the review: ${errorText(error)}`);
     }
