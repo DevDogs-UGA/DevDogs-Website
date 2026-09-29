@@ -128,3 +128,42 @@ jobs:
       - name: Show npm's OIDC diagnostics
         if: failure()
         run: grep -iE 'oidc|trusted|provenance' ~/.npm/_logs/*-debug-0.log || true
+
+  # The DevDogs Workshops VS Code extension (apps/workshops-vscode) goes to the
+  # Marketplace, not npm, so it has its own job: nothing here needs the npm
+  # OIDC permission, and the Marketplace token stays out of the npm job. Same
+  # trigger as above (CI passed on main). See
+  # scripts/publish-workshops-vscode.mjs for how "changed" is decided.
+  #
+  # Needs the VSCE_PAT secret (an Azure DevOps personal access token scoped to
+  # Marketplace: Manage, for the `devdogsuga` publisher). Without it the job
+  # succeeds and says it skipped. WORKSHOPS_VSCODE_SENTRY_DSN is the extension's
+  # public, ingest-only Sentry key, an Actions variable like DEVTOOLS_SENTRY_DSN;
+  # unset builds an extension that reports nothing.
+  extension:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      # Tags and a GitHub release (`workshops-vscode@<version>`) record what
+      # was published.
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          # Tags: the last release's tag holds the hash of what it published.
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+      - name: Publish the extension if it changed
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          WORKSHOPS_VSCODE_SENTRY_DSN: ${{ vars.WORKSHOPS_VSCODE_SENTRY_DSN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          node scripts/publish-workshops-vscode.mjs

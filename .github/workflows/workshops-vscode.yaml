@@ -1,0 +1,71 @@
+name: Workshops extension
+
+# The DevDogs Workshops VS Code extension (apps/workshops-vscode): builds the
+# .vsix and runs the real-VS-Code smoke test. Its typecheck and vitest suite
+# already run in ci.yaml (`pnpm -r run typecheck` / `test`, on every PR
+# including forks), so they are not repeated here. `tag-steps --check` runs in
+# slides.yaml.
+#
+# Separate from ci.yaml, beside slides.yaml, because the smoke test clones the
+# private web workshop repo (the apps/slides/workshops/web submodule and its
+# step tags), which the default GITHUB_TOKEN can't read: it needs the
+# WORKSHOPS_READ_TOKEN secret (see slides.yaml), so PRs from forks skip it.
+# Publishing lives in publish.yaml and waits on CI only, so a failure here
+# never blocks a release: read this workflow's result before merging.
+on:
+  pull_request:
+    paths:
+      - apps/workshops-vscode/**
+      - apps/slides/workshops/**
+      - .gitmodules
+      - pnpm-lock.yaml
+      - .github/workflows/workshops-vscode.yaml
+  push:
+    branches: [main]
+    paths:
+      - apps/workshops-vscode/**
+      - apps/slides/workshops/**
+      - .gitmodules
+      - pnpm-lock.yaml
+      - .github/workflows/workshops-vscode.yaml
+
+concurrency:
+  group: workshops-vscode-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  extension:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          token: ${{ secrets.WORKSHOPS_READ_TOKEN }}
+          submodules: true
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+      # A bundle that packages is what publishing ships (no Sentry DSN here:
+      # local and CI builds report nothing).
+      - name: Package the extension
+        run: pnpm --filter workshops run package
+      # The smoke test clones the web workshop repo with its step tags.
+      - name: Fetch the workshop step tags
+        run: git -C apps/slides/workshops/web fetch --tags --force origin
+      # VS Code's runtime libraries; xvfb gives it a display.
+      - name: Install Electron's runtime libraries
+        run: >-
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends
+          xvfb libgbm1 libnss3 libxss1 libasound2t64 libgtk-3-0t64 libatk-bridge2.0-0t64
+      # The VS Code build the test downloads is pinned in
+      # src/vscode-test/run.ts, so the cache key follows that file.
+      - name: Cache the VS Code download
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: apps/workshops-vscode/.vscode-test
+          key: vscode-test-${{ runner.os }}-${{ hashFiles('apps/workshops-vscode/src/vscode-test/run.ts') }}
+      - name: Smoke test in VS Code
+        run: xvfb-run -a pnpm --filter workshops run test:vscode

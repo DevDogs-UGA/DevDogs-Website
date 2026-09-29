@@ -14,7 +14,10 @@ allowBuilds:
   # the product repo's own, not an omission.
   core-js: false
   esbuild: true
-  # vsce-sign only verifies signatures on `vsce publish`; packaging does not need it.
+  # vsce-sign's postinstall fetches a native binary that only `vsce
+  # verify-signature` / `generate-manifest` call; `vsce package` and `vsce
+  # publish` (what CI runs) load the module without it. Checked against
+  # vsce 4.0.0's out/package.js. Turn it on only if we start signing.
   "@vscode/vsce-sign": false
   playwright-chromium: true
   sharp: true

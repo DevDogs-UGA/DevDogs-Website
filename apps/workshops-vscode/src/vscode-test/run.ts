@@ -17,6 +17,14 @@ import { runTests } from "@vscode/test-electron";
 const git = (cwd: string, ...args: string[]) =>
   execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 
+/**
+ * The VS Code the smoke test downloads: pinned so a run is reproducible and a
+ * new VS Code release can't turn CI red by itself. Bump it deliberately (the
+ * CI cache key follows this file). `VSCODE_TEST_VERSION` overrides it, e.g.
+ * `1.93.0` to try the extension's minimum.
+ */
+const VSCODE_VERSION = process.env["VSCODE_TEST_VERSION"] ?? "1.139.1";
+
 async function main(): Promise<void> {
   const packageDir = resolve(__dirname, "..");
   const source = resolve(packageDir, "../slides/workshops/web");
@@ -46,6 +54,7 @@ async function main(): Promise<void> {
     // against a fake relay, so nothing here reaches the real one.
     writeFileSync(join(userData, "User", "settings.json"), JSON.stringify({ "devdogsWorkshops.followLive": false }));
     await runTests({
+      version: VSCODE_VERSION,
       extensionDevelopmentPath: packageDir,
       extensionTestsPath: join(__dirname, "suite.js"),
       launchArgs: [clone, "--user-data-dir", userData, "--disable-extensions", "--disable-workspace-trust", "--no-sandbox"],

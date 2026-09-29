@@ -2,10 +2,10 @@
   "name": "workshops",
   "displayName": "DevDogs Workshops",
   "publisher": "devdogsuga",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "description": "Follow DevDogs workshops in your own clone: review each step's changes against your code and accept or reject them.",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/DevDogsUGA/Backstage.git",
@@ -379,7 +379,7 @@
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "package": "pnpm run build && vsce package --no-dependencies",
+    "package": "node esbuild.mjs --minify && vsce package --no-dependencies",
     "test:vscode": "node esbuild.mjs && node esbuild.mjs --tests && node dist-test/run.js"
   },
   "dependencies": {
