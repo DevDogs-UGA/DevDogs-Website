@@ -16,6 +16,7 @@
 import { reactive, ref } from 'vue'
 import type { Track } from './discord'
 import type {
+  AttendeeTally,
   Checkpoint,
   CheckpointStatus,
   DriveMessage,
@@ -45,6 +46,9 @@ const laptopTrack = (__DD_TRACK__ || undefined) as Track | undefined
 export const connection = ref<'off' | 'connecting' | 'open' | 'closed'>('off')
 export const currentRole = ref<Role>()
 export const peers = ref({ web: 0, mobile: 0, other: 0 })
+// Attendees in VS Code, by track: how many, and how many at each step.
+const noAttendees = (): Record<Track, AttendeeTally> => ({ web: { total: 0, steps: {} }, mobile: { total: 0, steps: {} } })
+export const attendees = ref(noAttendees())
 // The latest checkpoint the presenter sent, and each laptop's answer.
 export const lastCheckpoint = ref<{ ref: string, tracks: Track[], sentAt: number }>()
 export const checkpointResults = reactive(new Map<Track, CheckpointStatus>())
@@ -108,6 +112,7 @@ function receive(role: Role, message: RelayMessage) {
       break
     case 'peers':
       peers.value = { web: message.web, mobile: message.mobile, other: message.other }
+      attendees.value = message.attend ?? noAttendees()
       break
   }
 }

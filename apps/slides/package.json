@@ -12,6 +12,7 @@
     "dev:worker": "wrangler dev --var ACCESS_LOCAL_DEV:true",
     "deploy": "slidev build decks/2026-09-28-supabase.md && node scripts/strip-redirects.mjs && wrangler deploy",
     "types": "wrangler types --strict-vars=false worker/worker-configuration.d.ts",
+    "test": "vitest run",
     "typecheck": "tsc -p worker --noEmit"
   },
   "dependencies": {
@@ -28,6 +29,7 @@
     "playwright-chromium": "^1.63.0",
     "typescript": "catalog:",
     "unocss": "^66.10.5",
+    "vitest": "catalog:",
     "wrangler": "^4.135.0"
   }
 }

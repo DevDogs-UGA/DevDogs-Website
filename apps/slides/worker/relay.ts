@@ -16,10 +16,21 @@ import {
   type Role,
 } from '../theme/lib/liveProtocol'
 import type { Track } from '../theme/lib/discord'
+import {
+  checkRate,
+  isTrack,
+  MAX_ATTENDEES,
+  FLOOD_LIMIT,
+  parseAttendStep,
+  tallyAttendees,
+  type RateState,
+} from './attend'
 
-interface Attachment {
+interface Attachment extends RateState {
   role: Role
   track?: Track
+  // Attendees: the step number they last reported.
+  step?: number
 }
 
 // Slide state is a handful of numbers; anything this big is not from the deck.
@@ -27,9 +38,9 @@ const MAX_MESSAGE = 64 * 1024
 
 const STATE_KEY = 'state'
 
-function isTrack(value: unknown): value is Track {
-  return value === 'web' || value === 'mobile'
-}
+// Attendee counts reach the presenter at most this often, so a room of
+// people finishing a step together is one update, not a hundred.
+const PEERS_DELAY_MS = 1000
 
 export class Relay extends DurableObject<Env> {
   async fetch(request: Request): Promise<Response> {
@@ -38,20 +49,33 @@ export class Relay extends DurableObject<Env> {
     }
     const role = request.headers.get('X-Relay-Role') as Role
     const track = new URL(request.url).searchParams.get('track')
+    if (role === 'attend' && this.ctx.getWebSockets('attend').length >= MAX_ATTENDEES) {
+      return new Response('the room is full', { status: 503 })
+    }
     const attachment: Attachment = { role, track: isTrack(track) ? track : undefined }
 
     const { 0: client, 1: server } = new WebSocketPair()
     this.ctx.acceptWebSocket(server, [role])
     server.serializeAttachment(attachment)
 
-    const state = this.ctx.storage.kv.get(STATE_KEY)
-    if (state) this.send(server, { t: 'state', state: state as Record<string, unknown> })
-    this.announcePeers()
+    if (role === 'attend') {
+      this.send(server, { t: 'live', live: this.ctx.getWebSockets('drive').length > 0 })
+      await this.schedulePeers()
+    }
+    else {
+      const state = this.ctx.storage.kv.get(STATE_KEY)
+      if (state) this.send(server, { t: 'state', state: state as Record<string, unknown> })
+      if (role === 'drive') this.broadcast({ t: 'live', live: true }, undefined, 'attend')
+      this.announcePeers()
+    }
 
     return new Response(null, { status: 101, webSocket: client })
   }
 
   async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer) {
+    const attachment = ws.deserializeAttachment() as Attachment
+    if (attachment.role === 'attend') return this.attendMessage(ws, attachment, raw)
+
     if (typeof raw !== 'string' || raw.length > MAX_MESSAGE) return
     let message: DriveMessage | FollowMessage
     try {
@@ -60,7 +84,7 @@ export class Relay extends DurableObject<Env> {
     catch {
       return
     }
-    const { role } = ws.deserializeAttachment() as Attachment
+    const { role } = attachment
 
     if (role === 'drive' && message.t === 'state' && message.state && typeof message.state === 'object') {
       this.ctx.storage.kv.put(STATE_KEY, message.state)
@@ -69,7 +93,13 @@ export class Relay extends DurableObject<Env> {
     else if (role === 'drive' && message.t === 'checkpoint') {
       const tracks = Array.isArray(message.tracks) ? message.tracks.filter(isTrack) : []
       if (typeof message.ref !== 'string' || !CHECKPOINT_REF.test(message.ref) || !tracks.length) return
-      this.broadcast({ t: 'checkpoint', id: crypto.randomUUID(), ref: message.ref, tracks }, undefined, 'follow')
+      const checkpoint = { t: 'checkpoint' as const, id: crypto.randomUUID(), ref: message.ref, tracks }
+      this.broadcast(checkpoint, undefined, 'follow')
+      // Each attendee gets only its own track's checkpoint.
+      for (const attendee of this.ctx.getWebSockets('attend')) {
+        const { track } = attendee.deserializeAttachment() as Attachment
+        if (track && tracks.includes(track)) this.send(attendee, checkpoint)
+      }
     }
     else if (role === 'follow' && message.t === 'status' && isTrack(message.track)) {
       const { id, ref, track, ok, message: text } = message
@@ -84,25 +114,66 @@ export class Relay extends DurableObject<Env> {
     }
   }
 
+  // An attendee may say one thing: the step it has reached. Anything else, or
+  // too much of it, is dropped, and a socket that keeps flooding is closed.
+  private async attendMessage(ws: WebSocket, attachment: Attachment, raw: string | ArrayBuffer) {
+    const rate = checkRate(attachment, Date.now())
+    const next: Attachment = { ...attachment, ...rate.state }
+    if (!rate.ok) {
+      ws.serializeAttachment(next)
+      if ((rate.state.count ?? 0) > FLOOD_LIMIT) ws.close(1008, 'too many messages')
+      return
+    }
+    const step = parseAttendStep(raw)
+    if (step !== undefined) next.step = step
+    ws.serializeAttachment(next)
+    if (step !== undefined && step !== attachment.step) await this.schedulePeers()
+  }
+
   async webSocketClose(ws: WebSocket, code: number) {
     // Code 1005 ("no status") can't be sent back.
     ws.close(code === 1005 ? 1000 : code, 'closing')
-    this.announcePeers(ws)
+    this.socketGone(ws)
   }
 
   async webSocketError(ws: WebSocket) {
+    this.socketGone(ws)
+  }
+
+  private async socketGone(ws: WebSocket) {
+    const { role } = ws.deserializeAttachment() as Attachment
+    if (role === 'attend') return this.schedulePeers()
+    if (role === 'drive' && !this.ctx.getWebSockets('drive').some(other => other !== ws)) {
+      this.broadcast({ t: 'live', live: false }, undefined, 'attend')
+    }
     this.announcePeers(ws)
   }
 
+  // Attendee counts, a moment from now (see PEERS_DELAY_MS).
+  private async schedulePeers() {
+    if (this.ctx.getWebSockets('drive').length === 0) return
+    if ((await this.ctx.storage.getAlarm()) === null) await this.ctx.storage.setAlarm(Date.now() + PEERS_DELAY_MS)
+  }
+
+  async alarm() {
+    this.announcePeers()
+  }
+
   // How many follower decks are connected, by track, so the presenter can
-  // see both laptops are there before relying on them.
+  // see both laptops are there before relying on them, and how many
+  // attendees are in VS Code and which step each is at.
   private announcePeers(leaving?: WebSocket) {
-    const peers = { t: 'peers' as const, web: 0, mobile: 0, other: 0 }
+    const peers = { t: 'peers' as const, web: 0, mobile: 0, other: 0, attend: tallyAttendees([]) }
     for (const ws of this.ctx.getWebSockets('follow')) {
       if (ws === leaving) continue
       const { track } = ws.deserializeAttachment() as Attachment
       peers[track ?? 'other']++
     }
+    peers.attend = tallyAttendees(
+      this.ctx.getWebSockets('attend')
+        .filter(ws => ws !== leaving)
+        .map(ws => ws.deserializeAttachment() as Attachment),
+    )
     this.broadcast(peers, leaving, 'drive')
   }
 

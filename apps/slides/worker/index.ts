@@ -5,10 +5,14 @@
 //   /follow   websocket, public: any deck following the presenter (the demo
 //             laptops' local decks connect here from localhost, through
 //             slides-relay.devdogsuga.org, which Access doesn't cover)
+//   /attend   websocket, public, `?track=web|mobile`: an attendee's VS Code
+//             extension (checkpoints in, its step number out; same reach as
+//             /follow, so it's refused for browsers and anything else)
 //   /drive    websocket, Access: the hosted presenter view
 //   /discord  POST, Access: post a snippet to its track's channel
 //   *         Access: the deck itself
 import { checkAccess } from './access'
+import { checkAttendRequest } from './attend'
 import { Relay } from './relay'
 import { parseSnippet, sendSnippet, tracksOf, type Track } from '../theme/lib/discord'
 import type { Role } from '../theme/lib/liveProtocol'
@@ -62,6 +66,7 @@ export default {
   async fetch(request, env): Promise<Response> {
     const { pathname } = new URL(request.url)
     if (pathname === '/follow') return relay(request, env, 'follow')
+    if (pathname === '/attend') return checkAttendRequest(request) ?? relay(request, env, 'attend')
 
     const refused = await checkAccess(request, env)
     if (refused) return refused

@@ -13,8 +13,8 @@
 import { computed, ref, watch } from 'vue'
 import { useNav } from '@slidev/client'
 import type { Track } from './lib/discord'
-import { CHECKPOINT_REF } from './lib/liveProtocol'
-import { checkpointResults, connection, currentRole, lastCheckpoint, peers, sendCheckpoint } from './lib/live'
+import { CHECKPOINT_REF, checkpointStep } from './lib/liveProtocol'
+import { attendees, checkpointResults, connection, currentRole, lastCheckpoint, peers, sendCheckpoint } from './lib/live'
 
 const { currentFrontmatter, currentSlideNo } = useNav()
 
@@ -31,6 +31,23 @@ const peersLabel = computed(() => {
   if (connection.value !== 'open') return connection.value === 'connecting' ? 'Connecting to the relay…' : 'Relay disconnected, retrying'
   const { web, mobile } = peers.value
   return `Following: web ${web}, mobile ${mobile}`
+})
+
+// Attendees in VS Code ("23 in VS Code") and, on a checkpoint slide, how many
+// of them are at that slide's step ("17/23 at Step 3"). Both tracks together;
+// the tooltip splits them.
+const attendance = computed(() => {
+  const { web, mobile } = attendees.value
+  const total = web.total + mobile.total
+  const step = checkpoint.value ? checkpointStep(checkpoint.value) : undefined
+  const at = (t: typeof web) => (step === undefined ? 0 : t.steps[step] ?? 0)
+  return {
+    total,
+    step,
+    at: at(web) + at(mobile),
+    title: `In VS Code: web ${web.total}, mobile ${mobile.total}`
+      + (step === undefined ? '' : `. At step ${step}: web ${at(web)}, mobile ${at(mobile)}`),
+  }
 })
 
 const TRACKS: { label: string, tracks: Track[] }[] = [
@@ -90,6 +107,10 @@ const results = computed(() => {
         <span class="text-xs">{{ r.track }}</span>
       </span>
     </template>
+    <span v-if="connection === 'open'" class="dd-live-attend text-xs opacity-70" :title="attendance.title">
+      {{ attendance.total }} in VS Code<template v-if="attendance.step !== undefined">
+        · {{ attendance.at }}/{{ attendance.total }} at Step {{ attendance.step }}</template>
+    </span>
   </template>
 </template>
 
@@ -109,6 +130,10 @@ const results = computed(() => {
 .dd-live-open { background: #10b981; }
 .dd-live-connecting { background: #f59e0b; }
 .dd-live-closed { background: #ef4444; }
+.dd-live-attend {
+  padding: 0 0.25rem;
+  white-space: nowrap;
+}
 .dd-live-arm {
   display: flex;
   align-items: center;

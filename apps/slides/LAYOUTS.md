@@ -474,7 +474,34 @@ The pieces:
   presenter exactly as a second tab would.
 - `theme/custom-nav-controls.vue`: in the presenter view's nav bar, a dot
   for the relay connection, how many laptops are following (web·mobile),
-  and the checkpoint button.
+  and the checkpoint button, plus "23 in VS Code" and, on a checkpoint
+  slide, "17/23 at Step 3" (attendees, see below).
+
+### Attendees
+
+A third role, `attend`, is for the attendees' VS Code extension
+(apps/workshops-vscode, "Follow live workshops"). It connects to
+`wss://slides-relay.devdogsuga.org/attend?track=web|mobile`, the track being
+the workshop repo it has open. Like `/follow` there is no Access on it, so it
+is kept narrow (`worker/attend.ts`):
+
+- Only a GET websocket upgrade with a valid `track` and no `Origin` header (so
+  no browser page) is accepted; more than 500 attendee sockets are refused.
+- It **receives** only the checkpoints that name its track, and
+  `{ t: 'live', live: boolean }`: whether a presenter (`drive`) is connected,
+  sent on connect and whenever it changes. Never slide state.
+- It may **send** one message, `{ t: 'step', step: N }`: the step number it has
+  reached (0 for none), an integer 0-99, at most 128 bytes. No names, no code.
+  Anything else is dropped; more than 10 messages in 10 seconds are ignored,
+  and a socket far over that is closed.
+- The relay keeps each attendee's track, step and rate count in the socket's
+  attachment, so idle attendee sockets hibernate along with the rest.
+- The presenter's `peers` message gains `attend: { web, mobile }`, each
+  `{ total, steps: { "<N>": count } }`. Attendee changes reach the presenter
+  through a one-second alarm, so a room finishing a step at once is one update.
+
+Steps are counted as reported, so "at Step 3" means exactly 3, and the tooltip
+on "23 in VS Code" splits both counts by track.
 
 ### Checkpoints
 

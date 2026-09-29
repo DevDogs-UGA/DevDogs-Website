@@ -373,16 +373,18 @@
     "test:vscode": "node esbuild.mjs && node esbuild.mjs --tests && node dist-test/run.js"
   },
   "dependencies": {
-    "node-diff3": "^3.1.2"
+    "node-diff3": "^3.1.2",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",
     "@types/node": "catalog:",
     "@types/vscode": "1.93.0",
+    "@types/ws": "^8.18.1",
+    "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "@vscode/test-electron": "^2.5.2"
+    "vitest": "catalog:"
   }
 }
