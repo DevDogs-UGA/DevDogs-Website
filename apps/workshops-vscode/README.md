@@ -19,15 +19,34 @@ Works with `DevDogsUGA/Web-Workshops` and `DevDogsUGA/Mobile-Workshops`.
 - **Jump to step** (right-click a step): a deliberate reset. It moves your
   branch to that step and discards uncommitted changes, after asking.
 
+## Live workshops
+
+While a workshop repo is open, the extension listens to the DevDogs slides relay
+(`wss://slides-relay.devdogsuga.org/attend`, the track being the repo: Web or
+Mobile). It only listens for the presenter finishing a step.
+
+- **● Live** appears in the sidebar while the presenter is connected.
+- When the presenter finishes a step you don't have yet, a notification says
+  "Presenter finished Step 3: ..." with **Review** and **Later**. Later leaves a
+  badge on the Workshop view. It never interrupts a review in progress: the step
+  is offered when that review finishes.
+- Turn it off with the setting `devdogsWorkshops.followLive`. For testing,
+  `devdogsWorkshops.liveRelayUrl` points it at another relay.
+
 ## What it sends
 
-Nothing. There is no telemetry and no account. It talks to GitHub only through
-your own `git` (`git fetch origin --tags`, and a clone if you ask for one). Your
+There is no telemetry and no account. It talks to GitHub only through
+your own `git` (`git fetch origin --tags`, and a clone if you ask for one). With
+`devdogsWorkshops.followLive` on, it also tells the relay which step number
+you've reached, so the presenter can see "17/23 at Step 3": a small integer and
+nothing else, with no name, no username and no code. The relay sees your IP
+address as any server does, and keeps nothing after you disconnect. Your
 GitHub username, if it has to ask for it, and where your clone lives are stored
 on your machine (VS Code global state) and nowhere else.
 
 It never writes to your files until you accept a change. The only thing that
-runs by itself when a link opens is `git fetch origin --tags`.
+runs by itself when a link opens (or, with live workshops on, when the presenter
+finishes a step your clone lacks) is `git fetch origin --tags`.
 
 ## Reviewing a step
 

@@ -114,6 +114,13 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
   /** Opens the docs page after Finish. A field so tests can swap out the browser. */
   openUrl: (url: string) => Thenable<unknown> = (url) => vscode.env.openExternal(vscode.Uri.parse(url, true));
 
+  /**
+   * Called when a review ends for good: finished (true) or cancelled (false).
+   * Not when a new review replaces one. Live workshops use it to offer a step
+   * the presenter finished meanwhile.
+   */
+  onEnded: ((finished: boolean) => void) | undefined;
+
   constructor(private readonly onFinished: () => void) {
     this.comments.options = { placeHolder: "", prompt: "" };
     this.disposables.push(
@@ -468,6 +475,7 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
       const session = s.options.session;
       await this.end();
       this.onFinished();
+      this.onEnded?.(true);
       void vscode.window.showInformationMessage(
         autoCommit
           ? `${rangeLabel(s.plan.steps)} recorded as a merge commit.`
@@ -519,6 +527,7 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
       if (answer !== "Cancel the review") return;
     }
     await this.end();
+    this.onEnded?.(false);
   }
 
   private async updateContext(): Promise<void> {

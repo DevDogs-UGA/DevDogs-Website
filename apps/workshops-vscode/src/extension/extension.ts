@@ -3,6 +3,7 @@ import { workshopOfBranch, latestWorkshop } from "../core/index.js";
 import { Branches } from "./branches.js";
 import { Flow, REF_SCHEME, refContentProvider } from "./flow.js";
 import { errorText, logError, output } from "./log.js";
+import { LiveWorkshops } from "./live.js";
 import { isPendingFresh } from "./pending.js";
 import { CMD, StepsProvider, tagOf } from "./panel.js";
 import { CMD as REVIEW_CMD, WorkshopReviewController, commandIndexOf, fileIndexOf } from "./review-controller.js";
@@ -14,8 +15,8 @@ import { stepLabel } from "./steps-model.js";
  * Everything with a decision in it lives in the pure modules beside this
  * file; this only connects them to VS Code.
  *
- * Seams for later tasks: `review` (TASK-376 diff review), the "Live" view
- * declared in package.json but hidden (TASK-379).
+ * `live` (TASK-379) listens for the presenter's checkpoints while a workshop
+ * repo is open, behind the `devdogsWorkshops.followLive` setting.
  */
 export async function activate(context: vscode.ExtensionContext): Promise<WorkshopsApi> {
   const state = new State(context.globalState);
@@ -25,16 +26,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<Worksh
   const review = new WorkshopReviewController(refresh);
   const flow = new Flow(state, branches, review, refresh);
 
+  const stepsView = vscode.window.createTreeView("devdogsWorkshops.steps", { treeDataProvider: steps });
+  const live = new LiveWorkshops(steps, flow, review, stepsView);
+
   const api: WorkshopsApi = { handleLink: (path, query) => flow.handleLink(path, query),
+    live,
     review,
     setUsername: (name) => Promise.resolve(state.setUsername(name)),
     steps,
   };
-  const stepsView = vscode.window.createTreeView("devdogsWorkshops.steps", { treeDataProvider: steps });
   context.subscriptions.push(
     output,
     review,
+    live,
     stepsView,
+    vscode.window.createTreeView("devdogsWorkshops.live", { treeDataProvider: live.treeDataProvider }),
     vscode.window.createTreeView("devdogsWorkshops.review", { treeDataProvider: review.treeDataProvider }),
     vscode.workspace.registerTextDocumentContentProvider(REF_SCHEME, refContentProvider),
     vscode.window.registerUriHandler({
@@ -146,6 +152,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<Worksh
   register(REVIEW_CMD.skipCommands, () => review.skipCommands());
 
   await steps.refresh();
+  live.sync();
 
   // A link parked before a folder-open reload resumes now (expired ones are dropped).
   const pending = state.pending;
@@ -166,6 +173,7 @@ export function deactivate(): void {}
  * to drive the same paths a link or a click does and to read state back.
  */
 export interface WorkshopsApi {
+  live: LiveWorkshops;
   /** Handles a `vscode://devdogsuga.workshops/...` link's path and (decoded) query. */
   handleLink(path: string, query: string): Promise<void>;
   review: WorkshopReviewController;

@@ -360,6 +360,16 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "Commit the result of a finished review as a merge commit. When off, the result is staged and left as a merge in progress, so your own commit records the merge."
+        },
+        "devdogsWorkshops.followLive": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Follow live workshops: while a workshop repo is open, listen for the presenter finishing a step (you're offered a review) and tell the presenter which step number you're at. Nothing else is sent: no name, no code."
+        },
+        "devdogsWorkshops.liveRelayUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Websocket URL of the live relay, for testing. Empty uses the club's relay. Must start with `ws://` or `wss://`."
         }
       }
     }

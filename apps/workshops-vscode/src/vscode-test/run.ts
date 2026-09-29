@@ -41,7 +41,10 @@ async function main(): Promise<void> {
     git(clone, "tag", "-f", "-a", "-F", join(scratch, "tag-message"), "02-supabase/01-read", "02-supabase/01-read^{commit}");
 
     const userData = join(scratch, "user-data");
-    mkdirSync(userData);
+    mkdirSync(join(userData, "User"), { recursive: true });
+    // The extension follows live workshops on its own; the suite turns that on
+    // against a fake relay, so nothing here reaches the real one.
+    writeFileSync(join(userData, "User", "settings.json"), JSON.stringify({ "devdogsWorkshops.followLive": false }));
     await runTests({
       extensionDevelopmentPath: packageDir,
       extensionTestsPath: join(__dirname, "suite.js"),

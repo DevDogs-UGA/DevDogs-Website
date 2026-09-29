@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { WebSocketServer, type WebSocket } from "ws";
 import * as vscode from "vscode";
 import type { WorkshopsApi } from "../extension/extension";
 
@@ -10,7 +11,10 @@ import type { WorkshopsApi } from "../extension/extension";
  * way an attendee does it from a docs link: the panel lists the steps, a
  * `/review` link opens a review to step 1, the step's command runs in the
  * Workshop terminal, files open in diff editors, most changes are accepted and
- * one rejected, and Finish records a merge commit.
+ * one rejected, and Finish records a merge commit. Around it, a fake relay
+ * (a local ws server) plays the presenter: the extension follows it, offers
+ * the steps it finishes, holds one back during the review, and reports the
+ * attendee's step.
  */
 
 const clone = process.env["SMOKE_CLONE"]!;
@@ -44,6 +48,23 @@ async function shot(name: string): Promise<void> {
   }
 }
 
+/** A stand-in for the slides relay's /attend endpoint. */
+async function fakeRelay() {
+  const wss = new WebSocketServer({ host: "127.0.0.1", port: 0 });
+  await new Promise((resolve) => wss.once("listening", resolve));
+  const urls: string[] = [];
+  const received: unknown[] = [];
+  const sockets: WebSocket[] = [];
+  wss.on("connection", (ws, req) => {
+    urls.push(req.url ?? "");
+    sockets.push(ws);
+    ws.on("message", (data) => received.push(JSON.parse(data.toString())));
+  });
+  const { port } = wss.address() as { port: number };
+  const send = (message: object) => sockets.at(-1)!.send(JSON.stringify(message));
+  return { wss, port, urls, received, send };
+}
+
 export async function run(): Promise<void> {
   const extension = vscode.extensions.getExtension<WorkshopsApi>("devdogsuga.workshops");
   assert.ok(extension, "extension devdogsuga.workshops is installed in the host");
@@ -60,6 +81,37 @@ export async function run(): Promise<void> {
   assert.deepEqual(numbered.slice(0, 2), ["02-supabase/01-read", "02-supabase/02-sign-in"]);
   assert.equal(open.snapshot.current?.tag, "02-supabase/00-start");
   log(`panel lists ${numbered.length} steps, current is 00-start`);
+
+  // Live workshops: follow a fake relay.
+  const relay = await fakeRelay();
+  const prompts: string[] = [];
+  let answer: string | undefined = "Later";
+  api.live.prompt = async (message) => {
+    prompts.push(message);
+    return answer;
+  };
+  const config = vscode.workspace.getConfiguration("devdogsWorkshops");
+  await config.update("liveRelayUrl", `ws://127.0.0.1:${relay.port}/attend`, vscode.ConfigurationTarget.Global);
+  await config.update("followLive", true, vscode.ConfigurationTarget.Global);
+  await until("the relay connection", () => relay.urls.length === 1);
+  assert.equal(relay.urls[0], "/attend?track=web", "the track comes from the repo");
+  await until("the first step report", () => relay.received.length === 1);
+  assert.deepEqual(relay.received[0], { t: "step", step: 0 }, "only a step number is sent");
+  assert.equal(api.live.presenterLive, false, "no presenter yet");
+  relay.send({ t: "live", live: true });
+  await until("the Live view", () => api.live.presenterLive || undefined);
+  const [, step2, step3] = numbered as [string, string, string];
+  const tracks = ["web"];
+  relay.send({ t: "checkpoint", id: "1", ref: step2, tracks: ["mobile"] });
+  relay.send({ t: "checkpoint", id: "2", ref: "02-supabase/00-start", tracks });
+  relay.send({ t: "checkpoint", id: "3", ref: step2, tracks });
+  await until("the offer", () => prompts.length > 0 || undefined);
+  assert.equal(prompts.length, 1, "other tracks' and already-had checkpoints don't prompt");
+  assert.match(prompts[0]!, /^Presenter finished Step 2: /);
+  await until("the badge", () => api.live.badge || undefined);
+  assert.equal(api.live.badge!.value, 1);
+  assert.equal(api.live.pending.badge, step2);
+  log(`live: offered "${prompts[0]}", Later left a badge`);
 
   // Refused links do nothing.
   await api.handleLink("/review", "repo=evil/Web-Workshops&to=02-supabase/01-read");
@@ -79,6 +131,10 @@ export async function run(): Promise<void> {
   log("review opened with its command");
 
   // Step command in the Workshop terminal.
+  // The presenter finishes step 3 while the review is open: held back.
+  relay.send({ t: "checkpoint", id: "4", ref: step3, tracks });
+  await new Promise((r) => setTimeout(r, 500));
+  assert.equal(prompts.length, 1, "a review in progress is never interrupted");
   await vscode.commands.executeCommand("devdogsWorkshops.review.runAllCommands");
   let state = api.review.snapshot!.commands[0]!.state;
   if (state === "sent") {
@@ -157,4 +213,28 @@ export async function run(): Promise<void> {
   await api.steps.refresh();
   assert.equal(api.steps.open?.snapshot.current?.tag, "02-supabase/01-read");
   log("panel moved to step 1");
+
+  // After Finish: the step is reported, and the held-back step is offered.
+  await until("the step report", () => relay.received.some((m) => (m as { step?: number }).step === 1));
+  assert.deepEqual(relay.received.map((m) => (m as { step: number }).step), [0, 1]);
+  await until("the offer after the review", () => prompts.length === 2 || undefined);
+  assert.match(prompts[1]!, /^Presenter finished Step 3: /);
+  assert.equal(api.live.pending.badge, step3, "Later moved the badge to the newer step");
+  log("live: reported step 1, then offered step 3 once the review finished");
+
+  // "Review" on an offer starts a review to that step (the next one, so no
+  // "review steps together?" dialog, which the test host refuses).
+  answer = "Review";
+  relay.send({ t: "checkpoint", id: "5", ref: step2, tracks });
+  const offered = await until("the review from the offer", () => api.review.snapshot);
+  assert.equal(offered.target, step2);
+  assert.equal(api.live.pending.badge, step3, "the newer step stays badged");
+  await api.review.cancel();
+
+  // The presenter leaves.
+  relay.send({ t: "live", live: false });
+  await until("presenter gone", () => !api.live.presenterLive || undefined);
+  await config.update("followLive", false, vscode.ConfigurationTarget.Global);
+  relay.wss.close();
+  log("live: presenter left, following turned off");
 }
