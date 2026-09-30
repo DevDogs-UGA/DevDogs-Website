@@ -6,6 +6,7 @@
  * - as a library, for the types those generated declarations refer to.
  */
 export { compileDocs, emitDocsModule } from "./compile.js";
+export { type CodeIcon } from "./codeicons.js";
 export { type DocsDiff } from "./diffs.js";
 export { DocsBuildError } from "./errors.js";
 export { parseDocFile, toTitleCase } from "./parse.js";

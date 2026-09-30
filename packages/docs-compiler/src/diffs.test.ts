@@ -38,7 +38,7 @@ describe("diff blocks", () => {
       ctx,
     );
     expect(placeholders(html)).toEqual([
-      { file: "components/Guestbook.tsx", lang: "tsx", patch },
+      { file: "components/Guestbook.tsx", lang: "tsx", icon: "tsx", patch },
     ]);
     expect(html).not.toContain("<pre");
   });

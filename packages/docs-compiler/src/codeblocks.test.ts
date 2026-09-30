@@ -22,7 +22,9 @@ describe("code block frame", () => {
       ctx,
     );
     expect(html).toContain('<figure class="docs-code" data-kind="code">');
-    expect(html).toContain('<span class="docs-code-tab">lib/a.ts</span>');
+    expect(html).toMatch(
+      /<span class="docs-code-tab"><svg [^>]*data-icon="ts"[^>]*>.*?<\/svg>lib\/a\.ts<\/span>/,
+    );
     expect([...html.matchAll(/data-line="(\d+)"/g)].map((m) => m[1])).toEqual([
       "7",
       "8",
@@ -34,7 +36,7 @@ describe("code block frame", () => {
 
   it("names an untitled block's tab after its language, and counts from 1", async () => {
     const html = await renderBody("```sql\nselect 1;\n```\n", ctx);
-    expect(html).toContain('<span class="docs-code-tab">SQL</span>');
+    expect(html).toMatch(/data-icon="sql"[^>]*>.*?<\/svg>SQL<\/span>/);
     expect(html).toContain('data-line="1"');
   });
 
@@ -50,6 +52,7 @@ describe("code block frame", () => {
       ctx,
     );
     expect(html).toContain('data-kind="terminal"');
+    expect(html).toContain('data-icon="terminal"');
     expect(html).not.toContain("data-line");
     expect(html).toContain("docs-shell-comment");
     const prompts = [

@@ -34,12 +34,15 @@
  */
 import type { Code, Root } from "mdast";
 import { metaAttribute as attribute, vscodeLink } from "./codeblocks.js";
+import { codeIcon, type CodeIcon } from "./codeicons.js";
 import { DocsBuildError } from "./errors.js";
 
 /** What a placeholder carries, and what the platform's viewer needs. */
 export interface DocsDiff {
   file: string;
   lang: string;
+  /** The tab's file icon (see codeicons.ts). */
+  icon: CodeIcon;
   patch: string;
   /** The file before and after the change, when the body is the whole file
    * (`context=`). */
@@ -135,6 +138,7 @@ export function readDiff(node: Code): DocsDiff | null {
   const diff: DocsDiff = {
     file,
     lang,
+    icon: codeIcon(lang, file),
     patch,
     ...(href ? { href } : {}),
     ...(vscode ? { vscode } : {}),

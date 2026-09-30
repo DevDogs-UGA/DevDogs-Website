@@ -4,7 +4,7 @@
  * ```html
  * <figure class="docs-code" data-kind="code|terminal">
  *   <div class="docs-code-bar">
- *     <span class="docs-code-tab">lib/supabase.ts</span>
+ *     <span class="docs-code-tab"><svg class="docs-code-icon" data-icon="ts">…</svg>lib/supabase.ts</span>
  *     <div class="docs-code-actions">
  *       <a class="docs-code-vscode" href="vscode://…">…</a>
  *       <a class="docs-code-link" href="…">…</a>
@@ -18,6 +18,8 @@
  * The fence's info string drives it, after the language:
  *
  * - `file=<path>` (or `title=<text>`) names the tab; else the language does.
+ *   The tab starts with an icon for the file's kind (see codeicons.ts), or a
+ *   terminal window for a shell block.
  * - `lines=7-13,15` numbers the lines as those of the file they come from, so
  *   an excerpt keeps its real line numbers; each skip gets an empty
  *   `docs-code-gap` row. Absent, lines count from 1. It must name one number per
@@ -50,6 +52,7 @@
  */
 import type { Element, ElementContent, Root } from "hast";
 import type { ShikiTransformer } from "shiki";
+import { codeIcon, codeIconSvg } from "./codeicons.js";
 import { DocsBuildError } from "./errors.js";
 
 export const SHELL_LANGS = new Set([
@@ -464,13 +467,14 @@ export function docsCodeBlocks(): ShikiTransformer {
       const meta = this.options.meta?.__raw ?? "";
       const lang = this.options.lang;
       const terminal = SHELL_LANGS.has(lang);
+      const file = metaAttribute(meta, "file");
       const title =
-        metaAttribute(meta, "file") ??
+        file ??
         metaAttribute(meta, "title") ??
         (terminal ? "Terminal" : (LANG_NAMES[lang] ?? lang));
 
       const tab = span("docs-code-tab", [
-        ...(terminal ? [span("docs-code-dots", [])] : []),
+        codeIconSvg(terminal ? "terminal" : codeIcon(lang, file)),
         text(title),
       ]);
       const copy: Element = {
@@ -502,9 +506,7 @@ export function docsCodeBlocks(): ShikiTransformer {
             ],
           }
         : null;
-      const vscodeUri = terminal
-        ? undefined
-        : vscodeLink(meta, metaAttribute(meta, "file"));
+      const vscodeUri = terminal ? undefined : vscodeLink(meta, file);
       const isOpen = vscodeUri?.startsWith(`${VSCODE_LINK_PREFIX}open`);
       const vscode: Element | null = vscodeUri
         ? {
