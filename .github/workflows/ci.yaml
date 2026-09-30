@@ -46,6 +46,10 @@ jobs:
       # never blocks a publish (publish.yaml waits on this workflow).
       - name: Build (workspace)
         run: pnpm -r --filter '!slides' --if-present run build
+      - name: Lint (workspace)
+        run: pnpm lint
+      - name: Format check
+        run: pnpm format:check
       - name: Typecheck (workspace)
         run: pnpm -r --if-present run typecheck
       - name: Test (workspace)
