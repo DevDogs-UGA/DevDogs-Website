@@ -344,9 +344,9 @@ chip: DASHBOARD
 
 - Authentication → **Sign In / Providers** → Add a Custom **OIDC** Provider
 - Fill it in, save, and check that it's enabled:
-  - <table class="dd-config-table"><tbody><tr><th>Identifier</th><td><code>custom:devdogsuga</code></td></tr><tr><th>Name</th><td><code>DevDogs</code></td></tr><tr><th>Issuer URL</th><td><code>https://api.devdogsuga.org/auth/v1</code></td></tr><tr><th>Client ID and secret</th><td>From your DevDogs client</td></tr><tr><th>Scopes</th><td><code>openid email profile</code></td></tr></tbody></table>
+  - <table class="dd-config-table"><tbody><tr><th>Identifier</th><td><code>custom:devdogsuga</code></td></tr><tr><th>Name</th><td><code>DevDogs</code></td></tr><tr><th>Issuer URL</th><td><code>https://crhqsbngqmwtsplabmhj.supabase.co/auth/v1</code></td></tr><tr><th>Client ID</th><td><a href="https://devdogsuga.org/tools/oauth#credentials">Copy from your OAuth page</a></td></tr><tr><th>Client Secret</th><td><a href="https://devdogsuga.org/tools/oauth#credentials">Copy from your OAuth page</a></td></tr><tr><th>Scopes</th><td><code>openid email profile</code></td></tr></tbody></table>
 
-<!-- Presenter notes: Supabase requires custom provider identifiers to start with `custom:`, which is why the app signs in with `custom:devdogsuga`. VERIFY ON THE 9/27 DRY RUN: the exact Dashboard labels, and the issuer. Supabase refuses an issuer that disagrees with the discovery document (TASK-346/347); `devtools oauth` reads it from discovery, so if the dashboard rejects api.devdogsuga.org, use the issuer the discovery doc advertises. `devtools oauth` does all of this in one command; it comes back in the local bonus section at the end. -->
+<!-- Presenter notes: Supabase requires custom provider identifiers to start with `custom:`, which is why the app signs in with `custom:devdogsuga`. The issuer is the raw project host, not api.devdogsuga.org: Supabase's OAuth server ignores the custom domain in its discovery document and ID tokens, and a provider set to api.devdogsuga.org fails the issuer check (TASK-347). The OAuth page shows the current issuer with a copy button. `devtools oauth` does all of this in one command; it comes back in the local bonus section at the end. -->
 
 ---
 layout: dual-code

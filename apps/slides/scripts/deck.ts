@@ -271,16 +271,22 @@ function tipsOf(block: string): string[] {
 }
 
 // A two-column `<table>` of `<th>`/`<td>` rows (the provider settings) as a
-// markdown table.
+// markdown table, inside `:::copyable` so the docs put a copy button on each
+// value.
 function htmlTable(html: string, indent: string): string {
   const rows = [...html.matchAll(/<tr><th>([\s\S]*?)<\/th><td>([\s\S]*?)<\/td><\/tr>/g)]
-  const cell = (s: string) => s.replace(/<code>([\s\S]*?)<\/code>/g, '`$1`').replace(/\|/g, '\\|')
+  const cell = (s: string) => s
+    .replace(/<code>([\s\S]*?)<\/code>/g, '`$1`')
+    .replace(/<a href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g, '[$2]($1)')
+    .replace(/\|/g, '\\|')
   // Padded to column width, the way the docs repo's Prettier writes a table.
   const table = [['Setting', 'Value'], ...rows.map(r => [cell(r[1]), cell(r[2])])]
   const widths = [0, 1].map(c => Math.max(...table.map(row => row[c].length)))
   const line = (row: string[]) => `| ${row.map((c, k) => c.padEnd(widths[k])).join(' | ')} |`
-  return [line(table[0]), line(widths.map(w => '-'.repeat(w))), ...table.slice(1).map(line)]
-    .map(l => indent + l).join('\n')
+  // Blank lines inside the wrapper, or Prettier reads the closing `:::` as
+  // one more table row.
+  return [':::copyable', '', line(table[0]), line(widths.map(w => '-'.repeat(w))), ...table.slice(1).map(line), '', ':::']
+    .map(l => (l ? indent + l : l)).join('\n')
 }
 
 export const RE_FENCE = /^(?<ticks>`{3,})[^\n]*\n[\s\S]*?^\k<ticks>[ \t]*$/gm
