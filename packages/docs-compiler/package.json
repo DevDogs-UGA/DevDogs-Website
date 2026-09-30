@@ -37,7 +37,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@shikijs/rehype": "^4.4.3",
@@ -72,6 +74,7 @@
     "@types/mdast": "^4.0.4",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "eslint": "catalog:",
     "vitest": "catalog:"
   }
 }

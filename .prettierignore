@@ -1,19 +1,28 @@
-# format:check / format:write pass .gitignore as an --ignore-path too, so build
-# output (dist, .next, .open-next, build, coverage) is
-# already excluded there. Only list files that are generated but still
-# tracked — .gitignore structurally cannot express those.
-**/src/supabase/drizzle/
-# Rewritten unformatted by every `db:pull`, so formatting it is a change that
-# never sticks.
-**/src/server/db/schema/generated/
-apps/schedule-builder/cloudflare-env.d.ts
+# format:check / format:write pass .gitignore as an --ignore-path too, so
+# untracked build output (dist, .packs, .wrangler, ...) is already excluded
+# there. Only list files that are tracked but must never be reformatted, plus
+# anything covered by a NESTED .gitignore, which --ignore-path does not read.
 
-# --- Covered by a NESTED .gitignore, which --ignore-path does not read -------
-#
-# `--ignore-path .gitignore` reads exactly that one file. Anything ignored by
-# apps/*/.gitignore or packages/*/.gitignore is invisible to it, so build output
-# under a workspace-local ignore reaches prettier anyway and fails
-# `format:check` on a file nobody wrote and nobody can usefully format.
-#
-# apps/study-group-finder/.gitignore
-**/.dart_tool/
+pnpm-lock.yaml
+
+# Private workshop submodules: other repos' content.
+apps/slides/workshops/
+
+# Generated and committed. Reformatting is a change the generator undoes.
+packages/brand/src/generated/
+packages/newsletter/src/generated/
+apps/slides/worker/worker-configuration.d.ts
+
+# Hand-written fixtures whose exact bytes the tests depend on.
+packages/devtools/test-fixtures/
+packages/devtools/test/fixture-repo/
+
+# apps/slides/.gitignore
+apps/slides/export/
+# apps/workshops-vscode/.gitignore
+apps/workshops-vscode/.vscode-test/
+apps/workshops-vscode/dist-test/
+
+# Slidev decks: slide separators, per-slide frontmatter and Vue-in-markdown
+# that prettier's markdown parser rewrites into something else.
+apps/slides/decks/

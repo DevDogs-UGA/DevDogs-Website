@@ -32,7 +32,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:contract": "vitest run --config vitest.contract.config.ts"
+    "test:contract": "vitest run --config vitest.contract.config.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@bitwarden/cli": "2026.7.0",
@@ -57,10 +59,18 @@
     "@devdogsuga/events": "*"
   },
   "peerDependenciesMeta": {
-    "@devdogsuga/brand": { "optional": true },
-    "@devdogsuga/db": { "optional": true },
-    "@devdogsuga/env": { "optional": true },
-    "@devdogsuga/events": { "optional": true }
+    "@devdogsuga/brand": {
+      "optional": true
+    },
+    "@devdogsuga/db": {
+      "optional": true
+    },
+    "@devdogsuga/env": {
+      "optional": true
+    },
+    "@devdogsuga/events": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@devdogsuga/brand": "workspace:*",
@@ -71,6 +81,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "eslint": "catalog:",
     "react": "catalog:",
     "vitest": "catalog:"
   }

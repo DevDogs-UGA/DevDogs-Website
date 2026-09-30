@@ -70,6 +70,7 @@ catalog:
   # --- Toolchain ---
   # typescript is held at 6.x on purpose: typescript-eslint peer-requires
   # ">=4.8.4 <6.1.0", so TS 7 breaks linting in every package.
+  eslint: ^9.39.5
   tsx: ^4.23.12
   typescript: ^6.0.3
 

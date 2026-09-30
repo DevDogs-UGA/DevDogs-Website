@@ -36,7 +36,9 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@supabase/ssr": "catalog:",
@@ -52,6 +54,7 @@
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "drizzle-orm": "catalog:",
+    "eslint": "catalog:",
     "postgres": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

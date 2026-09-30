@@ -29,7 +29,9 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check": "tsx src/check.ts"
+    "check": "tsx src/check.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "zod": "catalog:"
@@ -37,6 +39,7 @@
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",
     "@types/node": "catalog:",
+    "eslint": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

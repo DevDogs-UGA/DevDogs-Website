@@ -380,7 +380,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "package": "node esbuild.mjs --minify && vsce package --no-dependencies",
-    "test:vscode": "node esbuild.mjs && node esbuild.mjs --tests && node dist-test/run.js"
+    "test:vscode": "node esbuild.mjs && node esbuild.mjs --tests && node dist-test/run.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@sentry/node": "catalog:",
@@ -395,6 +397,7 @@
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2",
+    "eslint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

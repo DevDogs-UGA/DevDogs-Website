@@ -12,6 +12,7 @@
   },
   "exports": {
     "./eslint": "./eslint/index.js",
+    "./eslint/library": "./eslint/library.js",
     "./tsconfig/*": "./tsconfig/*",
     "./vitest/node": {
       "types": "./vitest/node.d.ts",

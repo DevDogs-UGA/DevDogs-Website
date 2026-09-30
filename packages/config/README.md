@@ -10,6 +10,10 @@ import { nextEslintConfig } from "@devdogsuga/config/eslint"; // eslint.config.j
 import { nodePreset } from "@devdogsuga/config/vitest/node"; // vitest.config.ts
 ```
 
+Plain TypeScript packages (no Next.js) use `libraryEslintConfig` from
+`@devdogsuga/config/eslint/library`, which does not load `eslint-config-next`.
+Pass `project` (and `tsconfigRootDir`) when tests live in a second tsconfig.
+
 The tsconfig presets under `tsconfig/` are the exception: they are extended by
 relative path rather than by package specifier, because vitest's transform reads
 these files too and does not resolve specifiers in `extends`.

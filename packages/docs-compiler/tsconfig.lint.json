@@ -1,0 +1,16 @@
+{
+  // ESLint's type-aware project, not a build or typecheck config. tsconfig.json
+  // leaves tests out of the build, so this adds them back; and the tests
+  // import siblings without extensions (vitest resolves them), which NodeNext
+  // rejects, hence bundler resolution here. Never emitted.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "tsBuildInfoFile": "./tsconfig.lint.tsbuildinfo"
+  },
+  "include": ["src", "vitest.config.ts"],
+  "exclude": ["node_modules", "dist", "test/fixture-repo"]
+}

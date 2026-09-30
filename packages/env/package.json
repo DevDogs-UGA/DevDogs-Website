@@ -40,7 +40,9 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@dotenvx/dotenvx": "^2.21.0",
@@ -55,6 +57,7 @@
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",
     "@types/node": "catalog:",
+    "eslint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
