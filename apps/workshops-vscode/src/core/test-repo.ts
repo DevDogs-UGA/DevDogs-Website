@@ -36,6 +36,10 @@ export class TestRepo {
   static init(): TestRepo {
     const repo = new TestRepo();
     sh(repo.dir, "init", "-q", "-b", "main");
+    // The code under test runs git without ISOLATED_ENV, so the repo needs its
+    // own identity for commits on a machine with none (CI runners).
+    sh(repo.dir, "config", "user.name", "Test");
+    sh(repo.dir, "config", "user.email", "test@example.com");
     return repo;
   }
 
