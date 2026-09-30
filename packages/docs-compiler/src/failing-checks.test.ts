@@ -55,7 +55,7 @@ describe("runFailingChecks / printFailingChecks", () => {
   });
 
   it("prints a one-line notice when the devtools catalog is missing, even with no errors", () => {
-    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     try {
       printFailingChecks({
         linkErrors: [],
@@ -70,7 +70,7 @@ describe("runFailingChecks / printFailingChecks", () => {
   });
 
   it("prints nothing when there are no errors and the catalog loaded fine", () => {
-    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     try {
       printFailingChecks({
         linkErrors: [],

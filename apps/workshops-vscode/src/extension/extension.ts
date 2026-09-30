@@ -226,7 +226,9 @@ export async function activate(
   return api;
 }
 
-export function deactivate(): void {}
+export function deactivate(): void {
+  // Nothing to do: everything is disposed through context.subscriptions.
+}
 
 /**
  * What `activate` returns. Not a public contract: the integration tests use it

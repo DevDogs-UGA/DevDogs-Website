@@ -365,7 +365,7 @@ async function qualifyDevelopment(
       },
     ]);
     const parsed = parseSessionSelector(choice);
-    if (parsed === null || parsed.tier !== "development") {
+    if (parsed?.tier !== "development") {
       return { ok: false, reason: `unknown development database "${choice}".` };
     }
     return { ok: true, ...parsed, resolvedBy: "prompt" };

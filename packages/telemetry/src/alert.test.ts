@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const captureMessage = vi.fn();
-const getClient = vi.fn();
+const captureMessage = vi.fn<(...args: unknown[]) => void>();
+const getClient = vi.fn<(...args: unknown[]) => unknown>();
 
 vi.mock("@sentry/core", () => ({
   captureMessage: (...args: unknown[]) => captureMessage(...args),
@@ -26,14 +26,14 @@ describe("alert", () => {
     getClient.mockReturnValue({});
     alert("Config reconcile failing", ["3 rows rejected"]);
 
-    expect(captureMessage).toHaveBeenCalledWith(
-      "Config reconcile failing\n• 3 rows rejected",
-      expect.objectContaining({
-        level: "warning",
-        fingerprint: ["alert", "Config reconcile failing"],
-        tags: expect.objectContaining({ alert: "true" }),
-      }),
-    );
+    expect(captureMessage).toHaveBeenCalledTimes(1);
+    const [message, context] = captureMessage.mock.calls[0] ?? [];
+    expect(message).toBe("Config reconcile failing\n• 3 rows rejected");
+    expect(context).toMatchObject({
+      level: "warning",
+      fingerprint: ["alert", "Config reconcile failing"],
+      tags: { alert: "true" },
+    });
   });
 
   it("merges caller-supplied tags", () => {

@@ -1,7 +1,7 @@
 import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
 import { WebSocketServer, type WebSocket } from "ws";
-import { LiveClient } from "./live-client.js";
+import { LiveClient, rawDataToString } from "./live-client.js";
 
 const cleanup: (() => void)[] = [];
 afterEach(() => {
@@ -15,7 +15,7 @@ async function server(port = 0) {
   const received: string[] = [];
   wss.on("connection", (ws) => {
     sockets.push(ws);
-    ws.on("message", (d) => received.push(d.toString()));
+    ws.on("message", (d) => received.push(rawDataToString(d)));
   });
   cleanup.push(() => wss.close());
   return { wss, sockets, received, port: (wss.address() as AddressInfo).port };

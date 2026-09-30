@@ -1,4 +1,4 @@
-import WebSocket from "ws";
+import WebSocket, { type RawData } from "ws";
 import { backoffDelay, type Backoff } from "../core/index.js";
 
 /**
@@ -44,7 +44,7 @@ export class LiveClient {
     this.socket = undefined;
     if (socket) {
       socket.removeAllListeners();
-      socket.on("error", () => {});
+      socket.on("error", () => undefined);
       const wasOpen = socket.readyState === WebSocket.OPEN;
       socket.terminate();
       if (wasOpen) this.options.onConnection(false);
@@ -71,7 +71,7 @@ export class LiveClient {
       this.options.onConnection(true);
     });
     socket.on("message", (data, isBinary) => {
-      if (!isBinary) this.options.onMessage(data.toString());
+      if (!isBinary) this.options.onMessage(rawDataToString(data));
     });
     socket.on("error", (error) => this.options.onError?.(error));
     socket.on("close", () => {
@@ -87,4 +87,10 @@ export class LiveClient {
       this.timer = setTimeout(() => this.open(), delay);
     });
   }
+}
+
+/** A `ws` message payload as text: a frame arrives as one buffer or a list of fragments. */
+export function rawDataToString(data: RawData): string {
+  if (Array.isArray(data)) return Buffer.concat(data).toString("utf8");
+  return Buffer.from(data as ArrayBuffer).toString("utf8");
 }

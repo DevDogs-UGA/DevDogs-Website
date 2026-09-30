@@ -131,7 +131,7 @@ export class WorkshopTerminal implements vscode.Disposable {
   }
 
   dispose(): void {
-    this.subscriptions.forEach((s) => s.dispose());
+    for (const s of this.subscriptions) s.dispose();
     this.terminal?.dispose();
   }
 }

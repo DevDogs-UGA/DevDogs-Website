@@ -325,10 +325,13 @@ export class WorkshopReviewController
     const model = this.session?.model;
     for (const editor of vscode.window.visibleTextEditors) {
       const parsed = parseReviewUri(editor.document.uri);
-      if (!parsed || parsed.side !== "right") continue;
+      if (parsed?.side !== "right") continue;
       const index =
         model?.files.findIndex((f) => f.file.path === parsed.path) ?? -1;
-      const ranges: Record<keyof typeof this.bars, vscode.Range[]> = {
+      const ranges: Record<
+        "pending" | "accepted" | "rejected",
+        vscode.Range[]
+      > = {
         pending: [],
         accepted: [],
         rejected: [],
@@ -770,7 +773,7 @@ export class WorkshopReviewController
 
   dispose(): void {
     void this.end();
-    this.disposables.forEach((d) => d.dispose());
+    for (const d of this.disposables) d.dispose();
   }
 }
 

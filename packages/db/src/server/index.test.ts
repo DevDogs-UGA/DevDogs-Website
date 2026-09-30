@@ -75,7 +75,7 @@ describe("createDb", () => {
       expect.objectContaining({ prepare: false, idle_timeout: 20 }),
     );
     expect(postgresMock).toHaveBeenCalledTimes(1);
-    const postgresClient = postgresMock.mock.results[0]?.value;
+    const postgresClient: unknown = postgresMock.mock.results[0]?.value;
     expect(drizzleMock).toHaveBeenCalledWith({
       client: postgresClient,
       relations,

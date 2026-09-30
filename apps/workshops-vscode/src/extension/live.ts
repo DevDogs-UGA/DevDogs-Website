@@ -309,6 +309,6 @@ export class LiveWorkshops implements vscode.Disposable {
 
   dispose(): void {
     this.client?.stop();
-    this.disposables.forEach((d) => d.dispose());
+    for (const d of this.disposables) d.dispose();
   }
 }

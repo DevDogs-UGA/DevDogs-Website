@@ -58,11 +58,7 @@ import type {
   PhrasingContent,
   RootContent,
 } from "mdast";
-import type {
-  ContainerDirective,
-  LeafDirective,
-  TextDirective,
-} from "mdast-util-directive";
+import type { ContainerDirective, TextDirective } from "mdast-util-directive";
 import { visit } from "unist-util-visit";
 import { DocsBuildError } from "./errors.js";
 import { COPYABLE_CLASS } from "./tables.js";
@@ -425,7 +421,7 @@ function resolveList(nodes: RootContent[], ctx: VariantContext): RootContent[] {
       let j = i;
       for (; j < nodes.length; j++) {
         const next = fenceVariant(nodes[j]!);
-        if (!next || next.group !== fence.group) break;
+        if (next?.group !== fence.group) break;
         const code = nodes[j] as Code;
         run.push({
           values: readValues(next.group, next.raw, ctx, code),

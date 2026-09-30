@@ -313,7 +313,7 @@ describe("loadEnvironment", () => {
       root: "/fake/root",
       exists: () => true,
       probeLocalStack: () => false,
-      applyEnvFiles: () => {},
+      applyEnvFiles: () => undefined,
       baseEnv: {},
       ...overrides,
     };

@@ -73,7 +73,7 @@ describe("createServerClient", () => {
   it("passes url, key, schema and wires the caller's cookie adapter through", () => {
     const cookies: CookieMethodsServer = {
       getAll: () => [],
-      setAll: () => {},
+      setAll: () => undefined,
     };
 
     const client = createServerClient<SampleDatabase, "platform">({

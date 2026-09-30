@@ -122,7 +122,7 @@ export class Telemetry implements vscode.Disposable {
   }
 
   dispose(): void {
-    this.disposables.forEach((d) => d.dispose());
+    for (const d of this.disposables) d.dispose();
     void this.client?.close(2000);
   }
 }

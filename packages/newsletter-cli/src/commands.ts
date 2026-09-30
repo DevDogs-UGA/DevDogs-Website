@@ -280,7 +280,7 @@ async function signInViaPaste(mailbox: string): Promise<MailboxTokens> {
  */
 async function mailboxAccessToken(mailbox: string): Promise<string> {
   const stored = await readGrant();
-  if (stored && stored.mailbox === mailbox) {
+  if (stored?.mailbox === mailbox) {
     try {
       const tokens = await refreshTokens(stored.refreshToken);
       // Microsoft rotates refresh tokens; keeping the old one means the next

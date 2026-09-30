@@ -31,8 +31,7 @@ describe("checkAttendRequest", () => {
 
   it("refuses everything else", async () => {
     expect(
-      (await checkAttendRequest(upgrade(`${base}?track=web`, {}, "POST")))
-        ?.status,
+      checkAttendRequest(upgrade(`${base}?track=web`, {}, "POST"))?.status,
     ).toBe(405);
     expect(checkAttendRequest(new Request(`${base}?track=web`))?.status).toBe(
       426,

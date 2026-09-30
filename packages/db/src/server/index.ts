@@ -65,7 +65,10 @@ function connectionCache(): ConnectionCache {
     symbol,
     ConnectionCache | undefined
   >;
-  return (g[CACHE_KEY] ??= new Map());
+  const cache: ConnectionCache =
+    g[CACHE_KEY] ?? new Map<string, ReturnType<typeof postgres>>();
+  g[CACHE_KEY] = cache;
+  return cache;
 }
 
 export interface CreateDbOptions {

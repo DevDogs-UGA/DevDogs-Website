@@ -273,5 +273,6 @@ export type EnvMeta = {
  * right.
  */
 declare module "zod" {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- module augmentation merges by interface; a type alias cannot
   interface GlobalMeta extends Partial<EnvMeta> {}
 }

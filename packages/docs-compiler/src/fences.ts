@@ -63,7 +63,11 @@ export function opensFence(text: string): string | null {
  */
 export function closesFence(text: string, open: string): boolean {
   const run = fenceRun(text);
-  if (run === null || run[0] !== open[0] || run.length < open.length) {
+  if (
+    run === null ||
+    !run.startsWith(open.charAt(0)) ||
+    run.length < open.length
+  ) {
     return false;
   }
   return text.slice(text.indexOf(run) + run.length).trim() === "";

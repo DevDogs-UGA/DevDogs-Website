@@ -222,9 +222,13 @@ export function scrubEvent<E extends ReportEvent>(
         stacktrace: ex.stacktrace && {
           ...ex.stacktrace,
           frames: ex.stacktrace.frames?.map((frame) => {
-            const { context_line, pre_context, post_context, vars, ...rest } =
-              frame;
-            (void context_line, pre_context, post_context, vars);
+            const {
+              context_line: _contextLine,
+              pre_context: _preContext,
+              post_context: _postContext,
+              vars: _vars,
+              ...rest
+            } = frame;
             for (const key of ["filename", "abs_path", "module"]) {
               if (typeof rest[key] === "string")
                 rest[key] = scrubText(rest[key], context);

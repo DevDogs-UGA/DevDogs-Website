@@ -51,6 +51,7 @@
  * button skips prompts and annotations and copies the commands alone.
  */
 import type { Element, ElementContent, Root } from "hast";
+import type { Nodes as MdastNodes, Root as MdastRoot } from "mdast";
 import type { ShikiTransformer } from "shiki";
 import { codeIcon, codeIconSvg } from "./codeicons.js";
 import { DocsBuildError } from "./errors.js";
@@ -568,8 +569,8 @@ export function docsCodeBlocks(): ShikiTransformer {
  * element; a `metastring` property survives, and `@shikijs/rehype` reads it.
  */
 export function remarkKeepMeta() {
-  return (tree: import("mdast").Root) => {
-    const visit = (node: import("mdast").Nodes) => {
+  return (tree: MdastRoot) => {
+    const visit = (node: MdastNodes) => {
       if (node.type === "code" && node.meta) {
         node.data = {
           ...node.data,

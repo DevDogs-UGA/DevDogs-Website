@@ -39,7 +39,8 @@ export function parseTagMessage(message: string): TagMessage {
     if (line.trim() === "") continue;
     const start = /^Start:\s*(.*)$/.exec(line);
     if (start) {
-      parsed.start = start[1]?.trim() || undefined;
+      const title = start[1]?.trim();
+      parsed.start = title === "" ? undefined : title;
       sawTitle = true;
       continue;
     }
@@ -121,11 +122,11 @@ export async function readSteps(
     const [tag, type, peeled, direct, contents, subject] = record
       .replace(/^\n/, "")
       .split("\x1f");
-    if (!tag || tag.slice(0, workshop.length + 1) !== `${workshop}/`) continue;
+    if (tag?.slice(0, workshop.length + 1) !== `${workshop}/`) continue;
     const name = parseStepName(tag);
     // `<ws>/<NN>-<slug>` only: deeper names like `<ws>/x/01-a` belong to
     // another workshop whose name happens to start with ours.
-    if (!name || name.workshop !== workshop) continue;
+    if (name?.workshop !== workshop) continue;
 
     const annotated = type === "tag";
     const parsed = annotated

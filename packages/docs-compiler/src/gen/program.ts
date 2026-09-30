@@ -151,9 +151,8 @@ export function sourceFilesFor(target: Target): string[] {
 
 /** A `ts.Program` over one target, using its own `tsconfig.json`. */
 export function createProgram(target: Target): ts.Program {
-  const raw: unknown = ts.readConfigFile(
-    target.tsconfigPath,
-    ts.sys.readFile,
+  const raw: unknown = ts.readConfigFile(target.tsconfigPath, (file) =>
+    ts.sys.readFile(file),
   ).config;
 
   // Passing the config file name is what lets `extends` resolve; the presets
@@ -442,7 +441,9 @@ function readJsonObject(file: string): Record<string, unknown> | null {
  * apps declare one, and why chasing `extends` here would be wrong.
  */
 function readAliases(absDir: string, tsconfigPath: string): AliasRule[] {
-  const raw: unknown = ts.readConfigFile(tsconfigPath, ts.sys.readFile).config;
+  const raw: unknown = ts.readConfigFile(tsconfigPath, (file) =>
+    ts.sys.readFile(file),
+  ).config;
   const paths = asRecord(
     asRecord(asRecord(raw)?.["compilerOptions"])?.["paths"],
   );

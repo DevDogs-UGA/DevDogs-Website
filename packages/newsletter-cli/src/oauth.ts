@@ -49,7 +49,7 @@ export function authorizeUrl(
     login_hint: mailbox,
     ...(state ? { state } : {}),
   });
-  return `${AUTHORITY}/authorize?${query}`;
+  return `${AUTHORITY}/authorize?${query.toString()}`;
 }
 
 /**
@@ -141,7 +141,9 @@ export interface StoredGrant {
  * nothing that opens the club mailbox belongs anywhere `git add` can reach.
  */
 export function grantPath(): string {
-  const configHome = process.env.XDG_CONFIG_HOME || join(homedir(), ".config");
+  const xdg = process.env.XDG_CONFIG_HOME;
+  const configHome =
+    xdg === undefined || xdg === "" ? join(homedir(), ".config") : xdg;
   return join(configHome, "devdogsuga", "newsletter-mailbox.json");
 }
 

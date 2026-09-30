@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { WebSocketServer, type WebSocket } from "ws";
 import * as vscode from "vscode";
 import type { WorkshopsApi } from "../extension/extension";
+import { rawDataToString } from "../extension/live-client";
 
 /**
  * Runs inside a real VS Code (see run.ts). One scenario, top to bottom, the
@@ -63,7 +64,9 @@ async function fakeRelay() {
   wss.on("connection", (ws, req) => {
     urls.push(req.url ?? "");
     sockets.push(ws);
-    ws.on("message", (data) => received.push(JSON.parse(data.toString())));
+    ws.on("message", (data) =>
+      received.push(JSON.parse(rawDataToString(data))),
+    );
   });
   const { port } = wss.address() as { port: number };
   const send = (message: object) =>
@@ -140,7 +143,7 @@ export async function run(): Promise<void> {
     "other tracks' and already-had checkpoints don't prompt",
   );
   assert.match(prompts[0]!, /^Presenter finished Step 2: /);
-  await until("the badge", () => api.live.badge || undefined);
+  await until("the badge", () => api.live.badge ?? undefined);
   assert.equal(api.live.badge!.value, 1);
   assert.equal(api.live.pending.badge, step2);
   log(`live: offered "${prompts[0]}", Later left a badge`);

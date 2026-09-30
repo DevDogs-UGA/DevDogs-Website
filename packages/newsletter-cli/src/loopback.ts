@@ -57,7 +57,7 @@ export function startLoopback(state: string): Promise<Loopback> {
     });
     // A rejection can land in the gap before the caller awaits; this extra
     // no-op handler marks it handled without eating it for the real awaiter.
-    code.catch(() => {});
+    code.catch(() => undefined);
     const server = createServer((request, response) => {
       const result = parseCallback(request.url ?? "/", state);
       if (result === null) {
@@ -107,7 +107,7 @@ export function openInBrowser(url: string): void {
         : ["xdg-open", [url]];
   try {
     spawn(command, args, { stdio: "ignore", detached: true })
-      .on("error", () => {})
+      .on("error", () => undefined)
       .unref();
   } catch {
     // The printed URL is the real interface; this was only a convenience.

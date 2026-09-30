@@ -93,7 +93,7 @@ export class Relay extends DurableObject<Env> {
     if (typeof raw !== "string" || raw.length > MAX_MESSAGE) return;
     let message: DriveMessage | FollowMessage;
     try {
-      message = JSON.parse(raw);
+      message = JSON.parse(raw) as DriveMessage | FollowMessage;
     } catch {
       return;
     }
@@ -175,11 +175,11 @@ export class Relay extends DurableObject<Env> {
   async webSocketClose(ws: WebSocket, code: number) {
     // Code 1005 ("no status") can't be sent back.
     ws.close(code === 1005 ? 1000 : code, "closing");
-    this.socketGone(ws);
+    await this.socketGone(ws);
   }
 
   async webSocketError(ws: WebSocket) {
-    this.socketGone(ws);
+    await this.socketGone(ws);
   }
 
   private async socketGone(ws: WebSocket) {
