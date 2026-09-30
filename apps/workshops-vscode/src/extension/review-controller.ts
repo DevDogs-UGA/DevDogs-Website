@@ -3,7 +3,9 @@ import { join } from "node:path";
 import * as vscode from "vscode";
 import {
   finishReview,
+  git,
   loadFileMerge,
+  MissingIdentityError,
   resolveOutcome,
   type Decision,
   type FileMerge,
@@ -491,6 +493,10 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
         }
       }
     } catch (error) {
+      if (error instanceof MissingIdentityError) {
+        if (await askCommitIdentity(root)) await this.finish();
+        return;
+      }
       captureError("finish", error);
       logError("finish", error);
       void vscode.window.showErrorMessage(`Couldn't finish the review: ${errorText(error)}`);
@@ -637,4 +643,46 @@ export function fileIndexOf(arg: unknown): number | undefined {
   if (typeof arg === "number") return arg;
   if (typeof arg === "object" && arg !== null && (arg as Node).kind === "file") return (arg as { index: number }).index;
   return undefined;
+}
+
+/**
+ * Asks for the name and email git commits under and saves them globally, as
+ * `git config --global` would. Returns false if they cancel either.
+ */
+async function askCommitIdentity(root: string): Promise<boolean> {
+  const answer = await vscode.window.showInformationMessage(
+    "Git doesn't know your name and email yet.",
+    { modal: true, detail: "Finish records the step as a commit, and every commit carries a name and email. Nothing has been written yet." },
+    "Set them",
+  );
+  if (answer !== "Set them") return false;
+  const name = (
+    await vscode.window.showInputBox({
+      title: "Your name for git commits",
+      prompt: "Saved in your global git config, like git config --global user.name.",
+      placeHolder: "Uga Georgia",
+      ignoreFocusOut: true,
+      validateInput: (value) => (value.trim() ? undefined : "Enter a name."),
+    })
+  )?.trim();
+  if (!name) return false;
+  const email = (
+    await vscode.window.showInputBox({
+      title: "Your email for git commits",
+      prompt: "Use your GitHub account's email so GitHub links the commits to you.",
+      placeHolder: "you@uga.edu",
+      ignoreFocusOut: true,
+      validateInput: (value) => (/^[^\s@]+@[^\s@]+$/.test(value.trim()) ? undefined : "That doesn't look like an email."),
+    })
+  )?.trim();
+  if (!email) return false;
+  try {
+    await git(root, ["config", "--global", "user.name", name]);
+    await git(root, ["config", "--global", "user.email", email]);
+    return true;
+  } catch (error) {
+    logError("identity", error);
+    void vscode.window.showErrorMessage(`Couldn't save your name and email: ${errorText(error)}`);
+    return false;
+  }
 }

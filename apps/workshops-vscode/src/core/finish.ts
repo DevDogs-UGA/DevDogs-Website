@@ -98,11 +98,32 @@ async function writeIfChanged(abs: string, data: Buffer | string): Promise<void>
   await writeFile(abs, next);
 }
 
+/**
+ * Git has no name to commit under (a fresh install never ran `git config
+ * user.name`). Thrown before anything is written, so Finish can ask and retry.
+ */
+export class MissingIdentityError extends Error {
+  constructor() {
+    super("Git doesn't know your name and email yet.");
+    this.name = "MissingIdentityError";
+  }
+}
+
+/** Whether `git commit` here would find an author and committer. */
+export async function hasCommitIdentity(root: string): Promise<boolean> {
+  for (const variable of ["GIT_AUTHOR_IDENT", "GIT_COMMITTER_IDENT"]) {
+    const { code } = await gitRaw(root, ["var", variable], [128]);
+    if (code !== 0) return false;
+  }
+  return true;
+}
+
 /** Writes the decided files to the working tree, then commits or stages them. */
 export async function finishReview(input: FinishInput): Promise<FinishResult | null> {
   const { root, targetTag } = input;
   const targetCommit = await revParse(root, tagRef(targetTag));
   if (!targetCommit) throw new Error(`No such step: ${targetTag}`);
+  if (input.autoCommit && !(await hasCommitIdentity(root))) throw new MissingIdentityError();
 
   if (input.beforeWrite && !(await input.beforeWrite())) return null;
 

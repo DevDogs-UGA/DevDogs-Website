@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
-import { finishReview, resolveOutcome, type FileOutcome } from "./finish.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { finishReview, MissingIdentityError, resolveOutcome, type FileOutcome } from "./finish.js";
 import type { Decision } from "./merge.js";
 import { loadFileMerge, planReview } from "./plan.js";
 import { findCurrentStep, readStepLine } from "./tags.js";
@@ -167,6 +167,25 @@ describe("finishReview", () => {
       beforeWrite: async () => false,
     });
     expect(result).toBeNull();
+    expect(rev(repo, "HEAD")).toBe(before);
+    expect(repo.git("status", "--porcelain")).toBe("");
+  });
+
+  it("writes nothing when git has no name to commit under", async () => {
+    repo = build();
+    const before = rev(repo, "HEAD");
+    let asked = false;
+    vi.stubEnv("GIT_AUTHOR_NAME", ""); // what a fresh install with no user.name looks like
+    try {
+      await expect(
+        review(repo, "w/00-start", "w/01-one", () => "accept", {
+          beforeWrite: async () => (asked = true),
+        }),
+      ).rejects.toBeInstanceOf(MissingIdentityError);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    expect(asked).toBe(false);
     expect(rev(repo, "HEAD")).toBe(before);
     expect(repo.git("status", "--porcelain")).toBe("");
   });
