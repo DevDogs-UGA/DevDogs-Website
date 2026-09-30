@@ -10,8 +10,9 @@
  * finished HTML rather than a markdown pipeline.
  *
  * The plugin list is the one the platform ran, in the same order, so a page
- * renders the same; `remarkVariants`, `remarkDiffs`, `rehypeScrollTables` and
- * `rehypeRefuseScript` (sanitize.ts) are the only additions.
+ * renders the same; `remarkVariants`, `remarkDiffs`, `rehypeScrollTables`,
+ * `rehypeCopyableCells` (tables.ts) and `rehypeRefuseScript` (sanitize.ts) are
+ * the only additions.
  */
 import rehypeShiki from "@shikijs/rehype";
 import type { Element, Root as HastRoot } from "hast";
@@ -35,6 +36,7 @@ import { VFile } from "vfile";
 import { docsCodeBlocks, remarkKeepMeta } from "./codeblocks.js";
 import { remarkDiffs } from "./diffs.js";
 import { rehypeRefuseScript } from "./sanitize.js";
+import { rehypeCopyableCells } from "./tables.js";
 import { remarkVariants, type VariantContext } from "./variants.js";
 
 /**
@@ -92,6 +94,7 @@ const processor = unified()
     transformers: [docsCodeBlocks()],
   })
   .use(rehypeKatex)
+  .use(rehypeCopyableCells)
   .use(rehypeScrollTables)
   .use(rehypeStringify);
 

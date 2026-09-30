@@ -407,7 +407,7 @@ const VSCODE_ICON: Element = {
   ],
 };
 
-const COPY_ICON: Element = {
+export const COPY_ICON: Element = {
   type: "element",
   tagName: "svg",
   properties: {

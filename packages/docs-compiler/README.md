@@ -67,5 +67,9 @@ in a project whose `index.md` lists it under `os:`. The build fails when a
 tab set leaves a value uncovered, covers one twice, or puts a heading inside
 a tab.
 
+`:::copyable` isn't a variant: it puts a copy button on each cell of the
+tables inside it that is nothing but one code span, for values a reader
+pastes somewhere else.
+
 [API reference](https://devdogsuga.org/docs/toolkit/reference/api/docs-compiler) ·
 [Docs system](https://devdogsuga.org/docs/toolkit/guides/docs-compiler)

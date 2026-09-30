@@ -65,6 +65,7 @@ import type {
 } from "mdast-util-directive";
 import { visit } from "unist-util-visit";
 import { DocsBuildError } from "./errors.js";
+import { COPYABLE_CLASS } from "./tables.js";
 
 /** A setup axis the reader picks in the browser. */
 export type VariantGroup = "os" | "supabase";
@@ -440,11 +441,23 @@ function resolveList(nodes: RootContent[], ctx: VariantContext): RootContent[] {
         out.push(...tabsFromDirective(node, ctx));
       } else if (node.name === "only") {
         out.push(...resolveOnly(node, ctx));
+      } else if (node.name === "copyable") {
+        // Not a variant: a wrapper tables.ts looks for. Kept as a `div` so
+        // the tables inside it still know they were marked.
+        node.data = {
+          hName: "div",
+          hProperties: { className: [COPYABLE_CLASS] },
+        };
+        node.children = resolveChildren(
+          node.children as RootContent[],
+          ctx,
+        ) as typeof node.children;
+        out.push(node);
       } else {
         fail(
           ctx,
           node,
-          `unknown directive :::${node.name} — this compiler knows :::tabs and :::only`,
+          `unknown directive :::${node.name} — this compiler knows :::tabs, :::only and :::copyable`,
         );
       }
       continue;
