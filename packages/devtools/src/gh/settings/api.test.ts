@@ -56,8 +56,10 @@ const fake = vi.hoisted(() => {
         end: (value?: unknown) => {
           call.written = value;
           queueMicrotask(() => {
-            if (state.spawnExit.stdout) onStdout?.(Buffer.from(state.spawnExit.stdout));
-            if (state.spawnExit.stderr) onStderr?.(Buffer.from(state.spawnExit.stderr));
+            if (state.spawnExit.stdout)
+              onStdout?.(Buffer.from(state.spawnExit.stdout));
+            if (state.spawnExit.stderr)
+              onStderr?.(Buffer.from(state.spawnExit.stderr));
             handlers.get("close")?.(state.spawnExit.code);
           });
         },
@@ -100,14 +102,17 @@ const repo = { owner: "DevDogsUGA", repo: "DevDogsUGA" };
 describe("reads", () => {
   it("gets the repo, including security_and_analysis", async () => {
     fake.state.execResult = {
-      stdout: '{"private":false,"security_and_analysis":{"secret_scanning":{"status":"enabled"}}}',
+      stdout:
+        '{"private":false,"security_and_analysis":{"secret_scanning":{"status":"enabled"}}}',
     };
     const result = await getRepo(repo);
     expect(fake.state.execCalls.at(-1)!.args).toEqual([
       "api",
       "repos/DevDogsUGA/DevDogsUGA",
     ]);
-    expect(result.security_and_analysis?.secret_scanning?.status).toBe("enabled");
+    expect(result.security_and_analysis?.secret_scanning?.status).toBe(
+      "enabled",
+    );
   });
 
   it("reads vulnerability-alerts as enabled on a 204 (no error thrown)", async () => {
@@ -116,18 +121,25 @@ describe("reads", () => {
   });
 
   it("reads vulnerability-alerts as disabled on a 404", async () => {
-    fake.state.execResult = Object.assign(new Error("gone"), { stderr: "HTTP 404 Not Found" });
+    fake.state.execResult = Object.assign(new Error("gone"), {
+      stderr: "HTTP 404 Not Found",
+    });
     await expect(getVulnerabilityAlertsEnabled(repo)).resolves.toBe(false);
   });
 
   it("rethrows a non-404 failure from vulnerability-alerts as GhSettingsError", async () => {
-    fake.state.execResult = Object.assign(new Error("nope"), { stderr: "HTTP 403 Forbidden" });
-    await expect(getVulnerabilityAlertsEnabled(repo)).rejects.toBeInstanceOf(GhSettingsError);
+    fake.state.execResult = Object.assign(new Error("nope"), {
+      stderr: "HTTP 403 Forbidden",
+    });
+    await expect(getVulnerabilityAlertsEnabled(repo)).rejects.toBeInstanceOf(
+      GhSettingsError,
+    );
   });
 
   it("gets actions permissions, sha_pinning_required included", async () => {
     fake.state.execResult = {
-      stdout: '{"enabled":true,"allowed_actions":"selected","sha_pinning_required":true}',
+      stdout:
+        '{"enabled":true,"allowed_actions":"selected","sha_pinning_required":true}',
     };
     const result = await getActionsPermissions(repo);
     expect(fake.state.execCalls.at(-1)!.args).toEqual([
@@ -139,7 +151,8 @@ describe("reads", () => {
 
   it("reads selected-actions as the empty allowlist on a 409 — allowed_actions isn't 'selected' live", async () => {
     fake.state.execResult = Object.assign(new Error("nope"), {
-      stderr: "gh: All actions and workflows are allowed on this repository (Conflict)",
+      stderr:
+        "gh: All actions and workflows are allowed on this repository (Conflict)",
     });
     await expect(getSelectedActions(repo)).resolves.toEqual({
       github_owned_allowed: false,
@@ -149,18 +162,28 @@ describe("reads", () => {
   });
 
   it("rethrows a non-409 failure from getSelectedActions", async () => {
-    fake.state.execResult = Object.assign(new Error("nope"), { stderr: "HTTP 500" });
-    await expect(getSelectedActions(repo)).rejects.toBeInstanceOf(GhSettingsError);
+    fake.state.execResult = Object.assign(new Error("nope"), {
+      stderr: "HTTP 500",
+    });
+    await expect(getSelectedActions(repo)).rejects.toBeInstanceOf(
+      GhSettingsError,
+    );
   });
 
   it("returns null from getEnvironment on a 404, rather than throwing", async () => {
-    fake.state.execResult = Object.assign(new Error("gone"), { stderr: "HTTP 404 Not Found" });
+    fake.state.execResult = Object.assign(new Error("gone"), {
+      stderr: "HTTP 404 Not Found",
+    });
     await expect(getEnvironment(repo, "production")).resolves.toBeNull();
   });
 
   it("rethrows a non-404 failure from getEnvironment", async () => {
-    fake.state.execResult = Object.assign(new Error("nope"), { stderr: "HTTP 500" });
-    await expect(getEnvironment(repo, "production")).rejects.toBeInstanceOf(GhSettingsError);
+    fake.state.execResult = Object.assign(new Error("nope"), {
+      stderr: "HTTP 500",
+    });
+    await expect(getEnvironment(repo, "production")).rejects.toBeInstanceOf(
+      GhSettingsError,
+    );
   });
 
   it("gets an environment's deployment branch policies, defaulting to []", async () => {
@@ -176,7 +199,9 @@ describe("reads", () => {
   });
 
   it("wraps a failed read in GhSettingsError", async () => {
-    fake.state.execResult = Object.assign(new Error("boom"), { stderr: "HTTP 500" });
+    fake.state.execResult = Object.assign(new Error("boom"), {
+      stderr: "HTTP 500",
+    });
     await expect(getRepo(repo)).rejects.toBeInstanceOf(GhSettingsError);
   });
 });
@@ -184,7 +209,9 @@ describe("reads", () => {
 describe("writes", () => {
   it("PATCHes security_and_analysis, nesting the given fields", async () => {
     fake.state.spawnExit = { code: 0, stdout: "{}", stderr: "" };
-    await patchSecurityAndAnalysis(repo, { secret_scanning: { status: "enabled" } });
+    await patchSecurityAndAnalysis(repo, {
+      secret_scanning: { status: "enabled" },
+    });
     const call = fake.state.spawnCalls.at(-1)!;
     expect(call.args).toEqual([
       "api",
@@ -273,7 +300,11 @@ describe("writes", () => {
   });
 
   it("rejects with GhSettingsError on a non-zero exit", async () => {
-    fake.state.spawnExit = { code: 1, stdout: "", stderr: "HTTP 403 Forbidden" };
+    fake.state.spawnExit = {
+      code: 1,
+      stdout: "",
+      stderr: "HTTP 403 Forbidden",
+    };
     await expect(
       setActionsPermissions(repo, { enabled: true }),
     ).rejects.toBeInstanceOf(GhSettingsError);

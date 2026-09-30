@@ -43,7 +43,8 @@ export async function resolveVaultTarget(
   given: string | undefined,
   message: string,
 ): Promise<VaultTarget | null> {
-  const { ENV_TARGETS, VAULT_TARGETS, isEnvTarget, isVaultTarget } = await loadEnv();
+  const { ENV_TARGETS, VAULT_TARGETS, isEnvTarget, isVaultTarget } =
+    await loadEnv();
   if (given !== undefined) {
     if (isVaultTarget(given)) return given;
 

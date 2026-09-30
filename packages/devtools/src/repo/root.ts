@@ -49,7 +49,9 @@ function looksLikeRepoRoot(dir: string): boolean {
  * the throwing convenience most callers want; this is exported for callers
  * (like `setup`) that need to know without failing.
  */
-export function discoverRepoRoot(startDir: string = process.cwd()): string | null {
+export function discoverRepoRoot(
+  startDir: string = process.cwd(),
+): string | null {
   let dir = startDir;
   for (;;) {
     if (looksLikeRepoRoot(dir)) return dir;

@@ -113,7 +113,8 @@ export function discoverWorkspacePackages(
     const globbed = /^([^*]+)\/\*$/.exec(glob);
     if (globbed !== null) {
       const parent = path.join(repoRoot, globbed[1]!);
-      if (!fs.statSync(parent, { throwIfNoEntry: false })?.isDirectory()) continue;
+      if (!fs.statSync(parent, { throwIfNoEntry: false })?.isDirectory())
+        continue;
 
       for (const entry of fs.readdirSync(parent, { withFileTypes: true })) {
         if (!entry.isDirectory()) continue;
@@ -146,7 +147,8 @@ export function appPackagesBySlug(
 ): Map<string, WorkspacePackage> {
   const byApp = new Map<string, WorkspacePackage>();
   for (const pkg of packages) {
-    if (pkg.dir.startsWith("apps/")) byApp.set(pkg.dir.slice("apps/".length), pkg);
+    if (pkg.dir.startsWith("apps/"))
+      byApp.set(pkg.dir.slice("apps/".length), pkg);
   }
   return byApp;
 }

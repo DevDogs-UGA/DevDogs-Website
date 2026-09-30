@@ -49,7 +49,10 @@ async function pickApp(): Promise<string> {
   return unwrap(
     await select({
       message: "Whose schema is this migration for?",
-      options: Object.keys(APP_SCHEMAS).map((value) => ({ value, label: value })),
+      options: Object.keys(APP_SCHEMAS).map((value) => ({
+        value,
+        label: value,
+      })),
     }),
   );
 }

@@ -81,7 +81,9 @@ export async function exchangeCode({
 
   if (response.status === 429) {
     const retryAfterHeader = response.headers.get("retry-after");
-    const retryAfterSeconds = retryAfterHeader ? Number(retryAfterHeader) : undefined;
+    const retryAfterSeconds = retryAfterHeader
+      ? Number(retryAfterHeader)
+      : undefined;
     throw new ExchangeError(
       "rate_limited",
       `${url} is rate-limited` +
@@ -103,14 +105,24 @@ export async function exchangeCode({
   }
 
   if (!response.ok) {
-    const errBody = (body ?? {}) as { error?: unknown; error_description?: unknown };
+    const errBody = (body ?? {}) as {
+      error?: unknown;
+      error_description?: unknown;
+    };
     const kind: ExchangeErrorKind =
       errBody.error === "invalid_grant" ? "invalid_grant" : "invalid_request";
     const description =
-      typeof errBody.error_description === "string" ? errBody.error_description : undefined;
+      typeof errBody.error_description === "string"
+        ? errBody.error_description
+        : undefined;
     const code =
-      typeof errBody.error === "string" ? errBody.error : `HTTP ${response.status}`;
-    throw new ExchangeError(kind, description ? `${code}: ${description}` : code);
+      typeof errBody.error === "string"
+        ? errBody.error
+        : `HTTP ${response.status}`;
+    throw new ExchangeError(
+      kind,
+      description ? `${code}: ${description}` : code,
+    );
   }
 
   const result = (body ?? {}) as {

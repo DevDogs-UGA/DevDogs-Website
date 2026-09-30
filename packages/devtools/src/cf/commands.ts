@@ -88,7 +88,8 @@ export async function runCf(argv: readonly string[]): Promise<number> {
     }
 
     const envLoad = await loadEnvLoad();
-    let loaded: Awaited<ReturnType<typeof EnvLoadModule.loadEnvironment>> | undefined;
+    let loaded:
+      Awaited<ReturnType<typeof EnvLoadModule.loadEnvironment>> | undefined;
     if (tier !== "development") {
       try {
         // This process runs under `with-env` (development), so process.env

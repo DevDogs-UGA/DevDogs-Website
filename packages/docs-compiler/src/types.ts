@@ -16,10 +16,7 @@ export interface DocHeading {
  * runbooks, OAuth/GitHub App setup, CI, the docs system itself.
  */
 export type DocsSection =
-  | "getting-started"
-  | "guides"
-  | "infrastructure"
-  | "reference";
+  "getting-started" | "guides" | "infrastructure" | "reference";
 
 /**
  * A folder's own settings, from an `index.md` that has frontmatter and no

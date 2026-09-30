@@ -8,33 +8,46 @@
 // `--var` (wrangler dev rewrites every request to the routed hostname, so
 // the request itself can't say it's local). It's never in wrangler.jsonc or
 // set as a secret.
-import { createRemoteJWKSet, jwtVerify } from 'jose'
+import { createRemoteJWKSet, jwtVerify } from "jose";
 
-let keys: { team: string, set: ReturnType<typeof createRemoteJWKSet> } | undefined
+let keys:
+  { team: string; set: ReturnType<typeof createRemoteJWKSet> } | undefined;
 
 function keysFor(team: string) {
   if (keys?.team !== team) {
-    keys = { team, set: createRemoteJWKSet(new URL(`https://${team}/cdn-cgi/access/certs`)) }
+    keys = {
+      team,
+      set: createRemoteJWKSet(new URL(`https://${team}/cdn-cgi/access/certs`)),
+    };
   }
-  return keys.set
+  return keys.set;
 }
 
 // undefined when the request may go on, otherwise the response refusing it.
-export async function checkAccess(request: Request, env: Env): Promise<Response | undefined> {
-  if (env.ACCESS_LOCAL_DEV === 'true') return undefined
+export async function checkAccess(
+  request: Request,
+  env: Env,
+): Promise<Response | undefined> {
+  if (env.ACCESS_LOCAL_DEV === "true") return undefined;
 
-  const team = env.ACCESS_TEAM_DOMAIN
-  const aud = env.ACCESS_AUD
+  const team = env.ACCESS_TEAM_DOMAIN;
+  const aud = env.ACCESS_AUD;
   if (!team || !aud) {
-    return new Response('Cloudflare Access is not configured for this Worker (ACCESS_TEAM_DOMAIN, ACCESS_AUD).', { status: 503 })
+    return new Response(
+      "Cloudflare Access is not configured for this Worker (ACCESS_TEAM_DOMAIN, ACCESS_AUD).",
+      { status: 503 },
+    );
   }
-  const token = request.headers.get('Cf-Access-Jwt-Assertion')
-  if (!token) return new Response('Sign in through Cloudflare Access.', { status: 403 })
+  const token = request.headers.get("Cf-Access-Jwt-Assertion");
+  if (!token)
+    return new Response("Sign in through Cloudflare Access.", { status: 403 });
   try {
-    await jwtVerify(token, keysFor(team), { issuer: `https://${team}`, audience: aud })
-    return undefined
-  }
-  catch {
-    return new Response('Invalid Cloudflare Access token.', { status: 403 })
+    await jwtVerify(token, keysFor(team), {
+      issuer: `https://${team}`,
+      audience: aud,
+    });
+    return undefined;
+  } catch {
+    return new Response("Invalid Cloudflare Access token.", { status: 403 });
   }
 }

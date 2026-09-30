@@ -83,7 +83,14 @@ import { loadEnv } from "./repo/peers.js";
 import { setExplicitAccessToken } from "./bws/client.js";
 import { positionals } from "./args.js";
 import { resolveVaultTarget } from "./pick.js";
-import { bail, errorMessage, explain, explainError, renderChecks, unwrap } from "./ui.js";
+import {
+  bail,
+  errorMessage,
+  explain,
+  explainError,
+  renderChecks,
+  unwrap,
+} from "./ui.js";
 import { helpPath, renderHelp } from "./help.js";
 import { subcommandList, subcommandNames } from "./commands.js";
 import { bareGroupStartPath, runMenu } from "./menu.js";
@@ -715,7 +722,9 @@ async function runDbCommand(rest: string[]): Promise<void> {
   }
 
   if (sub === "types") {
-    const connection = await resolveDbConnection({ label: "devtools db types" });
+    const connection = await resolveDbConnection({
+      label: "devtools db types",
+    });
     if (!connection) {
       process.exitCode = 1;
       return;

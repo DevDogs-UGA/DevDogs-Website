@@ -16,10 +16,7 @@ describe("loopback listener", () => {
   it("resolves with code and state on a successful callback", async () => {
     const listener = await start();
     try {
-      const response = await hit(
-        listener.port,
-        "?code=abc123&state=xyz789",
-      );
+      const response = await hit(listener.port, "?code=abc123&state=xyz789");
       expect(response.status).toBe(200);
       expect(await response.text()).toContain("Connected");
       await expect(listener.result).resolves.toEqual({
@@ -127,8 +124,8 @@ describe("verifyState", () => {
   });
 
   it("throws StateMismatchError when state does not match", () => {
-    expect(() => verifyState("expected", { code: "abc", state: "different" })).toThrow(
-      StateMismatchError,
-    );
+    expect(() =>
+      verifyState("expected", { code: "abc", state: "different" }),
+    ).toThrow(StateMismatchError);
   });
 });

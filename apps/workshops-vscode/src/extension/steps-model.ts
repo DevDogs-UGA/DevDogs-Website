@@ -25,16 +25,29 @@ export interface StepsModel {
  * @param line    the whole line, oldest first, `00-start` markers included
  * @param current the newest step already in their history (null: none)
  */
-export function buildStepsModel(line: readonly Step[], current: Step | null): StepsModel {
+export function buildStepsModel(
+  line: readonly Step[],
+  current: Step | null,
+): StepsModel {
   const steps = line.filter((step) => step.number > 0);
-  const currentIndex = current ? steps.findIndex((step) => step.tag === current.tag) : -1;
+  const currentIndex = current
+    ? steps.findIndex((step) => step.tag === current.tag)
+    : -1;
   const rows = steps.map<StepRow>((step, index) => ({
     step,
-    state: index < currentIndex ? "done" : index === currentIndex ? "current" : "todo",
+    state:
+      index < currentIndex
+        ? "done"
+        : index === currentIndex
+          ? "current"
+          : "todo",
   }));
   const position = currentIndex + 1;
   const total = steps.length;
-  const header = position > 0 ? `Step ${position} of ${total}` : `Not started · ${total} steps`;
+  const header =
+    position > 0
+      ? `Step ${position} of ${total}`
+      : `Not started · ${total} steps`;
   return { rows, position, total, header };
 }
 

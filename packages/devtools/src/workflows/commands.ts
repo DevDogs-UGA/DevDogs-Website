@@ -803,7 +803,8 @@ export async function runWorkflowsRun(
   let triggerEnv: NodeJS.ProcessEnv | undefined;
   if (tier !== "development") {
     try {
-      triggerEnv = (await envLoad.loadEnvironment(tier, { override: true })).env;
+      triggerEnv = (await envLoad.loadEnvironment(tier, { override: true }))
+        .env;
     } catch (err) {
       if (err instanceof envLoad.MissingEnvFileError) {
         process.stderr.write(`devtools workflows run: ${err.message}\n`);

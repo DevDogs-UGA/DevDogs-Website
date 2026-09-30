@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,11 +31,20 @@ import { sh } from "./test-repo.js";
  */
 
 const here = dirname(fileURLToPath(import.meta.url));
-const submodule = (name: string) => join(here, "../../../slides/workshops", name);
+const submodule = (name: string) =>
+  join(here, "../../../slides/workshops", name);
 
 const REPOS = [
-  { name: "web", path: process.env["WORKSHOPS_WEB_REPO"] ?? submodule("web"), start: /^01-nextjs-intro$/ },
-  { name: "mobile", path: process.env["WORKSHOPS_MOBILE_REPO"] ?? submodule("mobile"), start: /^01-flutter-intro$/ },
+  {
+    name: "web",
+    path: process.env["WORKSHOPS_WEB_REPO"] ?? submodule("web"),
+    start: /^01-nextjs-intro$/,
+  },
+  {
+    name: "mobile",
+    path: process.env["WORKSHOPS_MOBILE_REPO"] ?? submodule("mobile"),
+    start: /^01-flutter-intro$/,
+  },
 ];
 const WORKSHOP = "02-supabase";
 
@@ -44,8 +60,23 @@ function prepare(source: string, start: RegExp): string | null {
   tmpDirs.push(dir);
   try {
     sh(dir, "init", "-q");
-    sh(dir, "fetch", "-q", source, "+refs/tags/*:refs/tags/*", "+refs/remotes/origin/*:refs/remotes/origin/*", "+refs/heads/*:refs/remotes/local/*");
-    const tags = sh(dir, "for-each-ref", "--format=%(refname:lstrip=2)", "refs/tags/").split("\n").filter(Boolean);
+    sh(
+      dir,
+      "fetch",
+      "-q",
+      source,
+      "+refs/tags/*:refs/tags/*",
+      "+refs/remotes/origin/*:refs/remotes/origin/*",
+      "+refs/heads/*:refs/remotes/local/*",
+    );
+    const tags = sh(
+      dir,
+      "for-each-ref",
+      "--format=%(refname:lstrip=2)",
+      "refs/tags/",
+    )
+      .split("\n")
+      .filter(Boolean);
     for (const tag of tags) {
       const legacy = /^demo\/(\d\d-.+)$/.exec(tag);
       if (legacy && !tags.includes(`${WORKSHOP}/${legacy[1]}`)) {
@@ -53,9 +84,24 @@ function prepare(source: string, start: RegExp): string | null {
       }
     }
     // The first workshop's branch, wherever the source keeps it.
-    const branches = sh(dir, "for-each-ref", "--format=%(refname)", "refs/remotes/").split("\n").filter(Boolean);
-    const startBranch = branches.find((ref) => start.test(ref.replace(/^refs\/remotes\/(origin|local)\//, "")));
-    const hasSteps = sh(dir, "for-each-ref", "--format=%(refname)", `refs/tags/${WORKSHOP}/`).trim() !== "";
+    const branches = sh(
+      dir,
+      "for-each-ref",
+      "--format=%(refname)",
+      "refs/remotes/",
+    )
+      .split("\n")
+      .filter(Boolean);
+    const startBranch = branches.find((ref) =>
+      start.test(ref.replace(/^refs\/remotes\/(origin|local)\//, "")),
+    );
+    const hasSteps =
+      sh(
+        dir,
+        "for-each-ref",
+        "--format=%(refname)",
+        `refs/tags/${WORKSHOP}/`,
+      ).trim() !== "";
     if (!hasSteps) return null;
     if (!tags.includes(`${WORKSHOP}/00-start`)) {
       if (!startBranch) return null;
@@ -90,7 +136,13 @@ interface Tally {
   conflicted: number;
 }
 
-async function checkRange(dir: string, line: Step[], base: Step, target: Step, tally: Record<Variant, Tally>) {
+async function checkRange(
+  dir: string,
+  line: Step[],
+  base: Step,
+  target: Step,
+  tally: Record<Variant, Tally>,
+) {
   const plan = await planReview(dir, line, base, target);
 
   for (const variant of ["pristine", "append", "prepend"] as const) {
@@ -104,7 +156,12 @@ async function checkRange(dir: string, line: Step[], base: Step, target: Step, t
         const path = join(dir, file.oldPath ?? file.path);
         if (!existsSync(path)) continue;
         const text = readFileSync(path, "utf8");
-        writeFileSync(path, variant === "append" ? `${text}\n// local edit\n` : `// local edit\n${text}`);
+        writeFileSync(
+          path,
+          variant === "append"
+            ? `${text}\n// local edit\n`
+            : `// local edit\n${text}`,
+        );
         edited++;
       }
       writeFileSync(join(dir, "LOCAL-NOTES.md"), "my notes\n");
@@ -117,7 +174,15 @@ async function checkRange(dir: string, line: Step[], base: Step, target: Step, t
     // git's answer.
     let expected: Map<string, string>;
     try {
-      sh(dir, "merge", "-q", "--no-ff", "--no-edit", "--end-of-options", `refs/tags/${target.tag}`);
+      sh(
+        dir,
+        "merge",
+        "-q",
+        "--no-ff",
+        "--no-edit",
+        "--end-of-options",
+        `refs/tags/${target.tag}`,
+      );
       expected = indexMap(dir);
     } catch {
       sh(dir, "merge", "--abort");
@@ -131,17 +196,24 @@ async function checkRange(dir: string, line: Step[], base: Step, target: Step, t
       const merge = await loadFileMerge(dir, plan, file);
       if (merge === null) throw new Error(`${file.path} unexpectedly binary`);
       const result = acceptAll(merge);
-      if (file.oldPath && file.oldPath !== file.path) rmSync(join(dir, file.oldPath), { force: true });
+      if (file.oldPath && file.oldPath !== file.path)
+        rmSync(join(dir, file.oldPath), { force: true });
       if (result.exists) {
         mkdirSync(dirname(join(dir, file.path)), { recursive: true });
         writeFileSync(join(dir, file.path), result.text);
       } else rmSync(join(dir, file.path), { force: true });
     }
     for (const file of plan.fromTarget) {
-      if (file.oldPath && file.oldPath !== file.path) rmSync(join(dir, file.oldPath), { force: true });
-      if (file.status === "deleted") rmSync(join(dir, file.path), { force: true });
+      if (file.oldPath && file.oldPath !== file.path)
+        rmSync(join(dir, file.oldPath), { force: true });
+      if (file.status === "deleted")
+        rmSync(join(dir, file.path), { force: true });
       else {
-        const blob = sh(dir, "rev-parse", `refs/tags/${target.tag}:${file.path}`).trim();
+        const blob = sh(
+          dir,
+          "rev-parse",
+          `refs/tags/${target.tag}:${file.path}`,
+        ).trim();
         mkdirSync(dirname(join(dir, file.path)), { recursive: true });
         writeFileSync(join(dir, file.path), sh(dir, "cat-file", "blob", blob));
       }
@@ -150,7 +222,9 @@ async function checkRange(dir: string, line: Step[], base: Step, target: Step, t
     sh(dir, "add", "-A", "-f");
     const actual = indexMap(dir);
 
-    const differing = [...new Set([...expected.keys(), ...actual.keys()])].filter((p) => expected.get(p) !== actual.get(p));
+    const differing = [
+      ...new Set([...expected.keys(), ...actual.keys()]),
+    ].filter((p) => expected.get(p) !== actual.get(p));
     expect(differing, `${variant}: ${base.tag} -> ${target.tag}`).toEqual([]);
     tally[variant].compared++;
   }
@@ -158,26 +232,29 @@ async function checkRange(dir: string, line: Step[], base: Step, target: Step, t
 
 for (const repo of REPOS) {
   const dir = prepare(repo.path, repo.start);
-  describe.skipIf(dir === null)(`accept-all equals git merge: ${repo.name}`, () => {
-    it("covers every base < target pair", async () => {
-      const line = await readStepLine(dir!, WORKSHOP);
-      expect(line.length).toBeGreaterThan(2);
-      const tally: Record<Variant, Tally> = {
-        pristine: { compared: 0, conflicted: 0 },
-        append: { compared: 0, conflicted: 0 },
-        prepend: { compared: 0, conflicted: 0 },
-      };
-      let pairs = 0;
-      for (let b = 0; b < line.length; b++) {
-        for (let t = b + 1; t < line.length; t++) {
-          await checkRange(dir!, line, line[b]!, line[t]!, tally);
-          pairs++;
+  describe.skipIf(dir === null)(
+    `accept-all equals git merge: ${repo.name}`,
+    () => {
+      it("covers every base < target pair", async () => {
+        const line = await readStepLine(dir!, WORKSHOP);
+        expect(line.length).toBeGreaterThan(2);
+        const tally: Record<Variant, Tally> = {
+          pristine: { compared: 0, conflicted: 0 },
+          append: { compared: 0, conflicted: 0 },
+          prepend: { compared: 0, conflicted: 0 },
+        };
+        let pairs = 0;
+        for (let b = 0; b < line.length; b++) {
+          for (let t = b + 1; t < line.length; t++) {
+            await checkRange(dir!, line, line[b]!, line[t]!, tally);
+            pairs++;
+          }
         }
-      }
-      console.info(`${repo.name}: ${pairs} ranges`, JSON.stringify(tally));
-      expect(pairs).toBe((line.length * (line.length - 1)) / 2);
-      // Their tree at the base can't conflict, so every pair was compared.
-      expect(tally.pristine).toEqual({ compared: pairs, conflicted: 0 });
-    });
-  });
+        console.info(`${repo.name}: ${pairs} ranges`, JSON.stringify(tally));
+        expect(pairs).toBe((line.length * (line.length - 1)) / 2);
+        // Their tree at the base can't conflict, so every pair was compared.
+        expect(tally.pristine).toEqual({ compared: pairs, conflicted: 0 });
+      });
+    },
+  );
 }

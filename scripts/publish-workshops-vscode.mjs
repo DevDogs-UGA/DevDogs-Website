@@ -44,7 +44,9 @@ const TAG_PREFIX = "workshops-vscode@";
 export function patchBump(version) {
   const parts = version.split(".");
   if (parts.length !== 3 || parts.some((p) => !/^\d+$/.test(p))) {
-    throw new Error(`Refusing to patch-bump non-plain-semver version "${version}".`);
+    throw new Error(
+      `Refusing to patch-bump non-plain-semver version "${version}".`,
+    );
   }
   return `${parts[0]}.${parts[1]}.${Number(parts[2]) + 1}`;
 }
@@ -58,30 +60,52 @@ export function patchBump(version) {
 export function hashEntries(entries) {
   const lines = [];
   for (const [path, bytes] of entries) {
-    if (path === "extension.vsixmanifest" || path === "[Content_Types].xml") continue;
+    if (path === "extension.vsixmanifest" || path === "[Content_Types].xml")
+      continue;
     let content = bytes;
     if (path === "extension/package.json") {
-      content = Buffer.from(JSON.stringify({ ...JSON.parse(bytes.toString("utf8")), version: "0.0.0" }));
+      content = Buffer.from(
+        JSON.stringify({
+          ...JSON.parse(bytes.toString("utf8")),
+          version: "0.0.0",
+        }),
+      );
     }
-    lines.push(`${path}\0${createHash("sha256").update(content).digest("hex")}`);
+    lines.push(
+      `${path}\0${createHash("sha256").update(content).digest("hex")}`,
+    );
   }
   return createHash("sha256").update(lines.sort().join("\n")).digest("hex");
 }
 
 function readVsix(file) {
-  const names = execFileSync("unzip", ["-Z1", file], { encoding: "utf8" }).split("\n").filter((n) => n && !n.endsWith("/"));
-  return names.map((name) => [name, execFileSync("unzip", ["-p", file, name.replace(/[[\]*?\\]/g, "\\$&")], { maxBuffer: 256 * 1024 * 1024 })]);
+  const names = execFileSync("unzip", ["-Z1", file], { encoding: "utf8" })
+    .split("\n")
+    .filter((n) => n && !n.endsWith("/"));
+  return names.map((name) => [
+    name,
+    execFileSync("unzip", ["-p", file, name.replace(/[[\]*?\\]/g, "\\$&")], {
+      maxBuffer: 256 * 1024 * 1024,
+    }),
+  ]);
 }
 
-const run = (cmd, args, options = {}) => execFileSync(cmd, args, { cwd: repoRoot, encoding: "utf8", ...options });
+const run = (cmd, args, options = {}) =>
+  execFileSync(cmd, args, { cwd: repoRoot, encoding: "utf8", ...options });
 const git = (...args) => run("git", args).trim();
 
 /** The highest `workshops-vscode@X.Y.Z` tag and the hash in its annotation, or null. */
 function lastRelease() {
-  const tag = git("tag", "--list", `${TAG_PREFIX}*`, "--sort=-v:refname").split("\n").find((t) => /^workshops-vscode@\d+\.\d+\.\d+$/.test(t));
+  const tag = git("tag", "--list", `${TAG_PREFIX}*`, "--sort=-v:refname")
+    .split("\n")
+    .find((t) => /^workshops-vscode@\d+\.\d+\.\d+$/.test(t));
   if (!tag) return null;
   const message = git("tag", "--list", tag, "--format=%(contents)");
-  return { tag, version: tag.slice(TAG_PREFIX.length), hash: /^content-hash: ([0-9a-f]{64})$/m.exec(message)?.[1] ?? null };
+  return {
+    tag,
+    version: tag.slice(TAG_PREFIX.length),
+    hash: /^content-hash: ([0-9a-f]{64})$/m.exec(message)?.[1] ?? null,
+  };
 }
 
 function writeVersion(version) {
@@ -93,14 +117,29 @@ function writeVersion(version) {
 function pack(version, dir) {
   writeVersion(version);
   const out = join(dir, `workshops-${version}.vsix`);
-  run("pnpm", ["--filter", "workshops", "exec", "vsce", "package", "--no-dependencies", "--out", out], { stdio: ["ignore", "inherit", "inherit"] });
+  run(
+    "pnpm",
+    [
+      "--filter",
+      "workshops",
+      "exec",
+      "vsce",
+      "package",
+      "--no-dependencies",
+      "--out",
+      out,
+    ],
+    { stdio: ["ignore", "inherit", "inherit"] },
+  );
   return out;
 }
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
   if (!dryRun && !process.env.VSCE_PAT) {
-    console.log("::notice title=Marketplace publish skipped::VSCE_PAT is not set, so the extension was not published.");
+    console.log(
+      "::notice title=Marketplace publish skipped::VSCE_PAT is not set, so the extension was not published.",
+    );
     return;
   }
 
@@ -110,7 +149,11 @@ async function main() {
   const committed = JSON.parse(readFileSync(pkgPath, "utf8")).version;
   try {
     // The bundle doesn't contain its own version, so it is built once.
-    run("pnpm", ["--filter", "workshops", "exec", "node", "esbuild.mjs", "--minify"], { stdio: ["ignore", "inherit", "inherit"] });
+    run(
+      "pnpm",
+      ["--filter", "workshops", "exec", "node", "esbuild.mjs", "--minify"],
+      { stdio: ["ignore", "inherit", "inherit"] },
+    );
 
     const baseline = pack(last?.version ?? committed, dir);
     const hash = hashEntries(readVsix(baseline));
@@ -123,29 +166,66 @@ async function main() {
     let version = last ? patchBump(last.version) : committed;
     for (let attempt = 1; ; attempt++) {
       const vsix = pack(version, dir);
-      console.log(`workshops ${last?.version ?? "(unpublished)"} -> ${version}`);
+      console.log(
+        `workshops ${last?.version ?? "(unpublished)"} -> ${version}`,
+      );
       if (dryRun) {
-        console.log(`[dry run] would publish ${vsix}, then tag ${TAG_PREFIX}${version}`);
+        console.log(
+          `[dry run] would publish ${vsix}, then tag ${TAG_PREFIX}${version}`,
+        );
         return;
       }
       try {
         // VSCE_PAT is read from the environment by vsce.
-        run("pnpm", ["--filter", "workshops", "exec", "vsce", "publish", "--no-dependencies", "--packagePath", vsix], { stdio: ["ignore", "inherit", "pipe"] });
+        run(
+          "pnpm",
+          [
+            "--filter",
+            "workshops",
+            "exec",
+            "vsce",
+            "publish",
+            "--no-dependencies",
+            "--packagePath",
+            vsix,
+          ],
+          { stdio: ["ignore", "inherit", "pipe"] },
+        );
         break;
       } catch (error) {
         const stderr = String(error.stderr ?? "");
         process.stderr.write(stderr);
         // The Marketplace already has this version (a run whose tag never landed).
-        if (!/already exists|version.*exists/i.test(stderr) || attempt >= 5) throw error;
+        if (!/already exists|version.*exists/i.test(stderr) || attempt >= 5)
+          throw error;
         version = patchBump(version);
       }
     }
 
     const tag = `${TAG_PREFIX}${version}`;
-    git("tag", "-a", tag, "-m", `DevDogs Workshops ${version}\n\ncontent-hash: ${hash}`);
+    git(
+      "tag",
+      "-a",
+      tag,
+      "-m",
+      `DevDogs Workshops ${version}\n\ncontent-hash: ${hash}`,
+    );
     git("push", "origin", `refs/tags/${tag}`);
-    run("gh", ["release", "create", tag, "--verify-tag", "--title", tag, "--latest=false", "--notes",
-      `Marketplace: https://marketplace.visualstudio.com/items?itemName=devdogsuga.workshops\n\nContent hash: \`${hash}\``], { stdio: "inherit" });
+    run(
+      "gh",
+      [
+        "release",
+        "create",
+        tag,
+        "--verify-tag",
+        "--title",
+        tag,
+        "--latest=false",
+        "--notes",
+        `Marketplace: https://marketplace.visualstudio.com/items?itemName=devdogsuga.workshops\n\nContent hash: \`${hash}\``,
+      ],
+      { stdio: "inherit" },
+    );
     console.log(`Published ${tag}`);
   } finally {
     rmSync(dir, { recursive: true, force: true });

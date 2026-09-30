@@ -76,22 +76,21 @@ interface GroupDefinition {
   labels: Readonly<Record<string, string>>;
 }
 
-export const VARIANT_GROUPS: Readonly<Record<VariantGroup, GroupDefinition>> =
-  {
-    os: {
-      values: ["macos", "linux", "wsl", "windows"],
-      labels: {
-        macos: "macOS",
-        linux: "Linux",
-        wsl: "Windows (WSL2)",
-        windows: "Windows (native)",
-      },
+export const VARIANT_GROUPS: Readonly<Record<VariantGroup, GroupDefinition>> = {
+  os: {
+    values: ["macos", "linux", "wsl", "windows"],
+    labels: {
+      macos: "macOS",
+      linux: "Linux",
+      wsl: "Windows (WSL2)",
+      windows: "Windows (native)",
     },
-    supabase: {
-      values: ["hosted", "local"],
-      labels: { hosted: "Hosted", local: "Local (Docker)" },
-    },
-  };
+  },
+  supabase: {
+    values: ["hosted", "local"],
+    labels: { hosted: "Hosted", local: "Local (Docker)" },
+  },
+};
 
 /**
  * The platforms a project supports when its `index.md` does not say. Native
@@ -242,7 +241,10 @@ function renderTabs(
           dataValue: value,
         },
         children: [
-          { type: "text" as const, value: VARIANT_GROUPS[group].labels[value]! },
+          {
+            type: "text" as const,
+            value: VARIANT_GROUPS[group].labels[value]!,
+          },
         ],
       })),
     },
@@ -401,11 +403,10 @@ function restoreText(node: TextDirective): PhrasingContent[] {
     { type: "text", value: `:${node.name}` },
   ];
   if (node.children.length > 0) {
-    restored.push(
-      { type: "text", value: "[" },
-      ...node.children,
-      { type: "text", value: "]" },
-    );
+    restored.push({ type: "text", value: "[" }, ...node.children, {
+      type: "text",
+      value: "]",
+    });
   }
   return restored;
 }

@@ -16,11 +16,22 @@ import { isAbsolute, posix, relative, resolve, sep, win32 } from "node:path";
 export function resolveInside(root: string, file: string): string | null {
   if (file === "" || file.includes("\0")) return null;
   const unified = file.replace(/\\/g, "/");
-  if (posix.isAbsolute(unified) || win32.isAbsolute(unified) || isAbsolute(file)) return null;
+  if (
+    posix.isAbsolute(unified) ||
+    win32.isAbsolute(unified) ||
+    isAbsolute(file)
+  )
+    return null;
 
   const target = resolve(root, ...unified.split("/"));
   const rel = relative(resolve(root), target);
-  if (rel === "" || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) return null;
+  if (
+    rel === "" ||
+    rel === ".." ||
+    rel.startsWith(`..${sep}`) ||
+    isAbsolute(rel)
+  )
+    return null;
   if (rel.split(sep)[0] === ".git") return null;
   return target;
 }

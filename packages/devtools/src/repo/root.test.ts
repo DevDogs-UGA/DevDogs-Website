@@ -2,7 +2,11 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { discoverRepoRoot, findRepoRoot, resetRepoRootCacheForTests } from "./root.js";
+import {
+  discoverRepoRoot,
+  findRepoRoot,
+  resetRepoRootCacheForTests,
+} from "./root.js";
 
 let dir: string;
 const savedEnv = process.env.DEVTOOLS_TEST_REPO_ROOT;
@@ -44,14 +48,23 @@ describe("discoverRepoRoot", () => {
 
   it("does not match a pnpm-workspace.yaml whose package.json has the wrong name", () => {
     // e.g. a Backstage checkout — also a pnpm workspace, but not this one.
-    writeFileSync(join(dir, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
-    writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "backstage" }));
+    writeFileSync(
+      join(dir, "pnpm-workspace.yaml"),
+      "packages:\n  - packages/*\n",
+    );
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "backstage" }),
+    );
 
     expect(discoverRepoRoot(dir)).toBeNull();
   });
 
   it("does not match a directory with the right package.json name but no pnpm-workspace.yaml", () => {
-    writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "devdogs-monorepo" }));
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "devdogs-monorepo" }),
+    );
     expect(discoverRepoRoot(dir)).toBeNull();
   });
 });
@@ -62,7 +75,9 @@ describe("findRepoRoot", () => {
     const cwd = process.cwd;
     process.cwd = () => join(dir, "nested");
     try {
-      expect(() => findRepoRoot()).toThrow("run this from inside a DevDogsUGA clone");
+      expect(() => findRepoRoot()).toThrow(
+        "run this from inside a DevDogsUGA clone",
+      );
     } finally {
       process.cwd = cwd;
     }

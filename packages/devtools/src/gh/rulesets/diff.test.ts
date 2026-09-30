@@ -172,9 +172,15 @@ describe("idempotence", () => {
       name: "production",
       target: "branch",
       enforcement: "active",
-      conditions: { ref_name: { exclude: [], include: ["refs/heads/production"] } },
+      conditions: {
+        ref_name: { exclude: [], include: ["refs/heads/production"] },
+      },
       bypass_actors: [
-        { actor_id: actors.devopsTeamId, actor_type: "Team", bypass_mode: "pull_request" },
+        {
+          actor_id: actors.devopsTeamId,
+          actor_type: "Team",
+          bypass_mode: "pull_request",
+        },
       ],
       rules: [
         { type: "deletion" },
@@ -196,9 +202,13 @@ describe("idempotence", () => {
         } as unknown as LiveRuleset["rules"][number],
       ],
     };
-    const summaries: LiveRulesetSummary[] = [{ id: 1, name: "production", target: "branch" }];
+    const summaries: LiveRulesetSummary[] = [
+      { id: 1, name: "production", target: "branch" },
+    ];
 
-    const plan = planRulesets(summaries, new Map([[1, live]]), actors, [productionDesired]);
+    const plan = planRulesets(summaries, new Map([[1, live]]), actors, [
+      productionDesired,
+    ]);
 
     expect(plan.updates).toEqual([]);
     expect(plan.noops).toEqual([{ name: "production", id: 1 }]);
@@ -211,13 +221,23 @@ describe("idempotence", () => {
       ...mainDesired,
       rules: mainDesired.rules.map((rule) =>
         rule.type === "pull_request"
-          ? { ...rule, parameters: { ...rule.parameters, allowed_merge_methods: ["merge"] } }
+          ? {
+              ...rule,
+              parameters: {
+                ...rule.parameters,
+                allowed_merge_methods: ["merge"],
+              },
+            }
           : rule,
       ),
     };
-    const summaries: LiveRulesetSummary[] = [{ id: 1, name: "main", target: "branch" }];
+    const summaries: LiveRulesetSummary[] = [
+      { id: 1, name: "main", target: "branch" },
+    ];
 
-    const plan = planRulesets(summaries, new Map([[1, live]]), actors, [mainDesired]);
+    const plan = planRulesets(summaries, new Map([[1, live]]), actors, [
+      mainDesired,
+    ]);
 
     expect(plan.updates).toHaveLength(1);
   });
@@ -230,7 +250,9 @@ describe("idempotence", () => {
       rules: [...mainDesired.rules].reverse(),
       bypass_actors: [...mainDesired.bypass_actors].reverse(),
     };
-    const summaries: LiveRulesetSummary[] = [{ id: 1, name: "main", target: "branch" }];
+    const summaries: LiveRulesetSummary[] = [
+      { id: 1, name: "main", target: "branch" },
+    ];
     const details = new Map<number, LiveRuleset>([[1, reordered]]);
 
     const plan = planRulesets(summaries, details, actors, [mainDesired]);

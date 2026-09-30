@@ -11,7 +11,10 @@ function tempDir(): string {
 describe("defaultLabel", () => {
   it("prefers package.json's name", () => {
     const dir = tempDir();
-    writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "my-workshop-app" }));
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "my-workshop-app" }),
+    );
     expect(defaultLabel(dir)).toBe("my-workshop-app");
   });
 

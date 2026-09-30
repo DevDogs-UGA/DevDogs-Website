@@ -63,7 +63,9 @@ export async function diffTags(
   baseTag: string,
   targetTag: string,
 ): Promise<ReviewFile[]> {
-  return (await diffEntries(cwd, baseTag, targetTag)).map(({ binary: _b, ...file }) => file);
+  return (await diffEntries(cwd, baseTag, targetTag)).map(
+    ({ binary: _b, ...file }) => file,
+  );
 }
 
 async function diffEntries(
@@ -116,7 +118,12 @@ async function diffEntries(
     const path = fields[++i]!;
     const status: FileStatus =
       letter === "A" ? "added" : letter === "D" ? "deleted" : "modified";
-    entries.push({ path, oldPath: undefined, status, binary: binaries.has(path) });
+    entries.push({
+      path,
+      oldPath: undefined,
+      status,
+      binary: binaries.has(path),
+    });
   }
   return entries;
 }
@@ -134,7 +141,9 @@ export async function planReview(
   const baseIndex = line.findIndex((s) => s.tag === base.tag);
   const targetIndex = line.findIndex((s) => s.tag === target.tag);
   if (baseIndex < 0 || targetIndex < 0) {
-    throw new Error(`Step not in the line: ${baseIndex < 0 ? base.tag : target.tag}`);
+    throw new Error(
+      `Step not in the line: ${baseIndex < 0 ? base.tag : target.tag}`,
+    );
   }
   if (baseIndex >= targetIndex) {
     throw new Error(`${base.tag} is not before ${target.tag}`);
@@ -143,7 +152,11 @@ export async function planReview(
   const steps = line.slice(baseIndex + 1, targetIndex + 1);
   const files: ReviewFile[] = [];
   const fromTarget: TargetFile[] = [];
-  for (const { binary, ...file } of await diffEntries(cwd, base.tag, target.tag)) {
+  for (const { binary, ...file } of await diffEntries(
+    cwd,
+    base.tag,
+    target.tag,
+  )) {
     if (isLockfile(file.path)) fromTarget.push({ ...file, reason: "lockfile" });
     else if (binary) fromTarget.push({ ...file, reason: "binary" });
     else files.push(file);
@@ -163,7 +176,10 @@ export function looksBinary(bytes: Buffer): boolean {
   return bytes.subarray(0, 8000).includes(0);
 }
 
-async function readWorkingFile(root: string, path: string): Promise<Buffer | null> {
+async function readWorkingFile(
+  root: string,
+  path: string,
+): Promise<Buffer | null> {
   try {
     return await readFile(join(root, path));
   } catch (error) {
@@ -187,14 +203,27 @@ export async function loadFileMerge(
   plan: Pick<ReviewPlan, "base" | "target">,
   file: ReviewFile,
 ): Promise<FileMerge | null> {
-  const baseBytes = await showFile(root, tagRef(plan.base.tag), file.oldPath ?? file.path);
+  const baseBytes = await showFile(
+    root,
+    tagRef(plan.base.tag),
+    file.oldPath ?? file.path,
+  );
   const theirsBytes = await showFile(root, tagRef(plan.target.tag), file.path);
   let oursBytes = await readWorkingFile(root, file.path);
-  if (oursBytes === null && file.oldPath) oursBytes = await readWorkingFile(root, file.oldPath);
+  if (oursBytes === null && file.oldPath)
+    oursBytes = await readWorkingFile(root, file.oldPath);
 
-  if ([baseBytes, oursBytes, theirsBytes].some((b) => b !== null && looksBinary(b))) {
+  if (
+    [baseBytes, oursBytes, theirsBytes].some(
+      (b) => b !== null && looksBinary(b),
+    )
+  ) {
     return null;
   }
   const text = (b: Buffer | null) => (b === null ? null : b.toString("utf8"));
-  return mergeFile({ base: text(baseBytes), ours: text(oursBytes), theirs: text(theirsBytes) });
+  return mergeFile({
+    base: text(baseBytes),
+    ours: text(oursBytes),
+    theirs: text(theirsBytes),
+  });
 }

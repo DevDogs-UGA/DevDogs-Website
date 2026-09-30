@@ -34,7 +34,10 @@ if (process.argv.includes("--tests")) {
   // runs inside the editor. Not part of the .vsix.
   await build({
     ...options,
-    entryPoints: { run: "src/vscode-test/run.ts", suite: "src/vscode-test/suite.ts" },
+    entryPoints: {
+      run: "src/vscode-test/run.ts",
+      suite: "src/vscode-test/suite.ts",
+    },
     outdir: "dist-test",
     outfile: undefined,
     sourcemap: true,

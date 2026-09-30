@@ -12,13 +12,13 @@ deleted from this package rather than left broken.
 A later review (the "Wave 2 gaps" pass) went through all 12 and gave each one
 a final home:
 
-* **7 were unit-testing devtools' OWN internals**, not DevDogsUGA's content —
+- **7 were unit-testing devtools' OWN internals**, not DevDogsUGA's content —
   `cron/discovery.test.ts`, `env/commands.target.test.ts`,
   `env/commands.test.ts`, `env/example.test.ts`, `env/selection.test.ts`,
   `env/commands.audit.test.ts`, `gh/environments.test.ts`. **Restored into
   this package**, adapted to run against the committed contract-test fixture
   (`test/fixture-repo/`, extended with a `test/fixture-repo/packages/
-  demo-registry/` manifest — see that file's own header) instead of
+demo-registry/` manifest — see that file's own header) instead of
   DevDogsUGA's real ~50-key registry, plus devtools' own operator manifest
   (`packages/devtools/env.ts`), which `env/discovery.ts` now loads
   unconditionally regardless of which repo devtools runs against (see that
@@ -56,7 +56,7 @@ a final home:
   fixture inside Backstage should try to reproduce byte-for-byte without
   duplicating DevDogsUGA's real content into this repo.
 
-* **5 remain repo-structural/content tests that belong in DevDogsUGA**, not
+- **5 remain repo-structural/content tests that belong in DevDogsUGA**, not
   here — unchanged from the original assessment below: `src/workers.test.ts`,
   `src/cron/contract.test.ts`, `src/env/completeness.test.ts`,
   `src/deploy/cli-dispatch.test.ts`, and the partial move from

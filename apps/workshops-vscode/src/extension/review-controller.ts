@@ -16,9 +16,23 @@ import {
 import { CommandQueue, type CommandState } from "./command-queue.js";
 import { errorText, logError } from "./log.js";
 import { handoffUrl, nextStep } from "./handoff.js";
-import { REVIEW_ACTIVE, type ReviewController, type ReviewStartOptions } from "./review.js";
-import { changeAtLine, leftText, ReviewModel, type FileStatus } from "./review-model.js";
-import { parseReviewUri, reviewUri, REVIEW_SCHEME, ReviewFs } from "./review-fs.js";
+import {
+  REVIEW_ACTIVE,
+  type ReviewController,
+  type ReviewStartOptions,
+} from "./review.js";
+import {
+  changeAtLine,
+  leftText,
+  ReviewModel,
+  type FileStatus,
+} from "./review-model.js";
+import {
+  parseReviewUri,
+  reviewUri,
+  REVIEW_SCHEME,
+  ReviewFs,
+} from "./review-fs.js";
 import { rangeLabel, reviewTitle } from "./scope.js";
 import { captureError } from "./telemetry.js";
 import { WorkshopTerminal } from "./workshop-terminal.js";
@@ -87,35 +101,50 @@ const STATUS_ICON: Record<FileStatus, [string, string | undefined]> = {
   partial: ["circle-half-filled", "charts.yellow"],
 };
 
-const BAR_COLOR = { pending: "#3794ff", accepted: "#2ea043", rejected: "#f85149" } as const;
+const BAR_COLOR = {
+  pending: "#3794ff",
+  accepted: "#2ea043",
+  rejected: "#f85149",
+} as const;
 
 function barType(color: string): vscode.TextEditorDecorationType {
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='1' width='4' height='16' fill='${color}'/></svg>`;
   return vscode.window.createTextEditorDecorationType({
     isWholeLine: true,
-    gutterIconPath: vscode.Uri.parse(`data:image/svg+xml;utf8,${encodeURIComponent(svg)}`),
+    gutterIconPath: vscode.Uri.parse(
+      `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`,
+    ),
     gutterIconSize: "contain",
     overviewRulerColor: color,
     overviewRulerLane: vscode.OverviewRulerLane.Left,
   });
 }
 
-export class WorkshopReviewController implements ReviewController, vscode.Disposable {
+export class WorkshopReviewController
+  implements ReviewController, vscode.Disposable
+{
   private readonly changed = new vscode.EventEmitter<Node | undefined>();
   private readonly fs = new ReviewFs();
-  private readonly comments = vscode.comments.createCommentController("devdogsWorkshops.review", "Workshop review");
+  private readonly comments = vscode.comments.createCommentController(
+    "devdogsWorkshops.review",
+    "Workshop review",
+  );
   private readonly terminal = new WorkshopTerminal();
   private readonly bars = {
     pending: barType(BAR_COLOR.pending),
     accepted: barType(BAR_COLOR.accepted),
     rejected: barType(BAR_COLOR.rejected),
   };
-  private readonly threads = new Map<vscode.CommentThread, { file: number; id: number }>();
+  private readonly threads = new Map<
+    vscode.CommentThread,
+    { file: number; id: number }
+  >();
   private readonly threadOf = new Map<string, vscode.CommentThread>();
   private readonly disposables: vscode.Disposable[] = [];
   private session: Session | undefined;
   /** Opens the docs page after Finish. A field so tests can swap out the browser. */
-  openUrl: (url: string) => Thenable<unknown> = (url) => vscode.env.openExternal(vscode.Uri.parse(url, true));
+  openUrl: (url: string) => Thenable<unknown> = (url) =>
+    vscode.env.openExternal(vscode.Uri.parse(url, true));
 
   /**
    * Called when a review ends for good: finished (true) or cancelled (false).
@@ -127,7 +156,10 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
   constructor(private readonly onFinished: () => void) {
     this.comments.options = { placeHolder: "", prompt: "" };
     this.disposables.push(
-      vscode.workspace.registerFileSystemProvider(REVIEW_SCHEME, this.fs, { isReadonly: true, isCaseSensitive: true }),
+      vscode.workspace.registerFileSystemProvider(REVIEW_SCHEME, this.fs, {
+        isReadonly: true,
+        isCaseSensitive: true,
+      }),
       vscode.window.onDidChangeVisibleTextEditors(() => this.applyBars()),
       vscode.window.tabGroups.onDidChangeTabs(() => void this.updateContext()),
       this.comments,
@@ -165,13 +197,22 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
     if (this.session && this.hasProgress(this.session)) {
       const replace = await vscode.window.showWarningMessage(
         "Replace the review in progress?",
-        { modal: true, detail: "Your accept and reject choices in it are not kept." },
+        {
+          modal: true,
+          detail: "Your accept and reject choices in it are not kept.",
+        },
         "Replace it",
       );
       if (replace !== "Replace it") return;
     }
     await this.end();
-    this.session = { plan, options, queue: new CommandQueue(plan.commands), model: undefined, lateFromTarget: [] };
+    this.session = {
+      plan,
+      options,
+      queue: new CommandQueue(plan.commands),
+      model: undefined,
+      lateFromTarget: [],
+    };
     await vscode.commands.executeCommand("setContext", REVIEW_ACTIVE, true);
     this.changed.fire(undefined);
     await vscode.commands.executeCommand("devdogsWorkshops.review.focus");
@@ -200,12 +241,15 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
           continue;
         }
         // A pure rename has no changes to review but still has to be applied.
-        const pureRename = file.status === "renamed" && !existsSync(join(root, file.path));
+        const pureRename =
+          file.status === "renamed" && !existsSync(join(root, file.path));
         if (merge.changes.length > 0 || pureRename) kept.push({ file, merge });
       }
     } catch (error) {
       logError("enterFiles", error);
-      void vscode.window.showErrorMessage(`Couldn't read the files for this review: ${errorText(error)}`);
+      void vscode.window.showErrorMessage(
+        `Couldn't read the files for this review: ${errorText(error)}`,
+      );
       return;
     }
     s.model = new ReviewModel(kept);
@@ -229,13 +273,17 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
       this.fs.set(reviewUri("left", state.file.path), leftText(state.merge));
       this.fs.set(reviewUri("right", state.file.path), s.model!.layout(i).text);
       for (const change of state.merge.changes) {
-        const thread = this.comments.createCommentThread(reviewUri("right", state.file.path), new vscode.Range(0, 0, 0, 0), [
-          {
-            body: new vscode.MarkdownString(""),
-            mode: vscode.CommentMode.Preview,
-            author: { name: "Workshop step" },
-          },
-        ]);
+        const thread = this.comments.createCommentThread(
+          reviewUri("right", state.file.path),
+          new vscode.Range(0, 0, 0, 0),
+          [
+            {
+              body: new vscode.MarkdownString(""),
+              mode: vscode.CommentMode.Preview,
+              author: { name: "Workshop step" },
+            },
+          ],
+        );
         thread.canReply = false;
         thread.collapsibleState = vscode.CommentThreadCollapsibleState.Expanded;
         this.threads.set(thread, { file: i, id: change.id });
@@ -259,7 +307,9 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
       thread.range = new vscode.Range(line, 0, line, 0);
       thread.contextValue = region.decision ?? "pending";
       thread.state =
-        region.decision === undefined ? vscode.CommentThreadState.Unresolved : vscode.CommentThreadState.Resolved;
+        region.decision === undefined
+          ? vscode.CommentThreadState.Unresolved
+          : vscode.CommentThreadState.Resolved;
       thread.label =
         region.decision === "accept"
           ? "Accepted"
@@ -276,13 +326,30 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
     for (const editor of vscode.window.visibleTextEditors) {
       const parsed = parseReviewUri(editor.document.uri);
       if (!parsed || parsed.side !== "right") continue;
-      const index = model?.files.findIndex((f) => f.file.path === parsed.path) ?? -1;
-      const ranges: Record<keyof typeof this.bars, vscode.Range[]> = { pending: [], accepted: [], rejected: [] };
+      const index =
+        model?.files.findIndex((f) => f.file.path === parsed.path) ?? -1;
+      const ranges: Record<keyof typeof this.bars, vscode.Range[]> = {
+        pending: [],
+        accepted: [],
+        rejected: [],
+      };
       if (model && index >= 0) {
         for (const region of model.layout(index).regions) {
-          const key = region.decision === "accept" ? "accepted" : region.decision === "reject" ? "rejected" : "pending";
+          const key =
+            region.decision === "accept"
+              ? "accepted"
+              : region.decision === "reject"
+                ? "rejected"
+                : "pending";
           const end = region.start + Math.max(region.count, 1) - 1;
-          ranges[key].push(new vscode.Range(region.start, 0, Math.min(end, editor.document.lineCount - 1), 0));
+          ranges[key].push(
+            new vscode.Range(
+              region.start,
+              0,
+              Math.min(end, editor.document.lineCount - 1),
+              0,
+            ),
+          );
         }
       }
       for (const key of Object.keys(this.bars) as (keyof typeof this.bars)[]) {
@@ -324,7 +391,10 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
     this.decide(file, id, decision);
   }
 
-  decideThread(thread: vscode.CommentThread | undefined, decision: Decision): void {
+  decideThread(
+    thread: vscode.CommentThread | undefined,
+    decision: Decision,
+  ): void {
     const ref = thread && this.threads.get(thread);
     if (ref) this.decide(ref.file, ref.id, decision);
   }
@@ -353,7 +423,10 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
         const p = parseReviewUri(e.document.uri);
         return p?.side === "right" && p.path === model.files[index]!.file.path;
       }) ?? vscode.window.activeTextEditor;
-    const id = changeAtLine(model.layout(index), editor?.selection.active.line ?? 0);
+    const id = changeAtLine(
+      model.layout(index),
+      editor?.selection.active.line ?? 0,
+    );
     if (id !== undefined) this.decide(index, id, decision);
   }
 
@@ -406,7 +479,11 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
   async runAll(): Promise<void> {
     const s = this.session;
     if (!s) return;
-    for (let i = s.queue.nextIndex; i >= 0 && s.queue.canRun(i); i = s.queue.nextIndex) {
+    for (
+      let i = s.queue.nextIndex;
+      i >= 0 && s.queue.canRun(i);
+      i = s.queue.nextIndex
+    ) {
       if (!(await this.runCommand(i))) return;
     }
   }
@@ -429,7 +506,8 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
   }
 
   private async afterCommand(s: Session): Promise<void> {
-    if (this.session === s && s.queue.allDone && !s.model) await this.enterFiles();
+    if (this.session === s && s.queue.allDone && !s.model)
+      await this.enterFiles();
   }
 
   // -- finishing ----------------------------------------------------------
@@ -438,29 +516,43 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
     const s = this.session;
     if (!s) return;
     if (!s.model) {
-      void vscode.window.showInformationMessage("Run the step's commands (or skip them) before finishing.");
+      void vscode.window.showInformationMessage(
+        "Run the step's commands (or skip them) before finishing.",
+      );
       return;
     }
     const model = s.model;
     if (model.undecided > 0) {
       const answer = await vscode.window.showWarningMessage(
         `${model.undecided} change${model.undecided === 1 ? " is" : "s are"} still undecided.`,
-        { modal: true, detail: "Reject keeps your code for those; Accept takes the step's version." },
+        {
+          modal: true,
+          detail:
+            "Reject keeps your code for those; Accept takes the step's version.",
+        },
         "Accept the rest",
         "Reject the rest",
       );
       if (!answer) return;
       const rest: Decision = answer === "Accept the rest" ? "accept" : "reject";
       model.files.forEach((state, i) => {
-        for (const change of state.merge.changes) if (!state.decisions.has(change.id)) model.decide(i, change.id, rest);
+        for (const change of state.merge.changes)
+          if (!state.decisions.has(change.id)) model.decide(i, change.id, rest);
       });
     }
 
     const { root } = s.options;
     const outcomes = model.files.map((state, i) =>
-      resolveOutcome(state.file, state.merge, model.decider(i), existsSync(join(root, state.file.path))),
+      resolveOutcome(
+        state.file,
+        state.merge,
+        model.decider(i),
+        existsSync(join(root, state.file.path)),
+      ),
     );
-    const autoCommit = vscode.workspace.getConfiguration("devdogsWorkshops").get<boolean>("autoCommit", true);
+    const autoCommit = vscode.workspace
+      .getConfiguration("devdogsWorkshops")
+      .get<boolean>("autoCommit", true);
     const title = reviewTitle(s.plan.steps);
     try {
       const result = await finishReview({
@@ -470,7 +562,8 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
         outcomes,
         fromTarget: [...s.plan.fromTarget, ...s.lateFromTarget],
         autoCommit,
-        beforeWrite: async () => (await s.options.ensurePersonalBranch()) !== undefined,
+        beforeWrite: async () =>
+          (await s.options.ensurePersonalBranch()) !== undefined,
       });
       if (result === null) return; // they declined the branch move; nothing was written
       const done = s.plan.steps.map((step) => step.tag);
@@ -499,7 +592,9 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
       }
       captureError("finish", error);
       logError("finish", error);
-      void vscode.window.showErrorMessage(`Couldn't finish the review: ${errorText(error)}`);
+      void vscode.window.showErrorMessage(
+        `Couldn't finish the review: ${errorText(error)}`,
+      );
     }
   }
 
@@ -514,8 +609,10 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
       .flatMap((g) => g.tabs)
       .filter(
         (t) =>
-          (t.input instanceof vscode.TabInputTextDiff && t.input.modified.scheme === REVIEW_SCHEME) ||
-          (t.input instanceof vscode.TabInputText && t.input.uri.scheme === REVIEW_SCHEME),
+          (t.input instanceof vscode.TabInputTextDiff &&
+            t.input.modified.scheme === REVIEW_SCHEME) ||
+          (t.input instanceof vscode.TabInputText &&
+            t.input.uri.scheme === REVIEW_SCHEME),
       );
     if (tabs.length > 0) await vscode.window.tabGroups.close(tabs);
     this.fs.clear();
@@ -529,7 +626,11 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
     if (this.hasProgress(this.session)) {
       const answer = await vscode.window.showWarningMessage(
         "Cancel this review?",
-        { modal: true, detail: "Nothing has been written to your files; your choices are dropped." },
+        {
+          modal: true,
+          detail:
+            "Nothing has been written to your files; your choices are dropped.",
+        },
         "Cancel the review",
       );
       if (answer !== "Cancel the review") return;
@@ -540,7 +641,9 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
 
   private async updateContext(): Promise<void> {
     const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
-    const active = input instanceof vscode.TabInputTextDiff && input.modified.scheme === REVIEW_SCHEME;
+    const active =
+      input instanceof vscode.TabInputTextDiff &&
+      input.modified.scheme === REVIEW_SCHEME;
     await vscode.commands.executeCommand("setContext", IN_REVIEW_FILE, active);
   }
 
@@ -554,13 +657,24 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
     if (!s.model) {
       if (s.queue.items.length > 0) {
         out.push({ kind: "runAll" }, { kind: "skip" });
-        out.push({ kind: "note", text: "The files to review appear once the commands are done." });
+        out.push({
+          kind: "note",
+          text: "The files to review appear once the commands are done.",
+        });
       }
       return out;
     }
     s.model.files.forEach((_, index) => out.push({ kind: "file", index }));
-    if (s.model.files.length === 0) out.push({ kind: "note", text: "Nothing to review: you already have these changes." });
-    out.push({ kind: "action", id: "acceptAll" }, { kind: "action", id: "rejectAll" }, { kind: "action", id: "finish" });
+    if (s.model.files.length === 0)
+      out.push({
+        kind: "note",
+        text: "Nothing to review: you already have these changes.",
+      });
+    out.push(
+      { kind: "action", id: "acceptAll" },
+      { kind: "action", id: "rejectAll" },
+      { kind: "action", id: "finish" },
+    );
     return out;
   }
 
@@ -577,13 +691,25 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
         const { command, state, exitCode } = s.queue.items[node.index]!;
         const item = new vscode.TreeItem(command);
         item.contextValue = `command-${state}`;
-        item.description = { pending: "", running: "running…", done: "done", failed: `failed (${exitCode})`, sent: "sent to your shell" }[state];
+        item.description = {
+          pending: "",
+          running: "running…",
+          done: "done",
+          failed: `failed (${exitCode})`,
+          sent: "sent to your shell",
+        }[state];
         item.iconPath = new vscode.ThemeIcon(
-          { pending: "terminal", running: "loading~spin", done: "check", failed: "error", sent: "question" }[state],
+          {
+            pending: "terminal",
+            running: "loading~spin",
+            done: "check",
+            failed: "error",
+            sent: "question",
+          }[state],
         );
         item.tooltip =
           state === "sent"
-            ? "Sent to your terminal. Press \"I ran it\" once it has finished."
+            ? 'Sent to your terminal. Press "I ran it" once it has finished.'
             : "Runs in the Workshop terminal (bash).";
         return item;
       }
@@ -610,15 +736,32 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
         const item = new vscode.TreeItem(state.file.path);
         item.description = `${status}${state.merge.changes.length ? ` · ${state.merge.changes.length} change${state.merge.changes.length === 1 ? "" : "s"}` : ""}`;
         const [icon, color] = STATUS_ICON[status];
-        item.iconPath = new vscode.ThemeIcon(icon, color ? new vscode.ThemeColor(color) : undefined);
+        item.iconPath = new vscode.ThemeIcon(
+          icon,
+          color ? new vscode.ThemeColor(color) : undefined,
+        );
         item.contextValue = "reviewFile";
-        item.command = { command: CMD.openFile, title: "Open", arguments: [node.index] };
+        item.command = {
+          command: CMD.openFile,
+          title: "Open",
+          arguments: [node.index],
+        };
         return item;
       }
       case "action": {
-        const label = { acceptAll: "Accept all", rejectAll: "Reject all", finish: "Finish" }[node.id];
+        const label = {
+          acceptAll: "Accept all",
+          rejectAll: "Reject all",
+          finish: "Finish",
+        }[node.id];
         const item = new vscode.TreeItem(label);
-        item.iconPath = new vscode.ThemeIcon({ acceptAll: "check-all", rejectAll: "close-all", finish: "git-merge" }[node.id]);
+        item.iconPath = new vscode.ThemeIcon(
+          {
+            acceptAll: "check-all",
+            rejectAll: "close-all",
+            finish: "git-merge",
+          }[node.id],
+        );
         item.command = { command: CMD[node.id], title: label };
         return item;
       }
@@ -634,14 +777,20 @@ export class WorkshopReviewController implements ReviewController, vscode.Dispos
 /** Reads the command index out of a tree node passed to an inline action. */
 export function commandIndexOf(arg: unknown): number | undefined {
   if (typeof arg === "number") return arg;
-  if (typeof arg === "object" && arg !== null && (arg as Node).kind === "command") return (arg as { index: number }).index;
+  if (
+    typeof arg === "object" &&
+    arg !== null &&
+    (arg as Node).kind === "command"
+  )
+    return (arg as { index: number }).index;
   return undefined;
 }
 
 /** File index from a tree node or a number. */
 export function fileIndexOf(arg: unknown): number | undefined {
   if (typeof arg === "number") return arg;
-  if (typeof arg === "object" && arg !== null && (arg as Node).kind === "file") return (arg as { index: number }).index;
+  if (typeof arg === "object" && arg !== null && (arg as Node).kind === "file")
+    return (arg as { index: number }).index;
   return undefined;
 }
 
@@ -652,14 +801,19 @@ export function fileIndexOf(arg: unknown): number | undefined {
 async function askCommitIdentity(root: string): Promise<boolean> {
   const answer = await vscode.window.showInformationMessage(
     "Git doesn't know your name and email yet.",
-    { modal: true, detail: "Finish records the step as a commit, and every commit carries a name and email. Nothing has been written yet." },
+    {
+      modal: true,
+      detail:
+        "Finish records the step as a commit, and every commit carries a name and email. Nothing has been written yet.",
+    },
     "Set them",
   );
   if (answer !== "Set them") return false;
   const name = (
     await vscode.window.showInputBox({
       title: "Your name for git commits",
-      prompt: "Saved in your global git config, like git config --global user.name.",
+      prompt:
+        "Saved in your global git config, like git config --global user.name.",
       placeHolder: "Uga Georgia",
       ignoreFocusOut: true,
       validateInput: (value) => (value.trim() ? undefined : "Enter a name."),
@@ -669,10 +823,14 @@ async function askCommitIdentity(root: string): Promise<boolean> {
   const email = (
     await vscode.window.showInputBox({
       title: "Your email for git commits",
-      prompt: "Use your GitHub account's email so GitHub links the commits to you.",
+      prompt:
+        "Use your GitHub account's email so GitHub links the commits to you.",
       placeHolder: "you@uga.edu",
       ignoreFocusOut: true,
-      validateInput: (value) => (/^[^\s@]+@[^\s@]+$/.test(value.trim()) ? undefined : "That doesn't look like an email."),
+      validateInput: (value) =>
+        /^[^\s@]+@[^\s@]+$/.test(value.trim())
+          ? undefined
+          : "That doesn't look like an email.",
     })
   )?.trim();
   if (!email) return false;
@@ -682,7 +840,9 @@ async function askCommitIdentity(root: string): Promise<boolean> {
     return true;
   } catch (error) {
     logError("identity", error);
-    void vscode.window.showErrorMessage(`Couldn't save your name and email: ${errorText(error)}`);
+    void vscode.window.showErrorMessage(
+      `Couldn't save your name and email: ${errorText(error)}`,
+    );
     return false;
   }
 }

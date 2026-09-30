@@ -17,7 +17,10 @@ import { remotesMatchRepo } from "./remote.js";
  */
 
 /** Network calls must never wait on a credential prompt nobody can see. */
-const NETWORK = { env: { GIT_TERMINAL_PROMPT: "0" }, timeoutMs: 60_000 } as const;
+const NETWORK = {
+  env: { GIT_TERMINAL_PROMPT: "0" },
+  timeoutMs: 60_000,
+} as const;
 
 /** The repo's top-level directory for any folder inside it, or null. */
 export async function repoRoot(dir: string): Promise<string | null> {
@@ -31,7 +34,11 @@ export async function repoRoot(dir: string): Promise<string | null> {
 
 /** Every remote URL of the clone at `root`. */
 export async function remoteUrls(root: string): Promise<string[]> {
-  const { stdout } = await gitRaw(root, ["config", "--get-regexp", "^remote\\..*\\.url$"], [1]);
+  const { stdout } = await gitRaw(
+    root,
+    ["config", "--get-regexp", "^remote\\..*\\.url$"],
+    [1],
+  );
   return stdout
     .toString("utf8")
     .split("\n")
@@ -40,7 +47,10 @@ export async function remoteUrls(root: string): Promise<string[]> {
 }
 
 /** Whether the clone at `dir` has a remote naming `repo`; returns its top level when so. */
-export async function cloneRootIfMatches(dir: string, repo: string): Promise<string | null> {
+export async function cloneRootIfMatches(
+  dir: string,
+  repo: string,
+): Promise<string | null> {
   const root = await repoRoot(dir);
   if (root === null) return null;
   return remotesMatchRepo(await remoteUrls(root), repo) ? root : null;

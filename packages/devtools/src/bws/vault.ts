@@ -40,9 +40,12 @@ export type VaultStatus =
 /** `bw status`, or `unavailable` when the CLI is not installed. */
 export async function vaultStatus(): Promise<VaultStatus> {
   try {
-    const { stdout } = await run(...bwCommand(bwArgs(["status", "--response"])), {
-      shell: false,
-    });
+    const { stdout } = await run(
+      ...bwCommand(bwArgs(["status", "--response"])),
+      {
+        shell: false,
+      },
+    );
     // `--response` wraps the payload; the bare form is also accepted, so read
     // whichever shape came back rather than depending on one.
     const parsed = JSON.parse(stdout) as

@@ -13,21 +13,24 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ConnectTarget } from "./target.js";
 
-const { startLoopbackMock, requestDeviceCodeMock, pollForTokenMock } = vi.hoisted(() => ({
-  startLoopbackMock: vi.fn(),
-  requestDeviceCodeMock: vi.fn(),
-  pollForTokenMock: vi.fn(),
-}));
+const { startLoopbackMock, requestDeviceCodeMock, pollForTokenMock } =
+  vi.hoisted(() => ({
+    startLoopbackMock: vi.fn(),
+    requestDeviceCodeMock: vi.fn(),
+    pollForTokenMock: vi.fn(),
+  }));
 
 vi.mock("./browser.js", () => ({ openBrowser: vi.fn() }));
 
 vi.mock("./loopback.js", async () => {
-  const actual = await vi.importActual<typeof import("./loopback.js")>("./loopback.js");
+  const actual =
+    await vi.importActual<typeof import("./loopback.js")>("./loopback.js");
   return { ...actual, start: startLoopbackMock };
 });
 
 vi.mock("./device.js", async () => {
-  const actual = await vi.importActual<typeof import("./device.js")>("./device.js");
+  const actual =
+    await vi.importActual<typeof import("./device.js")>("./device.js");
   return {
     ...actual,
     requestDeviceCode: requestDeviceCodeMock,
@@ -53,7 +56,11 @@ const deviceCodeResult = {
   expiresIn: 900,
   interval: 5,
 };
-const exchangeResult = { clientId: "cid", clientSecret: "csecret", issuer: "iss" };
+const exchangeResult = {
+  clientId: "cid",
+  clientSecret: "csecret",
+  issuer: "iss",
+};
 
 describe("connectViaOneClick", () => {
   afterEach(() => {
@@ -65,18 +72,27 @@ describe("connectViaOneClick", () => {
     // No SSH/Codespace/devcontainer signal — auto-detection alone would
     // pick loopback; this proves the fallback triggers on the START
     // failure itself, not on environment detection.
-    startLoopbackMock.mockRejectedValueOnce(new Error("EACCES: permission denied"));
+    startLoopbackMock.mockRejectedValueOnce(
+      new Error("EACCES: permission denied"),
+    );
     requestDeviceCodeMock.mockResolvedValueOnce(deviceCodeResult);
     pollForTokenMock.mockResolvedValueOnce(exchangeResult);
 
-    const result = await connectViaOneClick(target, platformUrl, cwd, undefined);
+    const result = await connectViaOneClick(
+      target,
+      platformUrl,
+      cwd,
+      undefined,
+    );
 
     expect(result).toEqual(exchangeResult);
     expect(requestDeviceCodeMock).toHaveBeenCalledTimes(1);
   });
 
   it("propagates a loopback start failure unchanged when --loopback was forced", async () => {
-    startLoopbackMock.mockRejectedValueOnce(new Error("EACCES: permission denied"));
+    startLoopbackMock.mockRejectedValueOnce(
+      new Error("EACCES: permission denied"),
+    );
 
     await expect(
       connectViaOneClick(target, platformUrl, cwd, "loopback"),

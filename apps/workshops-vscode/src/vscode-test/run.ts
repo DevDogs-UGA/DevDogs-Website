@@ -15,7 +15,10 @@ import { runTests } from "@vscode/test-electron";
  */
 
 const git = (cwd: string, ...args: string[]) =>
-  execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  execFileSync("git", ["-C", cwd, ...args], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
 
 /**
  * The VS Code the smoke test downloads: pinned so a run is reproducible and a
@@ -32,7 +35,9 @@ async function main(): Promise<void> {
   const clone = join(scratch, "Web-Workshops");
 
   try {
-    execFileSync("git", ["clone", "-q", "--no-hardlinks", source, clone], { stdio: "inherit" });
+    execFileSync("git", ["clone", "-q", "--no-hardlinks", source, clone], {
+      stdio: "inherit",
+    });
     const github = "https://github.com/DevDogsUGA/Web-Workshops.git";
     git(clone, "remote", "set-url", "origin", github);
     git(clone, "config", `url.${source}.insteadOf`, github);
@@ -41,23 +46,45 @@ async function main(): Promise<void> {
     git(clone, "checkout", "-q", "--detach", "02-supabase/00-start");
     // A harmless step command, so the terminal path runs for real (the
     // published tag's own command is a network install).
-    const message = git(clone, "tag", "-l", "--format=%(contents)", "02-supabase/01-read").replace(
-      /^Run: .*$/m,
-      "Run: echo ran > ran.txt",
-    );
+    const message = git(
+      clone,
+      "tag",
+      "-l",
+      "--format=%(contents)",
+      "02-supabase/01-read",
+    ).replace(/^Run: .*$/m, "Run: echo ran > ran.txt");
     writeFileSync(join(scratch, "tag-message"), message);
-    git(clone, "tag", "-f", "-a", "-F", join(scratch, "tag-message"), "02-supabase/01-read", "02-supabase/01-read^{commit}");
+    git(
+      clone,
+      "tag",
+      "-f",
+      "-a",
+      "-F",
+      join(scratch, "tag-message"),
+      "02-supabase/01-read",
+      "02-supabase/01-read^{commit}",
+    );
 
     const userData = join(scratch, "user-data");
     mkdirSync(join(userData, "User"), { recursive: true });
     // The extension follows live workshops on its own; the suite turns that on
     // against a fake relay, so nothing here reaches the real one.
-    writeFileSync(join(userData, "User", "settings.json"), JSON.stringify({ "devdogsWorkshops.followLive": false }));
+    writeFileSync(
+      join(userData, "User", "settings.json"),
+      JSON.stringify({ "devdogsWorkshops.followLive": false }),
+    );
     await runTests({
       version: VSCODE_VERSION,
       extensionDevelopmentPath: packageDir,
       extensionTestsPath: join(__dirname, "suite.js"),
-      launchArgs: [clone, "--user-data-dir", userData, "--disable-extensions", "--disable-workspace-trust", "--no-sandbox"],
+      launchArgs: [
+        clone,
+        "--user-data-dir",
+        userData,
+        "--disable-extensions",
+        "--disable-workspace-trust",
+        "--no-sandbox",
+      ],
       extensionTestsEnv: { SMOKE_CLONE: clone, DEVDOGS_WORKSHOPS_DEBUG: "1" },
     });
   } finally {

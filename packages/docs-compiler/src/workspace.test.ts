@@ -53,7 +53,10 @@ describe("workspace", () => {
   it("keys apps by their directory slug", () => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "docs-build-workspace-"));
     write("pnpm-workspace.yaml", 'packages:\n  - "apps/*"\n');
-    write("apps/schedule-builder/package.json", JSON.stringify({ name: "schedule-builder" }));
+    write(
+      "apps/schedule-builder/package.json",
+      JSON.stringify({ name: "schedule-builder" }),
+    );
 
     const byApp = appPackagesBySlug(discoverWorkspacePackages(root));
     expect([...byApp.keys()]).toEqual(["schedule-builder"]);
@@ -61,13 +64,13 @@ describe("workspace", () => {
 
   it("discovers a bare (non-glob) workspace entry as its own single package", () => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "docs-build-workspace-"));
-    write(
-      "pnpm-workspace.yaml",
-      'packages:\n  - "apps/*"\n  - "docs"\n',
-    );
+    write("pnpm-workspace.yaml", 'packages:\n  - "apps/*"\n  - "docs"\n');
     write(
       "docs/package.json",
-      JSON.stringify({ name: "@devdogsuga/docs", scripts: { build: "tsx build.ts" } }),
+      JSON.stringify({
+        name: "@devdogsuga/docs",
+        scripts: { build: "tsx build.ts" },
+      }),
     );
 
     const packages = discoverWorkspacePackages(root);
@@ -80,19 +83,25 @@ describe("workspace", () => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "docs-build-workspace-"));
     write(
       "pnpm-workspace.yaml",
-      'packages:\n  - apps/*\n  # a bare entry, not a glob\n  - docs\n\nshellEmulator: true\n',
+      "packages:\n  - apps/*\n  # a bare entry, not a glob\n  - docs\n\nshellEmulator: true\n",
     );
     write("apps/foo/package.json", JSON.stringify({ name: "foo" }));
     write("docs/package.json", JSON.stringify({ name: "@devdogsuga/docs" }));
 
     const packages = discoverWorkspacePackages(root);
-    expect(packages.map((p) => p.name).sort()).toEqual(["@devdogsuga/docs", "foo"]);
+    expect(packages.map((p) => p.name).sort()).toEqual([
+      "@devdogsuga/docs",
+      "foo",
+    ]);
   });
 
   it("reads the workspace root's own scripts", () => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "docs-build-workspace-"));
-    write("pnpm-workspace.yaml", "packages:\n  - \"apps/*\"\n");
-    write("package.json", JSON.stringify({ name: "devdogsuga", scripts: { lint: "eslint ." } }));
+    write("pnpm-workspace.yaml", 'packages:\n  - "apps/*"\n');
+    write(
+      "package.json",
+      JSON.stringify({ name: "devdogsuga", scripts: { lint: "eslint ." } }),
+    );
 
     const rootPackage = readRootPackage(root);
     expect(rootPackage?.name).toBe("devdogsuga");

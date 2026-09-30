@@ -29,11 +29,7 @@
 import { randomUUID } from "node:crypto";
 import { confirm, log, note, select } from "@clack/prompts";
 import type { DbConnection } from "./db/connection.js";
-import {
-  adminClient,
-  resolveInstance,
-  type Instance,
-} from "./instance.js";
+import { adminClient, resolveInstance, type Instance } from "./instance.js";
 import { grantModerator } from "./moderation.js";
 import { explain, unwrap } from "./ui.js";
 
@@ -136,7 +132,8 @@ async function findOtherProfile(
     .neq("userId", excludeUserId)
     .limit(1)
     .maybeSingle();
-  if (error) throw new Error(`Could not read platform.profile: ${error.message}`);
+  if (error)
+    throw new Error(`Could not read platform.profile: ${error.message}`);
   return data as { userId: string; preferredName: string } | null;
 }
 
@@ -159,9 +156,7 @@ async function fileSampleReport(
     .eq("slug", "platform")
     .single();
   if (appErr || !app) {
-    throw new Error(
-      `Could not find the platform app row: ${appErr?.message}`,
-    );
+    throw new Error(`Could not find the platform app row: ${appErr?.message}`);
   }
 
   const { error } = await admin.from("reports").insert({
@@ -297,7 +292,5 @@ export async function runPersona(argv: string[]): Promise<void> {
     subject.userId,
     subject.preferredName,
   );
-  log.success(
-    "Filed a sample report. Resolve it from /console/moderation.",
-  );
+  log.success("Filed a sample report. Resolve it from /console/moderation.");
 }

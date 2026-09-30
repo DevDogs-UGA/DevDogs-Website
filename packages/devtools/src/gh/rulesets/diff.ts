@@ -28,7 +28,12 @@ import {
   isPerTeamRulesetName,
   type RulesetActors,
 } from "./desired.js";
-import type { DesiredRuleset, LiveRuleset, LiveRulesetSummary, Rule } from "./types.js";
+import type {
+  DesiredRuleset,
+  LiveRuleset,
+  LiveRulesetSummary,
+  Rule,
+} from "./types.js";
 
 export interface CreateAction {
   kind: "create";
@@ -118,7 +123,11 @@ function sortRules(rules: readonly Rule[]): Rule[] {
 
 /** Sorted, and each actor rebuilt in a fixed key order for the same reason as `canonicalizeRule`. */
 function sortActors(
-  actors: readonly { actor_id: number; actor_type: string; bypass_mode: string }[],
+  actors: readonly {
+    actor_id: number;
+    actor_type: string;
+    bypass_mode: string;
+  }[],
 ) {
   return [...actors]
     .sort(
@@ -142,7 +151,11 @@ function fingerprint(r: {
   target: string;
   enforcement: string;
   conditions: { ref_name: { include: string[]; exclude: string[] } };
-  bypass_actors: readonly { actor_id: number; actor_type: string; bypass_mode: string }[];
+  bypass_actors: readonly {
+    actor_id: number;
+    actor_type: string;
+    bypass_mode: string;
+  }[];
   rules: readonly Rule[];
 }): string {
   return JSON.stringify({
@@ -238,6 +251,8 @@ export function planRulesets(
 /** Whether a plan would write anything at all. */
 export function planHasChanges(plan: RulesetPlan): boolean {
   return (
-    plan.creates.length > 0 || plan.updates.length > 0 || plan.deletes.length > 0
+    plan.creates.length > 0 ||
+    plan.updates.length > 0 ||
+    plan.deletes.length > 0
   );
 }

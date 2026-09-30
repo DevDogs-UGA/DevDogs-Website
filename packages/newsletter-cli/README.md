@@ -72,7 +72,7 @@ Nothing needs to be provisioned ahead of time.
 - `devtools` no longer depends on `@devdogsuga/newsletter` at all — the
   `newsletter` command, its peer dependency entry, and its optional-peer
   loader were removed.
-- Newsletter *content* (`ChangelogDocument`, `ISSUES`, `buildEml`, the
+- Newsletter _content_ (`ChangelogDocument`, `ISSUES`, `buildEml`, the
   export renderers) still lives in `@devdogsuga/newsletter` — this package
   only adds the CLI shell (argument parsing, the OAuth/IMAP/SMTP wire
   protocol, the interactive prompts) around it.

@@ -43,7 +43,10 @@ function matchingSnapshot(): LiveSettingsSnapshot {
         environment: {
           name: "staging",
           protection_rules: [],
-          deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
+          deployment_branch_policy: {
+            protected_branches: false,
+            custom_branch_policies: true,
+          },
         },
         branchPolicies: [{ id: 1, name: "main" }],
       },
@@ -51,7 +54,10 @@ function matchingSnapshot(): LiveSettingsSnapshot {
         environment: {
           name: "production",
           protection_rules: [],
-          deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
+          deployment_branch_policy: {
+            protected_branches: false,
+            custom_branch_policies: true,
+          },
         },
         branchPolicies: [{ id: 2, name: "production" }],
       },
@@ -61,10 +67,15 @@ function matchingSnapshot(): LiveSettingsSnapshot {
           protection_rules: [
             {
               type: "required_reviewers",
-              reviewers: [{ type: "Team", reviewer: { id: 9002, type: "Team" } }],
+              reviewers: [
+                { type: "Team", reviewer: { id: 9002, type: "Team" } },
+              ],
             },
           ],
-          deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
+          deployment_branch_policy: {
+            protected_branches: false,
+            custom_branch_policies: true,
+          },
         },
         branchPolicies: [{ id: 3, name: "production" }],
       },
@@ -92,7 +103,9 @@ describe("planSettings — drift", () => {
     const live = matchingSnapshot();
     live.repo.security_and_analysis!.secret_scanning = { status: "disabled" };
     const plan = planSettings(desiredFixture(), live, []);
-    const check = plan.checks.find((c) => c.key === "security_and_analysis.secret_scanning")!;
+    const check = plan.checks.find(
+      (c) => c.key === "security_and_analysis.secret_scanning",
+    )!;
     expect(check.status).toBe("drift");
     expect(check.fixable).toBe(true);
     expect(planHasFixableChanges(plan)).toBe(true);
@@ -102,17 +115,21 @@ describe("planSettings — drift", () => {
     const live = matchingSnapshot();
     live.repo.security_and_analysis = null;
     const plan = planSettings(desiredFixture(), live, []);
-    const check = plan.checks.find((c) => c.key === "security_and_analysis.secret_scanning")!;
+    const check = plan.checks.find(
+      (c) => c.key === "security_and_analysis.secret_scanning",
+    )!;
     expect(check.status).toBe("unsupported");
     expect(check.fixable).toBe(false);
   });
 
   it("reports a missing secret_scanning_non_provider_patterns field (plan lacks the feature) as unsupported", () => {
     const live = matchingSnapshot();
-    delete live.repo.security_and_analysis!.secret_scanning_non_provider_patterns;
+    delete live.repo.security_and_analysis!
+      .secret_scanning_non_provider_patterns;
     const plan = planSettings(desiredFixture(), live, []);
     const check = plan.checks.find(
-      (c) => c.key === "security_and_analysis.secret_scanning_non_provider_patterns",
+      (c) =>
+        c.key === "security_and_analysis.secret_scanning_non_provider_patterns",
     )!;
     expect(check.status).toBe("unsupported");
   });
@@ -121,7 +138,9 @@ describe("planSettings — drift", () => {
     const live = matchingSnapshot();
     live.vulnerabilityAlerts = false;
     const plan = planSettings(desiredFixture(), live, []);
-    expect(plan.checks.find((c) => c.key === "vulnerability_alerts")).toMatchObject({
+    expect(
+      plan.checks.find((c) => c.key === "vulnerability_alerts"),
+    ).toMatchObject({
       status: "drift",
       fixable: true,
     });
@@ -140,7 +159,9 @@ describe("planSettings — drift", () => {
     const live = matchingSnapshot();
     live.actionsPermissions.allowed_actions = "all";
     const plan = planSettings(desiredFixture(), live, []);
-    expect(plan.checks.find((c) => c.key === "actions.allowed_actions")).toMatchObject({
+    expect(
+      plan.checks.find((c) => c.key === "actions.allowed_actions"),
+    ).toMatchObject({
       status: "drift",
       fixable: true,
     });
@@ -150,7 +171,9 @@ describe("planSettings — drift", () => {
     const live = matchingSnapshot();
     live.selectedActions.patterns_allowed = ["some/other-action@*"];
     const plan = planSettings(desiredFixture(), live, []);
-    expect(plan.checks.find((c) => c.key === "actions.selected_actions")).toMatchObject({
+    expect(
+      plan.checks.find((c) => c.key === "actions.selected_actions"),
+    ).toMatchObject({
       status: "drift",
       fixable: true,
     });
@@ -160,7 +183,9 @@ describe("planSettings — drift", () => {
     const live = matchingSnapshot();
     live.workflowPermissions.default_workflow_permissions = "write";
     const plan = planSettings(desiredFixture(), live, []);
-    expect(plan.checks.find((c) => c.key === "actions.workflow_permissions")).toMatchObject({
+    expect(
+      plan.checks.find((c) => c.key === "actions.workflow_permissions"),
+    ).toMatchObject({
       status: "drift",
       fixable: true,
     });
@@ -183,7 +208,9 @@ describe("planSettings — drift", () => {
     live.environments.production.environment = null;
     live.environments.production.branchPolicies = [];
     const plan = planSettings(desiredFixture(), live, []);
-    expect(plan.checks.find((c) => c.key === "environments.production")).toMatchObject({
+    expect(
+      plan.checks.find((c) => c.key === "environments.production"),
+    ).toMatchObject({
       status: "unsupported",
       fixable: false,
     });
@@ -202,9 +229,15 @@ describe("planSettings — drift", () => {
 
   it("does not check required reviewers on staging/production, which don't require them", () => {
     const plan = planSettings(desiredFixture(), matchingSnapshot(), []);
-    expect(plan.checks.find((c) => c.key === "environments.staging.required_reviewers")).toBeUndefined();
     expect(
-      plan.checks.find((c) => c.key === "environments.production.required_reviewers"),
+      plan.checks.find(
+        (c) => c.key === "environments.staging.required_reviewers",
+      ),
+    ).toBeUndefined();
+    expect(
+      plan.checks.find(
+        (c) => c.key === "environments.production.required_reviewers",
+      ),
     ).toBeUndefined();
   });
 });
@@ -222,7 +255,9 @@ describe("planSettings — unpinned-action refusal", () => {
   it("refuses sha_pinning_required (unsupported, not fixable) when a workflow uses: is unpinned", () => {
     const plan = planSettings(desiredFixture(), matchingSnapshot(), unpinned);
     expect(plan.refuseShaPinning).toBe(true);
-    const check = plan.checks.find((c) => c.key === "actions.sha_pinning_required")!;
+    const check = plan.checks.find(
+      (c) => c.key === "actions.sha_pinning_required",
+    )!;
     expect(check.status).toBe("unsupported");
     expect(check.fixable).toBe(false);
     expect(check.desired).toContain("REFUSED");
@@ -237,7 +272,9 @@ describe("planSettings — unpinned-action refusal", () => {
     const live = matchingSnapshot();
     live.actionsPermissions.allowed_actions = "all";
     const plan = planSettings(desiredFixture(), live, unpinned);
-    expect(plan.checks.find((c) => c.key === "actions.allowed_actions")).toMatchObject({
+    expect(
+      plan.checks.find((c) => c.key === "actions.allowed_actions"),
+    ).toMatchObject({
       status: "drift",
       fixable: true,
     });
@@ -248,7 +285,9 @@ describe("planSettings — unpinned-action refusal", () => {
     live.actionsPermissions.sha_pinning_required = false;
     const plan = planSettings(desiredFixture(), live, []);
     expect(plan.refuseShaPinning).toBe(false);
-    expect(plan.checks.find((c) => c.key === "actions.sha_pinning_required")).toMatchObject({
+    expect(
+      plan.checks.find((c) => c.key === "actions.sha_pinning_required"),
+    ).toMatchObject({
       status: "drift",
       fixable: true,
     });

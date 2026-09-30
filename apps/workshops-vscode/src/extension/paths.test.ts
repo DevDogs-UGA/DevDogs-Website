@@ -6,9 +6,13 @@ const root = resolve("/tmp/clone");
 
 describe("resolveInside", () => {
   it("resolves ordinary relative paths", () => {
-    expect(resolveInside(root, "app/page.tsx")).toBe(resolve(root, "app/page.tsx"));
+    expect(resolveInside(root, "app/page.tsx")).toBe(
+      resolve(root, "app/page.tsx"),
+    );
     expect(resolveInside(root, "./a/../b.ts")).toBe(resolve(root, "b.ts"));
-    expect(resolveInside(root, "app/(group)/[id]/page.tsx")).toBe(resolve(root, "app/(group)/[id]/page.tsx"));
+    expect(resolveInside(root, "app/(group)/[id]/page.tsx")).toBe(
+      resolve(root, "app/(group)/[id]/page.tsx"),
+    );
   });
 
   it("refuses anything that leaves the clone", () => {

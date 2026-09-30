@@ -60,7 +60,9 @@ export async function launchCi(argv: readonly string[]): Promise<void> {
   const tier = resolution.tier;
 
   try {
-    const entered = await envSession.enterEnvironment(tier, { override: false });
+    const entered = await envSession.enterEnvironment(tier, {
+      override: false,
+    });
     for (const warning of entered.warnings) {
       process.stderr.write(`devtools-ci: ${warning}\n`);
     }

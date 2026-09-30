@@ -1,11 +1,21 @@
 import { describe, expect, it } from "vitest";
 import type { ReviewPlan, Step } from "../core/index.js";
-import { decideBase, planIsEmpty, rangeLabel, restrictPlanToFile, reviewTitle } from "./scope.js";
+import {
+  decideBase,
+  planIsEmpty,
+  rangeLabel,
+  restrictPlanToFile,
+  reviewTitle,
+} from "./scope.js";
 import { buildStepsModel, stepLabel } from "./steps-model.js";
 import { resolveUsername } from "./username.js";
 import { isPendingFresh, PENDING_TTL_MS, readPending } from "./pending.js";
 
-function step(workshop: string, number: number, title = `Title ${number}`): Step {
+function step(
+  workshop: string,
+  number: number,
+  title = `Title ${number}`,
+): Step {
   const nn = String(number).padStart(2, "0");
   return {
     tag: `${workshop}/${nn}-s${number}`,
@@ -36,7 +46,13 @@ describe("buildStepsModel", () => {
     expect(model.total).toBe(5);
     expect(model.position).toBe(4);
     expect(model.header).toBe("Step 4 of 5");
-    expect(model.rows.map((r) => r.state)).toEqual(["done", "done", "done", "current", "todo"]);
+    expect(model.rows.map((r) => r.state)).toEqual([
+      "done",
+      "done",
+      "done",
+      "current",
+      "todo",
+    ]);
   });
 
   it("reports not started when nothing (or only a start) is reached", () => {
@@ -46,7 +62,9 @@ describe("buildStepsModel", () => {
 
   it("labels steps with their number", () => {
     expect(stepLabel(step("w", 3, "Post it"))).toBe("03 Post it");
-    expect(stepLabel({ ...step("w", 3, ""), slug: "post-it" })).toBe("03 post-it");
+    expect(stepLabel({ ...step("w", 3, ""), slug: "post-it" })).toBe(
+      "03 post-it",
+    );
   });
 });
 
@@ -57,7 +75,10 @@ describe("decideBase", () => {
   });
 
   it("reviews the next step without asking", () => {
-    expect(decideBase(line, line[2]!, line[1]!, false)).toEqual({ kind: "ready", base: line[1] });
+    expect(decideBase(line, line[2]!, line[1]!, false)).toEqual({
+      kind: "ready",
+      base: line[1],
+    });
   });
 
   it("asks about a skipped range, offering the target's own step as the alternative", () => {
@@ -69,7 +90,10 @@ describe("decideBase", () => {
   });
 
   it("honours an explicit from without asking", () => {
-    expect(decideBase(line, line[6]!, line[2]!, true)).toEqual({ kind: "ready", base: line[2] });
+    expect(decideBase(line, line[6]!, line[2]!, true)).toEqual({
+      kind: "ready",
+      base: line[2],
+    });
   });
 });
 
@@ -92,12 +116,23 @@ describe("restrictPlanToFile", () => {
       { path: "a.ts", oldPath: undefined, status: "modified" },
       { path: "new.ts", oldPath: "old.ts", status: "renamed" },
     ],
-    fromTarget: [{ path: "pnpm-lock.yaml", oldPath: undefined, status: "modified", reason: "lockfile" }],
+    fromTarget: [
+      {
+        path: "pnpm-lock.yaml",
+        oldPath: undefined,
+        status: "modified",
+        reason: "lockfile",
+      },
+    ],
   };
 
   it("keeps one file (either side of a rename) and drops commands", () => {
-    expect(restrictPlanToFile(plan, "a.ts").files.map((f) => f.path)).toEqual(["a.ts"]);
-    expect(restrictPlanToFile(plan, "old.ts").files.map((f) => f.path)).toEqual(["new.ts"]);
+    expect(restrictPlanToFile(plan, "a.ts").files.map((f) => f.path)).toEqual([
+      "a.ts",
+    ]);
+    expect(restrictPlanToFile(plan, "old.ts").files.map((f) => f.path)).toEqual(
+      ["new.ts"],
+    );
     expect(restrictPlanToFile(plan, "a.ts").commands).toEqual([]);
   });
 
@@ -128,7 +163,11 @@ describe("resolveUsername", () => {
 
 describe("pending links", () => {
   it("round-trips through storage and expires", () => {
-    const pending = readPending({ path: "/review", query: "a=b", savedAt: 1000 });
+    const pending = readPending({
+      path: "/review",
+      query: "a=b",
+      savedAt: 1000,
+    });
     expect(pending).toEqual({ path: "/review", query: "a=b", savedAt: 1000 });
     expect(isPendingFresh(pending!, 1000 + PENDING_TTL_MS)).toBe(true);
     expect(isPendingFresh(pending!, 1001 + PENDING_TTL_MS)).toBe(false);
@@ -136,7 +175,13 @@ describe("pending links", () => {
   });
 
   it("ignores garbage", () => {
-    for (const raw of [undefined, null, "x", { path: 1 }, { path: "/a", query: "", savedAt: "n" }]) {
+    for (const raw of [
+      undefined,
+      null,
+      "x",
+      { path: 1 },
+      { path: "/a", query: "", savedAt: "n" },
+    ]) {
       expect(readPending(raw)).toBeUndefined();
     }
   });

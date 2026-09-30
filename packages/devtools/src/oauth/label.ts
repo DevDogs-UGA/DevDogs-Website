@@ -13,7 +13,9 @@ export function defaultLabel(cwd: string): string {
   const pkgPath = join(cwd, "package.json");
   if (existsSync(pkgPath)) {
     try {
-      const pkg = JSON.parse(readFileSync(pkgPath, "utf-8")) as { name?: unknown };
+      const pkg = JSON.parse(readFileSync(pkgPath, "utf-8")) as {
+        name?: unknown;
+      };
       if (typeof pkg.name === "string" && pkg.name.trim() !== "") {
         return pkg.name.trim();
       }

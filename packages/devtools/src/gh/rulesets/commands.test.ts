@@ -64,10 +64,14 @@ describe("resolving the platform App and Renovate", () => {
     expect(code).toBe(0);
     expect(err).not.toHaveBeenCalled();
     const printed = JSON.parse(log.mock.calls[0]![0] as string) as {
-      creates: { desired: { name: string; bypass_actors: { actor_id: number }[] } }[];
+      creates: {
+        desired: { name: string; bypass_actors: { actor_id: number }[] };
+      }[];
     };
     const allBranches = printed.creates.find((c) => c.desired.name === "~ALL")!;
-    expect(allBranches.desired.bypass_actors.map((a) => a.actor_id)).toContain(7001);
+    expect(allBranches.desired.bypass_actors.map((a) => a.actor_id)).toContain(
+      7001,
+    );
     restore();
   });
 
@@ -83,11 +87,18 @@ describe("resolving the platform App and Renovate", () => {
     expect(code).toBe(0);
     expect(err).toHaveBeenCalledWith(expect.stringContaining("Renovate"));
     const printed = JSON.parse(log.mock.calls[0]![0] as string) as {
-      creates: { desired: { name: string; bypass_actors: { actor_id: number; actor_type: string }[] } }[];
+      creates: {
+        desired: {
+          name: string;
+          bypass_actors: { actor_id: number; actor_type: string }[];
+        };
+      }[];
     };
     const allBranches = printed.creates.find((c) => c.desired.name === "~ALL")!;
     expect(
-      allBranches.desired.bypass_actors.every((a) => a.actor_type !== "Integration"),
+      allBranches.desired.bypass_actors.every(
+        (a) => a.actor_type !== "Integration",
+      ),
     ).toBe(true);
     restore();
   });

@@ -397,7 +397,11 @@ describe("preflight", () => {
   it("carries none of the ordinary credentials", () => {
     // BY NAME: ordinary (non-narrowed) secrets must not reach preflight.
     const file = mentioned(target("preflight"));
-    for (const key of ["DEMO_TOKEN", "DEMO_SECOND_TOKEN", "DEMO_APPLY_ADJACENT"]) {
+    for (const key of [
+      "DEMO_TOKEN",
+      "DEMO_SECOND_TOKEN",
+      "DEMO_APPLY_ADJACENT",
+    ]) {
       expect(file.has(key), `${key} must not reach preflight`).toBe(false);
       // POSITIVE CONTROL: each really is a key some target carries.
       expect(

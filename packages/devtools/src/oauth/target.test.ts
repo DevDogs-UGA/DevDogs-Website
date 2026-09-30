@@ -28,7 +28,10 @@ describe("readHostedTargetFromEnvFiles — outside a checkout", () => {
 
   it("falls back to .env when .env.local is absent or incomplete", () => {
     const dir = tempDir();
-    writeFileSync(join(dir, ".env"), 'SUPABASE_URL="https://efgh.supabase.co"\nSUPABASE_SERVICE_ROLE_KEY="k2"\n');
+    writeFileSync(
+      join(dir, ".env"),
+      'SUPABASE_URL="https://efgh.supabase.co"\nSUPABASE_SERVICE_ROLE_KEY="k2"\n',
+    );
     expect(readHostedTargetFromEnvFiles(dir)).toEqual({
       apiUrl: "https://efgh.supabase.co",
       serviceRoleKey: "k2",
@@ -37,8 +40,14 @@ describe("readHostedTargetFromEnvFiles — outside a checkout", () => {
 
   it("does not fall back to .env when .env.local has ONE of the two keys — treats it as incomplete", () => {
     const dir = tempDir();
-    writeFileSync(join(dir, ".env.local"), 'SUPABASE_URL="https://abcd.supabase.co"\n');
-    writeFileSync(join(dir, ".env"), 'SUPABASE_URL="https://efgh.supabase.co"\nSUPABASE_SERVICE_ROLE_KEY="k2"\n');
+    writeFileSync(
+      join(dir, ".env.local"),
+      'SUPABASE_URL="https://abcd.supabase.co"\n',
+    );
+    writeFileSync(
+      join(dir, ".env"),
+      'SUPABASE_URL="https://efgh.supabase.co"\nSUPABASE_SERVICE_ROLE_KEY="k2"\n',
+    );
     // .env.local is checked first and is incomplete, so this falls through to .env.
     expect(readHostedTargetFromEnvFiles(dir)).toEqual({
       apiUrl: "https://efgh.supabase.co",
@@ -56,7 +65,10 @@ describe("resolveHostedTargetInRepo — inside a checkout", () => {
   it("resolves a tier, enters its environment, and reads API_URL/SECRET_KEY", async () => {
     const enterEnvironment = vi.fn(async () => {});
     const resolveTier = vi.fn(async () => "staging" as const);
-    const env = { API_URL: "https://staging-ref.supabase.co", SECRET_KEY: "staging-secret" };
+    const env = {
+      API_URL: "https://staging-ref.supabase.co",
+      SECRET_KEY: "staging-secret",
+    };
 
     const target = await resolveHostedTargetInRepo(undefined, {
       resolveTier,

@@ -10,7 +10,14 @@ const { run } = await import("../db/run.js");
 describe("workerBuildCommands", () => {
   it("builds a vinext app's workspace deps, then the app itself", () => {
     expect(workerBuildCommands("schedule-builder")).toEqual([
-      ["-r", "--if-present", "--filter", "schedule-builder^...", "run", "build"],
+      [
+        "-r",
+        "--if-present",
+        "--filter",
+        "schedule-builder^...",
+        "run",
+        "build",
+      ],
       ["--filter", "schedule-builder", "exec", "vinext", "build"],
     ]);
   });
@@ -31,7 +38,16 @@ describe("buildWorkerApp", () => {
     const env = { CLOUDFLARE_ENV: "staging" };
     await expect(buildWorkerApp("schedule-builder", env)).resolves.toBe(0);
     expect(vi.mocked(run).mock.calls).toEqual([
-      [["-r", "--if-present", "--filter", "schedule-builder^...", "run", "build"]],
+      [
+        [
+          "-r",
+          "--if-present",
+          "--filter",
+          "schedule-builder^...",
+          "run",
+          "build",
+        ],
+      ],
       [["--filter", "schedule-builder", "exec", "vinext", "build"], env],
     ]);
   });

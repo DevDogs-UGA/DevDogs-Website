@@ -23,14 +23,19 @@ function describe(err: unknown): string {
 }
 
 /** `GET /orgs/{org}/teams/{slug}` -> the team's numeric id. */
-export async function resolveTeamId(org: string, slug: string): Promise<number> {
+export async function resolveTeamId(
+  org: string,
+  slug: string,
+): Promise<number> {
   try {
     const { stdout } = await run("gh", ["api", `orgs/${org}/teams/${slug}`], {
       shell: false,
     });
     const data = JSON.parse(stdout) as { id?: number };
     if (typeof data.id !== "number") {
-      throw new GhRulesetsError(`orgs/${org}/teams/${slug} returned no numeric id`);
+      throw new GhRulesetsError(
+        `orgs/${org}/teams/${slug} returned no numeric id`,
+      );
     }
     return data.id;
   } catch (err) {
@@ -57,13 +62,18 @@ interface Installation {
  * `docs/platform/guides/identity/github-app.md` already tells an operator to
  * run to verify the App's permission grant.
  */
-export async function resolveAppId(org: string, appSlug: string): Promise<number> {
+export async function resolveAppId(
+  org: string,
+  appSlug: string,
+): Promise<number> {
   try {
     const { stdout } = await run("gh", ["api", `orgs/${org}/installations`], {
       shell: false,
     });
     const data = JSON.parse(stdout) as { installations?: Installation[] };
-    const match = (data.installations ?? []).find((i) => i.app_slug === appSlug);
+    const match = (data.installations ?? []).find(
+      (i) => i.app_slug === appSlug,
+    );
     if (!match) {
       throw new GhRulesetsError(
         `no installation with app_slug "${appSlug}" found in orgs/${org}/installations`,
@@ -72,6 +82,8 @@ export async function resolveAppId(org: string, appSlug: string): Promise<number
     return match.app_id;
   } catch (err) {
     if (err instanceof GhRulesetsError) throw err;
-    throw new GhRulesetsError(`resolving App "${appSlug}" in ${org}: ${describe(err)}`);
+    throw new GhRulesetsError(
+      `resolving App "${appSlug}" in ${org}: ${describe(err)}`,
+    );
   }
 }

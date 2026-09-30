@@ -1,6 +1,6 @@
 # @devdogsuga/env
 
-The env-registry *machinery*: `declare()`/`define()` for building a manifest,
+The env-registry _machinery_: `declare()`/`define()` for building a manifest,
 target/tier resolution (development/preflight/staging/production), the
 `with-env` session loader, and a `@t3-oss/env-nextjs` re-export. It ships no
 variables of its own — the registry of actual names and schemas (which app

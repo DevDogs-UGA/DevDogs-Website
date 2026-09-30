@@ -15,7 +15,7 @@ secrets, or user-facing content.
   once `packages/events` in the product repo was ready to move out entirely.
   See `CUTOVER.md` for the migrated-from sha and what stays forward-ported.
 - **DevDogsUGA keeps anything a contributor authors** — app code, page
-  templates, email/OG templates, the env variable *registry* (the values;
+  templates, email/OG templates, the env variable _registry_ (the values;
   this repo only ships the framework that reads them), generated database
   types, migrations, and every deployment, cron, and secret binding.
 - `apps/slides` is the one exception to "nothing deploys": it's not a

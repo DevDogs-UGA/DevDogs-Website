@@ -1,7 +1,19 @@
 import { homedir } from "node:os";
-import { NodeClient, Scope, defaultStackParser, makeNodeTransport } from "@sentry/node";
+import {
+  NodeClient,
+  Scope,
+  defaultStackParser,
+  makeNodeTransport,
+} from "@sentry/node";
 import * as vscode from "vscode";
-import { Reporter, guard, scrubEvent, trackOfRepo, type ReportEvent, type ScrubContext } from "../core/index.js";
+import {
+  Reporter,
+  guard,
+  scrubEvent,
+  trackOfRepo,
+  type ReportEvent,
+  type ScrubContext,
+} from "../core/index.js";
 import { output } from "./log.js";
 
 /**
@@ -28,24 +40,39 @@ export class Telemetry implements vscode.Disposable {
   private readonly disposables: vscode.Disposable[] = [];
   private scrubContext: () => ScrubContext = () => ({ paths: [homedir()] });
 
-  constructor(context: vscode.ExtensionContext, dsn: string = __WORKSHOPS_SENTRY_DSN__) {
+  constructor(
+    context: vscode.ExtensionContext,
+    dsn: string = __WORKSHOPS_SENTRY_DSN__,
+  ) {
     if (dsn) {
       const client = new NodeClient({
         dsn,
         release: `workshops-vscode@${(context.extension.packageJSON as { version: string }).version}`,
-        environment: context.extensionMode === vscode.ExtensionMode.Production ? "production" : "development",
+        environment:
+          context.extensionMode === vscode.ExtensionMode.Production
+            ? "production"
+            : "development",
         integrations: [],
         transport: makeNodeTransport,
         stackParser: defaultStackParser,
         sendDefaultPii: false,
         sendClientReports: false,
         // Belt and braces: nothing queued leaves after telemetry is turned off.
-        beforeSend: (event) => (vscode.env.isTelemetryEnabled ? (scrubEvent(event as unknown as ReportEvent, this.scrubContext()) as unknown as typeof event) : null),
+        beforeSend: (event) =>
+          vscode.env.isTelemetryEnabled
+            ? (scrubEvent(
+                event as unknown as ReportEvent,
+                this.scrubContext(),
+              ) as unknown as typeof event)
+            : null,
       });
       const scope = new Scope();
       scope.setClient(client);
       client.init();
-      scope.setTags({ vscode_version: vscode.version, platform: process.platform });
+      scope.setTags({
+        vscode_version: vscode.version,
+        platform: process.platform,
+      });
       this.client = client;
       this.scope = scope;
     }
@@ -53,13 +80,19 @@ export class Telemetry implements vscode.Disposable {
       this.scope
         ? {
             enabled: () => vscode.env.isTelemetryEnabled,
-            send: (error, source) => void this.scope!.clone().setTag("source", source).captureException(error),
+            send: (error, source) =>
+              void this.scope!.clone()
+                .setTag("source", source)
+                .captureException(error),
           }
         : undefined,
     );
     this.disposables.push(
       vscode.env.onDidChangeTelemetryEnabled((on) => {
-        if (this.client) output.appendLine(`Error reporting ${on ? "on" : "off"} (VS Code's telemetry setting).`);
+        if (this.client)
+          output.appendLine(
+            `Error reporting ${on ? "on" : "off"} (VS Code's telemetry setting).`,
+          );
       }),
     );
   }
@@ -106,6 +139,9 @@ export function captureError(source: string, error: unknown): void {
 }
 
 /** Wraps a command handler so an unexpected error is reported, then thrown on as before. */
-export function guarded<A extends unknown[], R>(source: string, handler: (...args: A) => R): (...args: A) => R | Promise<R> {
+export function guarded<A extends unknown[], R>(
+  source: string,
+  handler: (...args: A) => R,
+): (...args: A) => R | Promise<R> {
   return guard(captureError, source, handler);
 }

@@ -15,22 +15,22 @@
 // Sorted soonest-first; `UpcomingStack` slices however many of the front it
 // wants (`count`, default 3, matching the platform homepage's
 // `UPCOMING_COUNT`).
-import type { Plugin } from 'vite'
-import { getClubConfig, type Meeting } from '@devdogsuga/events'
+import type { Plugin } from "vite";
+import { getClubConfig, type Meeting } from "@devdogsuga/events";
 
-const VIRTUAL_ID = 'virtual:dd-meetings'
-const RESOLVED_ID = `\0${VIRTUAL_ID}`
+const VIRTUAL_ID = "virtual:dd-meetings";
+const RESOLVED_ID = `\0${VIRTUAL_ID}`;
 
-const CUTOFF = '2026-09-28T22:00:00.000Z'
+const CUTOFF = "2026-09-28T22:00:00.000Z";
 
 export interface DeckMeeting {
-  id: string
-  title: string | null
-  kind: string | null
-  building: string | null
-  location: string | null
-  startsAt: string
-  endsAt: string
+  id: string;
+  title: string | null;
+  kind: string | null;
+  building: string | null;
+  location: string | null;
+  startsAt: string;
+  endsAt: string;
 }
 
 function toDeckMeeting(m: Meeting): DeckMeeting {
@@ -42,28 +42,28 @@ function toDeckMeeting(m: Meeting): DeckMeeting {
     location: m.location,
     startsAt: m.startsAt,
     endsAt: m.endsAt,
-  }
+  };
 }
 
 function upcoming(): DeckMeeting[] {
-  const { meetings } = getClubConfig()
+  const { meetings } = getClubConfig();
   return meetings
-    .filter(m => m.cancelledAt === null)
-    .filter(m => !(m.title ?? '').startsWith('Production test'))
-    .filter(m => m.startsAt > CUTOFF)
+    .filter((m) => m.cancelledAt === null)
+    .filter((m) => !(m.title ?? "").startsWith("Production test"))
+    .filter((m) => m.startsAt > CUTOFF)
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
-    .map(toDeckMeeting)
+    .map(toDeckMeeting);
 }
 
 export function meetingsData(): Plugin {
   return {
-    name: 'dd:meetings-data',
+    name: "dd:meetings-data",
     resolveId(id) {
-      if (id === VIRTUAL_ID) return RESOLVED_ID
+      if (id === VIRTUAL_ID) return RESOLVED_ID;
     },
     load(id) {
       if (id === RESOLVED_ID)
-        return `export const meetings = ${JSON.stringify(upcoming())}`
+        return `export const meetings = ${JSON.stringify(upcoming())}`;
     },
-  }
+  };
 }

@@ -19,7 +19,9 @@ export interface WorkspaceClone {
 }
 
 /** The first open folder that is a clone of `repo` (or of any allowlisted repo). */
-export async function findWorkspaceClone(repo?: string): Promise<WorkspaceClone | undefined> {
+export async function findWorkspaceClone(
+  repo?: string,
+): Promise<WorkspaceClone | undefined> {
   const wanted = repo ? [repo] : [...ALLOWED_REPOS];
   for (const folder of vscode.workspace.workspaceFolders ?? []) {
     if (folder.uri.scheme !== "file") continue;
@@ -51,7 +53,11 @@ export async function locateClone(
   if (open) return { kind: "here", root: open.root };
 
   const remembered = state.cloneFor(repo);
-  if (remembered && existsSync(remembered) && (await cloneRootIfMatches(remembered, repo))) {
+  if (
+    remembered &&
+    existsSync(remembered) &&
+    (await cloneRootIfMatches(remembered, repo))
+  ) {
     return openFolder(remembered, repo, state, link);
   }
 
@@ -59,7 +65,8 @@ export async function locateClone(
     `This link is for ${repo}, but it isn't open in this window.`,
     {
       modal: true,
-      detail: "Open the folder where you cloned it, or clone it now. Nothing is changed until you accept a change.",
+      detail:
+        "Open the folder where you cloned it, or clone it now. Nothing is changed until you accept a change.",
     },
     "Open a folder…",
     "Clone it",
@@ -76,14 +83,18 @@ export async function locateClone(
     if (!dir) return { kind: "cancelled" };
     const root = await cloneRootIfMatches(dir, repo);
     if (!root) {
-      void vscode.window.showErrorMessage(`That folder isn't a clone of ${repo}.`);
+      void vscode.window.showErrorMessage(
+        `That folder isn't a clone of ${repo}.`,
+      );
       return { kind: "cancelled" };
     }
     return openFolder(root, repo, state, link);
   }
   if (choice === "Clone it") {
     const cloned = await cloneInteractively(repo);
-    return cloned ? openFolder(cloned, repo, state, link) : { kind: "cancelled" };
+    return cloned
+      ? openFolder(cloned, repo, state, link)
+      : { kind: "cancelled" };
   }
   return { kind: "cancelled" };
 }
@@ -101,12 +112,17 @@ async function cloneInteractively(repo: string): Promise<string | undefined> {
   if (!parent) return undefined;
   const target = join(parent, basename(repo));
   if (existsSync(target)) {
-    void vscode.window.showErrorMessage(`${target} already exists. Choose another folder, or use "Open a folder…".`);
+    void vscode.window.showErrorMessage(
+      `${target} already exists. Choose another folder, or use "Open a folder…".`,
+    );
     return undefined;
   }
   try {
     return await vscode.window.withProgress(
-      { location: vscode.ProgressLocation.Notification, title: `Cloning ${repo}…` },
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `Cloning ${repo}…`,
+      },
       () => cloneRepo(repo, dirname(target)),
     );
   } catch (error) {
@@ -126,6 +142,10 @@ async function openFolder(
   // Park the link before the window reloads; it resumes in activate().
   await state.setPending({ ...link, savedAt: Date.now() });
   output.appendLine(`Opening ${root} to continue a workshop link.`);
-  await vscode.commands.executeCommand("vscode.openFolder", vscode.Uri.file(root), { forceNewWindow: false });
+  await vscode.commands.executeCommand(
+    "vscode.openFolder",
+    vscode.Uri.file(root),
+    { forceNewWindow: false },
+  );
   return { kind: "reloading" };
 }

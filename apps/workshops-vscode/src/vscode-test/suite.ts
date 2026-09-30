@@ -21,12 +21,17 @@ const clone = process.env["SMOKE_CLONE"]!;
 const git = (...args: string[]) =>
   execFileSync("git", ["-C", clone, ...args], { encoding: "utf8" }).trim();
 
-async function until<T>(what: string, check: () => T | undefined | false, timeoutMs = 60_000): Promise<T> {
+async function until<T>(
+  what: string,
+  check: () => T | undefined | false,
+  timeoutMs = 60_000,
+): Promise<T> {
   const start = Date.now();
   for (;;) {
     const value = check();
     if (value) return value;
-    if (Date.now() - start > timeoutMs) throw new Error(`Timed out waiting for ${what}`);
+    if (Date.now() - start > timeoutMs)
+      throw new Error(`Timed out waiting for ${what}`);
     await new Promise((r) => setTimeout(r, 100));
   }
 }
@@ -61,13 +66,19 @@ async function fakeRelay() {
     ws.on("message", (data) => received.push(JSON.parse(data.toString())));
   });
   const { port } = wss.address() as { port: number };
-  const send = (message: object) => sockets.at(-1)!.send(JSON.stringify(message));
+  const send = (message: object) =>
+    sockets.at(-1)!.send(JSON.stringify(message));
   return { wss, port, urls, received, send };
 }
 
 export async function run(): Promise<void> {
-  const extension = vscode.extensions.getExtension<WorkshopsApi>("devdogsuga.workshops");
-  assert.ok(extension, "extension devdogsuga.workshops is installed in the host");
+  const extension = vscode.extensions.getExtension<WorkshopsApi>(
+    "devdogsuga.workshops",
+  );
+  assert.ok(
+    extension,
+    "extension devdogsuga.workshops is installed in the host",
+  );
   const api = await extension.activate();
   assert.equal(extension.isActive, true);
   log("activated");
@@ -77,8 +88,13 @@ export async function run(): Promise<void> {
   const open = api.steps.open;
   assert.ok(open, "the panel found the workspace clone");
   assert.equal(open.repo, "DevDogsUGA/Web-Workshops");
-  const numbered = open.snapshot.line.filter((s) => s.number > 0).map((s) => s.tag);
-  assert.deepEqual(numbered.slice(0, 2), ["02-supabase/01-read", "02-supabase/02-sign-in"]);
+  const numbered = open.snapshot.line
+    .filter((s) => s.number > 0)
+    .map((s) => s.tag);
+  assert.deepEqual(numbered.slice(0, 2), [
+    "02-supabase/01-read",
+    "02-supabase/02-sign-in",
+  ]);
   assert.equal(open.snapshot.current?.tag, "02-supabase/00-start");
   log(`panel lists ${numbered.length} steps, current is 00-start`);
 
@@ -91,12 +107,24 @@ export async function run(): Promise<void> {
     return answer;
   };
   const config = vscode.workspace.getConfiguration("devdogsWorkshops");
-  await config.update("liveRelayUrl", `ws://127.0.0.1:${relay.port}/attend`, vscode.ConfigurationTarget.Global);
+  await config.update(
+    "liveRelayUrl",
+    `ws://127.0.0.1:${relay.port}/attend`,
+    vscode.ConfigurationTarget.Global,
+  );
   await config.update("followLive", true, vscode.ConfigurationTarget.Global);
   await until("the relay connection", () => relay.urls.length === 1);
-  assert.equal(relay.urls[0], "/attend?track=web", "the track comes from the repo");
+  assert.equal(
+    relay.urls[0],
+    "/attend?track=web",
+    "the track comes from the repo",
+  );
   await until("the first step report", () => relay.received.length === 1);
-  assert.deepEqual(relay.received[0], { t: "step", step: 0 }, "only a step number is sent");
+  assert.deepEqual(
+    relay.received[0],
+    { t: "step", step: 0 },
+    "only a step number is sent",
+  );
   assert.equal(api.live.presenterLive, false, "no presenter yet");
   relay.send({ t: "live", live: true });
   await until("the Live view", () => api.live.presenterLive || undefined);
@@ -106,7 +134,11 @@ export async function run(): Promise<void> {
   relay.send({ t: "checkpoint", id: "2", ref: "02-supabase/00-start", tracks });
   relay.send({ t: "checkpoint", id: "3", ref: step2, tracks });
   await until("the offer", () => prompts.length > 0 || undefined);
-  assert.equal(prompts.length, 1, "other tracks' and already-had checkpoints don't prompt");
+  assert.equal(
+    prompts.length,
+    1,
+    "other tracks' and already-had checkpoints don't prompt",
+  );
   assert.match(prompts[0]!, /^Presenter finished Step 2: /);
   await until("the badge", () => api.live.badge || undefined);
   assert.equal(api.live.badge!.value, 1);
@@ -114,7 +146,10 @@ export async function run(): Promise<void> {
   log(`live: offered "${prompts[0]}", Later left a badge`);
 
   // Refused links do nothing.
-  await api.handleLink("/review", "repo=evil/Web-Workshops&to=02-supabase/01-read");
+  await api.handleLink(
+    "/review",
+    "repo=evil/Web-Workshops&to=02-supabase/01-read",
+  );
   assert.equal(api.review.snapshot, undefined);
 
   await api.setUsername("smoke-tester");
@@ -123,11 +158,17 @@ export async function run(): Promise<void> {
   const before = git("rev-parse", "HEAD");
 
   // The link path: /review?repo&to&session.
-  await api.handleLink("/review", "repo=devdogsuga/web-workshops&to=02-supabase/01-read&session=smoke-session");
+  await api.handleLink(
+    "/review",
+    "repo=devdogsuga/web-workshops&to=02-supabase/01-read&session=smoke-session",
+  );
   const started = await until("review to open", () => api.review.snapshot);
   assert.equal(started.target, "02-supabase/01-read");
   assert.equal(started.phase, "commands");
-  assert.deepEqual(started.commands.map((c) => c.command), ["echo ran > ran.txt"]);
+  assert.deepEqual(
+    started.commands.map((c) => c.command),
+    ["echo ran > ran.txt"],
+  );
   log("review opened with its command");
 
   // Step command in the Workshop terminal.
@@ -135,16 +176,29 @@ export async function run(): Promise<void> {
   relay.send({ t: "checkpoint", id: "4", ref: step3, tracks });
   await new Promise((r) => setTimeout(r, 500));
   assert.equal(prompts.length, 1, "a review in progress is never interrupted");
-  await vscode.commands.executeCommand("devdogsWorkshops.review.runAllCommands");
+  await vscode.commands.executeCommand(
+    "devdogsWorkshops.review.runAllCommands",
+  );
   let state = api.review.snapshot!.commands[0]!.state;
   if (state === "sent") {
     log("no shell integration here: line was sent, confirming by hand");
-    await vscode.commands.executeCommand("devdogsWorkshops.review.confirmCommand", 0);
+    await vscode.commands.executeCommand(
+      "devdogsWorkshops.review.confirmCommand",
+      0,
+    );
   } else {
     log(`command finished via shell integration: ${state}`);
   }
-  await until("command result", () => api.review.snapshot!.phase === "files" || undefined);
-  if (state === "done") await until("ran.txt", () => existsSync(join(clone, "ran.txt")) || undefined, 15_000);
+  await until(
+    "command result",
+    () => api.review.snapshot!.phase === "files" || undefined,
+  );
+  if (state === "done")
+    await until(
+      "ran.txt",
+      () => existsSync(join(clone, "ran.txt")) || undefined,
+      15_000,
+    );
   state = api.review.snapshot!.commands[0]!.state;
   assert.equal(state, "done");
 
@@ -155,9 +209,15 @@ export async function run(): Promise<void> {
   await until("a review diff tab", () =>
     vscode.window.tabGroups.all
       .flatMap((g) => g.tabs)
-      .find((t) => t.input instanceof vscode.TabInputTextDiff && t.input.modified.scheme === "devdogs-review"),
+      .find(
+        (t) =>
+          t.input instanceof vscode.TabInputTextDiff &&
+          t.input.modified.scheme === "devdogs-review",
+      ),
   );
-  log(`${files.length} files to review, diff editor open: ${files.map((f) => `${f.path}(${f.changes})`).join(", ")}`);
+  log(
+    `${files.length} files to review, diff editor open: ${files.map((f) => `${f.path}(${f.changes})`).join(", ")}`,
+  );
 
   await shot("1-review-opened");
 
@@ -171,26 +231,50 @@ export async function run(): Promise<void> {
       return false;
     }
   };
-  const rejectIndex = files.findIndex((f) => existedBefore(f.path) && f.changes === 1);
+  const rejectIndex = files.findIndex(
+    (f) => existedBefore(f.path) && f.changes === 1,
+  );
   const target = rejectIndex >= 0 ? rejectIndex : files.length - 1;
   const rejected = files[target]!.path;
   await vscode.commands.executeCommand("devdogsWorkshops.review.acceptAll");
   api.review.decideChange(target, 0, "reject");
-  assert.equal(api.review.snapshot!.files[target]!.status, files[target]!.changes === 1 ? "rejected" : "partial");
-  const rejectedBefore = existedBefore(rejected) ? git("show", `${before}:${rejected}`) : null;
+  assert.equal(
+    api.review.snapshot!.files[target]!.status,
+    files[target]!.changes === 1 ? "rejected" : "partial",
+  );
+  const rejectedBefore = existedBefore(rejected)
+    ? git("show", `${before}:${rejected}`)
+    : null;
 
   await shot("2-after-decisions");
   await vscode.commands.executeCommand("devdogsWorkshops.review.finish");
-  await until("review to finish", () => api.review.snapshot === undefined || undefined);
+  await until(
+    "review to finish",
+    () => api.review.snapshot === undefined || undefined,
+  );
 
   // The merge commit.
   const tagCommit = git("rev-parse", "02-supabase/01-read^{commit}");
-  const parents = git("rev-list", "--parents", "-n1", "HEAD").split(" ").slice(1);
-  assert.deepEqual(parents, [before, tagCommit], "HEAD is a merge of the old HEAD and the step's tag");
+  const parents = git("rev-list", "--parents", "-n1", "HEAD")
+    .split(" ")
+    .slice(1);
+  assert.deepEqual(
+    parents,
+    [before, tagCommit],
+    "HEAD is a merge of the old HEAD and the step's tag",
+  );
   assert.match(git("log", "-1", "--format=%s"), /^Step 1: /);
-  assert.match(git("branch", "--show-current"), /\/02-supabase$/, "work moved to the personal branch");
+  assert.match(
+    git("branch", "--show-current"),
+    /\/02-supabase$/,
+    "work moved to the personal branch",
+  );
   if (rejectedBefore !== null) {
-    assert.equal(git("show", `HEAD:${rejected}`), rejectedBefore, "the rejected change kept the attendee's file");
+    assert.equal(
+      git("show", `HEAD:${rejected}`),
+      rejectedBefore,
+      "the rejected change kept the attendee's file",
+    );
   }
   log(`rejected change 0 of ${rejected}`);
   for (const file of files.filter((f) => f.path !== rejected)) {
@@ -200,7 +284,11 @@ export async function run(): Promise<void> {
       `${file.path} matches the step`,
     );
   }
-  assert.equal(git("status", "--porcelain", "--untracked-files=no"), "", "nothing tracked is left dirty");
+  assert.equal(
+    git("status", "--porcelain", "--untracked-files=no"),
+    "",
+    "nothing tracked is left dirty",
+  );
   assert.equal(opened.length, 1, "the docs tab handoff opened one URL");
   assert.match(
     opened[0]!,
@@ -215,18 +303,33 @@ export async function run(): Promise<void> {
   log("panel moved to step 1");
 
   // After Finish: the step is reported, and the held-back step is offered.
-  await until("the step report", () => relay.received.some((m) => (m as { step?: number }).step === 1));
-  assert.deepEqual(relay.received.map((m) => (m as { step: number }).step), [0, 1]);
-  await until("the offer after the review", () => prompts.length === 2 || undefined);
+  await until("the step report", () =>
+    relay.received.some((m) => (m as { step?: number }).step === 1),
+  );
+  assert.deepEqual(
+    relay.received.map((m) => (m as { step: number }).step),
+    [0, 1],
+  );
+  await until(
+    "the offer after the review",
+    () => prompts.length === 2 || undefined,
+  );
   assert.match(prompts[1]!, /^Presenter finished Step 3: /);
-  assert.equal(api.live.pending.badge, step3, "Later moved the badge to the newer step");
+  assert.equal(
+    api.live.pending.badge,
+    step3,
+    "Later moved the badge to the newer step",
+  );
   log("live: reported step 1, then offered step 3 once the review finished");
 
   // "Review" on an offer starts a review to that step (the next one, so no
   // "review steps together?" dialog, which the test host refuses).
   answer = "Review";
   relay.send({ t: "checkpoint", id: "5", ref: step2, tracks });
-  const offered = await until("the review from the offer", () => api.review.snapshot);
+  const offered = await until(
+    "the review from the offer",
+    () => api.review.snapshot,
+  );
   assert.equal(offered.target, step2);
   assert.equal(api.live.pending.badge, step3, "the newer step stays badged");
   await api.review.cancel();

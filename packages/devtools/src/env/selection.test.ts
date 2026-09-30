@@ -79,7 +79,10 @@ const NEVER_STORE = ["BWS_ACCESS_TOKEN"] as const;
 const APPLY_ONLY = ["SUPABASE_ACCESS_TOKEN"] as const;
 
 /** The two `localStack: true` fixture values — see `demo-registry/env.ts`. */
-const LOCAL_STACK_VARIABLES = ["DEMO_LOCAL_STACK_ONE", "DEMO_LOCAL_STACK_TWO"] as const;
+const LOCAL_STACK_VARIABLES = [
+  "DEMO_LOCAL_STACK_ONE",
+  "DEMO_LOCAL_STACK_TWO",
+] as const;
 
 /** Public, `scope: "environment"`, so the variable store. */
 const A_VARIABLE = "DEMO_VARIABLE";
@@ -324,7 +327,11 @@ describe("a value that is still the declared derivation", () => {
   it("leaves it to the registry instead of storing it", () => {
     // The bug: `env init` writes this line, push stored it verbatim, and a
     // STORED value beats the registry when the deploy composes an env file.
-    const { push, variables: vars, derived } = selectForPush(
+    const {
+      push,
+      variables: vars,
+      derived,
+    } = selectForPush(
       env({ DEMO_DERIVED: "$DEMO_VARIABLE", DEMO_TOKEN: "s" }),
       "staging",
     );
@@ -369,10 +376,11 @@ describe("a value that is still the declared derivation", () => {
   });
 
   it("still counts an empty value as skipped rather than derived", () => {
-    const { push, variables: vars, derived } = selectForPush(
-      env({ DEMO_DERIVED: "", DEMO_TOKEN: "" }),
-      "staging",
-    );
+    const {
+      push,
+      variables: vars,
+      derived,
+    } = selectForPush(env({ DEMO_DERIVED: "", DEMO_TOKEN: "" }), "staging");
     expect(push.size).toBe(0);
     expect(vars.size).toBe(0);
     expect(derived).toEqual([]);

@@ -16,7 +16,9 @@ export interface BashLookup {
 }
 
 /** Where Git Bash may live on Windows, best guess first. */
-export function windowsBashCandidates(lookup: Pick<BashLookup, "gitExecPath" | "env">): string[] {
+export function windowsBashCandidates(
+  lookup: Pick<BashLookup, "gitExecPath" | "env">,
+): string[] {
   const out: string[] = [];
   const exec = lookup.gitExecPath?.trim();
   if (exec) {
@@ -32,9 +34,11 @@ export function windowsBashCandidates(lookup: Pick<BashLookup, "gitExecPath" | "
   const roots = [
     lookup.env["ProgramFiles"],
     lookup.env["ProgramFiles(x86)"],
-    lookup.env["LOCALAPPDATA"] && win32.join(lookup.env["LOCALAPPDATA"], "Programs"),
+    lookup.env["LOCALAPPDATA"] &&
+      win32.join(lookup.env["LOCALAPPDATA"], "Programs"),
   ].filter((r): r is string => Boolean(r));
-  for (const root of roots) out.push(win32.join(root, "Git", "bin", "bash.exe"));
+  for (const root of roots)
+    out.push(win32.join(root, "Git", "bin", "bash.exe"));
   return [...new Set(out)];
 }
 

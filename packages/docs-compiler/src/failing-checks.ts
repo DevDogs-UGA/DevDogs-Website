@@ -80,7 +80,9 @@ export function printFailingChecks(result: FailingChecksResult): void {
     console.error(`[docs-compiler] ${all.length} error(s):`);
     for (const error of all) {
       const at = error.line === null ? "" : `:${error.line}`;
-      console.error(`[docs-compiler] error: ${error.file}${at}: ${error.message}`);
+      console.error(
+        `[docs-compiler] error: ${error.file}${at}: ${error.message}`,
+      );
     }
   }
 
@@ -92,7 +94,7 @@ export function printFailingChecks(result: FailingChecksResult): void {
   // choice a reader can see, not a gap they have to already know about.
   if (result.devtoolsCatalogMissing) {
     console.error(
-      "[docs-compiler] notice: devtools catalog not found — \"pnpm devtools …\" commands were not checked",
+      '[docs-compiler] notice: devtools catalog not found — "pnpm devtools …" commands were not checked',
     );
   }
 }

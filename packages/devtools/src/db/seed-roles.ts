@@ -14,7 +14,9 @@ import { supabase } from "./run.js";
 // top-level `const`, which broke `--help`/`setup` outside a repo — see
 // `workers.ts`'s header for the general pattern this follows).
 function seedFiles(): string[] {
-  return [join(findRepoRoot(), "supabase", "seed", "production", "01_roles.sql")];
+  return [
+    join(findRepoRoot(), "supabase", "seed", "production", "01_roles.sql"),
+  ];
 }
 
 /**

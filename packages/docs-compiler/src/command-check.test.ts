@@ -37,13 +37,19 @@ function pkg(overrides: Partial<WorkspacePackage> = {}): WorkspacePackage {
   };
 }
 
-function options(overrides: Partial<CommandCheckOptions> = {}): CommandCheckOptions {
+function options(
+  overrides: Partial<CommandCheckOptions> = {},
+): CommandCheckOptions {
   const scheduleBuilder = pkg();
   return {
     devtoolsCommands: new Set(["db", "db migration", "db migration new"]),
     packages: [scheduleBuilder],
     appBySlug: new Map([["schedule-builder", scheduleBuilder]]),
-    rootPackage: pkg({ name: "devdogsuga", dir: ".", scripts: new Set(["lint"]) }),
+    rootPackage: pkg({
+      name: "devdogsuga",
+      dir: ".",
+      scripts: new Set(["lint"]),
+    }),
     ...overrides,
   };
 }
@@ -55,20 +61,28 @@ function fence(lang: string, body: string, meta = ""): string {
 
 describe("checkCommands", () => {
   it("passes a real devtools command", () => {
-    const pages = [page({ content: fence("sh", "pnpm devtools db migration new") })];
+    const pages = [
+      page({ content: fence("sh", "pnpm devtools db migration new") }),
+    ];
     expect(checkCommands(pages, options())).toEqual([]);
   });
 
   it("fails a devtools command that does not exist", () => {
-    const pages = [page({ content: fence("sh", "pnpm devtools db reset --hard") })];
+    const pages = [
+      page({ content: fence("sh", "pnpm devtools db reset --hard") }),
+    ];
     const errors = checkCommands(pages, options());
     expect(errors).toHaveLength(1);
     expect(errors[0]?.message).toContain("db reset");
   });
 
   it("skips devtools validation when the catalog could not be loaded", () => {
-    const pages = [page({ content: fence("sh", "pnpm devtools anything at all") })];
-    expect(checkCommands(pages, options({ devtoolsCommands: null }))).toEqual([]);
+    const pages = [
+      page({ content: fence("sh", "pnpm devtools anything at all") }),
+    ];
+    expect(checkCommands(pages, options({ devtoolsCommands: null }))).toEqual(
+      [],
+    );
   });
 
   it("passes a --filter command with a real script", () => {
@@ -89,7 +103,9 @@ describe("checkCommands", () => {
 
   it("fails --filter naming a script the package does not have", () => {
     const pages = [
-      page({ content: fence("bash", "pnpm --filter schedule-builder typecheck") }),
+      page({
+        content: fence("bash", "pnpm --filter schedule-builder typecheck"),
+      }),
     ];
     const errors = checkCommands(pages, options());
     expect(errors).toHaveLength(1);
@@ -98,7 +114,9 @@ describe("checkCommands", () => {
 
   it("accepts the --filter … run <script> spelling", () => {
     const pages = [
-      page({ content: fence("bash", "pnpm --filter schedule-builder run build") }),
+      page({
+        content: fence("bash", "pnpm --filter schedule-builder run build"),
+      }),
     ];
     expect(checkCommands(pages, options())).toEqual([]);
   });
@@ -116,14 +134,20 @@ describe("checkCommands", () => {
 
   it("falls back to the workspace root for a project with no matching app", () => {
     const pages = [
-      page({ project: "toolkit", path: "toolkit/ci", content: fence("sh", "pnpm run lint") }),
+      page({
+        project: "toolkit",
+        path: "toolkit/ci",
+        content: fence("sh", "pnpm run lint"),
+      }),
     ];
     expect(checkCommands(pages, options())).toEqual([]);
   });
 
   it("ignores a command in a fence marked nocheck", () => {
     const pages = [
-      page({ content: fence("sh", "pnpm devtools db reset --hard", "nocheck") }),
+      page({
+        content: fence("sh", "pnpm devtools db reset --hard", "nocheck"),
+      }),
     ];
     expect(checkCommands(pages, options())).toEqual([]);
   });
@@ -141,14 +165,19 @@ describe("checkCommands", () => {
   });
 
   it("strips a leading shell prompt before checking", () => {
-    const pages = [page({ content: fence("console", "$ pnpm devtools db migration new") })];
+    const pages = [
+      page({ content: fence("console", "$ pnpm devtools db migration new") }),
+    ];
     expect(checkCommands(pages, options())).toEqual([]);
   });
 
   it("checks each `&&`-chained segment independently", () => {
     const pages = [
       page({
-        content: fence("sh", "pnpm devtools db migration new && pnpm devtools db migration new"),
+        content: fence(
+          "sh",
+          "pnpm devtools db migration new && pnpm devtools db migration new",
+        ),
       }),
     ];
     expect(checkCommands(pages, options())).toEqual([]);
@@ -157,7 +186,10 @@ describe("checkCommands", () => {
   it("fails the offending half of a `&&`-chained line", () => {
     const pages = [
       page({
-        content: fence("sh", "pnpm devtools db migration new && pnpm devtools db reset --hard"),
+        content: fence(
+          "sh",
+          "pnpm devtools db migration new && pnpm devtools db reset --hard",
+        ),
       }),
     ];
     const errors = checkCommands(pages, options());
@@ -168,7 +200,10 @@ describe("checkCommands", () => {
   it("splits on `;` and `|` as well as `&&`/`||`", () => {
     const pages = [
       page({
-        content: fence("sh", "pnpm --filter schedule-builder build ; pnpm --filter schedule-builder dev | cat"),
+        content: fence(
+          "sh",
+          "pnpm --filter schedule-builder build ; pnpm --filter schedule-builder dev | cat",
+        ),
       }),
     ];
     expect(checkCommands(pages, options())).toEqual([]);
@@ -243,7 +278,9 @@ describe("checkCommands", () => {
 
   it("ignores a --filter dependency-graph suffix it cannot resolve", () => {
     const pages = [
-      page({ content: fence("sh", "pnpm --filter 'schedule-builder^...' run build") }),
+      page({
+        content: fence("sh", "pnpm --filter 'schedule-builder^...' run build"),
+      }),
     ];
     expect(checkCommands(pages, options())).toEqual([]);
   });

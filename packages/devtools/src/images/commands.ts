@@ -54,7 +54,6 @@ import {
  * the contributor happened to be standing.
  */
 
-
 function flagValue(argv: readonly string[], flag: string): string | undefined {
   const index = argv.indexOf(flag);
   if (index === -1) return undefined;
@@ -155,7 +154,10 @@ async function loadEvents(
     return { graphics: [], skipped: errorMessage(err) };
   }
 
-  return { graphics: eventGraphics(await loadOpenGraph(), meetings), skipped: null };
+  return {
+    graphics: eventGraphics(await loadOpenGraph(), meetings),
+    skipped: null,
+  };
 }
 
 /** Where one selection is written. */

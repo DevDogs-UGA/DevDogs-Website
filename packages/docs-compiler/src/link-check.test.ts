@@ -29,16 +29,17 @@ function page(overrides: Partial<CompiledPage> = {}): CompiledPage {
 describe("checkLinks", () => {
   it("passes an absolute /docs/ link that resolves", () => {
     const pages = [
-      page({ path: "platform/index", content: "See [setup](/docs/platform/setup)." }),
+      page({
+        path: "platform/index",
+        content: "See [setup](/docs/platform/setup).",
+      }),
       page({ path: "platform/setup", title: "Setup" }),
     ];
     expect(checkLinks(pages)).toEqual([]);
   });
 
   it("fails an absolute /docs/ link to a page that does not exist", () => {
-    const pages = [
-      page({ content: "See [setup](/docs/platform/nowhere)." }),
-    ];
+    const pages = [page({ content: "See [setup](/docs/platform/nowhere)." })];
     const errors = checkLinks(pages);
     expect(errors).toHaveLength(1);
     expect(errors[0]?.message).toContain("platform/nowhere");
@@ -135,7 +136,10 @@ describe("checkLinks", () => {
   it("resolves an absolute link to a folder with its own index page", () => {
     const pages = [
       page({ content: "[gs](/docs/platform/getting-started)" }),
-      page({ path: "platform/getting-started/index", title: "Getting started" }),
+      page({
+        path: "platform/getting-started/index",
+        title: "Getting started",
+      }),
     ];
     expect(checkLinks(pages)).toEqual([]);
   });
@@ -213,9 +217,7 @@ describe("checkLinks", () => {
   });
 
   it("ignores a relative link to a non-markdown asset", () => {
-    const pages = [
-      page({ content: "![logo](./assets/logo.svg)" }),
-    ];
+    const pages = [page({ content: "![logo](./assets/logo.svg)" })];
     expect(checkLinks(pages)).toEqual([]);
   });
 

@@ -76,7 +76,10 @@ async function writeJson(
       body === undefined
         ? ["api", apiPath, "-X", method]
         : ["api", apiPath, "-X", method, "--input", "-"];
-    const child = spawn("gh", args, { stdio: ["pipe", "pipe", "pipe"], shell: false });
+    const child = spawn("gh", args, {
+      stdio: ["pipe", "pipe", "pipe"],
+      shell: false,
+    });
 
     let stdout = "";
     let stderr = "";
@@ -130,21 +133,39 @@ export async function getVulnerabilityAlertsEnabled(r: Repo): Promise<boolean> {
   }
 }
 
-export async function setVulnerabilityAlertsEnabled(r: Repo, enabled: boolean): Promise<void> {
-  await writeJson(enabled ? "PUT" : "DELETE", repoPath(r, "/vulnerability-alerts"));
+export async function setVulnerabilityAlertsEnabled(
+  r: Repo,
+  enabled: boolean,
+): Promise<void> {
+  await writeJson(
+    enabled ? "PUT" : "DELETE",
+    repoPath(r, "/vulnerability-alerts"),
+  );
 }
 
-export async function getAutomatedSecurityFixes(r: Repo): Promise<LiveAutomatedSecurityFixes> {
-  return readJson<LiveAutomatedSecurityFixes>(repoPath(r, "/automated-security-fixes"));
+export async function getAutomatedSecurityFixes(
+  r: Repo,
+): Promise<LiveAutomatedSecurityFixes> {
+  return readJson<LiveAutomatedSecurityFixes>(
+    repoPath(r, "/automated-security-fixes"),
+  );
 }
 
-export async function setAutomatedSecurityFixesEnabled(r: Repo, enabled: boolean): Promise<void> {
-  await writeJson(enabled ? "PUT" : "DELETE", repoPath(r, "/automated-security-fixes"));
+export async function setAutomatedSecurityFixesEnabled(
+  r: Repo,
+  enabled: boolean,
+): Promise<void> {
+  await writeJson(
+    enabled ? "PUT" : "DELETE",
+    repoPath(r, "/automated-security-fixes"),
+  );
 }
 
 // ── Actions permissions ──────────────────────────────────────────────────────
 
-export async function getActionsPermissions(r: Repo): Promise<LiveActionsPermissions> {
+export async function getActionsPermissions(
+  r: Repo,
+): Promise<LiveActionsPermissions> {
   return readJson<LiveActionsPermissions>(repoPath(r, "/actions/permissions"));
 }
 
@@ -164,7 +185,9 @@ export async function setActionsPermissions(
  * with `desired.actions`) instead of `commands.ts` failing outright before
  * it can report anything.
  */
-export async function getSelectedActions(r: Repo): Promise<LiveSelectedActions> {
+export async function getSelectedActions(
+  r: Repo,
+): Promise<LiveSelectedActions> {
   try {
     return await readJson<LiveSelectedActions>(
       repoPath(r, "/actions/permissions/selected-actions"),
@@ -174,18 +197,33 @@ export async function getSelectedActions(r: Repo): Promise<LiveSelectedActions> 
       err instanceof GhSettingsError &&
       (/\b409\b/.test(err.message) || /\(conflict\)/i.test(err.message))
     ) {
-      return { github_owned_allowed: false, verified_allowed: false, patterns_allowed: [] };
+      return {
+        github_owned_allowed: false,
+        verified_allowed: false,
+        patterns_allowed: [],
+      };
     }
     throw err;
   }
 }
 
-export async function setSelectedActions(r: Repo, body: LiveSelectedActions): Promise<void> {
-  await writeJson("PUT", repoPath(r, "/actions/permissions/selected-actions"), body);
+export async function setSelectedActions(
+  r: Repo,
+  body: LiveSelectedActions,
+): Promise<void> {
+  await writeJson(
+    "PUT",
+    repoPath(r, "/actions/permissions/selected-actions"),
+    body,
+  );
 }
 
-export async function getWorkflowPermissions(r: Repo): Promise<LiveWorkflowPermissions> {
-  return readJson<LiveWorkflowPermissions>(repoPath(r, "/actions/permissions/workflow"));
+export async function getWorkflowPermissions(
+  r: Repo,
+): Promise<LiveWorkflowPermissions> {
+  return readJson<LiveWorkflowPermissions>(
+    repoPath(r, "/actions/permissions/workflow"),
+  );
 }
 
 export async function setWorkflowPermissions(
@@ -198,11 +236,17 @@ export async function setWorkflowPermissions(
 // ── Environments ─────────────────────────────────────────────────────────────
 
 /** `null` when the environment does not exist yet — reported, never created here. */
-export async function getEnvironment(r: Repo, name: string): Promise<LiveEnvironment | null> {
+export async function getEnvironment(
+  r: Repo,
+  name: string,
+): Promise<LiveEnvironment | null> {
   try {
-    return await readJson<LiveEnvironment>(repoPath(r, `/environments/${encodeURIComponent(name)}`));
+    return await readJson<LiveEnvironment>(
+      repoPath(r, `/environments/${encodeURIComponent(name)}`),
+    );
   } catch (err) {
-    if (err instanceof GhSettingsError && /\b404\b/.test(err.message)) return null;
+    if (err instanceof GhSettingsError && /\b404\b/.test(err.message))
+      return null;
     throw err;
   }
 }
@@ -212,7 +256,10 @@ export async function getDeploymentBranchPolicies(
   name: string,
 ): Promise<LiveBranchPolicy[]> {
   const data = await readJson<{ branch_policies?: LiveBranchPolicy[] }>(
-    repoPath(r, `/environments/${encodeURIComponent(name)}/deployment-branch-policies`),
+    repoPath(
+      r,
+      `/environments/${encodeURIComponent(name)}/deployment-branch-policies`,
+    ),
   );
   return data.branch_policies ?? [];
 }
@@ -222,9 +269,13 @@ export async function setDeploymentBranchPolicyMode(
   name: string,
   mode: LiveDeploymentBranchPolicy,
 ): Promise<void> {
-  await writeJson("PUT", repoPath(r, `/environments/${encodeURIComponent(name)}`), {
-    deployment_branch_policy: mode,
-  });
+  await writeJson(
+    "PUT",
+    repoPath(r, `/environments/${encodeURIComponent(name)}`),
+    {
+      deployment_branch_policy: mode,
+    },
+  );
 }
 
 export async function addDeploymentBranchPolicy(
@@ -234,7 +285,10 @@ export async function addDeploymentBranchPolicy(
 ): Promise<void> {
   await writeJson(
     "POST",
-    repoPath(r, `/environments/${encodeURIComponent(name)}/deployment-branch-policies`),
+    repoPath(
+      r,
+      `/environments/${encodeURIComponent(name)}/deployment-branch-policies`,
+    ),
     { name: pattern },
   );
 }

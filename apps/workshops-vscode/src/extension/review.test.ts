@@ -3,10 +3,20 @@ import { mergeFile, type ReviewFile, type Step } from "../core/index.js";
 import { windowsBashCandidates, resolveBash } from "./bash.js";
 import { CommandQueue } from "./command-queue.js";
 import { DOCS_ORIGIN, handoffUrl, nextStep } from "./handoff.js";
-import { changeAtLine, fileStatus, layoutFor, leftText, ReviewModel } from "./review-model.js";
+import {
+  changeAtLine,
+  fileStatus,
+  layoutFor,
+  leftText,
+  ReviewModel,
+} from "./review-model.js";
 
 const L = (...lines: string[]) => lines.map((l) => `${l}\n`).join("");
-const file: ReviewFile = { path: "a.ts", oldPath: undefined, status: "modified" };
+const file: ReviewFile = {
+  path: "a.ts",
+  oldPath: undefined,
+  status: "modified",
+};
 
 /** Two separated step edits (lines 1 and 5) plus their own edit on line 3 (not a change). */
 const merge = () =>
@@ -28,9 +38,17 @@ describe("layoutFor", () => {
   });
 
   it("snaps a rejected change back to their code and moves later regions", () => {
-    const m = mergeFile({ base: L("a", "b"), ours: L("a", "b"), theirs: L("a", "x", "y", "b") });
+    const m = mergeFile({
+      base: L("a", "b"),
+      ours: L("a", "b"),
+      theirs: L("a", "x", "y", "b"),
+    });
     const accepted = layoutFor(m, new Map([[0, "accept"]]));
-    expect(accepted.regions[0]).toMatchObject({ start: 1, count: 2, decision: "accept" });
+    expect(accepted.regions[0]).toMatchObject({
+      start: 1,
+      count: 2,
+      decision: "accept",
+    });
     const rejected = layoutFor(m, new Map([[0, "reject"]]));
     expect(rejected.text).toBe(L("a", "b"));
     expect(rejected.regions[0]).toMatchObject({ count: 0, decision: "reject" });
@@ -46,7 +64,11 @@ describe("layoutFor", () => {
 });
 
 describe("ReviewModel", () => {
-  const model = () => new ReviewModel([{ file, merge: merge() }, { file: { ...file, path: "b.ts" }, merge: merge() }]);
+  const model = () =>
+    new ReviewModel([
+      { file, merge: merge() },
+      { file: { ...file, path: "b.ts" }, merge: merge() },
+    ]);
 
   it("reports pending, accepted, rejected and partial", () => {
     const m = model();
@@ -59,7 +81,9 @@ describe("ReviewModel", () => {
     expect(m.status(1)).toBe("rejected");
     m.decide(1, 0, "accept");
     expect(m.status(1)).toBe("partial");
-    expect(fileStatus({ merge: merge(), decisions: new Map() })).toBe("pending");
+    expect(fileStatus({ merge: merge(), decisions: new Map() })).toBe(
+      "pending",
+    );
   });
 
   it("counts undecided changes and decides in bulk", () => {
@@ -124,15 +148,24 @@ describe("bash", () => {
   const base = { env: {}, exists: () => false };
 
   it("is plain bash off Windows", () => {
-    expect(resolveBash({ ...base, platform: "linux", gitExecPath: undefined })).toBe("bash");
-    expect(resolveBash({ ...base, platform: "darwin", gitExecPath: undefined })).toBe("bash");
+    expect(
+      resolveBash({ ...base, platform: "linux", gitExecPath: undefined }),
+    ).toBe("bash");
+    expect(
+      resolveBash({ ...base, platform: "darwin", gitExecPath: undefined }),
+    ).toBe("bash");
   });
 
   it("finds Git Bash from git's exec path, else probes standard installs", () => {
     const exec = "C:\\Program Files\\Git\\mingw64\\libexec\\git-core";
     const wanted = "C:\\Program Files\\Git\\bin\\bash.exe";
     expect(
-      resolveBash({ platform: "win32", gitExecPath: exec, env: {}, exists: (p) => p === wanted }),
+      resolveBash({
+        platform: "win32",
+        gitExecPath: exec,
+        env: {},
+        exists: (p) => p === wanted,
+      }),
     ).toBe(wanted);
     expect(
       resolveBash({
@@ -145,8 +178,12 @@ describe("bash", () => {
   });
 
   it("gives up rather than picking the WSL launcher", () => {
-    expect(resolveBash({ ...base, platform: "win32", gitExecPath: "C:\\x" })).toBeUndefined();
-    expect(windowsBashCandidates({ gitExecPath: undefined, env: {} })).toEqual([]);
+    expect(
+      resolveBash({ ...base, platform: "win32", gitExecPath: "C:\\x" }),
+    ).toBeUndefined();
+    expect(windowsBashCandidates({ gitExecPath: undefined, env: {} })).toEqual(
+      [],
+    );
   });
 });
 
@@ -162,7 +199,12 @@ describe("handoff", () => {
     commit: "c",
     start: undefined,
   });
-  const line = [step(0), step(1), step(2, "/docs/workshops/supabase/nextjs/02-sign-in"), step(3)];
+  const line = [
+    step(0),
+    step(1),
+    step(2, "/docs/workshops/supabase/nextjs/02-sign-in"),
+    step(3),
+  ];
 
   it("picks the step after the target, skipping start markers", () => {
     expect(nextStep(line, line[1]!)?.number).toBe(2);
@@ -185,9 +227,21 @@ describe("handoff", () => {
   it("does nothing without a session, or for a path that isn't a docs path", () => {
     const ok = { nextDocs: "/docs/a", doneTags: ["t"] };
     expect(handoffUrl({ ...ok, session: undefined })).toBeUndefined();
-    expect(handoffUrl({ ...ok, session: "s", nextDocs: undefined })).toBeUndefined();
-    for (const bad of ["//evil.com/docs/x", "/docs//x", "https://evil.com", "/other/x", "/docs/x?y=1", "/docs/x y"]) {
-      expect(handoffUrl({ ...ok, session: "s", nextDocs: bad }), bad).toBeUndefined();
+    expect(
+      handoffUrl({ ...ok, session: "s", nextDocs: undefined }),
+    ).toBeUndefined();
+    for (const bad of [
+      "//evil.com/docs/x",
+      "/docs//x",
+      "https://evil.com",
+      "/other/x",
+      "/docs/x?y=1",
+      "/docs/x y",
+    ]) {
+      expect(
+        handoffUrl({ ...ok, session: "s", nextDocs: bad }),
+        bad,
+      ).toBeUndefined();
     }
   });
 });

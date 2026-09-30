@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { codeChallengeFor, generateCodeVerifier, generateState } from "./pkce.js";
+import {
+  codeChallengeFor,
+  generateCodeVerifier,
+  generateState,
+} from "./pkce.js";
 
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
 

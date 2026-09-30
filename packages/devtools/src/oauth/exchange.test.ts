@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ExchangeError, exchangeCode } from "./exchange.js";
 
-const args = { platformUrl: "https://devdogsuga.org", code: "abc", codeVerifier: "def" };
+const args = {
+  platformUrl: "https://devdogsuga.org",
+  code: "abc",
+  codeVerifier: "def",
+};
 
 describe("exchangeCode", () => {
   afterEach(() => {
@@ -124,6 +128,8 @@ describe("exchangeCode", () => {
     );
 
     await expect(exchangeCode(args)).rejects.toThrow(ExchangeError);
-    await expect(exchangeCode(args)).rejects.toMatchObject({ kind: "malformed" });
+    await expect(exchangeCode(args)).rejects.toMatchObject({
+      kind: "malformed",
+    });
   });
 });

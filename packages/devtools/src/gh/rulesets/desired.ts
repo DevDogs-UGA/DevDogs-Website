@@ -133,7 +133,11 @@ export function buildDesiredRulesets(actors: RulesetActors): DesiredRuleset[] {
       // side of a `main` push, so `always` (not `pull_request`-only) is the
       // right bypass mode here.
       bypass_actors: [
-        { actor_id: actors.devopsTeamId, actor_type: "Team", bypass_mode: "always" },
+        {
+          actor_id: actors.devopsTeamId,
+          actor_type: "Team",
+          bypass_mode: "always",
+        },
       ],
       rules: [
         { type: "deletion" },
@@ -246,7 +250,11 @@ export function buildDesiredRulesets(actors: RulesetActors): DesiredRuleset[] {
         },
       },
       bypass_actors: [
-        { actor_id: actors.devopsTeamId, actor_type: "Team", bypass_mode: "always" },
+        {
+          actor_id: actors.devopsTeamId,
+          actor_type: "Team",
+          bypass_mode: "always",
+        },
         // Renovate (TASK-299) creates and updates `renovate/*` branches for
         // its dependency-update PRs — an ordinary bot workflow, not a hole,
         // so it bypasses the same way the platform App bypasses `team/**`.
@@ -300,8 +308,16 @@ export function buildDesiredRulesets(actors: RulesetActors): DesiredRuleset[] {
         ref_name: { include: ["refs/heads/team/**"], exclude: [] },
       },
       bypass_actors: [
-        { actor_id: actors.appId, actor_type: "Integration", bypass_mode: "always" },
-        { actor_id: actors.devopsTeamId, actor_type: "Team", bypass_mode: "always" },
+        {
+          actor_id: actors.appId,
+          actor_type: "Integration",
+          bypass_mode: "always",
+        },
+        {
+          actor_id: actors.devopsTeamId,
+          actor_type: "Team",
+          bypass_mode: "always",
+        },
       ],
       rules: [
         { type: "creation" },
@@ -323,8 +339,16 @@ export function buildDesiredRulesets(actors: RulesetActors): DesiredRuleset[] {
         ref_name: { include: ["refs/tags/**"], exclude: [] },
       },
       bypass_actors: [
-        { actor_id: actors.adminsTeamId, actor_type: "Team", bypass_mode: "always" },
-        { actor_id: actors.devopsTeamId, actor_type: "Team", bypass_mode: "always" },
+        {
+          actor_id: actors.adminsTeamId,
+          actor_type: "Team",
+          bypass_mode: "always",
+        },
+        {
+          actor_id: actors.devopsTeamId,
+          actor_type: "Team",
+          bypass_mode: "always",
+        },
       ],
       rules: [{ type: "creation" }, { type: "update" }, { type: "deletion" }],
     },

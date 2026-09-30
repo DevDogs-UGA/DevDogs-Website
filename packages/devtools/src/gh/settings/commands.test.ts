@@ -26,9 +26,14 @@ function baseEnvironment(name: string, requireReviewers: boolean) {
       protection_rules: requireReviewers
         ? [{ type: "required_reviewers", reviewers: [{ type: "Team" }] }]
         : [],
-      deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
+      deployment_branch_policy: {
+        protected_branches: false,
+        custom_branch_policies: true,
+      },
     },
-    branchPolicies: [{ id: 1, name: name === "staging" ? "main" : "production" }],
+    branchPolicies: [
+      { id: 1, name: name === "staging" ? "main" : "production" },
+    ],
   };
 }
 
@@ -50,11 +55,13 @@ const api = vi.hoisted(() => ({
     default_workflow_permissions: "read" as const,
     can_approve_pull_request_reviews: false,
   })),
-  getEnvironment: vi.fn(async (_r: unknown, name: string) =>
-    baseEnvironment(name, name === "production-apply").environment,
+  getEnvironment: vi.fn(
+    async (_r: unknown, name: string) =>
+      baseEnvironment(name, name === "production-apply").environment,
   ),
-  getDeploymentBranchPolicies: vi.fn(async (_r: unknown, name: string) =>
-    baseEnvironment(name, false).branchPolicies,
+  getDeploymentBranchPolicies: vi.fn(
+    async (_r: unknown, name: string) =>
+      baseEnvironment(name, false).branchPolicies,
   ),
   patchSecurityAndAnalysis: vi.fn(async () => undefined),
   setVulnerabilityAlertsEnabled: vi.fn(async () => undefined),
@@ -70,13 +77,24 @@ const api = vi.hoisted(() => ({
 vi.mock("./api.js", () => api);
 
 const workflowsMock = vi.hoisted(() => ({
-  uses: [] as { raw: string; ref: { owner: string; repo: string; version: string } | null; file: string; line: number }[],
+  uses: [] as {
+    raw: string;
+    ref: { owner: string; repo: string; version: string } | null;
+    file: string;
+    line: number;
+  }[],
 }));
 
 vi.mock("./workflows.js", () => ({
   collectActionUses: vi.fn(() => workflowsMock.uses),
   computeActionPatterns: vi.fn((uses: typeof workflowsMock.uses) =>
-    [...new Set(uses.filter((u) => u.ref).map((u) => `${u.ref!.owner}/${u.ref!.repo}@*`))].sort(),
+    [
+      ...new Set(
+        uses
+          .filter((u) => u.ref)
+          .map((u) => `${u.ref!.owner}/${u.ref!.repo}@*`),
+      ),
+    ].sort(),
   ),
   unpinnedActionUses: vi.fn((uses: typeof workflowsMock.uses) =>
     uses.filter((u) => u.ref && !/^[0-9a-f]{40}$/.test(u.ref.version)),
@@ -102,7 +120,11 @@ beforeEach(() => {
   workflowsMock.uses = [
     {
       raw: "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
-      ref: { owner: "actions", repo: "checkout", version: "11d5960a326750d5838078e36cf38b85af677262" },
+      ref: {
+        owner: "actions",
+        repo: "checkout",
+        version: "11d5960a326750d5838078e36cf38b85af677262",
+      },
       file: "ci.yaml",
       line: 1,
     },
@@ -171,7 +193,9 @@ describe("unpinned-action refusal", () => {
     const code = await runGithubSettings(["--apply", "--yes"]);
     expect(code).toBe(0);
     expect(api.setActionsPermissions).toHaveBeenCalledTimes(1);
-    const body = api.setActionsPermissions.mock.calls[0]![1] as { sha_pinning_required?: boolean };
+    const body = api.setActionsPermissions.mock.calls[0]![1] as {
+      sha_pinning_required?: boolean;
+    };
     expect(body.sha_pinning_required).toBe(false);
     restore();
   });
@@ -193,8 +217,9 @@ describe("--apply", () => {
   });
 
   it("never auto-fixes a missing required reviewer on production-apply", async () => {
-    api.getEnvironment.mockImplementation(async (_r: unknown, name: string) =>
-      baseEnvironment(name, false).environment,
+    api.getEnvironment.mockImplementation(
+      async (_r: unknown, name: string) =>
+        baseEnvironment(name, false).environment,
     );
     const { restore } = captureConsole();
     const code = await runGithubSettings(["--apply", "--yes", "--json"]);
@@ -207,15 +232,24 @@ describe("--apply", () => {
 
   it("refuses to apply with no confirmation and no TTY, without --yes", async () => {
     api.getVulnerabilityAlertsEnabled.mockResolvedValueOnce(false);
-    const ttyDescriptor = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
-    Object.defineProperty(process.stdin, "isTTY", { value: false, configurable: true });
+    const ttyDescriptor = Object.getOwnPropertyDescriptor(
+      process.stdin,
+      "isTTY",
+    );
+    Object.defineProperty(process.stdin, "isTTY", {
+      value: false,
+      configurable: true,
+    });
     const { err, restore } = captureConsole();
     const code = await runGithubSettings(["--apply"]);
     expect(code).toBe(1);
-    expect(err).toHaveBeenCalledWith(expect.stringContaining("--yes is required"));
+    expect(err).toHaveBeenCalledWith(
+      expect.stringContaining("--yes is required"),
+    );
     expect(api.setVulnerabilityAlertsEnabled).not.toHaveBeenCalled();
     restore();
-    if (ttyDescriptor) Object.defineProperty(process.stdin, "isTTY", ttyDescriptor);
+    if (ttyDescriptor)
+      Object.defineProperty(process.stdin, "isTTY", ttyDescriptor);
   });
 });
 

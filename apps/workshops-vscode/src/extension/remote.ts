@@ -5,7 +5,11 @@
  * name the same repo. GitHub only; anything else is no match.
  */
 
-const GITHUB_HOSTS: ReadonlySet<string> = new Set(["github.com", "www.github.com", "ssh.github.com"]);
+const GITHUB_HOSTS: ReadonlySet<string> = new Set([
+  "github.com",
+  "www.github.com",
+  "ssh.github.com",
+]);
 
 /** `owner/name` (original casing) from a GitHub remote URL, or null. */
 export function parseGithubRemote(url: string): string | null {
@@ -25,7 +29,8 @@ export function parseGithubRemote(url: string): string | null {
     } catch {
       return null;
     }
-    if (!["https:", "http:", "ssh:", "git:"].includes(parsed.protocol)) return null;
+    if (!["https:", "http:", "ssh:", "git:"].includes(parsed.protocol))
+      return null;
     host = parsed.hostname;
     path = parsed.pathname;
   }
@@ -41,7 +46,10 @@ export function parseGithubRemote(url: string): string | null {
 }
 
 /** Whether any of a clone's remote URLs is `repo` (case-insensitive). */
-export function remotesMatchRepo(urls: readonly string[], repo: string): boolean {
+export function remotesMatchRepo(
+  urls: readonly string[],
+  repo: string,
+): boolean {
   const wanted = repo.toLowerCase();
   return urls.some((url) => parseGithubRemote(url)?.toLowerCase() === wanted);
 }

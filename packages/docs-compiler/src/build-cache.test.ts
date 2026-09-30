@@ -2,7 +2,11 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { type FileEntry, collectInputs, computeSignature } from "./build-cache.js";
+import {
+  type FileEntry,
+  collectInputs,
+  computeSignature,
+} from "./build-cache.js";
 
 const BASE: FileEntry[] = [
   { relPath: "docs/platform/index.md", mtimeMs: 1000, size: 40 },
@@ -31,7 +35,9 @@ describe("computeSignature", () => {
   });
 
   it("changes when the compiler's identity changes", () => {
-    expect(computeSignature(BASE, "c@2")).not.toBe(computeSignature(BASE, "c@1"));
+    expect(computeSignature(BASE, "c@2")).not.toBe(
+      computeSignature(BASE, "c@1"),
+    );
   });
 
   it("keeps each stat attached to its own path", () => {
@@ -61,7 +67,10 @@ describe("collectInputs", () => {
 
   beforeEach(() => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "docs-build-cache-"));
-    write("pnpm-workspace.yaml", 'packages:\n  - "apps/*"\n  - "packages/*"\n  - "docs"\n');
+    write(
+      "pnpm-workspace.yaml",
+      'packages:\n  - "apps/*"\n  - "packages/*"\n  - "docs"\n',
+    );
     write("package.json", "{}");
     write("docs/package.json", '{"name":"docs"}');
     write("docs/platform/index.md");

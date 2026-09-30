@@ -103,7 +103,11 @@ export function parseUsesLines(file: string, contents: string): ActionUse[] {
 
     out.push({
       raw: value,
-      ref: { owner: spec.slice(0, slash), repo: spec.slice(slash + 1), version },
+      ref: {
+        owner: spec.slice(0, slash),
+        repo: spec.slice(slash + 1),
+        version,
+      },
       file,
       line: i + 1,
     });
@@ -112,7 +116,9 @@ export function parseUsesLines(file: string, contents: string): ActionUse[] {
 }
 
 /** Every `uses:` across every workflow file in the repo. */
-export function collectActionUses(repoRoot: string = findRepoRoot()): ActionUse[] {
+export function collectActionUses(
+  repoRoot: string = findRepoRoot(),
+): ActionUse[] {
   const uses: ActionUse[] = [];
   for (const file of listWorkflowFiles(repoRoot)) {
     const contents = readFileSync(file, "utf8");

@@ -21,13 +21,13 @@ emerald #00D492   red    #FF6467
 Accent map for the 2026-09-28 Supabase deck (already applied to the
 fragment placeholders — keep it when filling them in):
 
-| Section | Accent |
-|---|---|
+| Section                                           | Accent  |
+| ------------------------------------------------- | ------- |
 | Title / sign-in + teaching sections (draft §1–11) | emerald |
-| Agenda | cyan |
-| §12 monorepo tie-back | cyan |
-| Events | amber |
-| Before-you-go / exit | cyan |
+| Agenda                                            | cyan    |
+| §12 monorepo tie-back                             | cyan    |
+| Events                                            | amber   |
+| Before-you-go / exit                              | cyan    |
 
 ## Chrome, chips, and the background wash
 
@@ -47,7 +47,7 @@ them off:
     website's section blob wash (`apps/platform/src/ui/section-background.tsx`
     and its callers like `HeroSection`/`EventsSection`): five radial
     gradients, tinted with `color-mix(in srgb, var(--accent) N%,
-    transparent)` so it always matches the slide's own accent, plus a
+transparent)` so it always matches the slide's own accent, plus a
     subtle diagonal edge cut echoing the site sections' own slant.
   - `template` — the pptx deck template's own baked-in background PNG
     for that accent (one per `purple`/`cyan`/`amber`/`emerald`/`red`,
@@ -66,7 +66,7 @@ them off:
   `@devdogsuga/brand` package (never redrawn). Turn it off on a
   particular slide with `chrome: false`.
 - **The corner chip**, if you set a `chip` frontmatter key (e.g. `chip:
-  WORKSHOP`) — an accent-filled pill, dark caps text (white fails contrast on every accent), top-right. Uses
+WORKSHOP`) — an accent-filled pill, dark caps text (white fails contrast on every accent), top-right. Uses
   the same `Chip` component as the `events` layout's inline chips, just
   in its `solid` variant.
 - **The safe area.** Every layout's content sits inside
@@ -87,9 +87,12 @@ All layouts render a dark background (`#0c090c`, `mauve-950`) and the accent
 wash automatically — you don't need to add either yourself.
 
 ### `title`
+
 Deck-opening / meeting-title slide.
+
 - Frontmatter: `accent`, `subtitle` (string, optional)
 - Slot: default — put your `# Heading` here, it's colored `--accent` and set in Alan Sans 800 at display size.
+
 ```md
 ---
 layout: title
@@ -101,8 +104,11 @@ subtitle: Workshops · DLW 124 · 6:00 PM
 ```
 
 ### `section-divider`
+
 Section break. Big kicker label + heading.
+
 - Frontmatter: `accent`, `kicker` (small label above the heading)
+
 ```md
 ---
 layout: section-divider
@@ -114,12 +120,15 @@ kicker: "01 · Tour"
 ```
 
 ### `numbered-list`
+
 Write a normal markdown list; items auto-number in the accent color
 (`01`, `02`, ... via CSS counters — don't hand-number them), each row
 separated by a `#2A212C` hairline divider. Use this for any accent-
 numbered list of rows: rules, steps, whatever isn't specifically the
 agenda.
+
 - Frontmatter: `accent`
+
 ```md
 ---
 layout: numbered-list
@@ -132,9 +141,11 @@ accent: cyan
 - Pull `main` before you start a session
 - Run `pnpm install` and commit the lockfile together
 ```
+
 Nest a plain item under a numbered one for a dimmed one-line sub-note
 (steps, a caveat) instead of a new numbered step — it renders smaller, in
 `--dd-grey-support`, with no number and no hairline of its own:
+
 ```md
 ---
 layout: numbered-list
@@ -149,10 +160,13 @@ accent: indigo
 ```
 
 ### `agenda`
+
 A thin preset of `numbered-list` — same accent-numbered, hairline-divided
 rows, just under a name that reads better in frontmatter for this
 specific slide.
+
 - Frontmatter: `accent`
+
 ```md
 ---
 layout: agenda
@@ -168,12 +182,15 @@ accent: cyan
 ```
 
 ### `bullets-card`
+
 Left an accent-dot bullet list; right a `#1D161E` rounded card with a
 dim, uppercase header and its own mini numbered list (or a code block —
 whatever fits).
+
 - Frontmatter: `accent`, `cardTitle` (the card's dim caps header,
   optional)
 - Slots: default (left bullets), `card` (right card body)
+
 ```md
 ---
 layout: bullets-card
@@ -193,9 +210,12 @@ cardTitle: What you'll need
 ```
 
 ### `statement`
+
 One big centered idea. Used for placeholder slides and single-line
 concept slides (draft §1, §3).
+
 - Frontmatter: `accent`
+
 ```md
 ---
 layout: statement
@@ -206,9 +226,12 @@ accent: emerald
 ```
 
 ### `diagram`
+
 Heading + a diagram area (image, or hand-built HTML) with an optional
 caption pinned to the bottom.
+
 - Frontmatter: `accent`, `caption` (optional)
+
 ```md
 ---
 layout: diagram
@@ -222,13 +245,15 @@ caption: "Client → Supabase → Postgres"
 ```
 
 ### `dual-code`
+
 **The workhorse for the Next.js/Flutter dual-track sections (§4, §7, §8,
 §9).** Two columns, left = Next.js, right = Flutter, each a code window
 (see "Code windows" below) titled with its stack and file path. Built on Slidev's named-slot convention (same
 mechanism as the built-in `two-cols` layout).
+
 - Frontmatter: `accent`, `heading` (optional — renders a heading **above**
   both columns; use this instead of a markdown `#`, because a `#` at the
-  top of the slide body lands inside the *left* column only. **Must be
+  top of the slide body lands inside the _left_ column only. **Must be
   `heading`, not `title`** — see the Gotchas note on Slidev's reserved
   `title:` frontmatter key), `leftLabel` (default `"Next.js"`),
   `rightLabel` (default `"Flutter"`), `leftFile` / `rightFile` (file path
@@ -248,13 +273,14 @@ mechanism as the built-in `two-cols` layout).
 - **Track mode** (see below): when `?track=web` or `?track=mobile` is
   set, only the matching column shows, full width. With no track set —
   including the PDF export — both columns show, same as before. This
-  applies to *every* `dual-code` slide, not just the Next.js/Flutter
+  applies to _every_ `dual-code` slide, not just the Next.js/Flutter
   ones — a slide using the columns for something else entirely (e.g. a
   before/after diff, `leftLabel: Before` / `rightLabel: After`) still
   loses a column once `?track=` has been set anywhere earlier in the
   same tab's session (it's sticky, see Track mode below). Set
   `trackSplit: false` on that slide's frontmatter to opt it out and
   always show both columns.
+
 ```md
 ---
 layout: dual-code
@@ -272,13 +298,16 @@ rightFile: ~/lib/guestbook.dart
 ```
 
 ### `terminal`
+
 One code window, full width: a shell session, or SQL for the Dashboard's
 SQL editor. The same window in the same place as a `dual-code` column.
+
 - Frontmatter: `accent`, `heading` (above the window; give every code
   slide one, so the windows line up), `titlebar` (the window's label,
   default `"shell"`. **Must be `titlebar`, not `title`** — see the
   Gotchas note on Slidev's reserved `title:` frontmatter key), `file` (a
   path shown beside the label, and the path a Discord post names)
+
 ```md
 ---
 layout: terminal
@@ -292,45 +321,52 @@ file: ~/supabase/migrations/20260928000000_guestbook.sql
 ```
 
 ### `terminal` extras
+
 `followTrack: true` makes the accent follow `?track=`, and `file` may
 differ by track (`file: { web: ~/lib/supabase.ts, mobile: ~/lib/main.dart }`),
 for one window whose content is wrapped in `<Track>`. A `<CodeTips>` in the
 slot goes under the window, as on `dual-code`.
 
 ### `split-reveal`
+
 One code window that makes room for a second: the first fills the width,
 and on the slide's first click the second slides in beside it (the
 terminal that made the migration files, then the files in an editor; or
 config first, then the terminal). The reveal registers before the code
 inside either window, so their clicks start once they're on screen.
+
 - Frontmatter: `accent`, `heading`, `firstLabel` / `firstFile`,
   `secondLabel` / `secondFile` (files may differ by track), `followTrack`
 - Slots: default (first window), `second`
 
 ### `bullets-code`
+
 Bullets on the left, a full-height code window on the right (the wider
 share). For "do this, and here's the file" slides, e.g. project setup
 beside the env file.
+
 - Frontmatter: `accent`, `heading`, `label` (default `"Editor"`), `file`
   (may differ by track), `followTrack`
 - Slots: default (bullets), `code`
 
 ### `features`
+
 The week's competition features split by project: DogDays (web) on the
 left, DogPack (mobile) on the right, each under its mark and name in the
 platform's project colours. Track mode shows each laptop its own project.
+
 - Frontmatter: `accent`, `heading`
 - Slots: default (DogDays list), `mobile` (DogPack list)
 
 ## Colour meanings (Supabase deck, 2026-09-25)
 
-| Colour | Means |
-|---|---|
-| `emerald` | SQL, run in the Supabase Dashboard |
+| Colour           | Means                                                                  |
+| ---------------- | ---------------------------------------------------------------------- |
+| `emerald`        | SQL, run in the Supabase Dashboard                                     |
 | `purple` / `sky` | Next.js / Flutter code (automatic on `dual-code` splits and `<Track>`) |
-| `amber` | Shell commands (and the events slide) |
-| `indigo` | The feature-competition section |
-| `rose` | Everything else: agenda, section intros, wrap-up |
+| `amber`          | Shell commands (and the events slide)                                  |
+| `indigo`         | The feature-competition section                                        |
+| `rose`           | Everything else: agenda, section intros, wrap-up                       |
 
 ## Code colours
 
@@ -420,7 +456,7 @@ headmatter's `docs.url`). It also tags `<workshop>/00-start` at the track's
 `start` branch the first time. See `scripts/tag-steps.ts`.
 
 - A shell block readers see but shouldn't run as part of the step (`pnpm
-  dev`, which never exits) says so: ```` ```bash {*}{run: false} ````.
+dev`, which never exits) says so: ` ```bash {*}{run: false} `.
 - It works on the deck's submodules (`workshops/web`, `workshops/mobile`) by
   default, or `--web`/`--mobile <clone>`. Push the tags to the planning
   repos from there: `git push --force origin 'refs/tags/02-supabase/*'`.
@@ -569,21 +605,24 @@ DevDogs account). The Worker needs:
   in `wrangler.jsonc` (`ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`) and redeploy.
   Until then the Worker refuses everything but `/follow`.
 - The Discord webhooks as secrets: `wrangler secret put
-  DISCORD_SNIPPETS_WEBHOOK_WEB` and `..._MOBILE`.
+DISCORD_SNIPPETS_WEBHOOK_WEB` and `..._MOBILE`.
 
 To try it all locally: `pnpm build`, then `pnpm run dev:worker` (the Worker
 on `http://localhost:8787`, with the Access check off), and
 `SLIDES_LIVE_URL=http://localhost:8787 pnpm follow web <clone>`.
 
 ### `qr`
+
 Big centered QR + caption. Use for the attendance/Discord/exit slides.
 `qrSrc` must point at a file under `public/qr/` (served at `/qr/...`) —
 `/qr/attendance.svg` and `/qr/discord.svg` already exist. **Must be
 `qrSrc`, not `src`** — see the Gotchas note on Slidev's reserved `src:`
 frontmatter key.
+
 - Frontmatter: `accent`, `qrSrc` (required), `caption` (optional), `label`
   (small kicker above the code, optional)
 - Slot: default — optional extra copy under the caption
+
 ```md
 ---
 layout: qr
@@ -595,6 +634,7 @@ caption: Scan to check in
 ```
 
 ### `events`
+
 Upcoming-events slide: a centred heading, then usually `<UpcomingStack />`
 (the next three meetings from `@devdogsuga/events`, each card in its
 event kind's own colour from the platform, never the slide's accent). The
@@ -602,7 +642,9 @@ first card is in the spotlight, and each click moves it to the next while
 the others recede. Hand-written markdown
 (`###` per event) still works: wrap each event-type label in
 `<Chip type="workshop" />` (etc.) to get the site-legend accent.
+
 - Frontmatter: `accent`
+
 ```md
 ---
 layout: events
@@ -615,9 +657,11 @@ accent: amber
 ```
 
 ### `closing`
+
 Exit / "before you go" slide — like `title` but meant to be the last
 content slide (pair it with a `qr` slide right after for attendance/
 Discord, or fold QR codes straight into this one via `footer`).
+
 - Frontmatter: `accent`, `subtitle`
 - Slots: default (the big heading), `footer` (optional: a
   `.dd-close-qr-row` div of `<QRSlot compact plain>`s, each in a `<Track>`
@@ -625,6 +669,7 @@ Discord, or fold QR codes straight into this one via `footer`).
   led by Phosphor icons). With a footer, the heading sits at the top, the
   contact lines at the bottom the same distance from the edge, and the QR
   codes centre in the space between.
+
 ```md
 ---
 layout: closing
@@ -648,6 +693,7 @@ subtitle: See you Wednesday!
 ```
 
 ### `default`
+
 Fallback when no `layout:` is set. Still dark + accent-aware, with the
 usual wash and chrome, so a forgotten `layout:` doesn't fall back to a
 white slide. You shouldn't need to reference it directly.
@@ -684,10 +730,10 @@ which are git submodules pinned to their `02-supabase` answer key:
 `workshops/web` (web-workshops-planning) and `workshops/mobile`
 (mobile-workshops-planning). A slide names a file at a demo step:
 
-````md
+```md
 <<< web@step-2:components/Guestbook.tsx {16|20-28|39-50}
 <<< mobile:lib/guestbook.dart {90-93}
-````
+```
 
 - The part after `@` is a git revision in the submodule: `step-N` is the
   commit whose message says "step N," (each demo step is one commit on
@@ -711,11 +757,12 @@ which are git submodules pinned to their `02-supabase` answer key:
 - In a Magic Move block, one `<<<` line per step:
 
   `````md
-  ````md magic-move
+  ```md magic-move
   <<< web@step-3:components/Guestbook.tsx {67-71}
   <<< web@step-4:components/Guestbook.tsx {66-76}
-  ````
+  ```
   `````
+
 - `theme/setup/transformers.ts` expands each line at build time into a
   fenced block holding the whole file. A missing submodule, an unknown
   revision, or a range past the end of the file fails the build.
@@ -773,15 +820,15 @@ Auto-imported globally in slide markdown (no `import` needed):
 
 - **`<Accent color="emerald">...</Accent>`** — inline accent-colored,
   semi-bold span for prose, e.g. `RLS is <Accent color="emerald">the
-  anchor</Accent> tonight.` `color` is any accent name; defaults to
+anchor</Accent> tonight.` `color` is any accent name; defaults to
   emerald if omitted.
 - **`<Chip type="workshop" />`** or **`<Chip color="cyan">Custom
-  label</Chip>`** — pill used on the `events` layout. Known `type`
+label</Chip>`** — pill used on the `events` layout. Known `type`
   values and their accent: `workshop`=emerald, `build session`=cyan,
   `social`=purple, `hackathon`=amber, `meeting`=red. Pass an explicit
   `color` to override.
 - **`<QRSlot src="/qr/attendance.svg" caption="Scan to check in"
-  accent="cyan" />`** — the QR+caption block the `qr` layout wraps. Use it
+accent="cyan" />`** — the QR+caption block the `qr` layout wraps. Use it
   directly if you need a QR code inside a non-`qr` layout (e.g. a slide
   that's mostly text with a small QR in the corner, or two side by side on
   `closing`'s `footer` slot). Extra props: `label` (small kicker above the
@@ -811,11 +858,11 @@ Auto-imported globally in slide markdown (no `import` needed):
 On top of the five accents, the template defines three grey tiers, each
 with one job — exposed as both CSS vars and UnoCSS utilities:
 
-| Var | Utility | Hex | Job |
-|---|---|---|---|
-| `--dd-grey-support` | `text-dd-support` | `#A89EA9` | Support/body text |
-| `--dd-grey-secondary` | `text-dd-secondary` | `#D7D0D7` | Contact lines, footer |
-| `--dd-grey-dim` | `text-dd-dim` | `#79697B` | Quietest tier: code comments, card headers |
+| Var                   | Utility             | Hex       | Job                                        |
+| --------------------- | ------------------- | --------- | ------------------------------------------ |
+| `--dd-grey-support`   | `text-dd-support`   | `#A89EA9` | Support/body text                          |
+| `--dd-grey-secondary` | `text-dd-secondary` | `#D7D0D7` | Contact lines, footer                      |
+| `--dd-grey-dim`       | `text-dd-dim`       | `#79697B` | Quietest tier: code comments, card headers |
 
 Also available: `--dd-card-fill` (`#1D161E`, the `bullets-card` card
 background) and `--dd-hairline` (`#2A212C`, the `numbered-list`/`agenda`
@@ -848,7 +895,7 @@ row dividers). Source of truth for all of these is `theme/accents.ts`
 - **Import-slide frontmatter.** In the master deck, each
   `---\nsrc: ./2026-09-28-supabase/NN-name.md\n---` block must contain
   **only** the `src:` key. Any other key on that block (e.g. `accent:`,
-  `layout:`) gets merged as an *override* onto every slide the fragment
+  `layout:`) gets merged as an _override_ onto every slide the fragment
   contains, clobbering that fragment's own per-slide `accent`/`layout`.
   Set `accent`/`layout` inside the fragment file itself, per slide.
 - **Slidev reserves `src:` on any slide's frontmatter** to mean "import
@@ -873,7 +920,7 @@ row dividers). Source of truth for all of these is `theme/accents.ts`
   body with real slides — you can add as many slides as you need per
   fragment file.
 - **Dual-code heading.** Don't put a markdown `#`/`##` at the very top of
-  a `dual-code` slide's body — it becomes part of the *left* column only.
+  a `dual-code` slide's body — it becomes part of the _left_ column only.
   Use the `heading` frontmatter prop for a heading that spans both
   columns.
 - **Slidev reserves `title:` on any slide's frontmatter** for its own
@@ -887,7 +934,7 @@ row dividers). Source of truth for all of these is `theme/accents.ts`
   layout's own frontmatter prop `title`.
 - **Magic Move's wrapper fence needs 4 backticks, not 3.** A
   ` ```md magic-move ` block containing normal ` ```ts `/` ```dart `
-  code fences only parses correctly if the *outer* fence has more
+  code fences only parses correctly if the _outer_ fence has more
   backticks than anything nested inside it — plain Markdown fences don't
   nest by themselves. Write it as ` ````md magic-move ` (four backticks)
   wrapping the inner triple-backtick blocks. Get this wrong and the whole

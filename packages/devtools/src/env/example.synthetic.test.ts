@@ -19,7 +19,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { declare, define, resetRegistry } from "@devdogsuga/env";
-import { loadEnv, resetEnvSyncCacheForTests, resetPeerCacheForTests } from "../repo/peers.js";
+import {
+  loadEnv,
+  resetEnvSyncCacheForTests,
+  resetPeerCacheForTests,
+} from "../repo/peers.js";
 import { renderInit, runEnvInit } from "./example.js";
 
 /**

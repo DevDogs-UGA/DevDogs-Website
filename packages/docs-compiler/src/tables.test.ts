@@ -47,10 +47,7 @@ describe("copyable table cells", () => {
   });
 
   it("leaves a table outside :::copyable alone", async () => {
-    const html = await renderBody(
-      "| Type |\n| ---- |\n| `string` |\n",
-      ctx,
-    );
+    const html = await renderBody("| Type |\n| ---- |\n| `string` |\n", ctx);
     expect(html).not.toContain("data-copy-inline");
   });
 

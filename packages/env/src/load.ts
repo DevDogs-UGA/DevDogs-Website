@@ -688,7 +688,8 @@ export async function loadEnvironment(
           // clobber that overlay — pointing a local wrangler session at the
           // hosted database. Reverse under overload so the first file still
           // wins while the files as a group still override the ambient env.
-          path: overrideExisting || sessionOverride ? [...paths].reverse() : paths,
+          path:
+            overrideExisting || sessionOverride ? [...paths].reverse() : paths,
           processEnv: target,
           quiet: true,
           overload: overrideExisting || sessionOverride,

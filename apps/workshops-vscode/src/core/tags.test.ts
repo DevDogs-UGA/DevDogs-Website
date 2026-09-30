@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { findCurrentStep, listWorkshops, parseStepName, parseTagMessage, readStepLine, readSteps } from "./tags.js";
+import {
+  findCurrentStep,
+  listWorkshops,
+  parseStepName,
+  parseTagMessage,
+  readStepLine,
+  readSteps,
+} from "./tags.js";
 import { TestRepo } from "./test-repo.js";
 
 describe("parseTagMessage", () => {
@@ -24,15 +31,24 @@ describe("parseTagMessage", () => {
   });
 
   it("tolerates CRLF, extra blank lines, and no trailing newline", () => {
-    const parsed = parseTagMessage("\r\nSign in\r\n\r\n\r\nRun: a\r\n\r\nDocs: /docs/x");
+    const parsed = parseTagMessage(
+      "\r\nSign in\r\n\r\n\r\nRun: a\r\n\r\nDocs: /docs/x",
+    );
     expect(parsed.title).toBe("Sign in");
     expect(parsed.run).toEqual(["a"]);
     expect(parsed.docs).toBe("/docs/x");
   });
 
   it("handles a title alone and an empty message", () => {
-    expect(parseTagMessage("Just a title")).toMatchObject({ title: "Just a title", run: [] });
-    expect(parseTagMessage("")).toMatchObject({ title: "", run: [], docs: undefined });
+    expect(parseTagMessage("Just a title")).toMatchObject({
+      title: "Just a title",
+      run: [],
+    });
+    expect(parseTagMessage("")).toMatchObject({
+      title: "",
+      run: [],
+      docs: undefined,
+    });
   });
 
   it("ignores unknown lines and empty Run lines", () => {
@@ -65,7 +81,10 @@ function buildLine(): TestRepo {
   r.commit({ "a.txt": "intro\n" }, "intro done");
   r.tag("02-supabase/00-start", "Start: 01-intro");
   r.commit({ "a.txt": "one\n" }, "feat: read");
-  r.tag("02-supabase/01-read", "Read it\n\nRun: pnpm add x\nDocs: /docs/workshops/s/01");
+  r.tag(
+    "02-supabase/01-read",
+    "Read it\n\nRun: pnpm add x\nDocs: /docs/workshops/s/01",
+  );
   r.commit({ "a.txt": "two\n" }, "feat: sign in");
   r.tag("02-supabase/02-sign-in", "Sign in");
   r.commit({ "a.txt": "three\n" }, "feat: insert");
@@ -86,14 +105,20 @@ describe("readSteps / readStepLine", () => {
       "02-supabase/02-sign-in",
       "02-supabase/03-insert",
     ]);
-    expect(steps[0]).toMatchObject({ number: 0, start: "01-intro", title: "Start" });
+    expect(steps[0]).toMatchObject({
+      number: 0,
+      start: "01-intro",
+      title: "Start",
+    });
     expect(steps[1]).toMatchObject({
       title: "Read it",
       run: ["pnpm add x"],
       docs: "/docs/workshops/s/01",
       slug: "read",
     });
-    expect(steps[1]!.commit).toBe(repo.git("rev-parse", "02-supabase/01-read^{commit}").trim());
+    expect(steps[1]!.commit).toBe(
+      repo.git("rev-parse", "02-supabase/01-read^{commit}").trim(),
+    );
   });
 
   it("uses the commit subject for lightweight tags", async () => {
@@ -101,7 +126,11 @@ describe("readSteps / readStepLine", () => {
     repo.commit({ f: "1" }, "feat: the first change\n\nbody text");
     repo.tag("w/01-first");
     const [step] = await readSteps(repo.dir, "w");
-    expect(step).toMatchObject({ title: "feat: the first change", run: [], docs: undefined });
+    expect(step).toMatchObject({
+      title: "feat: the first change",
+      run: [],
+      docs: undefined,
+    });
     expect(step!.commit).toBe(repo.git("rev-parse", "HEAD").trim());
   });
 
@@ -110,7 +139,9 @@ describe("readSteps / readStepLine", () => {
     repo.commit({ f: "1" });
     repo.tag("w/01-a", "A");
     repo.tag("w/x/01-b", "B");
-    expect((await readSteps(repo.dir, "w")).map((s) => s.tag)).toEqual(["w/01-a"]);
+    expect((await readSteps(repo.dir, "w")).map((s) => s.tag)).toEqual([
+      "w/01-a",
+    ]);
     expect(await listWorkshops(repo.dir)).toEqual(["w", "w/x"]);
   });
 
@@ -143,10 +174,21 @@ describe("findCurrentStep", () => {
     const line = await readStepLine(repo.dir, "03-auth");
     repo.git("switch", "-q", "-c", "me", "02-supabase/01-read");
     repo.commit({ mine: "x" });
-    expect((await findCurrentStep(repo.dir, line))?.tag).toBe("02-supabase/01-read");
+    expect((await findCurrentStep(repo.dir, line))?.tag).toBe(
+      "02-supabase/01-read",
+    );
 
-    repo.git("merge", "-q", "--no-ff", "-m", "Step 2", "02-supabase/02-sign-in");
-    expect((await findCurrentStep(repo.dir, line))?.tag).toBe("02-supabase/02-sign-in");
+    repo.git(
+      "merge",
+      "-q",
+      "--no-ff",
+      "-m",
+      "Step 2",
+      "02-supabase/02-sign-in",
+    );
+    expect((await findCurrentStep(repo.dir, line))?.tag).toBe(
+      "02-supabase/02-sign-in",
+    );
   });
 
   it("looks back across workshops", async () => {
@@ -154,7 +196,9 @@ describe("findCurrentStep", () => {
     const line = await readStepLine(repo.dir, "03-auth");
     repo.git("switch", "-q", "-c", "me", "02-supabase/03-insert");
     // 03-auth/00-start sits at the same commit, so it is the newest reachable.
-    expect((await findCurrentStep(repo.dir, line))?.tag).toBe("03-auth/00-start");
+    expect((await findCurrentStep(repo.dir, line))?.tag).toBe(
+      "03-auth/00-start",
+    );
   });
 
   it("is null when no step tag is reachable", async () => {

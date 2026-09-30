@@ -587,17 +587,20 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
     commands: [
       {
         name: "doctor",
-        summary: "Check this machine's environment against what the repo needs.",
+        summary:
+          "Check this machine's environment against what the repo needs.",
         hint: "node, pnpm, Docker, .env, hosted Supabase, OAuth — read-only",
         options: [
           {
             flag: "--app",
             value: "<slug>",
-            summary: "Scope checks to one app. Defaults to every app you have env for.",
+            summary:
+              "Scope checks to one app. Defaults to every app you have env for.",
           },
           {
             flag: "--report",
-            summary: "Print a redacted, paste-able block (versions, OS, results — no secrets).",
+            summary:
+              "Print a redacted, paste-able block (versions, OS, results — no secrets).",
           },
         ],
       },
@@ -819,7 +822,8 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
           },
           {
             name: "settings",
-            summary: "Diff security/Actions/environment settings vs live GitHub.",
+            summary:
+              "Diff security/Actions/environment settings vs live GitHub.",
             hint: "dry-run plan by default",
             envFree: true,
             options: [
@@ -869,7 +873,7 @@ const DECLARED_GROUPS: readonly CommandGroup[] = [
             flag: "--base-url",
             value: "<url>",
             summary:
-              "DevDogs API URL for \"Paste credentials instead\". Defaults to https://api.devdogsuga.org.",
+              'DevDogs API URL for "Paste credentials instead". Defaults to https://api.devdogsuga.org.',
           },
           {
             flag: "--platform-url",

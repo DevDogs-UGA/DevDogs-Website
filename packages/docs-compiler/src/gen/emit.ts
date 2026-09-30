@@ -8,7 +8,13 @@
  * needs a renderer the site does not already have.
  */
 import { closesFence, opensFence } from "../fences.js";
-import type { DocGroup, DocSymbol, ParamDoc, SourceRef, SymbolKind } from "./model.js";
+import type {
+  DocGroup,
+  DocSymbol,
+  ParamDoc,
+  SourceRef,
+  SymbolKind,
+} from "./model.js";
 
 /** Where "view source" points. */
 export interface EmitOptions {
@@ -444,4 +450,3 @@ export function renderGroupPage(group: DocGroup, options: EmitOptions): string {
     .replace(/\n{3,}/g, "\n\n")
     .trimEnd()}\n`;
 }
-

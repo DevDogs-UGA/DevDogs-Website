@@ -23,7 +23,7 @@ const config = getClubConfig(); // parses + validates src/data/meetings.json, or
   upstream of Postgres, so a file this schema accepts must always be a row
   Postgres accepts too.
 - **`validator.ts`** is the PUBLISHABILITY half: whether a structurally
-  valid file's *content* can go on a public page — a summary that fits its
+  valid file's _content_ can go on a public page — a summary that fits its
   card, an RSVP link on an allowlisted host. Run separately from the schema
   so a shape error and a publishability error are never confused for each
   other in CI output.

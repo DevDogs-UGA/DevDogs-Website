@@ -24,11 +24,7 @@ const fake = vi.hoisted(() => {
     removed: [] as string[],
   };
 
-  function spawn(
-    file: string,
-    args: string[],
-    opts: { cwd?: string } = {},
-  ) {
+  function spawn(file: string, args: string[], opts: { cwd?: string } = {}) {
     state.spawnCalls.push({ file, args, cwd: opts.cwd });
     const handlers = new Map<string, (arg?: unknown) => void>();
     queueMicrotask(() => {
@@ -156,7 +152,8 @@ describe("runIntrospect", () => {
   });
 
   it("re-injects platform's cross-schema import and aliases InPlatform exports", async () => {
-    const schemaPath = "/repo/apps/platform/src/server/db/schema/generated/schema.ts";
+    const schemaPath =
+      "/repo/apps/platform/src/server/db/schema/generated/schema.ts";
     fake.state.files.set(
       schemaPath,
       'import { pgSchema } from "drizzle-orm/pg-core"\n\nexport const platform = pgSchema("platform");\nexport const profileInPlatform = platform.table("profile", {});\n',

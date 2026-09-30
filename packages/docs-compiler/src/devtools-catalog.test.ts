@@ -35,7 +35,11 @@ describe("loadDevtoolsCommands", () => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "docs-build-devtools-"));
     const dir = path.join(root, "node_modules/@devdogsuga/devtools/dist");
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, "commands.js"), "export const nope = 1;\n", "utf-8");
+    fs.writeFileSync(
+      path.join(dir, "commands.js"),
+      "export const nope = 1;\n",
+      "utf-8",
+    );
 
     await expect(loadDevtoolsCommands(root)).resolves.toBeNull();
   });

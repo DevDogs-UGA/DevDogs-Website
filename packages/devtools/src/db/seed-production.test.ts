@@ -71,13 +71,18 @@ function writeSeedFile(name: string, sql: string): void {
 
 describe("runSeedProduction", () => {
   it("runs every production seed file's raw text, in filename order", async () => {
-    writeSeedFile("03_officers.sql", "insert into officers values (1); insert into officers values (2);");
+    writeSeedFile(
+      "03_officers.sql",
+      "insert into officers values (1); insert into officers values (2);",
+    );
     writeSeedFile("01_roles.sql", "insert into roles values (1);");
 
     const fake = fakeDb();
     const connect = vi.fn(() => fake.db);
 
-    const code = await runSeedProduction("postgresql://example/db", { connect });
+    const code = await runSeedProduction("postgresql://example/db", {
+      connect,
+    });
 
     expect(code).toBe(0);
     expect(connect).toHaveBeenCalledWith("postgresql://example/db");
@@ -90,10 +95,15 @@ describe("runSeedProduction", () => {
 
   it("ignores non-.sql files in the production directory", async () => {
     writeSeedFile("01_roles.sql", "insert into roles values (1);");
-    writeFileSync(join(dir, "supabase", "seed", "production", "README.md"), "not sql");
+    writeFileSync(
+      join(dir, "supabase", "seed", "production", "README.md"),
+      "not sql",
+    );
 
     const fake = fakeDb();
-    await runSeedProduction("postgresql://example/db", { connect: () => fake.db });
+    await runSeedProduction("postgresql://example/db", {
+      connect: () => fake.db,
+    });
 
     expect(fake.calls).toHaveLength(1);
   });
@@ -103,7 +113,9 @@ describe("runSeedProduction", () => {
     writeSeedFile("03_officers.sql", "insert into officers values (1);");
 
     const fake = fakeDb({ fail: "roles" });
-    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const stderr = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
 
     const code = await runSeedProduction("postgresql://example/db", {
       connect: () => fake.db,
@@ -112,7 +124,9 @@ describe("runSeedProduction", () => {
     expect(code).toBe(1);
     expect(fake.calls).toEqual(["insert into roles values (1);"]);
     expect(fake.ended).toBe(true);
-    expect(stderr).toHaveBeenCalledWith(expect.stringContaining("01_roles.sql"));
+    expect(stderr).toHaveBeenCalledWith(
+      expect.stringContaining("01_roles.sql"),
+    );
     stderr.mockRestore();
   });
 });

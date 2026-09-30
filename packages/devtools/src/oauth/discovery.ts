@@ -57,9 +57,7 @@ export async function fetchIssuer(baseUrl: string): Promise<string> {
       : undefined;
 
   if (typeof issuer !== "string" || issuer.length === 0) {
-    throw new DiscoveryError(
-      `${discoveryUrl} response had no "issuer" field`,
-    );
+    throw new DiscoveryError(`${discoveryUrl} response had no "issuer" field`);
   }
 
   return issuer;

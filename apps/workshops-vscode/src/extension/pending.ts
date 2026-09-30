@@ -17,7 +17,11 @@ export const PENDING_TTL_MS = 10 * 60 * 1000;
 export function readPending(raw: unknown): PendingLink | undefined {
   if (typeof raw !== "object" || raw === null) return undefined;
   const { path, query, savedAt } = raw as Record<string, unknown>;
-  if (typeof path !== "string" || typeof query !== "string" || typeof savedAt !== "number") {
+  if (
+    typeof path !== "string" ||
+    typeof query !== "string" ||
+    typeof savedAt !== "number"
+  ) {
     return undefined;
   }
   return { path, query, savedAt };

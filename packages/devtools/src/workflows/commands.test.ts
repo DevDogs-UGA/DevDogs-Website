@@ -489,7 +489,10 @@ describe("runningVinextDevPort", () => {
   function appWithLock(lock: unknown): string {
     const dir = mkdtempSync(join(tmpdir(), "vinext-lock-"));
     mkdirSync(join(dir, ".vinext", "dev"), { recursive: true });
-    writeFileSync(join(dir, ".vinext", "dev", "lock.json"), JSON.stringify(lock));
+    writeFileSync(
+      join(dir, ".vinext", "dev", "lock.json"),
+      JSON.stringify(lock),
+    );
     return dir;
   }
 

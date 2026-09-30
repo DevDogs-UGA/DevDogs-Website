@@ -7,7 +7,8 @@ export function logError(context: string, error: unknown): void {
   const line = `${context}: ${error instanceof Error ? error.message : String(error)}`;
   output.appendLine(line);
   // The integration test can't see the output channel; it sets this to read errors from stdout.
-  if (process.env["DEVDOGS_WORKSHOPS_DEBUG"]) console.error(`[workshops] ${line}`);
+  if (process.env["DEVDOGS_WORKSHOPS_DEBUG"])
+    console.error(`[workshops] ${line}`);
 }
 
 export function errorText(error: unknown): string {

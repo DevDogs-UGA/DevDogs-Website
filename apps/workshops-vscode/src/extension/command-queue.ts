@@ -80,6 +80,7 @@ export class CommandQueue {
   /** Puts a failed or sent command back so it can run again. */
   retry(index: number): void {
     const item = this.items[index];
-    if (item && (item.state === "failed" || item.state === "sent")) item.state = "pending";
+    if (item && (item.state === "failed" || item.state === "sent"))
+      item.state = "pending";
   }
 }

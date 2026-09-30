@@ -112,13 +112,13 @@ Review the changes up to a step.
 vscode://devdogsuga.workshops/review?repo=DevDogsUGA/Web-Workshops&to=02-supabase/03-insert-naive
 ```
 
-| Param     | Required | Meaning                                                                                  |
-| --------- | -------- | ---------------------------------------------------------------------------------------- |
-| `repo`    | yes      | `DevDogsUGA/Web-Workshops` or `DevDogsUGA/Mobile-Workshops` (case-insensitive)           |
-| `to`      | yes      | Step tag to review up to, e.g. `02-supabase/03-insert-naive`                             |
-| `from`    | no       | Step tag to review from. Without it, the step you're on is used (asked if it's unclear)  |
-| `file`    | no       | Repo-relative path; limits the review to that one file                                   |
-| `session` | no       | Opaque id of the docs tab; echoed back after Finish so the tab can continue              |
+| Param     | Required | Meaning                                                                                 |
+| --------- | -------- | --------------------------------------------------------------------------------------- |
+| `repo`    | yes      | `DevDogsUGA/Web-Workshops` or `DevDogsUGA/Mobile-Workshops` (case-insensitive)          |
+| `to`      | yes      | Step tag to review up to, e.g. `02-supabase/03-insert-naive`                            |
+| `from`    | no       | Step tag to review from. Without it, the step you're on is used (asked if it's unclear) |
+| `file`    | no       | Repo-relative path; limits the review to that one file                                  |
+| `session` | no       | Opaque id of the docs tab; echoed back after Finish so the tab can continue             |
 
 ### `/open`
 
@@ -128,12 +128,12 @@ Open a file from your clone with some lines selected.
 vscode://devdogsuga.workshops/open?repo=DevDogsUGA/Web-Workshops&ref=02-supabase/03-insert-naive&file=app/page.tsx&lines=12-20
 ```
 
-| Param   | Required | Meaning                                                                                          |
-| ------- | -------- | ------------------------------------------------------------------------------------------------ |
-| `repo`  | yes      | As above                                                                                         |
-| `ref`   | yes      | Step tag the lines refer to; must exist in your clone                                            |
-| `file`  | yes      | Repo-relative path                                                                               |
-| `lines` | no       | `12` or `12-20` (1-based, inclusive)                                                             |
+| Param   | Required | Meaning                                               |
+| ------- | -------- | ----------------------------------------------------- |
+| `repo`  | yes      | As above                                              |
+| `ref`   | yes      | Step tag the lines refer to; must exist in your clone |
+| `file`  | yes      | Repo-relative path                                    |
+| `lines` | no       | `12` or `12-20` (1-based, inclusive)                  |
 
 If the file isn't in your clone yet, you're offered a read-only view of it as
 it is at `ref`.

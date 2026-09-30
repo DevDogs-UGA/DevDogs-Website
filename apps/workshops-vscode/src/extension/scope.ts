@@ -30,7 +30,8 @@ export function decideBase(
 ): BaseDecision {
   const baseIndex = line.findIndex((s) => s.tag === base.tag);
   const targetIndex = line.findIndex((s) => s.tag === target.tag);
-  if (baseIndex < 0 || targetIndex < 0 || baseIndex >= targetIndex) return { kind: "up-to-date" };
+  if (baseIndex < 0 || targetIndex < 0 || baseIndex >= targetIndex)
+    return { kind: "up-to-date" };
   if (explicit || targetIndex - baseIndex === 1) return { kind: "ready", base };
   return { kind: "ask-range", combined: base, single: line[targetIndex - 1]! };
 }
@@ -75,5 +76,9 @@ export function restrictPlanToFile(plan: ReviewPlan, file: string): ReviewPlan {
 }
 
 export function planIsEmpty(plan: ReviewPlan): boolean {
-  return plan.files.length === 0 && plan.fromTarget.length === 0 && plan.commands.length === 0;
+  return (
+    plan.files.length === 0 &&
+    plan.fromTarget.length === 0 &&
+    plan.commands.length === 0
+  );
 }

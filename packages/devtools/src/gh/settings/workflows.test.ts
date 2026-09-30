@@ -39,13 +39,17 @@ describe("parseUsesLines", () => {
 
   it("classifies a local path (./…) with ref: null", () => {
     const uses = parseUsesLines("ci.yaml", FIXTURE);
-    const local = uses.find((u) => u.raw === "./.github/actions/setup-workspace")!;
+    const local = uses.find(
+      (u) => u.raw === "./.github/actions/setup-workspace",
+    )!;
     expect(local.ref).toBeNull();
   });
 
   it("classifies a same-repo reusable workflow (./…yaml) with ref: null", () => {
     const uses = parseUsesLines("ci.yaml", FIXTURE);
-    const reusable = uses.find((u) => u.raw === "./.github/workflows/deploy-app.yaml")!;
+    const reusable = uses.find(
+      (u) => u.raw === "./.github/workflows/deploy-app.yaml",
+    )!;
     expect(reusable.ref).toBeNull();
   });
 
@@ -85,7 +89,9 @@ describe("isShaPinned / unpinnedActionUses", () => {
   });
 
   it("treats a version tag (v2) as NOT pinned", () => {
-    const flutter = uses.find((u) => u.raw.startsWith("subosito/flutter-action@"))!;
+    const flutter = uses.find((u) =>
+      u.raw.startsWith("subosito/flutter-action@"),
+    )!;
     expect(isShaPinned(flutter)).toBe(false);
   });
 
@@ -95,7 +101,9 @@ describe("isShaPinned / unpinnedActionUses", () => {
   });
 
   it("a fully-pinned workflow set has no unpinned actions", () => {
-    const pinnedOnly = uses.filter((u) => u.raw !== "subosito/flutter-action@v2");
+    const pinnedOnly = uses.filter(
+      (u) => u.raw !== "subosito/flutter-action@v2",
+    );
     expect(unpinnedActionUses(pinnedOnly)).toEqual([]);
   });
 });

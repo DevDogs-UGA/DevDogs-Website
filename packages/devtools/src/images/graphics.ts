@@ -239,7 +239,10 @@ export interface EventGraphicSource {
  */
 export const EVENT_SCRATCH_DIR = ".images/events";
 
-export function eventGraphics(og: OpenGraphModule, events: EventGraphicSource[]): Graphic[] {
+export function eventGraphics(
+  og: OpenGraphModule,
+  events: EventGraphicSource[],
+): Graphic[] {
   return events.flatMap((event) => {
     const meeting: Graphic = {
       name: `event/${event.slug}/meeting`,

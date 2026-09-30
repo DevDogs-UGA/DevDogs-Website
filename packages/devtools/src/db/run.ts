@@ -14,7 +14,13 @@ import { loadDbTypegen } from "../repo/peers.js";
 const runFile = promisify(execFile);
 
 export function typesFile(): string {
-  return join(findRepoRoot(), "packages", "supabase", "src", "database.types.ts");
+  return join(
+    findRepoRoot(),
+    "packages",
+    "supabase",
+    "src",
+    "database.types.ts",
+  );
 }
 
 /** Spawn a pnpm command with inherited stdio; resolves to the exit code. Pass

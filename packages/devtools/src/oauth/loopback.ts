@@ -97,7 +97,7 @@ export interface LoopbackListener {
 
 function renderCallbackPage(heading: string, body: string): string {
   return (
-    "<!doctype html><html><head><meta charset=\"utf-8\"><title>DevDogs devtools</title></head>" +
+    '<!doctype html><html><head><meta charset="utf-8"><title>DevDogs devtools</title></head>' +
     `<body style="font-family: system-ui, sans-serif; max-width: 32rem; margin: 4rem auto; text-align: center;">` +
     `<h1>${heading}</h1><p>${body}</p></body></html>`
   );
@@ -153,7 +153,9 @@ export function start(
       const error = url.searchParams.get("error");
 
       if (error) {
-        res.writeHead(200, { "content-type": "text/html; charset=utf-8" }).end(DENIED_PAGE);
+        res
+          .writeHead(200, { "content-type": "text/html; charset=utf-8" })
+          .end(DENIED_PAGE);
         settle(() =>
           rejectResult(
             new CallbackDeniedError(
@@ -167,12 +169,16 @@ export function start(
       }
 
       if (!code || !state) {
-        res.writeHead(400, { "content-type": "text/html; charset=utf-8" }).end(DENIED_PAGE);
+        res
+          .writeHead(400, { "content-type": "text/html; charset=utf-8" })
+          .end(DENIED_PAGE);
         settle(() => rejectResult(new CallbackMalformedError()));
         return;
       }
 
-      res.writeHead(200, { "content-type": "text/html; charset=utf-8" }).end(SUCCESS_PAGE);
+      res
+        .writeHead(200, { "content-type": "text/html; charset=utf-8" })
+        .end(SUCCESS_PAGE);
       settle(() => resolveResult({ code, state }));
     });
 
@@ -210,7 +216,8 @@ export function start(
 
     server.listen(0, "127.0.0.1", () => {
       const address = server.address();
-      const port = typeof address === "object" && address !== null ? address.port : 0;
+      const port =
+        typeof address === "object" && address !== null ? address.port : 0;
       resolveListener({
         port,
         redirectUri: `http://127.0.0.1:${port}/callback`,

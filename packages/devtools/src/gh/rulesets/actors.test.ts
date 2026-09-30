@@ -73,7 +73,9 @@ describe("resolveAppId", () => {
 
   it("throws GhRulesetsError when no installation matches the slug", async () => {
     fake.state.execResult = {
-      stdout: JSON.stringify({ installations: [{ app_id: 1, app_slug: "other" }] }),
+      stdout: JSON.stringify({
+        installations: [{ app_id: 1, app_slug: "other" }],
+      }),
     };
     await expect(
       resolveAppId("DevDogsUGA", "devdogs-platform"),

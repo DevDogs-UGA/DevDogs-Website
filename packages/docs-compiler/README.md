@@ -54,6 +54,7 @@ Use apt.
 ```bash os=macos
 brew install fnm
 ```
+
 ```bash os="linux wsl"
 curl -fsSL https://fnm.vercel.app/install | bash
 ```

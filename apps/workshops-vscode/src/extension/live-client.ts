@@ -59,7 +59,10 @@ export class LiveClient {
   }
 
   private open(): void {
-    const socket = new WebSocket(this.options.url, { maxPayload: 64 * 1024, handshakeTimeout: 15_000 });
+    const socket = new WebSocket(this.options.url, {
+      maxPayload: 64 * 1024,
+      handshakeTimeout: 15_000,
+    });
     this.socket = socket;
     let opened = false;
     socket.on("open", () => {
@@ -76,7 +79,11 @@ export class LiveClient {
       this.socket = undefined;
       if (opened) this.options.onConnection(false); // a failed attempt is not news
       if (this.stopped) return;
-      const delay = backoffDelay(this.attempt++, this.options.random, this.options.backoff);
+      const delay = backoffDelay(
+        this.attempt++,
+        this.options.random,
+        this.options.backoff,
+      );
       this.timer = setTimeout(() => this.open(), delay);
     });
   }

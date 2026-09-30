@@ -23,8 +23,11 @@ import { resolveUsername, type UsernameSource } from "./username.js";
 function ghLogin(): Promise<string | undefined> {
   return new Promise((resolve) => {
     // `gh` is optional: not installed, not logged in, or slow all just mean "no answer".
-    execFile("gh", ["api", "user", "--jq", ".login"], { timeout: 5000, windowsHide: true }, (error, stdout) =>
-      resolve(error ? undefined : stdout.trim()),
+    execFile(
+      "gh",
+      ["api", "user", "--jq", ".login"],
+      { timeout: 5000, windowsHide: true },
+      (error, stdout) => resolve(error ? undefined : stdout.trim()),
     );
   });
 }
@@ -36,7 +39,11 @@ export class Branches {
   async username(): Promise<string | undefined> {
     const sources: UsernameSource[] = [
       async () => {
-        const session = await vscode.authentication.getSession("github", ["read:user"], { silent: true });
+        const session = await vscode.authentication.getSession(
+          "github",
+          ["read:user"],
+          { silent: true },
+        );
         return session?.account.label;
       },
       ghLogin,
@@ -44,11 +51,14 @@ export class Branches {
       async () => {
         const answer = await vscode.window.showInputBox({
           title: "Your GitHub username",
-          prompt: "Your work goes on a branch named <username>/<workshop>. Asked once; stored on this machine only.",
+          prompt:
+            "Your work goes on a branch named <username>/<workshop>. Asked once; stored on this machine only.",
           placeHolder: "octocat",
           ignoreFocusOut: true,
           validateInput: (value) =>
-            isValidUsername(value.trim()) ? undefined : "That doesn't look like a GitHub username.",
+            isValidUsername(value.trim())
+              ? undefined
+              : "That doesn't look like a GitHub username.",
         });
         const name = answer?.trim();
         if (name && isValidUsername(name)) await this.state.setUsername(name);
@@ -64,7 +74,10 @@ export class Branches {
    * keeping uncommitted work, and says so; on a branch of their own it does
    * nothing. Returns the branch to commit on, or undefined on cancel/failure.
    */
-  async ensurePersonalBranch(root: string, workshop: string): Promise<string | undefined> {
+  async ensurePersonalBranch(
+    root: string,
+    workshop: string,
+  ): Promise<string | undefined> {
     const user = await this.username();
     if (!user) return undefined;
     try {
@@ -106,7 +119,11 @@ export class Branches {
    * "Jump to step": the escape hatch. Confirms first, because it throws away
    * uncommitted changes to tracked files (as the demo laptops do).
    */
-  async jumpToStep(root: string, tag: string, title: string): Promise<string | undefined> {
+  async jumpToStep(
+    root: string,
+    tag: string,
+    title: string,
+  ): Promise<string | undefined> {
     const user = await this.username();
     if (!user) return undefined;
     const confirm = await vscode.window.showWarningMessage(
@@ -122,11 +139,15 @@ export class Branches {
     if (!confirm) return undefined;
     try {
       const branch = await jumpToStep(root, user, tag);
-      void vscode.window.showInformationMessage(`You're on ${branch} at ${title}.`);
+      void vscode.window.showInformationMessage(
+        `You're on ${branch} at ${title}.`,
+      );
       return branch;
     } catch (error) {
       logError("jumpToStep", error);
-      void vscode.window.showErrorMessage(`Couldn't jump to that step: ${errorText(error)}`);
+      void vscode.window.showErrorMessage(
+        `Couldn't jump to that step: ${errorText(error)}`,
+      );
       return undefined;
     }
   }

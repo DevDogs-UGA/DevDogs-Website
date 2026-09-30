@@ -27,7 +27,12 @@ export interface TagMessage {
  */
 export function parseTagMessage(message: string): TagMessage {
   const lines = message.split(/\r?\n/).map((line) => line.trimEnd());
-  const parsed: TagMessage = { title: "", run: [], docs: undefined, start: undefined };
+  const parsed: TagMessage = {
+    title: "",
+    run: [],
+    docs: undefined,
+    start: undefined,
+  };
   let sawTitle = false;
 
   for (const line of lines) {
@@ -93,7 +98,10 @@ export function parseStepName(
  * Reads one workshop's step tags, ordered by number. One
  * `for-each-ref` call, so it works offline and costs a single process.
  */
-export async function readSteps(cwd: string, workshop: string): Promise<Step[]> {
+export async function readSteps(
+  cwd: string,
+  workshop: string,
+): Promise<Step[]> {
   const format = [
     "%(refname:lstrip=2)",
     "%(objecttype)",
@@ -141,7 +149,11 @@ export async function readSteps(cwd: string, workshop: string): Promise<Step[]> 
 
 /** Every workshop that has step tags, e.g. `["02-supabase"]`. */
 export async function listWorkshops(cwd: string): Promise<string[]> {
-  const out = await git(cwd, ["for-each-ref", "--format=%(refname:lstrip=2)", "refs/tags/"]);
+  const out = await git(cwd, [
+    "for-each-ref",
+    "--format=%(refname:lstrip=2)",
+    "refs/tags/",
+  ]);
   const workshops = new Set<string>();
   for (const tag of out.split("\n")) {
     const name = parseStepName(tag.trim());
@@ -156,7 +168,10 @@ export async function listWorkshops(cwd: string): Promise<string[]> {
  * this walks that chain and concatenates each workshop's steps into one line.
  * A cycle or a previous workshop with no tags just ends the walk.
  */
-export async function readStepLine(cwd: string, workshop: string): Promise<Step[]> {
+export async function readStepLine(
+  cwd: string,
+  workshop: string,
+): Promise<Step[]> {
   const seen = new Set<string>();
   const segments: Step[][] = [];
   let current: string | undefined = workshop;
@@ -194,7 +209,10 @@ export async function findCurrentStep(
 }
 
 /** Resolves a ref to a commit id; used by callers comparing heads. */
-export async function revParse(cwd: string, ref: string): Promise<string | null> {
+export async function revParse(
+  cwd: string,
+  ref: string,
+): Promise<string | null> {
   const { code, stdout } = await gitRaw(
     cwd,
     ["rev-parse", "--verify", "--quiet", "--end-of-options", `${ref}^{commit}`],

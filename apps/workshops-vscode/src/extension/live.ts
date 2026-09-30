@@ -40,11 +40,15 @@ export const LIVE_CONTEXT = "devdogsWorkshops.live";
 const REVIEW = "Review";
 const LATER = "Later";
 
-type Prompt = (message: string, ...items: string[]) => Thenable<string | undefined>;
+type Prompt = (
+  message: string,
+  ...items: string[]
+) => Thenable<string | undefined>;
 
 export class LiveWorkshops implements vscode.Disposable {
   /** Shows the offer. A field so tests can answer it. */
-  prompt: Prompt = (message, ...items) => vscode.window.showInformationMessage(message, ...items);
+  prompt: Prompt = (message, ...items) =>
+    vscode.window.showInformationMessage(message, ...items);
 
   private client: LiveClient | undefined;
   private connectedTo: string | undefined;
@@ -69,7 +73,10 @@ export class LiveWorkshops implements vscode.Disposable {
       this.changed,
       steps.onDidChangeTreeData(() => this.sync()),
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration("devdogsWorkshops.followLive") || e.affectsConfiguration("devdogsWorkshops.liveRelayUrl")) {
+        if (
+          e.affectsConfiguration("devdogsWorkshops.followLive") ||
+          e.affectsConfiguration("devdogsWorkshops.liveRelayUrl")
+        ) {
           this.sync();
         }
       }),
@@ -99,18 +106,33 @@ export class LiveWorkshops implements vscode.Disposable {
   /** Backs the "● Live" view: the presenter, and the step they last finished. */
   readonly treeDataProvider: vscode.TreeDataProvider<string> = {
     onDidChangeTreeData: this.changed.event as vscode.Event<string | undefined>,
-    getChildren: () => (this.presenterLive ? ["presenter", ...(this.last && this.stepOf(this.last) ? [this.last] : [])] : []),
+    getChildren: () =>
+      this.presenterLive
+        ? [
+            "presenter",
+            ...(this.last && this.stepOf(this.last) ? [this.last] : []),
+          ]
+        : [],
     getTreeItem: (id) => {
       if (id === "presenter") {
         const item = new vscode.TreeItem("The presenter is live");
-        item.iconPath = new vscode.ThemeIcon("broadcast", new vscode.ThemeColor("charts.red"));
+        item.iconPath = new vscode.ThemeIcon(
+          "broadcast",
+          new vscode.ThemeColor("charts.red"),
+        );
         return item;
       }
       const step = this.stepOf(id)!;
-      const item = new vscode.TreeItem(offerText(step).replace("Presenter finished ", ""));
+      const item = new vscode.TreeItem(
+        offerText(step).replace("Presenter finished ", ""),
+      );
       item.description = "Review";
       item.iconPath = new vscode.ThemeIcon("git-compare");
-      item.command = { command: CMD.reviewToStep, title: "Review this step", arguments: [id] };
+      item.command = {
+        command: CMD.reviewToStep,
+        title: "Review this step",
+        arguments: [id],
+      };
       return item;
     },
   };
@@ -132,12 +154,18 @@ export class LiveWorkshops implements vscode.Disposable {
     const open = this.steps.open;
     const config = vscode.workspace.getConfiguration("devdogsWorkshops");
     const track = open ? trackOfRepo(open.repo) : undefined;
-    let base = config.get<string>("liveRelayUrl", "").trim() || DEFAULT_RELAY_URL;
+    let base =
+      config.get<string>("liveRelayUrl", "").trim() || DEFAULT_RELAY_URL;
     if (!attendUrl(base, "web")) {
-      output.appendLine(`Ignoring the live relay URL "${base}": it must be ws:// or wss://.`);
+      output.appendLine(
+        `Ignoring the live relay URL "${base}": it must be ws:// or wss://.`,
+      );
       base = DEFAULT_RELAY_URL;
     }
-    const target = track && config.get<boolean>("followLive", true) ? attendUrl(base, track) : undefined;
+    const target =
+      track && config.get<boolean>("followLive", true)
+        ? attendUrl(base, track)
+        : undefined;
 
     if (target !== this.connectedTo) {
       this.client?.stop();
@@ -159,7 +187,8 @@ export class LiveWorkshops implements vscode.Disposable {
     }
 
     const snapshot = open?.snapshot;
-    if (snapshot) this.offers = prune(this.offers, snapshot.line, snapshot.current);
+    if (snapshot)
+      this.offers = prune(this.offers, snapshot.line, snapshot.current);
     this.report();
     this.showBadge();
   }
@@ -182,7 +211,11 @@ export class LiveWorkshops implements vscode.Disposable {
   }
 
   private async updateContext(): Promise<void> {
-    await vscode.commands.executeCommand("setContext", LIVE_CONTEXT, this.presenterLive);
+    await vscode.commands.executeCommand(
+      "setContext",
+      LIVE_CONTEXT,
+      this.presenterLive,
+    );
     this.changed.fire(undefined);
   }
 
@@ -199,7 +232,9 @@ export class LiveWorkshops implements vscode.Disposable {
       this.live = event.live;
       void this.updateContext();
     } else {
-      void this.onCheckpoint(event.ref).catch((error) => this.failed("checkpoint", error));
+      void this.onCheckpoint(event.ref).catch((error) =>
+        this.failed("checkpoint", error),
+      );
     }
   }
 
@@ -219,7 +254,12 @@ export class LiveWorkshops implements vscode.Disposable {
     open = this.steps.open;
     if (!open) return;
     const { line, current } = open.snapshot;
-    const decision = decideCheckpoint({ ref, line, current, reviewing: this.review.snapshot !== undefined });
+    const decision = decideCheckpoint({
+      ref,
+      line,
+      current,
+      reviewing: this.review.snapshot !== undefined,
+    });
     if (decision === "ignore") return;
     this.last = ref;
     this.changed.fire(undefined);
@@ -252,14 +292,19 @@ export class LiveWorkshops implements vscode.Disposable {
     const result = afterReview(this.offers, finished, this.line);
     this.offers = result.state;
     this.showBadge();
-    if (result.offer) await this.onCheckpoint(result.offer).catch((error) => this.failed("checkpoint", error));
+    if (result.offer)
+      await this.onCheckpoint(result.offer).catch((error) =>
+        this.failed("checkpoint", error),
+      );
   }
 
   /** The badge on the Workshop view: a step they put off. */
   private showBadge(): void {
     const ref = this.offers.badge;
     const step = ref ? this.stepOf(ref) : undefined;
-    this.stepsView.badge = step ? { value: 1, tooltip: offerText(step) } : undefined;
+    this.stepsView.badge = step
+      ? { value: 1, tooltip: offerText(step) }
+      : undefined;
   }
 
   dispose(): void {

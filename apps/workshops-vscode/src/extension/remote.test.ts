@@ -34,7 +34,10 @@ describe("parseGithubRemote", () => {
 
 describe("remotesMatchRepo", () => {
   it("matches any remote, case-insensitively", () => {
-    const urls = ["git@github.com:someone/fork.git", "https://github.com/devdogsuga/web-workshops.git"];
+    const urls = [
+      "git@github.com:someone/fork.git",
+      "https://github.com/devdogsuga/web-workshops.git",
+    ];
     expect(remotesMatchRepo(urls, "DevDogsUGA/Web-Workshops")).toBe(true);
     expect(remotesMatchRepo(urls, "DevDogsUGA/Mobile-Workshops")).toBe(false);
     expect(remotesMatchRepo([], "DevDogsUGA/Web-Workshops")).toBe(false);

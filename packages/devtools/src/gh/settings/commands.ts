@@ -41,7 +41,11 @@ import {
   type SettingsPlan,
 } from "./diff.js";
 import type { LiveSecurityAndAnalysis } from "./types.js";
-import { collectActionUses, computeActionPatterns, unpinnedActionUses } from "./workflows.js";
+import {
+  collectActionUses,
+  computeActionPatterns,
+  unpinnedActionUses,
+} from "./workflows.js";
 import { findRepoRoot } from "../../repo/root.js";
 import { unwrap } from "../../ui.js";
 
@@ -129,7 +133,8 @@ function renderPlan(plan: SettingsPlan): string {
   }
 
   for (const check of plan.checks) {
-    const marker = check.status === "ok" ? "=" : check.status === "unsupported" ? "?" : "~";
+    const marker =
+      check.status === "ok" ? "=" : check.status === "unsupported" ? "?" : "~";
     lines.push(`${marker} ${check.key}`);
     lines.push(`    desired: ${check.desired}`);
     lines.push(`    live:    ${check.live}`);
@@ -171,21 +176,29 @@ async function applyPlan(
   plan: SettingsPlan,
 ): Promise<void> {
   const drift = new Set(
-    plan.checks.filter((c) => c.status === "drift" && c.fixable).map((c) => c.key),
+    plan.checks
+      .filter((c) => c.status === "drift" && c.fixable)
+      .map((c) => c.key),
   );
 
   const secretScanningFields: Partial<LiveSecurityAndAnalysis> = {};
   if (drift.has("security_and_analysis.secret_scanning")) {
     secretScanningFields.secret_scanning = {
-      status: desired.securityAndAnalysis.secretScanning ? "enabled" : "disabled",
+      status: desired.securityAndAnalysis.secretScanning
+        ? "enabled"
+        : "disabled",
     };
   }
   if (drift.has("security_and_analysis.secret_scanning_push_protection")) {
     secretScanningFields.secret_scanning_push_protection = {
-      status: desired.securityAndAnalysis.secretScanningPushProtection ? "enabled" : "disabled",
+      status: desired.securityAndAnalysis.secretScanningPushProtection
+        ? "enabled"
+        : "disabled",
     };
   }
-  if (drift.has("security_and_analysis.secret_scanning_non_provider_patterns")) {
+  if (
+    drift.has("security_and_analysis.secret_scanning_non_provider_patterns")
+  ) {
     secretScanningFields.secret_scanning_non_provider_patterns = {
       status: desired.securityAndAnalysis.secretScanningNonProviderPatterns
         ? "enabled"
@@ -194,7 +207,9 @@ async function applyPlan(
   }
   if (drift.has("security_and_analysis.secret_scanning_validity_checks")) {
     secretScanningFields.secret_scanning_validity_checks = {
-      status: desired.securityAndAnalysis.secretScanningValidityChecks ? "enabled" : "disabled",
+      status: desired.securityAndAnalysis.secretScanningValidityChecks
+        ? "enabled"
+        : "disabled",
     };
   }
   if (Object.keys(secretScanningFields).length > 0) {
@@ -206,10 +221,16 @@ async function applyPlan(
   }
 
   if (drift.has("dependabot_security_updates")) {
-    await setAutomatedSecurityFixesEnabled(r, desired.dependabotSecurityUpdates);
+    await setAutomatedSecurityFixesEnabled(
+      r,
+      desired.dependabotSecurityUpdates,
+    );
   }
 
-  if (drift.has("actions.sha_pinning_required") || drift.has("actions.allowed_actions")) {
+  if (
+    drift.has("actions.sha_pinning_required") ||
+    drift.has("actions.allowed_actions")
+  ) {
     await setActionsPermissions(r, {
       enabled: live.actionsPermissions.enabled,
       allowed_actions: drift.has("actions.allowed_actions")
@@ -235,8 +256,10 @@ async function applyPlan(
 
   if (drift.has("actions.workflow_permissions")) {
     await setWorkflowPermissions(r, {
-      default_workflow_permissions: desired.workflowPermissions.defaultWorkflowPermissions,
-      can_approve_pull_request_reviews: desired.workflowPermissions.canApprovePullRequestReviews,
+      default_workflow_permissions:
+        desired.workflowPermissions.defaultWorkflowPermissions,
+      can_approve_pull_request_reviews:
+        desired.workflowPermissions.canApprovePullRequestReviews,
     });
   }
 
@@ -250,16 +273,20 @@ async function applyPlan(
     const existing = await getDeploymentBranchPolicies(r, env.name);
     const wanted = new Set(env.allowedBranches);
     for (const policy of existing) {
-      if (!wanted.has(policy.name)) await deleteDeploymentBranchPolicy(r, env.name, policy.id);
+      if (!wanted.has(policy.name))
+        await deleteDeploymentBranchPolicy(r, env.name, policy.id);
     }
     const already = new Set(existing.map((p) => p.name));
     for (const branch of env.allowedBranches) {
-      if (!already.has(branch)) await addDeploymentBranchPolicy(r, env.name, branch);
+      if (!already.has(branch))
+        await addDeploymentBranchPolicy(r, env.name, branch);
     }
   }
 }
 
-export async function runGithubSettings(argv: readonly string[]): Promise<number> {
+export async function runGithubSettings(
+  argv: readonly string[],
+): Promise<number> {
   const opts = parseOptions(argv);
   const r: Repo = { owner: opts.org, repo: opts.repo };
 

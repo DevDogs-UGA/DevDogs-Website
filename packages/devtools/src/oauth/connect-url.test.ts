@@ -36,7 +36,9 @@ describe("buildConnectUrl", () => {
       label: "l",
       callbackUri: "http://x/auth/v1/callback",
     });
-    expect(url.startsWith("https://devdogsuga.org/tools/oauth/connect?")).toBe(true);
+    expect(url.startsWith("https://devdogsuga.org/tools/oauth/connect?")).toBe(
+      true,
+    );
   });
 
   it("truncates a label past 100 characters", () => {

@@ -16,7 +16,9 @@ export class GitError extends Error {
     readonly exitCode: number | null,
     readonly stderr: string,
   ) {
-    super(`git ${args.join(" ")} failed (${exitCode ?? "no exit code"}): ${stderr.trim()}`);
+    super(
+      `git ${args.join(" ")} failed (${exitCode ?? "no exit code"}): ${stderr.trim()}`,
+    );
     this.name = "GitError";
   }
 }
@@ -59,7 +61,8 @@ export function gitRaw(
       (error, stdout, stderr) => {
         if (!error) return resolve({ code: 0, stdout });
         const code = typeof error.code === "number" ? error.code : null;
-        if (code !== null && okCodes.includes(code)) return resolve({ code, stdout });
+        if (code !== null && okCodes.includes(code))
+          return resolve({ code, stdout });
         reject(new GitError(args, code, stderr.toString("utf8")));
       },
     );

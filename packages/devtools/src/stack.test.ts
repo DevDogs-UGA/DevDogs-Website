@@ -29,7 +29,8 @@ const seedBuckets = vi.fn(async () => 0);
 vi.mock("./db/run.js", () => ({
   dbPush: vi.fn(),
   generateTypes: vi.fn(),
-  seedBuckets: (...args: Parameters<typeof seedBuckets>) => seedBuckets(...args),
+  seedBuckets: (...args: Parameters<typeof seedBuckets>) =>
+    seedBuckets(...args),
   supabase: (...args: string[]) => supabase(...args),
   supabaseCapture: (...args: string[]) => supabaseCapture(...args),
 }));
@@ -159,8 +160,9 @@ describe('runStackCommand("start", …)', () => {
     expect(refreshSessionEnv).toHaveBeenCalledTimes(1);
     expect(lines).toContain("refreshed .env.generated");
     // `.env.generated` really was written, independent of the mock.
-    await expect(readFile(join(repoRoot, ".env.generated"), "utf8")).resolves
-      .toContain("API_URL=http://127.0.0.1:54321");
+    await expect(
+      readFile(join(repoRoot, ".env.generated"), "utf8"),
+    ).resolves.toContain("API_URL=http://127.0.0.1:54321");
   });
 
   it("still refreshes when seedBuckets fails AFTER .env.generated was already written", async () => {

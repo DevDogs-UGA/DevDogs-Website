@@ -117,7 +117,9 @@ export function ignoredFor(target: VaultTarget): Set<string> {
   assertRegistryLoaded();
   const pushable = pushableVariables();
   const skip = new Set<string>(
-    getEnvSync().neverSecretKeys().filter((key) => !pushable.has(key)),
+    getEnvSync()
+      .neverSecretKeys()
+      .filter((key) => !pushable.has(key)),
   );
   for (const key of getEnvSync().mintedKeys()) skip.add(key);
   if (target !== "production") {
@@ -219,7 +221,9 @@ function isDeclaredDerivation(
 ): boolean {
   // `getEnvSync().derivationOf()` returns null for everything that is not a derivation, and
   // `value` is non-empty by the time this is called, so null never matches.
-  return entries.some((entry) => getEnvSync().derivationOf(entry.meta) === value);
+  return entries.some(
+    (entry) => getEnvSync().derivationOf(entry.meta) === value,
+  );
 }
 
 /**

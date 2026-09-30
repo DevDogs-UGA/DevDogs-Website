@@ -34,8 +34,7 @@ export interface Change {
 }
 
 export type Segment =
-  | { kind: "same"; lines: string[] }
-  | { kind: "change"; change: Change };
+  { kind: "same"; lines: string[] } | { kind: "change"; change: Change };
 
 export interface FileMerge {
   segments: Segment[];
@@ -95,9 +94,10 @@ export function mergeFile(input: MergeInput): FileMerge {
   const ours = splitLines(input.ours);
   const theirs = splitLines(input.theirs);
 
-  const hunks = [...hunksOf(base, ours, "ours"), ...hunksOf(base, theirs, "theirs")].sort(
-    (a, b) => a.start - b.start,
-  );
+  const hunks = [
+    ...hunksOf(base, ours, "ours"),
+    ...hunksOf(base, theirs, "theirs"),
+  ].sort((a, b) => a.start - b.start);
 
   const segments: Segment[] = [];
   const changes: Change[] = [];
@@ -137,14 +137,18 @@ export function mergeFile(input: MergeInput): FileMerge {
       const head = own[0]!;
       const tail = own[own.length - 1]!;
       const from = head.sideStart - (head.start - start);
-      const to = tail.sideStart + tail.sideLength + (end - (tail.start + tail.length));
+      const to =
+        tail.sideStart + tail.sideLength + (end - (tail.start + tail.length));
       return lines.slice(from, to);
     };
     const regionBase = base.slice(start, end);
     const regionOurs = view("ours", ours);
     const regionTheirs = view("theirs", theirs);
 
-    if (sameLines(regionOurs, regionTheirs) || !group.some((h) => h.side === "theirs")) {
+    if (
+      sameLines(regionOurs, regionTheirs) ||
+      !group.some((h) => h.side === "theirs")
+    ) {
       // Same edit on both sides, or only ours edited: nothing to propose.
       pushSame(regionOurs);
     } else {
@@ -186,18 +190,22 @@ export interface AppliedFile {
  */
 export function applyDecisions(
   merge: FileMerge,
-  decisions: ReadonlyMap<number, Decision> | ((id: number) => Decision | undefined),
+  decisions:
+    ReadonlyMap<number, Decision> | ((id: number) => Decision | undefined),
   fallback: Decision = "reject",
 ): AppliedFile {
   const decide = (id: number): Decision =>
-    (typeof decisions === "function" ? decisions(id) : decisions.get(id)) ?? fallback;
+    (typeof decisions === "function" ? decisions(id) : decisions.get(id)) ??
+    fallback;
 
   let text = "";
   for (const segment of merge.segments) {
     if (segment.kind === "same") text += segment.lines.join("");
     else {
       const { change } = segment;
-      text += (decide(change.id) === "accept" ? change.theirs : change.ours).join("");
+      text += (
+        decide(change.id) === "accept" ? change.theirs : change.ours
+      ).join("");
     }
   }
   // A file only stops existing when nothing is left of it AND one side never

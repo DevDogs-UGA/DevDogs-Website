@@ -49,7 +49,14 @@ function srcPath(): string {
   );
 }
 function outPath(): string {
-  return join(findRepoRoot(), "apps", "platform", "src", "assets", "hypno.webp");
+  return join(
+    findRepoRoot(),
+    "apps",
+    "platform",
+    "src",
+    "assets",
+    "hypno.webp",
+  );
 }
 
 const RENDER_PX = 3536;

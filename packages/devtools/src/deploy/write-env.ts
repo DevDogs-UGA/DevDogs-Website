@@ -308,9 +308,9 @@ function compose(
   const ghSecrets = readContext("DEPLOY_GITHUB_SECRETS", env);
   const ghVars = readContext("DEPLOY_GITHUB_VARS", env);
 
-  const smuggled = getEnvSync().neverStoreKeys().filter(
-    (k) => k in ghSecrets || k in ghVars,
-  );
+  const smuggled = getEnvSync()
+    .neverStoreKeys()
+    .filter((k) => k in ghSecrets || k in ghVars);
   if (smuggled.length > 0) {
     throw new DeployError(
       `${smuggled.join(", ")} must never be a GitHub secret or variable.`,

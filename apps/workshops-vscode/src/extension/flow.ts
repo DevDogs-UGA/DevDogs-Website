@@ -14,7 +14,12 @@ import { errorText, logError, output } from "./log.js";
 import { resolveInside, repoRelative } from "./paths.js";
 import { fetchTags, loadSnapshot } from "./repo.js";
 import type { ReviewController } from "./review.js";
-import { decideBase, planIsEmpty, rangeLabel, restrictPlanToFile } from "./scope.js";
+import {
+  decideBase,
+  planIsEmpty,
+  rangeLabel,
+  restrictPlanToFile,
+} from "./scope.js";
 import type { State } from "./state.js";
 import { stepLabel } from "./steps-model.js";
 import { captureError } from "./telemetry.js";
@@ -42,7 +47,9 @@ export class Flow {
   async handleLink(path: string, query: string): Promise<void> {
     const parsed = parseWorkshopUri(path, query);
     if (!parsed.ok) {
-      void vscode.window.showErrorMessage(`DevDogs Workshops: ${parsed.reason}`);
+      void vscode.window.showErrorMessage(
+        `DevDogs Workshops: ${parsed.reason}`,
+      );
       return;
     }
     const { link } = parsed;
@@ -62,7 +69,10 @@ export class Flow {
   private async fetch(root: string): Promise<void> {
     try {
       await vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Window, title: "Fetching workshop steps…" },
+        {
+          location: vscode.ProgressLocation.Window,
+          title: "Fetching workshop steps…",
+        },
         () => fetchTags(root),
       );
     } catch (error) {
@@ -88,7 +98,11 @@ export class Flow {
     root: string,
     repo: string,
     toTag: string,
-    options: { from?: string | undefined; file?: string | undefined; session?: string | undefined } = {},
+    options: {
+      from?: string | undefined;
+      file?: string | undefined;
+      session?: string | undefined;
+    } = {},
   ): Promise<void> {
     try {
       const snap = await loadSnapshot(root);
@@ -105,7 +119,9 @@ export class Flow {
       if (options.file !== undefined) {
         file = repoRelative(root, options.file) ?? undefined;
         if (!file) {
-          void vscode.window.showErrorMessage("That link points outside your clone, so it was ignored.");
+          void vscode.window.showErrorMessage(
+            "That link points outside your clone, so it was ignored.",
+          );
           return;
         }
       }
@@ -116,7 +132,9 @@ export class Flow {
         base = line.find((s) => s.tag === options.from);
         explicit = true;
         if (!base) {
-          void vscode.window.showErrorMessage(`This clone doesn't have the step "${options.from}".`);
+          void vscode.window.showErrorMessage(
+            `This clone doesn't have the step "${options.from}".`,
+          );
           return;
         }
       } else {
@@ -126,16 +144,27 @@ export class Flow {
 
       const decision = decideBase(line, target, base, explicit);
       if (decision.kind === "up-to-date") {
-        void vscode.window.showInformationMessage(`You already have "${target.title || target.slug}".`);
+        void vscode.window.showInformationMessage(
+          `You already have "${target.title || target.slug}".`,
+        );
         return;
       }
       if (decision.kind === "ready") base = decision.base;
       else {
-        const range = rangeLabel(line.slice(indexOfTag(line, decision.combined) + 1, indexOfTag(line, target) + 1));
+        const range = rangeLabel(
+          line.slice(
+            indexOfTag(line, decision.combined) + 1,
+            indexOfTag(line, target) + 1,
+          ),
+        );
         const together = `Review ${range.charAt(0).toLowerCase()}${range.slice(1)} together`;
         const answer = await vscode.window.showInformationMessage(
           `You last had "${decision.combined.title || "the start"}". ${together}?`,
-          { modal: true, detail: "Skipped steps are included, so nothing they add is missed." },
+          {
+            modal: true,
+            detail:
+              "Skipped steps are included, so nothing they add is missed.",
+          },
           together,
           `Just ${rangeLabel([target]).toLowerCase()}`,
         );
@@ -147,7 +176,9 @@ export class Flow {
       if (file !== undefined) {
         plan = restrictPlanToFile(plan, file);
         if (planIsEmpty(plan)) {
-          void vscode.window.showInformationMessage(`"${file}" isn't changed by this step.`);
+          void vscode.window.showInformationMessage(
+            `"${file}" isn't changed by this step.`,
+          );
           return;
         }
       }
@@ -156,12 +187,15 @@ export class Flow {
         repo,
         session: options.session,
         line,
-        ensurePersonalBranch: () => this.branches.ensurePersonalBranch(root, target.workshop),
+        ensurePersonalBranch: () =>
+          this.branches.ensurePersonalBranch(root, target.workshop),
       });
     } catch (error) {
       captureError("reviewTo", error);
       logError("reviewTo", error);
-      void vscode.window.showErrorMessage(`Couldn't start the review: ${errorText(error)}`);
+      void vscode.window.showErrorMessage(
+        `Couldn't start the review: ${errorText(error)}`,
+      );
     }
   }
 
@@ -169,14 +203,25 @@ export class Flow {
    * No step tag in their history (they typed along without merging): guess,
    * then ask. A guess of the very first step needs no question.
    */
-  private async confirmInferred(root: string, line: readonly Step[], target: Step): Promise<Step | undefined> {
+  private async confirmInferred(
+    root: string,
+    line: readonly Step[],
+    target: Step,
+  ): Promise<Step | undefined> {
     const upTo = line.slice(0, line.indexOf(target) + 1);
     const guess = await inferStepFromWorkingTree(root, upTo);
     if (guess.step.tag === upTo[0]?.tag) return guess.step;
-    const label = guess.step.number === 0 ? `the start of ${guess.step.workshop}` : `step ${guess.step.number}, "${guess.step.title}"`;
+    const label =
+      guess.step.number === 0
+        ? `the start of ${guess.step.workshop}`
+        : `step ${guess.step.number}, "${guess.step.title}"`;
     const answer = await vscode.window.showInformationMessage(
       `Looks like you're at ${label}. Right?`,
-      { modal: true, detail: "This clone has no step history yet, so this is a guess from your files. If unsure, pick an earlier step: nothing you already have is lost." },
+      {
+        modal: true,
+        detail:
+          "This clone has no step history yet, so this is a guess from your files. If unsure, pick an earlier step: nothing you already have is lost.",
+      },
       "Yes",
       "Pick a step…",
     );
@@ -184,11 +229,15 @@ export class Flow {
     if (answer !== "Pick a step…") return undefined;
     const picked = await vscode.window.showQuickPick(
       upTo.slice(0, -1).map((step) => ({
-        label: step.number === 0 ? `Start of ${step.workshop}` : stepLabel(step),
+        label:
+          step.number === 0 ? `Start of ${step.workshop}` : stepLabel(step),
         description: step.workshop,
         step,
       })),
-      { title: "Which step do you already have?", placeHolder: "The last step you finished" },
+      {
+        title: "Which step do you already have?",
+        placeHolder: "The last step you finished",
+      },
     );
     return picked?.step;
   }
@@ -198,11 +247,15 @@ export class Flow {
     const abs = resolveInside(root, link.file);
     const rel = repoRelative(root, link.file);
     if (!abs || !rel) {
-      void vscode.window.showErrorMessage("That link points outside your clone, so it was ignored.");
+      void vscode.window.showErrorMessage(
+        "That link points outside your clone, so it was ignored.",
+      );
       return;
     }
     if (!(await revParse(root, tagRef(link.ref)))) {
-      void vscode.window.showErrorMessage(`This clone doesn't have the step "${link.ref}". Fetch the latest tags and try again.`);
+      void vscode.window.showErrorMessage(
+        `This clone doesn't have the step "${link.ref}". Fetch the latest tags and try again.`,
+      );
       return;
     }
 
@@ -222,12 +275,19 @@ export class Flow {
       });
     }
     const document = await vscode.workspace.openTextDocument(uri);
-    const editor = await vscode.window.showTextDocument(document, { preview: true });
+    const editor = await vscode.window.showTextDocument(document, {
+      preview: true,
+    });
     if (link.lines) {
       const last = document.lineCount - 1;
       const start = Math.min(link.lines.start - 1, last);
       const end = Math.min(link.lines.end - 1, last);
-      const range = new vscode.Range(start, 0, end, document.lineAt(end).range.end.character);
+      const range = new vscode.Range(
+        start,
+        0,
+        end,
+        document.lineAt(end).range.end.character,
+      );
       editor.selection = new vscode.Selection(range.start, range.end);
       editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
     }
@@ -250,11 +310,16 @@ async function isFile(path: string): Promise<boolean> {
 export const refContentProvider: vscode.TextDocumentContentProvider = {
   async provideTextDocumentContent(uri) {
     try {
-      const { root, ref } = JSON.parse(uri.query) as { root: string; ref: string };
+      const { root, ref } = JSON.parse(uri.query) as {
+        root: string;
+        ref: string;
+      };
       const rel = repoRelative(root, uri.path.replace(/^\//, ""));
       if (!rel) return "";
       const bytes = await showFile(root, tagRef(ref), rel);
-      return bytes ? bytes.toString("utf8") : "(This file doesn't exist at that step.)";
+      return bytes
+        ? bytes.toString("utf8")
+        : "(This file doesn't exist at that step.)";
     } catch (error) {
       return `Couldn't read this file: ${errorText(error)}`;
     }

@@ -14,9 +14,14 @@ export const DOCS_ORIGIN = "https://devdogsuga.org";
 const DOCS_PATH = /^\/docs\/[A-Za-z0-9._~\-/]*$/;
 
 /** The step after `target` in the line, skipping `00-start` markers. */
-export function nextStep(line: readonly Step[], target: Step): Step | undefined {
+export function nextStep(
+  line: readonly Step[],
+  target: Step,
+): Step | undefined {
   const index = line.findIndex((s) => s.tag === target.tag);
-  return index < 0 ? undefined : line.slice(index + 1).find((s) => s.number > 0);
+  return index < 0
+    ? undefined
+    : line.slice(index + 1).find((s) => s.number > 0);
 }
 
 /**
@@ -29,7 +34,13 @@ export function handoffUrl(input: {
   session: string | undefined;
 }): string | undefined {
   const { nextDocs, doneTags, session } = input;
-  if (!session || !nextDocs || !DOCS_PATH.test(nextDocs) || nextDocs.includes("//")) return undefined;
+  if (
+    !session ||
+    !nextDocs ||
+    !DOCS_PATH.test(nextDocs) ||
+    nextDocs.includes("//")
+  )
+    return undefined;
   const done = doneTags.map(encodeURIComponent).join(",");
   return `${DOCS_ORIGIN}${nextDocs}#done=${done}&session=${encodeURIComponent(session)}`;
 }

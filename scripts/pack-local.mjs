@@ -32,7 +32,13 @@
 // `pnpm pack` only pack whats already in `files` on disk.
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readdirSync, existsSync, statSync, renameSync } from "node:fs";
+import {
+  mkdirSync,
+  readdirSync,
+  existsSync,
+  statSync,
+  renameSync,
+} from "node:fs";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -50,7 +56,9 @@ function discoverPackages() {
     .map((name) => join(packagesDir, name))
     .filter((dir) => {
       try {
-        return statSync(dir).isDirectory() && existsSync(join(dir, "package.json"));
+        return (
+          statSync(dir).isDirectory() && existsSync(join(dir, "package.json"))
+        );
       } catch {
         return false;
       }
@@ -67,7 +75,9 @@ function tarballName(pkgName) {
 function main() {
   const pkgs = discoverPackages()
     .map((dir) => ({ dir, json: readPackageJson(dir) }))
-    .filter(({ json }) => json.private !== true && typeof json.name === "string");
+    .filter(
+      ({ json }) => json.private !== true && typeof json.name === "string",
+    );
 
   console.log(
     `Found ${pkgs.length} publishable package(s): ${pkgs.map((p) => p.json.name).join(", ") || "(none)"}`,

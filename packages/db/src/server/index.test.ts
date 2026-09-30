@@ -15,7 +15,9 @@ const postgresMock = vi.fn((url: string, options: unknown) => ({
   url,
   options,
 }));
-vi.mock("postgres", () => ({ default: (...args: [string, unknown]) => postgresMock(...args) }));
+vi.mock("postgres", () => ({
+  default: (...args: [string, unknown]) => postgresMock(...args),
+}));
 
 const { createAdminClient, createDb } = await import("./index.js");
 
@@ -74,7 +76,10 @@ describe("createDb", () => {
     );
     expect(postgresMock).toHaveBeenCalledTimes(1);
     const postgresClient = postgresMock.mock.results[0]?.value;
-    expect(drizzleMock).toHaveBeenCalledWith({ client: postgresClient, relations });
+    expect(drizzleMock).toHaveBeenCalledWith({
+      client: postgresClient,
+      relations,
+    });
     expect(db).toEqual({ __kind: "drizzle" });
   });
 

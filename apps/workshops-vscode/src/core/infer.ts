@@ -57,7 +57,11 @@ async function workingText(root: string, path: string): Promise<string | null> {
   }
 }
 
-async function tagText(root: string, tag: string, path: string): Promise<string | null> {
+async function tagText(
+  root: string,
+  tag: string,
+  path: string,
+): Promise<string | null> {
   const bytes = await showFile(root, tagRef(tag), path);
   return bytes === null || looksBinary(bytes) ? null : bytes.toString("utf8");
 }
@@ -68,12 +72,18 @@ async function tagText(root: string, tag: string, path: string): Promise<string 
  * when they're in the working file, and lines it removed when they're gone.
  * Null when the step has no measurable lines (say, it only touched lockfiles).
  */
-async function scoreStep(root: string, previous: Step, step: Step): Promise<number | null> {
+async function scoreStep(
+  root: string,
+  previous: Step,
+  step: Step,
+): Promise<number | null> {
   let matched = 0;
   let total = 0;
   for (const file of await diffTags(root, previous.tag, step.tag)) {
     if (isLockfile(file.path)) continue;
-    const before = signalSet(await tagText(root, previous.tag, file.oldPath ?? file.path));
+    const before = signalSet(
+      await tagText(root, previous.tag, file.oldPath ?? file.path),
+    );
     const after = signalSet(await tagText(root, step.tag, file.path));
     const working = signalSet(await workingText(root, file.path));
     for (const line of after) {
@@ -128,7 +138,7 @@ export async function inferStepFromWorkingTree(
 
   // The step just after the match, if it was scored, tells how much of the
   // NEXT step they already have; a high value means the match may be late.
-  const after = line[best + 1] ? scores.get(line[best + 1]!.tag) ?? 0 : 0;
+  const after = line[best + 1] ? (scores.get(line[best + 1]!.tag) ?? 0) : 0;
   const matchScore = scores.get(line[best]!.tag) ?? 0;
   const confidence = matchScore * (1 - after);
   if (confidence < SURE) {

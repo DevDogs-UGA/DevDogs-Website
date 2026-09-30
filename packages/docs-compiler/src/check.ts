@@ -414,7 +414,9 @@ export function printCheckSummary(
   );
   for (const warning of summary.warnings) {
     const at = warning.line === null ? "" : `:${warning.line}`;
-    console.log(`[docs-compiler] warn: ${warning.file}${at}: ${warning.message}`);
+    console.log(
+      `[docs-compiler] warn: ${warning.file}${at}: ${warning.message}`,
+    );
   }
 }
 

@@ -65,7 +65,10 @@ describe("reporting a caught failure", () => {
   });
 
   it("keeps a UsageError out of Sentry", () => {
-    explainError("Nothing called nope.", new UsageError("Nothing called nope."));
+    explainError(
+      "Nothing called nope.",
+      new UsageError("Nothing called nope."),
+    );
     expect(sentry.captureException).not.toHaveBeenCalled();
   });
 

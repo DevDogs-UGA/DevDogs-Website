@@ -89,7 +89,15 @@ function renderRuleLine(rule: { type: string }): string {
   return rule.type;
 }
 
-function renderDesired(desired: { name: string; rules: readonly { type: string }[]; bypass_actors: readonly { actor_id: number; actor_type: string; bypass_mode: string }[] }): string[] {
+function renderDesired(desired: {
+  name: string;
+  rules: readonly { type: string }[];
+  bypass_actors: readonly {
+    actor_id: number;
+    actor_type: string;
+    bypass_mode: string;
+  }[];
+}): string[] {
   return [
     `    rules:   ${desired.rules.map(renderRuleLine).join(", ")}`,
     `    bypass:  ${
@@ -114,7 +122,9 @@ export function renderPlan(plan: RulesetPlan): string {
       update.liveName !== update.desired.name
         ? ` (renamed from "${update.liveName}")`
         : "";
-    lines.push(`~ update   "${update.desired.name}"${renameNote} [id ${update.id}]`);
+    lines.push(
+      `~ update   "${update.desired.name}"${renameNote} [id ${update.id}]`,
+    );
     lines.push(...renderDesired(update.desired));
   }
   for (const del of plan.deletes) {
@@ -154,7 +164,9 @@ async function confirmApply(yes: boolean): Promise<boolean> {
   );
 }
 
-export async function runGithubRulesets(argv: readonly string[]): Promise<number> {
+export async function runGithubRulesets(
+  argv: readonly string[],
+): Promise<number> {
   const opts = parseOptions(argv);
   const r: Repo = { owner: opts.org, repo: opts.repo };
 

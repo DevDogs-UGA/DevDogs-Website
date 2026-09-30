@@ -51,14 +51,16 @@ describe("buildDesiredSettings", () => {
 
   it("restricts staging to main and production/production-apply to production", () => {
     const desired = buildDesiredSettings([]);
-    expect(desired.environments.find((e) => e.name === "staging")!.allowedBranches).toEqual([
-      "main",
-    ]);
     expect(
-      desired.environments.find((e) => e.name === "production")!.allowedBranches,
+      desired.environments.find((e) => e.name === "staging")!.allowedBranches,
+    ).toEqual(["main"]);
+    expect(
+      desired.environments.find((e) => e.name === "production")!
+        .allowedBranches,
     ).toEqual(["production"]);
     expect(
-      desired.environments.find((e) => e.name === "production-apply")!.allowedBranches,
+      desired.environments.find((e) => e.name === "production-apply")!
+        .allowedBranches,
     ).toEqual(["production"]);
   });
 

@@ -38,11 +38,16 @@ describe("runFailingChecks / printFailingChecks", () => {
 
   it("reports the devtools catalog as missing when it could not be loaded", async () => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "docs-build-failing-"));
-    fs.writeFileSync(path.join(root, "pnpm-workspace.yaml"), 'packages:\n  - "apps/*"\n');
+    fs.writeFileSync(
+      path.join(root, "pnpm-workspace.yaml"),
+      'packages:\n  - "apps/*"\n',
+    );
     const contentRoot = path.join(root, "docs");
     fs.mkdirSync(contentRoot, { recursive: true });
 
-    const result = await runFailingChecks(contentRoot, [page({ content: "no devtools here" })]);
+    const result = await runFailingChecks(contentRoot, [
+      page({ content: "no devtools here" }),
+    ]);
 
     expect(result.devtoolsCatalogMissing).toBe(true);
     expect(result.linkErrors).toEqual([]);
@@ -52,7 +57,11 @@ describe("runFailingChecks / printFailingChecks", () => {
   it("prints a one-line notice when the devtools catalog is missing, even with no errors", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
-      printFailingChecks({ linkErrors: [], commandErrors: [], devtoolsCatalogMissing: true });
+      printFailingChecks({
+        linkErrors: [],
+        commandErrors: [],
+        devtoolsCatalogMissing: true,
+      });
       expect(spy).toHaveBeenCalledTimes(1);
       expect(spy.mock.calls[0]?.[0]).toContain("devtools catalog not found");
     } finally {
@@ -63,7 +72,11 @@ describe("runFailingChecks / printFailingChecks", () => {
   it("prints nothing when there are no errors and the catalog loaded fine", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
-      printFailingChecks({ linkErrors: [], commandErrors: [], devtoolsCatalogMissing: false });
+      printFailingChecks({
+        linkErrors: [],
+        commandErrors: [],
+        devtoolsCatalogMissing: false,
+      });
       expect(spy).not.toHaveBeenCalled();
     } finally {
       spy.mockRestore();

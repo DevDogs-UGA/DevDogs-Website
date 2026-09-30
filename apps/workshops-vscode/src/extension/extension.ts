@@ -8,7 +8,12 @@ import { Telemetry, captureError, guarded, useTelemetry } from "./telemetry.js";
 import { LiveWorkshops } from "./live.js";
 import { isPendingFresh } from "./pending.js";
 import { CMD, StepsProvider, tagOf } from "./panel.js";
-import { CMD as REVIEW_CMD, WorkshopReviewController, commandIndexOf, fileIndexOf } from "./review-controller.js";
+import {
+  CMD as REVIEW_CMD,
+  WorkshopReviewController,
+  commandIndexOf,
+  fileIndexOf,
+} from "./review-controller.js";
 import { State } from "./state.js";
 import { stepLabel } from "./steps-model.js";
 
@@ -20,7 +25,9 @@ import { stepLabel } from "./steps-model.js";
  * `live` (TASK-379) listens for the presenter's checkpoints while a workshop
  * repo is open, behind the `devdogsWorkshops.followLive` setting.
  */
-export async function activate(context: vscode.ExtensionContext): Promise<WorkshopsApi> {
+export async function activate(
+  context: vscode.ExtensionContext,
+): Promise<WorkshopsApi> {
   const state = new State(context.globalState);
   const telemetry = new Telemetry(context);
   useTelemetry(telemetry);
@@ -30,7 +37,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<Worksh
   const review = new WorkshopReviewController(refresh);
   const flow = new Flow(state, branches, review, refresh);
 
-  const stepsView = vscode.window.createTreeView("devdogsWorkshops.steps", { treeDataProvider: steps });
+  const stepsView = vscode.window.createTreeView("devdogsWorkshops.steps", {
+    treeDataProvider: steps,
+  });
   const live = new LiveWorkshops(steps, flow, review, stepsView);
   telemetry.setScrubContext(() => ({
     paths: [
@@ -42,7 +51,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<Worksh
   }));
   steps.onDidChangeTreeData(() => telemetry.setRepo(steps.open?.repo));
 
-  const api: WorkshopsApi = { handleLink: (path, query) => flow.handleLink(path, query),
+  const api: WorkshopsApi = {
+    handleLink: (path, query) => flow.handleLink(path, query),
     live,
     review,
     setUsername: (name) => Promise.resolve(state.setUsername(name)),
@@ -54,15 +64,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<Worksh
     review,
     live,
     stepsView,
-    vscode.window.createTreeView("devdogsWorkshops.live", { treeDataProvider: live.treeDataProvider }),
-    vscode.window.createTreeView("devdogsWorkshops.review", { treeDataProvider: review.treeDataProvider }),
-    vscode.workspace.registerTextDocumentContentProvider(REF_SCHEME, refContentProvider),
+    vscode.window.createTreeView("devdogsWorkshops.live", {
+      treeDataProvider: live.treeDataProvider,
+    }),
+    vscode.window.createTreeView("devdogsWorkshops.review", {
+      treeDataProvider: review.treeDataProvider,
+    }),
+    vscode.workspace.registerTextDocumentContentProvider(
+      REF_SCHEME,
+      refContentProvider,
+    ),
     vscode.window.registerUriHandler({
-      handleUri: (uri) => flow.handleLink(uri.path, uri.query).catch((e) => {
-        captureError("handleUri", e);
-        logError("handleUri", e);
-        void vscode.window.showErrorMessage(`DevDogs Workshops: ${errorText(e)}`);
-      }),
+      handleUri: (uri) =>
+        flow.handleLink(uri.path, uri.query).catch((e) => {
+          captureError("handleUri", e);
+          logError("handleUri", e);
+          void vscode.window.showErrorMessage(
+            `DevDogs Workshops: ${errorText(e)}`,
+          );
+        }),
     }),
     vscode.window.onDidChangeWindowState((s) => s.focused && refresh()),
     vscode.workspace.onDidChangeWorkspaceFolders(refresh),
@@ -71,7 +91,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<Worksh
   // Branch switches and new tags (from a fetch or the terminal) change the panel.
   for (const folder of vscode.workspace.workspaceFolders ?? []) {
     const watcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(folder, ".git/{HEAD,packed-refs,refs/tags/**}"),
+      new vscode.RelativePattern(
+        folder,
+        ".git/{HEAD,packed-refs,refs/tags/**}",
+      ),
     );
     watcher.onDidChange(refresh);
     watcher.onDidCreate(refresh);
@@ -82,7 +105,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<Worksh
   const pickStep = async (title: string): Promise<string | undefined> => {
     const open = steps.open ?? (await steps.refresh().then(() => steps.open));
     if (!open || open.snapshot.line.length === 0) {
-      void vscode.window.showInformationMessage("Open a DevDogs workshop repository first.");
+      void vscode.window.showInformationMessage(
+        "Open a DevDogs workshop repository first.",
+      );
       return undefined;
     }
     const current = open.snapshot.current?.tag;
@@ -92,7 +117,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<Worksh
         .map((step) => ({
           label: stepLabel(step),
           description: step.tag === current ? "you are here" : step.workshop,
-          detail: step.run.length ? step.run.map((c) => `▶ ${c}`).join("  ") : undefined,
+          detail: step.run.length
+            ? step.run.map((c) => `▶ ${c}`).join("  ")
+            : undefined,
           tag: step.tag,
         })),
       { title, placeHolder: "Pick a step" },
@@ -100,8 +127,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<Worksh
     return picked?.tag;
   };
 
-  const register = (command: string, handler: (...args: unknown[]) => unknown) =>
-    context.subscriptions.push(vscode.commands.registerCommand(command, guarded(command, handler)));
+  const register = (
+    command: string,
+    handler: (...args: unknown[]) => unknown,
+  ) =>
+    context.subscriptions.push(
+      vscode.commands.registerCommand(command, guarded(command, handler)),
+    );
 
   register(CMD.refresh, () => steps.refresh());
 
@@ -124,7 +156,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<Worksh
     const open = steps.open;
     if (!open) return;
     const { workshops, branch } = open.snapshot;
-    const workshop = workshopOfBranch(branch, workshops) ?? open.snapshot.current?.workshop ?? latestWorkshop(workshops);
+    const workshop =
+      workshopOfBranch(branch, workshops) ??
+      open.snapshot.current?.workshop ??
+      latestWorkshop(workshops);
     if (workshop) await branches.ensurePersonalBranch(open.root, workshop);
     refresh();
   });
@@ -132,7 +167,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<Worksh
   register(CMD.jumpToStep, async (arg) => {
     const open = steps.open;
     if (!open) return;
-    const tag = tagOf(arg) ?? (await pickStep("Workshop: Jump to step (discards my changes)"));
+    const tag =
+      tagOf(arg) ??
+      (await pickStep("Workshop: Jump to step (discards my changes)"));
     if (!tag) return;
     const step = open.snapshot.line.find((s) => s.tag === tag);
     await branches.jumpToStep(open.root, tag, step ? stepLabel(step) : tag);
@@ -140,12 +177,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<Worksh
   });
 
   // Review commands (TASK-376) and step commands (TASK-377).
-  register(REVIEW_CMD.acceptChange, (thread) => review.decideThread(thread as vscode.CommentThread, "accept"));
-  register(REVIEW_CMD.rejectChange, (thread) => review.decideThread(thread as vscode.CommentThread, "reject"));
+  register(REVIEW_CMD.acceptChange, (thread) =>
+    review.decideThread(thread as vscode.CommentThread, "accept"),
+  );
+  register(REVIEW_CMD.rejectChange, (thread) =>
+    review.decideThread(thread as vscode.CommentThread, "reject"),
+  );
   register(REVIEW_CMD.acceptAtCursor, () => review.decideAtCursor("accept"));
   register(REVIEW_CMD.rejectAtCursor, () => review.decideAtCursor("reject"));
-  register(REVIEW_CMD.acceptFile, (arg) => review.decideFile("accept", fileIndexOf(arg)));
-  register(REVIEW_CMD.rejectFile, (arg) => review.decideFile("reject", fileIndexOf(arg)));
+  register(REVIEW_CMD.acceptFile, (arg) =>
+    review.decideFile("accept", fileIndexOf(arg)),
+  );
+  register(REVIEW_CMD.rejectFile, (arg) =>
+    review.decideFile("reject", fileIndexOf(arg)),
+  );
   register(REVIEW_CMD.nextFile, () => review.nextFile());
   register(REVIEW_CMD.acceptAll, () => review.decideAll("accept"));
   register(REVIEW_CMD.rejectAll, () => review.decideAll("reject"));

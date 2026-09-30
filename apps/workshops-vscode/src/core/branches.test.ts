@@ -40,14 +40,20 @@ describe("isWorkshopBranch", () => {
 
 describe("workshopOfBranch / latestWorkshop / usernames", () => {
   it("reads the workshop off a personal or a workshop branch", () => {
-    expect(workshopOfBranch("sloan/02-supabase", workshops)).toBe("02-supabase");
-    expect(workshopOfBranch("01-nextjs-intro", workshops)).toBe("01-nextjs-intro");
+    expect(workshopOfBranch("sloan/02-supabase", workshops)).toBe(
+      "02-supabase",
+    );
+    expect(workshopOfBranch("01-nextjs-intro", workshops)).toBe(
+      "01-nextjs-intro",
+    );
     expect(workshopOfBranch("main", workshops)).toBeUndefined();
     expect(workshopOfBranch(null, workshops)).toBeUndefined();
   });
 
   it("picks the highest-numbered workshop", () => {
-    expect(latestWorkshop(["02-supabase", "01-nextjs-intro"])).toBe("02-supabase");
+    expect(latestWorkshop(["02-supabase", "01-nextjs-intro"])).toBe(
+      "02-supabase",
+    );
     expect(latestWorkshop([])).toBeUndefined();
     // Legacy `demo/*` tags sort after the numbered names but are not a workshop line.
     expect(latestWorkshop(["02-supabase", "demo"])).toBe("02-supabase");
@@ -55,8 +61,18 @@ describe("workshopOfBranch / latestWorkshop / usernames", () => {
   });
 
   it("accepts GitHub logins and refuses anything git could misread", () => {
-    for (const ok of ["sloanfinger", "a", "a-b-c", "User123"]) expect(isValidUsername(ok)).toBe(true);
-    for (const bad of ["", "-x", "x-", "a--b", "a/b", "a b", "--upload-pack=x", "x".repeat(40)]) {
+    for (const ok of ["sloanfinger", "a", "a-b-c", "User123"])
+      expect(isValidUsername(ok)).toBe(true);
+    for (const bad of [
+      "",
+      "-x",
+      "x-",
+      "a--b",
+      "a/b",
+      "a b",
+      "--upload-pack=x",
+      "x".repeat(40),
+    ]) {
       expect(isValidUsername(bad)).toBe(false);
     }
     expect(() => personalBranchName("-x", "02-supabase")).toThrow();
@@ -74,7 +90,11 @@ describe("planPersonalBranch", () => {
 
   it("stays on a branch of their own", () => {
     expect(
-      planPersonalBranch({ ...base, currentBranch: "my-feature", localBranches: ["my-feature"] }),
+      planPersonalBranch({
+        ...base,
+        currentBranch: "my-feature",
+        localBranches: ["my-feature"],
+      }),
     ).toEqual({ kind: "stay", branch: "my-feature" });
     expect(
       planPersonalBranch({
@@ -116,11 +136,20 @@ describe("planPersonalBranch", () => {
   it("falls back to the workshop's 00-start tag", () => {
     for (const previousWorkshop of ["01-nextjs-intro", undefined]) {
       expect(
-        planPersonalBranch({ ...base, previousWorkshop, currentBranch: "main", localBranches: ["main"] }),
+        planPersonalBranch({
+          ...base,
+          previousWorkshop,
+          currentBranch: "main",
+          localBranches: ["main"],
+        }),
       ).toEqual({
         kind: "create",
         branch: "sloan/02-supabase",
-        start: { kind: "tag", name: "02-supabase/00-start", ref: "refs/tags/02-supabase/00-start" },
+        start: {
+          kind: "tag",
+          name: "02-supabase/00-start",
+          ref: "refs/tags/02-supabase/00-start",
+        },
       });
     }
   });
@@ -171,11 +200,15 @@ describe("applyBranchPlan and jumpToStep", () => {
     expect(branch).toBe("sloan/w");
     expect(await currentBranch(repo.dir)).toBe("sloan/w");
     expect(repo.git("status", "--porcelain")).toBe("");
-    expect(repo.git("rev-parse", "HEAD").trim()).toBe(repo.git("rev-parse", "refs/tags/w/01-one^{commit}").trim());
+    expect(repo.git("rev-parse", "HEAD").trim()).toBe(
+      repo.git("rev-parse", "refs/tags/w/01-one^{commit}").trim(),
+    );
   });
 
   it("refuses a tag that is not a step", async () => {
     repo = build();
-    await expect(jumpToStep(repo.dir, "sloan", "v1.0")).rejects.toThrow(/Not a step tag/);
+    await expect(jumpToStep(repo.dir, "sloan", "v1.0")).rejects.toThrow(
+      /Not a step tag/,
+    );
   });
 });

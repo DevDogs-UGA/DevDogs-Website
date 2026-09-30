@@ -47,8 +47,12 @@ describe("trackOfRepo", () => {
 
 describe("attendUrl", () => {
   it("adds the track", () => {
-    expect(attendUrl("wss://slides-relay.devdogsuga.org/attend", "web")).toBe("wss://slides-relay.devdogsuga.org/attend?track=web");
-    expect(attendUrl("ws://127.0.0.1:1234/attend?track=x", "mobile")).toBe("ws://127.0.0.1:1234/attend?track=mobile");
+    expect(attendUrl("wss://slides-relay.devdogsuga.org/attend", "web")).toBe(
+      "wss://slides-relay.devdogsuga.org/attend?track=web",
+    );
+    expect(attendUrl("ws://127.0.0.1:1234/attend?track=x", "mobile")).toBe(
+      "ws://127.0.0.1:1234/attend?track=mobile",
+    );
   });
   it("refuses other schemes and junk", () => {
     expect(attendUrl("https://example.com/attend", "web")).toBeUndefined();
@@ -58,26 +62,54 @@ describe("attendUrl", () => {
 
 describe("parseRelayMessage", () => {
   const checkpoint = (over: object = {}) =>
-    JSON.stringify({ t: "checkpoint", id: "abc", ref: "02-supabase/03-insert-naive", tracks: ["web"], ...over });
+    JSON.stringify({
+      t: "checkpoint",
+      id: "abc",
+      ref: "02-supabase/03-insert-naive",
+      tracks: ["web"],
+      ...over,
+    });
 
   it("reads live", () => {
-    expect(parseRelayMessage('{"t":"live","live":true}', "web")).toEqual({ kind: "live", live: true });
-    expect(parseRelayMessage('{"t":"live","live":false}', "web")).toEqual({ kind: "live", live: false });
+    expect(parseRelayMessage('{"t":"live","live":true}', "web")).toEqual({
+      kind: "live",
+      live: true,
+    });
+    expect(parseRelayMessage('{"t":"live","live":false}', "web")).toEqual({
+      kind: "live",
+      live: false,
+    });
   });
   it("reads a checkpoint for its track", () => {
-    expect(parseRelayMessage(checkpoint(), "web")).toEqual({ kind: "checkpoint", id: "abc", ref: "02-supabase/03-insert-naive" });
-    expect(parseRelayMessage(checkpoint({ tracks: ["web", "mobile"] }), "mobile")).toMatchObject({ kind: "checkpoint" });
+    expect(parseRelayMessage(checkpoint(), "web")).toEqual({
+      kind: "checkpoint",
+      id: "abc",
+      ref: "02-supabase/03-insert-naive",
+    });
+    expect(
+      parseRelayMessage(checkpoint({ tracks: ["web", "mobile"] }), "mobile"),
+    ).toMatchObject({ kind: "checkpoint" });
   });
   it("ignores a checkpoint for another track", () => {
     expect(parseRelayMessage(checkpoint(), "mobile")).toBeUndefined();
-    expect(parseRelayMessage(checkpoint({ tracks: "web" }), "web")).toBeUndefined();
+    expect(
+      parseRelayMessage(checkpoint({ tracks: "web" }), "web"),
+    ).toBeUndefined();
   });
   it("ignores bad refs and everything else", () => {
-    expect(parseRelayMessage(checkpoint({ ref: "main; rm -rf" }), "web")).toBeUndefined();
-    expect(parseRelayMessage(checkpoint({ ref: "../x/01-y" }), "web")).toBeUndefined();
+    expect(
+      parseRelayMessage(checkpoint({ ref: "main; rm -rf" }), "web"),
+    ).toBeUndefined();
+    expect(
+      parseRelayMessage(checkpoint({ ref: "../x/01-y" }), "web"),
+    ).toBeUndefined();
     expect(parseRelayMessage(checkpoint({ ref: 3 }), "web")).toBeUndefined();
-    expect(parseRelayMessage('{"t":"live","live":"yes"}', "web")).toBeUndefined();
-    expect(parseRelayMessage('{"t":"state","state":{}}', "web")).toBeUndefined();
+    expect(
+      parseRelayMessage('{"t":"live","live":"yes"}', "web"),
+    ).toBeUndefined();
+    expect(
+      parseRelayMessage('{"t":"state","state":{}}', "web"),
+    ).toBeUndefined();
     expect(parseRelayMessage("nope", "web")).toBeUndefined();
     expect(parseRelayMessage("null", "web")).toBeUndefined();
     expect(parseRelayMessage("3", "web")).toBeUndefined();
@@ -106,8 +138,12 @@ describe("backoffDelay", () => {
   it("grows exponentially up to the cap", () => {
     const top = () => 1;
     const low = () => 0;
-    expect([0, 1, 2, 3].map((n) => backoffDelay(n, top))).toEqual([1000, 2000, 4000, 8000]);
-    expect([0, 1, 2, 3].map((n) => backoffDelay(n, low))).toEqual([500, 1000, 2000, 4000]);
+    expect([0, 1, 2, 3].map((n) => backoffDelay(n, top))).toEqual([
+      1000, 2000, 4000, 8000,
+    ]);
+    expect([0, 1, 2, 3].map((n) => backoffDelay(n, low))).toEqual([
+      500, 1000, 2000, 4000,
+    ]);
     expect(backoffDelay(10, top)).toBe(60_000);
     expect(backoffDelay(1000, top)).toBe(60_000);
   });
@@ -123,26 +159,46 @@ describe("backoffDelay", () => {
 describe("decideCheckpoint", () => {
   const base = { line: LINE, reviewing: false };
   it("offers a step they don't have", () => {
-    expect(decideCheckpoint({ ...base, ref: s3.tag, current: s1 })).toBe("offer");
-    expect(decideCheckpoint({ ...base, ref: s1.tag, current: null })).toBe("offer");
+    expect(decideCheckpoint({ ...base, ref: s3.tag, current: s1 })).toBe(
+      "offer",
+    );
+    expect(decideCheckpoint({ ...base, ref: s1.tag, current: null })).toBe(
+      "offer",
+    );
   });
   it("does nothing when they have it or more", () => {
-    expect(decideCheckpoint({ ...base, ref: s2.tag, current: s2 })).toBe("have");
-    expect(decideCheckpoint({ ...base, ref: s1.tag, current: s3 })).toBe("have");
+    expect(decideCheckpoint({ ...base, ref: s2.tag, current: s2 })).toBe(
+      "have",
+    );
+    expect(decideCheckpoint({ ...base, ref: s1.tag, current: s3 })).toBe(
+      "have",
+    );
   });
   it("queues during a review", () => {
-    expect(decideCheckpoint({ ...base, ref: s3.tag, current: s1, reviewing: true })).toBe("queue");
+    expect(
+      decideCheckpoint({ ...base, ref: s3.tag, current: s1, reviewing: true }),
+    ).toBe("queue");
   });
   it("still ignores what they have during a review", () => {
-    expect(decideCheckpoint({ ...base, ref: s1.tag, current: s2, reviewing: true })).toBe("have");
+    expect(
+      decideCheckpoint({ ...base, ref: s1.tag, current: s2, reviewing: true }),
+    ).toBe("have");
   });
   it("ignores tags this clone doesn't have or that aren't steps", () => {
-    expect(decideCheckpoint({ ...base, ref: "02-supabase/09-later", current: s1 })).toBe("ignore");
-    expect(decideCheckpoint({ ...base, ref: LINE[2]!.tag, current: null })).toBe("ignore");
+    expect(
+      decideCheckpoint({ ...base, ref: "02-supabase/09-later", current: s1 }),
+    ).toBe("ignore");
+    expect(
+      decideCheckpoint({ ...base, ref: LINE[2]!.tag, current: null }),
+    ).toBe("ignore");
   });
   it("compares by line position across workshops", () => {
-    expect(decideCheckpoint({ ...base, ref: s1.tag, current: intro1 })).toBe("offer");
-    expect(decideCheckpoint({ ...base, ref: intro1.tag, current: s1 })).toBe("have");
+    expect(decideCheckpoint({ ...base, ref: s1.tag, current: intro1 })).toBe(
+      "offer",
+    );
+    expect(decideCheckpoint({ ...base, ref: intro1.tag, current: s1 })).toBe(
+      "have",
+    );
   });
 });
 
@@ -165,12 +221,18 @@ describe("offer state", () => {
 
   it("offers a queued step when the review finishes", () => {
     const state = queue({}, s2.tag, LINE);
-    expect(afterReview(state, true, LINE)).toEqual({ state: {}, offer: s2.tag });
+    expect(afterReview(state, true, LINE)).toEqual({
+      state: {},
+      offer: s2.tag,
+    });
   });
 
   it("badges a queued step when the review is cancelled", () => {
     const state = queue({ badge: s1.tag }, s3.tag, LINE);
-    expect(afterReview(state, false, LINE)).toEqual({ state: { badge: s3.tag }, offer: undefined });
+    expect(afterReview(state, false, LINE)).toEqual({
+      state: { badge: s3.tag },
+      offer: undefined,
+    });
   });
 
   it("does nothing without a queued step", () => {
@@ -180,6 +242,8 @@ describe("offer state", () => {
 
   it("words the offer", () => {
     expect(offerText(s3)).toBe("Presenter finished Step 3: Title 3");
-    expect(offerText({ ...s3, title: "" })).toBe("Presenter finished Step 3: s3");
+    expect(offerText({ ...s3, title: "" })).toBe(
+      "Presenter finished Step 3: s3",
+    );
   });
 });

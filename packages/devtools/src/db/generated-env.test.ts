@@ -6,7 +6,10 @@
  * is injected; see `EnsureGeneratedEnvDeps`.
  */
 import { describe, expect, it, vi } from "vitest";
-import { ensureGeneratedEnvFile, type EnsureGeneratedEnvDeps } from "./generated-env.js";
+import {
+  ensureGeneratedEnvFile,
+  type EnsureGeneratedEnvDeps,
+} from "./generated-env.js";
 
 function fakeDeps(overrides: Partial<EnsureGeneratedEnvDeps> = {}): {
   deps: EnsureGeneratedEnvDeps;
@@ -38,7 +41,14 @@ function fakeDeps(overrides: Partial<EnsureGeneratedEnvDeps> = {}): {
   };
   return {
     deps,
-    spies: { probeLocalStack, exists, captureStatus, write, listContainerNames, projectId },
+    spies: {
+      probeLocalStack,
+      exists,
+      captureStatus,
+      write,
+      listContainerNames,
+      projectId,
+    },
   };
 }
 
@@ -76,7 +86,9 @@ describe("ensureGeneratedEnvFile", () => {
   });
 
   it("does nothing when the file is missing but nothing is listening", async () => {
-    const { deps, spies } = fakeDeps({ probeLocalStack: vi.fn(async () => false) });
+    const { deps, spies } = fakeDeps({
+      probeLocalStack: vi.fn(async () => false),
+    });
 
     const result = await ensureGeneratedEnvFile("development", undefined, deps);
 
@@ -112,7 +124,10 @@ describe("ensureGeneratedEnvFile", () => {
       captureStatus: vi.fn(async () => {
         throw new Error("failed to connect");
       }),
-      listContainerNames: vi.fn(() => ["supabase_kong_DevDogs-Website", "other"]),
+      listContainerNames: vi.fn(() => [
+        "supabase_kong_DevDogs-Website",
+        "other",
+      ]),
       projectId: vi.fn(() => "DevDogsUGA"),
     });
 

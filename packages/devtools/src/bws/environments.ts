@@ -161,7 +161,8 @@ export function noVaultProjectHints(): string[] {
 export function assertVaultTarget(
   target: EnvTarget,
 ): asserts target is VaultTarget {
-  if (!getEnvSync().isVaultTarget(target)) throw new NoVaultProjectError(target);
+  if (!getEnvSync().isVaultTarget(target))
+    throw new NoVaultProjectError(target);
 }
 
 // ── Where the key sets went ──────────────────────────────────────────────────

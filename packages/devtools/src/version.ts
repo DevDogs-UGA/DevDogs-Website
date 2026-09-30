@@ -17,7 +17,9 @@ export function ownPackageDir(): string {
 /** Reads this build's own `package.json` version — used by `telemetry.ts`
  * (release tagging) and `cli.ts`'s `version` command. */
 export function ownVersion(): string {
-  const pkg = JSON.parse(readFileSync(join(ownPackageDir(), "package.json"), "utf8")) as {
+  const pkg = JSON.parse(
+    readFileSync(join(ownPackageDir(), "package.json"), "utf8"),
+  ) as {
     version?: unknown;
   };
   return typeof pkg.version === "string" ? pkg.version : "0.0.0";

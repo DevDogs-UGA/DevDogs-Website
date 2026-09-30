@@ -219,7 +219,9 @@ function sections(): { name: string; blocks: Block[] }[] {
 function derivedValue(meta: EnvMeta, routed: ReadonlySet<string>): string {
   const derivation = getEnvSync().derivationOf(meta);
   if (derivation === null) return "";
-  return getEnvSync().envReferences(derivation).every((ref) => routed.has(ref))
+  return getEnvSync()
+    .envReferences(derivation)
+    .every((ref) => routed.has(ref))
     ? derivation
     : "";
 }
@@ -700,7 +702,10 @@ export function renderInitAddition(
   const appended = [
     "",
     `# --- added by \`pnpm devtools env init\` on ${date} for: ${label} ---`,
-    ...renderBody(missing, getEnvSync().isVaultTarget(target) ? wanted : undefined),
+    ...renderBody(
+      missing,
+      getEnvSync().isVaultTarget(target) ? wanted : undefined,
+    ),
     "",
   ].join("\n");
 

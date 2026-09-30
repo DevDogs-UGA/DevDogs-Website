@@ -17,10 +17,9 @@ export type { ClientOptions, DatabaseSchema };
  * fail at build rather than leak the service key at runtime. Session
  * auto-refresh/persistence are disabled.
  */
-export function createAdminClient<
-  Database,
-  S extends DatabaseSchema<Database>,
->(opts: ClientOptions<Database, S>) {
+export function createAdminClient<Database, S extends DatabaseSchema<Database>>(
+  opts: ClientOptions<Database, S>,
+) {
   const options: SupabaseClientOptions<S> = {
     db: { schema: opts.schema },
     auth: { autoRefreshToken: false, persistSession: false },

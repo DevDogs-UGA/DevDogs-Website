@@ -51,10 +51,8 @@ export async function generateDatabaseTypes(
   await writeFile(opts.outFile, stdout);
 
   if (format) {
-    await execFileAsync(
-      "pnpm",
-      ["exec", "prettier", "--write", opts.outFile],
-      { cwd },
-    );
+    await execFileAsync("pnpm", ["exec", "prettier", "--write", opts.outFile], {
+      cwd,
+    });
   }
 }

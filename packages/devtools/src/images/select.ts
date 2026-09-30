@@ -99,7 +99,9 @@ export async function pair(
 }
 
 /** Every format any of these graphics can be drawn at, in registry order. */
-export async function formatsFor(graphics: readonly Graphic[]): Promise<Format[]> {
+export async function formatsFor(
+  graphics: readonly Graphic[],
+): Promise<Format[]> {
   const { FORMATS } = await loadOpenGraph();
   const names = new Set(graphics.flatMap((graphic) => graphic.formats));
 

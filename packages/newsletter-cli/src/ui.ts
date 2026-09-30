@@ -20,7 +20,11 @@ export function unwrap<T>(value: T | symbol): T {
 /**
  * Reports a failure with the next thing to try.
  */
-export function explain(summary: string, detail: string, hints: string[] = []): void {
+export function explain(
+  summary: string,
+  detail: string,
+  hints: string[] = [],
+): void {
   log.error(summary);
   if (detail) log.message(detail);
   if (hints.length > 0) note(hints.join("\n"), "Try this");

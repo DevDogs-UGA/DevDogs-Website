@@ -16,7 +16,9 @@ export function reviewUri(side: Side, path: string): vscode.Uri {
 }
 
 /** `left`/`right` and the repo path back out of a review URI, or undefined for anyone else's. */
-export function parseReviewUri(uri: vscode.Uri): { side: Side; path: string } | undefined {
+export function parseReviewUri(
+  uri: vscode.Uri,
+): { side: Side; path: string } | undefined {
   if (uri.scheme !== REVIEW_SCHEME) return undefined;
   const match = /^\/(left|right)\/(.+)$/.exec(uri.path);
   return match ? { side: match[1] as Side, path: match[2]! } : undefined;
@@ -29,14 +31,26 @@ interface Entry {
 
 export class ReviewFs implements vscode.FileSystemProvider {
   private readonly entries = new Map<string, Entry>();
-  private readonly emitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
+  private readonly emitter = new vscode.EventEmitter<
+    vscode.FileChangeEvent[]
+  >();
   readonly onDidChangeFile = this.emitter.event;
   private version = 0;
 
   set(uri: vscode.Uri, text: string): void {
     const existed = this.entries.has(uri.path);
-    this.entries.set(uri.path, { data: new TextEncoder().encode(text), version: ++this.version });
-    this.emitter.fire([{ type: existed ? vscode.FileChangeType.Changed : vscode.FileChangeType.Created, uri }]);
+    this.entries.set(uri.path, {
+      data: new TextEncoder().encode(text),
+      version: ++this.version,
+    });
+    this.emitter.fire([
+      {
+        type: existed
+          ? vscode.FileChangeType.Changed
+          : vscode.FileChangeType.Created,
+        uri,
+      },
+    ]);
   }
 
   clear(): void {

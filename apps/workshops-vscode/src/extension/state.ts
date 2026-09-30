@@ -24,7 +24,9 @@ export class State {
 
   /** Remembered clone location for a canonical `Owner/Name`. */
   cloneFor(repo: string): string | undefined {
-    return this.memento.get<Record<string, string>>(CLONES, {})[repo.toLowerCase()];
+    return this.memento.get<Record<string, string>>(CLONES, {})[
+      repo.toLowerCase()
+    ];
   }
 
   rememberClone(repo: string, path: string): Thenable<void> {

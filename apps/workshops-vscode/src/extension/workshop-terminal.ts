@@ -44,13 +44,24 @@ export class WorkshopTerminal implements vscode.Disposable {
         logError("git --exec-path", error);
       }
     }
-    this.bash = resolveBash({ platform: process.platform, gitExecPath, env: process.env, exists: existsSync });
+    this.bash = resolveBash({
+      platform: process.platform,
+      gitExecPath,
+      env: process.env,
+      exists: existsSync,
+    });
     return this.bash;
   }
 
-  private async ensure(root: string): Promise<{ terminal: vscode.Terminal; bash: boolean }> {
+  private async ensure(
+    root: string,
+  ): Promise<{ terminal: vscode.Terminal; bash: boolean }> {
     const bash = await this.findBash(root);
-    if (!this.terminal || this.terminal.exitStatus !== undefined || this.cwd !== root) {
+    if (
+      !this.terminal ||
+      this.terminal.exitStatus !== undefined ||
+      this.cwd !== root
+    ) {
       this.terminal?.dispose();
       this.terminal = vscode.window.createTerminal({
         name: "Workshop",
@@ -62,18 +73,26 @@ export class WorkshopTerminal implements vscode.Disposable {
     return { terminal: this.terminal, bash: bash !== undefined };
   }
 
-  private waitForIntegration(terminal: vscode.Terminal): Promise<vscode.TerminalShellIntegration | undefined> {
-    if (terminal.shellIntegration) return Promise.resolve(terminal.shellIntegration);
+  private waitForIntegration(
+    terminal: vscode.Terminal,
+  ): Promise<vscode.TerminalShellIntegration | undefined> {
+    if (terminal.shellIntegration)
+      return Promise.resolve(terminal.shellIntegration);
     return new Promise((resolve) => {
       const done = (value: vscode.TerminalShellIntegration | undefined) => {
         listener.dispose();
         clearTimeout(timer);
         resolve(value);
       };
-      const listener = vscode.window.onDidChangeTerminalShellIntegration((e) => {
-        if (e.terminal === terminal) done(e.shellIntegration);
-      });
-      const timer = setTimeout(() => done(terminal.shellIntegration), INTEGRATION_WAIT_MS);
+      const listener = vscode.window.onDidChangeTerminalShellIntegration(
+        (e) => {
+          if (e.terminal === terminal) done(e.shellIntegration);
+        },
+      );
+      const timer = setTimeout(
+        () => done(terminal.shellIntegration),
+        INTEGRATION_WAIT_MS,
+      );
     });
   }
 
@@ -81,7 +100,9 @@ export class WorkshopTerminal implements vscode.Disposable {
   async run(command: string, root: string): Promise<RunResult> {
     const { terminal, bash } = await this.ensure(root);
     terminal.show(true);
-    const integration = bash ? await this.waitForIntegration(terminal) : undefined;
+    const integration = bash
+      ? await this.waitForIntegration(terminal)
+      : undefined;
 
     if (integration) {
       output.appendLine(`$ ${command}`);
@@ -93,7 +114,8 @@ export class WorkshopTerminal implements vscode.Disposable {
           resolve(result);
         };
         const end = vscode.window.onDidEndTerminalShellExecution((e) => {
-          if (e.execution === execution) finish({ kind: "exit", code: e.exitCode });
+          if (e.execution === execution)
+            finish({ kind: "exit", code: e.exitCode });
         });
         // Closing the terminal mid-command must not leave the review waiting forever.
         const closed = vscode.window.onDidCloseTerminal((t) => {

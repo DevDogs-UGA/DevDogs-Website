@@ -38,7 +38,11 @@ export interface DoctorCheck {
   faqId?: string;
 }
 
-const TROUBLESHOOTING_APPS = ["schedule-builder", "study-group-finder", "platform"];
+const TROUBLESHOOTING_APPS = [
+  "schedule-builder",
+  "study-group-finder",
+  "platform",
+];
 
 function faqUrl(app: string, id: string): string {
   return `https://devdogsuga.org/docs/${app}/getting-started/troubleshooting#${id}`;
@@ -50,7 +54,10 @@ function faqUrl(app: string, id: string): string {
  * pins 24, which is what a `fnm use` picks up; a machine below the floor is
  * a WARN, not an error — plenty of contributors' shells still resolve an
  * old global `node` first. */
-export function checkNodeVersion(nodeVersion: string, app: string): DoctorCheck {
+export function checkNodeVersion(
+  nodeVersion: string,
+  app: string,
+): DoctorCheck {
   const [major = 0, minor = 0] = nodeVersion.split(".").map(Number);
   const ok = major > 22 || (major === 22 && minor >= 12);
   return {
@@ -96,7 +103,7 @@ export function checkPnpmVersion(
       id: "pnpm-missing",
       status: "warn",
       summary: "pnpm is not on PATH",
-      fix: '`npm install -g pnpm` (never `corepack enable` — this repo does not use corepack).',
+      fix: "`npm install -g pnpm` (never `corepack enable` — this repo does not use corepack).",
       faqId: "pnpm-missing",
     };
   }
@@ -253,7 +260,12 @@ function readPackageManagerPin(repoRoot: string): string | null {
 function readShellProfile(): string | null {
   const home = process.env.HOME;
   if (!home) return null;
-  for (const file of [".bashrc", ".zshrc", ".config/fish/config.fish", ".bash_profile"]) {
+  for (const file of [
+    ".bashrc",
+    ".zshrc",
+    ".config/fish/config.fish",
+    ".bash_profile",
+  ]) {
     const path = join(home, file);
     if (existsSync(path)) {
       try {
@@ -267,7 +279,8 @@ function readShellProfile(): string | null {
 }
 
 function renderCheck(app: string, check: DoctorCheck): string {
-  const icon = check.status === "ok" ? "OK  " : check.status === "skip" ? "SKIP" : "WARN";
+  const icon =
+    check.status === "ok" ? "OK  " : check.status === "skip" ? "SKIP" : "WARN";
   const lines = [`${icon}  ${check.summary}`];
   if (check.status === "warn") {
     if (check.fix) lines.push(`      fix: ${check.fix}`);
@@ -321,7 +334,7 @@ export async function runEnvironmentDoctor(
           summary: pnpmVersion ? `pnpm ${pnpmVersion}` : "pnpm is not on PATH",
           fix: pnpmVersion
             ? undefined
-            : '`npm install -g pnpm` (never `corepack enable`).',
+            : "`npm install -g pnpm` (never `corepack enable`).",
           faqId: pnpmVersion ? undefined : "pnpm-missing",
         },
   );
@@ -345,7 +358,9 @@ export async function runEnvironmentDoctor(
     checks.push({
       id: "docker-not-running",
       status: dockerUp ? "ok" : "warn",
-      summary: dockerUp ? "Docker is running" : "Docker daemon is not answering",
+      summary: dockerUp
+        ? "Docker is running"
+        : "Docker daemon is not answering",
       fix: dockerUp
         ? undefined
         : "Start Docker Desktop, or Docker Engine in WSL2. Never Colima.",
@@ -359,7 +374,9 @@ export async function runEnvironmentDoctor(
       id: "flutter-missing",
       status: flutter ? "ok" : "skip",
       summary: flutter ? "Flutter is installed" : "Flutter is not installed",
-      fix: flutter ? undefined : "Install the Flutter SDK for study-group-finder.",
+      fix: flutter
+        ? undefined
+        : "Install the Flutter SDK for study-group-finder.",
       faqId: flutter ? undefined : "flutter-missing",
     });
     if (flutter) {
@@ -391,7 +408,11 @@ export async function runEnvironmentDoctor(
   }
 
   // ── Hosted checks — only when .env looks like a hosted project ───────────
-  const isHosted = Boolean(env.API_URL && !env.API_URL.includes("127.0.0.1") && !env.API_URL.includes("localhost"));
+  const isHosted = Boolean(
+    env.API_URL &&
+    !env.API_URL.includes("127.0.0.1") &&
+    !env.API_URL.includes("localhost"),
+  );
   if (isHosted && env.API_URL) {
     let reachable = false;
     let probeStatus: number | null = null;
@@ -428,10 +449,16 @@ export async function runEnvironmentDoctor(
     if (reachable && env.SECRET_KEY) {
       let keysValid = false;
       try {
-        const res = await fetch(`${env.API_URL}/auth/v1/admin/users?page=1&per_page=1`, {
-          headers: { Authorization: `Bearer ${env.SECRET_KEY}`, apikey: env.SECRET_KEY },
-          signal: AbortSignal.timeout(5000),
-        });
+        const res = await fetch(
+          `${env.API_URL}/auth/v1/admin/users?page=1&per_page=1`,
+          {
+            headers: {
+              Authorization: `Bearer ${env.SECRET_KEY}`,
+              apikey: env.SECRET_KEY,
+            },
+            signal: AbortSignal.timeout(5000),
+          },
+        );
         keysValid = res.status !== 401 && res.status !== 403;
       } catch {
         keysValid = false;
@@ -439,7 +466,9 @@ export async function runEnvironmentDoctor(
       checks.push({
         id: "supabase-keys-invalid",
         status: keysValid ? "ok" : "warn",
-        summary: keysValid ? "SECRET_KEY is accepted" : "SECRET_KEY was rejected",
+        summary: keysValid
+          ? "SECRET_KEY is accepted"
+          : "SECRET_KEY was rejected",
         fix: keysValid
           ? undefined
           : "Copy the service_role secret key again from Project Settings -> API.",
@@ -468,7 +497,8 @@ export async function runEnvironmentDoctor(
 
   const warnings = checks.filter((c) => c.status === "warn").length;
   if (warnings === 0) log.success("Everything checked out.");
-  else log.warn(`${warnings} check${warnings === 1 ? "" : "s"} need attention.`);
+  else
+    log.warn(`${warnings} check${warnings === 1 ? "" : "s"} need attention.`);
 
   if (opts.report) {
     const redacted = [

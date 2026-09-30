@@ -56,8 +56,10 @@ const fake = vi.hoisted(() => {
         end: (value: unknown) => {
           call.written = value;
           queueMicrotask(() => {
-            if (state.spawnExit.stdout) onStdout?.(Buffer.from(state.spawnExit.stdout));
-            if (state.spawnExit.stderr) onStderr?.(Buffer.from(state.spawnExit.stderr));
+            if (state.spawnExit.stdout)
+              onStdout?.(Buffer.from(state.spawnExit.stdout));
+            if (state.spawnExit.stderr)
+              onStderr?.(Buffer.from(state.spawnExit.stderr));
             handlers.get("close")?.(state.spawnExit.code);
           });
         },
@@ -128,7 +130,9 @@ const desired: DesiredRuleset = {
   name: "main",
   target: "branch",
   enforcement: "active",
-  bypass_actors: [{ actor_id: 9002, actor_type: "Team", bypass_mode: "always" }],
+  bypass_actors: [
+    { actor_id: 9002, actor_type: "Team", bypass_mode: "always" },
+  ],
   conditions: { ref_name: { include: ["refs/heads/main"], exclude: [] } },
   rules: [{ type: "deletion" }],
 };
@@ -179,7 +183,11 @@ describe("writes", () => {
   });
 
   it("rejects with GhRulesetsError on a non-zero exit", async () => {
-    fake.state.spawnExit = { code: 1, stdout: "", stderr: "HTTP 403 Forbidden" };
+    fake.state.spawnExit = {
+      code: 1,
+      stdout: "",
+      stderr: "HTTP 403 Forbidden",
+    };
     await expect(createRuleset(repo, desired)).rejects.toBeInstanceOf(
       GhRulesetsError,
     );

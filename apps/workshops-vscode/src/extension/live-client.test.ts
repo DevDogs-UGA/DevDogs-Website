@@ -46,7 +46,9 @@ function client(url: string) {
 describe("LiveClient", () => {
   it("receives text and sends", async () => {
     const s = await server();
-    const { c, messages, connection } = client(`ws://127.0.0.1:${s.port}/attend`);
+    const { c, messages, connection } = client(
+      `ws://127.0.0.1:${s.port}/attend`,
+    );
     c.start();
     await until(() => s.sockets.length === 1 && c.connected);
     s.sockets[0]!.send('{"t":"live","live":true}');

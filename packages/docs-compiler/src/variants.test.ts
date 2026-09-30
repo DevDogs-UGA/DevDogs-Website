@@ -62,9 +62,9 @@ describe("tabs", () => {
   });
 
   it("fails on an unknown value or group", () => {
-    expect(() =>
-      parseBody(tabs.replace('"macos"', '"mac"'), ctx()),
-    ).toThrow(/unknown os value "mac"/);
+    expect(() => parseBody(tabs.replace('"macos"', '"mac"'), ctx())).toThrow(
+      /unknown os value "mac"/,
+    );
     expect(() =>
       parseBody(tabs.replace('group="os"', 'group="shell"'), ctx()),
     ).toThrow(DocsBuildError);
@@ -147,14 +147,19 @@ Done.
       ':::only{os="windows"}\nEnable Developer Mode.\n:::\n',
       sgf,
     );
-    expect(html).toContain('class="docs-only" data-group="os" data-values="windows"');
+    expect(html).toContain(
+      'class="docs-only" data-group="os" data-values="windows"',
+    );
     expect(await renderBody(':::only{os="windows"}\nx\n:::\n', ctx())).toBe("");
   });
 });
 
 describe("text directives", () => {
   it("puts back prose that merely looks like one", async () => {
-    const html = await renderBody("Connect to host:port, ratio 3:2 :tada:", ctx());
+    const html = await renderBody(
+      "Connect to host:port, ratio 3:2 :tada:",
+      ctx(),
+    );
     expect(html).toContain("host:port");
     expect(html).toContain("3:2");
     expect(html).toContain("🎉");

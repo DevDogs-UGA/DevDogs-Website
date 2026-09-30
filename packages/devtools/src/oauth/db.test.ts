@@ -39,7 +39,11 @@ describe("checkProvider — against a mocked Admin API", () => {
 
     const result = await checkProvider(HOSTED_TARGET, "custom:devdogsuga");
 
-    expect(result).toEqual({ exists: false, name: undefined, issuer: undefined });
+    expect(result).toEqual({
+      exists: false,
+      name: undefined,
+      issuer: undefined,
+    });
     expect(getProvider).toHaveBeenCalledWith("custom:devdogsuga");
   });
 
@@ -59,9 +63,14 @@ describe("checkProvider — against a mocked Admin API", () => {
   });
 
   it("rethrows a non-404 error", async () => {
-    getProvider.mockResolvedValue({ data: null, error: { status: 500, message: "boom" } });
+    getProvider.mockResolvedValue({
+      data: null,
+      error: { status: 500, message: "boom" },
+    });
 
-    await expect(checkProvider(HOSTED_TARGET, "custom:devdogsuga")).rejects.toEqual({
+    await expect(
+      checkProvider(HOSTED_TARGET, "custom:devdogsuga"),
+    ).rejects.toEqual({
       status: 500,
       message: "boom",
     });
@@ -101,7 +110,10 @@ describe("upsertDevDogsProvider — against a mocked Admin API", () => {
       }),
     );
     expect(updateProvider).not.toHaveBeenCalled();
-    expect(result).toEqual({ identifier: "custom:devdogsuga", issuer: opts.issuer });
+    expect(result).toEqual({
+      identifier: "custom:devdogsuga",
+      issuer: opts.issuer,
+    });
   });
 
   it("updates the provider when one already exists", async () => {
@@ -126,12 +138,18 @@ describe("upsertDevDogsProvider — against a mocked Admin API", () => {
       }),
     );
     expect(createProvider).not.toHaveBeenCalled();
-    expect(result).toEqual({ identifier: "custom:devdogsuga", issuer: opts.issuer });
+    expect(result).toEqual({
+      identifier: "custom:devdogsuga",
+      issuer: opts.issuer,
+    });
   });
 
   it("propagates a createProvider error", async () => {
     getProvider.mockResolvedValue({ data: null, error: { status: 404 } });
-    createProvider.mockResolvedValue({ data: null, error: { message: "quota exceeded" } });
+    createProvider.mockResolvedValue({
+      data: null,
+      error: { message: "quota exceeded" },
+    });
 
     await expect(upsertDevDogsProvider(HOSTED_TARGET, opts)).rejects.toEqual({
       message: "quota exceeded",

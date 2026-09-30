@@ -99,9 +99,13 @@ describe("VS Code links", () => {
       `\`\`\`ts file=lib/a.ts vscode=${review}\nconst a = 1;\n\`\`\`\n`,
       ctx,
     );
-    expect(html).toContain(`<a class="docs-code-vscode" href="${review.replaceAll("&", "&#x26;")}"`);
+    expect(html).toContain(
+      `<a class="docs-code-vscode" href="${review.replaceAll("&", "&#x26;")}"`,
+    );
     expect(html).toContain('aria-label="Review in VS Code"');
-    expect(html.indexOf("docs-code-vscode")).toBeLessThan(html.indexOf("data-copy"));
+    expect(html.indexOf("docs-code-vscode")).toBeLessThan(
+      html.indexOf("data-copy"),
+    );
   });
 
   it("says Open for an /open link", async () => {
@@ -113,7 +117,10 @@ describe("VS Code links", () => {
   });
 
   it("gives a terminal no button", async () => {
-    const html = await renderBody(`\`\`\`bash vscode=${review}\nls\n\`\`\`\n`, ctx);
+    const html = await renderBody(
+      `\`\`\`bash vscode=${review}\nls\n\`\`\`\n`,
+      ctx,
+    );
     expect(html).not.toContain("docs-code-vscode");
   });
 

@@ -48,7 +48,10 @@ const CHECKPOINT_REF = /^[\w.-]+\/\d\d-[\w.-]+$/;
  * Reads one relay message. Anything unexpected is undefined (ignored): a
  * checkpoint for another track, a malformed ref, other message types.
  */
-export function parseRelayMessage(raw: string, track: LiveTrack): RelayEvent | undefined {
+export function parseRelayMessage(
+  raw: string,
+  track: LiveTrack,
+): RelayEvent | undefined {
   let message: unknown;
   try {
     message = JSON.parse(raw);
@@ -57,10 +60,20 @@ export function parseRelayMessage(raw: string, track: LiveTrack): RelayEvent | u
   }
   if (typeof message !== "object" || message === null) return undefined;
   const m = message as Record<string, unknown>;
-  if (m["t"] === "live" && typeof m["live"] === "boolean") return { kind: "live", live: m["live"] };
-  if (m["t"] === "checkpoint" && typeof m["ref"] === "string" && CHECKPOINT_REF.test(m["ref"])) {
-    if (!Array.isArray(m["tracks"]) || !m["tracks"].includes(track)) return undefined;
-    return { kind: "checkpoint", id: typeof m["id"] === "string" ? m["id"] : "", ref: m["ref"] };
+  if (m["t"] === "live" && typeof m["live"] === "boolean")
+    return { kind: "live", live: m["live"] };
+  if (
+    m["t"] === "checkpoint" &&
+    typeof m["ref"] === "string" &&
+    CHECKPOINT_REF.test(m["ref"])
+  ) {
+    if (!Array.isArray(m["tracks"]) || !m["tracks"].includes(track))
+      return undefined;
+    return {
+      kind: "checkpoint",
+      id: typeof m["id"] === "string" ? m["id"] : "",
+      ref: m["ref"],
+    };
   }
   return undefined;
 }
@@ -75,7 +88,10 @@ export function stepMessage(step: number): string {
  * workshop in the repo, else 0. (Step 3 of last workshop must not count as
  * step 3 of tonight's.)
  */
-export function reportableStep(line: readonly Step[], current: Step | null): number {
+export function reportableStep(
+  line: readonly Step[],
+  current: Step | null,
+): number {
   if (!current || current.number <= 0) return 0;
   const latest = latestWorkshop([...new Set(line.map((s) => s.workshop))]);
   return current.workshop === latest ? Math.min(current.number, 99) : 0;
@@ -93,7 +109,11 @@ export interface Backoff {
  * with "equal jitter", so a room reconnecting after a deploy spreads out
  * instead of arriving together. Between half the ceiling and the whole of it.
  */
-export function backoffDelay(attempt: number, random: () => number = Math.random, { baseMs = 1000, maxMs = 60_000 }: Backoff = {}): number {
+export function backoffDelay(
+  attempt: number,
+  random: () => number = Math.random,
+  { baseMs = 1000, maxMs = 60_000 }: Backoff = {},
+): number {
   const ceiling = Math.min(maxMs, baseMs * 2 ** Math.min(attempt, 30));
   return Math.round(ceiling / 2 + random() * (ceiling / 2));
 }
@@ -109,7 +129,8 @@ export type CheckpointDecision =
   | "queue"
   | "offer";
 
-const indexOfTag = (line: readonly Step[], tag: string) => line.findIndex((s) => s.tag === tag);
+const indexOfTag = (line: readonly Step[], tag: string) =>
+  line.findIndex((s) => s.tag === tag);
 
 export function decideCheckpoint(input: {
   ref: string;
@@ -120,7 +141,8 @@ export function decideCheckpoint(input: {
 }): CheckpointDecision {
   const target = indexOfTag(input.line, input.ref);
   if (target < 0 || (input.line[target]?.number ?? 0) <= 0) return "ignore";
-  if (input.current && indexOfTag(input.line, input.current.tag) >= target) return "have";
+  if (input.current && indexOfTag(input.line, input.current.tag) >= target)
+    return "have";
   return input.reviewing ? "queue" : "offer";
 }
 
@@ -133,21 +155,37 @@ export interface OfferState {
 }
 
 /** The later step of two refs, by position in the line. */
-function newer(line: readonly Step[], a: string | undefined, b: string): string {
+function newer(
+  line: readonly Step[],
+  a: string | undefined,
+  b: string,
+): string {
   if (a === undefined) return b;
   return indexOfTag(line, a) >= indexOfTag(line, b) ? a : b;
 }
 
-export function defer(state: OfferState, ref: string, line: readonly Step[]): OfferState {
+export function defer(
+  state: OfferState,
+  ref: string,
+  line: readonly Step[],
+): OfferState {
   return { ...state, badge: newer(line, state.badge, ref) };
 }
 
-export function queue(state: OfferState, ref: string, line: readonly Step[]): OfferState {
+export function queue(
+  state: OfferState,
+  ref: string,
+  line: readonly Step[],
+): OfferState {
   return { ...state, queued: newer(line, state.queued, ref) };
 }
 
 /** Forgets whatever the attendee has caught up to. */
-export function prune(state: OfferState, line: readonly Step[], current: Step | null): OfferState {
+export function prune(
+  state: OfferState,
+  line: readonly Step[],
+  current: Step | null,
+): OfferState {
   const at = current ? indexOfTag(line, current.tag) : -1;
   const pending = (ref: string | undefined) => {
     const index = ref === undefined ? -1 : indexOfTag(line, ref);

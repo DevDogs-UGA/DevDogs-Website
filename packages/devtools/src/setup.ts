@@ -16,7 +16,15 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
-import { confirm, log, note, password, select, spinner, text } from "@clack/prompts";
+import {
+  confirm,
+  log,
+  note,
+  password,
+  select,
+  spinner,
+  text,
+} from "@clack/prompts";
 import { loadRegistry } from "./env/discovery.js";
 import { renderInit, resolveSections } from "./env/example.js";
 import { discoverRepoRoot } from "./repo/root.js";
@@ -187,7 +195,9 @@ export async function runSetup(): Promise<void> {
     // .env stays blank until `db start`, so checking now would only report
     // the expected gap. Point at doctor instead.
     printLocalNextSteps(chosenApps);
-    log.info("After `pnpm devtools db start`, run `pnpm devtools doctor` to check your setup.");
+    log.info(
+      "After `pnpm devtools db start`, run `pnpm devtools doctor` to check your setup.",
+    );
   }
 }
 
@@ -250,7 +260,12 @@ async function runHostedWizard(repoRoot: string): Promise<void> {
   const existing = existsSync(envPath) ? readFileSync(envPath, "utf8") : "";
   const doc = EnvDocument.parse(existing);
 
-  const apiUrl = await promptEnvValue(doc, "API_URL", "Project URL", "https://<ref>.supabase.co");
+  const apiUrl = await promptEnvValue(
+    doc,
+    "API_URL",
+    "Project URL",
+    "https://<ref>.supabase.co",
+  );
   const publishableKey = await promptEnvValue(
     doc,
     "PUBLISHABLE_KEY",
@@ -261,7 +276,11 @@ async function runHostedWizard(repoRoot: string): Promise<void> {
 
   let dbUrl: string;
   for (;;) {
-    const candidate = await promptSecretValue(doc, "DB_URL", "Session pooler DB_URL");
+    const candidate = await promptSecretValue(
+      doc,
+      "DB_URL",
+      "Session pooler DB_URL",
+    );
     const validation = validateSessionPoolerUrl(candidate);
     if (validation.ok) {
       dbUrl = candidate;

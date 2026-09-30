@@ -101,7 +101,9 @@ export function initDevtoolsTelemetry(command: string): void {
   initialized = true;
 
   if (!devtoolsTelemetryEnabled()) return;
-  if (!hasRealCaller(discoverRepoRoot() !== null, process.stdin.isTTY === true)) {
+  if (
+    !hasRealCaller(discoverRepoRoot() !== null, process.stdin.isTTY === true)
+  ) {
     return;
   }
 

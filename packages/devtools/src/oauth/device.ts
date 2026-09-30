@@ -34,7 +34,8 @@
  */
 import type { ExchangeResult } from "./exchange.js";
 
-export type DeviceErrorKind = "invalid_request" | "rate_limited" | "network" | "malformed";
+export type DeviceErrorKind =
+  "invalid_request" | "rate_limited" | "network" | "malformed";
 
 export class DeviceError extends Error {
   constructor(
@@ -128,7 +129,9 @@ export async function requestDeviceCode({
     throw new DeviceError(
       "rate_limited",
       `${url} is rate-limited` +
-        (retryAfterSeconds !== undefined ? ` — retry after ${retryAfterSeconds}s.` : "."),
+        (retryAfterSeconds !== undefined
+          ? ` — retry after ${retryAfterSeconds}s.`
+          : "."),
       retryAfterSeconds,
     );
   }
@@ -144,11 +147,22 @@ export async function requestDeviceCode({
   }
 
   if (!response.ok) {
-    const errBody = (body ?? {}) as { error?: unknown; error_description?: unknown };
+    const errBody = (body ?? {}) as {
+      error?: unknown;
+      error_description?: unknown;
+    };
     const description =
-      typeof errBody.error_description === "string" ? errBody.error_description : undefined;
-    const code = typeof errBody.error === "string" ? errBody.error : `HTTP ${response.status}`;
-    throw new DeviceError("invalid_request", description ? `${code}: ${description}` : code);
+      typeof errBody.error_description === "string"
+        ? errBody.error_description
+        : undefined;
+    const code =
+      typeof errBody.error === "string"
+        ? errBody.error
+        : `HTTP ${response.status}`;
+    throw new DeviceError(
+      "invalid_request",
+      description ? `${code}: ${description}` : code,
+    );
   }
 
   const result = (body ?? {}) as {
@@ -213,7 +227,8 @@ export async function pollForToken({
   intervalSeconds,
   expiresInSeconds,
   fetchImpl = fetch,
-  sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)),
+  sleep = (ms: number) =>
+    new Promise<void>((resolve) => setTimeout(resolve, ms)),
   now = () => Date.now(),
 }: {
   platformUrl: string;
@@ -305,10 +320,16 @@ export async function pollForToken({
       };
     }
 
-    const errBody = (body ?? {}) as { error?: unknown; error_description?: unknown };
-    const errorCode = typeof errBody.error === "string" ? errBody.error : undefined;
+    const errBody = (body ?? {}) as {
+      error?: unknown;
+      error_description?: unknown;
+    };
+    const errorCode =
+      typeof errBody.error === "string" ? errBody.error : undefined;
     const description =
-      typeof errBody.error_description === "string" ? errBody.error_description : undefined;
+      typeof errBody.error_description === "string"
+        ? errBody.error_description
+        : undefined;
 
     switch (errorCode) {
       case "authorization_pending":

@@ -391,7 +391,9 @@ async function localStatus(): Promise<{ code: number; lines: string[] }> {
   }
 
   if (env.stack === "unknown") {
-    lines.push("Could not read Docker. `supabase status` asks the stack directly.");
+    lines.push(
+      "Could not read Docker. `supabase status` asks the stack directly.",
+    );
     return { code: 0, lines };
   }
 

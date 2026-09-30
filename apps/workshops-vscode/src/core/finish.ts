@@ -22,7 +22,12 @@ import { revParse } from "./tags.js";
 
 /** What to do with one reviewed file on disk. */
 export type FileOutcome =
-  | { kind: "write"; path: string; text: string; removeOldPath: string | undefined }
+  | {
+      kind: "write";
+      path: string;
+      text: string;
+      removeOldPath: string | undefined;
+    }
   | { kind: "delete"; path: string; removeOldPath: string | undefined }
   /** Their file stays as it is (all changes rejected, or nothing to change). */
   | { kind: "keep"; path: string };
@@ -43,12 +48,21 @@ export function resolveOutcome(
 ): FileOutcome {
   const applied = applyDecisions(merge, decide);
   const anyAccepted = merge.changes.some((c) => decide(c.id) === "accept");
-  const removeOldPath = file.oldPath !== undefined && file.oldPath !== file.path ? file.oldPath : undefined;
+  const removeOldPath =
+    file.oldPath !== undefined && file.oldPath !== file.path
+      ? file.oldPath
+      : undefined;
 
-  if (removeOldPath !== undefined && !oursAtNewPath && merge.changes.length > 0 && !anyAccepted) {
+  if (
+    removeOldPath !== undefined &&
+    !oursAtNewPath &&
+    merge.changes.length > 0 &&
+    !anyAccepted
+  ) {
     return { kind: "keep", path: file.oldPath! };
   }
-  if (!applied.exists) return { kind: "delete", path: file.path, removeOldPath };
+  if (!applied.exists)
+    return { kind: "delete", path: file.path, removeOldPath };
   return { kind: "write", path: file.path, text: applied.text, removeOldPath };
 }
 
@@ -79,13 +93,18 @@ export interface FinishResult {
 
 function inside(root: string, path: string): string {
   const abs = resolve(root, path);
-  if (!abs.startsWith(resolve(root) + (process.platform === "win32" ? "\\" : "/"))) {
+  if (
+    !abs.startsWith(resolve(root) + (process.platform === "win32" ? "\\" : "/"))
+  ) {
     throw new Error(`Refusing to touch a path outside the clone: ${path}`);
   }
   return abs;
 }
 
-async function writeIfChanged(abs: string, data: Buffer | string): Promise<void> {
+async function writeIfChanged(
+  abs: string,
+  data: Buffer | string,
+): Promise<void> {
   const next = typeof data === "string" ? Buffer.from(data, "utf8") : data;
   if (existsSync(abs)) {
     try {
@@ -119,11 +138,14 @@ export async function hasCommitIdentity(root: string): Promise<boolean> {
 }
 
 /** Writes the decided files to the working tree, then commits or stages them. */
-export async function finishReview(input: FinishInput): Promise<FinishResult | null> {
+export async function finishReview(
+  input: FinishInput,
+): Promise<FinishResult | null> {
   const { root, targetTag } = input;
   const targetCommit = await revParse(root, tagRef(targetTag));
   if (!targetCommit) throw new Error(`No such step: ${targetTag}`);
-  if (input.autoCommit && !(await hasCommitIdentity(root))) throw new MissingIdentityError();
+  if (input.autoCommit && !(await hasCommitIdentity(root)))
+    throw new MissingIdentityError();
 
   if (input.beforeWrite && !(await input.beforeWrite())) return null;
 
@@ -144,7 +166,10 @@ export async function finishReview(input: FinishInput): Promise<FinishResult | n
     if (outcome.removeOldPath) await remove(outcome.removeOldPath);
   }
   for (const file of input.fromTarget) {
-    const bytes = file.status === "deleted" ? null : await showFile(root, tagRef(targetTag), file.path);
+    const bytes =
+      file.status === "deleted"
+        ? null
+        : await showFile(root, tagRef(targetTag), file.path);
     if (bytes === null) await remove(file.path);
     else {
       await writeIfChanged(inside(root, file.path), bytes);
@@ -161,8 +186,11 @@ export async function finishReview(input: FinishInput): Promise<FinishResult | n
     // Stage the result and leave a merge in progress: their own `git commit`
     // (or the Source Control panel) then records a merge with the step as
     // second parent.
-    if (list.length > 0) await git(root, ["add", "-A", "-f", "--", ...list], literal);
-    const gitDir = (await git(root, ["rev-parse", "--absolute-git-dir"])).trim();
+    if (list.length > 0)
+      await git(root, ["add", "-A", "-f", "--", ...list], literal);
+    const gitDir = (
+      await git(root, ["rev-parse", "--absolute-git-dir"])
+    ).trim();
     await writeFile(join(gitDir, "MERGE_HEAD"), `${targetCommit}\n`);
     // "no-ff" is what `git merge --no-ff --no-commit` writes: without it `git commit`
     // drops HEAD as a parent whenever the step is ahead of it (a fast-forward).
@@ -177,14 +205,34 @@ export async function finishReview(input: FinishInput): Promise<FinishResult | n
   // A private index: HEAD's tree plus the reviewed paths from the working tree.
   const dir = await mkdtemp(join(tmpdir(), "workshops-index-"));
   try {
-    const env = { GIT_INDEX_FILE: join(dir, "index"), GIT_LITERAL_PATHSPECS: "1" };
+    const env = {
+      GIT_INDEX_FILE: join(dir, "index"),
+      GIT_LITERAL_PATHSPECS: "1",
+    };
     await git(root, ["read-tree", "--end-of-options", head], { env });
-    if (list.length > 0) await git(root, ["add", "-A", "-f", "--", ...list], { env });
+    if (list.length > 0)
+      await git(root, ["add", "-A", "-f", "--", ...list], { env });
     const tree = (await git(root, ["write-tree"], { env })).trim();
     const commit = (
-      await git(root, ["commit-tree", tree, "-p", head, "-p", targetCommit, "-m", input.message])
+      await git(root, [
+        "commit-tree",
+        tree,
+        "-p",
+        head,
+        "-p",
+        targetCommit,
+        "-m",
+        input.message,
+      ])
     ).trim();
-    await git(root, ["update-ref", "-m", `workshop: ${input.message}`, "HEAD", commit, head]);
+    await git(root, [
+      "update-ref",
+      "-m",
+      `workshop: ${input.message}`,
+      "HEAD",
+      commit,
+      head,
+    ]);
     // The real index learns about the reviewed paths only; anything else they
     // had staged stays staged.
     if (list.length > 0) {

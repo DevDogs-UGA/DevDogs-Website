@@ -64,7 +64,11 @@ export async function render(
   element: ReactElement,
   { width, height, scale = 1 }: RenderOptions,
 ): Promise<Rendered> {
-  const svg = await satori(element, { width, height, fonts: await satoriFonts() });
+  const svg = await satori(element, {
+    width,
+    height,
+    fonts: await satoriFonts(),
+  });
 
   const png = new Resvg(svg, {
     fitTo: { mode: "width", value: Math.round(width * scale) },

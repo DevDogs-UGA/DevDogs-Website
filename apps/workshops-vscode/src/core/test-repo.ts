@@ -48,7 +48,10 @@ export class TestRepo {
   }
 
   /** Writes files (null deletes), stages everything, commits. Returns the sha. */
-  commit(files: Record<string, string | Buffer | null>, message = "commit"): string {
+  commit(
+    files: Record<string, string | Buffer | null>,
+    message = "commit",
+  ): string {
     for (const [path, content] of Object.entries(files)) {
       const full = join(this.dir, path);
       if (content === null) rmSync(full, { force: true });

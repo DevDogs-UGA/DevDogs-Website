@@ -44,13 +44,19 @@ export class StepsProvider implements vscode.TreeDataProvider<Node> {
   async refresh(): Promise<void> {
     try {
       const found = await findWorkspaceClone();
-      this.current = found ? { ...found, snapshot: await loadSnapshot(found.root) } : undefined;
+      this.current = found
+        ? { ...found, snapshot: await loadSnapshot(found.root) }
+        : undefined;
     } catch (error) {
       logError("refresh", error);
       this.current = undefined;
     }
     const hasSteps = (this.current?.snapshot.line.length ?? 0) > 0;
-    await vscode.commands.executeCommand("setContext", "devdogsWorkshops.hasWorkshop", hasSteps);
+    await vscode.commands.executeCommand(
+      "setContext",
+      "devdogsWorkshops.hasWorkshop",
+      hasSteps,
+    );
     this.changed.fire(undefined);
   }
 
@@ -60,7 +66,11 @@ export class StepsProvider implements vscode.TreeDataProvider<Node> {
     const { snapshot } = open;
     const model = buildStepsModel(snapshot.line, snapshot.current);
     const nodes: Node[] = [
-      { kind: "header", text: model.header, description: open.repo.split("/")[1] ?? open.repo },
+      {
+        kind: "header",
+        text: model.header,
+        description: open.repo.split("/")[1] ?? open.repo,
+      },
     ];
     if (isWorkshopBranch(snapshot.branch, snapshot.workshops)) {
       nodes.push({ kind: "warning", branch: snapshot.branch });
@@ -78,11 +88,16 @@ export class StepsProvider implements vscode.TreeDataProvider<Node> {
       return item;
     }
     if (node.kind === "warning") {
-      const where = node.branch ? `the workshop's own branch (${node.branch})` : "a detached checkout";
+      const where = node.branch
+        ? `the workshop's own branch (${node.branch})`
+        : "a detached checkout";
       const item = new vscode.TreeItem("You're on the workshop's own branch…");
       item.description = "Move my work";
       item.tooltip = `You're on ${where}. Your changes should live on your own branch, <you>/<workshop>, so pulling never mixes them with the solution. Click to move your work there; uncommitted changes come along.`;
-      item.iconPath = new vscode.ThemeIcon("warning", new vscode.ThemeColor("list.warningForeground"));
+      item.iconPath = new vscode.ThemeIcon(
+        "warning",
+        new vscode.ThemeColor("list.warningForeground"),
+      );
       item.contextValue = "warning";
       item.command = { command: CMD.moveMyWork, title: "Move my work" };
       return item;
@@ -91,14 +106,25 @@ export class StepsProvider implements vscode.TreeDataProvider<Node> {
     const item = new vscode.TreeItem(stepLabel(step));
     item.description = state === "current" ? "you are here" : step.workshop;
     item.iconPath = new vscode.ThemeIcon(
-      state === "done" ? "check" : state === "current" ? "circle-filled" : "circle-outline",
+      state === "done"
+        ? "check"
+        : state === "current"
+          ? "circle-filled"
+          : "circle-outline",
       state === "current" ? new vscode.ThemeColor("charts.green") : undefined,
     );
     item.tooltip = new vscode.MarkdownString(
-      [`**${step.title || step.slug}**`, ...step.run.map((cmd) => `- \`${cmd}\``)].join("\n"),
+      [
+        `**${step.title || step.slug}**`,
+        ...step.run.map((cmd) => `- \`${cmd}\``),
+      ].join("\n"),
     );
     item.contextValue = "step";
-    item.command = { command: CMD.reviewToStep, title: "Review to this step", arguments: [step.tag] };
+    item.command = {
+      command: CMD.reviewToStep,
+      title: "Review to this step",
+      arguments: [step.tag],
+    };
     return item;
   }
 }

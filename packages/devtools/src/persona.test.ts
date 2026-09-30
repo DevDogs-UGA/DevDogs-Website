@@ -32,9 +32,7 @@ describe("isPersonaKind", () => {
 
 describe("refuseUnlessDevelopment", () => {
   it("allows development", () => {
-    expect(refuseUnlessDevelopment(connection("development"), "x")).toBe(
-      false,
-    );
+    expect(refuseUnlessDevelopment(connection("development"), "x")).toBe(false);
   });
 
   it("refuses staging and production, naming the tier and the fix on stderr", () => {

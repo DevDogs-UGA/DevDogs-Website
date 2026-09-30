@@ -17,7 +17,11 @@
  */
 import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
-import type { DesiredRuleset, LiveRuleset, LiveRulesetSummary } from "./types.js";
+import type {
+  DesiredRuleset,
+  LiveRuleset,
+  LiveRulesetSummary,
+} from "./types.js";
 
 const run = promisify(execFile);
 const MAX_BUFFER = 16 * 1024 * 1024;
@@ -47,7 +51,9 @@ export async function listRulesets(r: Repo): Promise<LiveRulesetSummary[]> {
       maxBuffer: MAX_BUFFER,
       shell: false,
     });
-    return stdout.trim() === "" ? [] : (JSON.parse(stdout) as LiveRulesetSummary[]);
+    return stdout.trim() === ""
+      ? []
+      : (JSON.parse(stdout) as LiveRulesetSummary[]);
   } catch (err) {
     throw new GhRulesetsError(describe(err));
   }
@@ -106,7 +112,10 @@ async function writeJson(
   });
 }
 
-export async function createRuleset(r: Repo, desired: DesiredRuleset): Promise<LiveRuleset> {
+export async function createRuleset(
+  r: Repo,
+  desired: DesiredRuleset,
+): Promise<LiveRuleset> {
   return writeJson("POST", path(r), desired) as Promise<LiveRuleset>;
 }
 

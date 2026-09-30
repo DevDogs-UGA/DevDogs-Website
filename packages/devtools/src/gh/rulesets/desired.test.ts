@@ -71,7 +71,10 @@ describe("buildDesiredRulesets", () => {
   });
 
   it("~ALL bypasses Renovate too, when its App id is resolved", () => {
-    const withRenovate = buildDesiredRulesets({ ...actors, renovateAppId: 7001 });
+    const withRenovate = buildDesiredRulesets({
+      ...actors,
+      renovateAppId: 7001,
+    });
     const allBranches = withRenovate.find((d) => d.name === "~ALL")!;
     expect(allBranches.bypass_actors).toEqual([
       { actor_id: 9002, actor_type: "Team", bypass_mode: "always" },

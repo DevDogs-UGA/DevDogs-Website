@@ -59,7 +59,11 @@ import {
   setMenuEnvHook,
 } from "./env-entry.js";
 import { bareGroupStartPath } from "./menu.js";
-import { discoverRepoRoot, findRepoRoot, RepoNotFoundError } from "./repo/root.js";
+import {
+  discoverRepoRoot,
+  findRepoRoot,
+  RepoNotFoundError,
+} from "./repo/root.js";
 import { loadEnvLoad, loadEnvSession } from "./repo/peers.js";
 import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
 import { ignoreClosedPipes } from "./pipes.js";
@@ -215,7 +219,11 @@ export async function launch(argv: readonly string[]): Promise<void> {
 
   let tier: DeployEnvironment;
   let devDatabase: DevDatabase | undefined;
-  if (rest[0] === "setup" || rest[0] === "completions" || isEnvFreeCommand(rest)) {
+  if (
+    rest[0] === "setup" ||
+    rest[0] === "completions" ||
+    isEnvFreeCommand(rest)
+  ) {
     // Two commands run BEFORE there is a tier to resolve, and forcing the
     // mandate on them breaks each in its own way:
     //
@@ -268,7 +276,9 @@ export async function launch(argv: readonly string[]): Promise<void> {
       ? await envSession.developmentRemoteCandidate(findRepoRoot())
       : undefined;
     const localStackOnline =
-      typeof remoteCandidate === "string" ? await envLoad.probeLocalStack() : undefined;
+      typeof remoteCandidate === "string"
+        ? await envLoad.probeLocalStack()
+        : undefined;
 
     const resolution = await envSession.resolveSessionTier({
       explicit,

@@ -14,9 +14,7 @@
  */
 
 export type DbUrlProblem =
-  | "invalid"
-  | "direct-connection"
-  | "transaction-pooler";
+  "invalid" | "direct-connection" | "transaction-pooler";
 
 export interface DbUrlValidation {
   ok: boolean;
@@ -42,7 +40,8 @@ export function validateSessionPoolerUrl(dbUrl: string): DbUrlValidation {
     return {
       ok: false,
       problem: "invalid",
-      message: "That does not look like a connection string (expected postgresql://...).",
+      message:
+        "That does not look like a connection string (expected postgresql://...).",
     };
   }
 

@@ -27,11 +27,8 @@ vi.mock("./stack.js", () => ({
   runStackCommand: (...args: unknown[]) => runStackCommand(...args),
 }));
 
-const {
-  enterSessionEnvironment,
-  setMenuEnvHook,
-  takeMenuEnvHook,
-} = await import("./env-entry.js");
+const { enterSessionEnvironment, setMenuEnvHook, takeMenuEnvHook } =
+  await import("./env-entry.js");
 
 class MissingEnvFileError extends Error {}
 class LocalStackOfflineError extends Error {}
@@ -47,9 +44,8 @@ function fakeDeps(enterEnvironment: (...args: unknown[]) => unknown) {
     envSession: {
       enterEnvironment,
     } as unknown as Parameters<typeof enterSessionEnvironment>[3]["envSession"],
-    ensureGeneratedEnv: (
-      ...args: Parameters<typeof ensureGeneratedEnv>
-    ) => ensureGeneratedEnv(...args),
+    ensureGeneratedEnv: (...args: Parameters<typeof ensureGeneratedEnv>) =>
+      ensureGeneratedEnv(...args),
   };
 }
 
@@ -68,11 +64,9 @@ describe("enterSessionEnvironment", () => {
 
   function stubExit(): ReturnType<typeof vi.spyOn> {
     class ExitCalled extends Error {}
-    exitSpy = vi
-      .spyOn(process, "exit")
-      .mockImplementation(((code?: number) => {
-        throw new ExitCalled(`exit(${code})`);
-      }) as never);
+    exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
+      throw new ExitCalled(`exit(${code})`);
+    }) as never);
     return exitSpy;
   }
 
@@ -258,7 +252,9 @@ describe("enterSessionEnvironment", () => {
     it("is fatal for an explicitly selected tier", async () => {
       stubExit();
       const enterEnvironment = vi.fn(async () => {
-        throw new MissingEnvFileError("run `pnpm devtools env pull --target staging`");
+        throw new MissingEnvFileError(
+          "run `pnpm devtools env pull --target staging`",
+        );
       });
       const dispatchCommand = vi.fn(async () => "Done.");
 
@@ -278,11 +274,13 @@ describe("enterSessionEnvironment", () => {
   });
 
   describe("LocalStackOfflineError", () => {
-    function offlineDeps(afterOffer: (...args: unknown[]) => unknown = vi.fn(async () => ({
-      files: [],
-      warnings: [],
-      environment: {},
-    }))) {
+    function offlineDeps(
+      afterOffer: (...args: unknown[]) => unknown = vi.fn(async () => ({
+        files: [],
+        warnings: [],
+        environment: {},
+      })),
+    ) {
       const enterEnvironment = vi
         .fn()
         .mockImplementationOnce(async () => {

@@ -34,11 +34,19 @@ const EXPECTED_GIT = [
 
 export function isExpectedError(error: unknown): boolean {
   if (error instanceof ExpectedError) return true;
-  if (error instanceof GitError) return EXPECTED_GIT.some((p) => p.test(error.stderr));
+  if (error instanceof GitError)
+    return EXPECTED_GIT.some((p) => p.test(error.stderr));
   // Reading a file the attendee deleted mid-review, a disk that is full, etc.
   const code = (error as { code?: unknown } | null)?.code;
-  if (typeof code === "string" && ["ENOENT", "EACCES", "EPERM", "ENOSPC", "EBUSY"].includes(code)) return true;
-  return (error as { name?: unknown } | null)?.name === "EntryNotFound (FileSystemError)";
+  if (
+    typeof code === "string" &&
+    ["ENOENT", "EACCES", "EPERM", "ENOSPC", "EBUSY"].includes(code)
+  )
+    return true;
+  return (
+    (error as { name?: unknown } | null)?.name ===
+    "EntryNotFound (FileSystemError)"
+  );
 }
 
 // -- consent ----------------------------------------------------------------
@@ -59,7 +67,8 @@ export class Reporter {
   constructor(private readonly deps: ReporterDeps | undefined) {}
 
   capture(error: unknown, source: string): boolean {
-    if (!this.deps || !this.deps.enabled() || isExpectedError(error)) return false;
+    if (!this.deps || !this.deps.enabled() || isExpectedError(error))
+      return false;
     try {
       this.deps.send(error, source);
       return true;
@@ -85,7 +94,9 @@ export function guard<A extends unknown[], R>(
     };
     try {
       const result = handler(...args);
-      return result instanceof Promise ? (result.catch(fail) as Promise<R>) : result;
+      return result instanceof Promise
+        ? (result.catch(fail) as Promise<R>)
+        : result;
     } catch (error) {
       return fail(error);
     }
@@ -116,7 +127,8 @@ function pathPattern(path: string): RegExp {
 const POSIX_PATH = /(?<=^|[\s"'(<=])\/(?:[^\s"'()<>:]+\/)+([^\s"'()<>:]+)/g;
 const WINDOWS_PATH = /[A-Za-z]:\\(?:[^\s"'()<>]+\\)*([^\s"'()<>]+)/g;
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
-const SECRET = /\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_\w{20,}|[Bb]earer\s+[\w.-]+)/g;
+const SECRET =
+  /\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_\w{20,}|[Bb]earer\s+[\w.-]+)/g;
 const URL_CREDENTIALS = /(https?:\/\/)[^\s/@]+@/g;
 
 /**
@@ -127,28 +139,42 @@ const URL_CREDENTIALS = /(https?:\/\/)[^\s/@]+@/g;
  */
 export function scrubText(text: string, context: ScrubContext): string {
   let out = text;
-  const paths = [...context.paths].filter((p) => p.replace(/[\\/]+$/, "").length > 1).sort((a, b) => b.length - a.length);
+  const paths = [...context.paths]
+    .filter((p) => p.replace(/[\\/]+$/, "").length > 1)
+    .sort((a, b) => b.length - a.length);
   for (const path of paths) out = out.replace(pathPattern(path), "<path>");
   out = out.replace(WINDOWS_PATH, "$1").replace(POSIX_PATH, "$1");
-  out = out.replace(URL_CREDENTIALS, "$1").replace(EMAIL, "[email]").replace(SECRET, "[redacted]");
+  out = out
+    .replace(URL_CREDENTIALS, "$1")
+    .replace(EMAIL, "[email]")
+    .replace(SECRET, "[redacted]");
   if (context.username && context.username.length > 1) {
-    out = out.replace(new RegExp(`(?<![\\w-])${escape(context.username)}(?![\\w-])`, "gi"), "<user>");
+    out = out.replace(
+      new RegExp(`(?<![\\w-])${escape(context.username)}(?![\\w-])`, "gi"),
+      "<user>",
+    );
   }
   return out;
 }
 
-const scrubMessage = (text: string, context: ScrubContext) => scrubText(text, context).slice(0, MAX_MESSAGE);
+const scrubMessage = (text: string, context: ScrubContext) =>
+  scrubText(text, context).slice(0, MAX_MESSAGE);
 
 /** The parts of a Sentry event we touch; structural so this needs no Sentry types. */
 export interface ReportEvent {
   message?: string | undefined;
-  exception?: {
-    values?: {
-      type?: string | undefined;
-      value?: string | undefined;
-      stacktrace?: { frames?: Record<string, unknown>[] | undefined } | undefined;
-    }[] | undefined;
-  } | undefined;
+  exception?:
+    | {
+        values?:
+          | {
+              type?: string | undefined;
+              value?: string | undefined;
+              stacktrace?:
+                { frames?: Record<string, unknown>[] | undefined } | undefined;
+            }[]
+          | undefined;
+      }
+    | undefined;
   breadcrumbs?: unknown;
   extra?: Record<string, unknown> | undefined;
   contexts?: Record<string, unknown> | undefined;
@@ -162,10 +188,14 @@ export interface ReportEvent {
 function scrubValue(value: unknown, context: ScrubContext, depth = 0): unknown {
   if (typeof value === "string") return scrubMessage(value, context);
   if (depth > 4) return undefined;
-  if (Array.isArray(value)) return value.slice(0, 20).map((v) => scrubValue(v, context, depth + 1));
+  if (Array.isArray(value))
+    return value.slice(0, 20).map((v) => scrubValue(v, context, depth + 1));
   if (value && typeof value === "object") {
     return Object.fromEntries(
-      Object.entries(value).map(([k, v]) => [k, scrubValue(v, context, depth + 1)]),
+      Object.entries(value).map(([k, v]) => [
+        k,
+        scrubValue(v, context, depth + 1),
+      ]),
     );
   }
   return value;
@@ -177,21 +207,27 @@ function scrubValue(value: unknown, context: ScrubContext, depth = 0): unknown {
  * identity (breadcrumbs, source context lines, user, request, server name).
  * Contexts keep only the name and version of the os and runtime.
  */
-export function scrubEvent<E extends ReportEvent>(event: E, context: ScrubContext): E {
+export function scrubEvent<E extends ReportEvent>(
+  event: E,
+  context: ScrubContext,
+): E {
   const out: ReportEvent = { ...event };
   if (out.message) out.message = scrubMessage(out.message, context);
   if (out.exception) {
     out.exception = {
       values: out.exception.values?.map((ex) => ({
         ...ex,
-        value: ex.value === undefined ? undefined : scrubMessage(ex.value, context),
+        value:
+          ex.value === undefined ? undefined : scrubMessage(ex.value, context),
         stacktrace: ex.stacktrace && {
           ...ex.stacktrace,
           frames: ex.stacktrace.frames?.map((frame) => {
-            const { context_line, pre_context, post_context, vars, ...rest } = frame;
-            void context_line, pre_context, post_context, vars;
+            const { context_line, pre_context, post_context, vars, ...rest } =
+              frame;
+            (void context_line, pre_context, post_context, vars);
             for (const key of ["filename", "abs_path", "module"]) {
-              if (typeof rest[key] === "string") rest[key] = scrubText(rest[key], context);
+              if (typeof rest[key] === "string")
+                rest[key] = scrubText(rest[key], context);
             }
             return rest;
           }),
@@ -204,7 +240,8 @@ export function scrubEvent<E extends ReportEvent>(event: E, context: ScrubContex
   delete out.request;
   delete out.server_name;
   delete out.modules;
-  if (out.extra) out.extra = scrubValue(out.extra, context) as Record<string, unknown>;
+  if (out.extra)
+    out.extra = scrubValue(out.extra, context) as Record<string, unknown>;
   if (out.contexts) {
     // Only the name and version of os and runtime: no kernel string, host or device.
     const kept: Record<string, unknown> = {};
@@ -212,7 +249,9 @@ export function scrubEvent<E extends ReportEvent>(event: E, context: ScrubContex
       const entry = out.contexts[key] as Record<string, unknown> | undefined;
       if (entry && typeof entry === "object") {
         kept[key] = Object.fromEntries(
-          ["name", "version"].filter((k) => typeof entry[k] === "string").map((k) => [k, scrubMessage(entry[k] as string, context)]),
+          ["name", "version"]
+            .filter((k) => typeof entry[k] === "string")
+            .map((k) => [k, scrubMessage(entry[k] as string, context)]),
         );
       }
     }

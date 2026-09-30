@@ -48,7 +48,6 @@ import { visit } from "unist-util-visit";
 import { parseBody } from "./parse.js";
 import type { CompiledPage } from "./types.js";
 
-
 export interface LinkCheckError {
   /** The page the broken link was found on, `.md` included. */
   file: string;
@@ -96,7 +95,8 @@ export function checkLinks(pages: readonly CompiledPage[]): LinkCheckError[] {
         // A folder route with no index has no headings to check an anchor
         // against — left unverified rather than failed for a listing this
         // check cannot see into.
-        const headingsPage = resolved.kind === "page" ? resolved.page : resolved.indexPage;
+        const headingsPage =
+          resolved.kind === "page" ? resolved.page : resolved.indexPage;
         if (headingsPage === null) return;
 
         const known = headingsPage.headings.some((h) => h.id === target.anchor);
@@ -160,7 +160,10 @@ function resolveTarget(url: string, page: CompiledPage): Target | null {
     const slash = rest.indexOf("/");
     const project = slash === -1 ? rest : rest.slice(0, slash);
     const tail = slash === -1 ? "" : rest.slice(slash + 1);
-    return { path: tail === "" ? `${project}/index` : `${project}/${tail}`, anchor };
+    return {
+      path: tail === "" ? `${project}/index` : `${project}/${tail}`,
+      anchor,
+    };
   }
 
   if (bare === "") {

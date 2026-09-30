@@ -8,23 +8,23 @@
   --dd-ink: #f5f5f7;
   --dd-muted: #9a9aa2;
 
-  --dd-purple: #C27AFF;
-  --dd-cyan: #00D3F2;
-  --dd-amber: #FFB900;
-  --dd-emerald: #00D492;
-  --dd-red: #FF6467;
-  --dd-sky: #00BCFF;
-  --dd-rose: #FF637E;
-  --dd-indigo: #7C86FF;
+  --dd-purple: #c27aff;
+  --dd-cyan: #00d3f2;
+  --dd-amber: #ffb900;
+  --dd-emerald: #00d492;
+  --dd-red: #ff6467;
+  --dd-sky: #00bcff;
+  --dd-rose: #ff637e;
+  --dd-indigo: #7c86ff;
 
   /* The three template greys, one job each — see theme/accents.ts GREYS. */
-  --dd-grey-support: #A89EA9;
-  --dd-grey-secondary: #D7D0D7;
-  --dd-grey-dim: #79697B;
+  --dd-grey-support: #a89ea9;
+  --dd-grey-secondary: #d7d0d7;
+  --dd-grey-dim: #79697b;
 
   /* Card fill + hairline divider, also from the template. */
-  --dd-card-fill: #1D161E;
-  --dd-hairline: #2A212C;
+  --dd-card-fill: #1d161e;
+  --dd-hairline: #2a212c;
 
   /* Per-slide accent — layouts override this via inline style from the
      `accent` frontmatter prop. Defaults to emerald. */
@@ -60,14 +60,14 @@ body {
 .slidev-layout {
   background: var(--dd-bg);
   color: var(--dd-ink);
-  font-family: 'Hanken Grotesk', sans-serif;
+  font-family: "Hanken Grotesk", sans-serif;
 }
 
 .slidev-layout h1,
 .slidev-layout h2,
 .slidev-layout h3,
 .slidev-layout h4 {
-  font-family: 'Alan Sans', 'Hanken Grotesk', sans-serif;
+  font-family: "Alan Sans", "Hanken Grotesk", sans-serif;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
@@ -90,7 +90,7 @@ body {
 .slidev-layout code,
 .slidev-layout pre,
 .slidev-layout kbd {
-  font-family: 'Cascadia Code', monospace;
+  font-family: "Cascadia Code", monospace;
 }
 
 .slidev-layout a {
@@ -169,14 +169,14 @@ body {
 }
 
 .dd-chrome-footer-lines .dd-line-1 {
-  font-family: 'Hanken Grotesk', sans-serif;
+  font-family: "Hanken Grotesk", sans-serif;
   font-weight: 700;
   font-size: 0.6rem;
   color: var(--dd-ink);
 }
 
 .dd-chrome-footer-lines .dd-line-2 {
-  font-family: 'Hanken Grotesk', sans-serif;
+  font-family: "Hanken Grotesk", sans-serif;
   font-size: 0.55rem;
   color: var(--dd-grey-secondary);
 }
@@ -298,7 +298,7 @@ body {
   text-overflow: ellipsis;
   direction: rtl;
   text-align: left;
-  font-family: 'Cascadia Code', monospace;
+  font-family: "Cascadia Code", monospace;
   font-size: 0.75rem;
   color: var(--dd-grey-dim);
 }
@@ -356,7 +356,7 @@ body {
    viewports stays sharp. */
 .dd-code-frame .dd-code-block:not(.dd-shell)::before,
 .dd-code-frame .dd-code-block:not(.dd-shell)::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   right: 0;
@@ -488,7 +488,8 @@ body {
 
 /* Only while something is dimmed: `{*}` (or no range) marks every line
    highlighted, and a bar down the whole block would mean nothing. */
-.slidev-code:has(.slidev-code-dishonored) .slidev-code-highlighted:not(.shiki-magic-move-item) {
+.slidev-code:has(.slidev-code-dishonored)
+  .slidev-code-highlighted:not(.shiki-magic-move-item) {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   /* An inset bar, not a border: a line's padding is its wrap indent. */
   box-shadow: inset 2px 0 var(--accent);
@@ -525,7 +526,9 @@ body {
 }
 
 .dd-line-enter-active {
-  transition: opacity 0.35s ease 0.35s, transform 0.35s ease 0.35s;
+  transition:
+    opacity 0.35s ease 0.35s,
+    transform 0.35s ease 0.35s;
 }
 
 .dd-line-enter-from {

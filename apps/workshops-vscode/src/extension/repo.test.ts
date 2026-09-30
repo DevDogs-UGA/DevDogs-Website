@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { TestRepo } from "../core/test-repo.js";
-import { cloneRootIfMatches, loadSnapshot, remoteUrls, repoRoot } from "./repo.js";
+import {
+  cloneRootIfMatches,
+  loadSnapshot,
+  remoteUrls,
+  repoRoot,
+} from "./repo.js";
 
 let repo: TestRepo | undefined;
 afterEach(() => repo?.dispose());
@@ -21,18 +26,29 @@ describe("remote lookups", () => {
   it("finds the top level and any matching remote", async () => {
     repo = build();
     repo.git("remote", "add", "upstream", "git@github.com:someone/else.git");
-    repo.git("remote", "add", "origin", "https://github.com/devdogsuga/web-workshops.git");
+    repo.git(
+      "remote",
+      "add",
+      "origin",
+      "https://github.com/devdogsuga/web-workshops.git",
+    );
     expect(await remoteUrls(repo.dir)).toHaveLength(2);
     const real = repo.git("rev-parse", "--show-toplevel").trim();
     expect(await repoRoot(repo.dir)).toBe(real);
-    expect(await cloneRootIfMatches(repo.dir, "DevDogsUGA/Web-Workshops")).toBe(real);
-    expect(await cloneRootIfMatches(repo.dir, "DevDogsUGA/Mobile-Workshops")).toBeNull();
+    expect(await cloneRootIfMatches(repo.dir, "DevDogsUGA/Web-Workshops")).toBe(
+      real,
+    );
+    expect(
+      await cloneRootIfMatches(repo.dir, "DevDogsUGA/Mobile-Workshops"),
+    ).toBeNull();
   });
 
   it("copes with no remotes and with a folder that isn't a repo", async () => {
     repo = build();
     expect(await remoteUrls(repo.dir)).toEqual([]);
-    expect(await cloneRootIfMatches("/", "DevDogsUGA/Web-Workshops")).toBeNull();
+    expect(
+      await cloneRootIfMatches("/", "DevDogsUGA/Web-Workshops"),
+    ).toBeNull();
   });
 });
 
@@ -55,6 +71,10 @@ describe("loadSnapshot", () => {
   it("is empty for a repo without step tags", async () => {
     repo = TestRepo.init();
     repo.commit({ "a.txt": "x\n" });
-    expect(await loadSnapshot(repo.dir)).toMatchObject({ workshop: undefined, line: [], current: null });
+    expect(await loadSnapshot(repo.dir)).toMatchObject({
+      workshop: undefined,
+      line: [],
+      current: null,
+    });
   });
 });

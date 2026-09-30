@@ -60,7 +60,10 @@ export function packageNameOf(specifier: string): string {
  * invocation calling this a handful of times; see FINDINGS item 5 if this
  * is ever called in a hot loop.
  */
-export function findDependent(repoRoot: string, specifier: string): string | null {
+export function findDependent(
+  repoRoot: string,
+  specifier: string,
+): string | null {
   const packageName = packageNameOf(specifier);
   const groups = ["apps", "packages"];
   for (const group of groups) {
@@ -105,7 +108,9 @@ function findOwningPackageJson(startDir: string, specifier: string): string {
     const candidate = join(dir, "package.json");
     if (existsSync(candidate)) {
       try {
-        const pkg = JSON.parse(readFileSync(candidate, "utf8")) as { name?: unknown };
+        const pkg = JSON.parse(readFileSync(candidate, "utf8")) as {
+          name?: unknown;
+        };
         if (pkg.name === packageName) return candidate;
       } catch {
         // fall through and keep walking
@@ -168,7 +173,9 @@ export function resolveFromRepo(
   }
 
   const pkgJsonPath = findOwningPackageJson(dirname(resolvedPath), specifier);
-  const pkg = JSON.parse(readFileSync(pkgJsonPath, "utf8")) as { version?: string };
+  const pkg = JSON.parse(readFileSync(pkgJsonPath, "utf8")) as {
+    version?: string;
+  };
 
   return {
     resolvedPath,

@@ -55,7 +55,11 @@ import {
   type LoopbackListener,
 } from "./loopback.js";
 import { buildConnectUrl } from "./connect-url.js";
-import { ExchangeError, exchangeCode, type ExchangeResult } from "./exchange.js";
+import {
+  ExchangeError,
+  exchangeCode,
+  type ExchangeResult,
+} from "./exchange.js";
 import {
   DeviceError,
   PollError,
@@ -147,8 +151,14 @@ async function chooseHostedTargetFromEnvOrPrompt(
   const fromFiles = readHostedTargetFromEnvFiles(cwd);
 
   if (fromFiles.apiUrl && fromFiles.serviceRoleKey) {
-    log.info("Using the Supabase URL and service-role key from .env.local/.env.");
-    return { apiUrl: fromFiles.apiUrl, serviceRoleKey: fromFiles.serviceRoleKey, kind: "hosted" };
+    log.info(
+      "Using the Supabase URL and service-role key from .env.local/.env.",
+    );
+    return {
+      apiUrl: fromFiles.apiUrl,
+      serviceRoleKey: fromFiles.serviceRoleKey,
+      kind: "hosted",
+    };
   }
 
   const apiUrl = unwrap(
@@ -442,10 +452,13 @@ async function connectByPasting(
   // Not prompted: contributors always want the canonical API. `--base-url` /
   // `OAUTH_BASE_URL` stay as overrides for testing against another project.
   const baseUrl = (
-    baseUrlOverride ?? process.env[ENV_KEYS.baseUrl] ?? DEFAULT_API_URL
+    baseUrlOverride ??
+    process.env[ENV_KEYS.baseUrl] ??
+    DEFAULT_API_URL
   ).replace(/\/+$/, "");
 
-  let clientId: string | undefined = process.env[ENV_KEYS.clientId] || undefined;
+  let clientId: string | undefined =
+    process.env[ENV_KEYS.clientId] || undefined;
   let clientSecret: string | undefined =
     process.env[ENV_KEYS.clientSecret] || undefined;
 
@@ -534,9 +547,7 @@ export async function runOAuthSetup(
 ): Promise<void> {
   const cwd = process.cwd();
 
-  log.info(
-    'Configures a Supabase project to support "Sign in with DevDogs".',
-  );
+  log.info('Configures a Supabase project to support "Sign in with DevDogs".');
 
   // ── Step 1: Choose target ────────────────────────────────────────────────
 

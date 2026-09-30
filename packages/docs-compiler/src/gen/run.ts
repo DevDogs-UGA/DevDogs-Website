@@ -378,7 +378,9 @@ function printSummary(summary: GenSummary, docsRoot: string): void {
     const rows = [...summary.coverage, total];
     const width = Math.max(...rows.map((row) => row.area.length));
 
-    console.log("[docs-compiler] doc-comment coverage (reported, not enforced):");
+    console.log(
+      "[docs-compiler] doc-comment coverage (reported, not enforced):",
+    );
     for (const row of rows) {
       console.log(
         `[docs-compiler]   ${row.area.padEnd(width)}  ${String(row.documented).padStart(5)} / ${String(row.symbols).padEnd(5)}  ${percent(row.documented, row.symbols).padStart(4)}`,

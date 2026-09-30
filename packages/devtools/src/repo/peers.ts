@@ -66,7 +66,11 @@ function loadPeer<T>(specifier: string): Promise<T> {
           ` or packages/* to declare it (dependencies/devDependencies/peerDependencies).`,
       );
     }
-    const { resolvedPath } = resolveFromRepo(repoRoot, resolutionBase, specifier);
+    const { resolvedPath } = resolveFromRepo(
+      repoRoot,
+      resolutionBase,
+      specifier,
+    );
     const url = pathToFileURL(resolvedPath).href;
     resolvedUrls.set(specifier, url);
     return import(url) as Promise<T>;

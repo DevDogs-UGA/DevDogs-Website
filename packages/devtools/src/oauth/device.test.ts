@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { DeviceError, PollError, pollForToken, requestDeviceCode } from "./device.js";
+import {
+  DeviceError,
+  PollError,
+  pollForToken,
+  requestDeviceCode,
+} from "./device.js";
 
 const platformUrl = "https://devdogsuga.org";
 
@@ -23,7 +28,8 @@ describe("requestDeviceCode", () => {
         device_code: "devcode-1",
         user_code: "ABCD-EFGH",
         verification_uri: "https://devdogsuga.org/device",
-        verification_uri_complete: "https://devdogsuga.org/device?user_code=ABCD-EFGH",
+        verification_uri_complete:
+          "https://devdogsuga.org/device?user_code=ABCD-EFGH",
         expires_in: 900,
         interval: 5,
       });
@@ -40,7 +46,8 @@ describe("requestDeviceCode", () => {
       deviceCode: "devcode-1",
       userCode: "ABCD-EFGH",
       verificationUri: "https://devdogsuga.org/device",
-      verificationUriComplete: "https://devdogsuga.org/device?user_code=ABCD-EFGH",
+      verificationUriComplete:
+        "https://devdogsuga.org/device?user_code=ABCD-EFGH",
       expiresIn: 900,
       interval: 5,
     });
@@ -52,7 +59,12 @@ describe("requestDeviceCode", () => {
     });
 
     await expect(
-      requestDeviceCode({ platformUrl, label: "l", callbackUri: "c", fetchImpl }),
+      requestDeviceCode({
+        platformUrl,
+        label: "l",
+        callbackUri: "c",
+        fetchImpl,
+      }),
     ).rejects.toMatchObject({ kind: "network" });
   });
 
@@ -60,13 +72,21 @@ describe("requestDeviceCode", () => {
     const fetchImpl = vi.fn(
       async () =>
         new Response(
-          JSON.stringify({ error: "invalid_request", error_description: "bad label" }),
+          JSON.stringify({
+            error: "invalid_request",
+            error_description: "bad label",
+          }),
           { status: 400 },
         ),
     );
 
     await expect(
-      requestDeviceCode({ platformUrl, label: "l", callbackUri: "c", fetchImpl }),
+      requestDeviceCode({
+        platformUrl,
+        label: "l",
+        callbackUri: "c",
+        fetchImpl,
+      }),
     ).rejects.toMatchObject({ kind: "invalid_request" });
   });
 
@@ -80,15 +100,27 @@ describe("requestDeviceCode", () => {
     );
 
     await expect(
-      requestDeviceCode({ platformUrl, label: "l", callbackUri: "c", fetchImpl }),
+      requestDeviceCode({
+        platformUrl,
+        label: "l",
+        callbackUri: "c",
+        fetchImpl,
+      }),
     ).rejects.toMatchObject({ kind: "rate_limited", retryAfterSeconds: 12 });
   });
 
   it("reports a 200 body missing required fields as malformed", async () => {
-    const fetchImpl = vi.fn(async () => jsonResponse({ device_code: "only-this" }));
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({ device_code: "only-this" }),
+    );
 
     await expect(
-      requestDeviceCode({ platformUrl, label: "l", callbackUri: "c", fetchImpl }),
+      requestDeviceCode({
+        platformUrl,
+        label: "l",
+        callbackUri: "c",
+        fetchImpl,
+      }),
     ).rejects.toMatchObject({ kind: "malformed" });
   });
 });
@@ -121,12 +153,26 @@ describe("pollForToken", () => {
   it("returns the credentials on an immediate 200", async () => {
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
       expect(url).toBe("https://devdogsuga.org/tools/oauth/device/token");
-      expect(JSON.parse(init?.body as string)).toEqual({ device_code: "devcode-1" });
-      return jsonResponse({ client_id: "cid", client_secret: "csecret", issuer: "iss" });
+      expect(JSON.parse(init?.body as string)).toEqual({
+        device_code: "devcode-1",
+      });
+      return jsonResponse({
+        client_id: "cid",
+        client_secret: "csecret",
+        issuer: "iss",
+      });
     });
 
-    const result = await pollForToken({ ...baseArgs, fetchImpl, sleep: noSleep });
-    expect(result).toEqual({ clientId: "cid", clientSecret: "csecret", issuer: "iss" });
+    const result = await pollForToken({
+      ...baseArgs,
+      fetchImpl,
+      sleep: noSleep,
+    });
+    expect(result).toEqual({
+      clientId: "cid",
+      clientSecret: "csecret",
+      issuer: "iss",
+    });
     expect(noSleep).toHaveBeenCalledWith(5000);
   });
 
@@ -135,15 +181,30 @@ describe("pollForToken", () => {
     const fetchImpl = vi.fn(async () => {
       calls += 1;
       if (calls < 3) {
-        return new Response(JSON.stringify({ error: "authorization_pending" }), {
-          status: 400,
-        });
+        return new Response(
+          JSON.stringify({ error: "authorization_pending" }),
+          {
+            status: 400,
+          },
+        );
       }
-      return jsonResponse({ client_id: "cid", client_secret: "csecret", issuer: "iss" });
+      return jsonResponse({
+        client_id: "cid",
+        client_secret: "csecret",
+        issuer: "iss",
+      });
     });
 
-    const result = await pollForToken({ ...baseArgs, fetchImpl, sleep: noSleep });
-    expect(result).toEqual({ clientId: "cid", clientSecret: "csecret", issuer: "iss" });
+    const result = await pollForToken({
+      ...baseArgs,
+      fetchImpl,
+      sleep: noSleep,
+    });
+    expect(result).toEqual({
+      clientId: "cid",
+      clientSecret: "csecret",
+      issuer: "iss",
+    });
     expect(calls).toBe(3);
   });
 
@@ -153,9 +214,15 @@ describe("pollForToken", () => {
     const fetchImpl = vi.fn(async () => {
       calls += 1;
       if (calls === 1) {
-        return new Response(JSON.stringify({ error: "slow_down" }), { status: 400 });
+        return new Response(JSON.stringify({ error: "slow_down" }), {
+          status: 400,
+        });
       }
-      return jsonResponse({ client_id: "cid", client_secret: "csecret", issuer: "iss" });
+      return jsonResponse({
+        client_id: "cid",
+        client_secret: "csecret",
+        issuer: "iss",
+      });
     });
 
     await pollForToken({ ...baseArgs, intervalSeconds: 5, fetchImpl, sleep });
@@ -169,7 +236,10 @@ describe("pollForToken", () => {
     const fetchImpl = vi.fn(
       async () =>
         new Response(
-          JSON.stringify({ error: "access_denied", error_description: "user declined" }),
+          JSON.stringify({
+            error: "access_denied",
+            error_description: "user declined",
+          }),
           { status: 400 },
         ),
     );
@@ -182,7 +252,10 @@ describe("pollForToken", () => {
 
   it("throws expired_token when the server reports it", async () => {
     const fetchImpl = vi.fn(
-      async () => new Response(JSON.stringify({ error: "expired_token" }), { status: 400 }),
+      async () =>
+        new Response(JSON.stringify({ error: "expired_token" }), {
+          status: 400,
+        }),
     );
 
     await expect(
@@ -215,7 +288,10 @@ describe("pollForToken", () => {
 
   it("throws invalid_grant", async () => {
     const fetchImpl = vi.fn(
-      async () => new Response(JSON.stringify({ error: "invalid_grant" }), { status: 400 }),
+      async () =>
+        new Response(JSON.stringify({ error: "invalid_grant" }), {
+          status: 400,
+        }),
     );
 
     await expect(
@@ -234,11 +310,19 @@ describe("pollForToken", () => {
           headers: { "retry-after": "20" },
         });
       }
-      return jsonResponse({ client_id: "cid", client_secret: "csecret", issuer: "iss" });
+      return jsonResponse({
+        client_id: "cid",
+        client_secret: "csecret",
+        issuer: "iss",
+      });
     });
 
     const result = await pollForToken({ ...baseArgs, fetchImpl, sleep });
-    expect(result).toEqual({ clientId: "cid", clientSecret: "csecret", issuer: "iss" });
+    expect(result).toEqual({
+      clientId: "cid",
+      clientSecret: "csecret",
+      issuer: "iss",
+    });
     expect(sleep.mock.calls).toContainEqual([20000]);
   });
 
@@ -262,10 +346,22 @@ describe("pollForToken", () => {
     const fetchImpl = vi.fn(async () => {
       calls += 1;
       if (calls === 1) throw new Error("ECONNRESET");
-      return jsonResponse({ client_id: "cid", client_secret: "csecret", issuer: "iss" });
+      return jsonResponse({
+        client_id: "cid",
+        client_secret: "csecret",
+        issuer: "iss",
+      });
     });
 
-    const result = await pollForToken({ ...baseArgs, fetchImpl, sleep: noSleep });
-    expect(result).toEqual({ clientId: "cid", clientSecret: "csecret", issuer: "iss" });
+    const result = await pollForToken({
+      ...baseArgs,
+      fetchImpl,
+      sleep: noSleep,
+    });
+    expect(result).toEqual({
+      clientId: "cid",
+      clientSecret: "csecret",
+      issuer: "iss",
+    });
   });
 });

@@ -123,13 +123,18 @@ function patchBump(version) {
 // a publish by minutes (it's CDN-cached), so publishing also retries on a
 // collision; see publishWithRetry.
 async function fetchRegistryState(name) {
-  const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(name)}`, {
-    headers: { "cache-control": "no-cache" },
-    cache: "no-store",
-  });
+  const res = await fetch(
+    `https://registry.npmjs.org/${encodeURIComponent(name)}`,
+    {
+      headers: { "cache-control": "no-cache" },
+      cache: "no-store",
+    },
+  );
   if (res.status === 404) return null;
   if (!res.ok) {
-    throw new Error(`Registry lookup for ${name} failed: ${res.status} ${res.statusText}`);
+    throw new Error(
+      `Registry lookup for ${name} failed: ${res.status} ${res.statusText}`,
+    );
   }
   const body = await res.json();
   const latest = highestVersion(Object.keys(body.versions ?? {}));
@@ -157,20 +162,29 @@ function publishWithRetry(repoRoot, pkg, tarball, destDir, attempts = 5) {
       execFileSync(
         "npm",
         ["publish", tarball, "--access", "public", "--provenance"],
-        { cwd: repoRoot, stdio: ["ignore", "inherit", "pipe"], encoding: "utf8" },
+        {
+          cwd: repoRoot,
+          stdio: ["ignore", "inherit", "pipe"],
+          encoding: "utf8",
+        },
       );
       return pkg.json.version;
     } catch (err) {
       const stderr = String(err.stderr ?? "");
       process.stderr.write(stderr);
-      if (!/cannot publish over the previously published version/i.test(stderr) || i >= attempts) {
+      if (
+        !/cannot publish over the previously published version/i.test(stderr) ||
+        i >= attempts
+      ) {
         throw err;
       }
       const taken = pkg.json.version;
       pkg.json.version = patchBump(taken);
       writePackageJson(pkg.path, pkg.json);
       tarball = pnpmPack(repoRoot, pkg.json.name, destDir).tarballPath;
-      console.log(`${pkg.json.name}: ${taken} is already published; retrying as ${pkg.json.version}`);
+      console.log(
+        `${pkg.json.name}: ${taken} is already published; retrying as ${pkg.json.version}`,
+      );
     }
   }
 }
@@ -180,7 +194,9 @@ function discoverPackages() {
     .map((name) => join(packagesDir, name))
     .filter((dir) => {
       try {
-        return statSync(dir).isDirectory() && existsSync(join(dir, "package.json"));
+        return (
+          statSync(dir).isDirectory() && existsSync(join(dir, "package.json"))
+        );
       } catch {
         return false;
       }
@@ -197,7 +213,9 @@ function topoSort(pkgs) {
   function visit(pkg, stack) {
     if (visited.has(pkg.json.name)) return;
     if (stack.has(pkg.json.name)) {
-      throw new Error(`Circular workspace:* dependency involving ${pkg.json.name}`);
+      throw new Error(
+        `Circular workspace:* dependency involving ${pkg.json.name}`,
+      );
     }
     stack.add(pkg.json.name);
     const deps = {
@@ -258,7 +276,14 @@ function releaseExists(tag) {
 function releaseNotes(pkg, version) {
   const name = pkg.json.name;
   const dir = relative(repoRoot, dirname(pkg.path));
-  const previous = git(["tag", "--list", `${name}@*`, "--sort=-v:refname", "--merged", "HEAD"])
+  const previous = git([
+    "tag",
+    "--list",
+    `${name}@*`,
+    "--sort=-v:refname",
+    "--merged",
+    "HEAD",
+  ])
     .split("\n")
     .find((tag) => tag && tag !== `${name}@${version}`);
   const range = previous ? [`${previous}..HEAD`] : [];
@@ -272,9 +297,13 @@ function releaseNotes(pkg, version) {
   return [
     `npm: https://www.npmjs.com/package/${name}/v/${version}`,
     "",
-    previous ? `Changes to \`${dir}\` since ${previous}:` : `Changes to \`${dir}\`:`,
+    previous
+      ? `Changes to \`${dir}\` since ${previous}:`
+      : `Changes to \`${dir}\`:`,
     "",
-    ...(shown.length ? shown : ["- No changes to the package's own files (a dependency was bumped)."]),
+    ...(shown.length
+      ? shown
+      : ["- No changes to the package's own files (a dependency was bumped)."]),
   ].join("\n");
 }
 
@@ -288,10 +317,15 @@ function ensureRelease(pkg, version) {
   execFileSync(
     "gh",
     [
-      "release", "create", tag,
-      "--target", git(["rev-parse", "HEAD"]),
-      "--title", tag,
-      "--notes", releaseNotes(pkg, version),
+      "release",
+      "create",
+      tag,
+      "--target",
+      git(["rev-parse", "HEAD"]),
+      "--title",
+      tag,
+      "--notes",
+      releaseNotes(pkg, version),
       // Nine packages share one repo; "Latest" on whichever published last
       // would mean nothing.
       "--latest=false",
@@ -304,9 +338,13 @@ function ensureRelease(pkg, version) {
 async function main() {
   const pkgs = discoverPackages()
     .map((dir) => readPackageJson(dir))
-    .filter(({ json }) => json.private !== true && typeof json.name === "string");
+    .filter(
+      ({ json }) => json.private !== true && typeof json.name === "string",
+    );
 
-  console.log(`Found ${pkgs.length} publishable package(s): ${pkgs.map((p) => p.json.name).join(", ") || "(none)"}`);
+  console.log(
+    `Found ${pkgs.length} publishable package(s): ${pkgs.map((p) => p.json.name).join(", ") || "(none)"}`,
+  );
 
   // Pass 1: sync every publishable package's on-disk version to its
   // latest-known-published version, so workspace:* rewrites during packing
@@ -352,7 +390,9 @@ async function main() {
       // into its package.json.
       const { tarballPath: finalTarball } = pnpmPack(repoRoot, name, tmp);
 
-      console.log(`${name}: ${state ? state.latest : "(unpublished)"} -> ${nextVersion}`);
+      console.log(
+        `${name}: ${state ? state.latest : "(unpublished)"} -> ${nextVersion}`,
+      );
 
       let publishedVersion = nextVersion;
       if (dryRun) {
@@ -368,8 +408,12 @@ async function main() {
   }
 
   console.log("");
-  console.log(`Unchanged (${unchanged.length}): ${unchanged.join(", ") || "(none)"}`);
-  console.log(`${dryRun ? "Would publish" : "Published"} (${published.length}): ${published.join(", ") || "(none)"}`);
+  console.log(
+    `Unchanged (${unchanged.length}): ${unchanged.join(", ") || "(none)"}`,
+  );
+  console.log(
+    `${dryRun ? "Would publish" : "Published"} (${published.length}): ${published.join(", ") || "(none)"}`,
+  );
 }
 
 main().catch((err) => {

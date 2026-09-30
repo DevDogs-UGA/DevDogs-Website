@@ -45,7 +45,10 @@ describe("fetchIssuer", () => {
   it("reports a non-2xx response by status", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => new Response("not found", { status: 404, statusText: "Not Found" })),
+      vi.fn(
+        async () =>
+          new Response("not found", { status: 404, statusText: "Not Found" }),
+      ),
     );
 
     await expect(fetchIssuer("https://api.devdogsuga.org")).rejects.toThrow(

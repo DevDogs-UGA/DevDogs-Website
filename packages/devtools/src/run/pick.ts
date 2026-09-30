@@ -81,7 +81,13 @@ import { loadEnvLoad } from "../repo/peers.js";
  * file in the listing every contributor sees.
  */
 function memoryPath(): string {
-  return join(findRepoRoot(), "node_modules", ".cache", "devdogs", "tasks.json");
+  return join(
+    findRepoRoot(),
+    "node_modules",
+    ".cache",
+    "devdogs",
+    "tasks.json",
+  );
 }
 
 /**

@@ -62,7 +62,9 @@ interface Op {
 function wholeFileOps(patch: string): Op[] | string {
   const lines = patch.split("\n");
   const at = lines.findIndex((line) => line.startsWith("@@ "));
-  const header = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(lines[at] ?? "");
+  const header = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(
+    lines[at] ?? "",
+  );
   if (!header || Number(header[1]) > 1 || Number(header[2]) > 1) {
     return "context= needs the whole file: one hunk starting at line 1";
   }
@@ -88,7 +90,11 @@ function trimmedHunks(ops: Op[], context: number): string[] {
   const keep = ops.map(() => false);
   ops.forEach((op, k) => {
     if (op.kind === " ") return;
-    for (let c = Math.max(0, k - context); c <= Math.min(ops.length - 1, k + context); c++) {
+    for (
+      let c = Math.max(0, k - context);
+      c <= Math.min(ops.length - 1, k + context);
+      c++
+    ) {
       keep[c] = true;
     }
   });
@@ -108,7 +114,8 @@ function trimmedHunks(ops: Op[], context: number): string[] {
     const hunk = ops.slice(start, k);
     const oldCount = hunk.filter((op) => op.kind !== "+").length;
     const newCount = hunk.filter((op) => op.kind !== "-").length;
-    const from = (at: number, count: number) => `${count === 0 ? at - 1 : at},${count}`;
+    const from = (at: number, count: number) =>
+      `${count === 0 ? at - 1 : at},${count}`;
     out.push(`@@ -${from(oldAt, oldCount)} +${from(newAt, newCount)} @@`);
     out.push(...hunk.map((op) => `${op.kind}${op.line}`));
     oldAt += oldCount;
@@ -116,7 +123,6 @@ function trimmedHunks(ops: Op[], context: number): string[] {
   }
   return out;
 }
-
 
 /** The `{ file, lang, patch }` a `diff file=…` block describes, or null for
  * any other code block. */
@@ -127,7 +133,11 @@ export function readDiff(node: Code): DocsDiff | null {
 
   const patch = node.value;
   const line = node.position?.start.line;
-  if (!/^--- /m.test(patch) || !/^\+\+\+ /m.test(patch) || !/^@@ /m.test(patch)) {
+  if (
+    !/^--- /m.test(patch) ||
+    !/^\+\+\+ /m.test(patch) ||
+    !/^@@ /m.test(patch)
+  ) {
     throw new DocsBuildError(
       `diff block for ${file}${line === undefined ? "" : ` (line ${line})`}: needs a unified diff with ---/+++ headers and at least one @@ hunk`,
     );
@@ -148,7 +158,9 @@ export function readDiff(node: Code): DocsDiff | null {
   if (context === undefined) return diff;
   const where = `diff block for ${file}${line === undefined ? "" : ` (line ${line})`}`;
   if (!/^\d+$/.test(context)) {
-    throw new DocsBuildError(`${where}: context=${context} is not a number of lines`);
+    throw new DocsBuildError(
+      `${where}: context=${context} is not a number of lines`,
+    );
   }
   const ops = wholeFileOps(patch);
   if (typeof ops === "string") throw new DocsBuildError(`${where}: ${ops}`);
@@ -156,8 +168,14 @@ export function readDiff(node: Code): DocsDiff | null {
   return {
     ...diff,
     patch: [...headers, ...trimmedHunks(ops, Number(context))].join("\n"),
-    oldContent: ops.filter((op) => op.kind !== "+").map((op) => op.line).join("\n"),
-    newContent: ops.filter((op) => op.kind !== "-").map((op) => op.line).join("\n"),
+    oldContent: ops
+      .filter((op) => op.kind !== "+")
+      .map((op) => op.line)
+      .join("\n"),
+    newContent: ops
+      .filter((op) => op.kind !== "-")
+      .map((op) => op.line)
+      .join("\n"),
   };
 }
 

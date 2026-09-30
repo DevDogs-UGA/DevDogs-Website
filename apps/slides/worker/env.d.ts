@@ -2,8 +2,8 @@
 // covers the rest).
 interface Env {
   // Secrets; the Discord endpoint answers 503 while either is unset.
-  DISCORD_SNIPPETS_WEBHOOK_WEB?: string
-  DISCORD_SNIPPETS_WEBHOOK_MOBILE?: string
+  DISCORD_SNIPPETS_WEBHOOK_WEB?: string;
+  DISCORD_SNIPPETS_WEBHOOK_MOBILE?: string;
   // Only from `pnpm run dev:worker` (worker/access.ts).
-  ACCESS_LOCAL_DEV?: string
+  ACCESS_LOCAL_DEV?: string;
 }

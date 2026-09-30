@@ -375,10 +375,16 @@ const GITHUB_ICON: Element = {
 export const VSCODE_LINK_PREFIX = "vscode://devdogsuga.workshops/";
 
 /** The fence's `vscode=` link, checked, or undefined when it names none. */
-export function vscodeLink(meta: string, file: string | undefined): string | undefined {
+export function vscodeLink(
+  meta: string,
+  file: string | undefined,
+): string | undefined {
   const uri = metaAttribute(meta, "vscode");
   if (uri === undefined) return undefined;
-  if (!uri.startsWith(VSCODE_LINK_PREFIX) || uri.length === VSCODE_LINK_PREFIX.length) {
+  if (
+    !uri.startsWith(VSCODE_LINK_PREFIX) ||
+    uri.length === VSCODE_LINK_PREFIX.length
+  ) {
     throw new DocsBuildError(
       `code block${file ? ` ${file}` : ""}: vscode=${uri} isn't a ${VSCODE_LINK_PREFIX}review?… or …open?… link`,
     );
@@ -540,7 +546,11 @@ export function docsCodeBlocks(): ShikiTransformer {
                   type: "element",
                   tagName: "div",
                   properties: { className: ["docs-code-actions"] },
-                  children: [...(vscode ? [vscode] : []), ...(link ? [link] : []), copy],
+                  children: [
+                    ...(vscode ? [vscode] : []),
+                    ...(link ? [link] : []),
+                    copy,
+                  ],
                 },
               ],
             },

@@ -29,7 +29,11 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { declare, define, resetRegistry } from "@devdogsuga/env";
-import { loadEnv, resetEnvSyncCacheForTests, resetPeerCacheForTests } from "../repo/peers.js";
+import {
+  loadEnv,
+  resetEnvSyncCacheForTests,
+  resetPeerCacheForTests,
+} from "../repo/peers.js";
 import { runDeploySecretsFile } from "./secrets-file.js";
 
 function scratch(): string {

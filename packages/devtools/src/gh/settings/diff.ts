@@ -49,7 +49,10 @@ export interface LiveSettingsSnapshot {
   actionsPermissions: LiveActionsPermissions;
   selectedActions: LiveSelectedActions;
   workflowPermissions: LiveWorkflowPermissions;
-  environments: Record<DesiredEnvironmentPolicy["name"], LiveEnvironmentSnapshot>;
+  environments: Record<
+    DesiredEnvironmentPolicy["name"],
+    LiveEnvironmentSnapshot
+  >;
 }
 
 export interface SettingsPlan {
@@ -145,7 +148,8 @@ export function planSettings(
     description: "Dependabot alerts",
     desired: desired.vulnerabilityAlerts ? "enabled" : "disabled",
     live: live.vulnerabilityAlerts ? "enabled" : "disabled",
-    status: live.vulnerabilityAlerts === desired.vulnerabilityAlerts ? "ok" : "drift",
+    status:
+      live.vulnerabilityAlerts === desired.vulnerabilityAlerts ? "ok" : "drift",
     fixable: true,
   });
 
@@ -191,12 +195,14 @@ export function planSettings(
   });
 
   const patternsMatch =
-    live.selectedActions.github_owned_allowed === desired.actions.githubOwnedAllowed &&
+    live.selectedActions.github_owned_allowed ===
+      desired.actions.githubOwnedAllowed &&
     live.selectedActions.verified_allowed === desired.actions.verifiedAllowed &&
     sameSet(live.selectedActions.patterns_allowed, desired.actions.patterns);
   checks.push({
     key: "actions.selected_actions",
-    description: "Selected-actions allowlist (github-owned, verified, patterns)",
+    description:
+      "Selected-actions allowlist (github-owned, verified, patterns)",
     desired: `github_owned=${desired.actions.githubOwnedAllowed}, verified=${desired.actions.verifiedAllowed}, patterns=[${[...desired.actions.patterns].sort().join(", ")}]`,
     live: `github_owned=${live.selectedActions.github_owned_allowed}, verified=${live.selectedActions.verified_allowed}, patterns=[${[...live.selectedActions.patterns_allowed].sort().join(", ")}]`,
     status: patternsMatch ? "ok" : "drift",
@@ -233,15 +239,18 @@ export function planSettings(
 
     const liveBranches = snapshot.branchPolicies.map((p) => p.name);
     const branchesMatch =
-      snapshot.environment.deployment_branch_policy?.custom_branch_policies === true &&
-      snapshot.environment.deployment_branch_policy?.protected_branches === false &&
+      snapshot.environment.deployment_branch_policy?.custom_branch_policies ===
+        true &&
+      snapshot.environment.deployment_branch_policy?.protected_branches ===
+        false &&
       sameSet(liveBranches, env.allowedBranches);
     checks.push({
       key: `environments.${env.name}.branch_policy`,
       description: `Environment "${env.name}" deployment branch policy`,
       desired: [...env.allowedBranches].sort().join(", "),
       live: snapshot.environment.deployment_branch_policy
-        ? [...liveBranches].sort().join(", ") || "(no branch restriction — all branches allowed)"
+        ? [...liveBranches].sort().join(", ") ||
+          "(no branch restriction — all branches allowed)"
         : "(no deployment branch policy configured)",
       status: branchesMatch ? "ok" : "drift",
       fixable: true,
@@ -249,7 +258,9 @@ export function planSettings(
 
     if (env.requireReviewers) {
       const hasReviewers = (snapshot.environment.protection_rules ?? []).some(
-        (rule) => rule.type === "required_reviewers" && (rule.reviewers?.length ?? 0) > 0,
+        (rule) =>
+          rule.type === "required_reviewers" &&
+          (rule.reviewers?.length ?? 0) > 0,
       );
       checks.push({
         key: `environments.${env.name}.required_reviewers`,

@@ -84,12 +84,17 @@ export async function resolveTier(
   // file is missing, which `loadEnvironment` then reports — so it is validated
   // for shape only, not existence, and does NOT fall through to the picker.
   const entered = opts.deployEnv ?? process.env.DEPLOY_ENV;
-  if (entered !== undefined && entered !== "" && env.isDeployEnvironment(entered)) {
+  if (
+    entered !== undefined &&
+    entered !== "" &&
+    env.isDeployEnvironment(entered)
+  ) {
     return entered;
   }
 
   const available =
-    opts.available ?? (await (await loadEnvSession()).availableTiers(findRepoRoot()));
+    opts.available ??
+    (await (await loadEnvSession()).availableTiers(findRepoRoot()));
 
   // Zero or one tier file present: there is nothing to choose between, so
   // asking would be a question with one possible answer. Fall through to

@@ -15,7 +15,10 @@
  */
 
 /** The only repositories a link may name, canonical casing. */
-export const ALLOWED_REPOS = ["DevDogsUGA/Web-Workshops", "DevDogsUGA/Mobile-Workshops"] as const;
+export const ALLOWED_REPOS = [
+  "DevDogsUGA/Web-Workshops",
+  "DevDogsUGA/Mobile-Workshops",
+] as const;
 
 /** The canonical `Owner/Name` for an allowlisted repo (any casing), else undefined. */
 export function canonicalRepo(repo: string): string | undefined {
@@ -46,8 +49,7 @@ export interface OpenLink {
 export type WorkshopLink = ReviewLink | OpenLink;
 
 export type ParseResult =
-  | { ok: true; link: WorkshopLink }
-  | { ok: false; reason: string };
+  { ok: true; link: WorkshopLink } | { ok: false; reason: string };
 
 const MAX_VALUE = 500;
 
@@ -71,11 +73,17 @@ export function parseQuery(query: string): Map<string, string> {
 /** A tag or ref name from a link: non-empty, bounded, no control characters. */
 function isPlausibleName(value: string): boolean {
   // eslint-disable-next-line no-control-regex
-  return value.length > 0 && value.length <= MAX_VALUE && !/[\x00-\x1f\x7f]/.test(value);
+  return (
+    value.length > 0 &&
+    value.length <= MAX_VALUE &&
+    !/[\x00-\x1f\x7f]/.test(value)
+  );
 }
 
 /** `12` or `12-20`, 1-based, ascending. */
-export function parseLines(value: string): { start: number; end: number } | undefined {
+export function parseLines(
+  value: string,
+): { start: number; end: number } | undefined {
   const match = /^(\d{1,7})(?:-(\d{1,7}))?$/.exec(value);
   if (!match) return undefined;
   const start = Number(match[1]);
@@ -94,9 +102,13 @@ export function parseWorkshopUri(path: string, query: string): ParseResult {
   const action = path.replace(/^\/+|\/+$/g, "");
 
   const repoParam = params.get("repo");
-  if (repoParam === undefined) return fail("The link doesn't say which repository it is for.");
+  if (repoParam === undefined)
+    return fail("The link doesn't say which repository it is for.");
   const repo = canonicalRepo(repoParam);
-  if (!repo) return fail(`"${repoParam.slice(0, 80)}" isn't a DevDogs workshop repository.`);
+  if (!repo)
+    return fail(
+      `"${repoParam.slice(0, 80)}" isn't a DevDogs workshop repository.`,
+    );
 
   const name = (key: string): string | undefined | null => {
     const value = params.get(key);
@@ -118,12 +130,16 @@ export function parseWorkshopUri(path: string, query: string): ParseResult {
     if (from === null) return fail("The link's starting step isn't valid.");
     if (file === null) return fail("The link's file isn't valid.");
     if (session === null) return fail("The link's session isn't valid.");
-    return { ok: true, link: { action: "review", repo, to, from, file, session } };
+    return {
+      ok: true,
+      link: { action: "review", repo, to, from, file, session },
+    };
   }
 
   if (action === "open") {
     const ref = name("ref");
-    if (!ref) return fail("The link doesn't name the step to open the file at.");
+    if (!ref)
+      return fail("The link doesn't name the step to open the file at.");
     const file = optionalText("file");
     if (!file) return fail("The link doesn't name a file.");
     const linesParam = params.get("lines");

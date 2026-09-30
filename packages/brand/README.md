@@ -11,15 +11,15 @@ them.
 
 ## Entry points
 
-| Import | Holds |
-|---|---|
-| `@devdogsuga/brand` | Palette (`ACCENT`, `MAUVE`, `THEME`, `WHITE`, `BLOCK_SHADOW`), `CONTACT`, `WORDMARK_METRICS`, `loadFonts`, and the generated artwork assets (`MARK`, `WORDMARK_ON_DARK`, …). |
-| `@devdogsuga/brand/event` | The club's timezone and the meeting-to-card formatting. |
+| Import                    | Holds                                                                                                                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@devdogsuga/brand`       | Palette (`ACCENT`, `MAUVE`, `THEME`, `WHITE`, `BLOCK_SHADOW`), `CONTACT`, `WORDMARK_METRICS`, `loadFonts`, and the generated artwork assets (`MARK`, `WORDMARK_ON_DARK`, …). |
+| `@devdogsuga/brand/event` | The club's timezone and the meeting-to-card formatting.                                                                                                                      |
 
 `./event` is a separate entry point on purpose: it is types plus pure
 functions, so anything that a browser bundles can import it without dragging
 this package's base64-embedded fonts and artwork along. The root entry
-re-exports the event *types* for convenience, but importing the root pulls the
+re-exports the event _types_ for convenience, but importing the root pulls the
 assets with it.
 
 ## Colour

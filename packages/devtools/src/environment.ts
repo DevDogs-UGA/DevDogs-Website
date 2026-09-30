@@ -105,7 +105,9 @@ function run(file: string, args: string[]): string | null {
 export function probeEnvironment(
   execute: (file: string, args: string[]) => string | null = run,
 ): Environment {
-  const envFile: Known = existsSync(join(findRepoRoot(), ".env")) ? "yes" : "no";
+  const envFile: Known = existsSync(join(findRepoRoot(), ".env"))
+    ? "yes"
+    : "no";
 
   // `docker info` rather than `docker version`: version answers from the
   // client alone, so it reports success against a daemon that is not running.

@@ -36,9 +36,14 @@ function loadSource<T>(specifier: string): Promise<T> {
           ` or packages/* to declare it.`,
       );
     }
-    const { resolvedPath } = resolveFromRepo(repoRoot, resolutionBase, specifier, {
-      condition: CONDITION,
-    });
+    const { resolvedPath } = resolveFromRepo(
+      repoRoot,
+      resolutionBase,
+      specifier,
+      {
+        condition: CONDITION,
+      },
+    );
     return importRepoTs<T>(resolvedPath);
   })();
 

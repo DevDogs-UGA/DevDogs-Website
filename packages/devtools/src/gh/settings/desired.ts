@@ -53,7 +53,9 @@ export interface DesiredSettings {
  * rather than this module reading the filesystem itself, so `desired.test.ts`
  * can assert the shape with a fixture list and no repo on disk.
  */
-export function buildDesiredSettings(actionPatterns: readonly string[]): DesiredSettings {
+export function buildDesiredSettings(
+  actionPatterns: readonly string[],
+): DesiredSettings {
   return {
     securityAndAnalysis: {
       secretScanning: true,
@@ -76,7 +78,11 @@ export function buildDesiredSettings(actionPatterns: readonly string[]): Desired
     },
     environments: [
       { name: "staging", allowedBranches: ["main"], requireReviewers: false },
-      { name: "production", allowedBranches: ["production"], requireReviewers: false },
+      {
+        name: "production",
+        allowedBranches: ["production"],
+        requireReviewers: false,
+      },
       {
         name: "production-apply",
         allowedBranches: ["production"],

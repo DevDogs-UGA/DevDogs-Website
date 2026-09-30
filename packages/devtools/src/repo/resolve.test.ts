@@ -1,4 +1,10 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, symlinkSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  rmSync,
+  writeFileSync,
+  symlinkSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -17,7 +23,11 @@ afterEach(() => {
 /** A minimal, real, `require`-resolvable npm-shaped package under repoRoot/node_modules. */
 function writeInstalledPackage(
   name: string,
-  opts: { exports?: Record<string, unknown>; main?: string; version?: string } = {},
+  opts: {
+    exports?: Record<string, unknown>;
+    main?: string;
+    version?: string;
+  } = {},
 ): void {
   const scopedDir = join(repoRoot, "node_modules", ...name.split("/"));
   mkdirSync(scopedDir, { recursive: true });
@@ -31,7 +41,9 @@ function writeInstalledPackage(
   writeFileSync(join(scopedDir, "package.json"), JSON.stringify(pkgJson));
   writeFileSync(join(scopedDir, "index.js"), "export const marker = true;\n");
   if (opts.exports) {
-    for (const value of Object.values(opts.exports["."] as Record<string, string>)) {
+    for (const value of Object.values(
+      opts.exports["."] as Record<string, string>,
+    )) {
       const target = join(scopedDir, value);
       mkdirSync(join(target, ".."), { recursive: true });
       writeFileSync(target, "export const marker = true;\n");
@@ -70,7 +82,6 @@ describe("findDependent", () => {
     );
   });
 
-
   it("finds an app under apps/* that depends on the specifier", () => {
     writeApp("platform", { "@devdogsuga/env": "^0.1.0" });
     expect(findDependent(repoRoot, "@devdogsuga/env")).toBe(
@@ -83,7 +94,10 @@ describe("findDependent", () => {
     mkdirSync(pkgDir, { recursive: true });
     writeFileSync(
       join(pkgDir, "package.json"),
-      JSON.stringify({ name: "@devdogsuga/open-graph", dependencies: { "@devdogsuga/brand": "^0.1.0" } }),
+      JSON.stringify({
+        name: "@devdogsuga/open-graph",
+        dependencies: { "@devdogsuga/brand": "^0.1.0" },
+      }),
     );
     expect(findDependent(repoRoot, "@devdogsuga/brand")).toBe(
       join("packages", "open-graph", "package.json"),
@@ -116,10 +130,16 @@ describe("resolveFromRepo", () => {
     writeInstalledPackage("@devdogsuga/env", { version: "0.4.2" });
     writeApp("platform", { "@devdogsuga/env": "^0.4.2" });
 
-    const result = resolveFromRepo(repoRoot, join("apps", "platform", "package.json"), "@devdogsuga/env");
+    const result = resolveFromRepo(
+      repoRoot,
+      join("apps", "platform", "package.json"),
+      "@devdogsuga/env",
+    );
 
     expect(result.version).toBe("0.4.2");
-    expect(result.resolvedPath).toBe(join(repoRoot, "node_modules", "@devdogsuga", "env", "index.js"));
+    expect(result.resolvedPath).toBe(
+      join(repoRoot, "node_modules", "@devdogsuga", "env", "index.js"),
+    );
     expect(result.pkgJsonPath).toBe(
       join(repoRoot, "node_modules", "@devdogsuga", "env", "package.json"),
     );
@@ -135,13 +155,19 @@ describe("resolveFromRepo", () => {
     writeApp("platform", { "@devdogsuga/env": "^1.2.3" });
 
     expect(() =>
-      resolveFromRepo(repoRoot, join("apps", "platform", "package.json"), "@devdogsuga/env"),
+      resolveFromRepo(
+        repoRoot,
+        join("apps", "platform", "package.json"),
+        "@devdogsuga/env",
+      ),
     ).not.toThrow();
   });
 
   it("picks the given export condition over default, per the exports map", () => {
     writeInstalledPackage("@devdogsuga/open-graph", {
-      exports: { ".": { "devdogs-source": "./src/index.ts", default: "./dist/index.js" } },
+      exports: {
+        ".": { "devdogs-source": "./src/index.ts", default: "./dist/index.js" },
+      },
     });
     writeApp("platform", { "@devdogsuga/open-graph": "workspace:*" });
 
@@ -153,7 +179,14 @@ describe("resolveFromRepo", () => {
     );
 
     expect(result.resolvedPath).toBe(
-      join(repoRoot, "node_modules", "@devdogsuga", "open-graph", "src", "index.ts"),
+      join(
+        repoRoot,
+        "node_modules",
+        "@devdogsuga",
+        "open-graph",
+        "src",
+        "index.ts",
+      ),
     );
   });
 
@@ -189,10 +222,19 @@ describe("resolveFromRepo", () => {
         main: "dist/index.js",
       }),
     );
-    writeFileSync(join(realPkgDir, "dist", "index.js"), "export const marker = true;\n");
+    writeFileSync(
+      join(realPkgDir, "dist", "index.js"),
+      "export const marker = true;\n",
+    );
 
-    mkdirSync(join(repoRoot, "node_modules", "@devdogsuga"), { recursive: true });
-    symlinkSync(realPkgDir, join(repoRoot, "node_modules", "@devdogsuga", "brand"), "dir");
+    mkdirSync(join(repoRoot, "node_modules", "@devdogsuga"), {
+      recursive: true,
+    });
+    symlinkSync(
+      realPkgDir,
+      join(repoRoot, "node_modules", "@devdogsuga", "brand"),
+      "dir",
+    );
 
     writeApp("open-graph", { "@devdogsuga/brand": "^0.9.0" });
 

@@ -26,8 +26,11 @@ const patch = [
 ].join("\n");
 
 function placeholders(html: string): DocsDiff[] {
-  return [...html.matchAll(/<div data-docs-diff="([A-Za-z0-9+/=]+)"><\/div>/g)].map(
-    (m) => JSON.parse(Buffer.from(m[1]!, "base64").toString("utf-8")) as DocsDiff,
+  return [
+    ...html.matchAll(/<div data-docs-diff="([A-Za-z0-9+/=]+)"><\/div>/g),
+  ].map(
+    (m) =>
+      JSON.parse(Buffer.from(m[1]!, "base64").toString("utf-8")) as DocsDiff,
   );
 }
 
@@ -84,7 +87,8 @@ describe("whole-file diff blocks", () => {
   ];
 
   it("carries a vscode= link", async () => {
-    const link = "vscode://devdogsuga.workshops/review?repo=o%2Fr&to=t&file=a.ts";
+    const link =
+      "vscode://devdogsuga.workshops/review?repo=o%2Fr&to=t&file=a.ts";
     const html = await renderBody(
       `\`\`\`diff file=a.ts context=2 vscode=${link}\n${whole.join("\n")}\n\`\`\`\n`,
       ctx,
@@ -118,7 +122,10 @@ describe("whole-file diff blocks", () => {
 
   it("refuses context= on a diff that is not the whole file", async () => {
     await expect(
-      renderBody(`\`\`\`diff file=a.ts context=3\n${patch.replace("-1,2 +1,2", "-5,2 +5,2")}\n\`\`\`\n`, ctx),
+      renderBody(
+        `\`\`\`diff file=a.ts context=3\n${patch.replace("-1,2 +1,2", "-5,2 +5,2")}\n\`\`\`\n`,
+        ctx,
+      ),
     ).rejects.toThrow(/whole file/);
   });
 });
