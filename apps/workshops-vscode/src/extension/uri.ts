@@ -72,7 +72,6 @@ export function parseQuery(query: string): Map<string, string> {
 
 /** A tag or ref name from a link: non-empty, bounded, no control characters. */
 function isPlausibleName(value: string): boolean {
-  // eslint-disable-next-line no-control-regex
   return (
     value.length > 0 &&
     value.length <= MAX_VALUE &&

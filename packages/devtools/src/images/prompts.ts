@@ -55,7 +55,7 @@ export async function pickGraphics(
         hint: graphic.why,
       })),
     }),
-  ) as string[];
+  );
 
   return graphics.filter((graphic) => chosen.includes(graphic.name));
 }
@@ -88,7 +88,7 @@ export async function pickFormats(
         ? ["og"]
         : [],
     }),
-  ) as string[];
+  );
 }
 
 /** `undefined` means "each graphic's own default directory". */
@@ -127,7 +127,7 @@ export async function pickOutput(
         { value: "other", label: "Other…", hint: "a directory of your own" },
       ],
     }),
-  ) as string;
+  );
 
   if (choice === "default") return undefined;
 
@@ -138,5 +138,5 @@ export async function pickOutput(
       // answer is a folder, and offering files would invite naming one.
       directory: true,
     }),
-  ) as string;
+  );
 }

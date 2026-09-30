@@ -241,7 +241,7 @@ function removeReferenceTrees(docsRoot: string): void {
 
     const dir = `${docsRoot}/${entry.name}/${REFERENCE_SEGMENT}`;
     const stat = fs.lstatSync(dir, { throwIfNoEntry: false });
-    if (stat === undefined || !stat.isDirectory()) continue;
+    if (!stat?.isDirectory()) continue;
 
     fs.rmSync(dir, { recursive: true, force: true });
   }

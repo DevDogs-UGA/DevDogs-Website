@@ -47,7 +47,7 @@ function fakeDb(behavior: { fail?: string } = {}): {
     get ended() {
       return state.ended;
     },
-  } as { db: SeedProductionDb; calls: string[]; ended: boolean };
+  };
 }
 
 beforeEach(() => {

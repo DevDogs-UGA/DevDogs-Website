@@ -84,7 +84,7 @@ async function interactive(options: EmailOptions): Promise<EmailOptions> {
       initialValues: [...EMAIL_NAMES],
       required: true,
     }),
-  ) as EmailName[];
+  );
   const formats = unwrap(
     await multiselect({
       message: "Which formats?",

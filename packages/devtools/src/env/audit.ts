@@ -307,8 +307,7 @@ export function audit(input: AuditInput): Finding[] {
     // variable store is an orphan from a rename, reported as one below.
     // Calling it a leaked secret would be a guess, and a loud wrong one. With
     // no declared set there is no way to tell the two apart, so neither fires.
-    if (input.declared === undefined || !input.declared.has(copy.name))
-      continue;
+    if (!input.declared?.has(copy.name)) continue;
     findings.push({
       key: copy.name,
       severity: "error",
@@ -388,7 +387,7 @@ export function audit(input: AuditInput): Finding[] {
     // it an unrecognised name is indistinguishable from another team's
     // variable, and calling that a leaked secret would be a loud guess.
     if (ignore.has(name)) continue;
-    if (input.declared === undefined || !input.declared.has(name)) continue;
+    if (!input.declared?.has(name)) continue;
     findings.push({
       key: name,
       severity: "error",

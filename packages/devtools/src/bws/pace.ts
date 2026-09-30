@@ -24,9 +24,7 @@ export type CallKind = "read" | "write";
 export const WRITE_GAP_MS = 1_100;
 export const READ_GAP_MS = 350;
 
-export interface Pacer {
-  (kind: CallKind): Promise<void>;
-}
+export type Pacer = (kind: CallKind) => Promise<void>;
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 

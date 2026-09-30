@@ -134,7 +134,7 @@ async function findOtherProfile(
     .maybeSingle();
   if (error)
     throw new Error(`Could not read platform.profile: ${error.message}`);
-  return data as { userId: string; preferredName: string } | null;
+  return data;
 }
 
 /**

@@ -72,7 +72,7 @@ function addButton(cell: Element): void {
 export function rehypeCopyableCells() {
   return (tree: HastRoot) => {
     visit(tree, "element", (node: Element) => {
-      const classes = node.properties["className"];
+      const classes = node.properties.className;
       if (!Array.isArray(classes) || !classes.includes(COPYABLE_CLASS)) {
         return;
       }

@@ -599,7 +599,7 @@ export async function resolveSections(
         "always included; re-run init later to add more.)",
       options: [
         ...APP_SECTIONS.map((app) => ({
-          value: app as string,
+          value: app,
           label: app,
           hint: APP_HINTS[app],
         })),

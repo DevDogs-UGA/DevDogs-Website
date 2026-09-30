@@ -290,7 +290,7 @@ function readMountTargets(
     );
   }
 
-  const targets = raw as string[];
+  const targets = raw;
   const seen = new Set<string>();
 
   for (const project of targets) {

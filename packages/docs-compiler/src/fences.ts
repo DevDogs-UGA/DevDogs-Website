@@ -51,7 +51,7 @@ export function opensFence(text: string): string | null {
   const run = fenceRun(text);
   if (run === null) return null;
   const info = text.slice(text.indexOf(run) + run.length);
-  return run[0] === "`" && info.includes("`") ? null : run;
+  return run.startsWith("`") && info.includes("`") ? null : run;
 }
 
 /**

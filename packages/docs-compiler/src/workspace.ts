@@ -88,7 +88,7 @@ function readPackage(absDir: string): Omit<WorkspacePackage, "dir"> | null {
 
   const scripts =
     typeof manifest.scripts === "object" && manifest.scripts !== null
-      ? Object.keys(manifest.scripts as Record<string, unknown>)
+      ? Object.keys(manifest.scripts)
       : [];
 
   return {

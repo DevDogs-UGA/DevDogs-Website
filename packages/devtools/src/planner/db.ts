@@ -33,7 +33,7 @@ export function connectDb(url: string): PlannerDb {
   });
   return {
     async run(query: string) {
-      return (await sql.unsafe(query)) as unknown as Record<string, unknown>[];
+      return await sql.unsafe(query);
     },
     async end() {
       await sql.end({ timeout: 5 });

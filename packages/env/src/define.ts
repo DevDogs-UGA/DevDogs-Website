@@ -61,7 +61,7 @@ export const envRegistry = z.registry<EnvMeta>();
  */
 export function define<T extends z.ZodType>(schema: T, meta: EnvMeta): T {
   envRegistry.add(schema, meta);
-  return schema.meta(meta) as T;
+  return schema.meta(meta);
 }
 
 /** Reads back what a schema was declared as, if it went through `define()`. */

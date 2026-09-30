@@ -79,7 +79,7 @@ function wholeFileOps(patch: string): Op[] | string {
     if (kind !== " " && kind !== "-" && kind !== "+") {
       return `context=: ${JSON.stringify(line)} is not a diff line`;
     }
-    ops.push({ kind: kind as Op["kind"], line: line.slice(1) });
+    ops.push({ kind: kind, line: line.slice(1) });
   }
   return ops;
 }

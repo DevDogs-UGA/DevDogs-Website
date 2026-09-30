@@ -51,7 +51,7 @@ export function isInScope(absFile: string): boolean {
   const basename = segments.at(-1) ?? "";
 
   if (!/\.tsx?$/.test(basename)) return false;
-  if (/\.d\.ts$/.test(basename)) return false;
+  if (basename.endsWith(".d.ts")) return false;
   if (/\.(?:test|db-test)\.tsx?$/.test(basename)) return false;
 
   const directories = segments.slice(0, -1);

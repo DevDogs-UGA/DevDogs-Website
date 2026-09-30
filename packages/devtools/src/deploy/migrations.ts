@@ -36,7 +36,7 @@ const MISSING_DB_URL = [
  * seconds before the apply); it is the only thing that varies between them.
  */
 export async function runDeployPlan(
-  label: string = "Migration plan",
+  label = "Migration plan",
   env: NodeJS.ProcessEnv = process.env,
   plan: (dbUrl: string) => Promise<string> = dbPushDryRun,
 ): Promise<void> {

@@ -361,7 +361,7 @@ function resolveOnly(
     if (!projects.includes(ctx.project)) return [];
   }
 
-  let children = resolveList(node.children as RootContent[], ctx);
+  let children = resolveList(node.children, ctx);
 
   for (const group of Object.keys(VARIANT_GROUPS) as VariantGroup[]) {
     if (attributes[group] === undefined) continue;
@@ -450,7 +450,7 @@ function resolveList(nodes: RootContent[], ctx: VariantContext): RootContent[] {
           hProperties: { className: [COPYABLE_CLASS] },
         };
         node.children = resolveChildren(
-          node.children as RootContent[],
+          node.children,
           ctx,
         ) as typeof node.children;
         out.push(node);
@@ -467,7 +467,7 @@ function resolveList(nodes: RootContent[], ctx: VariantContext): RootContent[] {
     if (node.type === "leafDirective") {
       fail(
         ctx,
-        node as LeafDirective,
+        node,
         node.name === "tab"
           ? "::tab outside a :::tabs block"
           : `unknown directive ::${node.name}`,
@@ -476,7 +476,7 @@ function resolveList(nodes: RootContent[], ctx: VariantContext): RootContent[] {
 
     if ("children" in node && Array.isArray(node.children)) {
       const parent = node as Parent;
-      parent.children = resolveChildren(parent.children as RootContent[], ctx);
+      parent.children = resolveChildren(parent.children, ctx);
     }
     out.push(node);
   }
@@ -506,7 +506,7 @@ function resolveChildren(
  * not see.
  */
 export function resolveVariants(tree: Parent, ctx: VariantContext): void {
-  tree.children = resolveChildren(tree.children as RootContent[], ctx);
+  tree.children = resolveChildren(tree.children, ctx);
 }
 
 /**

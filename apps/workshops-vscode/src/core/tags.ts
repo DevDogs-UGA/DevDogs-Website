@@ -54,7 +54,7 @@ export function parseTagMessage(message: string): TagMessage {
       continue;
     }
     const docs = /^Docs:\s*(.*)$/.exec(line);
-    if (docs && docs[1]?.trim()) parsed.docs = docs[1].trim();
+    if (docs?.[1]?.trim()) parsed.docs = docs[1].trim();
   }
   return parsed;
 }

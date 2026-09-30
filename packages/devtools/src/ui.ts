@@ -20,7 +20,7 @@ export function bail(message = "Cancelled."): never {
 /** Exits cleanly on Ctrl-C rather than letting a cancel symbol leak onward. */
 export function unwrap<T>(value: T | symbol): T {
   if (isCancel(value)) bail();
-  return value as T;
+  return value;
 }
 
 /**

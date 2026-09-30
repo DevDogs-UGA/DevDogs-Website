@@ -415,7 +415,7 @@ export async function runPlannerDrop(
     return;
   }
   const stored = doc.get("DB_URL");
-  if (stored && stored.includes(PLANNER_ROLE)) {
+  if (stored?.includes(PLANNER_ROLE)) {
     doc.set("DB_URL", "");
     await writeFile(path, doc.toString());
     log.info(

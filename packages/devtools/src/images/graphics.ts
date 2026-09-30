@@ -144,7 +144,7 @@ const APP_HOME: Record<AppKey, { icons: string; app?: string }> = {
 };
 
 function appGraphics(og: OpenGraphModule): Graphic[] {
-  return (Object.keys(og.APPS) as AppKey[]).map((app) => {
+  return Object.keys(og.APPS).map((app) => {
     // Non-null by construction: every real AppKey (`Object.keys(og.APPS)`)
     // has an APP_HOME entry. `AppKey` itself is widened to `string` here
     // (see `open-graph-types.ts`'s header on why), so TS can no longer see

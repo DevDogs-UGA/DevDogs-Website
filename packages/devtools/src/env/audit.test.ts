@@ -91,7 +91,7 @@ describe("undeclared keys", () => {
       github: [gh("DB_URL")],
       declared: new Set(["DB_URL"]),
     });
-    expect(findings.some((f) => /disagrees/.test(f.summary))).toBe(true);
+    expect(findings.some((f) => f.summary.includes("disagrees"))).toBe(true);
   });
 });
 
@@ -747,7 +747,7 @@ describe("a key in the wrong GitHub store", () => {
       declared,
     });
     const leak = findings.find((f) =>
-      /is a secret and is a VARIABLE/.test(f.summary),
+      f.summary.includes("is a secret and is a VARIABLE"),
     );
     expect(leak).toBeDefined();
     expect(leak!.severity).toBe("error");

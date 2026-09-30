@@ -153,7 +153,7 @@ function prompt(cwd: string | undefined, branch: string | undefined): Element {
   }
   parts.push(span("docs-prompt-arrow", [text(cwd || branch ? " ❯ " : "❯ ")]));
   const el = span("docs-prompt", parts);
-  el.properties["ariaHidden"] = "true";
+  el.properties.ariaHidden = "true";
   return el;
 }
 
@@ -177,7 +177,7 @@ function textOf(node: ElementContent): string {
 /** Shiki's own elements carry `class` as a string; this package's carry
  * `className`. Either way, the element's classes as a list. */
 function classesOf(el: Element): string[] {
-  const value = el.properties["className"] ?? el.properties["class"];
+  const value = el.properties.className ?? el.properties["class"];
   if (Array.isArray(value)) return value.map(String);
   return typeof value === "string" ? value.split(/\s+/).filter(Boolean) : [];
 }
@@ -185,7 +185,7 @@ function classesOf(el: Element): string[] {
 function addClass(el: Element, className: string): void {
   const classes = classesOf(el);
   delete el.properties["class"];
-  el.properties["className"] = [...classes, className];
+  el.properties.className = [...classes, className];
 }
 
 /**
@@ -343,7 +343,7 @@ function decorateShell(
     span("docs-shell-cursor", []),
   ]);
   addClass(idle, "docs-shell-idle");
-  idle.properties["ariaHidden"] = "true";
+  idle.properties.ariaHidden = "true";
   code.children.push(text("\n"), idle);
 }
 
@@ -464,7 +464,7 @@ export function docsCodeBlocks(): ShikiTransformer {
           // A separator row where the excerpt skips lines of the file.
           const gap = span("line", []);
           addClass(gap, "docs-code-gap");
-          gap.properties["ariaHidden"] = "true";
+          gap.properties.ariaHidden = "true";
           code.children.splice(code.children.indexOf(line), 0, gap, text("\n"));
         }
       });

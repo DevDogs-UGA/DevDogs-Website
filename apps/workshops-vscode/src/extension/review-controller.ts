@@ -455,7 +455,7 @@ export class WorkshopReviewController
   /** Runs one command in the Workshop terminal. Returns whether it is done. */
   async runCommand(index: number): Promise<boolean> {
     const s = this.session;
-    if (!s || !s.queue.canRun(index)) return false;
+    if (!s?.queue.canRun(index)) return false;
     // A retry starts from pending.
     s.queue.start(index);
     this.changed.fire(undefined);
