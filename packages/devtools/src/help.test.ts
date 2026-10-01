@@ -135,18 +135,18 @@ describe("the top level", () => {
 describe("a level down", () => {
   it("lists a group's subcommands and stops", () => {
     const env = renderHelp(catalog, ["env"]);
-    expect(env).toContain("pull");
-    expect(env).toContain("audit");
+    expect(env).toContain("init");
+    expect(env).toContain("example");
     // env's own options belong to its subcommands, not to `env`.
-    expect(env).not.toContain("--access-token");
+    expect(env).not.toContain("--apps");
     expect(env.split("\n").length).toBeLessThan(20);
   });
 
   it("lists a leaf's options and has no subcommand section", () => {
-    const pull = renderHelp(catalog, ["env", "pull"]);
-    expect(pull).toContain("--target");
-    expect(pull).toContain("--access-token");
-    expect(pull).not.toContain("Subcommands:");
+    const init = renderHelp(catalog, ["env", "init"]);
+    expect(init).toContain("--target");
+    expect(init).toContain("--apps");
+    expect(init).not.toContain("Subcommands:");
   });
 
   it("renders every path in the tree", () => {

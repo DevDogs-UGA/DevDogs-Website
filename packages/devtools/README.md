@@ -55,6 +55,14 @@ and `psql` plus package scripts (`types:db`, `types:drizzle`, `types:cf`,
 `cf preview` and `run` are deprecated aliases, hidden from the menu, for
 callers that have not moved yet; `--help` names each replacement.
 
+What always needs production secrets is not here. `deploy`, `env
+pull|push|audit` and `planner` are in `@devdogsuga/backstage`
+(`pnpm dlx @devdogsuga/backstage …`, no checkout needed to start); `devtools
+env` keeps `init`, `example` and `reset`, and `bw` is gone (backstage's `env`
+signs in to Bitwarden itself). `devtools-ci` and `devtools-ci-bare` are
+deprecated aliases that run backstage's code, bundled in, so DevDogsUGA's
+workflows keep working until they move to `backstage`.
+
 The menu is generated from the same command tree the argv parser walks, so
 there is no second list to fall out of step — reach for `--help` at any level
 rather than a table here.
@@ -88,10 +96,11 @@ default, in both `pnpm devtools` and `devtools-ci`:
 composes the tree and `src/cli.ts` maps top-level command names to handlers. The
 shared core (repo and peer loading, ui, telemetry, tier and env entry, the
 catalog, help and menu) lives in the private `@devdogsuga/cli-core` package,
-which `tsdown` inlines into `dist/`. Only the core is bundled: every other
+which `tsdown` inlines into `dist/` (until the cutover, so is backstage's
+`devtools-ci` alias entry). Only those are bundled: every other
 import stays external and must be declared in this package's `dependencies` or
 `peerDependencies`, and the build fails when one is not
-(`scripts/check-bundle-imports.mjs` reads the built output).
+(`../../scripts/check-bundle-imports.mjs` reads the built output).
 
 [Command guide](../../docs/toolkit/guides/devtools.md) ·
 [API reference](https://devdogsuga.org/docs/toolkit/reference/api/devtools) ·

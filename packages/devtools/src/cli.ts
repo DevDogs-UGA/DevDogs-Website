@@ -44,7 +44,6 @@ import {
 } from "@devdogsuga/cli-core/telemetry";
 import { errorMessage, explain } from "@devdogsuga/cli-core/ui";
 import { ownVersion } from "@devdogsuga/cli-core/version";
-import { runBw } from "./bws/bw.js";
 import { catalog } from "./catalog.js";
 import { handleCf } from "./cf/commands.js";
 import { handleCheck } from "./check/commands.js";
@@ -60,7 +59,6 @@ import { handleGrantRoot, handleRoles } from "./roles/commands.js";
 import { handleImages } from "./images/commands.js";
 import { handleOAuth } from "./oauth/commands.js";
 import { handlePassthrough } from "./passthrough/commands.js";
-import { runPlannerCommand } from "./planner/commands.js";
 import { handlePreset } from "./preset/commands.js";
 import { runTask } from "./run/commands.js";
 import { handleScript } from "./script/commands.js";
@@ -72,10 +70,9 @@ import { handleWorkflows } from "./workflows/commands.js";
 /**
  * Commands that work against whatever tier the session points at, keyed by
  * top-level name. Each handler is owned by its domain's `commands.ts`; this
- * table is all `cli.ts` knows about them. One of them carries a
- * production-credential half that moves to the backstage CLI with the
- * production commands below: `env pull|push|audit` (declared in
- * `env/catalog.ts` as `envVaultSubcommands`).
+ * table is all `cli.ts` knows about them. (What always needs production
+ * secrets, `deploy`, `env pull|push|audit` and `planner`, is the backstage
+ * CLI's.)
  */
 const CONTRIBUTOR_HANDLERS: Record<string, CommandHandler> = {
   setup: handleSetup,
@@ -105,22 +102,8 @@ const CONTRIBUTOR_HANDLERS: Record<string, CommandHandler> = {
 };
 
 /**
- * Commands that ALWAYS need production secrets, which leave this CLI for the
- * backstage CLI (TASK-399): `bw`, and `deploy` (its own `devtools-ci` bin,
- * see `ci.ts`). Kept apart so the move is a cut and paste. Like `run`, a
- * typed `bw` is handled in `main()` before `intro()`.
- */
-const PRODUCTION_HANDLERS: Record<string, CommandHandler> = {
-  bw: runBw,
-  planner: async (rest) => {
-    await runPlannerCommand(rest);
-    return DONE;
-  },
-};
-
-/**
  * The real tools with the session's env and tier. A typed one is handled in
- * `main()` before `intro()`, like `bw`; these entries are for a dispatcher
+ * `main()` before `intro()`; these entries are for a dispatcher
  * that reaches them any other way.
  */
 const PASSTHROUGH_TOOLS = [
@@ -148,7 +131,6 @@ const PASSTHROUGH_HANDLERS: Record<string, CommandHandler> = Object.fromEntries(
 export const HANDLERS: Record<string, CommandHandler> = {
   ...CONTRIBUTOR_HANDLERS,
   ...PASSTHROUGH_HANDLERS,
-  ...PRODUCTION_HANDLERS,
 };
 
 /**
@@ -160,8 +142,19 @@ export const HANDLERS: Record<string, CommandHandler> = {
  */
 const RETIRED: Record<string, { message: string; hints: string[] }> = {
   secrets: {
-    message: "`secrets` is now `env`.",
-    hints: ["pnpm devtools env <pull|push|audit|reset|example|init>"],
+    message: "`secrets` is now `backstage env`.",
+    hints: ["pnpm dlx @devdogsuga/backstage env <pull|push|audit>"],
+  },
+  // Commands that always need production secrets live in the officer CLI.
+  bw: {
+    message: "`bw` is gone: `backstage env` signs in to Bitwarden itself.",
+    hints: ["pnpm dlx @devdogsuga/backstage env <pull|push|audit>"],
+  },
+  planner: {
+    message: "`planner` moved to backstage.",
+    hints: [
+      "pnpm dlx @devdogsuga/backstage planner <status|create|reset-password|drop>",
+    ],
   },
 };
 
@@ -220,22 +213,13 @@ async function dispatch(argv: string[]): Promise<string | null> {
  */
 export async function main(argv: string[]): Promise<void> {
   // Bootstrapped here — after `argv` is parsed off `process.argv`, before any
-  // dispatch below (including `bw`'s passthrough) touches it — so the
+  // dispatch below touches it — so the
   // `command` tag on whatever this run reports is the same argv every branch
   // below is about to act on. See `telemetry.ts`'s header for the no-op
   // contract when no DSN is configured.
   initDevtoolsTelemetry(argv[0] ?? "menu");
 
-  // ⚠️ BEFORE the `--help` check, unlike everything else here. `bw` is a
-  // passthrough, so `pnpm devtools bw --help` is a request for Bitwarden's
-  // help, not for ours. Answering it with our own would be this CLI talking
-  // over a tool it promised to get out of the way of.
-  if (argv[0] === "bw") {
-    await runBw(argv.slice(1));
-    return;
-  }
-
-  // The real tools, for the same reason: `devtools supabase --help` is the
+  // The real tools: `devtools supabase --help` is the
   // Supabase CLI's help. Before `intro()` too, so no banner lands above (or
   // an outro after) another tool's output.
   if (isPassthroughTool(argv[0])) {
@@ -280,13 +264,13 @@ export async function main(argv: string[]): Promise<void> {
     return;
   }
 
-  // Deploy has moved to the devtools-ci bin. Point any stray invocations at it
-  // before `intro()`, because `devtools deploy secrets-file` could otherwise
-  // fall through to the wizard banner on a stdout that is a credential channel.
+  // Deploys moved to the officer CLI. Point any stray invocation at it before
+  // `intro()`, because a deploy step's stdout can be a credential channel and
+  // must never carry the wizard banner.
   if (argv[0] === "deploy") {
     process.stderr.write(
-      "deploy has moved to devtools-ci.\n" +
-        "  Use: pnpm devtools-ci deploy <step|app> [flags]\n",
+      "deploy has moved to backstage.\n" +
+        "  Use: pnpm dlx @devdogsuga/backstage deploy <step|app> [flags]\n",
     );
     process.exitCode = 1;
     return;

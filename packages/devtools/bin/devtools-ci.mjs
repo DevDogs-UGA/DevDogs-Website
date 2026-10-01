@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Entry point for the `devtools-ci` bin. Same technique as `bin/devtools.mjs`
- * — see that file's header — pointed at `dist/launch-ci.js` instead.
+ * Entry point for the deprecated `devtools-ci` bin, which forwards to
+ * `@devdogsuga/backstage`'s code (see `src/launch-ci.ts`). Same technique as
+ * `bin/devtools.mjs` — see that file's header — pointed at `dist/launch-ci.js`.
  */
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

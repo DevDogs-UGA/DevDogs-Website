@@ -5,7 +5,7 @@
  * Unlike the unit suite (`src/**\/*.test.ts`, `pnpm test`), these do not mock
  * the filesystem or `findRepoRoot()` — they `pnpm pack` the real package,
  * install the real tarball into a temp copy of the committed fixture repo
- * (`test/fixture-repo/`, a minimal DevDogsUGA-shaped pnpm workspace), and run
+ * (`packages/cli-core/test-fixtures/fixture-repo/`, a minimal DevDogsUGA-shaped pnpm workspace), and run
  * the real `bin/devtools.mjs` as a subprocess against it. This is the closest
  * thing to "does a fresh `pnpm dlx @devdogsuga/devtools` actually work" that
  * can run without a real npm publish.
@@ -42,7 +42,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DEVTOOLS_ROOT = join(HERE, "..", "..");
 const BACKSTAGE_ROOT = join(DEVTOOLS_ROOT, "..", "..");
-const FIXTURE_SRC = join(DEVTOOLS_ROOT, "test", "fixture-repo");
+const FIXTURE_SRC = join(
+  BACKSTAGE_ROOT,
+  "packages",
+  "cli-core",
+  "test-fixtures",
+  "fixture-repo",
+);
 
 const PACK_TIMEOUT_MS = 60_000;
 const INSTALL_TIMEOUT_MS = 5 * 60_000;
@@ -594,6 +600,48 @@ describe("devtools contract tests", () => {
     });
     expect(status).toBe(0);
     expect(stdout).toContain("deploy");
+  });
+
+  // The `deploy` steps backstage folded away still run through the aliases, so
+  // the old workflows keep working until the cutover.
+  describe("the deploy steps the aliases keep", () => {
+    const bare = (): string =>
+      join(fixtureDir, "node_modules", ".bin", "devtools-ci-bare");
+
+    it("require-token refuses without CLOUDFLARE_API_TOKEN and is silent with it", async () => {
+      const refused = await run(["deploy", "require-token"], {
+        bin: bare(),
+        env: { CLOUDFLARE_API_TOKEN: "", CI: "true" },
+      });
+      expect(refused.status).toBe(1);
+      expect(refused.stderr).toContain("CLOUDFLARE_API_TOKEN is not set");
+
+      const passed = await run(["deploy", "require-token"], {
+        bin: bare(),
+        env: { CLOUDFLARE_API_TOKEN: "a-token", CI: "true" },
+      });
+      expect(passed.status).toBe(0);
+      expect(passed.stdout).toBe("");
+      expect(passed.stderr).toBe("");
+    });
+
+    it("require-planner refuses without a DB_URL", async () => {
+      const { status, stderr } = await run(["deploy", "require-planner"], {
+        bin: bare(),
+        env: { DB_URL: "", CI: "true" },
+      });
+      expect(status).toBe(1);
+      expect(stderr).toContain("DB_URL is not set");
+    });
+
+    it("secrets-file needs --app", async () => {
+      const { status, stderr } = await run(["deploy", "secrets-file"], {
+        bin: bare(),
+        env: { CI: "true" },
+      });
+      expect(status).toBe(1);
+      expect(stderr).toContain("--app <name> is required");
+    });
   });
 
   // ── the deprecated run alias ───────────────────────────────────────────────

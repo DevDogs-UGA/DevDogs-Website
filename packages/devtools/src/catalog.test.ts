@@ -127,11 +127,9 @@ describe("prompts", () => {
    * documented categories:
    *
    *   * **live-data**: the command asks itself from something live (`--app`,
-   *     `--user`, `--target`, `--apps`, `--filter`).
+   *     `--user`, `--apps`, `--filter`).
    *   * **suppressor**: exists only to suppress a prompt (`--yes`); asking in
    *     a wizard that IS the prompt makes no sense.
-   *   * **credential**: carries a secret (`--access-token`); interactive path
-   *     resolves it better and typing it makes it visible to shell history.
    *   * **scripting-only**: meaningful only outside a TTY (`--json`); asking
    *     in a wizard produces nothing useful.
    *
@@ -144,12 +142,9 @@ describe("prompts", () => {
       // live-data: the command asks from something live
       "--app",
       "--user",
-      "--target",
       "--apps",
       // suppressor: exists to suppress a prompt, not to be one
       "--yes",
-      // credential: visible in shell history if asked interactively
-      "--access-token",
       // file path: a text box is a worse version of the default
       "--file",
       // `run`'s two. The multiselect it opens IS this question, asked against
@@ -259,8 +254,6 @@ describe("coverage of what the CLI dispatches", () => {
     // what a typed command line reaches, and once in `dispatch` for the walk
     // the wizard hands back. They belong here for the second of those.
     "run",
-    "bw",
-    "planner",
     // The presets, and the real tools (passthroughs, typed only: `main()`
     // routes them ahead of `intro()`).
     "preset",
@@ -280,14 +273,7 @@ describe("coverage of what the CLI dispatches", () => {
   });
 
   it("declares the subcommands each group dispatches", () => {
-    expect(subcommandNames(["env"])).toEqual([
-      "pull",
-      "push",
-      "audit",
-      "init",
-      "example",
-      "reset",
-    ]);
+    expect(subcommandNames(["env"])).toEqual(["init", "example", "reset"]);
     expect(subcommandNames(["cron"])).toEqual(["list", "run"]);
     expect(subcommandNames(["workflows"])).toEqual(["list", "run", "serve"]);
     expect(subcommandNames(["check"])).toEqual([
@@ -295,12 +281,6 @@ describe("coverage of what the CLI dispatches", () => {
       "env",
       "workers",
       "scripts",
-    ]);
-    expect(subcommandNames(["planner"])).toEqual([
-      "status",
-      "create",
-      "reset-password",
-      "drop",
     ]);
     expect(subcommandNames(["preset"])).toEqual([
       "restart-stack",
@@ -395,9 +375,7 @@ describe("scopes", () => {
 describe("subcommandList", () => {
   it("reads as a sentence", () => {
     expect(subcommandList(["cf"])).toBe("preview");
-    expect(subcommandList(["planner"])).toBe(
-      "status, create, reset-password or drop",
-    );
+    expect(subcommandList(["cron"])).toBe("list or run");
   });
 
   it("is empty for a leaf", () => {

@@ -4,8 +4,8 @@
  * The claim under test is the one the menu exists for: **every interactive
  * command in the tree is reachable from it, and the argv a walk produces is one the CLI
  * accepts.** The menu this replaced could not make that claim. It held ten
- * hand-written entries beside a CLI with sixteen top-level commands, so `env`,
- * `planner` and `docs index` had no way in.
+ * hand-written entries beside a CLI with sixteen top-level commands, so `env`
+ * and `docs index` had no way in.
  *
  * `@clack/prompts` is mocked rather than driven: the point is which questions
  * get asked and what argv comes out, not how a terminal renders them.
@@ -243,16 +243,6 @@ describe("options become argv", () => {
       "bash",
     ]);
     expect(argv).toEqual(["completions", "--shell", "bash"]);
-  });
-
-  it("drops an optional text answered blank", async () => {
-    const argv = await walk([
-      groupOf("planner")!,
-      findCommand(["planner"])!,
-      findCommand(["planner", "status"])!,
-      "  ",
-    ]);
-    expect(argv).toEqual(["planner", "status"]);
   });
 });
 
@@ -530,7 +520,7 @@ describe("adapts to the machine", () => {
   });
 
   it("leaves a group without scopes unlabelled", async () => {
-    const drawn = await screen(RUNNING, ["planner"]);
+    const drawn = await screen(RUNNING, ["cron"]);
     for (const entry of drawn) {
       expect(entry.hint ?? "", entry.label).not.toContain(" · ");
     }

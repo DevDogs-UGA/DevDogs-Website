@@ -48,14 +48,8 @@
  * already been made, and `resolveTier` (see `tier.ts`) falls back to reading
  * it off `process.env.DEPLOY_ENV` rather than asking again.
  */
-import { select } from "@clack/prompts";
 import type { DeployEnvironment } from "@devdogsuga/env";
 import type { DevDatabase } from "@devdogsuga/env/load";
-import type * as EnvSessionModule from "@devdogsuga/env/session";
-import type {
-  SessionTierResolution,
-  TierChoice,
-} from "@devdogsuga/env/session";
 import { helpPath } from "@devdogsuga/cli-core/help";
 import { catalog } from "./catalog.js";
 import {
@@ -75,7 +69,9 @@ import {
   hasYes,
   isNonInteractive,
   stripNoEnvFlag,
+  stripTierFlag,
 } from "@devdogsuga/cli-core/mode";
+import { promptTier, resolveWithoutEnv } from "@devdogsuga/cli-core/session";
 import {
   gateHostedTier,
   GATE_PASSED_ENV,
@@ -92,35 +88,9 @@ import {
   lastSentryEventId,
 } from "@devdogsuga/cli-core/telemetry";
 import { ignoreClosedPipes } from "@devdogsuga/cli-core/pipes";
-import { errorMessage, unwrap } from "@devdogsuga/cli-core/ui";
+import { errorMessage } from "@devdogsuga/cli-core/ui";
 
-/**
- * Pulls a global `--tier <t>` out of `argv`, wherever it sits, leaving every
- * other argument untouched and in its original order. Exported for its own
- * unit tests; `launch()` below is the only real caller.
- */
-export function stripTierFlag(argv: readonly string[]): {
-  explicit: string | undefined;
-  rest: string[];
-} {
-  const rest = [...argv];
-  const index = rest.indexOf("--tier");
-  if (index === -1) return { explicit: undefined, rest };
-  const value = rest[index + 1];
-  // A trailing `--tier` with nothing after it removes just the flag; the
-  // missing value then reaches `resolveSessionTier` as `explicit: undefined`,
-  // which falls through to `DEPLOY_ENV`/the sole tier/the prompt exactly as
-  // if `--tier` had never been typed, rather than this function guessing.
-  //
-  // A following token that is itself a flag is treated the same way, NOT
-  // consumed as the value — the guard every other flag-value reader in this
-  // CLI keeps (`flagValue` in `@devdogsuga/cli-core/args`). Without it,
-  // `--tier --help` or `--tier -h` would swallow the flag as a bogus tier and
-  // refuse with "unknown tier" instead of reaching the help bypass below.
-  const missing = value === undefined || value.startsWith("-");
-  rest.splice(index, missing ? 1 : 2);
-  return { explicit: missing ? undefined : value, rest };
-}
+export { stripTierFlag };
 
 /**
  * Whether the command `rest` dispatches to is declared `envFree` in
@@ -158,16 +128,6 @@ async function startStack(): Promise<{ code: number; lines: string[] }> {
   return runStackCommand("start");
 }
 
-/** The real interactive picker: a clack `select`, unwrapped so Ctrl-C exits
- * cleanly instead of leaking a cancel symbol into `resolveSessionTier`.
- * Values are session selector words (`"development:local"`, `"staging"`…). */
-async function promptTier(
-  message: string,
-  choices: TierChoice[],
-): Promise<string> {
-  return unwrap(await select<string>({ message, options: choices }));
-}
-
 /**
  * Imports `cli.ts` and runs it, reporting a thrown rejection the same way
  * `cli.ts`'s own top level used to before `main` became an export instead of
@@ -185,28 +145,6 @@ async function dispatch(argv: string[]): Promise<void> {
     await captureDevtoolsError(err);
     process.exit(1);
   }
-}
-
-/**
- * The session for `--no-env`: the named tier, parsed and nothing more. `--tier`
- * wins over `DEPLOY_ENV`, and a run that names neither is plain development.
- */
-function resolveWithoutEnv(
-  envSession: typeof EnvSessionModule,
-  explicit: string | undefined,
-): SessionTierResolution {
-  const selector =
-    explicit ?? nonEmpty(process.env.DEPLOY_ENV) ?? "development";
-  const parsed = envSession.parseSessionSelector(selector);
-  if (parsed === null) {
-    return {
-      ok: false,
-      reason:
-        `unknown tier "${selector}". Expected: development, ` +
-        `${envSession.SESSION_SELECTORS.join(", ")}.`,
-    };
-  }
-  return { ok: true, ...parsed, resolvedBy: "explicit" };
 }
 
 /**

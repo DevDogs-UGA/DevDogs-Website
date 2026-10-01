@@ -118,7 +118,6 @@ describe("--dry-run", () => {
       ["grant-root"],
       ["roles", "grant"],
       ["roles", "revoke"],
-      ["planner", "create"],
     ]) {
       expect(dryRunKind(catalog, path), path.join(" ")).toBeUndefined();
     }

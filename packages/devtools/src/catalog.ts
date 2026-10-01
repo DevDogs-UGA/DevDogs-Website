@@ -8,12 +8,10 @@
  * read it before the session's environment is entered.
  */
 import { createCatalog, type CommandGroup } from "@devdogsuga/cli-core/catalog";
-import { bwCommand } from "./bws/catalog.js";
 import { cfCommand } from "./cf/catalog.js";
 import { completionsCommand } from "./completions/catalog.js";
 import { checkCommand } from "./check/catalog.js";
 import { cronCommand } from "./cron/catalog.js";
-import { deployCommand } from "./deploy/catalog.js";
 import { dbCommand } from "./db/catalog.js";
 import { doctorCommand } from "./doctor/catalog.js";
 import { emailsCommand } from "./emails/catalog.js";
@@ -29,7 +27,6 @@ import {
   supabaseCommand,
   wranglerCommand,
 } from "./passthrough/catalog.js";
-import { plannerCommand } from "./planner/catalog.js";
 import { presetCommand } from "./preset/catalog.js";
 import { runCommand } from "./run/catalog.js";
 import { scriptCommand } from "./script/catalog.js";
@@ -76,12 +73,6 @@ export const GROUPS: readonly CommandGroup[] = [
     commands: [envCommand, rolesCommand, grantRootCommand],
   },
   {
-    // Always need production secrets, so they leave for the backstage CLI
-    // (TASK-399); grouped here so that move is one cut.
-    title: "Production (moving to backstage)",
-    commands: [bwCommand, plannerCommand],
-  },
-  {
     title: "Environment",
     commands: [doctorCommand],
   },
@@ -95,14 +86,6 @@ export const GROUPS: readonly CommandGroup[] = [
   },
 ];
 
-/**
- * The commands the `devtools-ci` bin exposes. Never reached from the wizard
- * and never rendered in `--help`.
- */
-export const CI_GROUPS: readonly CommandGroup[] = [
-  { title: "Deploy", commands: [deployCommand] },
-];
-
 export const catalog = createCatalog({
   usage: "pnpm devtools",
   commonTasks: [
@@ -114,5 +97,4 @@ export const catalog = createCatalog({
     ["cron run", "Choose and run a scheduled job"],
   ],
   groups: GROUPS,
-  ciGroups: CI_GROUPS,
 });
