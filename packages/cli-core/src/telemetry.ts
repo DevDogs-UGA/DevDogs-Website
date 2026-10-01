@@ -29,6 +29,7 @@
 import { readFileSync } from "node:fs";
 import * as Sentry from "@sentry/node";
 import { buildSentryOptions } from "@devdogsuga/telemetry";
+import { isNonInteractive } from "./mode.js";
 import { discoverRepoRoot } from "./repo/root.js";
 import { ownVersion } from "./version.js";
 
@@ -58,12 +59,13 @@ export function resolveDevtoolsDsn(
 let initialized = false;
 
 /**
- * `'ci'` in every GitHub Actions job (`CI` is set by the runner itself,
- * before any workflow-authored env), `'local'` on a contributor's machine.
+ * `'ci'` whenever the run is non-interactive (no TTY, or `CI=true`, which the
+ * runner sets itself before any workflow-authored env), `'local'` on a
+ * contributor's terminal.
  * One of `@devdogsuga/telemetry`'s `ENVIRONMENTS`.
  */
 export function devtoolsEnvironment(): "ci" | "local" {
-  return process.env.CI ? "ci" : "local";
+  return isNonInteractive() ? "ci" : "local";
 }
 
 /**

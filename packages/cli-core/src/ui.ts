@@ -10,10 +10,12 @@
  *     ends at a stack trace.
  */
 import { cancel, isCancel, log, note } from "@clack/prompts";
+import { isNonInteractive } from "./mode.js";
 import { reportDevtoolsError } from "./telemetry.js";
 
 export function bail(message = "Cancelled."): never {
-  cancel(message);
+  if (isNonInteractive()) process.stderr.write(`${message}\n`);
+  else cancel(message);
   process.exit(1);
 }
 
@@ -35,6 +37,14 @@ export function explain(
   detail: string,
   hints: string[] = [],
 ): void {
+  // Non-interactive: plain lines on stderr, no clack boxes, so a log reads as
+  // a log and stdout stays whatever the command meant it to be.
+  if (isNonInteractive()) {
+    process.stderr.write(`${summary}\n`);
+    if (detail) process.stderr.write(`${detail}\n`);
+    for (const hint of hints) process.stderr.write(`  try: ${hint}\n`);
+    return;
+  }
   log.error(summary);
   if (detail) log.message(detail);
   if (hints.length > 0) note(hints.join("\n"), "Try this");
