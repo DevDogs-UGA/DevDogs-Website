@@ -169,7 +169,7 @@ describe("unpinned-action refusal", () => {
     const { log, restore } = captureConsole();
     const code = await runGithubSettings([]);
     expect(code).toBe(0);
-    const printed = log.mock.calls.map((c) => c[0]).join("\n");
+    const printed = log.mock.calls.map((c) => String(c[0])).join("\n");
     expect(printed).toContain("REFUSED");
     expect(printed).toContain(".github/workflows/ci.yaml:42");
     restore();

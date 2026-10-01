@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as NodeChildProcess from "node:child_process";
 
 /**
  * `run()`'s missing-binary handling and `seedBuckets()`'s exact argv, both
@@ -42,7 +43,7 @@ const fake = vi.hoisted(() => {
 });
 
 vi.mock("node:child_process", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:child_process")>();
+  const actual = await importOriginal<typeof NodeChildProcess>();
   return { ...actual, spawn: fake.spawn };
 });
 

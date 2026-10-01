@@ -1,6 +1,8 @@
 // Unit tests for cron/commands helpers.
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import type * as Discovery from "./discovery.js";
+import type * as RepoPeers from "../repo/peers.js";
 
 /**
  * `runCronRun`'s own dependencies, faked at the module boundary for the
@@ -36,7 +38,7 @@ const fixtures = vi.hoisted(() => ({
 }));
 
 vi.mock("./discovery.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./discovery.js")>()),
+  ...(await importOriginal<typeof Discovery>()),
   discoverCronMaps: vi.fn(async () => fixtures.maps),
   discoverWranglerConfigs: vi.fn(() => fixtures.configs),
 }));
@@ -47,7 +49,7 @@ vi.mock("./discovery.js", async (importOriginal) => ({
 vi.mock("../repo/peers.js", async (importOriginal) => {
   class MissingEnvFileError extends Error {}
   return {
-    ...(await importOriginal<typeof import("../repo/peers.js")>()),
+    ...(await importOriginal<typeof RepoPeers>()),
     loadEnvLoad: vi.fn(async () => ({
       loadEnvironment: vi.fn(async () => {
         throw new MissingEnvFileError(

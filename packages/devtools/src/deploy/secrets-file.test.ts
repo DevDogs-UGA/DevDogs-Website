@@ -165,7 +165,9 @@ describe("which keys are sent", () => {
     // Sending "" would read as configured to every consumer that checks for
     // presence, which is worse than the key being absent.
     expect(
-      Object.values(JSON.parse(readFileSync(result.file, "utf8"))),
+      Object.values(
+        JSON.parse(readFileSync(result.file, "utf8")) as Record<string, string>,
+      ),
     ).not.toContain("");
   });
 

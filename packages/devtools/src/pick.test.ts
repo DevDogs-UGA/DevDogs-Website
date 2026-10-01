@@ -30,7 +30,9 @@ function reported(): string {
     ...vi.mocked(log.error).mock.calls.flat(),
     ...vi.mocked(log.message).mock.calls.flat(),
     ...vi.mocked(note).mock.calls.flat(),
-  ].join("\n");
+  ]
+    .filter((part): part is string => typeof part === "string")
+    .join("\n");
 }
 
 beforeEach(() => {

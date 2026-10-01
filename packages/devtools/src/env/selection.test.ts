@@ -4,7 +4,6 @@ import {
   narrowedKeys,
   neverStoreKeys,
   variableKeys,
-  variables,
 } from "@devdogsuga/env";
 import {
   resetEnvSyncCacheForTests,

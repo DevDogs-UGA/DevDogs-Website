@@ -13,16 +13,16 @@
  * cleared once) is small enough to cover directly rather than only through a
  * full menu walk.
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
-const confirm = vi.fn();
+const confirm = vi.fn<(...args: unknown[]) => unknown>();
 vi.mock("@clack/prompts", () => ({
   confirm: (...args: unknown[]) => confirm(...args),
   isCancel: () => false,
   cancel: vi.fn(),
 }));
 
-const runStackCommand = vi.fn();
+const runStackCommand = vi.fn<(...args: unknown[]) => unknown>();
 vi.mock("./stack.js", () => ({
   runStackCommand: (...args: unknown[]) => runStackCommand(...args),
 }));
@@ -51,7 +51,7 @@ function fakeDeps(enterEnvironment: (...args: unknown[]) => unknown) {
 
 describe("enterSessionEnvironment", () => {
   const originalIsTTY = process.stdin.isTTY;
-  let exitSpy: ReturnType<typeof vi.spyOn>;
+  let exitSpy: MockInstance<typeof process.exit> | undefined;
 
   afterEach(() => {
     vi.clearAllMocks();
@@ -62,12 +62,15 @@ describe("enterSessionEnvironment", () => {
     exitSpy?.mockRestore();
   });
 
-  function stubExit(): ReturnType<typeof vi.spyOn> {
+  function stubExit(): MockInstance<typeof process.exit> {
     class ExitCalled extends Error {}
-    exitSpy = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
+    const spy = vi.spyOn(process, "exit").mockImplementation(((
+      code?: number,
+    ) => {
       throw new ExitCalled(`exit(${code})`);
     }) as never);
-    return exitSpy;
+    exitSpy = spy;
+    return spy;
   }
 
   it("enters the tier and dispatches once, on success", async () => {
@@ -342,7 +345,7 @@ describe("enterSessionEnvironment", () => {
         configurable: true,
       });
       confirm.mockResolvedValue(false);
-      const { enterEnvironment, deps } = offlineDeps();
+      const { deps } = offlineDeps();
       const dispatchCommand = vi.fn(async () => "Done.");
 
       const result = await enterSessionEnvironment(

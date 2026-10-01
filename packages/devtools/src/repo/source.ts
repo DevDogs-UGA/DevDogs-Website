@@ -69,10 +69,12 @@ export function loadOpenGraph(): Promise<OpenGraphModule> {
 
 import type { EmailTemplates } from "../emails/email-types.js";
 export interface EmailModule {
-  render<K extends keyof EmailTemplates>(
+  // A property rather than a method, so `const { render } = ...` is safe to
+  // destructure.
+  render: <K extends keyof EmailTemplates>(
     name: K,
     props: EmailTemplates[K],
-  ): { subject: string; html: string; text: string };
+  ) => { subject: string; html: string; text: string };
 }
 export function loadEmail(): Promise<EmailModule> {
   return loadSource<EmailModule>("@devdogsuga/email");

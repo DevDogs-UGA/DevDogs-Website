@@ -1,7 +1,7 @@
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   discoverRepoRoot,
   findRepoRoot,
@@ -72,21 +72,19 @@ describe("discoverRepoRoot", () => {
 describe("findRepoRoot", () => {
   it("throws a clear error when not inside a DevDogsUGA clone", () => {
     mkdirSync(join(dir, "nested"), { recursive: true });
-    const cwd = process.cwd;
-    process.cwd = () => join(dir, "nested");
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(join(dir, "nested"));
     try {
       expect(() => findRepoRoot()).toThrow(
         "run this from inside a DevDogsUGA clone",
       );
     } finally {
-      process.cwd = cwd;
+      cwd.mockRestore();
     }
   });
 
   it("memoizes the result across calls", () => {
     writeRepoMarker(dir);
-    const cwd = process.cwd;
-    process.cwd = () => dir;
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(dir);
     try {
       const first = findRepoRoot();
       // Removing the marker after the first call proves the second call
@@ -94,7 +92,7 @@ describe("findRepoRoot", () => {
       rmSync(join(dir, "pnpm-workspace.yaml"));
       expect(findRepoRoot()).toBe(first);
     } finally {
-      process.cwd = cwd;
+      cwd.mockRestore();
     }
   });
 

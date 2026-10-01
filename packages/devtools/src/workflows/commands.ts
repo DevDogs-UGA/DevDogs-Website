@@ -9,7 +9,6 @@ import { confirm, select, text } from "@clack/prompts";
 import { loadEnvLoad } from "../repo/peers.js";
 import {
   createTemporaryWranglerEnv,
-  renderWranglerEnvFile,
   scopedProcessEnv,
 } from "../cf/local-env.js";
 import { buildWorkspaceDeps, needsFrameworkBuild } from "../cf/build.js";
@@ -204,7 +203,7 @@ export async function waitForLocalWorkflow(
     }
     if (status === "complete") {
       const output = envelope.result.output;
-      const failures =
+      const failures: unknown[] =
         typeof output === "object" &&
         output !== null &&
         "failures" in output &&

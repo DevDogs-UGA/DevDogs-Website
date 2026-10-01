@@ -66,7 +66,24 @@ const SS = 3;
 const STROKE = "rgba(216,180,254,0.75)";
 const BUDGET = 60_000;
 
-async function loadChromium() {
+// The slice of Playwright this script drives. It is resolved at run time (see
+// `loadChromium`) rather than depended on, so there are no real types to import.
+interface PlaywrightPage {
+  goto(url: string): Promise<unknown>;
+  evaluate<Arg>(fn: (arg: Arg) => Promise<string>, arg: Arg): Promise<string>;
+}
+interface PlaywrightChromium {
+  launch(): Promise<{
+    newPage(): Promise<PlaywrightPage>;
+    close(): Promise<void>;
+  }>;
+}
+interface PlaywrightModule {
+  chromium?: PlaywrightChromium;
+  default?: { chromium?: PlaywrightChromium };
+}
+
+async function loadChromium(): Promise<PlaywrightChromium> {
   const require_ = createRequire(import.meta.url);
   for (const spec of [
     "playwright",
@@ -77,7 +94,7 @@ async function loadChromium() {
     ),
   ]) {
     try {
-      const mod = await import(require_.resolve(spec));
+      const mod = (await import(require_.resolve(spec))) as PlaywrightModule;
       const chromium = mod.chromium ?? mod.default?.chromium;
       if (chromium) return chromium;
     } catch {

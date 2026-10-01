@@ -41,6 +41,7 @@ import {
   VAULT_ITEM_NAME,
 } from "./vault.js";
 import { unwrap } from "../ui.js";
+import type { BitwardenClient as SdkClient } from "@bitwarden/sdk-napi";
 
 export class BwsError extends Error {}
 
@@ -216,7 +217,7 @@ function organizationId(): Promise<string> {
 }
 
 /** The lazily-loaded, logged-in SDK client, one per process. */
-let sdk: Promise<import("@bitwarden/sdk-napi").BitwardenClient> | undefined;
+let sdk: Promise<SdkClient> | undefined;
 
 /**
  * Where the SDK caches its login, so a process is not a fresh authentication.

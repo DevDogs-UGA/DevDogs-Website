@@ -8,7 +8,10 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { parseConfigFileTextToJson } from "typescript";
+import {
+  flattenDiagnosticMessageText,
+  parseConfigFileTextToJson,
+} from "typescript";
 import { findRepoRoot } from "../repo/root.js";
 import {
   CronRoutes,
@@ -57,7 +60,9 @@ export function isCronTier(value: string): value is CronTier {
 export function parseWrangler(path: string): WranglerConfig {
   const result = parseConfigFileTextToJson(path, readFileSync(path, "utf8"));
   if (result.error) {
-    throw new Error(`${path}: ${result.error.messageText}`);
+    throw new Error(
+      `${path}: ${flattenDiagnosticMessageText(result.error.messageText, "\n")}`,
+    );
   }
   return result.config as WranglerConfig;
 }
@@ -126,7 +131,10 @@ export async function discoverCronMaps(): Promise<AppCronMap[]> {
 
     if (!existsSync(scheduledPath)) continue;
 
-    const mod = await import(pathToFileURL(scheduledPath).href);
+    const mod = (await import(pathToFileURL(scheduledPath).href)) as {
+      CRON_ROUTES?: unknown;
+      WORKFLOW_CRONS?: unknown;
+    };
     const parsed = CronRoutes.safeParse(mod.CRON_ROUTES);
     if (!parsed.success) {
       throw new Error(

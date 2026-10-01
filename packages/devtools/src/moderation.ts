@@ -42,11 +42,13 @@ export async function conformance(
   client: DevtoolsClient,
   appSlug: string,
 ): Promise<ConformanceType[]> {
-  const { data, error } = await client.rpc("conformance_check", {
+  const response = await client.rpc("conformance_check", {
     app_slug: appSlug,
   });
-  if (error) throw new Error(error.message);
+  if (response.error) throw new Error(response.error.message);
 
+  // The generated types do not describe this function's return shape.
+  const data: unknown = response.data;
   return (data ?? []) as ConformanceType[];
 }
 

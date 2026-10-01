@@ -6,7 +6,15 @@
  * back", so a test that only checked `null` would pass while the reason —
  * the part a human acts on — regressed to noise.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from "vitest";
 import {
   describeDbTarget,
   isLocalConnection,
@@ -19,7 +27,7 @@ const POOLER_URL =
   "postgresql://user:secret@aws-1-us-east-1.pooler.supabase.com:6543/postgres";
 
 let stderr: string;
-let write: ReturnType<typeof vi.spyOn>;
+let write: MockInstance<typeof process.stderr.write>;
 
 beforeEach(() => {
   stderr = "";

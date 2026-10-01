@@ -12,6 +12,8 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ConnectTarget } from "./target.js";
+import type * as Loopback from "./loopback.js";
+import type * as Device from "./device.js";
 
 const { startLoopbackMock, requestDeviceCodeMock, pollForTokenMock } =
   vi.hoisted(() => ({
@@ -23,14 +25,12 @@ const { startLoopbackMock, requestDeviceCodeMock, pollForTokenMock } =
 vi.mock("./browser.js", () => ({ openBrowser: vi.fn() }));
 
 vi.mock("./loopback.js", async () => {
-  const actual =
-    await vi.importActual<typeof import("./loopback.js")>("./loopback.js");
+  const actual = await vi.importActual<typeof Loopback>("./loopback.js");
   return { ...actual, start: startLoopbackMock };
 });
 
 vi.mock("./device.js", async () => {
-  const actual =
-    await vi.importActual<typeof import("./device.js")>("./device.js");
+  const actual = await vi.importActual<typeof Device>("./device.js");
   return {
     ...actual,
     requestDeviceCode: requestDeviceCodeMock,

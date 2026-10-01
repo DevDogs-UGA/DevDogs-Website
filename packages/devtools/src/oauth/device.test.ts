@@ -1,10 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  DeviceError,
-  PollError,
-  pollForToken,
-  requestDeviceCode,
-} from "./device.js";
+import { pollForToken, requestDeviceCode } from "./device.js";
 
 const platformUrl = "https://devdogsuga.org";
 

@@ -14,8 +14,9 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stripTierFlag } from "./launch.js";
+import type * as RepoRoot from "./repo/root.js";
 
-const resolveSessionTier = vi.fn();
+const resolveSessionTier = vi.fn<(...args: unknown[]) => unknown>();
 const enterEnvironment = vi.fn(async (..._args: unknown[]) => ({
   files: [".env"],
   warnings: [],
@@ -41,7 +42,7 @@ vi.mock("./repo/peers.js", () => ({
   }),
 }));
 
-const main = vi.fn();
+const main = vi.fn<(...args: unknown[]) => unknown>();
 vi.mock("./cli.js", () => ({ main: (...args: unknown[]) => main(...args) }));
 
 // A menu invocation needs `discoverRepoRoot()` to find a repo before it can
@@ -52,7 +53,7 @@ vi.mock("./cli.js", () => ({ main: (...args: unknown[]) => main(...args) }));
 // `DEVTOOLS_TEST_REPO_ROOT`), so a bare/resumed-group invocation can reach
 // its tier resolution instead of hitting the `RepoNotFoundError` exit.
 vi.mock("./repo/root.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./repo/root.js")>();
+  const actual = await importOriginal<typeof RepoRoot>();
   return {
     ...actual,
     discoverRepoRoot: () => "/fake/repo",

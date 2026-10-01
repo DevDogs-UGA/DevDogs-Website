@@ -3,6 +3,8 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as CronDiscovery from "../cron/discovery.js";
+import type * as RepoPeers from "../repo/peers.js";
 
 /**
  * `runWorkflowsRun`'s own dependencies, faked at the module boundary for the
@@ -48,7 +50,7 @@ const fixtures = vi.hoisted(() => ({
 }));
 
 vi.mock("../cron/discovery.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../cron/discovery.js")>()),
+  ...(await importOriginal<typeof CronDiscovery>()),
   discoverWranglerConfigs: vi.fn(() => fixtures.configs),
 }));
 
@@ -68,7 +70,7 @@ const envLoadFixture = {
 };
 
 vi.mock("../repo/peers.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../repo/peers.js")>()),
+  ...(await importOriginal<typeof RepoPeers>()),
   loadEnvLoad: vi.fn(async () => envLoadFixture),
 }));
 
@@ -212,7 +214,9 @@ describe("local Wrangler connection diagnostics", () => {
     await expect(isWranglerDevRunning("3000", 100, next)).resolves.toBe(false);
     expect(wrangler).toHaveBeenCalledWith(
       "http://127.0.0.1:9999/cdn-cgi/local/explorer/api/workflows",
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      expect.objectContaining({
+        signal: expect.any(AbortSignal) as AbortSignal,
+      }),
     );
   });
 
@@ -239,7 +243,9 @@ describe("local Wrangler connection diagnostics", () => {
     ).resolves.toBe(0);
     expect(fetcher).toHaveBeenCalledWith(
       "http://127.0.0.1:9999/cdn-cgi/local/explorer/api/workflows/schedule%20scrape/instances/instance%2F123",
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      expect.objectContaining({
+        signal: expect.any(AbortSignal) as AbortSignal,
+      }),
     );
   });
 

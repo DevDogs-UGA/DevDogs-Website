@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as NodeChildProcess from "node:child_process";
+import type * as NodeFs from "node:fs";
 
 /**
  * `runIntrospect`'s per-app dispatch (unknown app, missing `DB_URL`, the
@@ -41,12 +43,12 @@ const fake = vi.hoisted(() => {
 });
 
 vi.mock("node:child_process", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:child_process")>();
+  const actual = await importOriginal<typeof NodeChildProcess>();
   return { ...actual, spawn: fake.spawn };
 });
 
 vi.mock("node:fs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:fs")>();
+  const actual = await importOriginal<typeof NodeFs>();
   return {
     ...actual,
     existsSync: (path: string) => fake.state.files.has(path),

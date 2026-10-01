@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const getProvider = vi.fn();
-const createProvider = vi.fn();
-const updateProvider = vi.fn();
+const getProvider = vi.fn<(...args: unknown[]) => unknown>();
+const createProvider = vi.fn<(...args: unknown[]) => unknown>();
+const updateProvider = vi.fn<(...args: unknown[]) => unknown>();
 
 vi.mock("@supabase/supabase-js", () => ({
   createClient: vi.fn(() => ({

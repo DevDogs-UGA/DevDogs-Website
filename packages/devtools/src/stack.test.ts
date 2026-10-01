@@ -20,6 +20,7 @@ import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type * as RepoSupabaseProject from "./repo/supabase-project.js";
 
 const supabase = vi.fn(async (..._args: string[]) => 0);
 const supabaseCapture = vi.fn(
@@ -43,9 +44,9 @@ vi.mock("./repo/root.js", () => ({
 const listContainerNames = vi.fn((): string[] | null => []);
 const readProjectId = vi.fn((): string | null => "DevDogsUGA");
 vi.mock("./repo/supabase-project.js", async () => {
-  const actual = await vi.importActual<
-    typeof import("./repo/supabase-project.js")
-  >("./repo/supabase-project.js");
+  const actual = await vi.importActual<typeof RepoSupabaseProject>(
+    "./repo/supabase-project.js",
+  );
   return {
     ...actual,
     listContainerNames: () => listContainerNames(),
@@ -92,7 +93,7 @@ describe("reconcileConfigAfterReset", () => {
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const [url, init] = fetchSpy.mock.calls[0]!;
-    expect(String(url)).toBe("http://localhost:3000/cron/config-reconcile");
+    expect(url).toBe("http://localhost:3000/cron/config-reconcile");
     // No CRON_SECRET, matching the route's own local-request exemption.
     expect(init).toBeUndefined();
     expect(lines).toEqual([
