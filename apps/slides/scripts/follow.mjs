@@ -14,9 +14,10 @@ import { execFileSync, spawn } from "node:child_process";
 import { existsSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveDeck } from "./deck-path.mjs";
 
 const appDir = join(dirname(fileURLToPath(import.meta.url)), "..");
-const DECK = "decks/2026-09-28-supabase.md";
+const DECK = resolveDeck();
 const PORT = 3030;
 
 // Where each track's checkpoint tags live (private: needs a GitHub login

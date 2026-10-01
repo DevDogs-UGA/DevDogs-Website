@@ -950,9 +950,9 @@ row dividers). Source of truth for all of these is `theme/accents.ts`
 - **Fonts** are loaded via the master deck's `fonts:` headmatter (Google
   Fonts), not per-fragment — don't re-declare `fonts:` in fragment files.
 - **`pnpm build` / `pnpm dev`** run from `apps/slides/` (see
-  `package.json` scripts) and point at
-  `decks/2026-09-28-supabase.md`, so they build the whole assembled deck,
-  fragments included.
+  `package.json` scripts) take the deck as an argument
+  (`pnpm dev 2026-09-28-supabase`) and default to the newest deck in
+  `decks/`, so they build the whole assembled deck, fragments included.
 - **Components auto-import in markdown, not inside layout `.vue` files.**
   Slidev's component auto-import (no `import` needed for `<Chip>`,
   `<Accent>`, `<Track>`, ...) only applies to slide markdown. A layout
