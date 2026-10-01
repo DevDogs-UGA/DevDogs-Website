@@ -57,7 +57,6 @@
  * typecheck/lint/test/dev run has no business doing (see `passthroughApps`'s
  * doc comment for why that is more than just wasted work).
  */
-import { spawn, spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -67,6 +66,8 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { cancel, confirm, isCancel, multiselect } from "@clack/prompts";
+import { isDryRun } from "@devdogsuga/cli-core/dry-run";
+import { reportRan, runInGroup } from "@devdogsuga/cli-core/process-group";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { loadEnvLoad } from "@devdogsuga/cli-core/repo/peers";
 import {
@@ -126,31 +127,28 @@ export interface App {
 
 /**
  * Runs one `pnpm` invocation to completion, reporting its own exit the way
- * `passthroughApps` needs to: a truthy return means "keep going", `never` on
- * anything that ends the process (a signal, or a non-zero status treated as
- * final).
+ * `passthroughApps` needs to: it returns to keep going, and exits the process
+ * on a non-zero status or when it is the final command.
  *
  * `pnpm` resolves from the workspace root's `node_modules/.bin`, which is
- * already on PATH. Signals and exit codes pass straight through, so a Ctrl-C
- * in a dev server behaves exactly as it did before this existed: when the
- * child dies to a signal rather than exiting with a code, this process
- * re-raises that same signal against itself instead of collapsing it to a
- * generic exit code, which is what lets a shell watching this process see a
- * conventional signal death rather than a failure.
+ * already on PATH. It runs through the process-group runner, so a Ctrl-C (or a
+ * closed terminal) stops the dev server and everything it started rather than
+ * orphaning vinext and workerd, and the exit status comes back as a shell would
+ * report it (`128 + n` for a signal). The command that ran is printed after it
+ * finishes.
  *
  * ⚠️ `cwd` is explicit, and must be. Reached through
  * `pnpm --filter @devdogsuga/devtools run cli`, this process starts in
  * `packages/devtools`, and a `pnpm -r`/`--filter` invoked there would scope
  * itself relative to that one package rather than the workspace root.
  */
-function runOne(
+async function runOne(
   args: string[],
   extraEnv: NodeJS.ProcessEnv | undefined,
   { final }: { final: boolean },
-): boolean {
-  const result = spawnSync("pnpm", args, {
+): Promise<void> {
+  const result = await runInGroup("pnpm", args, {
     cwd: findRepoRoot(),
-    stdio: "inherit",
     // Guards the one recursion that would matter: a bare, filter-less `pnpm
     // -r` never re-enters the root package's own scripts (pnpm excludes the
     // workspace root from an unfiltered recursive run by default), but an
@@ -162,24 +160,8 @@ function runOne(
     // asking again.
     env: { ...process.env, ...extraEnv, DEVDOGS_PICK: "0" },
   });
-  if (result.signal) {
-    // Restore the default disposition first: any SIGINT/SIGTERM listener
-    // this process itself registered (`@clack/prompts` installs one while a
-    // prompt is open) would otherwise run instead of the OS just ending the
-    // process, which is what re-raising is supposed to produce.
-    process.removeAllListeners(result.signal);
-    process.kill(process.pid, result.signal);
-    // Default disposition means the OS ends this process as part of that
-    // call, so nothing below ever runs long enough to matter.
-    for (;;) {
-      /* unreachable */
-    }
-  }
-  const status = result.status ?? 1;
-  if (status !== 0 || final) {
-    process.exit(status);
-  }
-  return true;
+  reportRan("pnpm", args, result);
+  if (result.code !== 0 || final) process.exit(result.code);
 }
 
 /**
@@ -189,16 +171,15 @@ function runOne(
  * what makes a dependency build failure and a task failure look identical
  * from the outside: the second spawn is never reached if the first one failed.
  *
- * Never returns: every branch inside `runOne` either exits or re-raises a
- * signal.
+ * Never returns: `runOne` exits on a failure and on the final command.
  */
-function passthrough(
+async function passthrough(
   commands: string[][],
   extraEnv?: NodeJS.ProcessEnv,
-): never {
-  commands.forEach((args, index) => {
-    runOne(args, extraEnv, { final: index === commands.length - 1 });
-  });
+): Promise<never> {
+  for (const [index, args] of commands.entries()) {
+    await runOne(args, extraEnv, { final: index === commands.length - 1 });
+  }
   // Unreachable: `runOne` above always exits on the final command (`final:
   // true` forces it even on success), and exits early on any earlier
   // failure. This satisfies the `never` return type without a bare `throw`.
@@ -347,12 +328,12 @@ function allAppNames(): string[] {
  * FILTERED build still needs the pre-step — naming a package by itself,
  * with no `^...`, selects only that package, not what it depends on.
  */
-function passthroughApps(
+async function passthroughApps(
   task: string,
   filters: string[],
   rest: string[],
   extraEnv?: NodeJS.ProcessEnv,
-): never {
+): Promise<never> {
   const commands: string[][] = [];
 
   const needsDepsPreStep =
@@ -375,7 +356,7 @@ function passthroughApps(
     ...rest,
   ]);
 
-  passthrough(commands, extraEnv);
+  return passthrough(commands, extraEnv);
 }
 
 // ── dev on vinext ────────────────────────────────────────────────────────────
@@ -456,7 +437,7 @@ async function runDev(
   tierEnv: NodeJS.ProcessEnv | undefined,
 ): Promise<never> {
   const depsOfTargets = filters.length > 0 ? filters : allAppNames();
-  runOne(
+  await runOne(
     [
       "-r",
       "--if-present",
@@ -478,41 +459,32 @@ async function runDev(
     ...(await Promise.all(
       plan.vinext.map(async (app) => ({
         args: ["--filter", app, "exec", "vinext", "dev", ...rest],
-        env: await scopedProcessEnv(app, environment, tier),
+        // A dry run must not write the scoped env file this builds.
+        env: isDryRun()
+          ? environment
+          : await scopedProcessEnv(app, environment, tier),
       })),
     )),
     ...(plan.others ? [{ args: plan.others, env: environment }] : []),
-  ].map(({ args, env }) =>
-    spawn("pnpm", args, {
+  ];
+
+  // Each server runs in its own process group (see `process-group.ts`), which
+  // also forwards Ctrl-C to it. When the first one ends the rest are asked to
+  // stop, and this waits for every group to leave before exiting.
+  const stop = new AbortController();
+  let first: number | undefined;
+  const runs = children.map(async ({ args, env }) => {
+    const result = await runInGroup("pnpm", args, {
       cwd: findRepoRoot(),
-      stdio: "inherit",
       env: { ...env, DEVDOGS_PICK: "0" },
-    }),
-  );
-
-  // Ctrl-C reaches every child through the terminal's process group; this
-  // process waits for them to finish rather than dying first.
-  const ignore = () => undefined;
-  process.on("SIGINT", ignore);
-  process.on("SIGTERM", ignore);
-
-  const first = await Promise.race(
-    children.map(
-      (child) =>
-        new Promise<number>((resolve) => {
-          child.once("error", () => resolve(1));
-          child.once("exit", (code, signal) =>
-            resolve(code ?? (signal ? 130 : 1)),
-          );
-        }),
-    ),
-  );
-  for (const child of children) {
-    if (child.exitCode === null && child.signalCode === null) {
-      child.kill("SIGTERM");
-    }
-  }
-  process.exit(first);
+      abort: stop.signal,
+    });
+    reportRan("pnpm", args, result);
+    first ??= result.code;
+    stop.abort();
+  });
+  await Promise.all(runs);
+  process.exit(first ?? 1);
 }
 
 /** `passthroughApps`, except that a `dev` selecting a vinext app goes to
@@ -527,7 +499,7 @@ async function dispatch(
     const plan = planDev(appsWith("dev"), filters, rest);
     if (plan.vinext.length > 0) return runDev(plan, filters, rest, tierEnv);
   }
-  passthroughApps(task, filters, rest, tierEnv);
+  return passthroughApps(task, filters, rest, tierEnv);
 }
 
 // ── Tier ─────────────────────────────────────────────────────────────────────
@@ -674,6 +646,8 @@ export function runAliasMessage(task: string): string {
  */
 async function announceRunAlias(task: string): Promise<void> {
   process.stderr.write(`${runAliasMessage(task)}\n`);
+  // A dry run is not a use of the alias that anyone is waiting on.
+  if (isDryRun()) return;
   await captureDevtoolsDeprecation(
     "devtools run is deprecated",
     RUN_ALIAS_FINGERPRINT,
@@ -717,7 +691,7 @@ export async function runTask(argv: string[]): Promise<never> {
   // A non-interactive caller that wants production has no way to say so, and
   // that is the point — the same exposure those two gate behind `--yes` gets
   // gated behind a terminal existing at all.
-  if (tier === "production") {
+  if (tier === "production" && !isDryRun()) {
     if (!process.stdin.isTTY) {
       console.error(
         "devtools run: --tier production needs a terminal to confirm — " +
@@ -820,7 +794,7 @@ export async function runTask(argv: string[]): Promise<never> {
     process.exit(0);
   }
 
-  remember(task, chosen);
+  if (!isDryRun()) remember(task, chosen);
 
   return dispatch(task, chosen, rest, tierEnv);
 }

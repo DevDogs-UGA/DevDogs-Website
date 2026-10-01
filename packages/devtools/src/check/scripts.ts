@@ -88,6 +88,8 @@ export function isAllowedScript(name: string, isRoot = false): boolean {
 export interface ScriptPackage {
   /** Workspace-relative directory; `.` for the root. */
   dir: string;
+  /** The package's `name`, which `pnpm -F` takes. Absent if it has none. */
+  name?: string;
   scripts: Readonly<Record<string, string>>;
 }
 
@@ -125,9 +127,14 @@ export function readScriptPackages(root: string): ScriptPackage[] {
     const file = join(root, dir, "package.json");
     if (!existsSync(file)) return null;
     const pkg = JSON.parse(readFileSync(file, "utf8")) as {
+      name?: string;
       scripts?: Record<string, string>;
     };
-    return { dir, scripts: pkg.scripts ?? {} };
+    return {
+      dir,
+      ...(pkg.name ? { name: pkg.name } : {}),
+      scripts: pkg.scripts ?? {},
+    };
   };
 
   const workspace = join(root, "pnpm-workspace.yaml");

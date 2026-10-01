@@ -42,6 +42,7 @@ const RUN_OPTIONS: readonly CommandOption[] = [
 
 export const runCommand: CommandNode = {
   name: "run",
+  dryRun: "handled",
   summary: "Run a pnpm workspace task, asking which apps first.",
   hint: "deprecated: pnpm -r run <task>",
   deprecated:

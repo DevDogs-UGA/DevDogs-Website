@@ -4,7 +4,8 @@
  * then answer "Unknown command", and a handler with no declaration would be
  * reachable but undiscoverable.
  */
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { dryRunKind, setDryRun } from "@devdogsuga/cli-core/dry-run";
 import { catalog } from "./catalog.js";
 import { HANDLERS, main } from "./cli.js";
 
@@ -57,5 +58,66 @@ describe("--help --json", () => {
     expect(byPath.get("preset restart-stack")?.surface).toBe("interactive");
     // The CI tree is a separate bin and stays out.
     expect(byPath.has("deploy")).toBe(false);
+  });
+});
+
+describe("--dry-run", () => {
+  afterEach(() => setDryRun(false));
+
+  async function stderrOf(argv: string[]): Promise<string> {
+    const chunks: string[] = [];
+    const write = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation((chunk) => {
+        chunks.push(String(chunk));
+        return true;
+      });
+    try {
+      await main(argv);
+    } finally {
+      write.mockRestore();
+    }
+    return chunks.join("");
+  }
+
+  it("stops a command that spawns or writes and prints what it would run", async () => {
+    setDryRun(true);
+    const printed = await stderrOf(["cron", "run", "--app", "platform"]);
+    expect(printed).toContain("Would run: devtools cron run --app platform");
+  });
+
+  it("says nothing about commands that only read, or that handle the flag", () => {
+    for (const path of [
+      ["doctor"],
+      ["check", "env"],
+      ["cron", "list"],
+      ["workflows", "list"],
+      ["supabase"],
+      ["preset", "apply-migrations"],
+      ["run", "build"],
+      ["images"],
+      ["emails"],
+    ]) {
+      expect(dryRunKind(catalog, path), path.join(" ")).toBeDefined();
+    }
+  });
+
+  it("stops the commands that write unless they said otherwise", () => {
+    for (const path of [
+      ["setup"],
+      ["oauth"],
+      ["cron", "run"],
+      ["workflows", "run"],
+      ["workflows", "serve"],
+      ["env", "pull"],
+      ["env", "example"],
+      ["db", "start"],
+      ["cf", "preview"],
+      ["gen", "campus-map"],
+      ["grant-root"],
+      ["planner", "create"],
+    ]) {
+      expect(dryRunKind(catalog, path), path.join(" ")).toBeUndefined();
+    }
   });
 });

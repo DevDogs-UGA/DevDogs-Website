@@ -32,6 +32,7 @@ import {
 import { plannerCommand } from "./planner/catalog.js";
 import { presetCommand } from "./preset/catalog.js";
 import { runCommand } from "./run/catalog.js";
+import { scriptCommand } from "./script/catalog.js";
 import { setupCommand } from "./setup/catalog.js";
 import { workflowsCommand } from "./workflows/catalog.js";
 
@@ -39,7 +40,13 @@ import { workflowsCommand } from "./workflows/catalog.js";
 export const GROUPS: readonly CommandGroup[] = [
   {
     title: "Workspace",
-    commands: [setupCommand, oauthCommand, runCommand, genCommand],
+    commands: [
+      setupCommand,
+      oauthCommand,
+      scriptCommand,
+      runCommand,
+      genCommand,
+    ],
   },
   {
     title: "Runtime & infrastructure",

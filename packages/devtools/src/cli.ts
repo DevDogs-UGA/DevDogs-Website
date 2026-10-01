@@ -22,6 +22,11 @@
 import { intro, log, note, outro } from "@clack/prompts";
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import {
+  dryRunKind,
+  isDryRun,
+  wouldRunLine,
+} from "@devdogsuga/cli-core/dry-run";
+import {
   helpPath,
   renderCommandList,
   renderHelp,
@@ -58,6 +63,7 @@ import { handlePassthrough } from "./passthrough/commands.js";
 import { runPlannerCommand } from "./planner/commands.js";
 import { handlePreset } from "./preset/commands.js";
 import { runTask } from "./run/commands.js";
+import { handleScript } from "./script/commands.js";
 import { handleSetup } from "./setup/commands.js";
 import { handleWorkflows } from "./workflows/commands.js";
 
@@ -82,6 +88,7 @@ const CONTRIBUTOR_HANDLERS: Record<string, CommandHandler> = {
   // rather than wedged between this CLI and pnpm's output.
   run: runTask,
   oauth: handleOAuth,
+  script: handleScript,
   images: handleImages,
   emails: handleEmails,
   cf: handleCf,
@@ -172,7 +179,15 @@ async function dispatch(argv: string[]): Promise<string | null> {
   if (!first) return DONE;
 
   const handler = HANDLERS[first];
-  if (handler) return handler(rest);
+  if (handler) {
+    // A command that has not said how it treats `--dry-run` may spawn or
+    // write, so it is stopped here and its command line printed instead.
+    if (isDryRun() && dryRunKind(catalog, helpPath(argv)) === undefined) {
+      process.stderr.write(`${wouldRunLine(argv)}\n`);
+      return DONE;
+    }
+    return handler(rest);
+  }
 
   const retired = RETIRED[first];
   if (retired) {

@@ -14,14 +14,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * `runTask` never returns for `--tier production` either — every path ends in
  * `passthrough`, which calls `process.exit` (see `commands.ts`'s own header) — so
  * these three modules are faked at the boundary rather than driven for real:
- * `node:child_process` so `passthrough` never actually spawns pnpm,
+ * `process-group` so `passthrough` never actually spawns pnpm,
  * `@clack/prompts` so the confirm is scripted rather than typed, and
  * `../repo/peers.js`'s `loadEnvLoad()` because `runTask` reaches it only
  * through a dynamic call gated on `--tier` (see the header on why it must
  * stay dynamic) — `vi.mock` intercepts that the same as a static import.
  */
-vi.mock("node:child_process", () => ({
-  spawnSync: vi.fn(() => ({ status: 0 })),
+vi.mock("@devdogsuga/cli-core/process-group", () => ({
+  runInGroup: vi.fn(async () => ({ code: 0, signal: null })),
+  reportRan: vi.fn(),
 }));
 
 vi.mock("@clack/prompts", () => ({
@@ -59,7 +60,7 @@ const {
   runTask,
   shouldAsk,
 } = await import("./commands.js");
-const { spawnSync } = await import("node:child_process");
+const { runInGroup } = await import("@devdogsuga/cli-core/process-group");
 const { cancel, confirm } = await import("@clack/prompts");
 
 /**
@@ -257,11 +258,9 @@ describe("runTask --tier production guard", () => {
     // plain `vi.fn()`s a module mock factory returns keep their call history
     // across tests, so each of these is reset by hand rather than trusted to
     // start clean.
-    vi.mocked(spawnSync)
+    vi.mocked(runInGroup)
       .mockClear()
-      .mockReturnValue({ status: 0 } as unknown as ReturnType<
-        typeof spawnSync
-      >);
+      .mockResolvedValue({ code: 0, signal: null });
     vi.mocked(confirm).mockReset();
     vi.mocked(cancel).mockClear();
     vi.mocked(loadEnvironment).mockResolvedValue({
@@ -281,7 +280,7 @@ describe("runTask --tier production guard", () => {
       runTask(["dev", "--all", "--tier", "production"]),
     ).rejects.toThrow("exit:1");
     expect(confirm).not.toHaveBeenCalled();
-    expect(spawnSync).not.toHaveBeenCalled();
+    expect(runInGroup).not.toHaveBeenCalled();
   });
 
   it("runs nothing when the confirm is declined", async () => {
@@ -291,7 +290,7 @@ describe("runTask --tier production guard", () => {
       runTask(["dev", "--all", "--tier", "production"]),
     ).rejects.toThrow("exit:0");
     expect(cancel).toHaveBeenCalled();
-    expect(spawnSync).not.toHaveBeenCalled();
+    expect(runInGroup).not.toHaveBeenCalled();
   });
 
   it("loads production's env and threads it to every spawned child once approved", async () => {
@@ -308,8 +307,8 @@ describe("runTask --tier production guard", () => {
     // the latter would also run each app's OWN build script), then the
     // `--parallel` dev task. Both children need the tier env, not just the
     // one that would exist under a single-spawn passthrough.
-    expect(spawnSync).toHaveBeenCalledTimes(2);
-    const [, rawBuildArgs, buildOptions] = vi.mocked(spawnSync).mock.calls[0]!;
+    expect(runInGroup).toHaveBeenCalledTimes(2);
+    const [, rawBuildArgs, buildOptions] = vi.mocked(runInGroup).mock.calls[0]!;
     const buildArgs = rawBuildArgs as string[];
     expect(buildArgs.slice(0, 2)).toEqual(["-r", "--if-present"]);
     expect(buildArgs.slice(-2)).toEqual(["run", "build"]);
@@ -326,7 +325,7 @@ describe("runTask --tier production guard", () => {
         "study-group-finder^...",
       ]),
     );
-    const [, devArgs, devOptions] = vi.mocked(spawnSync).mock.calls[1]!;
+    const [, devArgs, devOptions] = vi.mocked(runInGroup).mock.calls[1]!;
     expect(devArgs).toEqual(["-r", "--if-present", "--parallel", "run", "dev"]);
     for (const options of [buildOptions, devOptions]) {
       const env = (options as unknown as { env: NodeJS.ProcessEnv }).env;
@@ -342,8 +341,8 @@ describe("runTask --tier production guard", () => {
     ).rejects.toThrow("exit:0");
 
     expect(confirm).not.toHaveBeenCalled();
-    expect(spawnSync).toHaveBeenCalledTimes(2);
-    const options = vi.mocked(spawnSync).mock.calls[1]![2] as unknown as {
+    expect(runInGroup).toHaveBeenCalledTimes(2);
+    const options = vi.mocked(runInGroup).mock.calls[1]![2] as unknown as {
       env: NodeJS.ProcessEnv;
     };
     expect(options.env.DEPLOY_ENV).toBe("staging");
@@ -351,20 +350,13 @@ describe("runTask --tier production guard", () => {
 });
 
 /**
- * `passthrough`'s two ways of ending, reached through `runTask` since
- * `passthrough` itself is not exported. Only the numeric-exit branch is
- * exercised here — the signal branch calls the real `process.kill` against
- * this process, and a mock that swallows it would leave the infinite loop
- * after it (the thing that keeps that branch honestly typed as `never`)
- * spinning forever with nothing left to interrupt it, hanging the test
- * runner rather than the process it is meant to end. There is no in-process
- * way to observe a self-delivered signal without either sending a real one
- * or faking enough of Node's signal machinery to make the assertion
- * meaningless.
+ * `passthrough`'s exit code, reached through `runTask` since `passthrough`
+ * itself is not exported. The process-group runner reports a death by signal
+ * as `128 + n`, like a shell, so a signal is just another number here.
  */
 describe("passthrough exit code", () => {
   beforeEach(() => {
-    vi.mocked(spawnSync).mockClear();
+    vi.mocked(runInGroup).mockClear();
     vi.spyOn(process, "exit").mockImplementation((code) => {
       throw new Error(`exit:${code ?? 0}`);
     });
@@ -375,16 +367,16 @@ describe("passthrough exit code", () => {
   // skips the separate dependency pre-step), so `mockReturnValue` applying
   // to "every call" and "the one call that happens" coincide here.
   it("exits with the child's own status", async () => {
-    vi.mocked(spawnSync).mockReturnValue({
-      status: 3,
+    vi.mocked(runInGroup).mockResolvedValue({
+      code: 3,
       signal: null,
-    } as unknown as ReturnType<typeof spawnSync>);
+    });
     tty(true);
     vi.stubEnv("CI", "");
     vi.stubEnv("DEVDOGS_PICK", "");
     await expect(runTask(["build", "--all"])).rejects.toThrow("exit:3");
-    expect(spawnSync).toHaveBeenCalledOnce();
-    expect(vi.mocked(spawnSync).mock.calls[0]![1]).toEqual([
+    expect(runInGroup).toHaveBeenCalledOnce();
+    expect(vi.mocked(runInGroup).mock.calls[0]![1]).toEqual([
       "-r",
       "--if-present",
       "run",
@@ -392,31 +384,31 @@ describe("passthrough exit code", () => {
     ]);
   });
 
-  it("falls back to exit code 1 when the child reports neither a status nor a signal", async () => {
-    vi.mocked(spawnSync).mockReturnValue({
-      status: null,
-      signal: null,
-    } as unknown as ReturnType<typeof spawnSync>);
+  it("exits the way a shell reports a death by signal", async () => {
+    vi.mocked(runInGroup).mockResolvedValue({
+      code: 130,
+      signal: "SIGINT",
+    } as unknown as Awaited<ReturnType<typeof runInGroup>>);
     tty(true);
     vi.stubEnv("CI", "");
     vi.stubEnv("DEVDOGS_PICK", "");
-    await expect(runTask(["build", "--all"])).rejects.toThrow("exit:1");
+    await expect(runTask(["build", "--all"])).rejects.toThrow("exit:130");
   });
 
   it("stops at the dependency build and never runs the task when it fails", async () => {
     // `typecheck` always gets a dependency pre-step, filtered or not, unlike
     // `build`. The first (deps) spawn fails; the second (the actual
     // typecheck) must never happen.
-    vi.mocked(spawnSync).mockReturnValueOnce({
-      status: 2,
+    vi.mocked(runInGroup).mockResolvedValueOnce({
+      code: 2,
       signal: null,
-    } as unknown as ReturnType<typeof spawnSync>);
+    });
     tty(true);
     vi.stubEnv("CI", "");
     vi.stubEnv("DEVDOGS_PICK", "");
     await expect(runTask(["typecheck", "--all"])).rejects.toThrow("exit:2");
-    expect(spawnSync).toHaveBeenCalledOnce();
-    const args = vi.mocked(spawnSync).mock.calls[0]![1] as string[];
+    expect(runInGroup).toHaveBeenCalledOnce();
+    const args = vi.mocked(runInGroup).mock.calls[0]![1] as string[];
     expect(args.slice(0, 2)).toEqual(["-r", "--if-present"]);
     expect(args.slice(-2)).toEqual(["run", "build"]);
   });
@@ -432,11 +424,9 @@ describe("passthrough exit code", () => {
  */
 describe("passthroughApps command shapes", () => {
   beforeEach(() => {
-    vi.mocked(spawnSync)
+    vi.mocked(runInGroup)
       .mockClear()
-      .mockReturnValue({ status: 0, signal: null } as unknown as ReturnType<
-        typeof spawnSync
-      >);
+      .mockResolvedValue({ code: 0, signal: null });
     tty(true);
     vi.stubEnv("CI", "");
     vi.stubEnv("DEVDOGS_PICK", "");
@@ -450,8 +440,8 @@ describe("passthroughApps command shapes", () => {
       runTask(["typecheck", "--filter", "platform"]),
     ).rejects.toThrow("exit:0");
 
-    expect(spawnSync).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(spawnSync).mock.calls[0]![1]).toEqual([
+    expect(runInGroup).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(runInGroup).mock.calls[0]![1]).toEqual([
       "-r",
       "--if-present",
       "--filter",
@@ -459,7 +449,7 @@ describe("passthroughApps command shapes", () => {
       "run",
       "build",
     ]);
-    expect(vi.mocked(spawnSync).mock.calls[1]![1]).toEqual([
+    expect(vi.mocked(runInGroup).mock.calls[1]![1]).toEqual([
       "-r",
       "--if-present",
       "--filter",
@@ -476,8 +466,8 @@ describe("passthroughApps command shapes", () => {
 
     // `build` filtered still needs the dependency pre-step (see the earlier
     // "build --all" test for why the workspace-wide case differs).
-    expect(spawnSync).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(spawnSync).mock.calls[0]![1]).toEqual([
+    expect(runInGroup).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(runInGroup).mock.calls[0]![1]).toEqual([
       "-r",
       "--if-present",
       "--filter",
@@ -485,7 +475,7 @@ describe("passthroughApps command shapes", () => {
       "run",
       "build",
     ]);
-    expect(vi.mocked(spawnSync).mock.calls[1]![1]).toEqual([
+    expect(vi.mocked(runInGroup).mock.calls[1]![1]).toEqual([
       "-r",
       "--if-present",
       "--filter",
@@ -500,8 +490,8 @@ describe("passthroughApps command shapes", () => {
       runTask(["generate-types", "--filter", "platform"]),
     ).rejects.toThrow("exit:0");
 
-    expect(spawnSync).toHaveBeenCalledOnce();
-    expect(vi.mocked(spawnSync).mock.calls[0]![1]).toEqual([
+    expect(runInGroup).toHaveBeenCalledOnce();
+    expect(vi.mocked(runInGroup).mock.calls[0]![1]).toEqual([
       "-r",
       "--if-present",
       "--filter",
@@ -516,8 +506,8 @@ describe("passthroughApps command shapes", () => {
       runTask(["dev", "--filter", "platform", "--filter", "schedule-builder"]),
     ).rejects.toThrow("exit:0");
 
-    expect(spawnSync).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(spawnSync).mock.calls[1]![1]).toEqual([
+    expect(runInGroup).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(runInGroup).mock.calls[1]![1]).toEqual([
       "-r",
       "--if-present",
       "--parallel",
@@ -535,7 +525,7 @@ describe("passthroughApps command shapes", () => {
       runTask(["lint", "--filter", "platform", "--max-warnings", "0"]),
     ).rejects.toThrow("exit:0");
 
-    expect(vi.mocked(spawnSync).mock.calls[1]![1]).toEqual([
+    expect(vi.mocked(runInGroup).mock.calls[1]![1]).toEqual([
       "-r",
       "--if-present",
       "--filter",
@@ -605,11 +595,9 @@ describe("planDev", () => {
  */
 describe("runTask as a deprecated alias", () => {
   beforeEach(() => {
-    vi.mocked(spawnSync)
+    vi.mocked(runInGroup)
       .mockClear()
-      .mockReturnValue({ status: 0 } as unknown as ReturnType<
-        typeof spawnSync
-      >);
+      .mockResolvedValue({ code: 0, signal: null });
     captureDeprecation.mockClear();
     vi.spyOn(process, "exit").mockImplementation((code) => {
       throw new Error(`exit:${code ?? 0}`);
@@ -637,7 +625,7 @@ describe("runTask as a deprecated alias", () => {
       RUN_ALIAS_FINGERPRINT,
       { script: "lint", mode: "local" },
     );
-    expect(spawnSync).toHaveBeenCalled();
+    expect(runInGroup).toHaveBeenCalled();
   });
 
   it("reports the same fingerprint whatever the script", async () => {
