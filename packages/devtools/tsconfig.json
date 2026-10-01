@@ -7,12 +7,7 @@
     "types": ["node"],
     // tsdown builds dist/ (see tsdown.config.ts); tsc only type-checks, and
     // follows the inlined @devdogsuga/cli-core into its sibling package.
-    "noEmit": true,
-    // The image templates in @devdogsuga/open-graph are JSX, and `images` renders them
-    // here. `react-jsx` rather than `react` so the sources need no React import
-    // of their own — Satori reads the plain {type, props} objects the automatic
-    // runtime produces, and never mounts them.
-    "jsx": "react-jsx"
+    "noEmit": true
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["src/**/*.test.ts"]

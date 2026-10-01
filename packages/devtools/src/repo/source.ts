@@ -59,17 +59,11 @@ export function resetSourceCacheForTests(): void {
   cache.clear();
 }
 
-// Backstage has no copy of any of these three packages (all "private": true,
+// Backstage has no copy of either of these packages (both "private": true,
 // staying in DevDogsUGA — see the ledger), so none of their real types are
-// resolvable here. `open-graph-types.ts` and `email-types.ts` are
-// hand-maintained mirrors of what devtools actually uses; `docs` has no
-// shim at all, matching its one caller's own pre-existing inline cast
+// resolvable here. `email-types.ts` is a hand-maintained mirror of what
+// devtools actually uses; `docs` has no shim at all, matching its one caller's own pre-existing inline cast
 // (`docs/index-pages.ts`'s `loadPages()`).
-import type { OpenGraphModule } from "../images/open-graph-types.js";
-export function loadOpenGraph(): Promise<OpenGraphModule> {
-  return loadSource<OpenGraphModule>("@devdogsuga/open-graph");
-}
-
 import type { EmailTemplates } from "../emails/email-types.js";
 export interface EmailModule {
   // A property rather than a method, so `const { render } = ...` is safe to

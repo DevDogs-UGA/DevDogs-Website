@@ -95,7 +95,6 @@ describe("--dry-run", () => {
       ["supabase"],
       ["preset", "apply-migrations"],
       ["run", "build"],
-      ["images"],
       ["emails"],
       ["roles", "list"],
     ]) {

@@ -14,7 +14,7 @@ export const oauthCommand: CommandNode = {
   // DevDogsUGA env file, database, or `DEPLOY_ENV`. TASK-345: a
   // workshop repo with no DevDogsUGA checkout at all must still be
   // able to run `pnpm dlx @devdogsuga/devtools oauth`, so this joins
-  // `github rulesets`/`github settings` in the catalog-driven bypass
+  // the `check` commands in the catalog-driven bypass
   // rather than the hardcoded `setup`/`completions` check — see
   // `launch.ts`'s `isEnvFreeCommand`. Inside a checkout, the command's
   // own hosted-target path still resolves a tier itself, lazily, only

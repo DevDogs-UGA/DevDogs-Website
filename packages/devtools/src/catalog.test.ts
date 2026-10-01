@@ -152,15 +152,6 @@ describe("prompts", () => {
       // filter?" first would ask it twice and let the answers disagree.
       "--filter",
       "--all",
-      // `images`. The formats a graphic can be drawn at depend on WHICH
-      // graphic — the matrix is sparse — and its own wizard asks in the same
-      // order as the CLI: positional graphic, format, then output. The outer
-      // wizard dispatches bare `images`; these remain available to scripts and
-      // in help without duplicating or reordering that flow.
-      "--format",
-      "--all-formats",
-      "--out",
-      "--default-out",
       "--dry-run",
       // `emails` asks these after its template picker so the interactive and
       // scripted paths share one flow.
@@ -176,19 +167,6 @@ describe("prompts", () => {
       "--workflow",
       "--params",
       "--port",
-      // GitHub org/repo/App-slug scoping (`github rulesets`/`github
-      // settings`). All three default to the one repository (and App) this
-      // reconciler manages; a wizard question for values that are wrong
-      // roughly never is a worse version of just editing the flag on the
-      // rare drill (a fork, a renamed App) that needs them.
-      "--org",
-      "--repo",
-      "--app-slug",
-      // Write gate, not a question: `--apply` toggles "print" to "write" the
-      // same way `--dry-run` does elsewhere in this file — the confirmation
-      // before writing (`confirmApply`) IS the question, not a second one
-      // for whether to ask it.
-      "--apply",
       // `oauth`'s connect-transport override (TASK-352). Which transport —
       // the local loopback listener or the device-code flow — is decided
       // automatically from the environment (SSH/Codespaces/dev container,
@@ -244,12 +222,10 @@ describe("coverage of what the CLI dispatches", () => {
     "oauth",
     "script",
     "emails",
-    "images",
     "env",
     "gen",
     "cron",
     "workflows",
-    "github",
     // Both are dispatched twice: once in `main()` ahead of `intro()`, which is
     // what a typed command line reaches, and once in `dispatch` for the walk
     // the wizard hands back. They belong here for the second of those.

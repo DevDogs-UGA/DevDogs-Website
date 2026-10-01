@@ -19,8 +19,8 @@
  */
 export const VALUE_FLAGS = new Set([
   "--access-token",
-  // `images`: so `images --format og page/events` reads `og` as the format and
-  // `page/events` as the graphic, not both as graphics.
+  // `graphics`: so `graphics --format og brand/club` reads `og` as the format
+  // and `brand/club` as the graphic, not both as graphics.
   "--format",
   "--out",
   "--version",

@@ -37,50 +37,35 @@
   "dependencies": {
     "@clack/prompts": "catalog:",
     "@devdogsuga/telemetry": "workspace:*",
-    "@resvg/resvg-js": "^2.6.2",
     "@sentry/node": "catalog:",
     "@supabase/supabase-js": "catalog:",
     "dotenv": "^17.4.2",
     "postgres": "catalog:",
-    "satori": "^0.33.4",
-    "sharp": "0.35.3",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "zod": "catalog:"
   },
   "peerDependencies": {
-    "@devdogsuga/brand": "*",
     "@devdogsuga/db": "*",
-    "@devdogsuga/env": "*",
-    "@devdogsuga/events": "*"
+    "@devdogsuga/env": "*"
   },
   "peerDependenciesMeta": {
-    "@devdogsuga/brand": {
-      "optional": true
-    },
     "@devdogsuga/db": {
       "optional": true
     },
     "@devdogsuga/env": {
       "optional": true
-    },
-    "@devdogsuga/events": {
-      "optional": true
     }
   },
   "devDependencies": {
     "@devdogsuga/backstage": "workspace:*",
-    "@devdogsuga/brand": "workspace:*",
     "@devdogsuga/cli-core": "workspace:*",
     "@devdogsuga/config": "workspace:*",
     "@devdogsuga/db": "workspace:*",
     "@devdogsuga/env": "workspace:*",
-    "@devdogsuga/events": "workspace:*",
     "@types/node": "catalog:",
-    "@types/react": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",
-    "react": "catalog:",
     "tsdown": "^0.23.0",
     "vitest": "catalog:"
   }

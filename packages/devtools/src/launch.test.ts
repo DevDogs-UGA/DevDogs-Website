@@ -2,7 +2,7 @@
  * Unit tests for `stripTierFlag`, the one pure piece of `launch.ts`, plus
  * `launch()`'s bypasses: `--help`/`-h`, the `setup`/`completions` commands
  * that must run before there is a tier to resolve, and the catalog-driven
- * `envFree` bypass (`github rulesets`/`github settings`, TASK-342).
+ * `envFree` bypass (`oauth`).
  *
  * Everything else in that module either resolves the real filesystem
  * (`availableTiers`), mutates `process.env` (`enterEnvironment`), or exits
@@ -201,21 +201,14 @@ describe("launch", () => {
     expect(main).toHaveBeenCalledWith(["completions", "bash"]);
   });
 
-  it("github rulesets skips tier resolution — catalog-marked envFree (TASK-322/TASK-342 wart)", async () => {
+  it("oauth skips tier resolution — catalog-marked envFree", async () => {
     const { launch } = await import("./launch.js");
-    await launch(["github", "rulesets", "--apply"]);
+    await launch(["oauth", "--json"]);
     expect(resolveSessionTier).not.toHaveBeenCalled();
     expect(enterEnvironment).toHaveBeenCalledWith("development", {
       override: false,
     });
-    expect(main).toHaveBeenCalledWith(["github", "rulesets", "--apply"]);
-  });
-
-  it("github settings skips tier resolution — catalog-marked envFree", async () => {
-    const { launch } = await import("./launch.js");
-    await launch(["github", "settings", "--json"]);
-    expect(resolveSessionTier).not.toHaveBeenCalled();
-    expect(main).toHaveBeenCalledWith(["github", "settings", "--json"]);
+    expect(main).toHaveBeenCalledWith(["oauth", "--json"]);
   });
 
   it.each(["migrations", "env", "workers", "scripts"])(

@@ -25,11 +25,9 @@
     "typescript": "catalog:"
   },
   "devDependencies": {
-    "@devdogsuga/brand": "workspace:*",
     "@devdogsuga/config": "workspace:*",
     "@devdogsuga/db": "workspace:*",
     "@devdogsuga/env": "workspace:*",
-    "@devdogsuga/events": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "vitest": "catalog:",

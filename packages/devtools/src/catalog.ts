@@ -17,9 +17,7 @@ import { doctorCommand } from "./doctor/catalog.js";
 import { emailsCommand } from "./emails/catalog.js";
 import { envCommand } from "./env/catalog.js";
 import { genCommand } from "./gen/catalog.js";
-import { githubCommand } from "./gh/catalog.js";
 import { grantRootCommand, rolesCommand } from "./roles/catalog.js";
-import { imagesCommand } from "./images/catalog.js";
 import { oauthCommand } from "./oauth/catalog.js";
 import {
   drizzleKitCommand,
@@ -66,7 +64,7 @@ export const GROUPS: readonly CommandGroup[] = [
   },
   {
     title: "Content & communications",
-    commands: [imagesCommand, emailsCommand],
+    commands: [emailsCommand],
   },
   {
     title: "Configuration & integrations",
@@ -75,10 +73,6 @@ export const GROUPS: readonly CommandGroup[] = [
   {
     title: "Environment",
     commands: [doctorCommand],
-  },
-  {
-    title: "GitHub",
-    commands: [githubCommand],
   },
   {
     title: "CI & CLI utilities",

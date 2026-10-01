@@ -95,8 +95,7 @@ export { stripTierFlag };
 /**
  * Whether the command `rest` dispatches to is declared `envFree` in
  * the command catalog — the leading run of non-flag tokens is the
- * command path (`["github", "rulesets"]` out of `["github", "rulesets",
- * "--apply"]`), the same convention `stripTierFlag` already uses for
+ * command path (`["oauth"]` out of `["oauth", "--json"]`), the same convention `stripTierFlag` already uses for
  * pulling a flag out of argv wherever it sits.
  *
  * Catalog-driven rather than a second hardcoded name list: `setup` and
@@ -104,7 +103,7 @@ export { stripTierFlag };
  * resolution for a DIFFERENT reason worth spelling out at the call site —
  * see the comment above), but a plain "this command touches no env at all"
  * exemption reads once, from the same tree `--help` and the wizard already
- * render, rather than as a name a future GitHub-only command has to
+ * render, rather than as a name a future env-free command has to
  * remember to add here too.
  */
 function isEnvFreeCommand(rest: readonly string[]): boolean {
@@ -277,11 +276,9 @@ export async function launch(argv: readonly string[]): Promise<void> {
     //     machines of the people working on the deploy workflow.
     //
     // A third, open-ended case joins them here via `isEnvFreeCommand`:
-    // `github rulesets` and `github settings` (TASK-322, TASK-342) touch no
-    // DevDogsUGA env file or database at all — every write either one makes
-    // is a `gh api` call resolved from its own `--org`/`--repo` flags — so
-    // demanding a `--tier` before either could run was never a real
-    // requirement, only every command sharing one dispatch gate. See
+    // `oauth` and the `check` commands touch no DevDogsUGA env file or
+    // database at all, so demanding a `--tier` before they could run was
+    // never a real requirement, only every command sharing one dispatch gate. See
     // `isEnvFreeCommand`'s own doc for why this is catalog-driven rather
     // than a third name joining the `rest[0] ===` checks above.
     //

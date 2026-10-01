@@ -54,9 +54,7 @@ import { handleDoctor } from "./doctor/commands.js";
 import { handleEmails } from "./emails/commands.js";
 import { handleEnv } from "./env/commands.js";
 import { handleGen } from "./gen/commands.js";
-import { handleGithub } from "./gh/commands.js";
 import { handleGrantRoot, handleRoles } from "./roles/commands.js";
-import { handleImages } from "./images/commands.js";
 import { handleOAuth } from "./oauth/commands.js";
 import { handlePassthrough } from "./passthrough/commands.js";
 import { handlePreset } from "./preset/commands.js";
@@ -86,12 +84,10 @@ const CONTRIBUTOR_HANDLERS: Record<string, CommandHandler> = {
   run: runTask,
   oauth: handleOAuth,
   script: handleScript,
-  images: handleImages,
   emails: handleEmails,
   cf: handleCf,
   gen: handleGen,
   cron: handleCron,
-  github: handleGithub,
   workflows: handleWorkflows,
   env: handleEnv,
   db: handleDb,
@@ -155,6 +151,16 @@ const RETIRED: Record<string, { message: string; hints: string[] }> = {
     hints: [
       "pnpm dlx @devdogsuga/backstage planner <status|create|reset-password|drop>",
     ],
+  },
+  // Tools that need no checkout and no tier are the officer CLI's too.
+  images: {
+    message:
+      "`images` is now `backstage graphics` (no `page/*` group, no `--default-out`).",
+    hints: ["pnpm dlx @devdogsuga/backstage graphics 'event/*' --out ~/images"],
+  },
+  github: {
+    message: "`github` moved to backstage.",
+    hints: ["pnpm dlx @devdogsuga/backstage github <rulesets|settings>"],
   },
 };
 
