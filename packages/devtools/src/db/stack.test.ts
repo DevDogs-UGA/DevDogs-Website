@@ -1,10 +1,5 @@
 /**
- * `reconcileConfigAfterReset`: `db reset`'s best-effort trigger for the local
- * config reconcile route. Both `reachable` and `fetch` are injected (see
- * `ReconcileConfigDeps`) so these run with no real dev server and no
- * `vi.stubGlobal` on the network.
- *
- * Also `runStackCommand("start", …)`'s interaction with a failing bucket
+ * `runStackCommand("start")`'s interaction with a failing bucket
  * seed: `startLocalStack` writes `.env.generated` BEFORE `seedBuckets` runs,
  * so a nonzero `seedBuckets` exit must still refresh this process's entered
  * environment (`refreshSessionEnv`) — the file on disk genuinely changed —
@@ -59,83 +54,7 @@ vi.mock("./session-refresh.js", () => ({
   refreshSessionEnv: () => refreshSessionEnv(),
 }));
 
-import { reconcileConfigAfterReset, runStackCommand } from "./stack.js";
-
-function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    ...init,
-    headers: { "content-type": "application/json" },
-  });
-}
-
-describe("reconcileConfigAfterReset", () => {
-  it("reports the manual step when nothing is listening", async () => {
-    const fetchSpy = vi.fn();
-    const lines = await reconcileConfigAfterReset({
-      reachable: vi.fn(async () => false),
-      fetch: fetchSpy,
-    });
-
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(lines.join(" ")).toContain("nothing is listening");
-    expect(lines.join(" ")).toContain("pnpm --filter platform dev");
-  });
-
-  it("requests the config-reconcile route with no auth header, and reports success", async () => {
-    const fetchSpy = vi.fn<typeof globalThis.fetch>(async () =>
-      jsonResponse({ success: true, counts: {} }),
-    );
-    const lines = await reconcileConfigAfterReset({
-      reachable: vi.fn(async () => true),
-      fetch: fetchSpy,
-    });
-
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchSpy.mock.calls[0]!;
-    expect(url).toBe("http://localhost:3000/cron/config-reconcile");
-    // No CRON_SECRET, matching the route's own local-request exemption.
-    expect(init).toBeUndefined();
-    expect(lines).toEqual([
-      "Meetings and workshops reconciled from @devdogsuga/events.",
-    ]);
-  });
-
-  it("reports an aborted reconcile without pretending it succeeded", async () => {
-    const fetchSpy = vi.fn(async () =>
-      jsonResponse({ success: false, reason: "events has zero meetings" }),
-    );
-    const lines = await reconcileConfigAfterReset({
-      reachable: vi.fn(async () => true),
-      fetch: fetchSpy,
-    });
-
-    expect(lines.join(" ")).toContain("aborted");
-    expect(lines.join(" ")).toContain("events has zero meetings");
-  });
-
-  it("reports a non-2xx response instead of throwing", async () => {
-    const fetchSpy = vi.fn(async () => new Response("nope", { status: 500 }));
-    const lines = await reconcileConfigAfterReset({
-      reachable: vi.fn(async () => true),
-      fetch: fetchSpy,
-    });
-
-    expect(lines.join(" ")).toContain("HTTP 500");
-  });
-
-  it("reports a network failure instead of rejecting", async () => {
-    const fetchSpy = vi.fn(async () => {
-      throw new Error("ECONNRESET");
-    });
-    const lines = await reconcileConfigAfterReset({
-      reachable: vi.fn(async () => true),
-      fetch: fetchSpy,
-    });
-
-    expect(lines.join(" ")).toContain("ECONNRESET");
-  });
-});
+import { runStackCommand } from "./stack.js";
 
 describe('runStackCommand("start", …)', () => {
   beforeEach(() => {
@@ -155,7 +74,7 @@ describe('runStackCommand("start", …)', () => {
   });
 
   it("refreshes the session and reports success when the buckets seed succeeds", async () => {
-    const { code, lines } = await runStackCommand("start", null);
+    const { code, lines } = await runStackCommand("start");
 
     expect(code).toBe(0);
     expect(refreshSessionEnv).toHaveBeenCalledTimes(1);
@@ -174,7 +93,7 @@ describe('runStackCommand("start", …)', () => {
     // before `db start` ran.
     seedBuckets.mockResolvedValue(1);
 
-    const { code, lines } = await runStackCommand("start", null);
+    const { code, lines } = await runStackCommand("start");
 
     // The failure is still reported...
     expect(code).toBe(1);
@@ -186,7 +105,7 @@ describe('runStackCommand("start", …)', () => {
   it("does not refresh when `supabase start` itself fails — nothing on disk changed", async () => {
     supabase.mockResolvedValue(1);
 
-    const { code, lines } = await runStackCommand("start", null);
+    const { code, lines } = await runStackCommand("start");
 
     expect(code).toBe(1);
     expect(refreshSessionEnv).not.toHaveBeenCalled();
@@ -198,7 +117,7 @@ describe('runStackCommand("start", …)', () => {
     listContainerNames.mockReturnValue(["supabase_kong_DevDogs-Website"]);
     readProjectId.mockReturnValue("DevDogsUGA");
 
-    const { code, lines } = await runStackCommand("start", null);
+    const { code, lines } = await runStackCommand("start");
 
     expect(code).toBe(1);
     expect(refreshSessionEnv).not.toHaveBeenCalled();
@@ -212,7 +131,7 @@ describe('runStackCommand("start", …)', () => {
     listContainerNames.mockReturnValue(["supabase_kong_DevDogsUGA"]);
     readProjectId.mockReturnValue("DevDogsUGA");
 
-    const { code, lines } = await runStackCommand("start", null);
+    const { code, lines } = await runStackCommand("start");
 
     expect(code).toBe(1);
     expect(lines).toEqual([]);
@@ -221,7 +140,7 @@ describe('runStackCommand("start", …)', () => {
   it("does not refresh when `supabase status -o env` throws before the file is written", async () => {
     supabaseCapture.mockRejectedValue(new Error("supabase CLI crashed"));
 
-    const { code, lines } = await runStackCommand("start", null);
+    const { code, lines } = await runStackCommand("start");
 
     expect(code).toBe(1);
     expect(refreshSessionEnv).not.toHaveBeenCalled();

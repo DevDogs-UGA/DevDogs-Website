@@ -51,9 +51,6 @@ async function runGrantRoot(
   if (candidates.length === 0) {
     explain("There are no accounts on this database yet.", "", [
       "Sign in once through the app, then run this again.",
-      ...(connection.tier === "development"
-        ? ["Or create one: `pnpm devtools persona member`."]
-        : []),
     ]);
     return;
   }

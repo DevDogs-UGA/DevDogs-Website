@@ -36,7 +36,7 @@ function say(line: string): void {
 /** `supabase stop` then `supabase start`; the only way to pick up config.toml. */
 export async function restartStack(): Promise<number> {
   reportRuns(true);
-  const { code, lines } = await runStackCommand("restart", null);
+  const { code, lines } = await runStackCommand("restart");
   for (const line of lines) say(line);
   return code;
 }

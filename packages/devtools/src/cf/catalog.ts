@@ -32,8 +32,10 @@ const WORKER_APP_CHOICES: OptionChoice[] = (() => {
 
 export const cfCommand: CommandNode = {
   name: "cf",
-  summary: "Develop and build an app on the Workers runtime.",
-  hint: "preview, typegen — deploys live in CI",
+  summary: "Preview an app on the Workers runtime.",
+  hint: "deprecated: each app's own `preview` script",
+  surface: "cli-only",
+  deprecated: "Use the app's own `preview` script: `pnpm -F <app> preview`.",
   subcommands: [
     {
       name: "preview",
@@ -60,65 +62,6 @@ export const cfCommand: CommandNode = {
         },
         YES,
       ],
-    },
-    {
-      name: "typegen",
-      summary: "Regenerate cloudflare-env.d.ts from the wrangler config.",
-      options: [
-        {
-          flag: "--app",
-          value: "<slug>",
-          summary: "App to run typegen for. Asked for when absent.",
-          prompt: {
-            kind: "select",
-            message: "Which app?",
-            choices: WORKER_APP_CHOICES,
-          },
-        },
-        {
-          flag: "--check",
-          summary: "Check types only — do not write.",
-          prompt: {
-            kind: "confirm",
-            message: "Check only (do not write)?",
-            initial: true,
-          },
-        },
-      ],
-    },
-    {
-      name: "build",
-      summary: "Build an app's Worker bundle for a tier.",
-      options: [
-        {
-          flag: "--app",
-          value: "<slug>",
-          summary: "App to build. Asked for when absent.",
-          prompt: {
-            kind: "select",
-            message: "Which app?",
-            choices: WORKER_APP_CHOICES,
-          },
-        },
-        {
-          flag: "--tier",
-          value: "<t>",
-          summary: "Which deployment tier to build for.",
-          prompt: {
-            kind: "select",
-            message: "Which tier?",
-            choices: [
-              { value: "staging" },
-              { value: "production", hint: "⚠️  live bundle" },
-            ],
-          },
-        },
-      ],
-    },
-    {
-      name: "exec",
-      summary: "Run wrangler. Everything after -- passes through.",
-      hint: "the escape hatch",
     },
   ],
 };

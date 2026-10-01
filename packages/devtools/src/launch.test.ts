@@ -438,15 +438,15 @@ describe("launch", () => {
           "--no-env",
           "--tier",
           "development:local",
-          "check",
-          "env",
+          "cron",
+          "list",
         ]);
 
         expect(resolveSessionTier).not.toHaveBeenCalled();
         expect(enterEnvironment).not.toHaveBeenCalled();
         expect(process.env.DEPLOY_ENV).toBe("development");
         expect(process.env.DEV_DB).toBe("local");
-        expect(main).toHaveBeenCalledWith(["check", "env"]);
+        expect(main).toHaveBeenCalledWith(["cron", "list"]);
       });
 
       it("--no-env still refuses a tier it cannot parse", async () => {
@@ -456,7 +456,7 @@ describe("launch", () => {
         const { launch } = await import("./launch.js");
 
         await expect(
-          launch(["--no-env", "--tier", "prod", "check", "env"]),
+          launch(["--no-env", "--tier", "prod", "cron", "list"]),
         ).rejects.toThrow("exit");
       });
     });

@@ -6,8 +6,9 @@
  *
  * `devtools-ci deploy <app> --tier <staging|production>` replaces the three
  * near-identical `cf:deploy:*` shell strings in the app package.json files.
- * It runs `require-token`, then the app-specific deploy commands: docs index
- * for platform only, then a plain `wrangler deploy` for all three apps.
+ * It runs `require-token`, then a plain `wrangler deploy` for all three apps.
+ * (The docs search index is no longer a deploy step: docs-kit's
+ * `populate:search` writes it, from the cutover's deploy workflow.)
  * Both Next.js apps are on vinext now -- deploy-app.yaml's separate "Build"
  * step already ran `vinext build` (`cf:build:$DEPLOY_ENV`), which leaves a
  * Wrangler "config redirect" at `.wrangler/deploy/config.json` pointing at
@@ -29,7 +30,6 @@ import { runPreflight } from "./preflight.js";
 import { runDeployMigrate, runDeployPlan } from "./migrations.js";
 import { runRequirePlanner } from "./require-planner.js";
 import { runRequireToken } from "./require-token.js";
-import { runDocsIndex } from "../docs/index-pages.js";
 import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
 import { flagValue, positionals } from "@devdogsuga/cli-core/args";
 import { isWorkerApp, workerApps } from "@devdogsuga/cli-core/workers";
@@ -119,25 +119,6 @@ async function runAppDeploy(app: App, rest: string[]): Promise<void> {
   const secretsFile = process.env.DEPLOY_SECRETS_FILE;
 
   const steps: { label: string; fn: () => Promise<number> }[] = [];
-
-  // Platform is the only app with a prestep: it owns the docs site, so its
-  // deploy re-indexes the (already-built-elsewhere) docs into the remote
-  // search store before the Worker goes out.
-  if (app === "platform") {
-    steps.push({
-      label: "Index docs",
-      fn: async () => {
-        const buildCode = await pnpm(["--filter", "@devdogsuga/docs", "build"]);
-        if (buildCode !== 0) return buildCode;
-        const before = process.exitCode;
-        process.exitCode = 0;
-        await runDocsIndex({ target: "remote" });
-        const code = process.exitCode === 0 ? 0 : 1;
-        process.exitCode = before;
-        return code;
-      },
-    });
-  }
 
   // All three apps now share one deploy shape: a bare `wrangler deploy -e
   // <tier>` from the app directory. Both Next.js apps' target environment is

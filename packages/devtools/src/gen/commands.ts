@@ -1,31 +1,20 @@
 /**
  * Dispatch for `devtools gen *`.
  *
- * `gen og-assets` and `gen email-templates` delegate to the owning package
- * scripts via pnpm. `gen campus-map` and `gen hypno` are devtools-owned.
+ * Only `gen campus-map` is left; it moves to the platform's `fetch:campus-map`
+ * script with the rest of the DevDogsUGA-side scripts.
  */
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
-import { run } from "@devdogsuga/cli-core/db/run";
 import { runGenCampusMap } from "./campus-map.js";
-import { runGenHypno } from "./hypno.js";
 
 export async function runGen(argv: readonly string[]): Promise<number> {
   const sub = argv[0];
 
   if (sub === "campus-map") return runGenCampusMap();
-  if (sub === "hypno") return runGenHypno();
-
-  if (sub === "og-assets") {
-    return run(["--filter", "@devdogsuga/open-graph", "run", "generate"]);
-  }
-
-  if (sub === "email-templates") {
-    return run(["--filter", "@devdogsuga/email", "run", "compile"]);
-  }
 
   process.stderr.write(
     `devtools gen: unknown subcommand "${sub ?? "(none)"}". ` +
-      "Expected: campus-map, hypno, og-assets, email-templates.\n",
+      "Expected: campus-map.\n",
   );
   return 1;
 }

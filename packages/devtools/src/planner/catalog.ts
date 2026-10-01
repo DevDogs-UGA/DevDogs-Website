@@ -1,5 +1,5 @@
 /**
- * `db planner`'s place in the command tree: declaration only, nothing here
+ * `planner`'s place in the command tree: declaration only, nothing here
  * runs. The handler lives in `commands.ts` beside it. Production-only: the
  * role it manages exists for the deploy pipeline's preflight tier.
  */
@@ -24,7 +24,6 @@ const DB_URL: CommandOption = {
 export const plannerCommand: CommandNode = {
   name: "planner",
   summary: "The migration_planner role the preflight tier may hold.",
-  scope: "infra",
   subcommands: [
     {
       name: "status",

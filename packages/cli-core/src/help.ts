@@ -97,7 +97,10 @@ function optionRows(options: readonly CommandOption[]): [string, string][] {
 }
 
 function childRows(children: readonly CommandNode[]): [string, string][] {
-  return children.map((child) => [child.name, child.summary]);
+  return children.map((child) => [
+    child.name,
+    child.deprecated ? `${child.summary} (deprecated)` : child.summary,
+  ]);
 }
 
 // ── The three levels ─────────────────────────────────────────────────────────
@@ -154,6 +157,8 @@ function renderCommand(
     .join(" ");
 
   const lines = [usage, "", node.summary];
+
+  if (node.deprecated) lines.push("", `Deprecated. ${node.deprecated}`);
 
   if (children.length > 0) {
     lines.push("", "Subcommands:", ...scopedBody(children));

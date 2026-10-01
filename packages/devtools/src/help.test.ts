@@ -33,48 +33,40 @@ describe("the top level", () => {
   });
 
   /**
-   * The merged "Database" group renders as a single plain line at the root —
-   * `db` is its only command, and a group with no scoped commands of its own
-   * gets no headings. The four layers `db` spans now show up one level down,
-   * in `db --help`, tested next.
+   * The scoped lines are the presets', one level down in `preset --help`, so
+   * the root stays a plain list with no scope headings.
    */
-  it("renders db as a plain root entry without its internal scopes", () => {
-    const start = root.indexOf("\nRuntime & infrastructure:");
-    const end = root.indexOf("\n\n", start + 1);
-    const database = root.slice(start, end === -1 ? undefined : end);
-    // `split("\n")` on a string starting with "\n" gives ["", "Database:", …];
-    // skip both the empty leader and the heading itself.
-    const entries = database.split("\n").slice(2).filter(Boolean);
-
-    expect(database).not.toContain(SCOPES.machine.help);
-    expect(entries.some((entry) => entry.includes("db"))).toBe(true);
+  it("renders the presets as a plain root entry without their scopes", () => {
+    expect(root).not.toContain(`${SCOPES.repo.help}:`);
+    expect(root).toContain("preset");
   });
 
   /**
-   * "db" names both the containers and the database inside them, and
-   * `restart` and `reset` act on one each. The headings are what stop a
-   * fifteen-line list from making the reader guess which is which.
+   * Each preset names the layer it acts on, and the headings are what stop a
+   * short list from making the reader guess which is which.
    */
-  it("heads each layer of db, in scope order", () => {
-    const db = renderHelp(catalog, ["db"]);
-    const machine = db.indexOf(SCOPES.machine.help);
-    const repo = db.indexOf(SCOPES.repo.help);
-    const endpoint = db.indexOf(SCOPES.endpoint.help);
-    const infra = db.indexOf(SCOPES.infra.help);
+  it("heads each layer of preset, in scope order", () => {
+    const preset = renderHelp(catalog, ["preset"]);
+    const repo = preset.indexOf(SCOPES.repo.help);
+    const endpoint = preset.indexOf(SCOPES.endpoint.help);
 
-    // Machine, then repo, then endpoint, then infra — declaration order.
-    expect(machine).toBeGreaterThan(-1);
-    expect(repo).toBeGreaterThan(machine);
+    expect(repo).toBeGreaterThan(-1);
     expect(endpoint).toBeGreaterThan(repo);
-    expect(infra).toBeGreaterThan(endpoint);
+  });
+
+  it("marks a deprecated command and says what replaces it", () => {
+    expect(renderHelp(catalog, ["db"])).toContain("(deprecated)");
+    expect(renderHelp(catalog, ["db", "types"])).toContain(
+      "Deprecated. Use `pnpm -F @devdogsuga/supabase types:db`.",
+    );
   });
 
   it("leaves a single-scope group unheaded", () => {
-    // Groups that span only one layer (like Moderation) should not have a
-    // scope heading — every entry would sit under it and the heading adds noise.
+    // Groups that span only one layer should not have a scope heading —
+    // every entry would sit under it and the heading adds noise.
     // Structural rather than "contains no colon": a summary may hold one.
     const body = root
-      .slice(root.indexOf("\nModeration:") + 1)
+      .slice(root.indexOf("\nEnvironment:") + 1)
       .split("\n\n")[0]!
       .split("\n")
       .slice(1);

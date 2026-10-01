@@ -164,6 +164,15 @@ export interface CommandNode {
    */
   surface?: "interactive" | "cli-only";
   /**
+   * A thin alias kept for callers that have not moved yet: what replaces it.
+   *
+   * Help marks the command, the dispatcher still runs it, and
+   * `--help --json` carries the text so a docs check can refuse a page that
+   * documents it. Deprecated commands are also `cli-only`, so the wizard never
+   * offers them.
+   */
+  deprecated?: string;
+  /**
    * This command reads and writes no DevDogsUGA env file, database, or
    * `DEPLOY_ENV` — `launch.ts` may enter plain `development` for it with no
    * tier prompt and no multi-tier refusal, exactly like the hardcoded

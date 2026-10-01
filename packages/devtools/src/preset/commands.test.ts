@@ -99,7 +99,7 @@ afterEach(() => {
 describe("preset restart-stack", () => {
   it("restarts the local stack", async () => {
     await handlePreset(["restart-stack"]);
-    expect(runStackCommand).toHaveBeenCalledWith("restart", null);
+    expect(runStackCommand).toHaveBeenCalledWith("restart");
   });
 });
 
@@ -208,7 +208,7 @@ describe("preset push-config", () => {
     await handlePreset(["push-config"]);
 
     expect(commands()).toEqual([]);
-    expect(runStackCommand).toHaveBeenCalledWith("restart", null);
+    expect(runStackCommand).toHaveBeenCalledWith("restart");
   });
 });
 

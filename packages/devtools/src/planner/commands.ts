@@ -1,5 +1,5 @@
 /**
- * `pnpm devtools db planner <status|create|reset-password|drop>`, the operator
+ * `pnpm devtools planner <status|create|reset-password|drop>`, the operator
  * side of the `migration_planner` role.
  *
  * Four commands because the role has exactly four lifecycle moments:
@@ -186,7 +186,7 @@ export async function runPlannerStatus(
     if (!role) {
       log.warn(
         schemaReady
-          ? `${PLANNER_ROLE} does not exist. Mint it with \`pnpm devtools db planner create\`.`
+          ? `${PLANNER_ROLE} does not exist. Mint it with \`pnpm devtools planner create\`.`
           : `${PLANNER_ROLE} does not exist — and neither does the ` +
               "supabase_migrations schema, so `planner create` would refuse: " +
               "initialize this database's migration history first " +
@@ -447,7 +447,7 @@ export async function runPlannerResetPassword(
     if (!(await roleExists(db))) {
       bail(
         `${PLANNER_ROLE} does not exist — nothing to reset. Mint it with ` +
-          "`pnpm devtools db planner create`.",
+          "`pnpm devtools planner create`.",
       );
     }
     const password = generatePassword();
@@ -458,13 +458,13 @@ export async function runPlannerResetPassword(
 }
 
 /**
- * `db planner <status|create|reset-password|drop> [--db-url <url>]`
+ * `planner <status|create|reset-password|drop> [--db-url <url>]`
  *
  * Operator-side lifecycle of the `migration_planner` role. See
  * `planner/commands.ts` for the commands themselves and for why there is no
  * `retrieve`. Interactive by design (create and reset confirm before writing
  * to production), so unlike the `deploy` group it talks through clack and is
- * fine to run as plain `pnpm devtools db planner …`.
+ * fine to run as plain `pnpm devtools planner …`.
  */
 export async function runPlannerCommand(rest: string[]): Promise<void> {
   const [sub] = positionals(rest);
@@ -489,8 +489,8 @@ export async function runPlannerCommand(rest: string[]): Promise<void> {
 
   log.error(
     sub
-      ? `devtools db planner: unknown subcommand "${sub}". Try ${catalog.subcommandList(["db", "planner"])}.`
-      : `devtools db planner: which of ${catalog.subcommandList(["db", "planner"])}?`,
+      ? `devtools planner: unknown subcommand "${sub}". Try ${catalog.subcommandList(["planner"])}.`
+      : `devtools planner: which of ${catalog.subcommandList(["planner"])}?`,
   );
   process.exitCode = 1;
 }

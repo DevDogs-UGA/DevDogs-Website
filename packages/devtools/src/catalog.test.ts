@@ -210,6 +210,9 @@ describe("prompts", () => {
       // `doctor --report`: a write-gate for stdout, not a question — same
       // reasoning as `--apply`/`--json` above.
       "--report",
+      // `check migrations`: CI names the ref it compared against; the
+      // check is typed-only, so there is no wizard to ask.
+      "--base",
     ]);
     const unasked = new Set<string>();
 
@@ -238,31 +241,24 @@ describe("coverage of what the CLI dispatches", () => {
    */
   const DISPATCHED = [
     "completions",
-    "moderation",
+    "check",
     "doctor",
     "grant-root",
-    "persona",
     "setup",
     "oauth",
-    "docs",
     "emails",
     "images",
     "env",
-    // The merged Supabase/Database group: one top-level command, `db`, whose
-    // dispatch handles `start`, `connect`, `stop`, `restart`, `status`,
-    // `migrate`, `reset`, `migration *`, `types`, `seed *`, `introspect`,
-    // `config *`, `planner *` and `exec` beneath it.
-    "db",
     "gen",
     "cron",
     "workflows",
-    "cf",
     "github",
     // Both are dispatched twice: once in `main()` ahead of `intro()`, which is
     // what a typed command line reaches, and once in `dispatch` for the walk
     // the wizard hands back. They belong here for the second of those.
     "run",
     "bw",
+    "planner",
     // The presets, and the real tools (passthroughs, typed only: `main()`
     // routes them ahead of `intro()`).
     "preset",
@@ -270,6 +266,9 @@ describe("coverage of what the CLI dispatches", () => {
     "wrangler",
     "drizzle-kit",
     "psql",
+    // Deprecated aliases for what DevDogsUGA's main still calls, typed only.
+    "db",
+    "cf",
   ];
 
   it("declares exactly the top-level commands the CLI accepts", () => {
@@ -287,105 +286,93 @@ describe("coverage of what the CLI dispatches", () => {
       "example",
       "reset",
     ]);
-    expect(subcommandNames(["docs"])).toEqual(["index"]);
     expect(subcommandNames(["cron"])).toEqual(["list", "run"]);
     expect(subcommandNames(["workflows"])).toEqual(["list", "run", "serve"]);
-
-    // The merged `db` command. Declaration order is scope order: machine,
-    // repo, endpoint, infra, then the unscoped escape hatch.
-    expect(subcommandNames(["db"])).toEqual([
-      "start",
-      "connect",
-      "stop",
-      "restart",
-      "migration",
-      "status",
-      "migrate",
-      "reset",
-      "types",
-      "seed",
-      "introspect",
-      "config",
-      "planner",
-      "exec",
+    expect(subcommandNames(["check"])).toEqual([
+      "migrations",
+      "env",
+      "workers",
+      "scripts",
     ]);
-    expect(subcommandNames(["db", "migration"])).toEqual(["new"]);
-    expect(subcommandNames(["db", "seed"])).toEqual([
-      "buckets",
-      "roles",
-      "production",
-    ]);
-    expect(subcommandNames(["db", "config"])).toEqual(["push"]);
-    expect(subcommandNames(["db", "planner"])).toEqual([
+    expect(subcommandNames(["planner"])).toEqual([
       "status",
       "create",
       "reset-password",
       "drop",
     ]);
+    expect(subcommandNames(["preset"])).toEqual([
+      "restart-stack",
+      "new-migration",
+      "apply-migrations",
+      "push-config",
+    ]);
+
+    // The `db` and `cf` namespaces are gone. What is left is the deprecated
+    // aliases DevDogsUGA's main still calls.
+    expect(subcommandNames(["db"])).toEqual(["start", "types", "introspect"]);
+    expect(subcommandNames(["cf"])).toEqual(["preview"]);
+    expect(subcommandNames(["gen"])).toEqual(["campus-map"]);
+  });
+
+  it("has no command for what was deleted", () => {
+    for (const path of [
+      ["persona"],
+      ["moderation"],
+      ["docs"],
+      ["db", "reset"],
+      ["db", "seed"],
+      ["cf", "build"],
+      ["cf", "exec"],
+      ["gen", "hypno"],
+      ["gen", "og-assets"],
+      ["gen", "email-templates"],
+    ]) {
+      expect(findCommand(path), path.join(" ")).toBeNull();
+    }
+  });
+
+  it("keeps every deprecated command out of the wizard", () => {
+    for (const { path, node } of everyNode()) {
+      if (!node.deprecated) continue;
+      expect(node.surface, path.join(" ")).toBe("cli-only");
+    }
+    expect(findCommand(["completions"])?.surface).toBe("cli-only");
   });
 });
 
 describe("scopes", () => {
-  // Scopes used to divide a GROUP's own commands ("Supabase"). Now that group
-  // has merged into "Database", whose only command is `db`, they divide `db`'s
-  // own subcommands instead — the group itself renders as one plain line.
-  const dbSubcommands = () => findCommand(["db"])!.subcommands ?? [];
+  // Scopes divide the presets' lines now that `db` is gone: the layer each
+  // one acts on, so a contributor chooses deliberately rather than by accident.
+  const presets = () => findCommand(["preset"])!.subcommands ?? [];
 
-  it("places db in Runtime & infrastructure", () => {
-    const group = GROUPS.find((g) => g.title === "Runtime & infrastructure");
-    expect(group).toBeDefined();
-    expect(group!.commands.map((c) => c.name)).toContain("db");
-    expect(GROUPS.some((g) => g.title === "Supabase")).toBe(false);
-  });
-
-  /**
-   * Pinned as "all of them but `exec`" rather than "the ones that have one":
-   * an unlabelled command under `db` is the exact confusion the scopes exist
-   * to remove, and it would render as a stray line under whichever heading
-   * happened to be open. `exec` is the one deliberate exception — the escape
-   * hatch, unscoped like `bw`.
-   */
-  it("labels every db subcommand except exec", () => {
-    for (const command of dbSubcommands()) {
-      if (command.name === "exec") {
-        expect(command.scope, command.name).toBeUndefined();
-        continue;
-      }
-      expect(command.scope, `db ${command.name}`).toBeDefined();
+  it("labels every preset", () => {
+    for (const command of presets()) {
+      expect(command.scope, `preset ${command.name}`).toBeDefined();
     }
   });
 
-  it("labels nothing outside db's own subcommands", () => {
-    const inDb = new Set<CommandNode>(dbSubcommands());
-    // `docs index` is deliberately scoped: it connects to a database endpoint
-    // even though its parent group is not a scoped group. Explicit exception,
-    // unrelated to `db`.
-    const SCOPED_EXCEPTIONS = new Set(["docs index"]);
+  it("labels nothing outside the presets", () => {
     for (const { path, node } of everyNode()) {
-      if (inDb.has(node)) continue;
-      if (SCOPED_EXCEPTIONS.has(path.join(" "))) continue;
-      // The presets name the layer they act on, like `db` does.
       if (path[0] === "preset" && path.length > 1) continue;
       expect(node.scope, path.join(" ")).toBeUndefined();
     }
   });
 
   /**
-   * `--help` opens a heading every time the scope changes as it walks `db`'s
-   * subcommands, so scopes that interleaved would render as many one-line
-   * blocks rather than four readable ones. Declaration order carries that.
-   * `exec`'s undefined scope neither opens nor closes a heading.
+   * `--help` opens a heading every time the scope changes as it walks the
+   * presets, so scopes that interleaved would render as many one-line blocks
+   * rather than readable ones. Declaration order carries that.
    */
   it("declares each scope in one contiguous run", () => {
     const opened = new Set<Scope>();
     let open: Scope | undefined;
 
-    for (const command of dbSubcommands()) {
+    for (const command of presets()) {
       if (!command.scope) continue;
       if (command.scope === open) continue;
       expect(
         opened.has(command.scope),
-        `db ${command.name} reopens ${command.scope}`,
+        `preset ${command.name} reopens ${command.scope}`,
       ).toBe(false);
       opened.add(command.scope);
       open = command.scope;
@@ -402,8 +389,8 @@ describe("scopes", () => {
 
 describe("subcommandList", () => {
   it("reads as a sentence", () => {
-    expect(subcommandList(["docs"])).toBe("index");
-    expect(subcommandList(["db", "planner"])).toBe(
+    expect(subcommandList(["cf"])).toBe("preview");
+    expect(subcommandList(["planner"])).toBe(
       "status, create, reset-password or drop",
     );
   });
@@ -506,36 +493,6 @@ describe("style guide", () => {
     for (const { path, node } of everyNode()) {
       for (const option of node.options ?? []) {
         expect(option.flag, path.join(" ")).not.toBe("--no-output");
-      }
-    }
-  });
-
-  /**
-   * (f) `--target` never returns to the `db` namespace.
-   *
-   * The retired endpoint selector (`--target local|remote`) asked a question
-   * the SESSION already answers (`--tier development:local|development:remote|
-   * staging|production`, settled by the launcher before dispatch), and
-   * `db`'s dispatcher refuses the flag by name so old scripts fail loudly. This pin
-   * keeps a future db subcommand from quietly reintroducing the vocabulary.
-   * The `--target` flags that legitimately remain mean OTHER things: the env
-   * commands' vault target, `planner`'s tier word, and `docs index`'s delete
-   * acknowledgment (`DOCS_TARGET`) — all outside `db`'s endpoint scope, except
-   * `planner` which names its own connection (`infra` scope) rather than the
-   * session's.
-   */
-  it("keeps --target out of db's endpoint-scope commands", () => {
-    for (const { path, node } of everyNode()) {
-      if (path[0] !== "db") continue;
-      const parent = path.length > 1 ? findCommand(path.slice(0, -1)) : null;
-      const isEndpointScope =
-        node.scope === "endpoint" ||
-        (!node.scope && parent?.scope === "endpoint");
-      if (!isEndpointScope) continue;
-      for (const option of node.options ?? []) {
-        expect(option.flag, `${path.join(" ")} ${option.flag}`).not.toBe(
-          "--target",
-        );
       }
     }
   });

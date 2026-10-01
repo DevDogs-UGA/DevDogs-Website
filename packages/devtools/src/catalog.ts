@@ -11,10 +11,10 @@ import { createCatalog, type CommandGroup } from "@devdogsuga/cli-core/catalog";
 import { bwCommand } from "./bws/catalog.js";
 import { cfCommand } from "./cf/catalog.js";
 import { completionsCommand } from "./completions/catalog.js";
+import { checkCommand } from "./check/catalog.js";
 import { cronCommand } from "./cron/catalog.js";
 import { deployCommand } from "./deploy/catalog.js";
 import { dbCommand } from "./db/catalog.js";
-import { docsCommand } from "./docs/catalog.js";
 import { doctorCommand } from "./doctor/catalog.js";
 import { emailsCommand } from "./emails/catalog.js";
 import { envCommand } from "./env/catalog.js";
@@ -22,7 +22,6 @@ import { genCommand } from "./gen/catalog.js";
 import { githubCommand } from "./gh/catalog.js";
 import { grantRootCommand } from "./grant-root/catalog.js";
 import { imagesCommand } from "./images/catalog.js";
-import { moderationCommand } from "./moderation/catalog.js";
 import { oauthCommand } from "./oauth/catalog.js";
 import {
   drizzleKitCommand,
@@ -30,7 +29,7 @@ import {
   supabaseCommand,
   wranglerCommand,
 } from "./passthrough/catalog.js";
-import { personaCommand } from "./persona/catalog.js";
+import { plannerCommand } from "./planner/catalog.js";
 import { presetCommand } from "./preset/catalog.js";
 import { runCommand } from "./run/catalog.js";
 import { setupCommand } from "./setup/catalog.js";
@@ -40,7 +39,7 @@ import { workflowsCommand } from "./workflows/catalog.js";
 export const GROUPS: readonly CommandGroup[] = [
   {
     title: "Workspace",
-    commands: [setupCommand, oauthCommand, runCommand, genCommand, docsCommand],
+    commands: [setupCommand, oauthCommand, runCommand, genCommand],
   },
   {
     title: "Runtime & infrastructure",
@@ -67,15 +66,13 @@ export const GROUPS: readonly CommandGroup[] = [
   },
   {
     title: "Configuration & integrations",
-    commands: [envCommand, bwCommand],
+    commands: [envCommand, grantRootCommand],
   },
   {
-    title: "Moderation",
-    commands: [moderationCommand, grantRootCommand],
-  },
-  {
-    title: "Personas",
-    commands: [personaCommand],
+    // Always need production secrets, so they leave for the backstage CLI
+    // (TASK-399); grouped here so that move is one cut.
+    title: "Production (moving to backstage)",
+    commands: [bwCommand, plannerCommand],
   },
   {
     title: "Environment",
@@ -86,8 +83,8 @@ export const GROUPS: readonly CommandGroup[] = [
     commands: [githubCommand],
   },
   {
-    title: "CLI utilities",
-    commands: [completionsCommand],
+    title: "CI & CLI utilities",
+    commands: [checkCommand, completionsCommand],
   },
 ];
 
@@ -104,8 +101,7 @@ export const catalog = createCatalog({
   commonTasks: [
     ["setup", "Prepare a new checkout"],
     ["run dev", "Start development servers"],
-    ["db start", "Start Supabase on this machine"],
-    ["db reset", "Rebuild the local database"],
+    ["supabase start", "Start Supabase on this machine"],
     ["supabase <args>", "Run the Supabase CLI against this session's tier"],
     ["preset apply-migrations", "Push migrations, then offer types:db"],
     ["cron run", "Choose and run a scheduled job"],

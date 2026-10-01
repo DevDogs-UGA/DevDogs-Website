@@ -38,10 +38,10 @@ import { ownVersion } from "@devdogsuga/cli-core/version";
 import { runBw } from "./bws/bw.js";
 import { catalog } from "./catalog.js";
 import { handleCf } from "./cf/commands.js";
+import { handleCheck } from "./check/commands.js";
 import { handleCompletions } from "./completions/commands.js";
 import { handleCron } from "./cron/commands.js";
 import { handleDb } from "./db/commands.js";
-import { handleDocs } from "./docs/commands.js";
 import { handleDoctor } from "./doctor/commands.js";
 import { handleEmails } from "./emails/commands.js";
 import { handleEnv } from "./env/commands.js";
@@ -49,10 +49,9 @@ import { handleGen } from "./gen/commands.js";
 import { handleGithub } from "./gh/commands.js";
 import { handleGrantRoot } from "./grant-root/commands.js";
 import { handleImages } from "./images/commands.js";
-import { handleModeration } from "./moderation/commands.js";
 import { handleOAuth } from "./oauth/commands.js";
 import { handlePassthrough } from "./passthrough/commands.js";
-import { handlePersona } from "./persona/commands.js";
+import { runPlannerCommand } from "./planner/commands.js";
 import { handlePreset } from "./preset/commands.js";
 import { runTask } from "./run/commands.js";
 import { handleSetup } from "./setup/commands.js";
@@ -63,15 +62,15 @@ import { handleWorkflows } from "./workflows/commands.js";
 /**
  * Commands that work against whatever tier the session points at, keyed by
  * top-level name. Each handler is owned by its domain's `commands.ts`; this
- * table is all `cli.ts` knows about them. Two of them carry a
+ * table is all `cli.ts` knows about them. One of them carries a
  * production-credential half that moves to the backstage CLI with the
  * production commands below: `env pull|push|audit` (declared in
- * `env/catalog.ts` as `envVaultSubcommands`) and `db planner`
- * (`planner/catalog.ts`).
+ * `env/catalog.ts` as `envVaultSubcommands`).
  */
 const CONTRIBUTOR_HANDLERS: Record<string, CommandHandler> = {
   setup: handleSetup,
   completions: handleCompletions,
+  check: handleCheck,
   // Reached only from the wizard. A typed `run` is handled in `main()` before
   // `intro()`. It exits with its child's status, so it never returns and
   // `outro()` is never reached. That is right: by the time a menu walk gets
@@ -79,7 +78,6 @@ const CONTRIBUTOR_HANDLERS: Record<string, CommandHandler> = {
   // rather than wedged between this CLI and pnpm's output.
   run: runTask,
   oauth: handleOAuth,
-  docs: handleDocs,
   images: handleImages,
   emails: handleEmails,
   cf: handleCf,
@@ -91,8 +89,6 @@ const CONTRIBUTOR_HANDLERS: Record<string, CommandHandler> = {
   db: handleDb,
   doctor: handleDoctor,
   preset: handlePreset,
-  persona: handlePersona,
-  moderation: handleModeration,
   "grant-root": handleGrantRoot,
 };
 
@@ -104,6 +100,10 @@ const CONTRIBUTOR_HANDLERS: Record<string, CommandHandler> = {
  */
 const PRODUCTION_HANDLERS: Record<string, CommandHandler> = {
   bw: runBw,
+  planner: async (rest) => {
+    await runPlannerCommand(rest);
+    return DONE;
+  },
 };
 
 /**
@@ -150,17 +150,6 @@ const RETIRED: Record<string, { message: string; hints: string[] }> = {
   secrets: {
     message: "`secrets` is now `env`.",
     hints: ["pnpm devtools env <pull|push|audit|reset|example|init>"],
-  },
-  // `catalog` still has an answer (`moderation check`, now folded together);
-  // `roundtrip` does not, because the command it named is gone outright.
-  catalog: {
-    message: "`catalog` is now `devtools moderation check`.",
-    hints: ["pnpm devtools moderation check"],
-  },
-  roundtrip: {
-    message:
-      "`roundtrip` is gone. The app repo's own CI covers the file/quarantine/check round trip more thoroughly than this command ever did.",
-    hints: ["pnpm devtools moderation check --app <slug>"],
   },
 };
 

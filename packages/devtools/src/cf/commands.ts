@@ -1,8 +1,10 @@
 /**
  * Dispatch for `devtools cf *`.
  *
- * Delegates to each app's package scripts for preview/typegen/build, and
- * passes through to wrangler for `cf exec`.
+ * Deprecated: only `cf preview` is left, for the app `cf:preview` scripts on
+ * DevDogsUGA's main. The cutover swaps those for each app's own `preview`
+ * script and deletes this alias. `typegen`, `build` and `exec` are gone
+ * (`types:cf`, `DEPLOY_ENV=<tier> pnpm -F <app> build`, `devtools wrangler`).
  */
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { confirm } from "@clack/prompts";
@@ -159,54 +161,9 @@ export async function runCf(argv: readonly string[]): Promise<number> {
     );
   }
 
-  if (sub === "typegen") {
-    const { app, rest: remaining } = parseAppAndRest(rest);
-    if (!app) {
-      process.stderr.write("devtools cf typegen: --app <slug> is required.\n");
-      return 1;
-    }
-    if (!isWorkerApp(app)) {
-      process.stderr.write(
-        `devtools cf typegen: unknown app "${app}". ${unknownAppHint()}\n`,
-      );
-      return 1;
-    }
-    const check = remaining.includes("--check");
-    const script = check ? "cf:typegen:check" : "cf:typegen";
-    return run(["--filter", app, "run", script]);
-  }
-
-  if (sub === "build") {
-    const { app } = parseAppAndRest(rest);
-    const tier = parseTier(rest);
-    if (!app) {
-      process.stderr.write("devtools cf build: --app <slug> is required.\n");
-      return 1;
-    }
-    if (!isWorkerApp(app)) {
-      process.stderr.write(
-        `devtools cf build: unknown app "${app}". ${unknownAppHint()}\n`,
-      );
-      return 1;
-    }
-    if (!tier || (tier !== "staging" && tier !== "production")) {
-      process.stderr.write(
-        "devtools cf build: --tier <staging|production> is required.\n",
-      );
-      return 1;
-    }
-    return run(["--filter", app, "run", `cf:build:${tier}`]);
-  }
-
-  if (sub === "exec") {
-    // Everything after "exec" (or after "--") passes to wrangler
-    const wranglerArgs = rest[0] === "--" ? rest.slice(1) : rest;
-    return run(["exec", "wrangler", ...wranglerArgs]);
-  }
-
   process.stderr.write(
     `devtools cf: unknown subcommand "${sub ?? "(none)"}". ` +
-      "Expected: preview, typegen, build, exec.\n",
+      "Expected: preview.\n",
   );
   return 1;
 }

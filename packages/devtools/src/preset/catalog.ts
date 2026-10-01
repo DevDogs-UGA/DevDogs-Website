@@ -17,6 +17,9 @@ export const presetCommand: CommandNode = {
       summary: "Restart the local Supabase stack.",
       hint: "supabase stop, then start; picks up config.toml",
       scope: "machine",
+      // Restarting a stack that is not running is the one question a menu
+      // should never ask; `supabase start` is the command for that.
+      when: "instance-running",
     },
     {
       name: "new-migration",

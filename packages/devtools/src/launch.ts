@@ -142,7 +142,7 @@ function isEnvFreeCommand(rest: readonly string[]): boolean {
  * the lifecycle command), imported lazily like the rest of the commands. */
 async function startStack(): Promise<{ code: number; lines: string[] }> {
   const { runStackCommand } = await import("./db/stack.js");
-  return runStackCommand("start", null);
+  return runStackCommand("start");
 }
 
 /** The real interactive picker: a clack `select`, unwrapped so Ctrl-C exits
