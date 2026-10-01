@@ -10,10 +10,14 @@
  *     ends at a stack trace.
  */
 import { cancel, isCancel, log, note } from "@clack/prompts";
+import { suppressFailureLog } from "./failure-log.js";
 import { isNonInteractive } from "./mode.js";
 import { reportDevtoolsError } from "./telemetry.js";
 
 export function bail(message = "Cancelled."): never {
+  // Ctrl-C at a prompt is the user's choice; there is nothing to send to
+  // #tech-support. Any other message is a real stop.
+  if (message === "Cancelled.") suppressFailureLog();
   if (isNonInteractive()) process.stderr.write(`${message}\n`);
   else cancel(message);
   process.exit(1);

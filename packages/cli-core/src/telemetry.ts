@@ -29,6 +29,7 @@
 import { readFileSync } from "node:fs";
 import * as Sentry from "@sentry/node";
 import { buildSentryOptions } from "@devdogsuga/telemetry";
+import { noteError } from "./failure-log.js";
 import { isNonInteractive } from "./mode.js";
 import { discoverRepoRoot } from "./repo/root.js";
 import { ownVersion } from "./version.js";
@@ -57,6 +58,23 @@ export function resolveDevtoolsDsn(
 }
 
 let initialized = false;
+
+/** The id of the last event this process sent to Sentry, if any. */
+let lastEventId: string | undefined;
+
+/**
+ * The Sentry event id of the last error or failure this run reported, or
+ * `undefined` when telemetry is off or sent nothing. Printed with the failure
+ * log so a maintainer can find the event.
+ */
+export function lastSentryEventId(): string | undefined {
+  return lastEventId;
+}
+
+/** Records the id only when a client exists: without one nothing was sent. */
+function sent(id: string): void {
+  if (Sentry.getClient()) lastEventId = id;
+}
 
 /**
  * `'ci'` whenever the run is non-interactive (no TTY, or `CI=true`, which the
@@ -136,8 +154,9 @@ export function initDevtoolsTelemetry(command: string): void {
  * because Sentry's ingest is slow or unreachable.
  */
 export async function captureDevtoolsError(err: unknown): Promise<void> {
+  noteError(err);
   if (!devtoolsTelemetryEnabled()) return;
-  Sentry.captureException(err);
+  sent(Sentry.captureException(err));
   await Sentry.flush(2000);
 }
 
@@ -149,8 +168,9 @@ export async function captureDevtoolsError(err: unknown): Promise<void> {
  * path that ends in `process.exit` instead must use `captureDevtoolsError`.
  */
 export function reportDevtoolsError(err: unknown): void {
+  noteError(err);
   if (!devtoolsTelemetryEnabled()) return;
-  Sentry.captureException(err);
+  sent(Sentry.captureException(err));
 }
 
 /**
@@ -161,8 +181,9 @@ export function reportDevtoolsFailure(
   message: string,
   extra: Record<string, unknown> = {},
 ): void {
+  noteError(new Error(message));
   if (!devtoolsTelemetryEnabled()) return;
-  Sentry.captureMessage(message, { level: "error", extra });
+  sent(Sentry.captureMessage(message, { level: "error", extra }));
 }
 
 /**

@@ -3,12 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const sentry = vi.hoisted(() => ({
   captureException: vi.fn(),
   captureMessage: vi.fn(),
+  getClient: vi.fn(() => ({})),
   flush: vi.fn(async () => true),
 }));
 vi.mock("@sentry/node", () => sentry);
 
 import {
   hasRealCaller,
+  lastSentryEventId,
   reportDevtoolsError,
   reportDevtoolsFailure,
   resolveDevtoolsDsn,
@@ -78,6 +80,19 @@ describe("reporting a caught failure", () => {
       level: "error",
       extra: { exitCode: 2 },
     });
+  });
+
+  it("remembers the event id Sentry returned, for the failure log", () => {
+    sentry.captureException.mockReturnValueOnce("abc123");
+    reportDevtoolsError(new Error("boom"));
+    expect(lastSentryEventId()).toBe("abc123");
+  });
+
+  it("does not claim an event id when there is no Sentry client", () => {
+    sentry.getClient.mockReturnValueOnce(undefined as never);
+    sentry.captureException.mockReturnValueOnce("not-sent");
+    reportDevtoolsError(new Error("boom"));
+    expect(lastSentryEventId()).not.toBe("not-sent");
   });
 
   it("reports nothing under DEVTOOLS_TELEMETRY=0", () => {

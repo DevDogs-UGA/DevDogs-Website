@@ -16,12 +16,16 @@
  * up after itself, so a tool that deliberately leaves a daemon running keeps it.
  */
 import { spawn } from "node:child_process";
+import { isDryRun } from "./dry-run.js";
+import { noteRan } from "./failure-log.js";
 
 export interface ToolRunOptions {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
   /** Defaults to `"inherit"`: the tool owns the terminal. */
   stdio?: "inherit" | "ignore";
+  /** Aborting stops the whole group, as a SIGTERM to this process would. */
+  abort?: AbortSignal;
 }
 
 export interface ToolResult {
@@ -56,6 +60,10 @@ export function runInGroup(
   args: readonly string[],
   opts: ToolRunOptions = {},
 ): Promise<ToolResult> {
+  if (isDryRun()) {
+    process.stderr.write(`Would run: ${formatCommand(command, args)}\n`);
+    return Promise.resolve({ code: 0, signal: null });
+  }
   return new Promise((resolve) => {
     const child = spawn(command, [...args], {
       stdio: opts.stdio ?? "inherit",
@@ -75,6 +83,11 @@ export function runInGroup(
       escalation ??= setTimeout(() => signalGroup(pid, "SIGKILL"), GRACE_MS);
       escalation.unref();
     };
+    if (opts.abort?.aborted) forward("SIGTERM");
+    else
+      opts.abort?.addEventListener("abort", () => forward("SIGTERM"), {
+        once: true,
+      });
     const handlers = FORWARDED.map((signal) => {
       const handler = (): void => forward(signal);
       process.on(signal, handler);
@@ -87,6 +100,7 @@ export function runInGroup(
     process.on("exit", onExit);
 
     const finish = (result: ToolResult): void => {
+      noteRan(`${formatCommand(command, args)}  (exit ${result.code})`);
       for (const [signal, handler] of handlers) process.off(signal, handler);
       process.off("exit", onExit);
       if (escalation) clearTimeout(escalation);
@@ -146,6 +160,7 @@ export function reportRan(
   args: readonly string[],
   result: ToolResult,
 ): void {
+  if (isDryRun()) return;
   const status = result.code === 0 ? "" : `  (exit ${result.code})`;
   process.stderr.write(`Ran: ${formatCommand(command, args)}${status}\n`);
 }

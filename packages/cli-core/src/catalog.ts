@@ -197,6 +197,18 @@ export interface CommandNode {
    * runs on a runner with no `.env`. Implies `envFree`.
    */
   noEnv?: boolean;
+  /**
+   * How this command treats `--dry-run` (see `dry-run.ts`).
+   *
+   *   * `read-only`: nothing to skip; it runs normally.
+   *   * `handled`: it honours the flag itself, either through `runInGroup`
+   *     (which prints instead of spawning) or its own `--dry-run` option.
+   *
+   * Absent means the command spawns or writes and says nothing about the
+   * flag, so the dispatcher prints the command and stops. Inherited by
+   * subcommands that do not say otherwise.
+   */
+  dryRun?: "read-only" | "handled";
 }
 
 /** Top-level sections. Only `--help` and the wizard's first screen use these. */
