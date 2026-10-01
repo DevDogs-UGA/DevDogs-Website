@@ -43,8 +43,22 @@ vi.mock("@devdogsuga/cli-core/repo/peers", () => ({
   loadEnvLoad: async () => ({ loadEnvironment, MissingEnvFileError }),
 }));
 
-const { extractFilters, parseTierArg, planDev, runTask, shouldAsk } =
-  await import("./commands.js");
+const captureDeprecation = vi.fn(async () => {});
+vi.mock("@devdogsuga/cli-core/telemetry", () => ({
+  captureDevtoolsDeprecation: (...args: unknown[]) =>
+    (captureDeprecation as (...a: unknown[]) => Promise<void>)(...args),
+  devtoolsEnvironment: () => "local",
+}));
+
+const {
+  extractFilters,
+  parseTierArg,
+  planDev,
+  RUN_ALIAS_FINGERPRINT,
+  runAliasMessage,
+  runTask,
+  shouldAsk,
+} = await import("./commands.js");
 const { spawnSync } = await import("node:child_process");
 const { cancel, confirm } = await import("@clack/prompts");
 
@@ -581,5 +595,57 @@ describe("planDev", () => {
       planDev([{ name: "x", script: "vinext build && next dev" }], [], [])
         .vinext,
     ).toEqual([]);
+  });
+});
+
+/**
+ * `run` is a deprecated alias (removed by TASK-404 once Sentry stops seeing
+ * it): each use names what to type instead and reports one warning under a
+ * fixed fingerprint, then runs the task as before.
+ */
+describe("runTask as a deprecated alias", () => {
+  beforeEach(() => {
+    vi.mocked(spawnSync)
+      .mockClear()
+      .mockReturnValue({ status: 0 } as unknown as ReturnType<
+        typeof spawnSync
+      >);
+    captureDeprecation.mockClear();
+    vi.spyOn(process, "exit").mockImplementation((code) => {
+      throw new Error(`exit:${code ?? 0}`);
+    });
+  });
+
+  it("names the replacement for the task", () => {
+    expect(runAliasMessage("typecheck")).toBe(
+      "devtools run is deprecated. Use `pnpm -r run typecheck` for every " +
+        "package, or `pnpm -F <app> typecheck` for one app.",
+    );
+  });
+
+  it("prints the replacement, reports it under the fixed fingerprint, and still runs", async () => {
+    tty(false);
+    const stderr = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+
+    await expect(runTask(["lint", "--all"])).rejects.toThrow("exit:0");
+
+    expect(stderr).toHaveBeenCalledWith(`${runAliasMessage("lint")}\n`);
+    expect(captureDeprecation).toHaveBeenCalledWith(
+      "devtools run is deprecated",
+      RUN_ALIAS_FINGERPRINT,
+      { script: "lint", mode: "local" },
+    );
+    expect(spawnSync).toHaveBeenCalled();
+  });
+
+  it("reports the same fingerprint whatever the script", async () => {
+    tty(false);
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    await expect(runTask(["test", "--all"])).rejects.toThrow("exit:0");
+
+    expect(captureDeprecation.mock.calls[0]?.[1]).toBe(RUN_ALIAS_FINGERPRINT);
   });
 });

@@ -164,3 +164,26 @@ export function reportDevtoolsFailure(
   if (!devtoolsTelemetryEnabled()) return;
   Sentry.captureMessage(message, { level: "error", extra });
 }
+
+/**
+ * Reports a warning-level message under a FIXED fingerprint, then flushes.
+ *
+ * For the deprecated aliases: every use groups into one Sentry issue per
+ * fingerprint, so the issue's last-seen time says when the alias stopped
+ * being used and is safe to remove. Flushed because the callers go on to
+ * `process.exit`, which would otherwise drop the request in flight. The
+ * timeout is short: the command being run is what the person came for.
+ */
+export async function captureDevtoolsDeprecation(
+  message: string,
+  fingerprint: string,
+  tags: Record<string, string>,
+): Promise<void> {
+  if (!devtoolsTelemetryEnabled()) return;
+  Sentry.captureMessage(message, {
+    level: "warning",
+    fingerprint: [fingerprint],
+    tags,
+  });
+  await Sentry.flush(1000);
+}

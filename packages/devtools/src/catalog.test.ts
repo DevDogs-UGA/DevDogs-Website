@@ -334,6 +334,9 @@ describe("coverage of what the CLI dispatches", () => {
   it("keeps every deprecated command out of the wizard", () => {
     for (const { path, node } of everyNode()) {
       if (!node.deprecated) continue;
+      // `run` stays in the menu until the package-script picker replaces its
+      // app picker (it is the only way the wizard starts a dev server).
+      if (path[0] === "run") continue;
       expect(node.surface, path.join(" ")).toBe("cli-only");
     }
     expect(findCommand(["completions"])?.surface).toBe("cli-only");

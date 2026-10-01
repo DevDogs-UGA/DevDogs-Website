@@ -43,7 +43,10 @@ const RUN_OPTIONS: readonly CommandOption[] = [
 export const runCommand: CommandNode = {
   name: "run",
   summary: "Run a pnpm workspace task, asking which apps first.",
-  hint: "build, dev, lint…",
+  hint: "deprecated: pnpm -r run <task>",
+  deprecated:
+    "Use `pnpm -r run <task>` for every package or `pnpm -F <app> <task>` for one. " +
+    "It still runs, and each use is reported so it can be removed (TASK-404).",
   // The six with a root alias, which are the six a contributor types.
   // NOT an exhaustive list of every package script: `run` forwards
   // whatever name it is given, so `test:coverage` works without being

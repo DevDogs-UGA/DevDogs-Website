@@ -69,6 +69,10 @@ import { dirname, join } from "node:path";
 import { cancel, confirm, isCancel, multiselect } from "@clack/prompts";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { loadEnvLoad } from "@devdogsuga/cli-core/repo/peers";
+import {
+  captureDevtoolsDeprecation,
+  devtoolsEnvironment,
+} from "@devdogsuga/cli-core/telemetry";
 
 /**
  * Where the last answer per task is kept.
@@ -645,6 +649,38 @@ function remember(task: string, apps: string[]): void {
 
 // ── Entry ────────────────────────────────────────────────────────────────────
 
+/** Groups every use of `run` into one Sentry issue, whatever the script. */
+export const RUN_ALIAS_FINGERPRINT = "devtools-run-alias";
+
+/**
+ * What replaces `run <task>`, as the line printed before it runs.
+ *
+ * `run` is a deprecated alias: branches behind main still call it. It says
+ * what to type instead (`pnpm -r run <task>` for every package,
+ * `pnpm -F <app> <task>` for one) and then does the job as before.
+ */
+export function runAliasMessage(task: string): string {
+  return (
+    `devtools run is deprecated. Use \`pnpm -r run ${task}\` for every ` +
+    `package, or \`pnpm -F <app> ${task}\` for one app.`
+  );
+}
+
+/**
+ * Prints the replacement and reports the use. Each use sends one
+ * warning-level Sentry message with a fixed fingerprint, tagged with the
+ * script and local or CI, so the alias can be removed once that issue stops
+ * receiving events (TASK-404).
+ */
+async function announceRunAlias(task: string): Promise<void> {
+  process.stderr.write(`${runAliasMessage(task)}\n`);
+  await captureDevtoolsDeprecation(
+    "devtools run is deprecated",
+    RUN_ALIAS_FINGERPRINT,
+    { script: task, mode: devtoolsEnvironment() },
+  );
+}
+
 /**
  * Runs one root task, asking which apps first where that makes sense.
  *
@@ -660,6 +696,8 @@ export async function runTask(argv: string[]): Promise<never> {
     console.error("usage: pnpm devtools run <task> [pnpm args…]");
     process.exit(1);
   }
+
+  await announceRunAlias(task);
 
   // `--all` is this command's own flag, not pnpm's: it means "no question,
   // every package", which is what the root scripts did before this existed.
