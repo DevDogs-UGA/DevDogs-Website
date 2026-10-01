@@ -97,6 +97,7 @@ describe("--dry-run", () => {
       ["run", "build"],
       ["images"],
       ["emails"],
+      ["roles", "list"],
     ]) {
       expect(dryRunKind(catalog, path), path.join(" ")).toBeDefined();
     }
@@ -115,6 +116,8 @@ describe("--dry-run", () => {
       ["cf", "preview"],
       ["gen", "campus-map"],
       ["grant-root"],
+      ["roles", "grant"],
+      ["roles", "revoke"],
       ["planner", "create"],
     ]) {
       expect(dryRunKind(catalog, path), path.join(" ")).toBeUndefined();

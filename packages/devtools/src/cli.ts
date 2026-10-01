@@ -56,7 +56,7 @@ import { handleEmails } from "./emails/commands.js";
 import { handleEnv } from "./env/commands.js";
 import { handleGen } from "./gen/commands.js";
 import { handleGithub } from "./gh/commands.js";
-import { handleGrantRoot } from "./grant-root/commands.js";
+import { handleGrantRoot, handleRoles } from "./roles/commands.js";
 import { handleImages } from "./images/commands.js";
 import { handleOAuth } from "./oauth/commands.js";
 import { handlePassthrough } from "./passthrough/commands.js";
@@ -100,6 +100,7 @@ const CONTRIBUTOR_HANDLERS: Record<string, CommandHandler> = {
   db: handleDb,
   doctor: handleDoctor,
   preset: handlePreset,
+  roles: handleRoles,
   "grant-root": handleGrantRoot,
 };
 

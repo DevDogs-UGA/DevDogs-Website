@@ -244,6 +244,7 @@ describe("coverage of what the CLI dispatches", () => {
     "check",
     "doctor",
     "grant-root",
+    "roles",
     "setup",
     "oauth",
     "script",

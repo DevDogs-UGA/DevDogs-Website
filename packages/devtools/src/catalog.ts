@@ -20,7 +20,7 @@ import { emailsCommand } from "./emails/catalog.js";
 import { envCommand } from "./env/catalog.js";
 import { genCommand } from "./gen/catalog.js";
 import { githubCommand } from "./gh/catalog.js";
-import { grantRootCommand } from "./grant-root/catalog.js";
+import { grantRootCommand, rolesCommand } from "./roles/catalog.js";
 import { imagesCommand } from "./images/catalog.js";
 import { oauthCommand } from "./oauth/catalog.js";
 import {
@@ -73,7 +73,7 @@ export const GROUPS: readonly CommandGroup[] = [
   },
   {
     title: "Configuration & integrations",
-    commands: [envCommand, grantRootCommand],
+    commands: [envCommand, rolesCommand, grantRootCommand],
   },
   {
     // Always need production secrets, so they leave for the backstage CLI
