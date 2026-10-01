@@ -1,0 +1,37 @@
+{
+  "name": "@devdogsuga/cli-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The shared core of the published CLIs (devtools, backstage): repo root and peer loading, ui, telemetry, tier and env entry, env discovery, db/run, instance, args and the command catalog. Never published; each CLI inlines it with tsdown, so it is only ever a workspace:* devDependency.",
+  "license": "MIT",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "@clack/prompts": "catalog:",
+    "@devdogsuga/telemetry": "workspace:*",
+    "@sentry/node": "catalog:",
+    "@supabase/supabase-js": "catalog:",
+    "dotenv": "^17.4.2",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  },
+  "devDependencies": {
+    "@devdogsuga/brand": "workspace:*",
+    "@devdogsuga/config": "workspace:*",
+    "@devdogsuga/db": "workspace:*",
+    "@devdogsuga/env": "workspace:*",
+    "@devdogsuga/events": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "vitest": "catalog:"
+  }
+}

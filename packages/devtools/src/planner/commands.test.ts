@@ -45,7 +45,7 @@ vi.mock("@clack/prompts", () => ({
 }));
 
 // `bail()` calls process.exit; the tests need the refusal, not the exit.
-vi.mock("../ui.js", async (importOriginal) => ({
+vi.mock("@devdogsuga/cli-core/ui", async (importOriginal) => ({
   ...(await importOriginal<typeof Ui>()),
   bail: vi.fn((message = "Cancelled."): never => {
     throw new Error(`bail: ${message}`);
@@ -54,7 +54,7 @@ vi.mock("../ui.js", async (importOriginal) => ({
 
 import { CHECK_IDENTITY, CHECK_MIGRATIONS, CHECK_OVERREACH } from "./checks.js";
 import type { PlannerDb } from "./db.js";
-import type * as Ui from "../ui.js";
+import type * as Ui from "@devdogsuga/cli-core/ui";
 import {
   runPlannerCreate,
   runPlannerDrop,

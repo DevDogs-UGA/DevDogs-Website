@@ -30,7 +30,7 @@ import {
   loadEnv,
   resetEnvSyncCacheForTests,
   resetPeerCacheForTests,
-} from "../repo/peers.js";
+} from "@devdogsuga/cli-core/repo/peers";
 import { DeployError } from "./report.js";
 import { renderWriteEnvReport, runDeployWriteEnv } from "./write-env.js";
 

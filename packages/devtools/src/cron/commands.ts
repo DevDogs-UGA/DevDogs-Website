@@ -22,11 +22,11 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { confirm, select } from "@clack/prompts";
 import { parse as parseEnv } from "dotenv";
-import { loadEnvLoad } from "../repo/peers.js";
-import { findRepoRoot } from "../repo/root.js";
-import { positionals } from "../args.js";
-import { resolveTier } from "../tier.js";
-import { unwrap } from "../ui.js";
+import { loadEnvLoad } from "@devdogsuga/cli-core/repo/peers";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { positionals } from "@devdogsuga/cli-core/args";
+import { resolveTier } from "@devdogsuga/cli-core/tier";
+import { unwrap } from "@devdogsuga/cli-core/ui";
 import {
   CRON_TIERS,
   cronsForTier,

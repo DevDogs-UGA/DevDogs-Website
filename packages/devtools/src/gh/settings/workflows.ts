@@ -19,7 +19,7 @@
  */
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { findRepoRoot } from "../../repo/root.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 
 const FULL_SHA = /^[0-9a-f]{40}$/;
 

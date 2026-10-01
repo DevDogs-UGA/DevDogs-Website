@@ -33,7 +33,7 @@
  * addressable for jobs that run only one step.
  */
 import { spawn } from "node:child_process";
-import { loadEnvLoad } from "./repo/peers.js";
+import { loadEnvLoad } from "@devdogsuga/cli-core/repo/peers";
 import { DeployError, say } from "./deploy/report.js";
 import { renderWriteEnvReport, runDeployWriteEnv } from "./deploy/write-env.js";
 import { runDeploySecretsFile } from "./deploy/secrets-file.js";
@@ -43,17 +43,17 @@ import { runDeployMigrate, runDeployPlan } from "./deploy/migrations.js";
 import { runRequirePlanner } from "./deploy/require-planner.js";
 import { runRequireToken } from "./deploy/require-token.js";
 import { runDocsIndex } from "./docs/index-pages.js";
-import { loadRegistry } from "./env/discovery.js";
-import { positionals } from "./args.js";
+import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
+import { positionals } from "@devdogsuga/cli-core/args";
 import { findCiCommand, subcommandCiNames } from "./commands.js";
-import { isWorkerApp, workerApps } from "./workers.js";
-import { ignoreClosedPipes } from "./pipes.js";
+import { isWorkerApp, workerApps } from "@devdogsuga/cli-core/workers";
+import { ignoreClosedPipes } from "@devdogsuga/cli-core/pipes";
 import {
   captureDevtoolsError,
   initDevtoolsTelemetry,
   reportDevtoolsError,
   reportDevtoolsFailure,
-} from "./telemetry.js";
+} from "@devdogsuga/cli-core/telemetry";
 
 function flagValue(rest: string[], flag: string): string | undefined {
   const index = rest.indexOf(flag);

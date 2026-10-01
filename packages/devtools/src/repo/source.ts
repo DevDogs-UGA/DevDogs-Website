@@ -15,9 +15,12 @@
  * and routing the result through the same tsx-backed import as the other
  * two is harmless: tsx passes plain `.js` through unchanged.
  */
-import { findRepoRoot } from "./root.js";
-import { findDependent, resolveFromRepo } from "./resolve.js";
-import { importRepoTs } from "./tsx-loader.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import {
+  findDependent,
+  resolveFromRepo,
+} from "@devdogsuga/cli-core/repo/resolve";
+import { importRepoTs } from "@devdogsuga/cli-core/repo/tsx-loader";
 
 const CONDITION = "devdogs-source";
 

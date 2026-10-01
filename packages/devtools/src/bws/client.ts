@@ -40,7 +40,7 @@ import {
   saveTokenToVault,
   VAULT_ITEM_NAME,
 } from "./vault.js";
-import { unwrap } from "../ui.js";
+import { unwrap } from "@devdogsuga/cli-core/ui";
 import type { BitwardenClient as SdkClient } from "@bitwarden/sdk-napi";
 
 export class BwsError extends Error {}

@@ -126,18 +126,21 @@ vi.mock("./cloudflare.js", () => ({
 
 import { projectIdFor } from "../bws/client.js";
 import { NoVaultProjectError } from "../bws/environments.js";
-import { findRepoRoot, resetRepoRootCacheForTests } from "../repo/root.js";
+import {
+  findRepoRoot,
+  resetRepoRootCacheForTests,
+} from "@devdogsuga/cli-core/repo/root";
 import {
   resetEnvSyncCacheForTests,
   resetPeerCacheForTests,
-} from "../repo/peers.js";
+} from "@devdogsuga/cli-core/repo/peers";
 import {
   runEnvAudit,
   runEnvPull,
   runEnvPush,
   type EnvOptions,
 } from "./commands.js";
-import { loadRegistry } from "./discovery.js";
+import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
 
 const FIXTURE_ROOT = new URL("../../test/fixture-repo/", import.meta.url)
   .pathname;

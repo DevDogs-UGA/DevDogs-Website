@@ -41,7 +41,7 @@
  * parse, so the overlay-plus-probe logic still applies.
  */
 import type { LoadedEnvironment } from "@devdogsuga/env/load";
-import { loadEnvLoad } from "../repo/peers.js";
+import { loadEnvLoad } from "@devdogsuga/cli-core/repo/peers";
 
 export interface ResolveLocalToolingEnvOptions {
   /** Injectable for tests; defaults to `process.env`. */

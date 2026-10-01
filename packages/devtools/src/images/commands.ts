@@ -27,9 +27,14 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { log, note } from "@clack/prompts";
 import type { Format } from "./open-graph-types.js";
 import { loadOpenGraph } from "../repo/source.js";
-import { findRepoRoot } from "../repo/root.js";
-import { positionals } from "../args.js";
-import { errorMessage, explain, explainError, UsageError } from "../ui.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { positionals } from "@devdogsuga/cli-core/args";
+import {
+  errorMessage,
+  explain,
+  explainError,
+  UsageError,
+} from "@devdogsuga/cli-core/ui";
 import { configEvents, type EventReader } from "./events.js";
 import {
   assertUniqueStems,

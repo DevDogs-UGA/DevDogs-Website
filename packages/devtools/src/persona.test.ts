@@ -7,7 +7,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import { isPersonaKind, refuseUnlessDevelopment } from "./persona.js";
-import type { DbConnection } from "./db/connection.js";
+import type { DbConnection } from "@devdogsuga/cli-core/db/connection";
 
 function connection(tier: DbConnection["tier"]): DbConnection {
   return {

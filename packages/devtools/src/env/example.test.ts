@@ -47,9 +47,9 @@ import {
 import {
   resetEnvSyncCacheForTests,
   resetPeerCacheForTests,
-} from "../repo/peers.js";
-import { resetRepoRootCacheForTests } from "../repo/root.js";
-import { loadRegistry } from "./discovery.js";
+} from "@devdogsuga/cli-core/repo/peers";
+import { resetRepoRootCacheForTests } from "@devdogsuga/cli-core/repo/root";
+import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
 import {
   keysForSections,
   renderExample,

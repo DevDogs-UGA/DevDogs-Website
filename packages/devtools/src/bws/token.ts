@@ -14,7 +14,7 @@
  * account and reports nothing, so the order is asserted rather than assumed.
  */
 import { log, password } from "@clack/prompts";
-import { unwrap } from "../ui.js";
+import { unwrap } from "@devdogsuga/cli-core/ui";
 
 export class NoAccessTokenError extends Error {}
 

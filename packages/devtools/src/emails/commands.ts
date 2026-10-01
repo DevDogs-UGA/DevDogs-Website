@@ -3,8 +3,13 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { isTTY, log, multiselect, note, text as askText } from "@clack/prompts";
-import { positionals } from "../args.js";
-import { explain, explainError, unwrap, UsageError } from "../ui.js";
+import { positionals } from "@devdogsuga/cli-core/args";
+import {
+  explain,
+  explainError,
+  unwrap,
+  UsageError,
+} from "@devdogsuga/cli-core/ui";
 import { EMAIL_FIXTURES } from "./fixtures.js";
 import { loadEmail } from "../repo/source.js";
 

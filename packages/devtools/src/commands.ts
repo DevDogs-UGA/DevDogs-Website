@@ -25,7 +25,7 @@
  * order and deploy internals live in `docs/`, not here: `--help` is a map, and
  * a map that reprints the territory is the thing this replaced.
  */
-import { workerApps } from "./workers.js";
+import { workerApps } from "@devdogsuga/cli-core/workers";
 
 /**
  * One choice in a select prompt.

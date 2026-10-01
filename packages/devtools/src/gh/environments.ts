@@ -28,8 +28,8 @@
  * deploy-tier OAuth secrets, and the orphan prune wanted a deploy-tier API
  * token. So `production-apply` now receives a SUPERSET of `production`.
  */
-import { assertRegistryLoaded } from "../env/discovery.js";
-import { getEnvSync } from "../repo/peers.js";
+import { assertRegistryLoaded } from "@devdogsuga/cli-core/env/discovery";
+import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
 
 export const GITHUB_ENVIRONMENTS = [
   "preflight",

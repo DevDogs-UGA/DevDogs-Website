@@ -28,10 +28,14 @@
  */
 import { randomUUID } from "node:crypto";
 import { confirm, log, note, select } from "@clack/prompts";
-import type { DbConnection } from "./db/connection.js";
-import { adminClient, resolveInstance, type Instance } from "./instance.js";
+import type { DbConnection } from "@devdogsuga/cli-core/db/connection";
+import {
+  adminClient,
+  resolveInstance,
+  type Instance,
+} from "@devdogsuga/cli-core/instance";
 import { grantModerator } from "./moderation.js";
-import { explain, unwrap } from "./ui.js";
+import { explain, unwrap } from "@devdogsuga/cli-core/ui";
 
 export const PERSONA_KINDS = ["member", "moderator"] as const;
 export type PersonaKind = (typeof PERSONA_KINDS)[number];

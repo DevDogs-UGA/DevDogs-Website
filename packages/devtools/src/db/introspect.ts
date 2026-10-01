@@ -19,7 +19,7 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { findRepoRoot } from "../repo/root.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { resolveLocalToolingEnv } from "./local-env.js";
 
 // ── Per-app config ────────────────────────────────────────────────────────────

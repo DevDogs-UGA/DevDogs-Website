@@ -61,19 +61,19 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { log, multiselect, note } from "@clack/prompts";
 import { EnvDocument } from "./document.js";
-import { unwrap } from "../ui.js";
+import { unwrap } from "@devdogsuga/cli-core/ui";
 import type {
   EnvTarget,
   EnvEntry,
   EnvMeta,
   VaultTarget,
 } from "@devdogsuga/env";
-import { assertRegistryLoaded } from "./discovery.js";
-import { getEnvSync } from "../repo/peers.js";
-import { recordResolved } from "../invocation.js";
+import { assertRegistryLoaded } from "@devdogsuga/cli-core/env/discovery";
+import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
+import { recordResolved } from "@devdogsuga/cli-core/invocation";
 import { keysRoutedTo } from "./selection.js";
-import { findRepoRoot } from "../repo/root.js";
-import { explain } from "../ui.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { explain } from "@devdogsuga/cli-core/ui";
 
 /**
  * Section order is FIXED here rather than inherited from manifest import

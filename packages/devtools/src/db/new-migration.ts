@@ -14,8 +14,8 @@
  * `name` as `<schema>_<description>` and hand it off unchanged.
  */
 import { select, text } from "@clack/prompts";
-import { unwrap } from "../ui.js";
-import { supabase } from "./run.js";
+import { unwrap } from "@devdogsuga/cli-core/ui";
+import { supabase } from "@devdogsuga/cli-core/db/run";
 
 /** App slug -> Postgres schema name. Schedule Builder and Study Group
  * Finder use underscores; their slugs use hyphens. */

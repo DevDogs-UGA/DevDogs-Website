@@ -23,8 +23,11 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Condition } from "./commands.js";
-import { findRepoRoot } from "./repo/root.js";
-import { containerPrefix, readProjectId } from "./repo/supabase-project.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import {
+  containerPrefix,
+  readProjectId,
+} from "@devdogsuga/cli-core/repo/supabase-project";
 
 /**
  * The repo root, which is where `supabase/config.toml` and `.env` live.

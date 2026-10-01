@@ -20,34 +20,34 @@ import { existsSync, rmSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describeEnvironment, probeEnvironment } from "./environment.js";
-import { findRepoRoot } from "./repo/root.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import {
   foreignStackMessage,
   foreignStackProjectId,
   listContainerNames,
   STACK_API_PORT,
   readProjectId,
-} from "./repo/supabase-project.js";
+} from "@devdogsuga/cli-core/repo/supabase-project";
 import {
   dbPush,
   generateTypes,
   seedBuckets,
   supabase,
   supabaseCapture,
-} from "./db/run.js";
+} from "@devdogsuga/cli-core/db/run";
 import {
   describeDbTarget,
   isLocalConnection,
   type DbConnection,
-} from "./db/connection.js";
+} from "@devdogsuga/cli-core/db/connection";
 import { refreshSessionEnv } from "./db/session-refresh.js";
 import { runSeedProduction } from "./db/seed-production.js";
 import { originReachable, resolveBaseUrl } from "./cron/commands.js";
 import {
   ensureGeneratedEnvFile,
   realEnsureGeneratedEnvDeps,
-} from "./db/generated-env.js";
-import { loadEnvLoad } from "./repo/peers.js";
+} from "@devdogsuga/cli-core/db/generated-env";
+import { loadEnvLoad } from "@devdogsuga/cli-core/repo/peers";
 
 // Scope order, matching `db`'s subcommands in `commands.ts`: the four that
 // act on the Supabase stack (`connect` is handled separately below — it

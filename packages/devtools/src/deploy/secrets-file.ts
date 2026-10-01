@@ -58,8 +58,8 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { EnvEntry } from "@devdogsuga/env";
-import { assertRegistryLoaded } from "../env/discovery.js";
-import { getEnvSync } from "../repo/peers.js";
+import { assertRegistryLoaded } from "@devdogsuga/cli-core/env/discovery";
+import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
 import { DeployError, say, summary } from "./report.js";
 
 export interface SecretsFileOptions {

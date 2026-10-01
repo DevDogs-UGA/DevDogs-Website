@@ -5,7 +5,7 @@ import type {
   OpenGraphModule,
 } from "./open-graph-types.js";
 import { loadOpenGraph } from "../repo/source.js";
-import { UsageError } from "../ui.js";
+import { UsageError } from "@devdogsuga/cli-core/ui";
 import type { ReactElement } from "react";
 
 /**

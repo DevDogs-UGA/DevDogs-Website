@@ -23,7 +23,7 @@ import {
   loadEnv,
   resetEnvSyncCacheForTests,
   resetPeerCacheForTests,
-} from "../repo/peers.js";
+} from "@devdogsuga/cli-core/repo/peers";
 import { renderInit, runEnvInit } from "./example.js";
 
 /**

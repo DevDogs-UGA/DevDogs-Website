@@ -6,12 +6,12 @@
  */
 import { confirm } from "@clack/prompts";
 import type * as EnvLoadModule from "@devdogsuga/env/load";
-import { loadEnvLoad } from "../repo/peers.js";
-import { run } from "../db/run.js";
+import { loadEnvLoad } from "@devdogsuga/cli-core/repo/peers";
+import { run } from "@devdogsuga/cli-core/db/run";
 import { buildWorkerApp } from "./build.js";
-import { resolveTier } from "../tier.js";
-import { unwrap } from "../ui.js";
-import { isWorkerApp, workerApps } from "../workers.js";
+import { resolveTier } from "@devdogsuga/cli-core/tier";
+import { unwrap } from "@devdogsuga/cli-core/ui";
+import { isWorkerApp, workerApps } from "@devdogsuga/cli-core/workers";
 import { withWranglerEnv } from "./local-env.js";
 
 // A function, not a top-level constant — `workerApps()` reads `workers.json`

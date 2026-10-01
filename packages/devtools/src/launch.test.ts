@@ -14,7 +14,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stripTierFlag } from "./launch.js";
-import type * as RepoRoot from "./repo/root.js";
+import type * as RepoRoot from "@devdogsuga/cli-core/repo/root";
 
 const resolveSessionTier = vi.fn<(...args: unknown[]) => unknown>();
 const enterEnvironment = vi.fn(async (..._args: unknown[]) => ({
@@ -27,7 +27,7 @@ class LocalStackOfflineError extends Error {}
 // Mocks `../repo/peers.js` rather than the bare `@devdogsuga/env/session`
 // and `@devdogsuga/env/load` specifiers: devtools resolves both dynamically
 // FROM the target repo now (see `repo/peers.ts`).
-vi.mock("./repo/peers.js", () => ({
+vi.mock("@devdogsuga/cli-core/repo/peers", () => ({
   loadEnvSession: async () => ({
     availableTiers: vi.fn(),
     developmentRemoteCandidate: vi.fn(),
@@ -52,7 +52,7 @@ vi.mock("./cli.js", () => ({ main: (...args: unknown[]) => main(...args) }));
 // this suite (which `vitest.config.ts` already stabilizes via
 // `DEVTOOLS_TEST_REPO_ROOT`), so a bare/resumed-group invocation can reach
 // its tier resolution instead of hitting the `RepoNotFoundError` exit.
-vi.mock("./repo/root.js", async (importOriginal) => {
+vi.mock("@devdogsuga/cli-core/repo/root", async (importOriginal) => {
   const actual = await importOriginal<typeof RepoRoot>();
   return {
     ...actual,
@@ -296,7 +296,8 @@ describe("launch", () => {
 
     it("a bare invocation exports the tier but does not enter it before dispatching to the menu", async () => {
       const { launch } = await import("./launch.js");
-      const { takeMenuEnvHook } = await import("./env-entry.js");
+      const { takeMenuEnvHook } =
+        await import("@devdogsuga/cli-core/env-entry");
 
       await launch([]);
 
@@ -326,7 +327,8 @@ describe("launch", () => {
         configurable: true,
       });
       const { launch } = await import("./launch.js");
-      const { takeMenuEnvHook } = await import("./env-entry.js");
+      const { takeMenuEnvHook } =
+        await import("@devdogsuga/cli-core/env-entry");
 
       await launch(["db"]);
 
@@ -343,7 +345,8 @@ describe("launch", () => {
         configurable: true,
       });
       const { launch } = await import("./launch.js");
-      const { takeMenuEnvHook } = await import("./env-entry.js");
+      const { takeMenuEnvHook } =
+        await import("@devdogsuga/cli-core/env-entry");
 
       await launch(["db"]);
 
@@ -358,7 +361,8 @@ describe("launch", () => {
 
     it("a typed command still enters the environment before main() runs, unchanged", async () => {
       const { launch } = await import("./launch.js");
-      const { takeMenuEnvHook } = await import("./env-entry.js");
+      const { takeMenuEnvHook } =
+        await import("@devdogsuga/cli-core/env-entry");
 
       await launch(["db", "status"]);
 

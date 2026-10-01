@@ -15,8 +15,8 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { EnvDocument } from "../env/document.js";
-import { findRepoRoot } from "../repo/root.js";
-import { loadEnv } from "../repo/peers.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { loadEnv } from "@devdogsuga/cli-core/repo/peers";
 
 export async function saveToDevEnv(key: string, value: string): Promise<void> {
   const { fileFor } = await loadEnv();

@@ -1,4 +1,4 @@
-import { loadBrandEvent, loadEvents } from "../repo/peers.js";
+import { loadBrandEvent, loadEvents } from "@devdogsuga/cli-core/repo/peers";
 import type { Meeting, Workshop } from "@devdogsuga/events";
 import type { EventGraphicSource } from "./graphics.js";
 

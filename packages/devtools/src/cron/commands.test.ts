@@ -2,7 +2,7 @@
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type * as Discovery from "./discovery.js";
-import type * as RepoPeers from "../repo/peers.js";
+import type * as RepoPeers from "@devdogsuga/cli-core/repo/peers";
 
 /**
  * `runCronRun`'s own dependencies, faked at the module boundary for the
@@ -46,7 +46,7 @@ vi.mock("./discovery.js", async (importOriginal) => ({
 // Mocks `../repo/peers.js`'s `loadEnvLoad()` rather than the bare
 // `@devdogsuga/env/load` specifier: devtools resolves that module
 // dynamically FROM the target repo now (see `repo/peers.ts`).
-vi.mock("../repo/peers.js", async (importOriginal) => {
+vi.mock("@devdogsuga/cli-core/repo/peers", async (importOriginal) => {
   class MissingEnvFileError extends Error {}
   return {
     ...(await importOriginal<typeof RepoPeers>()),

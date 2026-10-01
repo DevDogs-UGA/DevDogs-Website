@@ -46,8 +46,8 @@ import {
   computeActionPatterns,
   unpinnedActionUses,
 } from "./workflows.js";
-import { findRepoRoot } from "../../repo/root.js";
-import { unwrap } from "../../ui.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { unwrap } from "@devdogsuga/cli-core/ui";
 
 const DEFAULT_ORG = "DevDogsUGA";
 const DEFAULT_REPO = "DevDogsUGA";

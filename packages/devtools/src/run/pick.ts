@@ -69,8 +69,8 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { cancel, confirm, isCancel, multiselect } from "@clack/prompts";
-import { findRepoRoot } from "../repo/root.js";
-import { loadEnvLoad } from "../repo/peers.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { loadEnvLoad } from "@devdogsuga/cli-core/repo/peers";
 
 /**
  * Where the last answer per task is kept.

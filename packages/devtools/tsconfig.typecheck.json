@@ -1,19 +1,21 @@
 {
   // `pnpm typecheck` covers `env.ts` (devtools' own operator manifest) and
-  // `vitest.config.ts` too, neither of which `tsconfig.json` can include:
-  // anything under `rootDir` is emitted to `dist/`, and `env.ts` sits at the
-  // package root deliberately (see its own header) rather than under `src/`.
+  // the vitest configs too, which `tsconfig.json` does not include: `env.ts`
+  // sits at the package root deliberately (see its own header) rather than
+  // under `src/`. `rootDir` reaches up to `packages/` because the inlined
+  // `@devdogsuga/cli-core` is type-checked from its sibling source.
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmit": true,
-    "rootDir": "."
+    "rootDir": ".."
   },
   "include": [
     "src",
     "env.ts",
     "vitest.config.ts",
     "vitest.contract.config.ts",
-    "test/contract"
+    "test/contract",
+    "test/setup.ts",
+    "tsdown.config.ts"
   ],
   // The fixture repo is its own (fake) workspace, deliberately not part of
   // this package's TypeScript project — its files typecheck (or don't)

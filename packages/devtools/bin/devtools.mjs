@@ -2,8 +2,9 @@
 /**
  * Entry point for the `devtools` bin.
  *
- * Ships built JS (see the package's `build` script — `tsc` to `dist/`) and
- * runs it directly with plain `node`: no `tsx` wrapper, no
+ * Ships built JS (see the package's `build` script — tsdown bundles `src/` and
+ * the private `@devdogsuga/cli-core` into a flat `dist/`) and runs it
+ * directly with plain `node`: no `tsx` wrapper, no
  * `--conditions=devdogs-source` flag. Those were needed when devtools lived
  * INSIDE the DevDogsUGA workspace and imported sibling `@devdogsuga/*`
  * packages by TypeScript source; published as its own package and run via

@@ -1,4 +1,4 @@
-import { supabase } from "./run.js";
+import { supabase } from "@devdogsuga/cli-core/db/run";
 
 /**
  * `config.toml` lives on a hosted project only — there is no local

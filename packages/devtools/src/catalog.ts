@@ -22,7 +22,7 @@
  * can. `moderation.ts`'s `withTemporaryModerator` is what supplies that
  * client — this module reads with it, it does not sign in on its own.
  */
-import type { DevtoolsClient } from "./instance.js";
+import type { DevtoolsClient } from "@devdogsuga/cli-core/instance";
 
 export interface CatalogReason {
   reason: string;

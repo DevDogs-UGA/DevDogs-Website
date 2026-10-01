@@ -4,7 +4,7 @@
  * `gen og-assets` and `gen email-templates` delegate to the owning package
  * scripts via pnpm. `gen campus-map` and `gen hypno` are devtools-owned.
  */
-import { run } from "../db/run.js";
+import { run } from "@devdogsuga/cli-core/db/run";
 import { runGenCampusMap } from "./campus-map.js";
 import { runGenHypno } from "./hypno.js";
 

@@ -8,7 +8,10 @@ import {
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
-import { findRepoRoot, resetRepoRootCacheForTests } from "../repo/root.js";
+import {
+  findRepoRoot,
+  resetRepoRootCacheForTests,
+} from "@devdogsuga/cli-core/repo/root";
 import { discoverWranglerConfigs, parseWrangler } from "./discovery.js";
 
 /**

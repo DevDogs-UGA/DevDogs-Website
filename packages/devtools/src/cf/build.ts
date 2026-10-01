@@ -23,7 +23,7 @@
  * `dist/` output, so on a fresh clone `vinext build` fails to load
  * `next.config.ts` without them.
  */
-import { run } from "../db/run.js";
+import { run } from "@devdogsuga/cli-core/db/run";
 
 /** Apps deployed without a framework build: Wrangler bundles `main` itself. */
 const NO_FRAMEWORK_BUILD = new Set(["sandbox"]);

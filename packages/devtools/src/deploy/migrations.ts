@@ -17,7 +17,7 @@
  * than reached for, so the tests exercise the argv, the refusals, the summary
  * framing, and the failed-connection invariant without a database.
  */
-import { dbPush, dbPushDryRun } from "../db/run.js";
+import { dbPush, dbPushDryRun } from "@devdogsuga/cli-core/db/run";
 import { DeployError, say, summary } from "./report.js";
 
 const MISSING_DB_URL = [

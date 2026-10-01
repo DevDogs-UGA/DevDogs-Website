@@ -79,7 +79,7 @@ export function findRepoRoot(): string {
     // it IS a different pnpm workspace — but most of devtools' unit tests
     // exercise code that calls `findRepoRoot()` only to build a path string
     // that a mocked `node:fs/promises` never actually reads. Rather than
-    // adding a `vi.mock("../repo/root.js", ...)` to every one of those
+    // adding a `vi.mock("./root.js", ...)` to every one of those
     // files, `vitest.config.ts` sets this one env var for the whole run so
     // `findRepoRoot()` resolves to a stable fake path instead of throwing.
     // A test that specifically wants the real "not in a repo" refusal

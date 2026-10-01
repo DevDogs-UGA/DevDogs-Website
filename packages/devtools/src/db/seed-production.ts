@@ -35,7 +35,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import postgres from "postgres";
-import { findRepoRoot } from "../repo/root.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 
 const SEED_DIR = "production";
 

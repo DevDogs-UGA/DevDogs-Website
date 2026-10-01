@@ -27,7 +27,7 @@ import {
 import { buildDesiredRulesets, isPerTeamRulesetName } from "./desired.js";
 import { planHasChanges, planRulesets, type RulesetPlan } from "./diff.js";
 import type { LiveRuleset } from "./types.js";
-import { unwrap } from "../../ui.js";
+import { unwrap } from "@devdogsuga/cli-core/ui";
 
 const DEFAULT_ORG = "DevDogsUGA";
 const DEFAULT_REPO = "DevDogsUGA";

@@ -26,7 +26,7 @@
  * in the first place.
  */
 import type { EnteredEnvironment } from "@devdogsuga/env/session";
-import { loadEnvLoad, loadEnvSession } from "../repo/peers.js";
+import { loadEnvLoad, loadEnvSession } from "@devdogsuga/cli-core/repo/peers";
 
 export interface RefreshSessionEnvOptions {
   /** Injectable for tests; defaults to `process.env.DEPLOY_ENV`. */

@@ -25,16 +25,16 @@ import {
   spinner,
   text,
 } from "@clack/prompts";
-import { loadRegistry } from "./env/discovery.js";
+import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
 import { renderInit, resolveSections } from "./env/example.js";
-import { discoverRepoRoot } from "./repo/root.js";
+import { discoverRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { EnvDocument } from "./env/document.js";
-import { dbPush } from "./db/run.js";
+import { dbPush } from "@devdogsuga/cli-core/db/run";
 import { validateSessionPoolerUrl } from "./db/pooler.js";
 import { runOAuthSetup } from "./oauth/wizard.js";
 import type { ConnectTarget } from "./oauth/target.js";
 import { runEnvironmentDoctor } from "./environment-doctor.js";
-import { unwrap } from "./ui.js";
+import { unwrap } from "@devdogsuga/cli-core/ui";
 
 function has(cmd: string, args: string[] = ["--version"]): string | null {
   try {

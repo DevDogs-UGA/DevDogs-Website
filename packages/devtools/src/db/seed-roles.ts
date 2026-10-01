@@ -6,8 +6,8 @@
  * break-glass role requires the explicit, service-key-backed grant-root command.
  */
 import { join } from "node:path";
-import { findRepoRoot } from "../repo/root.js";
-import { supabase } from "./run.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { supabase } from "@devdogsuga/cli-core/db/run";
 
 // Lazy — computed inside `runSeedRoles`, not at module load, so importing
 // this file never calls `findRepoRoot()` on its own (it used to, as a

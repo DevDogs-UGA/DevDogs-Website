@@ -12,7 +12,7 @@ import {
   flattenDiagnosticMessageText,
   parseConfigFileTextToJson,
 } from "typescript";
-import { findRepoRoot } from "../repo/root.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import {
   CronRoutes,
   WorkflowCrons,

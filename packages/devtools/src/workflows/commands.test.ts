@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as CronDiscovery from "../cron/discovery.js";
-import type * as RepoPeers from "../repo/peers.js";
+import type * as RepoPeers from "@devdogsuga/cli-core/repo/peers";
 
 /**
  * `runWorkflowsRun`'s own dependencies, faked at the module boundary for the
@@ -54,7 +54,7 @@ vi.mock("../cron/discovery.js", async (importOriginal) => ({
   discoverWranglerConfigs: vi.fn(() => fixtures.configs),
 }));
 
-vi.mock("../db/run.js", () => ({
+vi.mock("@devdogsuga/cli-core/db/run", () => ({
   runWithStderr: vi.fn(async () => ({ code: 0, stderr: "" })),
   run: vi.fn(async () => 0),
 }));
@@ -69,13 +69,13 @@ const envLoadFixture = {
   MissingEnvFileError: class MissingEnvFileError extends Error {},
 };
 
-vi.mock("../repo/peers.js", async (importOriginal) => ({
+vi.mock("@devdogsuga/cli-core/repo/peers", async (importOriginal) => ({
   ...(await importOriginal<typeof RepoPeers>()),
   loadEnvLoad: vi.fn(async () => envLoadFixture),
 }));
 
 const { beginInvocation, recordEnteredTier, reproducibleCommand } =
-  await import("../invocation.js");
+  await import("@devdogsuga/cli-core/invocation");
 const {
   findFreePort,
   isPortFree,
@@ -92,7 +92,7 @@ const {
   wranglerDevConnectionHint,
   wranglerDevNotRunningHint,
 } = await import("./commands.js");
-const { runWithStderr } = await import("../db/run.js");
+const { runWithStderr } = await import("@devdogsuga/cli-core/db/run");
 const { loadEnvironment, MissingEnvFileError } = envLoadFixture;
 
 const configs = [

@@ -57,7 +57,7 @@ vi.mock("node:fs/promises", () => ({
 import { chmod, writeFile } from "node:fs/promises";
 import { setSecret, setVariable } from "../gh/client.js";
 import { pushToGithub, save } from "./commands.js";
-import { loadRegistry } from "./discovery.js";
+import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
 import { EnvDocument } from "./document.js";
 
 beforeAll(async () => {

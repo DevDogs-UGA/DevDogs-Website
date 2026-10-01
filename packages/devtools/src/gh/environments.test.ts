@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { applyOnlyKeys } from "@devdogsuga/env";
-import { loadRegistry } from "../env/discovery.js";
+import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
 import {
   accepts,
   acceptedBy,

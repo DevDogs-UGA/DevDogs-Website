@@ -26,7 +26,7 @@ import {
   select,
   spinner,
 } from "@clack/prompts";
-import { resolveInstance, type Instance } from "./instance.js";
+import { resolveInstance, type Instance } from "@devdogsuga/cli-core/instance";
 import { conformance, withTemporaryModerator } from "./moderation.js";
 import { runPersona, refuseUnlessDevelopment } from "./persona.js";
 import { runEnvironmentDoctor } from "./environment-doctor.js";
@@ -47,7 +47,7 @@ import {
   isLocalConnection,
   resolveDbConnection,
   type DbConnection,
-} from "./db/connection.js";
+} from "@devdogsuga/cli-core/db/connection";
 import { runDbExec } from "./db/exec.js";
 import { runGenerateTypes } from "./db/generate-types.js";
 import { runIntrospect } from "./db/introspect.js";
@@ -61,7 +61,7 @@ import {
   recordEnteredTier,
   recordResolved,
   reproducibleCommand,
-} from "./invocation.js";
+} from "@devdogsuga/cli-core/invocation";
 import { runSetup } from "./setup.js";
 import { readCatalog, renderCatalog } from "./catalog.js";
 import {
@@ -78,10 +78,10 @@ import {
   runPlannerResetPassword,
   runPlannerStatus,
 } from "./planner/commands.js";
-import { loadRegistry } from "./env/discovery.js";
-import { loadEnv } from "./repo/peers.js";
+import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
+import { loadEnv } from "@devdogsuga/cli-core/repo/peers";
 import { setExplicitAccessToken } from "./bws/client.js";
-import { positionals } from "./args.js";
+import { positionals } from "@devdogsuga/cli-core/args";
 import { resolveVaultTarget } from "./pick.js";
 import {
   bail,
@@ -90,7 +90,7 @@ import {
   explainError,
   renderChecks,
   unwrap,
-} from "./ui.js";
+} from "@devdogsuga/cli-core/ui";
 import { helpPath, renderHelp } from "./help.js";
 import { subcommandList, subcommandNames } from "./commands.js";
 import { bareGroupStartPath, runMenu } from "./menu.js";
@@ -106,8 +106,11 @@ import { runGithubRulesets } from "./gh/rulesets/commands.js";
 import { runGithubSettings } from "./gh/settings/commands.js";
 import { runWorkflows } from "./workflows/commands.js";
 import { runCf } from "./cf/commands.js";
-import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
-import { ownVersion } from "./version.js";
+import {
+  captureDevtoolsError,
+  initDevtoolsTelemetry,
+} from "@devdogsuga/cli-core/telemetry";
+import { ownVersion } from "@devdogsuga/cli-core/version";
 
 function flagValue(rest: string[], flag: string): string | undefined {
   const index = rest.indexOf(flag);

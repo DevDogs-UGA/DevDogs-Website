@@ -17,7 +17,7 @@
  * commands in the separate `devtools-ci` bin do not appear here.
  */
 import { confirm, note, select, text } from "@clack/prompts";
-import { positionals } from "./args.js";
+import { positionals } from "@devdogsuga/cli-core/args";
 import {
   findCommand,
   GROUPS,
@@ -26,7 +26,7 @@ import {
   type CommandNode,
   type CommandOption,
 } from "./commands.js";
-import { takeMenuEnvHook } from "./env-entry.js";
+import { takeMenuEnvHook } from "@devdogsuga/cli-core/env-entry";
 import {
   blockedBecause,
   describeEnvironment,
@@ -34,8 +34,11 @@ import {
   probeEnvironment,
   type Environment,
 } from "./environment.js";
-import { beginInvocation, recordEnteredTier } from "./invocation.js";
-import { unwrap } from "./ui.js";
+import {
+  beginInvocation,
+  recordEnteredTier,
+} from "@devdogsuga/cli-core/invocation";
+import { unwrap } from "@devdogsuga/cli-core/ui";
 
 /** Chosen when a submenu should return to the screen above it. */
 const BACK = Symbol("back");

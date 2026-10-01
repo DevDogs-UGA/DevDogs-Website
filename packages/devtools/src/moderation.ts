@@ -27,8 +27,8 @@ import {
   signedInClient,
   type DevtoolsClient,
   type Instance,
-} from "./instance.js";
-import type { CheckResult } from "./ui.js";
+} from "@devdogsuga/cli-core/instance";
+import type { CheckResult } from "@devdogsuga/cli-core/ui";
 
 interface ConformanceType {
   contentType: string;

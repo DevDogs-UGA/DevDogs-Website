@@ -67,7 +67,7 @@ vi.mock("node:fs", async (importOriginal) => {
   };
 });
 
-vi.mock("../repo/root.js", () => ({
+vi.mock("@devdogsuga/cli-core/repo/root", () => ({
   findRepoRoot: () => "/repo",
 }));
 

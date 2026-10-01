@@ -74,6 +74,12 @@ export interface EnvEntryDeps {
     tier: DeployEnvironment,
     devDatabase: DevDatabase | undefined,
   ) => Promise<EnsureGeneratedEnvResult>;
+  /**
+   * Starts the local Supabase stack, for the offer made when the session's
+   * local database is down. Injected rather than imported: the stack
+   * lifecycle is a command of the CLI built on this core, not part of it.
+   */
+  startStack: () => Promise<{ code: number; lines: string[] }>;
 }
 
 /**
@@ -83,10 +89,12 @@ export interface EnvEntryDeps {
 export function realEnvEntryDeps(
   envLoad: typeof EnvLoadModule,
   envSession: typeof EnvSessionModule,
+  startStack: EnvEntryDeps["startStack"],
 ): EnvEntryDeps {
   return {
     envLoad,
     envSession,
+    startStack,
     ensureGeneratedEnv: (tier, devDatabase) =>
       ensureGeneratedEnvFile(
         tier,
@@ -175,8 +183,7 @@ export async function enterSessionEnvironment<T>(
           // overlay under it, and the command dispatched next resolves the
           // freshly-started local database.
           if (devDatabase !== undefined) process.env.DEV_DB = devDatabase;
-          const { runStackCommand } = await import("./stack.js");
-          const { code, lines } = await runStackCommand("start", null);
+          const { code, lines } = await deps.startStack();
           for (const line of lines) {
             process.stderr.write(`devtools: ${line}\n`);
           }

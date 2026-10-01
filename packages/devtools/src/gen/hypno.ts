@@ -29,7 +29,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createRequire } from "node:module";
-import { findRepoRoot } from "../repo/root.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 
 // Lazy — computed inside `runGenHypno`/`loadChromium`, not at module load.
 // This file used to compute these as top-level `const`s, which called

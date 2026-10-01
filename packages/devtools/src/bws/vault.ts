@@ -20,7 +20,7 @@
 import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import { confirm, log, spinner } from "@clack/prompts";
-import { unwrap } from "../ui.js";
+import { unwrap } from "@devdogsuga/cli-core/ui";
 import { bwCommand } from "./bw.js";
 
 const run = promisify(execFile);

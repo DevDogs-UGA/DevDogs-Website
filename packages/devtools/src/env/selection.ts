@@ -36,8 +36,8 @@
  */
 import type { EnvEntry } from "@devdogsuga/env";
 import { type VaultTarget } from "../bws/environments.js";
-import { assertRegistryLoaded } from "./discovery.js";
-import { getEnvSync } from "../repo/peers.js";
+import { assertRegistryLoaded } from "@devdogsuga/cli-core/env/discovery";
+import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
 
 export interface PushSelection {
   push: Map<string, string>;

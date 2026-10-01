@@ -20,14 +20,14 @@ import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type * as RepoSupabaseProject from "./repo/supabase-project.js";
+import type * as RepoSupabaseProject from "@devdogsuga/cli-core/repo/supabase-project";
 
 const supabase = vi.fn(async (..._args: string[]) => 0);
 const supabaseCapture = vi.fn(
   async (..._args: string[]) => "API_URL=http://127.0.0.1:54321\n",
 );
 const seedBuckets = vi.fn(async () => 0);
-vi.mock("./db/run.js", () => ({
+vi.mock("@devdogsuga/cli-core/db/run", () => ({
   dbPush: vi.fn(),
   generateTypes: vi.fn(),
   seedBuckets: (...args: Parameters<typeof seedBuckets>) =>
@@ -37,15 +37,15 @@ vi.mock("./db/run.js", () => ({
 }));
 
 let repoRoot = "";
-vi.mock("./repo/root.js", () => ({
+vi.mock("@devdogsuga/cli-core/repo/root", () => ({
   findRepoRoot: () => repoRoot,
 }));
 
 const listContainerNames = vi.fn((): string[] | null => []);
 const readProjectId = vi.fn((): string | null => "DevDogsUGA");
-vi.mock("./repo/supabase-project.js", async () => {
+vi.mock("@devdogsuga/cli-core/repo/supabase-project", async () => {
   const actual = await vi.importActual<typeof RepoSupabaseProject>(
-    "./repo/supabase-project.js",
+    "@devdogsuga/cli-core/repo/supabase-project",
   );
   return {
     ...actual,

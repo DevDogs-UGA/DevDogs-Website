@@ -33,7 +33,7 @@ import {
   loadEnv,
   resetEnvSyncCacheForTests,
   resetPeerCacheForTests,
-} from "../repo/peers.js";
+} from "@devdogsuga/cli-core/repo/peers";
 import { runDeploySecretsFile } from "./secrets-file.js";
 
 function scratch(): string {

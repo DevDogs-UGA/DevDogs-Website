@@ -5,7 +5,7 @@
  * stance as `bw` and `cf exec`: the wrapped CLI owns its own targeting and its
  * own flags, so this declares no subcommands and does no parsing of its own.
  */
-import { supabase } from "./run.js";
+import { supabase } from "@devdogsuga/cli-core/db/run";
 
 export async function runDbExec(args: string[]): Promise<number> {
   return supabase(...args);

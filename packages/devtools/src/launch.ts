@@ -57,17 +57,20 @@ import {
   enterSessionEnvironment,
   realEnvEntryDeps,
   setMenuEnvHook,
-} from "./env-entry.js";
+} from "@devdogsuga/cli-core/env-entry";
 import { bareGroupStartPath } from "./menu.js";
 import {
   discoverRepoRoot,
   findRepoRoot,
   RepoNotFoundError,
-} from "./repo/root.js";
-import { loadEnvLoad, loadEnvSession } from "./repo/peers.js";
-import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
-import { ignoreClosedPipes } from "./pipes.js";
-import { errorMessage, unwrap } from "./ui.js";
+} from "@devdogsuga/cli-core/repo/root";
+import { loadEnvLoad, loadEnvSession } from "@devdogsuga/cli-core/repo/peers";
+import {
+  captureDevtoolsError,
+  initDevtoolsTelemetry,
+} from "@devdogsuga/cli-core/telemetry";
+import { ignoreClosedPipes } from "@devdogsuga/cli-core/pipes";
+import { errorMessage, unwrap } from "@devdogsuga/cli-core/ui";
 
 /**
  * Pulls a global `--tier <t>` out of `argv`, wherever it sits, leaving every
@@ -119,6 +122,13 @@ function isEnvFreeCommand(rest: readonly string[]): boolean {
     path.push(arg);
   }
   return findCommand(path)?.envFree === true;
+}
+
+/** The offer's stack start (`env-entry.ts` holds the TTY prompt, this holds
+ * the lifecycle command), imported lazily like the rest of the commands. */
+async function startStack(): Promise<{ code: number; lines: string[] }> {
+  const { runStackCommand } = await import("./stack.js");
+  return runStackCommand("start", null);
 }
 
 /** The real interactive picker: a clack `select`, unwrapped so Ctrl-C exits
@@ -313,7 +323,7 @@ export async function launch(argv: readonly string[]): Promise<void> {
         tier,
         devDatabase,
         commandArgv,
-        realEnvEntryDeps(envLoad, envSession),
+        realEnvEntryDeps(envLoad, envSession, startStack),
         dispatchCommand,
       ),
     );
@@ -328,7 +338,7 @@ export async function launch(argv: readonly string[]): Promise<void> {
     tier,
     devDatabase,
     rest,
-    realEnvEntryDeps(envLoad, envSession),
+    realEnvEntryDeps(envLoad, envSession, startStack),
     () => dispatch(rest),
   );
 }

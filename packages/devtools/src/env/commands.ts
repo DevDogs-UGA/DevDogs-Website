@@ -37,7 +37,7 @@ import { chmod, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { confirm, log, note } from "@clack/prompts";
 import type { EnvTarget } from "@devdogsuga/env";
-import { getEnvSync } from "../repo/peers.js";
+import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
 import {
   createSecret,
   listSecrets as listBwsSecrets,
@@ -83,8 +83,8 @@ import {
   pushableVariables,
   selectForPush,
 } from "./selection.js";
-import { findRepoRoot } from "../repo/root.js";
-import { bail, errorMessage, explain, unwrap } from "../ui.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { bail, errorMessage, explain, unwrap } from "@devdogsuga/cli-core/ui";
 
 export interface EnvOptions {
   /**

@@ -23,9 +23,6 @@ vi.mock("@clack/prompts", () => ({
 }));
 
 const runStackCommand = vi.fn<(...args: unknown[]) => unknown>();
-vi.mock("./stack.js", () => ({
-  runStackCommand: (...args: unknown[]) => runStackCommand(...args),
-}));
 
 const { enterSessionEnvironment, setMenuEnvHook, takeMenuEnvHook } =
   await import("./env-entry.js");
@@ -46,6 +43,11 @@ function fakeDeps(enterEnvironment: (...args: unknown[]) => unknown) {
     } as unknown as Parameters<typeof enterSessionEnvironment>[3]["envSession"],
     ensureGeneratedEnv: (...args: Parameters<typeof ensureGeneratedEnv>) =>
       ensureGeneratedEnv(...args),
+    startStack: () =>
+      runStackCommand("start", null) as Promise<{
+        code: number;
+        lines: string[];
+      }>,
   };
 }
 

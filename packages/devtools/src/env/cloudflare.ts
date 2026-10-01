@@ -9,8 +9,8 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join } from "node:path";
-import { findRepoRoot } from "../repo/root.js";
-import { workerApps } from "../workers.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { workerApps } from "@devdogsuga/cli-core/workers";
 
 const run = promisify(execFile);
 

@@ -30,7 +30,13 @@
  */
 import { confirm, log, spinner } from "@clack/prompts";
 import postgres from "postgres";
-import { bail, errorMessage, explain, explainError, unwrap } from "../ui.js";
+import {
+  bail,
+  errorMessage,
+  explain,
+  explainError,
+  unwrap,
+} from "@devdogsuga/cli-core/ui";
 import { loadDocs } from "../repo/source.js";
 
 /** One row of the artifact `@devdogsuga/docs` builds. */

@@ -39,7 +39,7 @@ const loadEnvironment = vi.fn(async () => ({
 }));
 class MissingEnvFileError extends Error {}
 
-vi.mock("../repo/peers.js", () => ({
+vi.mock("@devdogsuga/cli-core/repo/peers", () => ({
   loadEnvLoad: async () => ({ loadEnvironment, MissingEnvFileError }),
 }));
 

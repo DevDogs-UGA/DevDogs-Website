@@ -24,7 +24,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { log, note } from "@clack/prompts";
 import { parse as parseDotenv } from "dotenv";
-import { discoverRepoRoot } from "./repo/root.js";
+import { discoverRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { validateSessionPoolerUrl } from "./db/pooler.js";
 
 export type CheckStatus = "ok" | "warn" | "skip";

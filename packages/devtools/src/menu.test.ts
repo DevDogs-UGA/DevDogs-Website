@@ -69,7 +69,8 @@ const { runMenu, bareGroupStartPath } = await import("./menu.js");
 const { GROUPS, TOP_LEVEL, allPaths, findCommand, groupOf } =
   await import("./commands.js");
 const { UNKNOWN_ENVIRONMENT } = await import("./environment.js");
-const { setMenuEnvHook, takeMenuEnvHook } = await import("./env-entry.js");
+const { setMenuEnvHook, takeMenuEnvHook } =
+  await import("@devdogsuga/cli-core/env-entry");
 
 /**
  * Runs one walk with the given answers, returning the argv it dispatched.
@@ -287,7 +288,8 @@ describe("entered-tier recording", () => {
 
   it("records the ambient DEPLOY_ENV as the entered tier", async () => {
     process.env.DEPLOY_ENV = "staging";
-    const { reproducibleCommand } = await import("./invocation.js");
+    const { reproducibleCommand } =
+      await import("@devdogsuga/cli-core/invocation");
     await walk(answersFor(["db", "status"]));
     expect(reproducibleCommand()).toBe(
       "pnpm devtools --tier staging db status",
@@ -297,7 +299,8 @@ describe("entered-tier recording", () => {
   it("records nothing extra for the development default", async () => {
     delete process.env.DEPLOY_ENV;
     delete process.env.DEV_DB;
-    const { reproducibleCommand } = await import("./invocation.js");
+    const { reproducibleCommand } =
+      await import("@devdogsuga/cli-core/invocation");
     await walk(answersFor(["db", "status"]));
     expect(reproducibleCommand()).toBe("pnpm devtools db status");
   });
@@ -309,7 +312,8 @@ describe("entered-tier recording", () => {
     // session.
     delete process.env.DEPLOY_ENV;
     process.env.DEV_DB = "remote";
-    const { reproducibleCommand } = await import("./invocation.js");
+    const { reproducibleCommand } =
+      await import("@devdogsuga/cli-core/invocation");
     await walk(answersFor(["db", "status"]));
     expect(reproducibleCommand()).toBe(
       "pnpm devtools --tier development:remote db status",

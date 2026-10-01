@@ -51,7 +51,7 @@
  * a value pulled at run time is not unless somebody remembers `::add-mask::`.
  */
 import type { EnvTarget, VaultTarget } from "@devdogsuga/env";
-import { getEnvSync } from "../repo/peers.js";
+import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
 
 export type { VaultTarget };
 export const isVaultTarget = (target: EnvTarget): target is VaultTarget =>

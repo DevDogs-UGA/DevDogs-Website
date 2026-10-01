@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../db/run.js", () => ({
+vi.mock("@devdogsuga/cli-core/db/run", () => ({
   run: vi.fn(async () => 0),
 }));
 
 const { buildWorkerApp, workerBuildCommands } = await import("./build.js");
-const { run } = await import("../db/run.js");
+const { run } = await import("@devdogsuga/cli-core/db/run");
 
 describe("workerBuildCommands", () => {
   it("builds a vinext app's workspace deps, then the app itself", () => {

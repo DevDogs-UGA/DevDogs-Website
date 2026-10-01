@@ -28,11 +28,14 @@
  * value as `explicit`, and `ci.ts`'s own parse then falls back to
  * `process.env.DEPLOY_ENV`, which `enterEnvironment` just set to it.
  */
-import { findRepoRoot } from "./repo/root.js";
-import { loadEnvLoad, loadEnvSession } from "./repo/peers.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { loadEnvLoad, loadEnvSession } from "@devdogsuga/cli-core/repo/peers";
 import { stripTierFlag } from "./launch.js";
-import { captureDevtoolsError, initDevtoolsTelemetry } from "./telemetry.js";
-import { ignoreClosedPipes } from "./pipes.js";
+import {
+  captureDevtoolsError,
+  initDevtoolsTelemetry,
+} from "@devdogsuga/cli-core/telemetry";
+import { ignoreClosedPipes } from "@devdogsuga/cli-core/pipes";
 
 export async function launchCi(argv: readonly string[]): Promise<void> {
   const { explicit, rest } = stripTierFlag(argv);

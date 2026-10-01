@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resetRepoRootCacheForTests } from "../repo/root.js";
+import { resetRepoRootCacheForTests } from "@devdogsuga/cli-core/repo/root";
 import { runSeedProduction, type SeedProductionDb } from "./seed-production.js";
 
 /**

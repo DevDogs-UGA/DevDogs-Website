@@ -58,12 +58,13 @@
  * at length.
  */
 import { existsSync, readdirSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { redirectPeer } from "../repo/peer-redirect.js";
 import { getEnvSync, loadEnv, repoPeerUrl } from "../repo/peers.js";
 import { findRepoRoot } from "../repo/root.js";
 import { importRepoTs } from "../repo/tsx-loader.js";
+import { ownPackageDir } from "../version.js";
 
 /**
  * The single in-flight (or settled) load.
@@ -191,19 +192,15 @@ function manifestPaths(): string[] {
  * `dist/` (see `package.json`'s `files`), not inside the target repo's
  * workspace, so `findRepoRoot()`/`workspaceDirs()` can never find it.
  *
- * `import.meta.url` here is `dist/env/discovery.js` (this file's build
- * output — `tsconfig.json`'s `rootDir: "src"` / `outDir: "dist"` mirrors
- * `src/env/discovery.ts`'s own location one level down), so two `..` reach
- * the package root: `dist/env/discovery.js` -> `dist/env` -> `dist` ->
- * package root, where `env.ts` sits (deliberately outside `src/`, per that
- * file's own header — `tsconfig.typecheck.json` includes it as a sibling
- * of `src` for exactly that reason). Same file, same relative shape, in
- * both a workspace checkout (`packages/devtools/env.ts`) and an installed
- * copy (`node_modules/@devdogsuga/devtools/env.ts`).
+ * The package root is `ownPackageDir()`: `env.ts` sits there, deliberately
+ * outside `src/` (see that file's own header, and `tsconfig.typecheck.json`,
+ * which includes it as a sibling of `src` for exactly that reason). Same file,
+ * same relative shape, in both a workspace checkout
+ * (`packages/devtools/env.ts`) and an installed copy
+ * (`node_modules/@devdogsuga/devtools/env.ts`).
  */
 function ownManifestPath(): string {
-  const here = dirname(fileURLToPath(import.meta.url));
-  return join(here, "..", "..", "env.ts");
+  return join(ownPackageDir(), "env.ts");
 }
 
 function workspaceDirs(): string[] {

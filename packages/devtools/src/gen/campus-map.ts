@@ -30,7 +30,7 @@
  */
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { findRepoRoot } from "../repo/root.js";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 
 /** Query bbox (S, W, N, E), generous so roads at the frame's edge arrive whole
  * instead of clipped mid-way. */

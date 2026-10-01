@@ -60,10 +60,10 @@
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import type { EnvEntry } from "@devdogsuga/env";
-import { assertRegistryLoaded } from "../env/discovery.js";
+import { assertRegistryLoaded } from "@devdogsuga/cli-core/env/discovery";
 import { listWorkerSecrets, workerApps } from "../env/cloudflare.js";
-import { getEnvSync } from "../repo/peers.js";
-import { findRepoRoot } from "../repo/root.js";
+import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
+import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { DeployError, say, summary } from "./report.js";
 
 export interface OrphansOptions {

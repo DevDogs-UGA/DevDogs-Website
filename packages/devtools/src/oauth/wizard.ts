@@ -77,10 +77,10 @@ import {
   resolveHostedTargetInRepo,
   type ConnectTarget,
 } from "./target.js";
-import { loadEnvSession } from "../repo/peers.js";
-import { discoverRepoRoot } from "../repo/root.js";
-import { resolveTier } from "../tier.js";
-import { bail, errorMessage, unwrap } from "../ui.js";
+import { loadEnvSession } from "@devdogsuga/cli-core/repo/peers";
+import { discoverRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { resolveTier } from "@devdogsuga/cli-core/tier";
+import { bail, errorMessage, unwrap } from "@devdogsuga/cli-core/ui";
 
 /** Runs `supabase status`, retrying if not running. */
 async function detectLocalWithRetry(cwd: string): Promise<ConnectTarget> {

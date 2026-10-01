@@ -7,7 +7,7 @@ import {
 } from "@clack/prompts";
 import type { Format } from "./open-graph-types.js";
 import { loadOpenGraph } from "../repo/source.js";
-import { unwrap, UsageError } from "../ui.js";
+import { unwrap, UsageError } from "@devdogsuga/cli-core/ui";
 import type { Graphic } from "./graphics.js";
 import { formatsFor } from "./select.js";
 

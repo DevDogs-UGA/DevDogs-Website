@@ -21,7 +21,11 @@
  * already control this database". That is the only true statement available.
  * By hand the equivalent is one INSERT in the Supabase dashboard.
  */
-import { adminClient, ROOT_ROLE_ID, type Instance } from "./instance.js";
+import {
+  adminClient,
+  ROOT_ROLE_ID,
+  type Instance,
+} from "@devdogsuga/cli-core/instance";
 
 export interface RootHolder {
   userId: string;

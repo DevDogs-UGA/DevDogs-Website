@@ -98,10 +98,10 @@ import {
 import {
   resetEnvSyncCacheForTests,
   resetPeerCacheForTests,
-} from "../repo/peers.js";
-import { resetRepoRootCacheForTests } from "../repo/root.js";
+} from "@devdogsuga/cli-core/repo/peers";
+import { resetRepoRootCacheForTests } from "@devdogsuga/cli-core/repo/root";
 import { runEnvAudit } from "./commands.js";
-import { loadRegistry } from "./discovery.js";
+import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
 
 const FIXTURE_ROOT = new URL("../../test/fixture-repo/", import.meta.url)
   .pathname;
