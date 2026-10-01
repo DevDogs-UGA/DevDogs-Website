@@ -148,6 +148,23 @@ export function resolveSession(
   };
 }
 
+/**
+ * Whether the command `argv` names is declared `envFree`: it needs no env
+ * file and no tier (`graphics`, `qr`, `github`, `newsletter`), so the session
+ * behaves as if `--no-env` was typed. They run in a directory with no
+ * checkout and no `.env`, which is the point of `pnpm dlx`.
+ */
+function isEnvFree(argv: readonly string[]): boolean {
+  // The leading words are the path, then any positionals (`qr <text>`,
+  // `newsletter send <issue>`): the deepest node the tree knows decides.
+  const path = helpPath(argv);
+  for (let end = path.length; end > 0; end -= 1) {
+    const node = catalog.findCommand(path.slice(0, end));
+    if (node) return node.envFree === true;
+  }
+  return false;
+}
+
 function fail(label: string, message: string): never {
   process.stderr.write(`${label}: ${message}\n`);
   process.exit(1);
@@ -276,9 +293,10 @@ export async function launchWith(
   const label = options.label ?? "backstage";
   const gate = options.gate ?? true;
 
-  const { noEnv, rest: withoutNoEnv } = stripNoEnvFlag(argv);
+  const { noEnv: typedNoEnv, rest: withoutNoEnv } = stripNoEnvFlag(argv);
   const { explicit, rest: withoutTier } = stripTierFlag(withoutNoEnv);
   const { dryRun, rest } = resolveDryRun(withoutTier);
+  const noEnv = typedNoEnv || isEnvFree(rest);
   setNoEnv(noEnv);
   setDryRun(dryRun);
   installFailureLog({ argv, eventId: lastSentryEventId });
@@ -344,15 +362,19 @@ export async function launchWith(
         process.exitCode = 1;
         return null;
       }
+      // An env-free command chosen from the menu skips the env files, as one
+      // typed would; `noEnv` above only knows about the menu itself.
+      const skipEnv = noEnv || isEnvFree(commandArgv);
+      setNoEnv(skipEnv);
       const refusal = options.lenientTier
         ? null
-        : missingTier(commandArgv, chosen.session, noEnv);
+        : missingTier(commandArgv, chosen.session, skipEnv);
       if (refusal) {
         process.stderr.write(`${label}: ${refusal}\n`);
         process.exitCode = 1;
         return null;
       }
-      await enterSession(chosen.session, noEnv, label);
+      await enterSession(chosen.session, skipEnv, label);
       return gated(chosen.session, commandArgv, dispatchCommand, null, gate);
     });
     await dispatch(rest);

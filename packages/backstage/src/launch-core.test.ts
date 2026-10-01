@@ -162,6 +162,35 @@ describe("launchWith", () => {
     expect(dispatch).toHaveBeenCalledWith(["deploy", "preflight"]);
   });
 
+  it.each([
+    ["graphics", "app/dogdays", "--out", "x"],
+    ["qr", "hello"],
+    ["github", "rulesets"],
+    ["newsletter", "render", "3.0.0"],
+    ["newsletter", "send", "3.0.0", "--to", "a@uga.edu"],
+  ])(
+    "%s needs no checkout, no env file and no tier, with nothing typed",
+    async (...argv) => {
+      inRepo = false;
+      await launchWith(argv, { dispatch });
+      expect(enterEnvironment).not.toHaveBeenCalled();
+      // The gate sees plain development, which it lets through unasked.
+      expect(gate).toHaveBeenCalledWith(
+        expect.objectContaining({ tier: "development" }),
+      );
+      expect(process.env.DEPLOY_ENV).toBe("development");
+      expect(dispatch).toHaveBeenCalledWith(argv);
+      expect(written).toBe("");
+    },
+  );
+
+  it("still insists on a checkout for a command that reads one", async () => {
+    inRepo = false;
+    await expect(launchWith(["env", "audit"], { dispatch })).rejects.toThrow(
+      "exit 1",
+    );
+  });
+
   it("--no-env needs no tier named, even for deploy", async () => {
     await launchWith(["--no-env", "deploy", "preflight"], {
       dispatch,
