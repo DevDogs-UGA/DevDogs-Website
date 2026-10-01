@@ -68,6 +68,7 @@ export {
   DOGDAYS_MARK,
   DOGPACK_MARK,
   MARKS,
+  markBody,
   markSvg,
   type MarkData,
   type MarkName,

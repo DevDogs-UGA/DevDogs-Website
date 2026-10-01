@@ -163,18 +163,26 @@ function nodeSvg(node: MarkNode): string {
 }
 
 /**
+ * The mark's shapes as markup, without the `<svg>` around them: for a Vue
+ * component that owns the `<svg>` element (its size, class, `aria-hidden`) and
+ * only wants the geometry, through `v-html`. Paint stays `currentColor` unless
+ * `color` is given.
+ */
+export function markBody(name: MarkName, color?: string): string {
+  const body = MARKS[name].nodes.map(nodeSvg).join("");
+  return color ? body.replaceAll("currentColor", color) : body;
+}
+
+/**
  * The mark as an `<svg>` string.
  *
  * With no `color` the paint stays `currentColor`, so the surrounding CSS
- * `color` tints it (what a Vue `v-html` wants). `size` omitted leaves the
- * width and height to CSS.
+ * `color` tints it. `size` omitted leaves the width and height to CSS.
  */
 export function markSvg(
   name: MarkName,
   { color, size }: { color?: string; size?: number } = {},
 ): string {
-  const { viewBox, nodes } = MARKS[name];
   const dims = size === undefined ? "" : ` width="${size}" height="${size}"`;
-  const body = nodes.map(nodeSvg).join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg"${dims} viewBox="${viewBox}">${color ? body.replaceAll("currentColor", color) : body}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg"${dims} viewBox="${MARKS[name].viewBox}">${markBody(name, color)}</svg>`;
 }
