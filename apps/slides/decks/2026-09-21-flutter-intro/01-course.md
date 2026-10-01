@@ -63,7 +63,7 @@ git switch -c <github-username>/01-flutter-intro 01-flutter-intro/00-start
 flutter pub get
 ```
 
-The workshop started from `flutter create workshop_demo`, which makes a fresh Flutter app. The repo's `main` branch is that same starter, trimmed down, so every step below has a checkpoint to catch up to if you fall behind.
+Open the `Mobile-Workshops` folder in VS Code (`code .` from that terminal works too). If `flutter pub get` says your Dart SDK is too old, run `flutter upgrade`. The workshop started from `flutter create workshop_demo`, which makes a fresh Flutter app. `01-flutter-intro/00-start` is that same starter, trimmed down, and every step below ends at a checkpoint like it, so you can catch up if you fall behind.
 
 ---
 layout: terminal
@@ -72,7 +72,7 @@ heading: Run It
 titlebar: Terminal
 ---
 
-Start your emulator from Android Studio's Device Manager first. Then:
+Start your emulator first: in Android Studio, **More Actions → Virtual Device Manager**, then the play button beside your device. `flutter devices` should list it. Then:
 
 ```bash {*}{run: false}
 # Build the app and start it on the emulator
@@ -123,7 +123,7 @@ file: ~/lib/homepage.dart
 <CodeTips>
 <template #0>
 
-Make `lib/homepage.dart` for the home screen, so `main.dart` doesn't grow with every screen you add. `HomePage` is a `StatefulWidget`: the widget itself is small, and `createState` hands it a `State` object to keep.
+Make `lib/homepage.dart` for the home screen, so `main.dart` doesn't grow with every screen you add. It comes in two parts here: put them one after the other. `HomePage` is a `StatefulWidget`: the widget itself is small, and `createState` hands it a `State` object to keep.
 
 </template>
 <template #1>
@@ -147,7 +147,7 @@ file: ~/lib/main.dart
 <CodeTips>
 <template #0>
 
-`main()` runs the app. `MyApp` sets its title and theme, and `home` is the first screen. The old `HomePage` comes out of this file, and an import brings in the new one. `package:flutter_workshop/` is this app's own `lib` folder: `flutter_workshop` is the name in `pubspec.yaml`.
+`main()` runs the app. `MyApp` sets its title and theme, and `home` is the first screen. Delete the old `HomePage` class from the bottom of this file, and add the import of the new one as the first line. `package:flutter_workshop/` is this app's own `lib` folder: `flutter_workshop` is the name in `pubspec.yaml`.
 
 </template>
 </CodeTips>
@@ -178,7 +178,7 @@ accent: indigo
 
 In `homepage.dart`, wrap the `Text` in a `Column`, add a second `Text` under it, and put the whole thing in a `Card`. Save, and press `r` in the terminal running the app: the change appears without restarting.
 
-This one's for practice, with no checkpoint. Undo it before step 2, so your code matches ours.
+This one's for practice, with no checkpoint. Undo it before step 2 (**Ctrl+Z**, or **Cmd+Z** on macOS, in the editor), so your code matches ours.
 
 ---
 layout: statement
@@ -276,7 +276,7 @@ file: ~/lib/guestbook.dart
 <CodeTips>
 <template #0>
 
-Make `lib/guestbook.dart`. `GuestbookEntry` is plain Dart: one entry's name, message and time. `required` means every entry has all three.
+Make `lib/guestbook.dart`. It's long, so it comes in five parts: put them one after another, in order, or copy the whole file from the link after the last part. `GuestbookEntry` is plain Dart: one entry's name, message and time. `required` means every entry has all three.
 
 </template>
 <template #1>

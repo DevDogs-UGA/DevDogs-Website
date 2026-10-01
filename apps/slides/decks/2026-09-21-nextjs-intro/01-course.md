@@ -47,7 +47,7 @@ git switch -c <github-username>/01-nextjs-intro 01-nextjs-intro/00-start
 pnpm install
 ```
 
-The workshop started from `pnpm create next-app@latest my-app --yes`, which makes a fresh Next.js app. The repo's `main` branch is that same starter, trimmed down, so every step below has a checkpoint to catch up to if you fall behind.
+Open the `Web-Workshops` folder in VS Code (`code .` from that terminal works too). The workshop started from `pnpm create next-app@latest my-app --yes`, which makes a fresh Next.js app. `01-nextjs-intro/00-start` is that same starter, trimmed down, and every step below ends at a checkpoint like it, so you can catch up if you fall behind.
 
 ---
 layout: terminal
@@ -61,7 +61,7 @@ titlebar: Terminal
 pnpm dev
 ```
 
-Open [localhost:3000](http://localhost:3000): a page with one heading. Leave the server running while you work; the page reloads every time you save a file.
+Open [localhost:3000](http://localhost:3000): a page with one heading. Leave the server running while you work; the page reloads every time you save a file. If something else already uses port 3000, run `pnpm dev --port 3001` and use that port instead.
 
 ---
 layout: statement
@@ -170,7 +170,7 @@ docsPage:
 
 # Layouts and Links
 
-Your About page has room for more than one page. This step adds a second page beneath it, links the two, and wraps both in a layout.
+An About section can hold more than one page. This step adds a second page inside `/about`, links the two, and wraps both in a layout.
 
 ---
 layout: bullets-card
@@ -509,6 +509,14 @@ file: ~/components/Counter.tsx
 </CodeTips>
 
 ---
+accent: rose
+---
+
+# Try It
+
+Open [localhost:3000](http://localhost:3000). The home page is just the button for now, under the navbar. Click it: the count goes up with each click. Refresh, and it starts from zero again.
+
+---
 layout: statement
 accent: rose
 chip: STEP 6
@@ -573,7 +581,7 @@ file: ~/components/Guestbook.tsx
 <CodeTips>
 <template #0>
 
-`Guestbook` is a Client Component: it holds state, and its form reacts to typing. `Entry` describes one message. The component keeps three pieces of state: the list of entries, and what's typed in each field so far.
+The file is long, so it comes in four parts: put them one after another, in order (the line numbers show where each goes), or copy the whole file from the link after the last part. `Guestbook` is a Client Component: it holds state, and its form reacts to typing. `Entry` describes one message. The component keeps three pieces of state: the list of entries, and what's typed in each field so far.
 
 </template>
 <template #1>
