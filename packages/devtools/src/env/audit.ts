@@ -324,7 +324,7 @@ export function audit(input: AuditInput): Finding[] {
   // from inside an environment.
   //
   // ⚠️ An ENVIRONMENT variable SHADOWS a repository variable of the same name.
-  // So a repository-level `AIRTABLE_BASE_ID`, which people were told to set by
+  // So a repository-level `EXAMPLE_BASE_URL`, which people were told to set by
   // hand before push started routing that key, is not merely redundant: it is
   // unreadable from every job, holds whatever it held the day it was set, and
   // becomes live the moment somebody deletes the environment copy. Nothing

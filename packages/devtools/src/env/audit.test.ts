@@ -787,14 +787,14 @@ describe("repository-level variables", () => {
    * blind to.
    *
    * An ENVIRONMENT variable shadows a repository variable of the same name, so
-   * a repository-level `AIRTABLE_BASE_ID`, set by hand back when the setup
+   * a repository-level `EXAMPLE_BASE_URL`, set by hand back when the setup
    * docs said to, is read by no job, drifts from Bitwarden forever, and turns
    * live the moment somebody removes the environment copy. Every assertion
    * below is a way that could go unnoticed.
    */
-  const variables = new Set(["AIRTABLE_BASE_ID", "PROJECT_REF"]);
+  const variables = new Set(["EXAMPLE_BASE_URL", "PROJECT_REF"]);
   const declared = new Set([
-    "AIRTABLE_BASE_ID",
+    "EXAMPLE_BASE_URL",
     "PROJECT_REF",
     "DISCORD_TOKEN",
     "BWS_ACCESS_TOKEN",
@@ -820,12 +820,12 @@ describe("repository-level variables", () => {
 
   it("reports a repository variable colliding with a managed key", () => {
     const findings = run({
-      repositoryVariables: saw("AIRTABLE_BASE_ID"),
+      repositoryVariables: saw("EXAMPLE_BASE_URL"),
       variables,
       declared,
     });
     expect(findings).toHaveLength(1);
-    expect(findings[0]!.key).toBe("AIRTABLE_BASE_ID");
+    expect(findings[0]!.key).toBe("EXAMPLE_BASE_URL");
     expect(findings[0]!.store).toBe("github");
     // A warning, not an error: the environment copy wins today, so nothing is
     // broken. It is the orphan category, state nothing manages and nothing
@@ -838,7 +838,7 @@ describe("repository-level variables", () => {
     // tidiness and gets deferred; the reason it cannot be deferred is that it
     // is invisible now and authoritative later.
     const [finding] = run({
-      repositoryVariables: saw("AIRTABLE_BASE_ID"),
+      repositoryVariables: saw("EXAMPLE_BASE_URL"),
       variables,
       declared,
     });
@@ -848,14 +848,14 @@ describe("repository-level variables", () => {
   });
 
   it("names the fix, with the key in it", () => {
-    // `gh variable delete AIRTABLE_BASE_ID`, with no `--env`, which is the
+    // `gh variable delete EXAMPLE_BASE_URL`, with no `--env`, which is the
     // flag that would delete the managed copy and leave the stale one in charge.
     const [finding] = run({
-      repositoryVariables: saw("AIRTABLE_BASE_ID"),
+      repositoryVariables: saw("EXAMPLE_BASE_URL"),
       variables,
       declared,
     });
-    expect(finding!.summary).toContain("gh variable delete AIRTABLE_BASE_ID");
+    expect(finding!.summary).toContain("gh variable delete EXAMPLE_BASE_URL");
     expect(finding!.summary).not.toContain("--env");
   });
 
@@ -867,11 +867,11 @@ describe("repository-level variables", () => {
     // The declared name alongside it is the control: without it this would
     // pass just as well if the whole pass were skipped.
     const findings = run({
-      repositoryVariables: saw("SOMEONE_ELSES_FLAG", "AIRTABLE_BASE_ID"),
+      repositoryVariables: saw("SOMEONE_ELSES_FLAG", "EXAMPLE_BASE_URL"),
       variables,
       declared,
     });
-    expect(findings.map((f) => f.key)).toEqual(["AIRTABLE_BASE_ID"]);
+    expect(findings.map((f) => f.key)).toEqual(["EXAMPLE_BASE_URL"]);
   });
 
   it("reports a FAILED list as 'could not check'", () => {
@@ -934,9 +934,9 @@ describe("repository-level variables", () => {
         repositoryVariables: undefined,
         variables,
         declared,
-        local: new Map([["AIRTABLE_BASE_ID", "app1"]]),
-        bws: bws({ AIRTABLE_BASE_ID: "app1" }),
-        githubVariables: [ghVar("AIRTABLE_BASE_ID", "app1")],
+        local: new Map([["EXAMPLE_BASE_URL", "app1"]]),
+        bws: bws({ EXAMPLE_BASE_URL: "app1" }),
+        githubVariables: [ghVar("EXAMPLE_BASE_URL", "app1")],
       }),
     ).toEqual([]);
   });
@@ -1009,10 +1009,10 @@ describe("repository-level variables", () => {
     // repository one is reported. If these two ever merge into one list, this
     // is the test that notices.
     const findings = run({
-      local: new Map([["AIRTABLE_BASE_ID", "app1"]]),
-      bws: bws({ AIRTABLE_BASE_ID: "app1" }),
-      githubVariables: [ghVar("AIRTABLE_BASE_ID", "app1")],
-      repositoryVariables: saw("AIRTABLE_BASE_ID"),
+      local: new Map([["EXAMPLE_BASE_URL", "app1"]]),
+      bws: bws({ EXAMPLE_BASE_URL: "app1" }),
+      githubVariables: [ghVar("EXAMPLE_BASE_URL", "app1")],
+      repositoryVariables: saw("EXAMPLE_BASE_URL"),
       variables,
       declared,
     });
