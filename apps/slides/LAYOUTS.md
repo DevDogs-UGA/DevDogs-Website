@@ -424,7 +424,7 @@ the same tab), not just the first page load. See `theme/lib/track.ts`.
 
 A PDF export only catches one frame of each code window, so the handout is
 markdown for the docs site instead:
-`pnpm export:md [decks/<deck>.md] --out <DevDogsUGA>/docs/workshops/<workshop>`
+`pnpm export:md decks/<deck>.md --out <DevDogsUGA>/docs/workshops/<workshop>`
 writes one folder of step pages per track (a docs "course"), plus any pages
 both tracks share. See `scripts/export-md.ts`. Each `{build}` import becomes
 one diff per click group with its `<CodeTips>` tip before it, then a link to
@@ -435,7 +435,12 @@ the whole file on GitHub; presenter notes are dropped.
   which the docs hide the workshop's pages; written onto the track folders
   and the shared pages), `repos` (the public GitHub repo per track, for the file
   links), and `tracks` (each track's folder `dir`, `name`, `order`, and
-  `start`, the branch its demo starts from).
+  `start`, the branch its demo starts from). Only the tracks named are
+  exported and tagged, so a workshop that ran as one room per stack is one
+  deck per track, both exported into the same workshop folder (the
+  2026-09-21 Framework Intros decks).
+- A `bullets-card` slide's `cardTitle` becomes a bold line before the card's
+  content.
 - `docsPage` on a slide starts a page: `file`, optional `title` (else the
   slide's heading), `description`, and `shared: true` + `order` for a page
   both tracks read the same, written once beside the track folders.

@@ -26,6 +26,8 @@ export const TRACKS: Record<Track, string> = {
 export interface Frontmatter {
   layout?: string;
   heading?: string;
+  /** A `bullets-card` slide's card header. */
+  cardTitle?: string;
   chip?: string;
   titlebar?: string;
   trackSplit?: boolean;
@@ -514,6 +516,10 @@ function trackSource(slide: Slide, track: Track): string {
     const [left, right = ""] = body.split(/^::right::$/m);
     body = track === "web" ? left : right;
   }
+  // A card's header leads its content, or the card's list runs on from the
+  // slide's.
+  const { cardTitle } = slide.frontmatter;
+  if (cardTitle) body = body.replace(/^::card::$/m, `\n**${cardTitle}**\n`);
   body = body.replace(/^::\w+::$/gm, "");
   return forTrack(body, track);
 }
@@ -614,6 +620,20 @@ export interface DocsConfig {
   tracks?: Partial<
     Record<Track, { dir: string; name: string; order?: number; start?: string }>
   >;
+}
+
+// The tracks a deck exports, in TRACKS order: the ones its headmatter's
+// `docs.tracks` names. A workshop that ran as one room per stack is one deck
+// per track.
+export function tracksOf(deck: Deck): Track[] {
+  const tracks = (Object.keys(TRACKS) as Track[]).filter(
+    (track) => deck.docs.tracks?.[track],
+  );
+  if (!tracks.length)
+    throw new Error(
+      `${deck.entry}: the headmatter's docs.tracks names no track`,
+    );
+  return tracks;
 }
 
 export function pageStartOf(fm: Frontmatter): PageStart | undefined {

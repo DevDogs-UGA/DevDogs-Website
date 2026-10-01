@@ -26,7 +26,7 @@ rightFile: terminal
 # Download the workshop repo
 git clone https://github.com/DevDogsUGA/Web-Workshops
 cd Web-Workshops
-# Your own branch, starting from Setup Night's code
+# Your own branch, starting from the Framework Intros code
 git switch -c <github-username>/02-supabase origin/01-nextjs-intro
 # Install dependencies
 pnpm install
@@ -38,7 +38,7 @@ pnpm install
 # Download the workshop repo
 git clone https://github.com/DevDogsUGA/Mobile-Workshops
 cd Mobile-Workshops
-# Your own branch, starting from Setup Night's code
+# Your own branch, starting from the Framework Intros code
 git switch -c <github-username>/02-supabase origin/01-flutter-intro
 # Install dependencies
 flutter pub get
@@ -85,7 +85,7 @@ docsPage:
 
 # Read the Guestbook
 
-The guestbook is the part we didn't get to at Setup Night. It's already in your starter code, keeping messages in memory. Now we'll give it a real database.
+The guestbook from Framework Intros is already in your starter code, keeping messages in memory. Now we'll give it a real database.
 
 <!-- Presenter notes: First step: swap the in-memory list for a real Supabase table, read-only. -->
 
@@ -225,7 +225,7 @@ rightFile: ~/lib/guestbook.dart
 <CodeTips>
 <template #0>
 
-Setup Night's guestbook kept entries in memory, so they vanished on refresh. The lit lines are about to change.
+The guestbook from Framework Intros kept entries in memory, so they vanished on refresh. The lit lines are about to change.
 
 </template>
 <template #1>
@@ -267,7 +267,7 @@ Each field now comes from the database row: `author_name`, `created_at`, and `bo
 <CodeTips>
 <template #0>
 
-Setup Night's guestbook kept entries in a list in memory, so they vanished on restart. The lit lines are about to change.
+The guestbook from Framework Intros kept entries in a list in memory, so they vanished on restart. The lit lines are about to change.
 
 </template>
 <template #1>
@@ -494,7 +494,7 @@ rightFile: ~/lib/guestbook.dart
 <CodeTips>
 <template #0>
 
-The form from Setup Night comes back, now saving to the database.
+The form from Framework Intros comes back, now saving to the database.
 
 </template>
 <template #1>
@@ -536,7 +536,7 @@ The message box works the same way, and signed-out visitors get a hint instead o
 <CodeTips>
 <template #0>
 
-The form from Setup Night comes back, now saving to the database.
+The form from Framework Intros comes back, now saving to the database.
 
 </template>
 <template #1>

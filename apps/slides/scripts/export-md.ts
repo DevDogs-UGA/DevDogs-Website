@@ -1,7 +1,7 @@
 // Writes a deck out as markdown for the docs site: a folder of step pages per
 // track, plus any pages both tracks share.
 //
-//   pnpm export:md [decks/<deck>.md] --out <docs>/workshops/<workshop>
+//   pnpm export:md decks/<deck>.md --out <docs>/workshops/<workshop>
 //
 // A slide deck is a poor handout: its code windows pan and build click by
 // click, so a PDF only catches one frame of each. This reads the same slides
@@ -16,6 +16,10 @@
 //   lines at once when none do, each linking to its lines on GitHub.
 // - `<CodeTips>` become the prose between the code; presenter notes are
 //   dropped.
+//
+// Only the tracks the headmatter's `docs.tracks` names are written, so a
+// workshop that ran as one room per stack can be one deck per track, each
+// exported into the same workshop folder.
 //
 // A slide with `docsPage` starts a new page (`file`, and optionally `title`,
 // `description`, and `shared: true` for one page beside the track folders).
@@ -45,9 +49,8 @@ import {
   pagesOf,
   reviewLink,
   TRACK_CWD,
-  TRACKS,
+  tracksOf,
   type PageStart,
-  type Track,
 } from "./deck.ts";
 
 const APP = fileURLToPath(new URL("..", import.meta.url));
@@ -55,7 +58,11 @@ const { values, positionals } = parseArgs({
   allowPositionals: true,
   options: { out: { type: "string" } },
 });
-const entry = resolve(APP, positionals[0] ?? "decks/2026-09-28-supabase.md");
+if (!positionals[0])
+  throw new Error(
+    "usage: pnpm export:md decks/<deck>.md --out <docs>/workshops/<workshop>",
+  );
+const entry = resolve(APP, positionals[0]);
 
 const GENERATED = `<!-- Generated from Backstage apps/slides/${entry.slice(APP.length)} by \`pnpm export:md\`; edit the deck, not this file. -->`;
 
@@ -165,7 +172,8 @@ function clearGenerated(dir: string) {
   }
 }
 
-const { docs, slides } = await loadDeck(entry);
+const deck = await loadDeck(entry);
+const { docs, slides } = deck;
 // YAML reads an unquoted timestamp as a Date.
 const scheduled: unknown = docs.scheduled;
 if (scheduled instanceof Date) docs.scheduled = scheduled.toISOString();
@@ -174,12 +182,8 @@ const out = resolve(values.out ?? join(APP, "export", basename(entry, ".md")));
 mkdirSync(out, { recursive: true });
 const shared = new Map<string, string>();
 
-for (const track of Object.keys(TRACKS) as Track[]) {
-  const config = docs.tracks?.[track];
-  if (!config)
-    throw new Error(
-      `${entry}: the headmatter's docs.tracks has no ${track} entry`,
-    );
+for (const track of tracksOf(deck)) {
+  const config = docs.tracks![track]!;
   const dir = join(out, config.dir);
   clearGenerated(dir);
   mkdirSync(dir, { recursive: true });

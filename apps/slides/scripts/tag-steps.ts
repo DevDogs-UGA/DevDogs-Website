@@ -43,7 +43,7 @@ import {
   pageCommands,
   pageContent,
   pagesOf,
-  TRACKS,
+  tracksOf,
   type Deck,
   type Track,
 } from "./deck.ts";
@@ -232,7 +232,7 @@ const changed: string[] = [];
 
 for (const entry of decks) {
   const deck = await loadDeck(entry);
-  for (const track of Object.keys(TRACKS) as Track[]) {
+  for (const track of tracksOf(deck)) {
     const repo = clones[track];
     const { prefix, tags } = wantedTags(deck, track);
     const label = `${track} (${repo})`;
