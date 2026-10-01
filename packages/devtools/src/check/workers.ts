@@ -14,6 +14,7 @@
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { parseWorkerEntries } from "@devdogsuga/cli-core/workers";
 
 /** Worker apps that ship a `wrangler.jsonc` but are deliberately left out of
  * the automated deploy matrix (see `deploy-app.yaml`'s own comment). */
@@ -99,9 +100,9 @@ function sameSet(a: readonly string[], b: readonly string[]): boolean {
 export function checkWorkers(root: string): string[] {
   const problems: string[] = [];
 
-  const paths = JSON.parse(
-    readFileSync(join(root, "workers.json"), "utf8"),
-  ) as string[];
+  const paths = parseWorkerEntries(
+    JSON.parse(readFileSync(join(root, "workers.json"), "utf8")),
+  ).map((entry) => entry.path);
   const apps = paths.map((path) => basename(path));
 
   const scanned = expandWorkspacePackages(

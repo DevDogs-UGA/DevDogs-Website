@@ -20,6 +20,7 @@
  * flag is the command's own, and also ours.
  */
 import type { Catalog } from "./catalog.js";
+import { cliName } from "./cli-name.js";
 
 export const DRY_RUN_FLAG = "--dry-run";
 
@@ -82,5 +83,5 @@ export function dryRunKind(
 
 /** The command line a stopped command would have run. */
 export function wouldRunLine(argv: readonly string[]): string {
-  return `Would run: devtools ${argv.join(" ")}`;
+  return `Would run: ${cliName()} ${argv.join(" ")}`;
 }

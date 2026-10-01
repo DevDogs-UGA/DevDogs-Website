@@ -10,7 +10,8 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
-const ROOT = fileURLToPath(new URL("..", import.meta.url));
+const ROOT = fileURLToPath(new URL("../../..", import.meta.url));
+const PACKAGE = fileURLToPath(new URL("..", import.meta.url));
 
 interface Checker {
   importedPackages: (source: string) => Set<string>;
@@ -100,10 +101,10 @@ describe("findUndeclaredImports", () => {
   });
 
   it("holds for the real build, when there is one", () => {
-    const dist = join(ROOT, "dist");
+    const dist = join(PACKAGE, "dist");
     if (!existsSync(join(dist, "launch.js"))) return;
     const manifest = JSON.parse(
-      readFileSync(join(ROOT, "package.json"), "utf8"),
+      readFileSync(join(PACKAGE, "package.json"), "utf8"),
     ) as Record<string, unknown>;
     expect([...checker.findUndeclaredImports(dist, manifest)]).toEqual([]);
   });

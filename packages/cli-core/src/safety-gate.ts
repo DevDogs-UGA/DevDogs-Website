@@ -17,6 +17,7 @@
  *   * development (local or remote): no prompt.
  */
 import { confirm } from "@clack/prompts";
+import { cliName } from "./cli-name.js";
 import { formatCommand } from "./process-group.js";
 import { unwrap } from "./ui.js";
 
@@ -61,21 +62,22 @@ export async function gateHostedTier(input: GateInput): Promise<GateOutcome> {
 
   const production = input.tier === "production";
   const target = `${production ? "PRODUCTION" : "staging"} (project ${input.projectRef ?? "unknown"})`;
-  const command = formatCommand("devtools", input.argv);
+  const cli = cliName();
+  const command = formatCommand(cli, input.argv);
 
   // ⚠️ SAFETY: `--yes` is the one way past this with no terminal, checked
   // before anything TTY-dependent runs.
   if (input.yes) {
     if (input.nonInteractive) {
       process.stderr.write(
-        `devtools: running \`${command}\` against ${target}.\n`,
+        `${cli}: running \`${command}\` against ${target}.\n`,
       );
     }
     return { proceed: true };
   }
   if (input.nonInteractive) {
     process.stderr.write(
-      `devtools: refusing to run \`${command}\` against ${target} without --yes. ` +
+      `${cli}: refusing to run \`${command}\` against ${target} without --yes. ` +
         "Nobody is here to confirm it.\n",
     );
     return { proceed: false, reason: "refused" };
@@ -88,7 +90,7 @@ export async function gateHostedTier(input: GateInput): Promise<GateOutcome> {
       : `This runs \`${command}\` against staging, project ${input.projectRef ?? "unknown"}. Continue?`,
   );
   if (!confirmed) {
-    process.stderr.write(`devtools: left ${input.tier} alone.\n`);
+    process.stderr.write(`${cli}: left ${input.tier} alone.\n`);
     return { proceed: false, reason: "declined" };
   }
   return { proceed: true };

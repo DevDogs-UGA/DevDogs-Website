@@ -60,7 +60,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { log, multiselect, note } from "@clack/prompts";
-import { EnvDocument } from "./document.js";
+import { EnvDocument } from "@devdogsuga/cli-core/env/document";
 import { unwrap } from "@devdogsuga/cli-core/ui";
 import type {
   EnvTarget,
@@ -71,7 +71,7 @@ import type {
 import { assertRegistryLoaded } from "@devdogsuga/cli-core/env/discovery";
 import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
 import { recordResolved } from "@devdogsuga/cli-core/invocation";
-import { keysRoutedTo } from "./selection.js";
+import { keysRoutedTo } from "@devdogsuga/cli-core/env/selection";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { explain } from "@devdogsuga/cli-core/ui";
 

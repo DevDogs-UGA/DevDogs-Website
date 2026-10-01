@@ -11,12 +11,12 @@ dist/
 .env.*
 !.env.example
 
-# The devtools contract-test fixture commits a hand-written stand-in for a
-# compiled build (packages/devtools/test/fixture-repo/packages/demo-source/
+# The contract-test fixture commits a hand-written stand-in for a
+# compiled build (packages/cli-core/test-fixtures/fixture-repo/packages/demo-source/
 # dist/index.js) — it is never actually built, and would otherwise be
 # silently caught by the blanket dist/ rule above.
-!packages/devtools/test/fixture-repo/packages/demo-source/dist/
-!packages/devtools/test/fixture-repo/packages/demo-source/dist/index.js
+!packages/cli-core/test-fixtures/fixture-repo/packages/demo-source/dist/
+!packages/cli-core/test-fixtures/fixture-repo/packages/demo-source/dist/index.js
 
 # @devdogsuga/brand: derived by `pnpm codegen` from artwork/ and Phosphor.
 packages/brand/src/generated/assets.ts

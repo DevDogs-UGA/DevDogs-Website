@@ -15,7 +15,7 @@ apps/slides/worker/worker-configuration.d.ts
 
 # Hand-written fixtures whose exact bytes the tests depend on.
 packages/devtools/test-fixtures/
-packages/devtools/test/fixture-repo/
+packages/cli-core/test-fixtures/fixture-repo/
 
 # apps/slides/.gitignore
 apps/slides/export/

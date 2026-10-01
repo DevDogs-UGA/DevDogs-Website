@@ -129,9 +129,13 @@ function renderRoot(catalog: Catalog): string {
         "--tier <t>",
         "Deploy tier for this whole invocation (development, staging, production)",
       ],
+      [
+        "--no-env",
+        "Load no env files; the environment you pass is the environment",
+      ],
     ]),
     "",
-    "`${catalog.usage} <command> --help` shows what that command takes.",
+    `\`${catalog.usage} <command> --help\` shows what that command takes.`,
   );
 
   return lines.join("\n");

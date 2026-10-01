@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   TARGETS,
@@ -8,9 +9,10 @@ import {
 import {
   resetEnvSyncCacheForTests,
   resetPeerCacheForTests,
-} from "@devdogsuga/cli-core/repo/peers";
-import { resetRepoRootCacheForTests } from "@devdogsuga/cli-core/repo/root";
-import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
+} from "../repo/peers.js";
+import { resetRepoRootCacheForTests } from "../repo/root.js";
+import { overrideOwnPackageDir } from "../version.js";
+import { loadRegistry } from "./discovery.js";
 import { keysRoutedTo, selectForPush } from "./selection.js";
 
 /**
@@ -22,8 +24,8 @@ import { keysRoutedTo, selectForPush } from "./selection.js";
  * registry (49/50/1 real declared keys, real derivation formulas like
  * `NEXT_PUBLIC_SUPABASE_URL: "$API_URL"`). This one points
  * `DEVTOOLS_TEST_REPO_ROOT` at the committed contract-test fixture
- * (`test/fixture-repo/`, extended with a `demo-registry` package —
- * `test/fixture-repo/packages/demo-registry/env.ts`) instead, whose keys
+ * (`test-fixtures/fixture-repo/`, extended with a `demo-registry` package —
+ * `test-fixtures/fixture-repo/packages/demo-registry/env.ts`) instead, whose keys
  * mirror the SAME classifications (an ordinary secret, a narrowed one, a
  * public per-environment variable, two `localStack` ones, a committed
  * constant, a minted credential, a derived value, an apply-adjacent ordinary
@@ -49,12 +51,19 @@ import { keysRoutedTo, selectForPush } from "./selection.js";
  * throughout: in the store it belongs to, and NOT in the other one.
  */
 
-const FIXTURE_ROOT = new URL("../../test/fixture-repo/", import.meta.url)
-  .pathname;
+const FIXTURE_ROOT = new URL(
+  "../../test-fixtures/fixture-repo/",
+  import.meta.url,
+).pathname;
 const previousRoot = process.env.DEVTOOLS_TEST_REPO_ROOT;
 
 beforeAll(async () => {
   process.env.DEVTOOLS_TEST_REPO_ROOT = FIXTURE_ROOT;
+  // The operator manifest (`BWS_ACCESS_TOKEN` and friends) is the running CLI's
+  // own `env.ts`; borrow backstage's, which declares them.
+  overrideOwnPackageDir(
+    fileURLToPath(new URL("../../../backstage/", import.meta.url)),
+  );
   resetRepoRootCacheForTests();
   resetPeerCacheForTests();
   resetEnvSyncCacheForTests();
@@ -62,6 +71,7 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
+  overrideOwnPackageDir(undefined);
   if (previousRoot === undefined) delete process.env.DEVTOOLS_TEST_REPO_ROOT;
   else process.env.DEVTOOLS_TEST_REPO_ROOT = previousRoot;
   resetRepoRootCacheForTests();

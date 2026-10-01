@@ -34,10 +34,9 @@
  * `getEnvSync().variableKeys()` differ only in `secrecy`, so no key can be in both, and the
  * loop below routes to one or the other and never to neither-nor-both.
  */
-import type { EnvEntry } from "@devdogsuga/env";
-import { type VaultTarget } from "../bws/environments.js";
-import { assertRegistryLoaded } from "@devdogsuga/cli-core/env/discovery";
-import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
+import type { EnvEntry, VaultTarget } from "@devdogsuga/env";
+import { getEnvSync } from "../repo/peers.js";
+import { assertRegistryLoaded } from "./discovery.js";
 
 export interface PushSelection {
   push: Map<string, string>;

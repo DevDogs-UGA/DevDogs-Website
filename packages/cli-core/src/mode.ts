@@ -49,3 +49,42 @@ export function stripNoEnvFlag(argv: readonly string[]): {
   const rest = argv.filter((arg) => arg !== NO_ENV_FLAG);
   return { noEnv: rest.length !== argv.length, rest };
 }
+
+/**
+ * Pulls a global `--tier <t>` out of `argv`, wherever it sits, leaving every
+ * other argument untouched and in its original order.
+ *
+ * A trailing `--tier` with nothing after it removes just the flag; the
+ * missing value then reaches tier resolution as `explicit: undefined`, which
+ * falls through to `DEPLOY_ENV`/the sole tier/the prompt exactly as if
+ * `--tier` had never been typed, rather than this function guessing. A
+ * following token that is itself a flag is treated the same way, NOT consumed
+ * as the value (the guard every other flag-value reader keeps): without it,
+ * `--tier --help` would swallow the flag as a bogus tier and refuse with
+ * "unknown tier" instead of reaching the help bypass.
+ */
+export function stripTierFlag(argv: readonly string[]): {
+  explicit: string | undefined;
+  rest: string[];
+} {
+  const rest = [...argv];
+  const index = rest.indexOf("--tier");
+  if (index === -1) return { explicit: undefined, rest };
+  const value = rest[index + 1];
+  const missing = value === undefined || value.startsWith("-");
+  rest.splice(index, missing ? 1 : 2);
+  return { explicit: missing ? undefined : value, rest };
+}
+
+let noEnv = false;
+
+/** Records that `--no-env` was typed, for handlers that behave differently
+ * when the caller supplies the environment (backstage's `planner status`). */
+export function setNoEnv(value: boolean): void {
+  noEnv = value;
+}
+
+/** Whether this run was started with `--no-env`. */
+export function isNoEnv(): boolean {
+  return noEnv;
+}

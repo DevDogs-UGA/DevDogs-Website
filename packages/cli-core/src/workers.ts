@@ -19,14 +19,57 @@ import { findRepoRoot } from "./repo/root.js";
 // the filesystem until a caller actually asks for the list, by which point
 // it is a real repo-dependent command that is supposed to refuse outside a
 // repo anyway.
-let cachedWorkerPaths: readonly string[] | undefined;
+let cachedWorkerEntries: readonly WorkerEntry[] | undefined;
+
+/**
+ * One app in `workers.json`. An entry is a workspace-relative path, or an
+ * object carrying the path and whatever per-app data the deploy commands read
+ * (`smoke`, for `backstage deploy smoke`; validated by the command that reads
+ * it, not here).
+ */
+export interface WorkerEntry {
+  path: string;
+  smoke?: unknown;
+}
+
+/**
+ * Normalizes the parsed JSON of `workers.json`: bare path strings and
+ * `{ path, smoke? }` objects may be mixed, so the file can grow per-app data
+ * without every reader changing the day it does.
+ */
+export function parseWorkerEntries(json: unknown): WorkerEntry[] {
+  if (!Array.isArray(json)) {
+    throw new Error("workers.json must be an array.");
+  }
+  return json.map((entry: unknown, index): WorkerEntry => {
+    if (typeof entry === "string") return { path: entry };
+    if (
+      typeof entry === "object" &&
+      entry !== null &&
+      "path" in entry &&
+      typeof entry.path === "string"
+    ) {
+      return "smoke" in entry
+        ? { path: entry.path, smoke: entry.smoke }
+        : { path: entry.path };
+    }
+    throw new Error(
+      `workers.json entry ${index} must be a path string or an object with a "path".`,
+    );
+  });
+}
+
+/** Every entry in root `workers.json`. */
+export function workerEntries(): readonly WorkerEntry[] {
+  cachedWorkerEntries ??= parseWorkerEntries(
+    JSON.parse(readFileSync(join(findRepoRoot(), "workers.json"), "utf8")),
+  );
+  return cachedWorkerEntries;
+}
 
 /** Workspace-relative paths, exactly as listed in root `workers.json`. */
 export function workerPaths(): readonly string[] {
-  cachedWorkerPaths ??= JSON.parse(
-    readFileSync(join(findRepoRoot(), "workers.json"), "utf8"),
-  ) as readonly string[];
-  return cachedWorkerPaths;
+  return workerEntries().map((entry) => entry.path);
 }
 
 /** Basenames, e.g. `"schedule-builder"` — the `pnpm --filter` / CLI slug. */

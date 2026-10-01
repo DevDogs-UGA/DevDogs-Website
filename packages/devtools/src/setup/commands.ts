@@ -29,7 +29,7 @@ import {
 import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
 import { renderInit, resolveSections } from "../env/example.js";
 import { discoverRepoRoot } from "@devdogsuga/cli-core/repo/root";
-import { EnvDocument } from "../env/document.js";
+import { EnvDocument } from "@devdogsuga/cli-core/env/document";
 import { dbPush } from "@devdogsuga/cli-core/db/run";
 import { validateSessionPoolerUrl } from "../db/pooler.js";
 import { runOAuthSetup } from "../oauth/wizard.js";

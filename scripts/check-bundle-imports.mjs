@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Runs after tsdown (see package.json `build`). Fails the build if the bundled
-// output imports a third-party package this package.json does not declare.
+// Shared by the published CLIs: `node ../../scripts/check-bundle-imports.mjs`
+// from a package, after tsdown (see its package.json `build`). Fails the
+// build if the bundled output imports a third-party package this package.json does not declare.
 //
 // The bundle inlines the private @devdogsuga/cli-core and nothing else, so
 // every other import is resolved by whoever installs the published tarball.
@@ -8,11 +9,15 @@
 // fine here and fails for users with "Cannot find package". tsdown's
 // `deps.onlyImport` is the first line of defence; this reads what was actually
 // written, so a dynamic import or a chunk that slipped past is caught too.
-import { builtinModules } from "node:module";
+import { builtinModules, createRequire } from "node:module";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import ts from "typescript";
+
+// TypeScript is the checked package's own dependency, not the root's, so it is
+// resolved from the package this runs for (the working directory: `build`
+// scripts run in the package, and so do its tests).
+const ts = createRequire(join(process.cwd(), "package.json"))("typescript");
 
 const BUILTINS = new Set(builtinModules);
 
@@ -87,7 +92,9 @@ export function findUndeclaredImports(distDir, manifest) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const root = join(fileURLToPath(import.meta.url), "..", "..");
+  // The package whose `dist/` to read: the one named on the command line, or
+  // the one the script runs from (`build` scripts run in the package).
+  const root = resolve(process.argv[2] ?? process.cwd());
   const dist = join(root, "dist");
   if (!existsSync(dist)) {
     console.error("check-bundle-imports: dist/ does not exist; build first.");

@@ -17,11 +17,5 @@
     "test/setup.ts",
     "tsdown.config.ts"
   ],
-  // The fixture repo is its own (fake) workspace, deliberately not part of
-  // this package's TypeScript project — its files typecheck (or don't)
-  // against whatever the real DevDogsUGA workspace would provide, which is
-  // not this repo's concern, and its `@devdogsuga/env`/`@devdogsuga/*`
-  // imports only resolve once the contract test's `pnpm install` step has
-  // run against packed tarballs.
-  "exclude": ["src/**/*.test.ts", "test/fixture-repo"]
+  "exclude": ["src/**/*.test.ts"]
 }

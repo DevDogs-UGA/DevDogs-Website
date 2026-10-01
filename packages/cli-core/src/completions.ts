@@ -1,4 +1,5 @@
 import type { Catalog } from "./catalog.js";
+import { cliName } from "./cli-name.js";
 
 type Shell = "bash" | "zsh";
 
@@ -20,6 +21,7 @@ function buildGroups(catalog: Catalog): Map<string, string[]> {
 }
 
 function generateBash(catalog: Catalog): string {
+  const name = cliName();
   const groups = buildGroups(catalog);
   const topLevel = (groups.get("") ?? []).join(" ");
 
@@ -31,10 +33,10 @@ function generateBash(catalog: Catalog): string {
   }
 
   return [
-    "# devtools bash completion",
+    `# ${name} bash completion`,
     "# Source this file or add it to /etc/bash_completion.d/",
-    '#   eval "$(pnpm devtools completions --shell bash)"',
-    "_devtools_complete() {",
+    `#   eval "$(pnpm ${name} completions --shell bash)"`,
+    `_${name}_complete() {`,
     '    local cur="${COMP_WORDS[COMP_CWORD]}"',
     '    local prev="${COMP_WORDS[COMP_CWORD-1]}"',
     '    local words=""',
@@ -55,12 +57,13 @@ function generateBash(catalog: Catalog): string {
     "",
     '    COMPREPLY=($(compgen -W "$words" -- "$cur"))',
     "}",
-    "complete -F _devtools_complete devtools",
+    `complete -F _${name}_complete ${name}`,
     "",
   ].join("\n");
 }
 
 function generateZsh(catalog: Catalog): string {
+  const name = cliName();
   const groups = buildGroups(catalog);
   const topLevel = (groups.get("") ?? []).join(" ");
 
@@ -71,11 +74,11 @@ function generateZsh(catalog: Catalog): string {
   }
 
   return [
-    "#compdef devtools",
-    "# devtools zsh completion",
+    `#compdef ${name}`,
+    `# ${name} zsh completion`,
     "# Add to your .zshrc:",
-    '#   eval "$(pnpm devtools completions --shell zsh)"',
-    "_devtools() {",
+    `#   eval "$(pnpm ${name} completions --shell zsh)"`,
+    `_${name}() {`,
     "    local state",
     `    local -a top_level=(${topLevel})`,
     "",
@@ -97,7 +100,7 @@ function generateZsh(catalog: Catalog): string {
     "",
     "    compadd -a candidates",
     "}",
-    "_devtools",
+    `_${name}`,
     "",
   ].join("\n");
 }
@@ -111,9 +114,10 @@ export function runCompletions(catalog: Catalog, argv: string[]): number {
   const shell = shellIdx !== -1 ? argv[shellIdx + 1] : undefined;
 
   if (shell !== "bash" && shell !== "zsh") {
+    const name = cliName();
     process.stderr.write(
-      "devtools completions: --shell must be bash or zsh.\n" +
-        "Example: pnpm devtools completions --shell bash\n",
+      `${name} completions: --shell must be bash or zsh.\n` +
+        `Example: pnpm ${name} completions --shell bash\n`,
     );
     return 1;
   }

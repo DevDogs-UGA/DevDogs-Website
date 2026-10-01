@@ -29,6 +29,7 @@
 import { readFileSync } from "node:fs";
 import * as Sentry from "@sentry/node";
 import { buildSentryOptions } from "@devdogsuga/telemetry";
+import { cliName } from "./cli-name.js";
 import { noteError } from "./failure-log.js";
 import { isNonInteractive } from "./mode.js";
 import { discoverRepoRoot } from "./repo/root.js";
@@ -135,7 +136,7 @@ export function initDevtoolsTelemetry(command: string): void {
     dsn: resolveDevtoolsDsn(process.env, bakedSentryDsn()),
     // The published version, so an issue names the release it came from; a
     // dlx run has no SENTRY_RELEASE of its own.
-    release: `devtools@${ownVersion()}`,
+    release: `${cliName()}@${ownVersion()}`,
   });
   if (!options) return;
 

@@ -1,7 +1,7 @@
 # @devdogsuga/cli-core
 
-The shared core of the published CLIs (`@devdogsuga/devtools`, and
-`@devdogsuga/backstage` once it exists). **Private and never published.** Each
+The shared core of the published CLIs (`@devdogsuga/devtools` and
+`@devdogsuga/backstage`). **Private and never published.** Each
 CLI inlines it with [tsdown](https://tsdown.dev), so it is only ever a
 `workspace:*` devDependency, and its source is consumed directly (the
 `exports` map points at `src/`).
@@ -15,7 +15,10 @@ It holds what both CLIs need and neither owns:
 | `tier`, `env-entry`, `env/discovery`     | the session tier, entering its env, the env manifest registry                              |
 | `db/run`, `db/connection`, `instance`    | running the Supabase CLI, resolving the session's database                                 |
 | `args`, `invocation`                     | argv helpers, the "run it directly next time" recorder                                     |
-| `mode`, `safety-gate`                    | non-interactive mode (`--yes`, `--no-env`), the hosted-tier gate                           |
+| `mode`, `safety-gate`                    | non-interactive mode (`--yes`, `--no-env`, `--tier`), the hosted-tier gate                 |
+| `cli-name`, `session`                    | which CLI this is (Sentry release, messages); the tier pieces both launchers use           |
+| `env/*`                                  | the env registry, an env file's document and its read/write, the push selection            |
+| `workers`                                | `workers.json`: the Worker apps and their per-app data                                     |
 | `process-group`, `supabase-args`         | process-group kills and printing what ran; the tier arguments `devtools supabase` fills in |
 | `catalog`, `help`, `menu`, `completions` | the command catalog and everything that walks it                                           |
 | `dispatch`                               | the handler contract between a CLI's dispatcher and its domains                            |
