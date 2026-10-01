@@ -294,6 +294,9 @@ describe("launch", () => {
     const savedDevDb = process.env.DEV_DB;
 
     beforeEach(() => {
+      // CI sets CI=true, which counts as non-interactive even when a test
+      // fakes a TTY; these tests are about the interactive paths.
+      vi.stubEnv("CI", "");
       resolveSessionTier.mockResolvedValue({
         ok: true,
         tier: "development",
@@ -304,6 +307,7 @@ describe("launch", () => {
     });
 
     afterEach(() => {
+      vi.unstubAllEnvs();
       Object.defineProperty(process.stdin, "isTTY", {
         value: savedIsTTY,
         configurable: true,
