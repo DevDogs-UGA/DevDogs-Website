@@ -8,6 +8,7 @@
 import { execFile, spawn as nodeSpawn } from "node:child_process";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { reportRan, runInGroup } from "../process-group.js";
 import { findRepoRoot } from "../repo/root.js";
 import { loadDbTypegen } from "../repo/peers.js";
 
@@ -24,20 +25,31 @@ export function typesFile(): string {
 }
 
 /** Spawn a pnpm command with inherited stdio; resolves to the exit code. Pass
- * `env` to run the child against a loaded tier rather than process.env. */
-export function run(args: string[], env?: NodeJS.ProcessEnv): Promise<number> {
-  return new Promise((resolve) => {
-    const child = nodeSpawn("pnpm", args, {
-      stdio: "inherit",
-      cwd: findRepoRoot(),
-      ...(env ? { env } : {}),
-    });
-    child.on("error", (error) => {
-      process.stderr.write(`${error.message}\n`);
-      resolve(1);
-    });
-    child.on("exit", (code) => resolve(code ?? 1));
+ * `env` to run the child against a loaded tier rather than process.env. The
+ * child runs in its own process group, so stopping this process stops
+ * whatever it started (see `process-group.ts`). */
+export async function run(
+  args: string[],
+  env?: NodeJS.ProcessEnv,
+): Promise<number> {
+  const result = await runInGroup("pnpm", args, {
+    cwd: findRepoRoot(),
+    ...(env ? { env } : {}),
   });
+  if (reporting) reportRan("pnpm", args, result);
+  return result.code;
+}
+
+let reporting = false;
+
+/**
+ * Makes every `run()` after this print the exact command it ran (on stderr,
+ * after it finishes). Off by default, so a deploy log or a piped command is
+ * not changed under its caller; the presets turn it on because showing the
+ * tool calls behind a button is their whole point.
+ */
+export function reportRuns(enabled: boolean): void {
+  reporting = enabled;
 }
 
 export interface RunWithStderrResult {
