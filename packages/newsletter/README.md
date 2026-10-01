@@ -165,31 +165,10 @@ durable fix is an EITS-approved app registration with delegated
 `Mail.ReadWrite` and `Mail.Send`; if that ever lands, swap the IMAP APPEND
 and SMTP submission for their Graph calls and delete the borrowed ID.
 
-## Regenerating the lockup
+## The lockup
 
-`src/generated/lockup.ts` embeds `apps/platform/public/brand/devdogs-logo-dark.svg`
-(the composed mascot + wordmark, which `@devdogsuga/og` does not export). If
-that artwork changes, re-run from the repo root:
-
-```bash
-node --input-type=module -e '
-import { readFileSync, writeFileSync } from "node:fs";
-const svg = readFileSync("apps/platform/public/brand/devdogs-logo-dark.svg", "utf8").trim();
-const [, w, h] = svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
-writeFileSync("packages/newsletter/src/generated/lockup.ts", [
-  "// @generated from apps/platform/public/brand/devdogs-logo-dark.svg — the",
-  "// mascot + wordmark lockup drawn for dark grounds. Regenerate by re-running",
-  "// the base64 line in packages/newsletter/README.md if the artwork changes.",
-  "",
-  "/** The artwork's own viewBox units, carried so display sizes derive an aspect ratio instead of hard-coding one. */",
-  "export const DEVDOGS_LOCKUP_ON_DARK = {",
-  `  src: "data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}",`,
-  `  width: ${w},`,
-  `  height: ${h},`,
-  "} as const;",
-  "",
-].join("\n"));
-'
-```
+The masthead's mascot + wordmark lockup is `LOCKUP_ON_DARK` from
+`@devdogsuga/brand`, built there from `artwork/devdogs-logo-dark.svg`. Change
+the artwork in brand, not here.
 
 [API reference](https://devdogsuga.org/docs/toolkit/reference/api/newsletter)

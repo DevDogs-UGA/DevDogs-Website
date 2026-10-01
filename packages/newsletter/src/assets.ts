@@ -1,20 +1,18 @@
 /**
  * The two brand marks the newsletter draws: the DevDogs mascot+wordmark
- * lockup (embedded here — brand carries the wordmark and mascot separately,
- * and the masthead wants the composed artwork) and the GDG-on-Campus · UGA
- * cobrand, taken from brand so the two stay one file.
+ * lockup and the GDG-on-Campus · UGA cobrand, both taken from brand so each
+ * stays one file.
  *
  * Display sizes are derived from each artwork's own units against a shared
  * 33px masthead height, so a re-exported SVG with a new viewBox cannot
  * silently stretch.
  */
-import { GDGC_UGA, type Asset } from "@devdogsuga/brand";
-import { DEVDOGS_LOCKUP_ON_DARK } from "./generated/lockup.js";
+import { GDGC_UGA, LOCKUP_ON_DARK, type Asset } from "@devdogsuga/brand";
 import { socialIconDataUri, type SocialIconName } from "./icons.js";
 import type { FontStacks } from "./theme.js";
 
 export { GDGC_UGA };
-export const DEVDOGS_LOCKUP: Asset = DEVDOGS_LOCKUP_ON_DARK;
+export const DEVDOGS_LOCKUP: Asset = LOCKUP_ON_DARK;
 
 /** The masthead/footer line height every mark is scaled to. */
 const MARK_HEIGHT = 33;
