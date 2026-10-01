@@ -101,7 +101,7 @@ export async function resolveInstance(
     process.stderr.write(
       `${label}: this session has a DB_URL but no API_URL/PUBLISHABLE_KEY/` +
         "SECRET_KEY — run `pnpm devtools env pull` for this tier, or " +
-        "`pnpm devtools db start` for the local stack.\n",
+        "`pnpm devtools supabase start` for the local stack.\n",
     );
     return null;
   }

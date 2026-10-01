@@ -131,6 +131,6 @@ export function foreignStackMessage(foreignProjectId: string): string {
   return (
     `The stack on port ${STACK_API_PORT} belongs to project "${foreignProjectId}", not ` +
     "this checkout's. Stop it with `supabase stop --project-id " +
-    `${foreignProjectId}\` then \`pnpm devtools db start\`.`
+    `${foreignProjectId}\` then \`pnpm devtools supabase start\`.`
   );
 }

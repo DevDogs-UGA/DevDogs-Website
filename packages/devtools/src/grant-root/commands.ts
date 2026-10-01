@@ -132,8 +132,9 @@ async function runGrantRoot(
     );
   } catch (err) {
     explainError("Could not grant Root.", err, [
-      "Seeds create the Root role definition — try `pnpm devtools db reset` " +
-        "(development) or `pnpm devtools db seed production` (staging/production) first.",
+      "Migrations create the Root role definition — try " +
+        "`pnpm devtools supabase db reset` (development) or " +
+        "`pnpm devtools preset apply-migrations` (staging/production) first.",
     ]);
     process.exitCode = 1;
   }

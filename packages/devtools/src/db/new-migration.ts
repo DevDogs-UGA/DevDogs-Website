@@ -64,7 +64,7 @@ export async function runNewMigration(
   const app = appArg ?? (await pickApp());
   if (!APP_SCHEMAS[app]) {
     process.stderr.write(
-      `devtools db migration new: unknown app "${app}". Expected one of: ${Object.keys(APP_SCHEMAS).join(", ")}.\n`,
+      `devtools preset new-migration: unknown app "${app}". Expected one of: ${Object.keys(APP_SCHEMAS).join(", ")}.\n`,
     );
     return 1;
   }
@@ -82,7 +82,7 @@ export async function runNewMigration(
   const name = migrationName(app, description);
   if (!name) {
     process.stderr.write(
-      "devtools db migration new: the description left nothing usable in the filename.\n",
+      "devtools preset new-migration: the description left nothing usable in the filename.\n",
     );
     return 1;
   }
