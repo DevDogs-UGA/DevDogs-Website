@@ -22,7 +22,10 @@
  * tarballs), so it is `pnpm test:contract`, not part of `pnpm test`.
  *
  * PREREQUISITE: `pnpm --filter @devdogsuga/backstage build` (and the same for
- * `@devdogsuga/telemetry` and `@devdogsuga/env`). This packs what is on disk.
+ * `@devdogsuga/telemetry`, `@devdogsuga/env`, `@devdogsuga/brand`,
+ * `@devdogsuga/events` and `@devdogsuga/newsletter`). This packs what is on
+ * disk, and overrides every `@devdogsuga/*` dependency with its local tarball
+ * so a published older version cannot stand in for the one under test.
  */
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import {
@@ -102,6 +105,9 @@ describe("backstage contract tests", () => {
       requireBuilt(PACKAGE_ROOT, "launch.js");
       requireBuilt(join(WORKSPACE_ROOT, "packages", "telemetry"), "index.js");
       requireBuilt(join(WORKSPACE_ROOT, "packages", "env"), "index.js");
+      for (const name of ["brand", "events", "newsletter"]) {
+        requireBuilt(join(WORKSPACE_ROOT, "packages", name), "index.js");
+      }
 
       tmpRoot = mkdtempSync(join(tmpdir(), "backstage-contract-"));
       const packDir = join(tmpRoot, "packs");
@@ -116,6 +122,23 @@ describe("backstage contract tests", () => {
         join(WORKSPACE_ROOT, "packages", "env"),
         packDir,
       );
+      const brandTgz = packPackage(
+        join(WORKSPACE_ROOT, "packages", "brand"),
+        packDir,
+      );
+      const eventsTgz = packPackage(
+        join(WORKSPACE_ROOT, "packages", "events"),
+        packDir,
+      );
+      const newsletterTgz = packPackage(
+        join(WORKSPACE_ROOT, "packages", "newsletter"),
+        packDir,
+      );
+      // What the officer tools (`graphics`, `qr`, `newsletter`) read.
+      const libraryOverrides =
+        `  "@devdogsuga/brand": "file:${brandTgz}"\n` +
+        `  "@devdogsuga/events": "file:${eventsTgz}"\n` +
+        `  "@devdogsuga/newsletter": "file:${newsletterTgz}"\n`;
 
       // ── dlx: the tarball alone, outside any repo, install scripts off ────
       dlxDir = join(tmpRoot, "dlx");
@@ -130,7 +153,8 @@ describe("backstage contract tests", () => {
       );
       writeFileSync(
         join(dlxDir, "pnpm-workspace.yaml"),
-        `overrides:\n  "@devdogsuga/telemetry": "file:${telemetryTgz}"\n`,
+        `overrides:\n  "@devdogsuga/telemetry": "file:${telemetryTgz}"\n` +
+          libraryOverrides,
       );
       install(dlxDir, ["--ignore-scripts"]);
       if (existsSync(join(dlxDir, "node_modules", "@devdogsuga", "env"))) {
@@ -163,6 +187,7 @@ describe("backstage contract tests", () => {
         `${readFileSync(workspaceYamlPath, "utf8")}\noverrides:\n` +
           `  "@devdogsuga/telemetry": "file:${telemetryTgz}"\n` +
           `  "@devdogsuga/env": "file:${envTgz}"\n` +
+          libraryOverrides +
           `allowBuilds:\n  core-js: false\n  esbuild: true\n`,
       );
       install(fixtureDir);
@@ -307,12 +332,94 @@ describe("backstage contract tests", () => {
       "env audit",
       "planner status",
       "planner create",
+      "graphics",
+      "qr",
+      "github rulesets",
+      "github settings",
+      "newsletter render",
+      "newsletter draft",
+      "newsletter send",
     ]) {
       expect(paths).toContain(path);
     }
     for (const gone of ["bw", "deploy require-token", "deploy orphans"]) {
       expect(paths).not.toContain(gone);
     }
+  });
+
+  // ── the tools that need nothing ──────────────────────────────────────────
+
+  it("qr writes every format from a directory outside any repo", async () => {
+    const out = join(emptyDir, "qr-out");
+    const { status, stderr } = await outside([
+      "qr",
+      "https://devdogsuga.org",
+      "--format",
+      "svg,png,jpg,webp,avif,tiff",
+      "--size",
+      "200",
+      "--out",
+      out,
+    ]);
+    expect(stderr).not.toContain("Could not");
+    expect(status).toBe(0);
+    expect(readdirSync(out).sort()).toEqual([
+      "qr.avif",
+      "qr.jpg",
+      "qr.png",
+      "qr.svg",
+      "qr.tiff",
+      "qr.webp",
+    ]);
+  });
+
+  it("graphics renders brand, app and event images with no checkout", async () => {
+    const out = join(emptyDir, "graphics-out");
+    const { status, stderr } = await outside([
+      "graphics",
+      "brand/club",
+      "app/dogdays",
+      "event/*",
+      "--format",
+      "og",
+      "--out",
+      out,
+    ]);
+    expect(stderr).not.toContain("Could not");
+    expect(status).toBe(0);
+    const files = readdirSync(out);
+    expect(files).toContain("club-og.png");
+    expect(files).toContain("dogdays-og.png");
+    expect(files.length).toBeGreaterThan(2);
+  });
+
+  it("newsletter render writes the files, rasterising through the brand renderer", async () => {
+    const out = join(emptyDir, "newsletter-out");
+    const { status, stderr } = await outside([
+      "newsletter",
+      "render",
+      "*",
+      "--out",
+      out,
+    ]);
+    expect(stderr).not.toContain("Could not");
+    expect(status).toBe(0);
+    const files = readdirSync(out);
+    expect(files.some((name) => name.endsWith(".eml"))).toBe(true);
+    expect(files.some((name) => name.endsWith(".html"))).toBe(true);
+  });
+
+  it("newsletter send refuses to go out without --yes and no terminal", async () => {
+    const { status, stderr } = await outside([
+      "newsletter",
+      "send",
+      "*",
+      "--to",
+      "a@uga.edu",
+    ]);
+    expect(status).toBe(1);
+    expect(stderr).toContain("Pass --yes to send");
+    expect(stderr).toContain("a@uga.edu");
   });
 
   it("completions prints a script without a checkout", async () => {
