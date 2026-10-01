@@ -3,6 +3,7 @@
  *
  *   with-env <command> [args...]
  *   with-env -c '<shell command>'
+ *   with-env --worker <app> [--yes] <command> [args...]
  *
  * Loads the environment `DEPLOY_ENV` selects, where unset means development
  * means the root `.env`. In development only, it also loads the
@@ -23,6 +24,12 @@
  * through @yarnpkg/shell, the same JS shell pnpm's shellEmulator uses, so it
  * stays cross-platform.
  *
+ * `--worker <app>` additionally writes the app's Worker env (see
+ * `worker-env.ts`) to a private mode-0600 file for the life of the command and
+ * substitutes its path for any argument spelled `{env-file}`, e.g.
+ * `with-env --worker platform wrangler dev --env-file {env-file}`. Previewing
+ * the production tier asks first (`--yes` when there is no terminal).
+ *
  * Neither mode spawns a platform shell, so this works on Windows and POSIX.
  */
 import { spawn } from "node:child_process";
@@ -32,12 +39,15 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { UnknownEnvironmentError } from "./targets.js";
+import { confirmProduction } from "./confirm.js";
+import { ensureGeneratedEnv } from "./generated.js";
 import {
   applyDeployTierAliases,
   applyWranglerLocalDatabaseAlias,
   loadEnvironment,
   LocalStackOfflineError,
   MissingEnvFileError,
+  probeLocalStack,
 } from "./load.js";
 import {
   availableTiers,
@@ -129,6 +139,11 @@ const program = new Command("with-env")
     `environment to load (${SESSION_SELECTORS.join(", ")}, ` +
       "or bare development); overrides DEPLOY_ENV",
   )
+  .option(
+    "--worker <app>",
+    "write <app>'s Worker env to a temp file; {env-file} in the command is replaced by its path",
+  )
+  .option("--yes", "confirm previewing the production tier without asking")
   .argument("[command...]", "command to run with the env loaded")
   .configureOutput({
     // Re-prefix commander's `error:` lines so a rejected flag (e.g. the
@@ -138,7 +153,12 @@ const program = new Command("with-env")
   });
 
 program.parse();
-const opts = program.opts<{ c?: string; tier?: string }>();
+const opts = program.opts<{
+  c?: string;
+  tier?: string;
+  worker?: string;
+  yes?: boolean;
+}>();
 const args = program.args;
 
 const usage =
@@ -148,6 +168,10 @@ const usage =
 const shellMode = opts.c !== undefined;
 if (shellMode && args.length > 0) {
   console.error("with-env: -c takes a single quoted string\n" + usage);
+  process.exit(1);
+}
+if (shellMode && opts.worker !== undefined) {
+  console.error("with-env: --worker takes a command, not -c\n" + usage);
   process.exit(1);
 }
 if (!shellMode && args.length === 0) {
@@ -195,6 +219,38 @@ const resolution = await resolveSessionTier({
 if (!resolution.ok) {
   console.error(`with-env: ${resolution.reason}`);
   process.exit(1);
+}
+
+if (opts.worker !== undefined) {
+  const confirmed = await confirmProduction({
+    tier: resolution.tier,
+    what: opts.worker,
+    yes: opts.yes === true,
+    isTTY: Boolean(process.stdin.isTTY),
+  });
+  if (!confirmed.ok) {
+    console.error(`with-env: ${confirmed.reason}`);
+    process.exit(1);
+  }
+}
+
+// The local stack's connection block is written for you when the stack is up
+// and the file is missing or stale. Development only, like the overlay itself,
+// and not when the session asked for the remote database.
+if (resolution.tier === "development" && resolution.devDatabase !== "remote") {
+  const generated = await ensureGeneratedEnv({
+    root,
+    probe: () => probeLocalStack(),
+  });
+  if (generated.action === "written" || generated.action === "refreshed") {
+    console.error(
+      `with-env: ${generated.action} ${generated.file} from \`supabase status -o env\`.`,
+    );
+  } else if (generated.action === "failed") {
+    console.error(
+      `with-env: could not write .env.generated (${generated.reason}).`,
+    );
+  }
 }
 
 // Decide which files to load, and load them, in one call — selection is
@@ -349,6 +405,36 @@ if (shellMode && opts.c !== undefined) {
 // `shell: true` is not the fix: it would break on any path containing a space,
 // which on Windows is the ordinary case (`C:\Users\Firstname Lastname\...`).
 const windows = process.platform === "win32";
+
+// `--worker`: the file lives exactly as long as the command. Scoped to the
+// app's manifest and written AFTER the tier's env loaded, so it carries that
+// tier's values. SIGINT/SIGTERM are caught so the credential-bearing file is
+// removed by the exit handler below instead of dying with the process.
+let workerEnvFile: { path: string; remove: () => void } | undefined;
+if (opts.worker !== undefined) {
+  const [{ loadAppRegistry }, { buildWorkerEnv }, { writeWranglerEnvFile }] =
+    await Promise.all([
+      import("./app-registry.js"),
+      import("./worker-env.js"),
+      import("./wrangler-env.js"),
+    ]);
+  try {
+    const registry = await loadAppRegistry(cwd);
+    workerEnvFile = await writeWranglerEnvFile(
+      buildWorkerEnv(opts.worker, env, "dev", registry).env,
+    );
+  } catch (err) {
+    console.error(
+      `with-env: --worker ${opts.worker}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    process.exit(1);
+  }
+  env.WORKER_ENV_FILE = workerEnvFile.path;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "{env-file}") args[i] = workerEnvFile.path;
+  }
+}
+
 // `env` was already loaded once, up front, on both platforms (see above).
 // dotenvx is used below only as the .cmd-safe process launcher on Windows,
 // not as a second loader.
@@ -375,10 +461,22 @@ const child = spawn(
 );
 
 child.on("error", (err: Error) => {
+  workerEnvFile?.remove();
   console.error(`with-env: ${err.message}`);
   process.exit(1);
 });
+if (workerEnvFile !== undefined) {
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    // The child gets a terminal's SIGINT itself; a bare `kill` only reaches us.
+    process.on(signal, () => child.kill(signal));
+  }
+}
+
 child.on("exit", (code: number | null, signal: NodeJS.Signals | null) => {
-  if (signal) process.kill(process.pid, signal);
-  else process.exit(code ?? 1);
+  workerEnvFile?.remove();
+  if (signal) {
+    // Our forwarding listener would swallow the re-raised signal.
+    process.removeAllListeners(signal);
+    process.kill(process.pid, signal);
+  } else process.exit(code ?? 1);
 });

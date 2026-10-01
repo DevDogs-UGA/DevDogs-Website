@@ -43,3 +43,9 @@ export {
   type TargetSpec,
   type VaultTarget,
 } from "./targets.js";
+export {
+  buildWorkerEnv,
+  type WorkerEnv,
+  type WorkerEnvPurpose,
+  type WorkerEnvRegistry,
+} from "./worker-env.js";

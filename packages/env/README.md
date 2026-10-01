@@ -34,3 +34,18 @@ the plain argv form otherwise.
 For a staging or production tier, `with-env` also sets `CLOUDFLARE_ENV` and
 `NEXT_PUBLIC_DEPLOY_ENV` to that tier, so `DEPLOY_ENV=staging with-env vinext
 build` needs nothing else. A value you set yourself (shell or env file) wins.
+
+`with-env` also derives `CLOUDFLARE_ENV` and `NEXT_PUBLIC_DEPLOY_ENV` from
+`DEPLOY_ENV` (an explicit value wins), and writes `.env.generated` from
+`supabase status -o env` when the local stack is up and the file is missing or
+older than `supabase/config.toml`. `--worker <app>` writes the app's Worker env
+to a private temp file for the life of the command and replaces `{env-file}` in
+the command with its path; previewing production asks first (`--yes` without a
+terminal):
+
+```jsonc
+"start": "with-env --worker platform wrangler dev --config dist/server/wrangler.json --env-file {env-file}"
+```
+
+`buildWorkerEnv(app, env, "dev" | "deploy")` builds that env, and the one
+`wrangler deploy --secrets-file` uploads, from the app's manifest.
