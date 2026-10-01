@@ -214,3 +214,50 @@ export function helpPath(argv: readonly string[]): string[] {
   }
   return path;
 }
+
+/** One row of `--help --json`. */
+export interface CommandListEntry {
+  /** The space-joined command path: `env pull`. */
+  path: string;
+  summary: string;
+  /** `cli-only` commands are typed-only; the wizard never offers them. */
+  surface: "interactive" | "cli-only";
+  /** What replaces a deprecated command. Absent otherwise. */
+  deprecated?: string;
+}
+
+/**
+ * Every command path the CLI accepts, for tools that need the supported list
+ * (the docs build refuses a page that shows a command that no longer exists).
+ *
+ * A declared export rather than a scrape of `--help`: same tree, parsed once.
+ * Only the contributor tree. The CI tree (`devtools-ci`) is a separate bin and
+ * deliberately absent, so a doc cannot pass by showing `pnpm devtools deploy`.
+ */
+export function commandList(catalog: Catalog): CommandListEntry[] {
+  const entries: CommandListEntry[] = [];
+  const visit = (
+    nodes: readonly CommandNode[],
+    prefix: readonly string[],
+    inheritedCliOnly: boolean,
+  ): void => {
+    for (const node of nodes) {
+      const path = [...prefix, node.name];
+      const cliOnly = inheritedCliOnly || node.surface === "cli-only";
+      entries.push({
+        path: path.join(" "),
+        summary: node.summary,
+        surface: cliOnly ? "cli-only" : "interactive",
+        ...(node.deprecated ? { deprecated: node.deprecated } : {}),
+      });
+      visit(node.subcommands ?? [], path, cliOnly);
+    }
+  };
+  visit(catalog.topLevel, [], false);
+  return entries;
+}
+
+/** `--help --json`'s document: the version and every command path. */
+export function renderCommandList(catalog: Catalog, version: string): string {
+  return JSON.stringify({ version, commands: commandList(catalog) }, null, 2);
+}

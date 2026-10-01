@@ -21,7 +21,11 @@
  */
 import { intro, log, note, outro } from "@clack/prompts";
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
-import { helpPath, renderHelp } from "@devdogsuga/cli-core/help";
+import {
+  helpPath,
+  renderCommandList,
+  renderHelp,
+} from "@devdogsuga/cli-core/help";
 import {
   beginInvocation,
   recordEnteredTier,
@@ -220,6 +224,18 @@ export async function main(argv: string[]): Promise<void> {
   // an outro after) another tool's output.
   if (isPassthroughTool(argv[0])) {
     await handlePassthrough(argv[0], argv.slice(1));
+    return;
+  }
+
+  // `--help --json` is the supported command list, for tools: every path the
+  // CLI accepts, deprecated ones marked. Plain stdout, no banner. Only with no
+  // command named, so `cron list --json --help` still answers about `cron list`.
+  if (
+    (argv.includes("--help") || argv.includes("-h")) &&
+    argv.includes("--json") &&
+    helpPath(argv).length === 0
+  ) {
+    process.stdout.write(`${renderCommandList(catalog, ownVersion())}\n`);
     return;
   }
 
