@@ -286,7 +286,7 @@ function readShellProfile(): string | null {
 /** Which tier and database this session points at, so a failure below can be
  * read against the right one. */
 function sessionCheck(): DoctorCheck {
-  const tier = process.env.DEPLOY_ENV || "development";
+  const tier = process.env.DEPLOY_ENV ?? "development";
   const database = process.env.DEV_DB
     ? ` (${process.env.DEV_DB} database)`
     : "";

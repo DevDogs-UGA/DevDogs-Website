@@ -43,7 +43,7 @@ vi.mock("@devdogsuga/cli-core/repo/peers", () => ({
   loadEnvLoad: async () => ({ loadEnvironment, MissingEnvFileError }),
 }));
 
-const captureDeprecation = vi.fn(async () => {});
+const captureDeprecation = vi.fn(async () => undefined);
 vi.mock("@devdogsuga/cli-core/telemetry", () => ({
   captureDevtoolsDeprecation: (...args: unknown[]) =>
     (captureDeprecation as (...a: unknown[]) => Promise<void>)(...args),

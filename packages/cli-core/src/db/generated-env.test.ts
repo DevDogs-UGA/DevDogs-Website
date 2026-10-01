@@ -139,7 +139,7 @@ describe("ensureGeneratedEnvFile", () => {
       line:
         'devtools: The stack on port 54321 belongs to project "DevDogs-Website", ' +
         "not this checkout's. Stop it with `supabase stop --project-id " +
-        "DevDogs-Website` then `pnpm devtools db start`.",
+        "DevDogs-Website` then `pnpm devtools supabase start`.",
     });
   });
 

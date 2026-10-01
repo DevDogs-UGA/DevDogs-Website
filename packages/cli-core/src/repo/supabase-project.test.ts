@@ -66,7 +66,7 @@ describe("foreignStackMessage", () => {
     const message = foreignStackMessage("DevDogs-Website");
     expect(message).toContain('project "DevDogs-Website"');
     expect(message).toContain("supabase stop --project-id DevDogs-Website");
-    expect(message).toContain("pnpm devtools db start");
+    expect(message).toContain("pnpm devtools supabase start");
   });
 });
 
