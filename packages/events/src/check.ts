@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getClubConfig, ClubConfigError } from "./index.js";
 
 /**
- * `pnpm --filter @devdogsuga/events check` -- the CI gate.
+ * `pnpm --filter @devdogsuga/events check:events` -- the CI gate.
  *
  * Config is validated exactly once, here, before it ever reaches a deploy:
  * the runtime reconcile (`server/config/reconcile.ts`) trusts what it parses

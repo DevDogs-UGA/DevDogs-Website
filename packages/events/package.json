@@ -29,7 +29,8 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check": "tsx src/check.ts",
+    "test:watch": "vitest",
+    "check:events": "tsx src/check.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },

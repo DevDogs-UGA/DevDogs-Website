@@ -34,7 +34,7 @@ both steps in order and throw a readable `ClubConfigError` if either fails.
 ## `check` — the CI gate
 
 ```bash
-pnpm --filter @devdogsuga/events check
+pnpm --filter @devdogsuga/events check:events
 ```
 
 Runs `getClubConfig()` against the committed `src/data/meetings.json` and prints

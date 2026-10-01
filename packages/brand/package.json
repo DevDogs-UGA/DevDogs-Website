@@ -58,7 +58,6 @@
     "pretest": "pnpm codegen",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
     "prelint": "pnpm codegen",
     "lint": "eslint .",
     "prelint:fix": "pnpm codegen",

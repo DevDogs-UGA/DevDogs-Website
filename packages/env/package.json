@@ -41,6 +41,7 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
