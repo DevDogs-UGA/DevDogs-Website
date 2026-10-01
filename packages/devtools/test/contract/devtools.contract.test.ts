@@ -220,6 +220,8 @@ describe("devtools contract tests", () => {
         cwd: options?.cwd ?? fixtureDir,
         env: {
           ...process.env,
+          // Failure logs go in the temp dir, never the real home.
+          DEVTOOLS_LOG_DIR: join(tmpRoot, "default-logs"),
           ...options?.env,
         },
       });
@@ -603,5 +605,70 @@ describe("devtools contract tests", () => {
     );
     expect(stderr).toContain("devtools run is deprecated.");
     expect(stderr).toContain("pnpm -r run no-such-task");
+  });
+
+  // ── --dry-run, the failure log and the script picker ───────────────────────
+
+  it("--dry-run prints the tool call a passthrough would make and spawns nothing", async () => {
+    const { status, stderr } = await run(
+      ["--tier", "development", "--dry-run", "wrangler", "--version"],
+      { env: { CI: "true", DEVTOOLS_TELEMETRY: "0" } },
+    );
+    expect(status).toBe(0);
+    expect(stderr).toContain("Would run: pnpm exec wrangler --version");
+    expect(stderr).not.toContain("Ran:");
+  });
+
+  it("--dry-run stops a command that writes and says what it would run", async () => {
+    const { status, stderr } = await run(
+      [
+        "cron",
+        "run",
+        "--app",
+        "demo-app",
+        "--dry-run",
+        "--tier",
+        "development",
+      ],
+      { env: { CI: "true", DEVTOOLS_TELEMETRY: "0" } },
+    );
+    expect(status).toBe(0);
+    expect(stderr).toContain("Would run: devtools cron run --app demo-app");
+  });
+
+  it("a failed run writes a log and prints its path", async () => {
+    const logDir = join(tmpRoot, "logs");
+    const { status, stderr } = await run(
+      ["no-such-command", "--tier", "development"],
+      {
+        env: { CI: "true", DEVTOOLS_TELEMETRY: "0", DEVTOOLS_LOG_DIR: logDir },
+      },
+    );
+    expect(status).toBe(1);
+    expect(stderr).toContain("Log for #tech-support:");
+    const logs = readdirSync(logDir).filter((name) => name.endsWith(".log"));
+    expect(logs).toHaveLength(1);
+    const text = readFileSync(join(logDir, logs[0]!), "utf8");
+    expect(text).toContain("devtools no-such-command");
+    expect(text).toContain("exit code: 1");
+  });
+
+  it("script runs pnpm -F <package> run <script> and prints the command after", async () => {
+    const { status, stdout, stderr } = await run(
+      ["script", "demo-app", "build", "--tier", "development"],
+      { env: { CI: "true", DEVTOOLS_TELEMETRY: "0" } },
+    );
+    expect(status).toBe(0);
+    expect(stdout).toContain("hello from demo-app");
+    expect(stderr).toContain("Ran: pnpm -F demo-app run build");
+  });
+
+  it("script refuses a script the package does not have", async () => {
+    const { status, stderr } = await run(
+      ["script", "demo-app", "no-such-script", "--tier", "development"],
+      { env: { CI: "true", DEVTOOLS_TELEMETRY: "0" } },
+    );
+    expect(status).toBe(1);
+    expect(stderr).toContain('has no script "no-such-script"');
   });
 });

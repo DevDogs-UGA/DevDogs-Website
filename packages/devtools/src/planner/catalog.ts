@@ -27,6 +27,7 @@ export const plannerCommand: CommandNode = {
   subcommands: [
     {
       name: "status",
+      dryRun: "read-only",
       summary: "Does the role exist, hold its two grants, and no more.",
       hint: "reads only — start here",
       options: [DB_URL, JSON_FLAG],

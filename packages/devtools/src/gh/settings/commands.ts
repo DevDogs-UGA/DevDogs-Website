@@ -13,6 +13,7 @@
  * environment — both are reported only. See `../diff.ts`'s header for why.
  */
 import { confirm } from "@clack/prompts";
+import { isDryRun } from "@devdogsuga/cli-core/dry-run";
 import {
   addDeploymentBranchPolicy,
   deleteDeploymentBranchPolicy,
@@ -72,7 +73,7 @@ function parseOptions(argv: readonly string[]): SettingsOptions {
     const arg = argv[i];
     if (arg === "--org") opts.org = argv[++i] ?? opts.org;
     else if (arg === "--repo") opts.repo = argv[++i] ?? opts.repo;
-    else if (arg === "--apply") opts.apply = true;
+    else if (arg === "--apply") opts.apply = !isDryRun();
     else if (arg === "--yes") opts.yes = true;
     else if (arg === "--json") opts.json = true;
   }

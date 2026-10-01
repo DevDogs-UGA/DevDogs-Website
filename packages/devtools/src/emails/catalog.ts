@@ -6,6 +6,7 @@ import { type CommandNode } from "@devdogsuga/cli-core/catalog";
 
 export const emailsCommand: CommandNode = {
   name: "emails",
+  dryRun: "handled",
   summary: "Render populated transactional email previews.",
   hint: "HTML or plain text, one template or all",
   // Like `images`, this command owns its dependent questions: formats

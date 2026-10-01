@@ -9,6 +9,7 @@ import { YES, type CommandNode } from "@devdogsuga/cli-core/catalog";
 
 export const presetCommand: CommandNode = {
   name: "preset",
+  dryRun: "handled",
   summary: "Common Supabase jobs, each a few tool calls in a row.",
   hint: "restart the stack, new migration, apply migrations, push config",
   subcommands: [

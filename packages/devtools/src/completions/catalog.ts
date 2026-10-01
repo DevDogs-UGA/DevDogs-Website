@@ -6,6 +6,7 @@ import { type CommandNode } from "@devdogsuga/cli-core/catalog";
 
 export const completionsCommand: CommandNode = {
   name: "completions",
+  dryRun: "read-only",
   summary: "Output a shell completion script for devtools.",
   hint: "pipe to source or write to a file",
   surface: "cli-only",

@@ -29,6 +29,21 @@ Against `staging` or `production`, every command asks once before it runs
 banner, the tier must be named (`--tier` or `DEPLOY_ENV`), confirmations need
 `--yes`, and `--no-env` skips loading env files.
 
+`pnpm devtools script` picks a package and then one of its scripts (or a script
+and then a package that has it) and runs `pnpm -F <package> run <script>`;
+`pnpm devtools script <package> <script>` skips the questions.
+
+`--dry-run` prints what would run and runs nothing. A tool call prints as
+`Would run: <command>`; a command that spawns or writes without a dry-run mode
+of its own stops and prints its own command line. For the passthroughs and
+`run`, the tool owns every flag after its name, so put ours first:
+`pnpm devtools --dry-run supabase db push`.
+
+When a run fails, devtools writes a log (`~/.local/state/devdogs/logs`, or
+`DEVTOOLS_LOG_DIR`) with the command, versions, the tool commands that ran and
+devtools' own output, secrets redacted, and prints its path and the Sentry
+event id if telemetry sent one. Attach it to a #tech-support message.
+
 `check migrations|env|workers|scripts` is what CI runs over the checkout (it
 replaces DevDogsUGA's `packages/repo-checks`). They read the checkout and
 nothing else: no tier, no env file. `pnpm devtools --help --json` prints every
@@ -75,7 +90,8 @@ shared core (repo and peer loading, ui, telemetry, tier and env entry, the
 catalog, help and menu) lives in the private `@devdogsuga/cli-core` package,
 which `tsdown` inlines into `dist/`. Only the core is bundled: every other
 import stays external and must be declared in this package's `dependencies` or
-`peerDependencies`, and the build fails when one is not.
+`peerDependencies`, and the build fails when one is not
+(`scripts/check-bundle-imports.mjs` reads the built output).
 
 [Command guide](../../docs/toolkit/guides/devtools.md) ·
 [API reference](https://devdogsuga.org/docs/toolkit/reference/api/devtools) ·

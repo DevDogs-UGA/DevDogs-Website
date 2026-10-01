@@ -209,6 +209,20 @@ export async function runDeployCommand(rest: string[]): Promise<void> {
     return;
   }
 
+  // The steps that write (an env file, a secrets file, the database, Worker
+  // secrets) stop at `--dry-run` and say what they would have done. The rest
+  // only read or check, so there is nothing to skip.
+  if (
+    rest.includes("--dry-run") &&
+    (sub === "write-env" ||
+      sub === "secrets-file" ||
+      sub === "migrate" ||
+      (sub === "orphans" && rest.includes("--prune")))
+  ) {
+    say([`Would run: devtools-ci deploy ${rest.join(" ")}`]);
+    return;
+  }
+
   try {
     if (sub === "require-token") {
       runRequireToken();

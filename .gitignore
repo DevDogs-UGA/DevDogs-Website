@@ -4,7 +4,6 @@ dist/
 .slidev/
 .DS_Store
 *.log
-.turbo/
 .cache/
 .wrangler/
 .packs/

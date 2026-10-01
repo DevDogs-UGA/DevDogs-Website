@@ -8,6 +8,7 @@
  * alone: `with-env` already ignores it while the stack is down.
  */
 import { writeFile } from "node:fs/promises";
+import { isDryRun } from "@devdogsuga/cli-core/dry-run";
 import { join } from "node:path";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import {
@@ -68,6 +69,12 @@ async function startLocalStack(): Promise<{
   hint?: string;
 }> {
   const code = await supabase("start");
+  // The start above only printed. Nothing is running to read a status from,
+  // and `.env.generated` must not be written for a stack that never started.
+  if (isDryRun()) {
+    process.stderr.write("Would write .env.generated from the running stack\n");
+    return { code: 0, wroteEnvFile: false };
+  }
   if (code !== 0) {
     const hint = foreignStackHint();
     return hint === undefined
@@ -111,7 +118,7 @@ async function afterLocalStackChange(
   code: number,
   wroteEnvFile = false,
 ): Promise<string[]> {
-  if (code !== 0 && !wroteEnvFile) return [];
+  if (isDryRun() || (code !== 0 && !wroteEnvFile)) return [];
   return refreshSessionEnv();
 }
 

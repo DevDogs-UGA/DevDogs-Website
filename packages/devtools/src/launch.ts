@@ -66,6 +66,12 @@ import {
 import { nonEmpty } from "@devdogsuga/cli-core/db/connection";
 import { bareGroupStartPath } from "@devdogsuga/cli-core/menu";
 import {
+  isDryRun,
+  resolveDryRun,
+  setDryRun,
+} from "@devdogsuga/cli-core/dry-run";
+import { installFailureLog } from "@devdogsuga/cli-core/failure-log";
+import {
   hasYes,
   isNonInteractive,
   stripNoEnvFlag,
@@ -83,6 +89,7 @@ import { loadEnvLoad, loadEnvSession } from "@devdogsuga/cli-core/repo/peers";
 import {
   captureDevtoolsError,
   initDevtoolsTelemetry,
+  lastSentryEventId,
 } from "@devdogsuga/cli-core/telemetry";
 import { ignoreClosedPipes } from "@devdogsuga/cli-core/pipes";
 import { errorMessage, unwrap } from "@devdogsuga/cli-core/ui";
@@ -214,6 +221,8 @@ async function gated<T>(
   proceed: () => Promise<T>,
   blocked: T,
 ): Promise<T> {
+  // A dry run spawns and writes nothing, so there is nothing to confirm.
+  if (isDryRun()) return proceed();
   const outcome = await gateHostedTier({
     tier,
     projectRef: nonEmpty(process.env.PROJECT_REF),
@@ -241,7 +250,10 @@ async function gated<T>(
  */
 export async function launch(argv: readonly string[]): Promise<void> {
   const { noEnv, rest: withoutNoEnv } = stripNoEnvFlag(argv);
-  const { explicit, rest } = stripTierFlag(withoutNoEnv);
+  const { explicit, rest: withoutTier } = stripTierFlag(withoutNoEnv);
+  const { dryRun, rest } = resolveDryRun(withoutTier);
+  setDryRun(dryRun);
+  installFailureLog({ argv, eventId: lastSentryEventId });
 
   // Here rather than only in `cli.ts`'s `main()`, so a failure while
   // resolving or entering the tier below is reported too. `main()`'s own

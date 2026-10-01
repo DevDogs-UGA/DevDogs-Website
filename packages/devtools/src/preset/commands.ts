@@ -9,6 +9,7 @@
 import { confirm, log } from "@clack/prompts";
 import { flagValue } from "@devdogsuga/cli-core/args";
 import { reportRuns } from "@devdogsuga/cli-core/db/run";
+import { isDryRun } from "@devdogsuga/cli-core/dry-run";
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { hasYes, isNonInteractive } from "@devdogsuga/cli-core/mode";
 import { reportRan, runInGroup } from "@devdogsuga/cli-core/process-group";
@@ -77,6 +78,8 @@ async function applyMigrations(): Promise<number> {
 
   // Pushing a migration usually changes the generated types, but regenerating
   // them rewrites a committed file, so it is a question rather than a step.
+  // A dry run asks nothing; it shows the step the question would lead to.
+  if (isDryRun()) return regenerateTypes();
   if (isNonInteractive()) {
     process.stderr.write(
       `Hint: ${TYPES_DB_COMMAND} regenerates the committed database types.\n`,
@@ -106,7 +109,9 @@ async function pushConfig(args: string[]): Promise<number> {
   const diffCode = await runSupabaseRaw(diff);
   if (diffCode !== 0) return diffCode;
 
-  if (isNonInteractive()) {
+  if (isDryRun()) {
+    // No question to ask: show the push the answer would lead to.
+  } else if (isNonInteractive()) {
     if (!hasYes(args)) {
       process.stderr.write(
         "devtools preset push-config: --yes is required to push with no " +

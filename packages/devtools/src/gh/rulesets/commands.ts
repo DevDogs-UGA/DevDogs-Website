@@ -15,6 +15,7 @@
  * classification.
  */
 import { confirm } from "@clack/prompts";
+import { isDryRun } from "@devdogsuga/cli-core/dry-run";
 import { resolveAppId, resolveTeamId } from "./actors.js";
 import {
   createRuleset,
@@ -60,7 +61,7 @@ function parseOptions(argv: readonly string[]): RulesetsOptions {
     if (arg === "--org") opts.org = argv[++i] ?? opts.org;
     else if (arg === "--repo") opts.repo = argv[++i] ?? opts.repo;
     else if (arg === "--app-slug") opts.appSlug = argv[++i] ?? opts.appSlug;
-    else if (arg === "--apply") opts.apply = true;
+    else if (arg === "--apply") opts.apply = !isDryRun();
     else if (arg === "--yes") opts.yes = true;
     else if (arg === "--json") opts.json = true;
   }

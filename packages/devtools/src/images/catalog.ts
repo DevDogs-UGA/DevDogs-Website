@@ -6,6 +6,7 @@ import { type CommandNode } from "@devdogsuga/cli-core/catalog";
 
 export const imagesCommand: CommandNode = {
   name: "images",
+  dryRun: "handled",
   summary: "Render a club image at one or more sizes.",
   hint: "brand/*, page/*, app/*, event/*, or * for all",
   // No subcommands: graphics are positional, and several can be named at

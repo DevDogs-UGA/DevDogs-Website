@@ -18,6 +18,8 @@
  * in a clone, nothing puts `bw` on PATH and a bare `spawn("bw")` is ENOENT.
  */
 import { spawn } from "node:child_process";
+import { isDryRun } from "@devdogsuga/cli-core/dry-run";
+import { formatCommand } from "@devdogsuga/cli-core/process-group";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
@@ -49,6 +51,10 @@ export function bwCommand(args: string[]): [string, string[]] {
  * while `bw login` was still waiting for a master password.
  */
 export function runBw(args: string[]): Promise<never> {
+  if (isDryRun()) {
+    process.stderr.write(`Would run: ${formatCommand("bw", args)}\n`);
+    process.exit(0);
+  }
   return new Promise<never>(() => {
     const child = spawn(...bwCommand(args), { stdio: "inherit" });
 

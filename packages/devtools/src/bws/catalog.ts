@@ -13,6 +13,7 @@ export const bwCommand: CommandNode = {
   // Bitwarden's commands are its own to document, and mirroring a slice
   // of them here would go stale on their release schedule, not ours.
   name: "bw",
+  dryRun: "handled",
   summary: "Run the Bitwarden CLI. `bw login` is the one you want.",
   hint: "passes everything through",
 };

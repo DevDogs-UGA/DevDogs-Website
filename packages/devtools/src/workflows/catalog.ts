@@ -11,6 +11,7 @@ export const workflowsCommand: CommandNode = {
   subcommands: [
     {
       name: "list",
+      dryRun: "read-only",
       summary: "List every Workflow binding declared by each Wrangler tier.",
       options: [
         {

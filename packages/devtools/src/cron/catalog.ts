@@ -11,6 +11,7 @@ export const cronCommand: CommandNode = {
   subcommands: [
     {
       name: "list",
+      dryRun: "read-only",
       summary: "Every registered cron: schedule, English description, routes.",
       hint: "the audit view",
       options: [

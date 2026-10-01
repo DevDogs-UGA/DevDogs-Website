@@ -10,6 +10,7 @@ import type { CommandNode } from "@devdogsuga/cli-core/catalog";
 
 export const supabaseCommand: CommandNode = {
   name: "supabase",
+  dryRun: "handled",
   summary: "Run the Supabase CLI against the session's tier.",
   hint: "fills in --db-url / --project-ref; the rest is yours",
   surface: "cli-only",
@@ -17,6 +18,7 @@ export const supabaseCommand: CommandNode = {
 
 export const wranglerCommand: CommandNode = {
   name: "wrangler",
+  dryRun: "handled",
   summary: "Run Wrangler with the session's env.",
   hint: "everything after the name goes to wrangler",
   surface: "cli-only",
@@ -24,6 +26,7 @@ export const wranglerCommand: CommandNode = {
 
 export const drizzleKitCommand: CommandNode = {
   name: "drizzle-kit",
+  dryRun: "handled",
   summary: "Run drizzle-kit with the session's env.",
   hint: "run it from the app that owns the config",
   surface: "cli-only",
@@ -31,6 +34,7 @@ export const drizzleKitCommand: CommandNode = {
 
 export const psqlCommand: CommandNode = {
   name: "psql",
+  dryRun: "handled",
   summary: "Run psql against the session's database.",
   hint: "connects with the tier's DB_URL unless you say otherwise",
   surface: "cli-only",

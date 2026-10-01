@@ -6,6 +6,7 @@ import { DRY_RUN, TIER, type CommandNode } from "@devdogsuga/cli-core/catalog";
 
 export const deployCommand: CommandNode = {
   name: "deploy",
+  dryRun: "handled",
   summary: "Deploy an app: token gate, per-app steps, upload.",
   options: [TIER, DRY_RUN],
   subcommands: [
@@ -35,6 +36,7 @@ export const deployCommand: CommandNode = {
           value: "<manifest>",
           summary: "Compose one manifest's slice instead of all.",
         },
+        DRY_RUN,
       ],
     },
     {
@@ -46,6 +48,7 @@ export const deployCommand: CommandNode = {
           value: "<app>",
           summary: "Whose manifest declares the Worker's secrets.",
         },
+        DRY_RUN,
       ],
     },
     {
@@ -56,6 +59,7 @@ export const deployCommand: CommandNode = {
           flag: "--prune",
           summary: "Delete them. production-apply only.",
         },
+        DRY_RUN,
       ],
     },
     {
@@ -84,6 +88,7 @@ export const deployCommand: CommandNode = {
     {
       name: "migrate",
       summary: "Apply the migrations to DB_URL.",
+      options: [DRY_RUN],
     },
   ],
 };

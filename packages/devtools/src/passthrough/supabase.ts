@@ -13,6 +13,7 @@ import {
   sessionIsLocal,
   sessionLabel,
 } from "@devdogsuga/cli-core/db/connection";
+import { isDryRun } from "@devdogsuga/cli-core/dry-run";
 import { isNonInteractive } from "@devdogsuga/cli-core/mode";
 import { reportRan, runInGroup } from "@devdogsuga/cli-core/process-group";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
@@ -79,7 +80,7 @@ export async function refuseLocalConfigPush(
       "change there takes effect.",
     isNonInteractive() ? ["pnpm devtools preset restart-stack"] : [],
   );
-  if (isNonInteractive()) return 1;
+  if (isNonInteractive() || isDryRun()) return 1;
   const again = unwrap(
     await confirm({
       message: "Restart the local stack now to apply config.toml?",
@@ -109,7 +110,7 @@ export async function runSupabase(
   if (!planned) return 1;
 
   const code = await runSupabaseRaw(planned);
-  if (code === 0 && isMigrationPush(args)) {
+  if (code === 0 && !isDryRun() && isMigrationPush(args)) {
     process.stderr.write(
       `Hint: ${TYPES_DB_COMMAND} regenerates the committed database types.\n`,
     );

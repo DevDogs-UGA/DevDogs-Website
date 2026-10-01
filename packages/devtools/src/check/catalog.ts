@@ -10,6 +10,7 @@ import { type CommandNode } from "@devdogsuga/cli-core/catalog";
 
 export const checkCommand: CommandNode = {
   name: "check",
+  dryRun: "read-only",
   summary: "Structural checks over the checkout, for CI.",
   hint: "migrations, env, workers, scripts",
   surface: "cli-only",
