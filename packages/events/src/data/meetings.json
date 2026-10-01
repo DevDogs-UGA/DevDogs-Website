@@ -235,8 +235,8 @@
     },
     {
       "id": "workshop-2026-10-12",
-      "title": "Workshop: Topic TBA",
-      "summary": "Topic to be announced. Check back here or on Discord for what we are building this week.",
+      "title": "Workshops: Next.js II & Flutter II",
+      "summary": "Two UI workshops in separate rooms: components, state, and styling in Next.js, and screens, forms, and navigation in Flutter.",
       "kind": null,
       "building": "DLW",
       "location": "124",
@@ -246,7 +246,20 @@
       "cancelledAt": null,
       "cancellationReason": null,
       "surveyUrl": null,
-      "agenda": [],
+      "agenda": [
+        {
+          "id": "workshop-2026-10-12-nextjs",
+          "title": "Next.js II: Components, State, and Styling",
+          "description": null,
+          "project": "DogDays"
+        },
+        {
+          "id": "workshop-2026-10-12-flutter",
+          "title": "Flutter II: Screens, Forms & Navigation",
+          "description": null,
+          "project": "DogPack"
+        }
+      ],
       "countsForCredit": true
     },
     {
@@ -267,8 +280,8 @@
     },
     {
       "id": "workshop-2026-10-19",
-      "title": "Workshop: Topic TBA",
-      "summary": "Topic to be announced. Check back here or on Discord for what we are building this week.",
+      "title": "Workshops: Supabase II",
+      "summary": "Supabase, round two, split by track: search, filters, and pagination on the web, and CRUD, joins, and RLS on mobile.",
       "kind": null,
       "building": "DLW",
       "location": "124",
@@ -278,7 +291,20 @@
       "cancelledAt": null,
       "cancellationReason": null,
       "surveyUrl": null,
-      "agenda": [],
+      "agenda": [
+        {
+          "id": "workshop-2026-10-19-web",
+          "title": "Supabase II: Search, Filters & Pagination",
+          "description": null,
+          "project": "DogDays"
+        },
+        {
+          "id": "workshop-2026-10-19-mobile",
+          "title": "Supabase II: CRUD, Joins, and RLS Deep-dive",
+          "description": null,
+          "project": "DogPack"
+        }
+      ],
       "countsForCredit": true
     },
     {
