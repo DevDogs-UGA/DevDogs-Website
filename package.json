@@ -10,7 +10,6 @@
     "test": "pnpm -r --if-present run test",
     "build:slides": "pnpm --filter slides build",
     "pack:local": "node scripts/pack-local.mjs",
-    "newsletter": "node packages/newsletter-cli/bin/newsletter.mjs",
     "lint": "pnpm -r --no-bail --if-present run lint",
     "lint:fix": "pnpm -r --no-bail --if-present run lint:fix",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",

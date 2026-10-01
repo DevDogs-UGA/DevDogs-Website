@@ -11,12 +11,34 @@ import { catalog } from "./catalog.js";
 const { allPaths, findCommand, subcommandNames } = catalog;
 
 describe("the tree", () => {
-  it("is exactly the commands that always need production secrets, plus completions", () => {
+  it("is the commands that always need production secrets, then the ones that need none, then completions", () => {
     expect(catalog.topLevel.map((node) => node.name)).toEqual([
       "deploy",
       "env",
       "planner",
+      "graphics",
+      "qr",
+      "github",
+      "newsletter",
       "completions",
+    ]);
+  });
+
+  it("marks every command that needs no env file or tier envFree", () => {
+    // These run under `pnpm dlx` with no checkout and no `.env`; the
+    // launcher skips env entry for them (see `launch-core.ts`).
+    const envFree = catalog
+      .allPaths()
+      .filter((path) => catalog.findCommand(path)!.envFree)
+      .map((path) => path.join(" "));
+    expect(envFree).toEqual([
+      "graphics",
+      "qr",
+      "github rulesets",
+      "github settings",
+      "newsletter render",
+      "newsletter draft",
+      "newsletter send",
     ]);
   });
 
@@ -33,6 +55,12 @@ describe("the tree", () => {
       "reconcile",
     ]);
     expect(subcommandNames(["env"])).toEqual(["pull", "push", "audit"]);
+    expect(subcommandNames(["github"])).toEqual(["rulesets", "settings"]);
+    expect(subcommandNames(["newsletter"])).toEqual([
+      "render",
+      "draft",
+      "send",
+    ]);
     expect(subcommandNames(["planner"])).toEqual([
       "status",
       "create",
@@ -112,6 +140,37 @@ describe("prompts", () => {
       "--dry-run",
       // The menu offers the prune itself, after showing the audit.
       "--prune",
+      // `graphics` asks for the graphic and the formats itself, in CLI order,
+      // from what the chosen graphics support; a static list cannot know.
+      "--format",
+      "--all-formats",
+      "--out",
+      // `qr` asks for the text itself. Its other flags are the schema's
+      // fields (see `qr/options.ts`): a wizard question for each would be a
+      // form the console page already is.
+      "--text",
+      "--theme",
+      "--size",
+      "--margin",
+      "--color",
+      "--background",
+      "--gradient",
+      "--shape",
+      "--logo",
+      "--logo-size",
+      "--logo-padding",
+      "--error-level",
+      "--qr-version",
+      "--logo-crop",
+      "--name",
+      // GitHub org/repo/App-slug scoping: all default to the one repository
+      // (and App) the reconciler manages.
+      "--org",
+      "--repo",
+      "--app-slug",
+      // Write gate, not a question: the confirmation before writing IS the
+      // question.
+      "--apply",
     ]);
     const unasked = new Set<string>();
     for (const path of allPaths()) {

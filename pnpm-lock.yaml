@@ -178,9 +178,21 @@ importers:
       '@clack/prompts':
         specifier: 'catalog:'
         version: 1.7.0
+      '@devdogsuga/brand':
+        specifier: workspace:*
+        version: link:../brand
+      '@devdogsuga/events':
+        specifier: workspace:*
+        version: link:../events
+      '@devdogsuga/newsletter':
+        specifier: workspace:*
+        version: link:../newsletter
       '@devdogsuga/telemetry':
         specifier: workspace:*
         version: link:../telemetry
+      '@resvg/resvg-js':
+        specifier: ^2.6.2
+        version: 2.6.2
       '@sentry/node':
         specifier: 'catalog:'
         version: 10.75.1(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))
@@ -193,6 +205,15 @@ importers:
       postgres:
         specifier: 'catalog:'
         version: 3.4.9
+      react:
+        specifier: 'catalog:'
+        version: 19.3.0
+      satori:
+        specifier: ^0.33.4
+        version: 0.33.5
+      sharp:
+        specifier: 0.35.3
+        version: 0.35.3(@types/node@26.6.2)
       tsx:
         specifier: 'catalog:'
         version: 4.23.15
@@ -218,6 +239,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.2
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.11(vitest@4.1.11)
@@ -319,9 +343,6 @@ importers:
         specifier: 'catalog:'
         version: 6.0.3
     devDependencies:
-      '@devdogsuga/brand':
-        specifier: workspace:*
-        version: link:../brand
       '@devdogsuga/config':
         specifier: workspace:*
         version: link:../config
@@ -331,9 +352,6 @@ importers:
       '@devdogsuga/env':
         specifier: workspace:*
         version: link:../env
-      '@devdogsuga/events':
-        specifier: workspace:*
-        version: link:../events
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.2
@@ -417,9 +435,6 @@ importers:
       '@devdogsuga/telemetry':
         specifier: workspace:*
         version: link:../telemetry
-      '@resvg/resvg-js':
-        specifier: ^2.6.2
-        version: 2.6.2
       '@sentry/node':
         specifier: 'catalog:'
         version: 10.75.1(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))
@@ -432,12 +447,6 @@ importers:
       postgres:
         specifier: 'catalog:'
         version: 3.4.9
-      satori:
-        specifier: ^0.33.4
-        version: 0.33.5
-      sharp:
-        specifier: 0.35.3
-        version: 0.35.3(@types/node@26.6.2)
       tsx:
         specifier: 'catalog:'
         version: 4.23.15
@@ -451,9 +460,6 @@ importers:
       '@devdogsuga/backstage':
         specifier: workspace:*
         version: link:../backstage
-      '@devdogsuga/brand':
-        specifier: workspace:*
-        version: link:../brand
       '@devdogsuga/cli-core':
         specifier: workspace:*
         version: link:../cli-core
@@ -466,24 +472,15 @@ importers:
       '@devdogsuga/env':
         specifier: workspace:*
         version: link:../env
-      '@devdogsuga/events':
-        specifier: workspace:*
-        version: link:../events
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.2
-      '@types/react':
-        specifier: 'catalog:'
-        version: 19.3.0
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.11(vitest@4.1.11)
       eslint:
         specifier: 'catalog:'
         version: 9.39.5(jiti@2.7.0)
-      react:
-        specifier: 'catalog:'
-        version: 19.3.0
       tsdown:
         specifier: ^0.23.0
         version: 0.23.0(@vue/language-core@3.3.11)(tsx@4.23.15)(typescript@6.0.3)
@@ -704,37 +701,6 @@ importers:
       '@types/react-dom':
         specifier: 'catalog:'
         version: 19.3.0(@types/react@19.3.0)
-      '@vitest/coverage-v8':
-        specifier: 'catalog:'
-        version: 4.1.11(vitest@4.1.11)
-      eslint:
-        specifier: 'catalog:'
-        version: 9.39.5(jiti@2.7.0)
-      typescript:
-        specifier: 'catalog:'
-        version: 6.0.3
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(@vitest/coverage-v8@4.1.11)(jsdom@26.1.0)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.15)(yaml@2.9.1))
-
-  packages/newsletter-cli:
-    dependencies:
-      '@clack/prompts':
-        specifier: 'catalog:'
-        version: 1.7.0
-      '@devdogsuga/newsletter':
-        specifier: workspace:*
-        version: link:../newsletter
-      '@resvg/resvg-js':
-        specifier: ^2.6.2
-        version: 2.6.2
-    devDependencies:
-      '@devdogsuga/config':
-        specifier: workspace:*
-        version: link:../config
-      '@types/node':
-        specifier: 'catalog:'
-        version: 26.6.2
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.11(vitest@4.1.11)

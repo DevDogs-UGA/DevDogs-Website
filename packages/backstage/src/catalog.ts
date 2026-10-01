@@ -7,14 +7,18 @@
  * launcher can read it before the session's environment is entered.
  *
  * Everything here is grouped by what it needs, not by what it does: the first
- * three groups always need production secrets, the rest need nothing the
- * caller has not got.
+ * three groups always need production secrets, then come the tools that need
+ * nothing, the caller's own GitHub login, and the club mailbox sign-in.
  */
 import { createCatalog, type CommandGroup } from "@devdogsuga/cli-core/catalog";
 import { completionsCommand } from "./completions/catalog.js";
 import { deployCommand } from "./deploy/catalog.js";
 import { envCommand } from "./env/catalog.js";
+import { githubCommand } from "./github/catalog.js";
+import { graphicsCommand } from "./graphics/catalog.js";
+import { newsletterCommand } from "./newsletter/catalog.js";
 import { plannerCommand } from "./planner/catalog.js";
+import { qrCommand } from "./qr/catalog.js";
 
 export const GROUPS: readonly CommandGroup[] = [
   {
@@ -30,6 +34,14 @@ export const GROUPS: readonly CommandGroup[] = [
     commands: [plannerCommand],
   },
   {
+    title: "Graphics & QR codes (no credentials)",
+    commands: [graphicsCommand, qrCommand],
+  },
+  {
+    title: "Your own sign-in (gh login, club mailbox)",
+    commands: [githubCommand, newsletterCommand],
+  },
+  {
     title: "CLI utilities",
     commands: [completionsCommand],
   },
@@ -42,6 +54,8 @@ export const catalog = createCatalog({
     ["env audit --target production", "Compare every store, list orphans"],
     ["deploy platform --tier staging", "Deploy an app"],
     ["planner status", "Check the preflight credential"],
+    ["graphics 'event/*' --out ~/images", "Render event images"],
+    ["qr https://devdogsuga.org --format svg,png", "Make a QR code"],
   ],
   groups: GROUPS,
 });

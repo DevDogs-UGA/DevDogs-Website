@@ -26,6 +26,12 @@ import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
+/**
+ * Thunderbird's public client ID, BORROWED: the club has no app registration
+ * of its own. If Microsoft or UGA's tenant stops allowing it, drafting and
+ * sending need a club-owned registration (an EITS request), and this constant
+ * and the redirect below change with it.
+ */
 const CLIENT_ID = "9e5f94bc-e8a4-4e73-b8be-63364c29d753";
 /** The fallback redirect when no loopback server could bind. */
 export const PASTE_REDIRECT_URI = "https://localhost";

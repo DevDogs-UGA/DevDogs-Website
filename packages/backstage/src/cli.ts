@@ -44,6 +44,7 @@ import { catalog } from "./catalog.js";
 import { handleCompletions } from "./completions/commands.js";
 import { runDeployCommand } from "./deploy/commands.js";
 import { handleEnv } from "./env/commands.js";
+import { handleGithub } from "./github/commands.js";
 import { runPlannerCommand } from "./planner/commands.js";
 
 // ── Dispatch ─────────────────────────────────────────────────────────────────
@@ -60,6 +61,14 @@ export const HANDLERS: Record<string, CommandHandler> = {
     return process.exitCode ? null : DONE;
   },
   completions: handleCompletions,
+  github: handleGithub,
+  // The next three load on use: they pull in the brand package's fonts and
+  // artwork, or the newsletter's React, which no other command needs.
+  graphics: async (rest) =>
+    (await import("./graphics/commands.js")).handleGraphics(rest),
+  qr: async (rest) => (await import("./qr/commands.js")).handleQr(rest),
+  newsletter: async (rest) =>
+    (await import("./newsletter/commands.js")).handleNewsletter(rest),
 };
 
 /**
