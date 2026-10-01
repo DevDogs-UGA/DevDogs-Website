@@ -756,12 +756,12 @@ which are git submodules pinned to their `02-supabase` answer key:
   place, new lines fade in.
 - In a Magic Move block, one `<<<` line per step:
 
-  `````md
+  ````md
   ```md magic-move
   <<< web@step-3:components/Guestbook.tsx {67-71}
   <<< web@step-4:components/Guestbook.tsx {66-76}
   ```
-  `````
+  ````
 
 - `theme/setup/transformers.ts` expands each line at build time into a
   fenced block holding the whole file. A missing submodule, an unknown

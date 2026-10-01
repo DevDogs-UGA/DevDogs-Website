@@ -26,3 +26,6 @@ apps/workshops-vscode/dist-test/
 # Slidev decks: slide separators, per-slide frontmatter and Vue-in-markdown
 # that prettier's markdown parser rewrites into something else.
 apps/slides/decks/
+
+# Closed cutover log; prettier is not idempotent on its wrapped list items.
+CUTOVER.md
