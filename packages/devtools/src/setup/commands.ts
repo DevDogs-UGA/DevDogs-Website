@@ -5,8 +5,8 @@
  * pick app(s) -> hosted or local -> prerequisite checks -> for hosted, a
  * short wizard collects the project's URL and keys, validates the DB_URL,
  * writes `.env`, runs the migrations, and chains straight into `devtools
- * oauth` against that same project. Local keeps today's `db start` flow
- * unchanged.
+ * oauth` against that same project. Local ends in the database next steps
+ * (`localNextSteps`), each a separate command.
  *
  * Was `scripts/setup.ts` at the repo root, resolving paths from
  * `process.cwd()`, so it only worked when invoked from the root. Same class of
@@ -193,49 +193,88 @@ export async function runSetup(): Promise<void> {
     // A read-only check of what just happened.
     await runEnvironmentDoctor({ app: chosenApps?.[0] });
   } else {
-    // .env stays blank until `db start`, so checking now would only report
-    // the expected gap. Point at doctor instead.
+    // .env stays blank until the stack starts, so checking now would only
+    // report the expected gap. Point at doctor instead.
     printLocalNextSteps(chosenApps);
     log.info(
-      "After `pnpm devtools db start`, run `pnpm devtools doctor` to check your setup.",
+      "After `pnpm devtools supabase start`, run `pnpm devtools doctor` to check your setup.",
     );
   }
 }
 
-function printLocalNextSteps(chosenApps: string[] | null): void {
+/**
+ * The local database next steps, in order. These are what `db reset` used to
+ * chain on its own; they are separate commands now so each is the real tool
+ * and can be re-run alone.
+ *
+ * `chosenApps` is null when `.env` already existed and nothing was asked, in
+ * which case every app-specific step is listed. The docs search index needs
+ * no step: the platform dev server runs `populate:search` itself.
+ */
+export function localNextSteps(chosenApps: string[] | null): string {
+  const picked = (app: string): boolean =>
+    chosenApps === null || chosenApps.includes(app);
+
   const startSteps =
     chosenApps && chosenApps.length > 0
       ? chosenApps.map((app) =>
           app === "study-group-finder"
-            ? `     pnpm dev --filter study-group-finder   (Flutter — needs the SDK)`
-            : `     pnpm dev --filter ${app}`,
+            ? `     pnpm -F study-group-finder dev   (Flutter — needs the SDK)`
+            : `     pnpm -F ${app} dev`,
         )
-      : ["     pnpm dev   — then pick your app from the list"];
+      : ["     pnpm -F <your app> dev"];
 
-  note(
+  const steps: string[][] = [
     [
-      "1. Run `pnpm devtools` again and choose:",
-      "     Database → start   — boots the local Docker stack and writes",
-      "                          .env.generated (no credentials needed)",
-      "",
-      '2. Choose Workspace → oauth to configure "Sign in with DevDogs"',
-      "   after the local database is running. Every app signs in through",
-      "   platform's OAuth server, so this step is shared no matter which",
-      "   project you are building.",
-      "",
-      "3. Start the project you picked:",
+      "Start Supabase on this machine (Docker). This writes .env.generated;",
+      "no credentials needed:",
+      "     pnpm devtools supabase start",
+    ],
+    [
+      "Build the database from the migrations:",
+      "     pnpm devtools supabase db reset",
+    ],
+    [
+      "Regenerate the committed database types:",
+      "     pnpm -F @devdogsuga/supabase types:db",
+    ],
+    ["Create the storage buckets:", "     pnpm devtools supabase seed buckets"],
+    [
+      'Configure "Sign in with DevDogs" (shared by every app, because they',
+      "all sign in through platform's OAuth server):",
+      "     pnpm devtools oauth",
+    ],
+    [
+      "Start the project you picked:",
       ...startSteps,
-      ...(chosenApps?.includes("schedule-builder")
-        ? [
-            "",
-            "   schedule-builder starts with an empty catalog. Populate it by",
-            "   triggering the registrar scrape workflow (starts vinext dev for you):",
-            "     pnpm devtools workflows run --app schedule-builder --tier development",
-          ]
-        : []),
-    ].join("\n"),
-    "Next steps",
-  );
+      "   The platform dev server also indexes the docs search by itself.",
+    ],
+  ];
+
+  if (picked("platform")) {
+    steps.push([
+      "With the platform dev server running, reconcile meetings and workshops",
+      "from config (the platform's 15-minute cron):",
+      "     pnpm devtools cron run --app platform --cron '*/15 * * * *'",
+    ]);
+  }
+  if (picked("schedule-builder")) {
+    steps.push([
+      "With the schedule-builder dev server running, load the course catalog",
+      "(it scrapes UGA's registrar, so it is not run for you):",
+      "     pnpm -F schedule-builder populate:courses",
+    ]);
+  }
+
+  return steps
+    .map(([first, ...rest], i) =>
+      [`${i + 1}. ${first}`, ...rest.map((l) => `   ${l}`)].join("\n"),
+    )
+    .join("\n\n");
+}
+
+function printLocalNextSteps(chosenApps: string[] | null): void {
+  note(localNextSteps(chosenApps), "Next steps");
 }
 
 /**
@@ -311,7 +350,7 @@ async function runHostedWizard(repoRoot: string): Promise<void> {
   } else {
     s.stop("Migrations failed — see the Supabase CLI output above");
     log.warn(
-      "Fix the problem above, then re-run `pnpm devtools setup` (your .env answers are kept), or run `pnpm devtools db migrate` and `pnpm devtools oauth` yourself.",
+      "Fix the problem above, then re-run `pnpm devtools setup` (your .env answers are kept), or run `pnpm devtools preset apply-migrations` and `pnpm devtools oauth` yourself.",
     );
     process.exitCode = 1;
     return;
@@ -326,7 +365,7 @@ async function runHostedWizard(repoRoot: string): Promise<void> {
   await runOAuthSetup(undefined, undefined, undefined, hostedTarget);
 
   // runOAuthSetup already printed the dashboard redirect-URL step.
-  note("pnpm dev --filter <your app>", "Then run your app");
+  note("pnpm -F <your app> dev", "Then run your app");
 }
 
 async function promptEnvValue(
