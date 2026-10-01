@@ -226,6 +226,9 @@ describe("devtools contract tests", () => {
         cwd: options?.cwd ?? fixtureDir,
         env: {
           ...process.env,
+          // Nothing reaches Sentry from a test: the publish build bakes in a
+          // real DSN, and several cases here fail on purpose.
+          DEVTOOLS_TELEMETRY: "0",
           // Failure logs go in the temp dir, never the real home.
           DEVTOOLS_LOG_DIR: join(tmpRoot, "default-logs"),
           ...options?.env,
