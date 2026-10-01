@@ -56,6 +56,7 @@ import type {
   SessionTierResolution,
   TierChoice,
 } from "@devdogsuga/env/session";
+import { helpPath } from "@devdogsuga/cli-core/help";
 import { catalog } from "./catalog.js";
 import {
   enterSessionEnvironment,
@@ -130,12 +131,17 @@ export function stripTierFlag(argv: readonly string[]): {
  * remember to add here too.
  */
 function isEnvFreeCommand(rest: readonly string[]): boolean {
-  const path: string[] = [];
-  for (const arg of rest) {
-    if (arg.startsWith("-")) break;
-    path.push(arg);
-  }
-  return catalog.findCommand(path)?.envFree === true;
+  return catalog.findCommand(helpPath(rest))?.envFree === true;
+}
+
+/**
+ * Whether the command reads nothing but the checkout, so the session behaves
+ * as if `--no-env` was typed: development is named and no env file is
+ * looked for or complained about. The `check` commands, which CI runs on a
+ * runner that has no `.env` at all.
+ */
+function skipsEnvEntry(rest: readonly string[]): boolean {
+  return catalog.findCommand(helpPath(rest))?.noEnv === true;
 }
 
 /** The offer's stack start (`env-entry.ts` holds the TTY prompt, this holds
@@ -430,7 +436,7 @@ export async function launch(argv: readonly string[]): Promise<void> {
   const run = (): Promise<void> =>
     gated(tier, rest, () => dispatch(rest), undefined);
 
-  if (noEnv) {
+  if (noEnv || skipsEnvEntry(rest)) {
     // The caller's environment is the environment: name the session, load
     // nothing.
     process.env.DEPLOY_ENV = tier;

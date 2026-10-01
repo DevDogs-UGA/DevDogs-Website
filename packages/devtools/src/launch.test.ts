@@ -218,6 +218,18 @@ describe("launch", () => {
     expect(main).toHaveBeenCalledWith(["github", "settings", "--json"]);
   });
 
+  it.each(["migrations", "env", "workers", "scripts"])(
+    "check %s names development and loads no env file — CI has no .env",
+    async (sub) => {
+      const { launch } = await import("./launch.js");
+      await launch(["check", sub]);
+      expect(resolveSessionTier).not.toHaveBeenCalled();
+      expect(enterEnvironment).not.toHaveBeenCalled();
+      expect(process.env.DEPLOY_ENV).toBe("development");
+      expect(main).toHaveBeenCalledWith(["check", sub]);
+    },
+  );
+
   describe("DEVTOOLS_SHELL_KEYS marker", () => {
     const MARKER = "DEVTOOLS_SHELL_KEYS";
     let hadMarker: boolean;

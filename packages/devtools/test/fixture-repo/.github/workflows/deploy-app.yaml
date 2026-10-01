@@ -1,0 +1,16 @@
+# Fixture stand-in for DevDogsUGA's reusable deploy workflow: `check workers`
+# reads the ONE deploy matrix from here and compares it with workers.json.
+name: Deploy app
+
+on:
+  workflow_call:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - app: demo-app
+    steps:
+      - run: echo deploy ${{ matrix.app }}

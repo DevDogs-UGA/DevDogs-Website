@@ -190,6 +190,13 @@ export interface CommandNode {
    * because `launch.ts` looks up the exact dispatched path.
    */
   envFree?: boolean;
+  /**
+   * This command reads nothing but the checkout, so the launcher behaves as if
+   * `--no-env` was typed: development is named and no env file is loaded, or
+   * complained about when it is missing. For the `check` commands, which CI
+   * runs on a runner with no `.env`. Implies `envFree`.
+   */
+  noEnv?: boolean;
 }
 
 /** Top-level sections. Only `--help` and the wizard's first screen use these. */
