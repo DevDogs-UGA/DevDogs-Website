@@ -103,10 +103,10 @@ jobs:
       # publishes, and apps/slides can't build without the private workshop
       # submodules.
       - name: Build (packages)
-        # devtools bakes its Sentry DSN into dist/build-info.json at build
-        # time (packages/devtools/scripts/write-build-info.mjs). A public
+        # devtools and backstage bake their Sentry DSN into dist/build-info.json
+        # at build time (their scripts/write-build-info.mjs). A public
         # ingest-only value, so an Actions variable, not a secret; unset
-        # builds a devtools that reports nothing.
+        # builds a CLI that reports nothing.
         env:
           DEVTOOLS_SENTRY_DSN: ${{ vars.DEVTOOLS_SENTRY_DSN }}
         run: pnpm -r --filter './packages/**' --if-present run build
@@ -118,6 +118,9 @@ jobs:
       # that `ci.yaml` already ran it on the merged commit.
       - name: devtools contract tests
         run: pnpm --filter @devdogsuga/devtools run test:contract
+      # Same for backstage: it too is run at the latest version, everywhere.
+      - name: backstage contract tests
+        run: pnpm --filter @devdogsuga/backstage run test:contract
       - name: Patch-bump + publish changed packages, with GitHub releases
         env:
           GH_TOKEN: ${{ github.token }}

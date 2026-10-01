@@ -63,6 +63,12 @@ jobs:
       # devtools'/telemetry's/env's `dist/`.
       - name: devtools contract tests
         run: pnpm --filter @devdogsuga/devtools run test:contract
+      # backstage's, the same way: the packed tarball installed outside any
+      # repo (it must start without a checkout, with install scripts off) and
+      # inside the fixture repo. A bad publish reaches every officer and every
+      # CI run through `pnpm dlx` at the latest version.
+      - name: backstage contract tests
+        run: pnpm --filter @devdogsuga/backstage run test:contract
       # `check` is its own script, not `test`, because it exercises the CLI
       # a config author actually runs (`pnpm --filter @devdogsuga/events
       # check`), not just the package's own vitest suite. Merge-blocking
