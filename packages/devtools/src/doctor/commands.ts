@@ -26,8 +26,18 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { log, note } from "@clack/prompts";
 import { parse as parseDotenv } from "dotenv";
+import {
+  describeEnvironment,
+  probeEnvironment,
+} from "@devdogsuga/cli-core/environment";
 import { discoverRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { validateSessionPoolerUrl } from "../db/pooler.js";
+import {
+  databaseChecks,
+  probeDatabase,
+  readDeclaredBuckets,
+  typesFreshness,
+} from "./data.js";
 
 export type CheckStatus = "ok" | "warn" | "skip";
 
@@ -175,8 +185,8 @@ export function checkPowerShellExecutionPolicy(
 
 /**
  * The checkout's development env the way every other command loads it:
- * `.env.generated` (the local stack's connection block, written by `db
- * start`) first and winning, then `.env`. Reading `.env` alone reported a
+ * `.env.generated` (the local stack's connection block, written when the stack
+ * starts) first and winning, then `.env`. Reading `.env` alone reported a
  * working local-Docker checkout as missing PUBLISHABLE_KEY, and took the
  * blank hosted template's `https://$PROJECT_REF.supabase.co` for a real
  * hosted project that "did not respond".
@@ -209,7 +219,7 @@ export function checkEnvKeysPresent(
     fix:
       missing.length === 0
         ? undefined
-        : "`pnpm devtools setup` (or `pnpm devtools env init`) fills in the blanks.",
+        : "`pnpm devtools setup` fills in the blanks.",
     faqId: missing.length === 0 ? undefined : "env-incomplete",
   };
 }
@@ -273,11 +283,27 @@ function readShellProfile(): string | null {
   return null;
 }
 
+/** Which tier and database this session points at, so a failure below can be
+ * read against the right one. */
+function sessionCheck(): DoctorCheck {
+  const tier = process.env.DEPLOY_ENV || "development";
+  const database = process.env.DEV_DB
+    ? ` (${process.env.DEV_DB} database)`
+    : "";
+  return {
+    id: "session-tier",
+    status: "ok",
+    summary: `This session targets ${tier}${database}`,
+  };
+}
+
 function renderCheck(app: string, check: DoctorCheck): string {
   const icon =
     check.status === "ok" ? "OK  " : check.status === "skip" ? "SKIP" : "WARN";
   const lines = [`${icon}  ${check.summary}`];
-  if (check.status === "warn") {
+  // A skip with an FAQ id is an optional tool (Flutter); one without is a
+  // fact worth acting on (a database that could not be read).
+  if (check.status === "warn" || (check.status === "skip" && !check.faqId)) {
     if (check.fix) lines.push(`      fix: ${check.fix}`);
     if (check.faqId) lines.push(`      ${faqUrl(app, check.faqId)}`);
   }
@@ -347,7 +373,7 @@ export async function runEnvironmentDoctor(
   }
 
   // Local Docker stack — only relevant when the checkout has a local
-  // `.env.generated`, the signature of `db start` having run at least once.
+  // `.env.generated`, the signature of the stack having started at least once.
   if (repoRoot && existsSync(join(repoRoot, ".env.generated"))) {
     const dockerUp = has("docker", ["info"]) !== null;
     checks.push({
@@ -483,6 +509,43 @@ export async function runEnvironmentDoctor(
       fix: validation.ok ? undefined : validation.message,
       faqId: validation.faqId,
     });
+  }
+
+  // ── The session: which tier this is, and what is in its database ───────────
+  checks.push(sessionCheck());
+  if (repoRoot) {
+    // What `db status` used to say, now one line among the rest.
+    const machine = probeEnvironment();
+    checks.push({
+      id: "local-stack",
+      status: machine.stack === "yes" ? "ok" : "skip",
+      summary: describeEnvironment(machine),
+      fix:
+        machine.stack === "no" && machine.docker === "yes"
+          ? "Start it with `pnpm devtools supabase start`."
+          : undefined,
+    });
+  }
+  if (repoRoot) checks.push(typesFreshness(repoRoot));
+  const sessionDbUrl = process.env.DB_URL;
+  if (repoRoot && sessionDbUrl) {
+    try {
+      checks.push(
+        ...databaseChecks(
+          await probeDatabase(sessionDbUrl),
+          readDeclaredBuckets(repoRoot),
+        ),
+      );
+    } catch (err) {
+      // Not a fault in the checkout: the stack may simply be off, or the
+      // database not migrated yet. The lines above already say which.
+      checks.push({
+        id: "database-unreachable",
+        status: "skip",
+        summary: `Could not read the session's database (${err instanceof Error ? err.message : String(err)})`,
+        fix: "Start the stack with `pnpm devtools supabase start`, or apply migrations with `pnpm devtools preset apply-migrations`.",
+      });
+    }
   }
 
   note(
