@@ -52,9 +52,8 @@ export async function vaultStatus(): Promise<VaultStatus> {
       | { success?: boolean; data?: { template?: { status?: string } } }
       | { status?: string };
     const status =
-      ("status" in parsed && parsed.status) ||
-      ("data" in parsed && parsed.data?.template?.status) ||
-      undefined;
+      ("status" in parsed ? parsed.status : undefined) ??
+      ("data" in parsed ? parsed.data?.template?.status : undefined);
 
     if (status === "unlocked") return "unlocked";
     if (status === "locked") return "locked";

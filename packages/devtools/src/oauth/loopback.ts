@@ -139,7 +139,7 @@ export function start(
     // moments later — this dummy handler exists purely to be that first
     // listener; it does not consume the rejection for real callers, who
     // still get their own `await`/`.catch` on the same promise.
-    result.catch(() => {});
+    result.catch(() => undefined);
 
     const server: Server = createServer((req, res) => {
       const url = new URL(req.url ?? "/", "http://127.0.0.1");

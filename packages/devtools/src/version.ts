@@ -8,9 +8,7 @@ let cachedOwnDir: string | undefined;
  * i.e. the devtools package's own root (`dist/version.js` → up one).
  * Exported for tests; memoized since it never changes within a process. */
 export function ownPackageDir(): string {
-  if (cachedOwnDir === undefined) {
-    cachedOwnDir = join(dirname(fileURLToPath(import.meta.url)), "..");
-  }
+  cachedOwnDir ??= join(dirname(fileURLToPath(import.meta.url)), "..");
   return cachedOwnDir;
 }
 

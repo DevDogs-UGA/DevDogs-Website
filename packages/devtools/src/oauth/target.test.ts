@@ -63,7 +63,7 @@ describe("readHostedTargetFromEnvFiles — outside a checkout", () => {
 
 describe("resolveHostedTargetInRepo — inside a checkout", () => {
   it("resolves a tier, enters its environment, and reads API_URL/SECRET_KEY", async () => {
-    const enterEnvironment = vi.fn(async () => {});
+    const enterEnvironment = vi.fn(async () => undefined);
     const resolveTier = vi.fn(async () => "staging" as const);
     const env = {
       API_URL: "https://staging-ref.supabase.co",
@@ -102,7 +102,7 @@ describe("resolveHostedTargetInRepo — inside a checkout", () => {
     await expect(
       resolveHostedTargetInRepo(undefined, {
         resolveTier: async () => "production",
-        enterEnvironment: vi.fn(async () => {}),
+        enterEnvironment: vi.fn(async () => undefined),
         env: {},
       }),
     ).rejects.toThrow(HostedCredentialsMissingError);

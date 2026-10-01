@@ -23,11 +23,9 @@ let cachedWorkerPaths: readonly string[] | undefined;
 
 /** Workspace-relative paths, exactly as listed in root `workers.json`. */
 export function workerPaths(): readonly string[] {
-  if (cachedWorkerPaths === undefined) {
-    cachedWorkerPaths = JSON.parse(
-      readFileSync(join(findRepoRoot(), "workers.json"), "utf8"),
-    ) as readonly string[];
-  }
+  cachedWorkerPaths ??= JSON.parse(
+    readFileSync(join(findRepoRoot(), "workers.json"), "utf8"),
+  ) as readonly string[];
   return cachedWorkerPaths;
 }
 

@@ -126,7 +126,7 @@ describe("requestDeviceCode", () => {
 });
 
 /** A no-op `sleep` — tests never wait on the real clock. */
-const noSleep = vi.fn(async () => {});
+const noSleep = vi.fn(async () => undefined);
 
 /** A `now()` that starts at 0 and advances by `stepMs` on every call after the first. */
 function fakeClock(stepMs: number): () => number {
@@ -210,7 +210,7 @@ describe("pollForToken", () => {
 
   it("slow_down adds 5 seconds to the poll interval and keeps polling", async () => {
     let calls = 0;
-    const sleep = vi.fn(async () => {});
+    const sleep = vi.fn(async () => undefined);
     const fetchImpl = vi.fn(async () => {
       calls += 1;
       if (calls === 1) {
@@ -301,7 +301,7 @@ describe("pollForToken", () => {
 
   it("waits out Retry-After on a 429 and keeps polling", async () => {
     let calls = 0;
-    const sleep = vi.fn(async () => {});
+    const sleep = vi.fn(async () => undefined);
     const fetchImpl = vi.fn(async () => {
       calls += 1;
       if (calls === 1) {
@@ -327,7 +327,7 @@ describe("pollForToken", () => {
   });
 
   it("retries a handful of network failures with backoff before failing", async () => {
-    const sleep = vi.fn(async () => {});
+    const sleep = vi.fn(async () => undefined);
     const fetchImpl = vi.fn(async () => {
       throw new Error("ECONNRESET");
     });

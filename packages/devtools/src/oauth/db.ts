@@ -45,7 +45,7 @@ export function detectLocalSupabase(cwd: string): LocalSupabaseConfig {
           "supabase CLI not found — install it from https://supabase.com/docs/guides/cli",
         );
       }
-      const stderr = (first as { stderr?: string }).stderr?.trim();
+      const stderr = ((first as { stderr?: string }).stderr ?? "").trim();
       throw new Error(
         stderr || (first instanceof Error ? first.message : String(first)),
       );

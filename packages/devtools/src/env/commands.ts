@@ -634,12 +634,13 @@ export async function runEnvAudit(options: EnvOptions): Promise<void> {
       names: (await listRepositoryVariables()).map((v) => v.name),
     };
   } catch (err) {
+    const firstLine = errorMessage(err).split("\n")[0]?.trim() ?? "";
     repositoryVariables = {
       readable: false,
       // The FIRST line only. `describe()` in the gh client returns a paragraph
       // of guidance, and a finding is one line. The rest is reproducible by
       // running the command the finding names.
-      reason: errorMessage(err).split("\n")[0]?.trim() || "`gh` failed",
+      reason: firstLine || "`gh` failed",
     };
   }
 

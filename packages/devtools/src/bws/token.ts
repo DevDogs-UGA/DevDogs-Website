@@ -37,7 +37,7 @@ export interface TokenSources {
 export type TokenSource = "flag" | "environment" | "vault" | "prompt";
 
 export async function resolveToken(sources: TokenSources): Promise<string> {
-  const announce = sources.onSource ?? (() => {});
+  const announce = sources.onSource ?? (() => undefined);
 
   // Explicit beats ambient. Someone who passes the flag while an environment
   // variable is set is overriding on purpose, and silently ignoring them would

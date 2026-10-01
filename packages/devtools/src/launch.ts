@@ -213,9 +213,7 @@ export async function launch(argv: readonly string[]): Promise<void> {
   // holds this session's entered values, not the outer shell's, and
   // recomputing from it would misclassify every one of them as a genuine
   // shell export — the exact bug this marker exists to prevent, one layer in.
-  if (process.env[envLoad.SHELL_KEYS_ENV] === undefined) {
-    process.env[envLoad.SHELL_KEYS_ENV] = Object.keys(process.env).join(",");
-  }
+  process.env[envLoad.SHELL_KEYS_ENV] ??= Object.keys(process.env).join(",");
 
   let tier: DeployEnvironment;
   let devDatabase: DevDatabase | undefined;

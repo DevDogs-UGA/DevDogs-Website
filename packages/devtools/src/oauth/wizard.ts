@@ -118,6 +118,12 @@ function requireUrl(v: string | undefined): string | undefined {
   }
 }
 
+/** An environment variable's value, with an empty one treated as unset. */
+function nonEmptyEnv(key: string): string | undefined {
+  const value = process.env[key];
+  return value === "" ? undefined : value;
+}
+
 function requireNonEmpty(v: string | undefined): string | undefined {
   return v?.trim() ? undefined : "Required";
 }
@@ -457,10 +463,8 @@ async function connectByPasting(
     DEFAULT_API_URL
   ).replace(/\/+$/, "");
 
-  let clientId: string | undefined =
-    process.env[ENV_KEYS.clientId] || undefined;
-  let clientSecret: string | undefined =
-    process.env[ENV_KEYS.clientSecret] || undefined;
+  let clientId = nonEmptyEnv(ENV_KEYS.clientId);
+  let clientSecret = nonEmptyEnv(ENV_KEYS.clientSecret);
 
   if (clientId && clientSecret) {
     const useSaved = unwrap(

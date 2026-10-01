@@ -104,7 +104,7 @@ vi.mock("./workflows.js", () => ({
 import { runGithubSettings } from "./commands.js";
 
 function captureConsole() {
-  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+  const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
   const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   return {
     log,

@@ -47,7 +47,7 @@ export function makePacer(
     });
     // The chain never rejects: a pacer that fails closed would wedge every
     // later call behind a rejection that had nothing to do with them.
-    chain = turn.catch(() => {});
+    chain = turn.catch(() => undefined);
     return turn;
   };
 }

@@ -22,7 +22,7 @@ describe("completion scripts", () => {
     it("does not shadow the zsh words builtin array", () => {
       // Avoid declaring `local words` which would shadow the completion system's
       // built-in `words` array. We use it to read command arguments.
-      const localDeclarations = zsh.match(/local\s+(\w+(?:\s+\w+)*)/g) || [];
+      const localDeclarations = zsh.match(/local\s+(\w+(?:\s+\w+)*)/g) ?? [];
       const hasLocalWords = localDeclarations.some((decl) => {
         // Match "local state" etc. but not find "words" as a declared local
         const vars = decl.replace(/local\s+/, "").split(/\s+/);

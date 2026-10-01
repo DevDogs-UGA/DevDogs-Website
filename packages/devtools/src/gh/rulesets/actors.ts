@@ -19,7 +19,8 @@ const run = promisify(execFile);
 function describe(err: unknown): string {
   const e = err as { stderr?: string; message?: string };
   const stderr = (e.stderr ?? "").trim();
-  return stderr || e.message || "gh failed with no output.";
+  const message = e.message ?? "";
+  return stderr || message || "gh failed with no output.";
 }
 
 /** `GET /orgs/{org}/teams/{slug}` -> the team's numeric id. */

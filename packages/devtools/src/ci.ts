@@ -67,10 +67,12 @@ function flagValue(rest: string[], flag: string): string | undefined {
 // `WORKER_APPS` is read from root `workers.json` at runtime rather than
 // declared as a literal tuple, so it cannot narrow to a union of string
 // literals the way the old `["platform", ...] as const` did. `App` stays
-// `string`; `isApp` still refuses anything not in the shared list.
+// `string`; `isApp` still refuses anything not in the shared list. It is
+// deliberately not a type predicate: `value is string` would narrow the
+// fall-through `sub` to `never`.
 type App = string;
 
-function isApp(value: string): value is App {
+function isApp(value: string): boolean {
   return isWorkerApp(value);
 }
 

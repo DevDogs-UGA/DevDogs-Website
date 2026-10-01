@@ -54,10 +54,7 @@ function faqUrl(app: string, id: string): string {
  * pins 24, which is what a `fnm use` picks up; a machine below the floor is
  * a WARN, not an error — plenty of contributors' shells still resolve an
  * old global `node` first. */
-export function checkNodeVersion(
-  nodeVersion: string,
-  app: string,
-): DoctorCheck {
+export function checkNodeVersion(nodeVersion: string): DoctorCheck {
   const [major = 0, minor = 0] = nodeVersion.split(".").map(Number);
   const ok = major > 22 || (major === 22 && minor >= 12);
   return {
@@ -73,13 +70,10 @@ export function checkNodeVersion(
   };
 }
 
-export function checkFnmHookPresent(
-  shellProfile: string | null,
-  app: string,
-): DoctorCheck {
-  const present = Boolean(
-    shellProfile?.includes("fnm env") || shellProfile?.includes("fnm_env"),
-  );
+export function checkFnmHookPresent(shellProfile: string | null): DoctorCheck {
+  const present =
+    shellProfile !== null &&
+    (shellProfile.includes("fnm env") || shellProfile.includes("fnm_env"));
   return {
     id: "fnm-not-found",
     status: present ? "ok" : "warn",
@@ -96,7 +90,6 @@ export function checkFnmHookPresent(
 export function checkPnpmVersion(
   pnpmVersion: string | null,
   pinned: string,
-  app: string,
 ): DoctorCheck {
   if (!pnpmVersion) {
     return {
@@ -302,13 +295,13 @@ export async function runEnvironmentDoctor(
   const repoRoot = discoverRepoRoot();
   const checks: DoctorCheck[] = [];
 
-  const nodeCheck = checkNodeVersion(process.versions.node, app);
+  const nodeCheck = checkNodeVersion(process.versions.node);
   checks.push(nodeCheck);
   // Only worth raising when Node is wrong: nvm, Volta or a system Node that
   // already satisfies the floor is fine, and flagging a missing fnm hook there
   // is a false alarm.
   if (nodeCheck.status !== "ok") {
-    checks.push(checkFnmHookPresent(readShellProfile(), app));
+    checks.push(checkFnmHookPresent(readShellProfile()));
   } else {
     const pinnedMajor = repoRoot ? readNvmrc(repoRoot)?.split(".")[0] : null;
     const major = process.versions.node.split(".")[0];
@@ -327,7 +320,7 @@ export async function runEnvironmentDoctor(
   const pin = repoRoot ? readPackageManagerPin(repoRoot) : null;
   checks.push(
     pin
-      ? checkPnpmVersion(pnpmVersion, pin, app)
+      ? checkPnpmVersion(pnpmVersion, pin)
       : {
           id: "pnpm-version",
           status: pnpmVersion ? "ok" : "warn",

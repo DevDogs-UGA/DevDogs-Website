@@ -25,7 +25,7 @@ function fakeDeps(overrides: Partial<EnsureGeneratedEnvDeps> = {}): {
   const probeLocalStack = vi.fn(async () => true);
   const exists = vi.fn(() => false);
   const captureStatus = vi.fn(async () => "API_URL=http://127.0.0.1:54321\n");
-  const write = vi.fn(async () => {});
+  const write = vi.fn(async () => undefined);
   const listContainerNames = vi.fn((): string[] | null => []);
   const projectId = vi.fn((): string | null => "DevDogsUGA");
 

@@ -267,13 +267,12 @@ async function images(options: ImagesOptions, deps: ImagesDeps): Promise<void> {
   if (selections.length === 0) throw new UsageError("Nothing to render.");
 
   // ── Where ─────────────────────────────────────────────────────────────────
+  // An empty `--out` counts as absent, exactly as the old truthiness test did.
+  const explicitOut = options.out === "" ? undefined : options.out;
   const out = options.defaultOut
     ? undefined
-    : options.out
-      ? options.out
-      : options.noOutput
-        ? undefined
-        : await pickOutput(graphics);
+    : (explicitOut ??
+      (options.noOutput ? undefined : await pickOutput(graphics)));
 
   if (skipped) log.warn(`event graphics skipped — ${skipped}`);
 

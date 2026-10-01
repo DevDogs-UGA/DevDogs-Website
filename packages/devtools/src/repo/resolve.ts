@@ -83,7 +83,7 @@ export function findDependent(
         peerDependencies?: Record<string, string>;
       };
       try {
-        pkg = JSON.parse(readFileSync(pkgJsonPath, "utf8"));
+        pkg = JSON.parse(readFileSync(pkgJsonPath, "utf8")) as typeof pkg;
       } catch {
         continue;
       }

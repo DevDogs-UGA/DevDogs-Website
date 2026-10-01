@@ -265,7 +265,9 @@ describe("the env-token override", () => {
   });
 
   it("warns ONCE, on stderr, when an environment token will override the login", async () => {
-    const stderr = vi.spyOn(console, "error").mockImplementation(() => {});
+    const stderr = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     process.env.GITHUB_TOKEN = "ghp_leftover";
     await listSecrets("staging");
     await listVariables("staging");

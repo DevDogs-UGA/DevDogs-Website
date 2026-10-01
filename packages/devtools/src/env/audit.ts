@@ -347,8 +347,7 @@ export function audit(input: AuditInput): Finding[] {
         "exactly like this report. Run `gh variable list` by hand",
     });
   }
-  const repositoryNames =
-    repository !== undefined && repository.readable ? repository.names : [];
+  const repositoryNames = repository?.readable ? repository.names : [];
   for (const name of repositoryNames) {
     // Membership in `variables` IS the declaration test for this branch, since
     // the set comes from the registry, which is why it does not also consult

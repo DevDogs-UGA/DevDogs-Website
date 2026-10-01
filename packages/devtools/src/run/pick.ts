@@ -496,7 +496,7 @@ async function runDev(
 
   // Ctrl-C reaches every child through the terminal's process group; this
   // process waits for them to finish rather than dying first.
-  const ignore = () => {};
+  const ignore = () => undefined;
   process.on("SIGINT", ignore);
   process.on("SIGTERM", ignore);
 

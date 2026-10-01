@@ -20,7 +20,7 @@ function sources(over: Partial<TokenSources> = {}): TokenSources {
     fromVault: async () => undefined,
     prompt: async () => undefined,
     offerSave: async () => false,
-    save: async () => {},
+    save: async () => undefined,
     ...over,
   };
 }
@@ -74,7 +74,7 @@ describe("order of preference", () => {
 
 describe("saving what was typed", () => {
   it("offers to save a typed token, and saves on yes", async () => {
-    const save = vi.fn(async () => {});
+    const save = vi.fn(async () => undefined);
     await resolveToken(
       sources({
         prompt: async () => "typed-token",
@@ -86,7 +86,7 @@ describe("saving what was typed", () => {
   });
 
   it("does not save when declined", async () => {
-    const save = vi.fn(async () => {});
+    const save = vi.fn(async () => undefined);
     await resolveToken(
       sources({
         prompt: async () => "typed-token",

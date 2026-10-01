@@ -137,7 +137,8 @@ function describe(err: unknown): string {
     );
   }
 
-  return stderr || e.message || "gh failed with no output.";
+  const message = e.message ?? "";
+  return stderr || message || "gh failed with no output.";
 }
 
 /** Environment secret names and when each last changed. Never values. */

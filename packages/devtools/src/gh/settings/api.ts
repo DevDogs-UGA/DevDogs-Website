@@ -35,7 +35,8 @@ export class GhSettingsError extends Error {}
 function describe(err: unknown): string {
   const e = err as { stderr?: string; message?: string };
   const stderr = (e.stderr ?? "").trim();
-  return stderr || e.message || "gh failed with no output.";
+  const message = e.message ?? "";
+  return stderr || message || "gh failed with no output.";
 }
 
 /** `owner/repo`, e.g. `DevDogsUGA/DevDogsUGA`. */

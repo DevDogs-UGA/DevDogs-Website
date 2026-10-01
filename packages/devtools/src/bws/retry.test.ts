@@ -36,7 +36,10 @@ describe("withRateLimitRetry", () => {
       throw LIMITED;
     });
     await expect(
-      withRateLimitRetry(op, { doing: "a write", sleep: async () => {} }),
+      withRateLimitRetry(op, {
+        doing: "a write",
+        sleep: async () => undefined,
+      }),
     ).rejects.toThrow(/429/);
     // First attempt + three retries.
     expect(op).toHaveBeenCalledTimes(4);
@@ -50,7 +53,10 @@ describe("withRateLimitRetry", () => {
       throw new Error("401 Unauthorized");
     });
     await expect(
-      withRateLimitRetry(op, { doing: "a write", sleep: async () => {} }),
+      withRateLimitRetry(op, {
+        doing: "a write",
+        sleep: async () => undefined,
+      }),
     ).rejects.toThrow(/401/);
     expect(op).toHaveBeenCalledTimes(1);
   });

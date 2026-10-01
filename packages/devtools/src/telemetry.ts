@@ -50,7 +50,9 @@ export function resolveDevtoolsDsn(
   env: NodeJS.ProcessEnv,
   baked: string,
 ): string {
-  return env.DEVTOOLS_SENTRY_DSN || baked;
+  // An empty override (`DEVTOOLS_SENTRY_DSN=`) must fall back to the baked DSN.
+  const override = env.DEVTOOLS_SENTRY_DSN ?? "";
+  return override || baked;
 }
 
 let initialized = false;

@@ -102,7 +102,9 @@ function fake(roleExists: boolean, schemaExists = true): Fake {
         statements.push(query);
         return [];
       },
-      async end() {},
+      async end() {
+        return undefined;
+      },
     };
   }
 }
@@ -272,7 +274,9 @@ describe("planner drop", () => {
         if (query.startsWith("drop owned")) throw denied;
         return [];
       },
-      async end() {},
+      async end() {
+        return undefined;
+      },
     });
 
     await expect(runPlannerDrop({ connect })).rejects.toThrow(

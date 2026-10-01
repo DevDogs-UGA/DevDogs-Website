@@ -102,7 +102,7 @@ describe("connectViaOneClick", () => {
 
   it("does not fall back to device for a failure after the listener has already started", async () => {
     const listenerResult = Promise.reject(new Error("boom"));
-    listenerResult.catch(() => {});
+    listenerResult.catch(() => undefined);
     const close = vi.fn();
     startLoopbackMock.mockResolvedValueOnce({
       port: 54999,

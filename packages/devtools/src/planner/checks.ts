@@ -50,7 +50,7 @@ export async function checkPlanner(db: PlannerDb): Promise<PlannerVerdict> {
   const lines: string[] = [];
 
   const [identity] = await db.run(CHECK_IDENTITY);
-  const who = String(identity?.who ?? "");
+  const who = typeof identity?.who === "string" ? identity.who : "";
   if (who !== PLANNER_ROLE) {
     return {
       ok: false,
