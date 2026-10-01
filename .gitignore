@@ -18,3 +18,8 @@ dist/
 # silently caught by the blanket dist/ rule above.
 !packages/devtools/test/fixture-repo/packages/demo-source/dist/
 !packages/devtools/test/fixture-repo/packages/demo-source/dist/index.js
+
+# @devdogsuga/brand: derived by `pnpm codegen` from artwork/ and Phosphor.
+packages/brand/src/generated/assets.ts
+packages/brand/src/generated/icons.ts
+packages/brand/palette.css

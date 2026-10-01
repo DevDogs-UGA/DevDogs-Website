@@ -10,5 +10,5 @@
     // produced it instead (gitignored); `dist` stays purely emitted output.
     "tsBuildInfoFile": "./tsconfig.typecheck.tsbuildinfo"
   },
-  "include": ["src", "vitest.config.ts"]
+  "include": ["src", "scripts", "vitest.config.ts"]
 }

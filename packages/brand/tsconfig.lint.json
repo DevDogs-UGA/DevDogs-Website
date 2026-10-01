@@ -11,6 +11,6 @@
     "moduleResolution": "Bundler",
     "tsBuildInfoFile": "./tsconfig.lint.tsbuildinfo"
   },
-  "include": ["src", "vitest.config.ts"],
+  "include": ["src", "scripts", "vitest.config.ts"],
   "exclude": ["node_modules", "dist", "test/fixture-repo"]
 }

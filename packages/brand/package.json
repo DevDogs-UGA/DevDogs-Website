@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": false,
   "type": "module",
-  "description": "The club's brand tokens — palette, contact/social copy, embedded fonts and mark/wordmark artwork — extracted from @devdogsuga/og's Satori templates so any consumer can use them without pulling in a renderer",
+  "description": "The club's brand identity: palette, Satori templates, app marks, embedded fonts and artwork, plus the QR generator and the PNG and next/og renderers",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -22,27 +22,94 @@
     "./event": {
       "types": "./dist/event.d.ts",
       "default": "./dist/event.js"
-    }
+    },
+    "./marks": {
+      "types": "./dist/marks-data.d.ts",
+      "default": "./dist/marks-data.js"
+    },
+    "./qr": {
+      "types": "./dist/qr.d.ts",
+      "default": "./dist/qr.js"
+    },
+    "./render": {
+      "types": "./dist/render.d.ts",
+      "default": "./dist/render.js"
+    },
+    "./next": {
+      "types": "./dist/next.d.ts",
+      "default": "./dist/next.js"
+    },
+    "./palette.css": "./palette.css",
+    "./artwork/*": "./artwork/*",
+    "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "artwork",
+    "palette.css"
   ],
   "scripts": {
+    "codegen": "tsx scripts/codegen.ts",
+    "fetch:fonts": "tsx scripts/fetch-fonts.ts",
+    "prebuild": "pnpm codegen",
     "build": "tsc",
+    "pretypecheck": "pnpm codegen",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "pretest": "pnpm codegen",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "prelint": "pnpm codegen",
     "lint": "eslint .",
+    "prelint:fix": "pnpm codegen",
     "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",
+    "@phosphor-icons/react": "^2.1.10",
+    "@resvg/resvg-js": "^2.6.2",
     "@types/node": "catalog:",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "satori": "^0.33.4",
+    "sharp": "0.35.3",
     "tailwindcss": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "sideEffects": false,
+  "dependencies": {
+    "qrcode": "1.5.4",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "next": ">=16",
+    "satori": "^0.33.4",
+    "@resvg/resvg-js": "^2.6.2",
+    "sharp": "0.35.3"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "next": {
+      "optional": true
+    },
+    "satori": {
+      "optional": true
+    },
+    "@resvg/resvg-js": {
+      "optional": true
+    },
+    "sharp": {
+      "optional": true
+    }
   }
 }
