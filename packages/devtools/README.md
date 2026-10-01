@@ -1,16 +1,16 @@
 # @devdogsuga/devtools
 
-Contributor CLI for workspace tasks, runtime infrastructure, generated
-content, configuration, and moderation checks.
+Contributor CLI for a DevDogsUGA checkout: the real tools with the session's
+tier filled in, a menu over them, and the checks CI runs.
 
 ```bash
-pnpm devtools                      # no arguments: menu of interactive commands
-pnpm devtools db start             # boot Supabase on this machine
-pnpm devtools db connect <ref>     # or register a hosted project as the remote target
-pnpm devtools db reset             # replay migrations, then seeds, then regenerate types
-pnpm devtools cron run             # choose a configured route cron
-pnpm devtools workflows run        # choose a configured Cloudflare Workflow
-pnpm devtools workflows serve      # keep an app-scoped Wrangler runtime open
+pnpm devtools                           # no arguments: menu of interactive commands
+pnpm devtools setup                     # prepare a checkout, then print the database next steps
+pnpm devtools doctor                    # first stop: machine, tier, stack, types, buckets, seeded data
+pnpm devtools supabase start            # boot Supabase on this machine
+pnpm devtools cron run                  # choose a configured route cron
+pnpm devtools workflows run             # choose a configured Cloudflare Workflow
+pnpm devtools workflows serve           # keep an app-scoped Wrangler runtime open
 ```
 
 ```bash
@@ -29,6 +29,17 @@ Against `staging` or `production`, every command asks once before it runs
 banner, the tier must be named (`--tier` or `DEPLOY_ENV`), confirmations need
 `--yes`, and `--no-env` skips loading env files.
 
+`check migrations|env|workers|scripts` is what CI runs over the checkout (it
+replaces DevDogsUGA's `packages/repo-checks`). They read the checkout and
+nothing else: no tier, no env file. `pnpm devtools --help --json` prints every
+command path (deprecated ones marked), for tools that check what a page shows.
+
+The `db` and `cf` namespaces are gone: `supabase`, `wrangler`, `drizzle-kit`
+and `psql` plus package scripts (`types:db`, `types:drizzle`, `types:cf`,
+`preview`) replace them. What is left of `db` (`start`, `types`, `introspect`),
+`cf preview` and `run` are deprecated aliases, hidden from the menu, for
+callers that have not moved yet; `--help` names each replacement.
+
 The menu is generated from the same command tree the argv parser walks, so
 there is no second list to fall out of step — reach for `--help` at any level
 rather than a table here.
@@ -39,7 +50,7 @@ This CLI reports its own crashes to Sentry (see `src/telemetry.ts`), on by
 default, in both `pnpm devtools` and `devtools-ci`:
 
 - **What**: uncaught errors only — a captured exception plus a `command` tag
-  naming the subcommand that threw (e.g. `db reset`, `deploy platform`).
+  naming the subcommand that threw (e.g. `doctor`, `deploy platform`).
   Nothing about a successful run is ever sent.
 - **When**: every run, unless `DEVTOOLS_TELEMETRY=0` is set (per-machine or
   per-job opt-out) — or the build has no DSN. The DSN is baked in when

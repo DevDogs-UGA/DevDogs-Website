@@ -1,5 +1,16 @@
 # Tests moved out of the Backstage `devtools` copy — final disposition
 
+> **Update (TASK-398).** The "left to DevDogsUGA repo-checks" tests below came
+> home when `packages/repo-checks` was retired. The structural ones are now
+> commands CI runs, with their own unit tests in `src/check/`:
+> `workers.test.ts` is `check workers`, `env/completeness.test.ts` is
+> `check env`, and `check:migration-order` is `check migrations` (plus the new
+> `check scripts`). The live process tests are contract tests against the
+> fixture repo in `test/contract/`: the cron contract (`cron list` refuses a
+> scheduled.ts that breaks it) and `devtools-ci` stdout purity. The email
+> generation test is not moved: `emails` leaves for `packages/email`'s own
+> `preview` script, so there is nothing left here for it to exercise.
+
 Stage A1 (the devtools carve-out) found 12 tests/test-groups that inherently
 checked DevDogsUGA's own repo structure or content — real `apps/*`/
 `packages/*` directories, real env manifests, a real DevDogsUGA CLI
