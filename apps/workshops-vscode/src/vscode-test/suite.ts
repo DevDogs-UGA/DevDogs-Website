@@ -91,8 +91,11 @@ export async function run(): Promise<void> {
   const open = api.steps.open;
   assert.ok(open, "the panel found the workspace clone");
   assert.equal(open.repo, "DevDogsUGA/Web-Workshops");
+  // `02-supabase/00-start` names `01-nextjs-intro`, so that course's steps
+  // lead the line.
+  assert.equal(open.snapshot.line[0]?.tag, "01-nextjs-intro/00-start");
   const numbered = open.snapshot.line
-    .filter((s) => s.number > 0)
+    .filter((s) => s.workshop === "02-supabase" && s.number > 0)
     .map((s) => s.tag);
   assert.deepEqual(numbered.slice(0, 2), [
     "02-supabase/01-read",
