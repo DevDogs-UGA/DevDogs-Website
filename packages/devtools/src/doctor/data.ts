@@ -106,7 +106,7 @@ export function checkPresident(holders: number): DoctorCheck {
     fix:
       holders > 0
         ? undefined
-        : "Sign in once through the app, then `pnpm devtools grant-root`.",
+        : "Sign in once through the app, then `pnpm devtools roles grant <your email> President`.",
   };
 }
 

@@ -12,7 +12,7 @@
  *
  * This replaces `detectLocalInstance()`+`assertMigrated()`, which read
  * `supabase status -o env` directly and therefore only ever found the Docker
- * stack on this machine — the reason `moderation check` and `grant-root`
+ * stack on this machine — the reason `roles` and the old `grant-root`
  * used to be local-only long after `db reset`/`db migrate` moved onto the
  * session system.
  */
@@ -55,8 +55,8 @@ export interface Instance {
   secretKey: string;
 }
 
-/** The built-in Root role, from `supabase/seed/production/01_roles.sql`. */
-export const ROOT_ROLE_ID = "00000000-0000-0000-0000-000000000002";
+/** The built-in President role, created by the `core_roles` migration. */
+export const PRESIDENT_ROLE_ID = "00000000-0000-0000-0000-000000000002";
 
 export interface ResolvedInstance {
   connection: DbConnection;
@@ -64,7 +64,7 @@ export interface ResolvedInstance {
 }
 
 export interface ResolveInstanceOptions {
-  /** Stderr prefix, e.g. "devtools grant-root". */
+  /** Stderr prefix, e.g. "devtools roles". */
   label?: string;
   /** Injectable for tests; defaults to `process.env`. */
   env?: NodeJS.ProcessEnv;
@@ -122,10 +122,8 @@ export function adminClient(
  *
  * Signs in for real rather than hand-signing a JWT, so the token path exercised
  * is the one production uses, with whatever claims Supabase Auth actually puts
- * in a token rather than the ones we assume. Takes the password explicitly —
- * there is no fixed persona password any more (see `persona.ts` and
- * `moderation.ts`'s `withTemporaryModerator`, both of which generate a fresh
- * random one per account).
+ * in a token rather than the ones we assume. Takes the password explicitly:
+ * there is no fixed password for any account.
  */
 export async function signedInClient(
   instance: Instance,

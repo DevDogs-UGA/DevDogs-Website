@@ -73,7 +73,7 @@ describe("checkPresident", () => {
   it("warns when nobody holds it", () => {
     const check = checkPresident(0);
     expect(check.status).toBe("warn");
-    expect(check.fix).toContain("grant-root");
+    expect(check.fix).toContain("roles grant");
   });
 
   it("passes when somebody does", () => {
