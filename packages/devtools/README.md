@@ -13,6 +13,22 @@ pnpm devtools workflows run        # choose a configured Cloudflare Workflow
 pnpm devtools workflows serve      # keep an app-scoped Wrangler runtime open
 ```
 
+```bash
+pnpm devtools supabase db push     # the real tool, with the tier's --db-url filled in
+pnpm devtools wrangler|drizzle-kit|psql …
+pnpm devtools preset apply-migrations   # db push, then asks about types:db
+```
+
+`supabase` adds `--db-url` or `--project-ref` from the session's tier unless you
+passed `--local`, `--linked`, `--db-url` or `--project-ref` yourself. It never
+falls back to the linked project and never adds `--yes`. Every run prints the
+exact command afterwards.
+
+Against `staging` or `production`, every command asks once before it runs
+(`--yes` answers it). With no terminal, or `CI=true`, there is no menu and no
+banner, the tier must be named (`--tier` or `DEPLOY_ENV`), confirmations need
+`--yes`, and `--no-env` skips loading env files.
+
 The menu is generated from the same command tree the argv parser walks, so
 there is no second list to fall out of step — reach for `--help` at any level
 rather than a table here.

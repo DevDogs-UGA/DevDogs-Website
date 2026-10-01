@@ -51,14 +51,28 @@
 import { select } from "@clack/prompts";
 import type { DeployEnvironment } from "@devdogsuga/env";
 import type { DevDatabase } from "@devdogsuga/env/load";
-import type { TierChoice } from "@devdogsuga/env/session";
+import type * as EnvSessionModule from "@devdogsuga/env/session";
+import type {
+  SessionTierResolution,
+  TierChoice,
+} from "@devdogsuga/env/session";
 import { catalog } from "./catalog.js";
 import {
   enterSessionEnvironment,
   realEnvEntryDeps,
   setMenuEnvHook,
 } from "@devdogsuga/cli-core/env-entry";
+import { nonEmpty } from "@devdogsuga/cli-core/db/connection";
 import { bareGroupStartPath } from "@devdogsuga/cli-core/menu";
+import {
+  hasYes,
+  isNonInteractive,
+  stripNoEnvFlag,
+} from "@devdogsuga/cli-core/mode";
+import {
+  gateHostedTier,
+  GATE_PASSED_ENV,
+} from "@devdogsuga/cli-core/safety-gate";
 import {
   discoverRepoRoot,
   findRepoRoot,
@@ -161,6 +175,57 @@ async function dispatch(argv: string[]): Promise<void> {
 }
 
 /**
+ * The session for `--no-env`: the named tier, parsed and nothing more. `--tier`
+ * wins over `DEPLOY_ENV`, and a run that names neither is plain development.
+ */
+function resolveWithoutEnv(
+  envSession: typeof EnvSessionModule,
+  explicit: string | undefined,
+): SessionTierResolution {
+  const selector =
+    explicit ?? nonEmpty(process.env.DEPLOY_ENV) ?? "development";
+  const parsed = envSession.parseSessionSelector(selector);
+  if (parsed === null) {
+    return {
+      ok: false,
+      reason:
+        `unknown tier "${selector}". Expected: development, ` +
+        `${envSession.SESSION_SELECTORS.join(", ")}.`,
+    };
+  }
+  return { ok: true, ...parsed, resolvedBy: "explicit" };
+}
+
+/**
+ * Runs `proceed` only if the hosted-tier gate lets the command through (see
+ * `@devdogsuga/cli-core/safety-gate`). Called after the environment is
+ * entered, so the project ref it shows is the tier's own. A command the gate
+ * stops exits non-zero and returns `blocked`.
+ */
+async function gated<T>(
+  tier: DeployEnvironment,
+  commandArgv: readonly string[],
+  proceed: () => Promise<T>,
+  blocked: T,
+): Promise<T> {
+  const outcome = await gateHostedTier({
+    tier,
+    projectRef: nonEmpty(process.env.PROJECT_REF),
+    argv: commandArgv,
+    yes: hasYes(commandArgv),
+    nonInteractive: isNonInteractive(),
+  });
+  if (!outcome.proceed) {
+    process.exitCode = 1;
+    return blocked;
+  }
+  // A devtools run started by this one inherits the answer instead of asking
+  // again.
+  process.env[GATE_PASSED_ENV] = tier;
+  return proceed();
+}
+
+/**
  * Resolves the session's deploy tier, enters it (or defers entry to the
  * menu — see this file's header), and hands off to `cli.ts`.
  *
@@ -169,7 +234,8 @@ async function dispatch(argv: string[]): Promise<void> {
  * nothing this function could return that would mean anything.
  */
 export async function launch(argv: readonly string[]): Promise<void> {
-  const { explicit, rest } = stripTierFlag(argv);
+  const { noEnv, rest: withoutNoEnv } = stripNoEnvFlag(argv);
+  const { explicit, rest } = stripTierFlag(withoutNoEnv);
 
   // Here rather than only in `cli.ts`'s `main()`, so a failure while
   // resolving or entering the tier below is reported too. `main()`'s own
@@ -202,6 +268,13 @@ export async function launch(argv: readonly string[]): Promise<void> {
   // before ever reaching its `--help` branch, so routing straight to `main()`
   // below reproduces that passthrough correctly either way.
   if (rest.includes("--help") || rest.includes("-h")) {
+    await dispatch(rest);
+    return;
+  }
+
+  // `version` prints one line and reads nothing; asking about production first
+  // would be absurd.
+  if (rest[0] === "version") {
     await dispatch(rest);
     return;
   }
@@ -275,8 +348,26 @@ export async function launch(argv: readonly string[]): Promise<void> {
     // actually land on BARE development — an explicit staging/production or
     // qualified selector, an already-deployed DEPLOY_ENV, or a DEV_DB answer
     // all settle the question without them, and the lookup imports dotenvx.
+    // Non-interactive runs never guess: with nobody to ask, an unnamed tier
+    // would silently become whichever env file happens to be on the machine.
+    if (
+      isNonInteractive() &&
+      rest.length > 0 &&
+      explicit === undefined &&
+      !process.env.DEPLOY_ENV &&
+      !process.env.DEV_DB
+    ) {
+      process.stderr.write(
+        "devtools: no tier named. With no terminal (or CI=true) the tier must " +
+          "be explicit: pass --tier <development:local|development:remote|staging|production> " +
+          "or set DEPLOY_ENV.\n",
+      );
+      process.exit(1);
+    }
+
     const deployEnv = process.env.DEPLOY_ENV ?? "";
     const couldBeBareDevelopment =
+      !noEnv &&
       (process.env.DEV_DB ?? "") === "" &&
       (explicit === "development" ||
         (explicit === undefined &&
@@ -289,17 +380,21 @@ export async function launch(argv: readonly string[]): Promise<void> {
         ? await envLoad.probeLocalStack()
         : undefined;
 
-    const resolution = await envSession.resolveSessionTier({
-      explicit,
-      deployEnv: process.env.DEPLOY_ENV,
-      devDb: process.env.DEV_DB,
-      available: await envSession.availableTiers(findRepoRoot()),
-      isTTY: process.stdin.isTTY === true,
-      prompt: promptTier,
-      promptMessage: "Which environment should this session use?",
-      remoteCandidate,
-      localStackOnline,
-    });
+    // `--no-env`: the caller supplies the environment, so there are no env
+    // files to look for and no picker to show. The tier is whatever it names.
+    const resolution = noEnv
+      ? resolveWithoutEnv(envSession, explicit)
+      : await envSession.resolveSessionTier({
+          explicit,
+          deployEnv: process.env.DEPLOY_ENV,
+          devDb: process.env.DEV_DB,
+          available: await envSession.availableTiers(findRepoRoot()),
+          isTTY: process.stdin.isTTY === true,
+          prompt: promptTier,
+          promptMessage: "Which environment should this session use?",
+          remoteCandidate,
+          localStackOnline,
+        });
 
     if (!resolution.ok) {
       process.stderr.write(`devtools: ${resolution.reason}\n`);
@@ -325,10 +420,22 @@ export async function launch(argv: readonly string[]): Promise<void> {
         devDatabase,
         commandArgv,
         realEnvEntryDeps(envLoad, envSession, startStack),
-        dispatchCommand,
+        () => gated(tier, commandArgv, dispatchCommand, null),
       ),
     );
     await dispatch(rest);
+    return;
+  }
+
+  const run = (): Promise<void> =>
+    gated(tier, rest, () => dispatch(rest), undefined);
+
+  if (noEnv) {
+    // The caller's environment is the environment: name the session, load
+    // nothing.
+    process.env.DEPLOY_ENV = tier;
+    if (devDatabase !== undefined) process.env.DEV_DB = devDatabase;
+    await run();
     return;
   }
 
@@ -340,7 +447,7 @@ export async function launch(argv: readonly string[]): Promise<void> {
     devDatabase,
     rest,
     realEnvEntryDeps(envLoad, envSession, startStack),
-    () => dispatch(rest),
+    run,
   );
 }
 

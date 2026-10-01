@@ -8,15 +8,17 @@ CLI inlines it with [tsdown](https://tsdown.dev), so it is only ever a
 
 It holds what both CLIs need and neither owns:
 
-| Module                                   | What it is                                                      |
-| ---------------------------------------- | --------------------------------------------------------------- |
-| `repo/*`                                 | repo root discovery, `@devdogsuga/*` peer loading, tsx loading  |
-| `ui`, `telemetry`, `version`, `pipes`    | clack helpers, Sentry bootstrap, own-version, EPIPE handling    |
-| `tier`, `env-entry`, `env/discovery`     | the session tier, entering its env, the env manifest registry   |
-| `db/run`, `db/connection`, `instance`    | running the Supabase CLI, resolving the session's database      |
-| `args`, `invocation`                     | argv helpers, the "run it directly next time" recorder          |
-| `catalog`, `help`, `menu`, `completions` | the command catalog and everything that walks it                |
-| `dispatch`                               | the handler contract between a CLI's dispatcher and its domains |
+| Module                                   | What it is                                                                                 |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `repo/*`                                 | repo root discovery, `@devdogsuga/*` peer loading, tsx loading                             |
+| `ui`, `telemetry`, `version`, `pipes`    | clack helpers, Sentry bootstrap, own-version, EPIPE handling                               |
+| `tier`, `env-entry`, `env/discovery`     | the session tier, entering its env, the env manifest registry                              |
+| `db/run`, `db/connection`, `instance`    | running the Supabase CLI, resolving the session's database                                 |
+| `args`, `invocation`                     | argv helpers, the "run it directly next time" recorder                                     |
+| `mode`, `safety-gate`                    | non-interactive mode (`--yes`, `--no-env`), the hosted-tier gate                           |
+| `process-group`, `supabase-args`         | process-group kills and printing what ran; the tier arguments `devtools supabase` fills in |
+| `catalog`, `help`, `menu`, `completions` | the command catalog and everything that walks it                                           |
+| `dispatch`                               | the handler contract between a CLI's dispatcher and its domains                            |
 
 ## The rules
 

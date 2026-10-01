@@ -363,4 +363,44 @@ describe("devtools contract tests", () => {
     expect(status).not.toBe(0);
     expect(stderr).toContain("run this from inside a DevDogsUGA clone");
   });
+
+  it("refuses to guess a tier when nobody can answer", async () => {
+    // The harness has no TTY, so this is the non-interactive path.
+    const { status, stderr } = await run(["cron", "list"], {
+      env: { DEPLOY_ENV: "", DEV_DB: "", CI: "" },
+    });
+    expect(status).toBe(1);
+    expect(stderr).toContain("no tier named");
+  });
+
+  it("refuses production without --yes before the tool is ever started", async () => {
+    // --no-env: there is no production env file in the fixture, and the gate
+    // must not depend on one.
+    const { status, stderr } = await run(
+      ["--no-env", "--tier", "production", "supabase", "db", "push"],
+      { env: { CI: "" } },
+    );
+    expect(status).toBe(1);
+    expect(stderr).toContain("without --yes");
+    expect(stderr).not.toContain("Ran:");
+  });
+
+  it("--no-env runs a command against a named tier without loading any env file", async () => {
+    const { status, stdout, stderr } = await run(
+      ["--no-env", "--tier", "development", "cron", "list"],
+      { env: { CI: "true" } },
+    );
+    expect(status).toBe(0);
+    expect(stdout).toContain("demo-app");
+    expect(stderr).not.toContain("loaded");
+  });
+
+  it("prints no banner without a terminal", async () => {
+    const { status, stdout } = await run(
+      ["env", "example", "--tier", "development"],
+      { env: { CI: "true" } },
+    );
+    expect(status).toBe(0);
+    expect(stdout).not.toContain("DevDogs devtools");
+  });
 });

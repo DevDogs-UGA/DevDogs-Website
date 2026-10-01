@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as Mode from "@devdogsuga/cli-core/mode";
 
 /**
  * What `--target <something>` on the command line resolves to.
@@ -19,6 +20,14 @@ vi.mock("@clack/prompts", () => ({
   }),
   log: { error: vi.fn(), message: vi.fn() },
   note: vi.fn(),
+}));
+
+// `explain()` prints plain stderr lines when nobody can answer a prompt, which
+// is what a test run is. These tests are about the words, not the channel, so
+// they ask for the clack rendering.
+vi.mock("@devdogsuga/cli-core/mode", async (importOriginal) => ({
+  ...(await importOriginal<typeof Mode>()),
+  isNonInteractive: () => false,
 }));
 
 import { log, note } from "@clack/prompts";

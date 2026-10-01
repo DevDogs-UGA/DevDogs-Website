@@ -33,6 +33,21 @@ vi.mock("@devdogsuga/cli-core/repo/peers", () => ({
     developmentRemoteCandidate: vi.fn(),
     enterEnvironment: (...args: unknown[]) => enterEnvironment(...args),
     resolveSessionTier: (...args: unknown[]) => resolveSessionTier(...args),
+    SESSION_SELECTORS: [
+      "development:local",
+      "development:remote",
+      "staging",
+      "production",
+    ],
+    parseSessionSelector: (value: string) => {
+      const [tier, qualifier] = value.split(":");
+      if (!["development", "staging", "production"].includes(tier!))
+        return null;
+      if (qualifier === undefined) return { tier };
+      return tier === "development" && ["local", "remote"].includes(qualifier)
+        ? { tier, devDatabase: qualifier }
+        : null;
+    },
   }),
   loadEnvLoad: async () => ({
     probeLocalStack: vi.fn(),
@@ -348,7 +363,7 @@ describe("launch", () => {
       const { takeMenuEnvHook } =
         await import("@devdogsuga/cli-core/env-entry");
 
-      await launch(["db"]);
+      await launch(["--tier", "development", "db"]);
 
       // Entered eagerly, exactly as a typed command does — `main(["db"])`
       // hits the dispatcher's own "which of …?" refusal, not the wizard.
@@ -364,7 +379,7 @@ describe("launch", () => {
       const { takeMenuEnvHook } =
         await import("@devdogsuga/cli-core/env-entry");
 
-      await launch(["db", "status"]);
+      await launch(["--tier", "development", "db", "status"]);
 
       expect(enterEnvironment).toHaveBeenCalledWith("development", {
         override: false,
@@ -377,6 +392,159 @@ describe("launch", () => {
       const enterOrder = enterEnvironment.mock.invocationCallOrder[0]!;
       const mainOrder = main.mock.invocationCallOrder[0]!;
       expect(enterOrder).toBeLessThan(mainOrder);
+    });
+
+    describe("non-interactive runs", () => {
+      const savedExitCode = process.exitCode;
+
+      beforeEach(() => {
+        Object.defineProperty(process.stdin, "isTTY", {
+          value: false,
+          configurable: true,
+        });
+        vi.spyOn(process.stderr, "write").mockReturnValue(true);
+      });
+
+      afterEach(() => {
+        process.exitCode = savedExitCode;
+        vi.restoreAllMocks();
+      });
+
+      it("refuses a command that names no tier", async () => {
+        const exit = vi.spyOn(process, "exit").mockImplementation(() => {
+          throw new Error("exit");
+        });
+        const { launch } = await import("./launch.js");
+
+        await expect(launch(["supabase", "status"])).rejects.toThrow("exit");
+
+        expect(exit).toHaveBeenCalledWith(1);
+        expect(main).not.toHaveBeenCalled();
+      });
+
+      it("takes the tier from DEPLOY_ENV", async () => {
+        process.env.DEPLOY_ENV = "development";
+        const { launch } = await import("./launch.js");
+
+        await launch(["supabase", "status"]);
+
+        expect(main).toHaveBeenCalledWith(["supabase", "status"]);
+      });
+
+      it("--no-env names the tier, loads nothing, and hides itself from the command", async () => {
+        const { launch } = await import("./launch.js");
+
+        await launch([
+          "--no-env",
+          "--tier",
+          "development:local",
+          "check",
+          "env",
+        ]);
+
+        expect(resolveSessionTier).not.toHaveBeenCalled();
+        expect(enterEnvironment).not.toHaveBeenCalled();
+        expect(process.env.DEPLOY_ENV).toBe("development");
+        expect(process.env.DEV_DB).toBe("local");
+        expect(main).toHaveBeenCalledWith(["check", "env"]);
+      });
+
+      it("--no-env still refuses a tier it cannot parse", async () => {
+        vi.spyOn(process, "exit").mockImplementation(() => {
+          throw new Error("exit");
+        });
+        const { launch } = await import("./launch.js");
+
+        await expect(
+          launch(["--no-env", "--tier", "prod", "check", "env"]),
+        ).rejects.toThrow("exit");
+      });
+    });
+
+    describe("the hosted-tier gate", () => {
+      const savedExitCode = process.exitCode;
+
+      beforeEach(() => {
+        Object.defineProperty(process.stdin, "isTTY", {
+          value: false,
+          configurable: true,
+        });
+        resolveSessionTier.mockResolvedValue({
+          ok: true,
+          tier: "production",
+          resolvedBy: "explicit",
+        });
+        vi.spyOn(process.stderr, "write").mockReturnValue(true);
+        delete process.env.DEVTOOLS_GATE_PASSED;
+      });
+
+      afterEach(() => {
+        process.exitCode = savedExitCode;
+        delete process.env.DEVTOOLS_GATE_PASSED;
+        vi.restoreAllMocks();
+      });
+
+      it("refuses production with no terminal and no --yes, before the command runs", async () => {
+        const { launch } = await import("./launch.js");
+
+        await launch(["--tier", "production", "supabase", "db", "push"]);
+
+        expect(main).not.toHaveBeenCalled();
+        expect(process.exitCode).toBe(1);
+      });
+
+      it("lets --yes through", async () => {
+        const { launch } = await import("./launch.js");
+
+        await launch([
+          "--tier",
+          "production",
+          "supabase",
+          "db",
+          "push",
+          "--yes",
+        ]);
+
+        expect(main).toHaveBeenCalledWith(["supabase", "db", "push", "--yes"]);
+      });
+
+      it("does not gate development", async () => {
+        resolveSessionTier.mockResolvedValue({
+          ok: true,
+          tier: "development",
+          resolvedBy: "explicit",
+        });
+        const { launch } = await import("./launch.js");
+
+        await launch(["--tier", "development", "supabase", "status"]);
+
+        expect(main).toHaveBeenCalledWith(["supabase", "status"]);
+      });
+
+      it("gates the menu's chosen command too", async () => {
+        Object.defineProperty(process.stdin, "isTTY", {
+          value: true,
+          configurable: true,
+        });
+        const { launch } = await import("./launch.js");
+        const { takeMenuEnvHook } =
+          await import("@devdogsuga/cli-core/env-entry");
+        const gate = await import("@devdogsuga/cli-core/safety-gate");
+        const ask = vi
+          .spyOn(gate, "gateHostedTier")
+          .mockResolvedValue({ proceed: false, reason: "declined" });
+
+        await launch(["--tier", "production"]);
+        const dispatched = vi.fn(async () => "Done.");
+        const result = await takeMenuEnvHook()!(
+          ["preset", "push-config"],
+          dispatched,
+        );
+
+        expect(ask).toHaveBeenCalled();
+        expect(dispatched).not.toHaveBeenCalled();
+        expect(result).toBeNull();
+      });
     });
   });
 });
