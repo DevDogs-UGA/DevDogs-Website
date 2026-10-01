@@ -19,13 +19,15 @@
  * orchestrator (`runEnvironmentDoctor`) is the only part that actually
  * touches the machine.
  */
+import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
+import { flagValue } from "@devdogsuga/cli-core/args";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { log, note } from "@clack/prompts";
 import { parse as parseDotenv } from "dotenv";
 import { discoverRepoRoot } from "@devdogsuga/cli-core/repo/root";
-import { validateSessionPoolerUrl } from "./db/pooler.js";
+import { validateSessionPoolerUrl } from "../db/pooler.js";
 
 export type CheckStatus = "ok" | "warn" | "skip";
 
@@ -504,3 +506,11 @@ export async function runEnvironmentDoctor(
     note(redacted, "Paste this in Discord");
   }
 }
+
+export const handleDoctor: CommandHandler = async (rest) => {
+  await runEnvironmentDoctor({
+    app: flagValue(rest, "--app"),
+    report: rest.includes("--report"),
+  });
+  return DONE;
+};

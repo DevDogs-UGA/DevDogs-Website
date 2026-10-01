@@ -21,6 +21,7 @@
  * of the "unavailable" branch — a repo `@devdogsuga/events` cannot resolve
  * in, rather than a database that is not up.
  */
+import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
@@ -348,3 +349,11 @@ function resolvePatterns(patterns: string[], registry: Graphic[]): Graphic[] {
 
 /** Re-exported so `render.ts`'s options type is the format's own shape. */
 export type { Format };
+
+export const handleImages: CommandHandler = async (rest) => {
+  // No database dependency to pass through: event graphics read
+  // `@devdogsuga/events`'s committed config directly (see `events.ts`), so
+  // `images` never needs a running stack at all.
+  await runImages(rest);
+  return DONE;
+};

@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { readCheckoutEnv } from "./environment-doctor.js";
+import { readCheckoutEnv } from "./commands.js";
 
 describe("readCheckoutEnv", () => {
   let root: string;

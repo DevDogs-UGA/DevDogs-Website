@@ -3,7 +3,7 @@
  * Session pooler string, not the direct connection and not the Transaction
  * pooler.
  *
- * Pure and synchronous on purpose — `setup.ts`'s hosted wizard calls this
+ * Pure and synchronous on purpose — `setup/commands.ts`'s hosted wizard calls this
  * before writing anything to `.env`, and `doctor.ts`'s environment checker
  * calls the same function against whatever is already there, so the two
  * never drift into disagreeing about what a good `DB_URL` looks like.

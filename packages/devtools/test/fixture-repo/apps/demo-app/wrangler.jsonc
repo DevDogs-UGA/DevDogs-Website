@@ -8,13 +8,13 @@
   "main": "cloudflare/scheduled.ts",
   "compatibility_date": "2026-01-01",
   "triggers": {
-    "crons": ["*/30 * * * *"]
+    "crons": ["*/30 * * * *"],
   },
   "env": {
     "production": {
       "triggers": {
-        "crons": ["0 6 * * *"]
-      }
-    }
-  }
+        "crons": ["0 6 * * *"],
+      },
+    },
+  },
 }

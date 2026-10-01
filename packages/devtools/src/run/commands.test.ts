@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * `runTask` never returns for `--tier production` either — every path ends in
- * `passthrough`, which calls `process.exit` (see `pick.ts`'s own header) — so
+ * `passthrough`, which calls `process.exit` (see `commands.ts`'s own header) — so
  * these three modules are faked at the boundary rather than driven for real:
  * `node:child_process` so `passthrough` never actually spawns pnpm,
  * `@clack/prompts` so the confirm is scripted rather than typed, and
@@ -44,7 +44,7 @@ vi.mock("@devdogsuga/cli-core/repo/peers", () => ({
 }));
 
 const { extractFilters, parseTierArg, planDev, runTask, shouldAsk } =
-  await import("./pick.js");
+  await import("./commands.js");
 const { spawnSync } = await import("node:child_process");
 const { cancel, confirm } = await import("@clack/prompts");
 
@@ -96,7 +96,7 @@ describe("shouldAsk", () => {
   });
 
   // pnpm's own flags spell the same idea two ways (`--filter` and `-F`),
-  // plus `--scope` for anyone still typing the turbo-era name; each accepts
+  // plus `--scope` for anyone still typing the old name; each accepts
   // both a separate value and an `=` form. Missing one would mean asking a
   // caller to repeat a choice they had already made on the command line.
   it.each([
@@ -293,7 +293,7 @@ describe("runTask --tier production guard", () => {
     // app, read from `apps/*`, rather than a bare `pnpm -r run build` —
     // the latter would also run each app's OWN build script), then the
     // `--parallel` dev task. Both children need the tier env, not just the
-    // one that would exist under the old single-spawn turbo passthrough.
+    // one that would exist under a single-spawn passthrough.
     expect(spawnSync).toHaveBeenCalledTimes(2);
     const [, rawBuildArgs, buildOptions] = vi.mocked(spawnSync).mock.calls[0]!;
     const buildArgs = rawBuildArgs as string[];
@@ -410,7 +410,7 @@ describe("passthrough exit code", () => {
 
 /**
  * The actual `pnpm` command shapes `passthroughApps` builds — the part of
- * this file that stands in for turbo's task graph. Covers: an explicit
+ * this file that stands in for a task graph. Covers: an explicit
  * `--filter` builds that package's dependencies first with `^...` and then
  * runs the task against just that package; a task outside
  * `NEEDS_DEPS_BUILT` skips the dependency spawn entirely; and `dev` always

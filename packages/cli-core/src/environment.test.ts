@@ -7,9 +7,8 @@
  * that hides the command you were looking for because a subprocess timed out.
  */
 import { describe, expect, it } from "vitest";
-import type { Condition } from "./commands.js";
+import type { Condition } from "./catalog.js";
 import {
-  blockedBecause,
   describeEnvironment,
   holds,
   isOffered,
@@ -79,38 +78,6 @@ describe("isOffered", () => {
         isOffered({ when: condition }, UNKNOWN_ENVIRONMENT),
         condition,
       ).toBe(true);
-    }
-  });
-});
-
-describe("blockedBecause", () => {
-  it("finds nothing wrong with a command that asks for nothing", () => {
-    expect(blockedBecause({}, withStack("no"))).toBeNull();
-  });
-
-  it("explains an unmet need in a phrase that finishes a hint", () => {
-    expect(blockedBecause({ needs: "instance-running" }, withStack("no"))).toBe(
-      "Supabase is not running on this machine",
-    );
-  });
-
-  it("stays quiet when the need is met, or unreadable", () => {
-    expect(
-      blockedBecause({ needs: "instance-running" }, withStack("yes")),
-    ).toBeNull();
-    expect(
-      blockedBecause({ needs: "instance-running" }, UNKNOWN_ENVIRONMENT),
-    ).toBeNull();
-  });
-
-  it("has a phrase for every condition", () => {
-    for (const condition of CONDITIONS) {
-      const unmet: Environment = { docker: "no", stack: "yes", envFile: "no" };
-      // `instance-stopped` is the one unmet when the stack is UP, so this
-      // environment leaves exactly one condition met and the rest blocked:
-      // enough to prove no condition renders as `undefined`.
-      const reason = blockedBecause({ needs: condition }, unmet);
-      if (reason !== null) expect(reason, condition).not.toContain("undefined");
     }
   });
 });

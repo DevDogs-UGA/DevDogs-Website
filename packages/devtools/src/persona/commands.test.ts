@@ -2,11 +2,11 @@
  * Unit tests for the pure pieces of `persona`: kind parsing and the
  * development-only tier refusal. Everything else here (account creation,
  * cleanup, filing a sample report) talks to `auth.admin` and Postgres and has
- * no local-only path to unit test against, matching `moderation.ts` and
- * `grantRoot.ts`'s own lack of coverage.
+ * no local-only path to unit test against, matching `moderation/checks.ts` and
+ * `grant-root/roles.ts`'s own lack of coverage.
  */
 import { describe, expect, it, vi } from "vitest";
-import { isPersonaKind, refuseUnlessDevelopment } from "./persona.js";
+import { isPersonaKind, refuseUnlessDevelopment } from "./commands.js";
 import type { DbConnection } from "@devdogsuga/cli-core/db/connection";
 
 function connection(tier: DbConnection["tier"]): DbConnection {

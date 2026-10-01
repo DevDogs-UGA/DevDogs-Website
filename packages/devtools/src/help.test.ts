@@ -9,11 +9,14 @@
  * than it needs to" both fail silently.
  */
 import { describe, expect, it } from "vitest";
-import { helpPath, renderHelp } from "./help.js";
-import { allPaths, findCommand, SCOPES, TOP_LEVEL } from "./commands.js";
+import { helpPath, renderHelp } from "@devdogsuga/cli-core/help";
+import { SCOPES } from "@devdogsuga/cli-core/catalog";
+import { catalog } from "./catalog.js";
+
+const { allPaths, findCommand, topLevel: TOP_LEVEL } = catalog;
 
 describe("the top level", () => {
-  const root = renderHelp();
+  const root = renderHelp(catalog);
 
   it("fits on a screen", () => {
     // The old one was 190. A bound rather than a snapshot: this should be free
@@ -53,7 +56,7 @@ describe("the top level", () => {
    * fifteen-line list from making the reader guess which is which.
    */
   it("heads each layer of db, in scope order", () => {
-    const db = renderHelp(["db"]);
+    const db = renderHelp(catalog, ["db"]);
     const machine = db.indexOf(SCOPES.machine.help);
     const repo = db.indexOf(SCOPES.repo.help);
     const endpoint = db.indexOf(SCOPES.endpoint.help);
@@ -139,7 +142,7 @@ describe("the top level", () => {
 
 describe("a level down", () => {
   it("lists a group's subcommands and stops", () => {
-    const env = renderHelp(["env"]);
+    const env = renderHelp(catalog, ["env"]);
     expect(env).toContain("pull");
     expect(env).toContain("audit");
     // env's own options belong to its subcommands, not to `env`.
@@ -148,7 +151,7 @@ describe("a level down", () => {
   });
 
   it("lists a leaf's options and has no subcommand section", () => {
-    const pull = renderHelp(["env", "pull"]);
+    const pull = renderHelp(catalog, ["env", "pull"]);
     expect(pull).toContain("--target");
     expect(pull).toContain("--access-token");
     expect(pull).not.toContain("Subcommands:");
@@ -156,14 +159,14 @@ describe("a level down", () => {
 
   it("renders every path in the tree", () => {
     for (const path of allPaths()) {
-      const text = renderHelp(path);
+      const text = renderHelp(catalog, path);
       expect(text, path.join(" ")).toContain(findCommand(path)!.summary);
       expect(text, path.join(" ")).toContain(`pnpm devtools ${path.join(" ")}`);
     }
   });
 
   it("falls back to the top level for a name that is not a command", () => {
-    expect(renderHelp(["nonsense"])).toBe(renderHelp());
+    expect(renderHelp(catalog, ["nonsense"])).toBe(renderHelp(catalog));
   });
 });
 

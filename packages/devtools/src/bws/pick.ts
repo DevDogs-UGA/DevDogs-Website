@@ -22,10 +22,7 @@
 import { select } from "@clack/prompts";
 import type { VaultTarget } from "@devdogsuga/env";
 import { loadEnv } from "@devdogsuga/cli-core/repo/peers";
-import {
-  noVaultProjectHints,
-  NoVaultProjectError,
-} from "./bws/environments.js";
+import { noVaultProjectHints, NoVaultProjectError } from "./environments.js";
 import { explain, unwrap } from "@devdogsuga/cli-core/ui";
 
 /** Short enough to sit beside the name; the specs' summaries are paragraphs. */

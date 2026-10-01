@@ -1,4 +1,5 @@
 /** `pnpm devtools emails [template…] [--format html,text] [--out dir]`. */
+import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
@@ -180,3 +181,8 @@ export async function runEmails(argv: string[]): Promise<void> {
     process.exitCode = 1;
   }
 }
+
+export const handleEmails: CommandHandler = async (rest) => {
+  await runEmails(rest);
+  return DONE;
+};

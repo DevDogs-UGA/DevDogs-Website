@@ -12,23 +12,21 @@
  * A contributor who does not know a command name is the entire audience for
  * this file.
  *
- * Walking `commands.ts` means an interactive command added there is in the
+ * Walking the catalog means an interactive command added there is in the
  * menu the same day, with its options. Commands marked `cli-only` and deploy
  * commands in the separate `devtools-ci` bin do not appear here.
  */
 import { confirm, note, select, text } from "@clack/prompts";
 import { positionals } from "@devdogsuga/cli-core/args";
 import {
-  findCommand,
-  GROUPS,
   SCOPES,
+  type Catalog,
   type CommandGroup,
   type CommandNode,
   type CommandOption,
-} from "./commands.js";
+} from "./catalog.js";
 import { takeMenuEnvHook } from "@devdogsuga/cli-core/env-entry";
 import {
-  blockedBecause,
   describeEnvironment,
   isOffered,
   probeEnvironment,
@@ -66,21 +64,9 @@ function offered(
   );
 }
 
-/**
- * The line beside a name, with whatever is standing in this command's way.
- *
- * The reader learns a command needs something standing in its way *before*
- * choosing it, instead of after a spinner and a connection error — `db
- * start`'s `when: "instance-stopped"` is the one still in the tree today. The
- * command stays selectable when it merely `needs` rather than requires the
- * condition to be shown at all: the check is a probe, the probe can be
- * wrong, and the command's own failure message is the authority on whether
- * it can run.
- */
-function hintFor(node: CommandNode, env: Environment): string {
-  const base = node.hint ?? node.summary;
-  const blocked = blockedBecause(node, env);
-  const said = blocked ? `${base} — ${blocked}` : base;
+/** The line beside a name. */
+function hintFor(node: CommandNode): string {
+  const said = node.hint ?? node.summary;
 
   // The scope leads, because in the one group that has scopes it is the thing
   // the reader is actually choosing between: `restart` and `reset` sit four
@@ -90,11 +76,14 @@ function hintFor(node: CommandNode, env: Environment): string {
 
 // ── Screens ──────────────────────────────────────────────────────────────────
 
-async function pickGroup(env: Environment): Promise<CommandGroup | null> {
+async function pickGroup(
+  catalog: Catalog,
+  env: Environment,
+): Promise<CommandGroup | null> {
   // A group whose every command is hidden has nothing behind its door, so the
   // door is not drawn. No group in the tree can empty out today; this is here
   // so that a later `when` cannot leave a dead entry on the first screen.
-  const groups = GROUPS.filter(
+  const groups = catalog.groups.filter(
     (group) => offered(group.commands, env).length > 0,
   );
 
@@ -135,7 +124,7 @@ async function pickCommand(
         ...commands.map((command) => ({
           value: command,
           label: command.name,
-          hint: hintFor(command, env),
+          hint: hintFor(command),
         })),
         BACK_OPTION,
       ],
@@ -154,7 +143,7 @@ async function pickSubcommand(
         ...offered(node.subcommands ?? [], env).map((child) => ({
           value: child,
           label: child.name,
-          hint: hintFor(child, env),
+          hint: hintFor(child),
         })),
         BACK_OPTION,
       ],
@@ -176,7 +165,7 @@ async function askOption(option: CommandOption): Promise<string[]> {
   if (!prompt) return [];
 
   if (prompt.kind === "confirm") {
-    // Yes adds the flag, always. `commands.ts` phrases every message so that
+    // Yes adds the flag, always. each option's declaration phrases every message so that
     // this needs no per-option inversion.
     const yes = unwrap(
       await confirm({ message: prompt.message, initialValue: prompt.initial }),
@@ -266,18 +255,19 @@ async function descendFrom(
  * `pickGroup`.
  */
 async function walk(
+  catalog: Catalog,
   env: Environment,
   startPath?: string[],
 ): Promise<Chosen | null> {
   if (startPath) {
-    const start = findCommand(startPath);
+    const start = catalog.findCommand(startPath);
     if (!start) return null; // defensive: the caller guarantees a group node
     const chosen = await descendFrom(start, [...startPath], env);
     return chosen === BACK ? null : chosen;
   }
 
   for (;;) {
-    const group = await pickGroup(env);
+    const group = await pickGroup(catalog, env);
     if (!group) return null;
 
     const first = await pickCommand(group, env);
@@ -299,10 +289,13 @@ async function walk(
  * wizard already covers). The caller resumes the wizard at this node when
  * stdin is a TTY; a non-TTY caller keeps the dispatcher's "which of …?" exit.
  */
-export function bareGroupStartPath(argv: readonly string[]): string[] | null {
+export function bareGroupStartPath(
+  catalog: Catalog,
+  argv: readonly string[],
+): string[] | null {
   const path = positionals(argv);
   if (path.length === 0) return null;
-  const node = findCommand(path);
+  const node = catalog.findCommand(path);
   if (!node || (node.subcommands ?? []).length === 0) return null;
   return path;
 }
@@ -313,7 +306,7 @@ export function bareGroupStartPath(argv: readonly string[]): string[] | null {
  * Runs the wizard, returning the `outro()` line its command earned.
  *
  * `dispatch` is the CLI's own argv handler, injected rather than imported so
- * that `cli.ts` keeps a single definition of what each command does and the
+ * that the CLI keeps a single definition of what each command does and the
  * tests can watch what a walk produces without running it. Its return value
  * passes straight through, the closing line or `null` for a failure already
  * explained, so a command reached from the menu signs off exactly as it does
@@ -341,6 +334,7 @@ export function bareGroupStartPath(argv: readonly string[]): string[] | null {
  * through, unchanged from before this existed.
  */
 export async function runMenu(
+  catalog: Catalog,
   dispatch: (argv: string[]) => Promise<string | null>,
   env: Environment = probeEnvironment(),
   options: {
@@ -354,7 +348,7 @@ export async function runMenu(
   // instead of the one they happen to run on.
   note(describeEnvironment(env), "This machine");
 
-  const chosen = await walk(env, options.startPath);
+  const chosen = await walk(catalog, env, options.startPath);
   // Quitting is not a failure, but it has nothing to announce either.
   if (!chosen) return null;
 

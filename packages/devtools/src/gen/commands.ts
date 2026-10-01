@@ -4,6 +4,7 @@
  * `gen og-assets` and `gen email-templates` delegate to the owning package
  * scripts via pnpm. `gen campus-map` and `gen hypno` are devtools-owned.
  */
+import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { run } from "@devdogsuga/cli-core/db/run";
 import { runGenCampusMap } from "./campus-map.js";
 import { runGenHypno } from "./hypno.js";
@@ -28,3 +29,8 @@ export async function runGen(argv: readonly string[]): Promise<number> {
   );
   return 1;
 }
+
+export const handleGen: CommandHandler = async (rest) => {
+  process.exitCode = await runGen(rest);
+  return DONE;
+};

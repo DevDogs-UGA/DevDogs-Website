@@ -13,6 +13,7 @@
  * bug that made the Supabase CLI look for `supabase_db_platform`. It resolves
  * from `findRepoRoot()` now and works from anywhere.
  */
+import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
@@ -26,14 +27,14 @@ import {
   text,
 } from "@clack/prompts";
 import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
-import { renderInit, resolveSections } from "./env/example.js";
+import { renderInit, resolveSections } from "../env/example.js";
 import { discoverRepoRoot } from "@devdogsuga/cli-core/repo/root";
-import { EnvDocument } from "./env/document.js";
+import { EnvDocument } from "../env/document.js";
 import { dbPush } from "@devdogsuga/cli-core/db/run";
-import { validateSessionPoolerUrl } from "./db/pooler.js";
-import { runOAuthSetup } from "./oauth/wizard.js";
-import type { ConnectTarget } from "./oauth/target.js";
-import { runEnvironmentDoctor } from "./environment-doctor.js";
+import { validateSessionPoolerUrl } from "../db/pooler.js";
+import { runOAuthSetup } from "../oauth/wizard.js";
+import type { ConnectTarget } from "../oauth/target.js";
+import { runEnvironmentDoctor } from "../doctor/commands.js";
 import { unwrap } from "@devdogsuga/cli-core/ui";
 
 function has(cmd: string, args: string[] = ["--version"]): string | null {
@@ -375,3 +376,8 @@ async function promptSecretValue(
     }),
   ).trim();
 }
+
+export const handleSetup: CommandHandler = async () => {
+  await runSetup();
+  return DONE;
+};

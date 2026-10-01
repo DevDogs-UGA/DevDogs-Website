@@ -1,4 +1,5 @@
 /** Config-derived listing and manual triggering for Cloudflare Workflows. */
+import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -984,3 +985,9 @@ export async function runWorkflows(argv: readonly string[]): Promise<number> {
   );
   return 1;
 }
+
+export const handleWorkflows: CommandHandler = async (rest) => {
+  const code = await runWorkflows(rest);
+  process.exitCode = code;
+  return code === 0 ? DONE : null;
+};

@@ -34,18 +34,16 @@
  *     `import` of `@devdogsuga/docs` anywhere in the eager graph would
  *     deadlock `pnpm build` on itself.
  *
- * ## Turbo's `^build` ordering, in pnpm terms
+ * ## Building dependencies first, in pnpm terms
  *
- * Turbo's task graph guaranteed that a package's workspace dependencies were
- * built before the task ran against it — `dependsOn: ["^build"]` in the old
- * `turbo.json`, for every task in `NEEDS_DEPS_BUILT` below. pnpm has no single
- * flag that means the same thing, but it has the two pieces that compose into
- * it: `<pkg>^...` selects only the direct and indirect DEPENDENCIES of a
+ * A package's workspace dependencies have to be built before a task runs
+ * against it, for every task in `NEEDS_DEPS_BUILT` below. pnpm has no single
+ * flag that means this, but it has the two pieces that compose into it: `<pkg>^...` selects only the direct and indirect DEPENDENCIES of a
  * package (excluding the package itself), and plain recursive `pnpm -r` runs
  * scripts in dependency order (a package's own dependencies always run before
  * it). So building the deps-of set with `-r --filter '<pkg>^...' run build`
- * and then running the real task against the package itself reproduces
- * turbo's ordering with two spawns instead of turbo's one.
+ * and then running the real task against the package itself gives that
+ * ordering with two spawns.
  *
  * `@devdogsuga/email` is the one package that needs its OWN build before its
  * OWN typecheck/test, not just its dependencies' — its build step generates
@@ -92,7 +90,7 @@ function memoryPath(): string {
 
 /**
  * pnpm's own ways of naming packages, plus `--scope` for backward
- * compatibility with anyone who still types the turbo-era flag out of habit.
+ * compatibility with anyone who still types the old flag out of habit.
  * Any of them means "already decided" for `shouldAsk`; `--scope`'s value is
  * translated into a `--filter` when a command actually gets built, since pnpm
  * itself has no `--scope` flag.
@@ -100,11 +98,10 @@ function memoryPath(): string {
 const FILTERS = ["--filter", "-F", "--scope"];
 
 /**
- * Tasks whose turbo definition depended on `^build` — the packages a target
- * depends on must be built first. Everything else forwarded through `run`
- * (`generate-types`, and any package script not in this list) needs no
- * dependency build: turbo's `generate-types` declared no `dependsOn` at all,
- * and nothing else is routed through the root aliases this picker serves.
+ * Tasks that need the packages a target depends on built first. Everything
+ * else forwarded through `run` (`generate-types`, and any package script not
+ * in this list) needs no dependency build, and nothing else is routed through
+ * the root aliases this picker serves.
  */
 const NEEDS_DEPS_BUILT = new Set([
   "build",
@@ -155,8 +152,8 @@ function runOne(
     // workspace root from an unfiltered recursive run by default), but an
     // explicit `--filter` naming the root package — or a `!`-exclusion or
     // `[since]` selector, both of which DO match the root even though a bare
-    // `-r` does not — would. `DEVDOGS_PICK=0` is the same recursion guard
-    // turbo's spawn used: it means "already decided", so a root script that
+    // `-r` does not — would. `DEVDOGS_PICK=0` is the recursion
+    // guard: it means "already decided", so a root script that
     // re-entered `pnpm devtools run …` would pass straight through instead of
     // asking again.
     env: { ...process.env, ...extraEnv, DEVDOGS_PICK: "0" },
@@ -185,11 +182,8 @@ function runOne(
  * Runs a sequence of `pnpm` invocations — typically "build the dependencies",
  * then "run the actual task" — stopping (and exiting non-zero) at the first
  * one that fails, and exiting with the LAST one's status otherwise. This is
- * what stands in for turbo's single-process task graph: turbo built
- * dependencies and ran the target task inside one invocation, so a dependency
- * build failure and a task failure looked identical from the outside (a
- * failed `turbo run`); this reproduces that from the outside by never
- * reaching the second spawn if the first one failed.
+ * what makes a dependency build failure and a task failure look identical
+ * from the outside: the second spawn is never reached if the first one failed.
  *
  * Never returns: every branch inside `runOne` either exits or re-raises a
  * signal.
@@ -238,7 +232,7 @@ export function shouldAsk(args: string[]): boolean {
  * package patterns named and the remaining args with those flags removed.
  *
  * `--scope` is folded into the same bucket as `--filter` here: pnpm has no
- * `--scope` flag of its own, so a caller who still types the turbo-era name
+ * `--scope` flag of its own, so a caller who still types the old name
  * gets it translated into a real `--filter` value rather than passed through
  * to a `pnpm` invocation that would reject it outright.
  *
@@ -311,7 +305,7 @@ function allAppNames(): string[] {
  *
  * The first spawn's filter set matters more than it looks: it must build
  * every dependency the target packages need, and NOTHING ELSE — never an
- * app's own `build` script, since turbo's `^build` never ran one either
+ * app's own `build` script, since a dependency build never includes the target's own
  * (typechecking `platform` built platform's DEPENDENCIES, then ran
  * `platform`'s `typecheck` script; it never ran `platform`'s own `build`).
  * Getting this wrong is not just wasted work: an app's `build` script can
@@ -336,12 +330,10 @@ function allAppNames(): string[] {
  * — `--parallel` "completely disregard[s] concurrency and topological
  * sorting, running a given script immediately in all matching packages with
  * prefixed streaming output" (pnpm's own words for the flag), which is
- * exactly the live, interleaved multi-app output turbo's `dev` gave. Every
- * other task keeps pnpm's default topological/serial recursion, which is a
- * real difference from turbo: turbo ran independent tasks (lint, typecheck,
- * test across several apps) concurrently up to its own concurrency limit,
- * while this runs them one package at a time. Slower on a multi-app
- * selection, never wrong.
+ * exactly the live, interleaved multi-app output a dev run wants. Every other
+ * task keeps pnpm's default topological/serial recursion: independent tasks
+ * (lint, typecheck, test across several apps) run one package at a time.
+ * Slower on a multi-app selection, never wrong.
  *
  * `build` with no filter (the whole workspace) is the one case that skips
  * the separate dependency spawn even though it is in `NEEDS_DEPS_BUILT`: a

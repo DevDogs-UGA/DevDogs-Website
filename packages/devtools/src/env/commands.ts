@@ -33,16 +33,24 @@
  *   * **Values are never printed.** Fingerprints tell a rotation from a paste
  *     error and cannot be used to reconstruct anything.
  */
+import { flagValue, positionals } from "@devdogsuga/cli-core/args";
+import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
+import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
+import { recordResolved } from "@devdogsuga/cli-core/invocation";
+import { catalog } from "../catalog.js";
+import { resolveVaultTarget } from "../bws/pick.js";
+import { runEnvExample, runEnvInit } from "./example.js";
 import { chmod, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { confirm, log, note } from "@clack/prompts";
 import type { EnvTarget } from "@devdogsuga/env";
-import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
+import { getEnvSync, loadEnv } from "@devdogsuga/cli-core/repo/peers";
 import {
   createSecret,
   listSecrets as listBwsSecrets,
   byKey,
   projectIdFor,
+  setExplicitAccessToken,
   updateSecret,
 } from "../bws/client.js";
 import {
@@ -50,7 +58,7 @@ import {
   assertVaultTarget,
   type VaultTarget,
 } from "../bws/environments.js";
-import { fingerprint } from "../fingerprint.js";
+import { fingerprint } from "./fingerprint.js";
 import {
   listSecrets as listGhSecrets,
   listVariables as listGhVariables,
@@ -84,7 +92,13 @@ import {
   selectForPush,
 } from "./selection.js";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
-import { bail, errorMessage, explain, unwrap } from "@devdogsuga/cli-core/ui";
+import {
+  bail,
+  errorMessage,
+  explain,
+  explainError,
+  unwrap,
+} from "@devdogsuga/cli-core/ui";
 
 export interface EnvOptions {
   /**
@@ -785,3 +799,152 @@ export async function runEnvReset(
       "will fill them back in from Bitwarden.",
   );
 }
+
+/**
+ * `env <pull|push|audit> --target <preflight|staging|production>`, plus the
+ * three local-only subcommands: `reset`, `example [--check]`, and
+ * `init [--target <target>]`.
+ *
+ * The target has no default for pull/push/audit, and is asked for when
+ * `--target` is absent. Every other command here defaults to the local stack
+ * because guessing wrong is free; guessing wrong about whose credentials to
+ * overwrite is not. (`init` does default, to development: it refuses to touch
+ * an existing file, so the worst a wrong guess can do is create a blank one.)
+ *
+ * One flag, one vocabulary. `--target` names a row in the target table, and
+ * the file, the Bitwarden project and whether `DEPLOY_ENV` may say it all come
+ * from that row. Its predecessor `--env` named one of two different enums
+ * depending on which subcommand read it, which is why `init --env staging`
+ * wrote `.env.staging` while `push --env staging` uploaded `.env`.
+ */
+async function runEnvCommand(rest: string[]): Promise<void> {
+  const { ENV_TARGETS, isEnvTarget } = await loadEnv();
+  // `positionals` rather than `rest[0]`, so a flag before the subcommand does
+  // not become the subcommand -- and, more to the point, so the VALUE of a flag
+  // never does: in `env --file production pull`, `production` is a filename and
+  // must not be read as anything else.
+  const [sub] = positionals(rest);
+
+  // Validated against the command tree rather than a list kept here. One
+  // declaration means a subcommand cannot exist in the CLI and be missing
+  // from the menu, or the reverse.
+  if (!sub || !catalog.subcommandNames(["env"]).includes(sub)) {
+    log.error(`Unknown env subcommand: ${sub ?? "(none)"}`);
+    log.message(`Try ${catalog.subcommandList(["env"])}.`);
+    process.exitCode = 1;
+    return;
+  }
+
+  // `reset` only edits a local file. Asking which target to clear it against
+  // would imply it reaches one, which is the opposite of what it does.
+  if (sub === "reset") {
+    try {
+      await runEnvReset({
+        file: flagValue(rest, "--file"),
+        yes: rest.includes("--yes"),
+      });
+    } catch (err) {
+      explainError("The reset failed.", err);
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  // Every remaining subcommand reads the registry, which fills only when the
+  // env manifests are imported. Loaded HERE, lazily, rather than at CLI
+  // start: the import pass touches a manifest in nearly every workspace
+  // package, and `pnpm devtools db reset` (or any stack command) should not pay
+  // for declarations it never reads. `env reset` returned above for the
+  // same reason: it edits the local file and consults no key set.
+  await loadRegistry();
+
+  // `example` and `init` are pure registry → text. They return BEFORE the
+  // Bitwarden token lookup and the pull/push target prompt, and must
+  // keep doing so: CI's credential-free validate job runs `example --check`,
+  // and a generator that needed a secret to describe the secrets could not
+  // live there.
+  if (sub === "example") {
+    try {
+      await runEnvExample({ check: rest.includes("--check") });
+    } catch (err) {
+      explainError("Generating .env.example failed.", err);
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  if (sub === "init") {
+    // Every target, including `development` and `preflight`: init maps target
+    // → file and nothing else, and every target has a file. It is the one
+    // subcommand here that needs no Bitwarden project, though WHAT it writes
+    // now depends on the target. See `example.ts`'s header for why a vault
+    // target's file is not the development one under a different name.
+    const given = flagValue(rest, "--target") ?? "development";
+    if (!isEnvTarget(given)) {
+      explain(`"${given}" is not a target init can create a file for.`, "", [
+        `Pass --target ${ENV_TARGETS.join(" | ")} (default: development).`,
+      ]);
+      process.exitCode = 1;
+      return;
+    }
+    try {
+      // `--apps` (development only): which projects' sections to render, as
+      // comma-separated app names, plus `devtools` for the operator role.
+      // Absent at a terminal, init asks; absent in a pipe, it renders
+      // everything, which is what every pre-picker caller got.
+      await runEnvInit(given, flagValue(rest, "--apps") ?? undefined);
+    } catch (err) {
+      explainError("env init failed.", err);
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  // The question names the direction, because the answer means something
+  // different each way: pull overwrites your file, push overwrites theirs.
+  const target = await resolveVaultTarget(
+    flagValue(rest, "--target"),
+    sub === "pull"
+      ? "Which target should I pull into its env file?"
+      : sub === "push"
+        ? "Which target should I push its env file to?"
+        : "Which target should I audit?",
+  );
+  if (!target) {
+    process.exitCode = 1;
+    return;
+  }
+
+  // A target chosen at the prompt (not passed as a flag) is what the rerun
+  // line needs to skip that prompt next time.
+  if (flagValue(rest, "--target") === undefined) {
+    recordResolved("--target", target);
+  }
+
+  // Before any command runs, so every `bws` call in it sees the same token.
+  setExplicitAccessToken(flagValue(rest, "--access-token"));
+
+  const options = {
+    target,
+    file: flagValue(rest, "--file"),
+    yes: rest.includes("--yes"),
+  };
+
+  try {
+    if (sub === "pull") await runEnvPull(options);
+    else if (sub === "push") await runEnvPush(options);
+    else await runEnvAudit(options);
+  } catch (err) {
+    explainError("The env command failed.", err, [
+      "The access token is read from --access-token, then BWS_ACCESS_TOKEN,",
+      "then your Bitwarden vault, and finally by asking.",
+      "`gh auth status` shows whether the GitHub CLI is signed in.",
+    ]);
+    process.exitCode = 1;
+  }
+}
+
+export const handleEnv: CommandHandler = async (rest) => {
+  await runEnvCommand(rest);
+  return DONE;
+};

@@ -55,7 +55,7 @@ vi.mock("@devdogsuga/cli-core/repo/supabase-project", async () => {
 });
 
 const refreshSessionEnv = vi.fn(async () => ["refreshed .env.generated"]);
-vi.mock("./db/session-refresh.js", () => ({
+vi.mock("./session-refresh.js", () => ({
   refreshSessionEnv: () => refreshSessionEnv(),
 }));
 

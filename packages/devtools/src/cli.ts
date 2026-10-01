@@ -9,943 +9,135 @@
  * The subcommands still exist for anyone who does know them, and for CI, which
  * cannot answer a prompt.
  *
- * ## Three files, one tree
+ * ## One tree, many handlers
  *
- * `commands.ts` holds the command tree as data. `help.ts` renders one level of
- * it at a time, and `menu.ts` walks it into an argv that comes back through
+ * `catalog.ts` composes the command tree from each domain's `catalog.ts`
+ * (inert data). `help.ts` and `menu.ts` in `@devdogsuga/cli-core` render and
+ * walk it, and the menu turns a walk into an argv that comes back through
  * `dispatch()` below, the same entry a typed command line takes. That is why
  * the menu covers everything the CLI does: there is no second list of commands
- * anywhere, so there is nothing to fall out of step.
+ * anywhere, so there is nothing to fall out of step. Each domain's
+ * `commands.ts` owns its handlers; this file only maps names to them.
  */
-import {
-  confirm,
-  intro,
-  log,
-  note,
-  outro,
-  select,
-  spinner,
-} from "@clack/prompts";
-import { resolveInstance, type Instance } from "@devdogsuga/cli-core/instance";
-import { conformance, withTemporaryModerator } from "./moderation.js";
-import { runPersona, refuseUnlessDevelopment } from "./persona.js";
-import { runEnvironmentDoctor } from "./environment-doctor.js";
-import {
-  currentRootHolder,
-  grantRoot,
-  listCandidates,
-  transferRoot,
-} from "./grantRoot.js";
-import {
-  connectRemoteProject,
-  runStackCommand,
-  type StackCommand,
-} from "./stack.js";
-import { runConfigPush } from "./db/config-push.js";
-import {
-  describeDbTarget,
-  isLocalConnection,
-  resolveDbConnection,
-  type DbConnection,
-} from "@devdogsuga/cli-core/db/connection";
-import { runDbExec } from "./db/exec.js";
-import { runGenerateTypes } from "./db/generate-types.js";
-import { runIntrospect } from "./db/introspect.js";
-import { runNewMigration } from "./db/new-migration.js";
-import { runSeedBuckets } from "./db/seed-buckets.js";
-import { runSeedProduction } from "./db/seed-production.js";
-import { runSeedRoles } from "./db/seed-roles.js";
-import { runOAuthSetup } from "./oauth/wizard.js";
+import { intro, log, note, outro } from "@clack/prompts";
+import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
+import { helpPath, renderHelp } from "@devdogsuga/cli-core/help";
 import {
   beginInvocation,
   recordEnteredTier,
-  recordResolved,
   reproducibleCommand,
 } from "@devdogsuga/cli-core/invocation";
-import { runSetup } from "./setup.js";
-import { readCatalog, renderCatalog } from "./catalog.js";
-import {
-  runEnvAudit,
-  runEnvPull,
-  runEnvPush,
-  runEnvReset,
-} from "./env/commands.js";
-import { runEnvExample, runEnvInit } from "./env/example.js";
-
-import {
-  runPlannerCreate,
-  runPlannerDrop,
-  runPlannerResetPassword,
-  runPlannerStatus,
-} from "./planner/commands.js";
-import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
-import { loadEnv } from "@devdogsuga/cli-core/repo/peers";
-import { setExplicitAccessToken } from "./bws/client.js";
-import { positionals } from "@devdogsuga/cli-core/args";
-import { resolveVaultTarget } from "./pick.js";
-import {
-  bail,
-  errorMessage,
-  explain,
-  explainError,
-  renderChecks,
-  unwrap,
-} from "@devdogsuga/cli-core/ui";
-import { helpPath, renderHelp } from "./help.js";
-import { subcommandList, subcommandNames } from "./commands.js";
-import { bareGroupStartPath, runMenu } from "./menu.js";
-import { runDocsIndex } from "./docs/index-pages.js";
-import { runTask } from "./run/pick.js";
-import { runCompletions } from "./completions.js";
-import { runBw } from "./bws/bw.js";
-import { runImages } from "./images/commands.js";
-import { runEmails } from "./emails/commands.js";
-import { runGen } from "./gen/commands.js";
-import { runCronList, runCronRun } from "./cron/commands.js";
-import { runGithubRulesets } from "./gh/rulesets/commands.js";
-import { runGithubSettings } from "./gh/settings/commands.js";
-import { runWorkflows } from "./workflows/commands.js";
-import { runCf } from "./cf/commands.js";
+import { bareGroupStartPath, runMenu } from "@devdogsuga/cli-core/menu";
 import {
   captureDevtoolsError,
   initDevtoolsTelemetry,
 } from "@devdogsuga/cli-core/telemetry";
+import { errorMessage, explain } from "@devdogsuga/cli-core/ui";
 import { ownVersion } from "@devdogsuga/cli-core/version";
-
-function flagValue(rest: string[], flag: string): string | undefined {
-  const index = rest.indexOf(flag);
-  if (index === -1) return undefined;
-  const value = rest[index + 1];
-  return value && !value.startsWith("--") ? value : undefined;
-}
-
-/**
- * The retired flags a `db` invocation can still carry from muscle memory or
- * an old script. Refused loudly, never ignored: a flag that looks like it
- * selects the database while actually deciding nothing is exactly the
- * silent lie the session vocabulary replaced. The session (`--tier
- * development:local|development:remote|staging|production`, settled by the
- * launcher before dispatch) is the ONE selector now.
- */
-function refuseRetiredDbFlags(rest: readonly string[]): boolean {
-  for (const flag of ["--target", "--team"]) {
-    if (rest.includes(flag)) {
-      process.stderr.write(
-        `devtools db: ${flag} is retired. The session already names the ` +
-          "database — relaunch with --tier development:local, " +
-          "development:remote, staging, or production.\n",
-      );
-      process.exitCode = 1;
-      return true;
-    }
-  }
-  return false;
-}
-
-// ── Commands ─────────────────────────────────────────────────────────────────
-
-async function runStack(command: StackCommand, rest: string[]): Promise<void> {
-  // The data commands need the session's connection before anything else —
-  // including before the reset confirmation below, which has to name what it
-  // is about to erase. The lifecycle commands (`start`/`stop`/`restart`)
-  // skip resolution outright: they act on this machine's containers, and
-  // `db start` is the FIX for the very state resolution would refuse on.
-  // `status` resolves quietly and treats "nothing resolvable" as an answer.
-  let connection: DbConnection | null = null;
-  if (command === "migrate" || command === "reset") {
-    connection = await resolveDbConnection({ label: `devtools db ${command}` });
-    if (!connection) {
-      process.exitCode = 1;
-      return;
-    }
-  } else if (command === "status") {
-    connection = await resolveDbConnection({ quiet: true });
-  }
-
-  // `reset` drops everything, and a non-local `migrate` pushes straight to a
-  // shared database — both worth a question before they run. The local stack
-  // gets the harmless-sounding question, every hosted database a harder one
-  // naming exactly which, and production the hardest of all.
-  const local = connection !== null && isLocalConnection(connection);
-  if (
-    connection !== null &&
-    (command === "reset" || (command === "migrate" && !local))
-  ) {
-    if (!local) {
-      // Named up front, and ONLY the tier/host and project — never the
-      // DB_URL, which carries the password — so whoever is about to answer
-      // "yes" knows exactly what they are agreeing to.
-      log.message(
-        `This will ${command === "reset" ? "reset" : "push migrations to"} ${describeDbTarget(connection)}` +
-          (connection.projectRef
-            ? ` (project ${connection.projectRef}).`
-            : "."),
-      );
-    }
-
-    // ⚠️ SAFETY: gates every branch below, including production — `--yes` is
-    // the ONE way past any of them, checked before anything TTY-dependent
-    // runs. clack's `confirm()` never resolves without a TTY (reproduced
-    // against @clack/core@1.4.3), so a non-interactive caller without --yes
-    // must be refused outright rather than left to hang forever on a prompt
-    // nobody is there to answer.
-    if (!rest.includes("--yes")) {
-      if (!process.stdin.isTTY) {
-        process.stderr.write(
-          `devtools db ${command}: --yes is required to run non-interactively.\n`,
-        );
-        process.exitCode = 1;
-        return;
-      }
-
-      if (connection.tier === "production") {
-        // Production gets the sternest wording of the three: this is the one
-        // database in this whole CLI that must never be touched by a
-        // reflexive keystroke.
-        const confirmed = unwrap(
-          await confirm({
-            message:
-              (command === "reset"
-                ? "This PERMANENTLY ERASES the PRODUCTION database "
-                : "This pushes new migrations to the PRODUCTION database ") +
-              `(project ${connection.projectRef ?? "unknown"}). Continue?`,
-            initialValue: false,
-          }),
-        );
-        if (!confirmed) bail("Left the database alone.");
-      } else {
-        const confirmed = unwrap(
-          await confirm({
-            message:
-              command === "reset"
-                ? local
-                  ? "This erases your local database and rebuilds it. Continue?"
-                  : `This erases ${describeDbTarget(connection)} and rebuilds it. Continue?`
-                : `This pushes new migrations to ${describeDbTarget(connection)}. Continue?`,
-            initialValue: local,
-          }),
-        );
-        if (!confirmed) bail("Left the database alone.");
-      }
-    }
-  }
-
-  try {
-    const { code, lines } = await runStackCommand(command, connection);
-    for (const line of lines) log.message(line);
-    if (code !== 0) {
-      // Lines on a failure ARE the explanation, which is the contract with
-      // `runStackCommand`. "Scroll up for the Supabase CLI's output" is only
-      // true when a delegated script ran, and pointing a reader at output that
-      // does not exist is worse than adding nothing. A failure with scrollback
-      // worth reading says so in its own line.
-      if (lines.length === 0) {
-        explain(`\`${command}\` did not finish cleanly.`, "", [
-          "Scroll up for the output from the Supabase CLI.",
-        ]);
-      }
-      process.exitCode = code;
-    }
-  } catch (err) {
-    explainError(`\`${command}\` failed.`, err);
-    process.exitCode = 1;
-  }
-}
-
-/**
- * `moderation check [--app <slug>]`.
- *
- * With no app, this is what `moderation catalog` used to be on its own: the
- * report reasons and every app's moderatable content types, the two halves
- * of "what can be reported here" that used to have no answer anywhere but
- * the database. With one, it runs `platform.conformance_check()` for that
- * app, as it always did. Folded into one command because they were always
- * the same question at two different zoom levels, asked through two
- * differently-named commands for no reason better than history.
- *
- * Both halves run inside ONE `withTemporaryModerator` — one throwaway
- * account, created and torn down around whichever half ran, rather than a
- * separate one per RPC call.
- */
-async function runModerationCheck(
-  instance: Instance,
-  appSlug?: string,
-): Promise<void> {
-  if (!appSlug) {
-    const s = spinner();
-    s.start("Signing in as a temporary moderator");
-    try {
-      const catalog = await withTemporaryModerator(instance, readCatalog);
-      s.stop("Read the catalog");
-      note(renderCatalog(catalog), "Moderation catalog");
-    } catch (err) {
-      s.stop("Could not read the catalog");
-      explainError("Reading the catalog failed.", err);
-      process.exitCode = 1;
-    }
-    return;
-  }
-
-  const s = spinner();
-  s.start(`Checking ${appSlug}`);
-
-  let types: Awaited<ReturnType<typeof conformance>>;
-  try {
-    types = await withTemporaryModerator(instance, (client) =>
-      conformance(client, appSlug),
-    );
-    s.stop(`Checked ${appSlug}`);
-  } catch (err) {
-    s.stop("The check could not run");
-    explainError("conformance_check() failed.", err);
-    process.exitCode = 1;
-    return;
-  }
-
-  if (types.length === 0) {
-    note(
-      `${appSlug} has no moderatable content types.\n\n` +
-        "A table becomes one by carrying a foreign key to\n" +
-        'platform."reportResolutions" -- adding that column is the whole\n' +
-        "registration. See docs/platform/reporting-and-feedback.md.",
-      "Nothing to check",
-    );
-    return;
-  }
-
-  let failures = 0;
-  for (const type of types) {
-    const failed = type.checks.filter((c) => !c.ok).length;
-    failures += failed;
-    note(
-      renderChecks(type.checks),
-      `${type.tableName} → "${type.contentType}"`,
-    );
-  }
-
-  if (failures === 0) {
-    log.success(`${appSlug} looks correctly integrated.`);
-  } else {
-    log.warn(
-      `${failures} check${failures === 1 ? "" : "s"} failed. The last two are ` +
-        "heuristics over policy text, so a failure there is worth reading rather " +
-        "than trusting outright.",
-    );
-  }
-}
-
-/**
- * Grants Root, asking who to if it was not told.
- *
- * Transferring is a separate confirmation from granting, because they are
- * different actions wearing the same name: one gives you a console you did not
- * have, the other takes somebody else's away. `userRoles_root_singleton` means
- * there is no state where both hold it, so the release cannot be skipped.
- *
- * Runs on any tier the session resolves to now — `resolveInstance` (see
- * `instance.ts`) replaced the local-only `supabase status` probe this used
- * to go through — so a PRODUCTION target gets the same `--yes`/stern-confirm
- * treatment `db reset` does: this is a privilege escalation on whatever
- * database it runs against, and on production that database is live.
- */
-async function runGrantRoot(
-  connection: DbConnection,
-  instance: Instance,
-  userEmail: string | undefined,
-  rest: string[],
-): Promise<void> {
-  let holder: Awaited<ReturnType<typeof currentRootHolder>>;
-  let candidates: Awaited<ReturnType<typeof listCandidates>>;
-
-  try {
-    [holder, candidates] = await Promise.all([
-      currentRootHolder(instance),
-      listCandidates(instance),
-    ]);
-  } catch (err) {
-    explainError("Could not read the current roles.", err);
-    process.exitCode = 1;
-    return;
-  }
-
-  if (candidates.length === 0) {
-    explain("There are no accounts on this database yet.", "", [
-      "Sign in once through the app, then run this again.",
-      ...(connection.tier === "development"
-        ? ["Or create one: `pnpm devtools persona member`."]
-        : []),
-    ]);
-    return;
-  }
-
-  const chosen =
-    userEmail ??
-    unwrap(
-      await select({
-        message: "Which account should hold Root?",
-        options: candidates.map((c) => ({
-          value: c.email,
-          label: c.email,
-          hint: c.userId === holder?.userId ? "holds it now" : undefined,
-        })),
-      }),
-    );
-
-  const target = candidates.find((c) => c.email === chosen);
-
-  if (!target) {
-    explain(`No account on this database has the address ${chosen}.`, "", [
-      "Run without --user to pick from a list.",
-    ]);
-    process.exitCode = 1;
-    return;
-  }
-
-  if (holder?.userId === target.userId) {
-    log.info(`${target.email} already holds Root.`);
-    return;
-  }
-
-  const action = holder
-    ? `Take Root away from ${holder.email} and give it to ${target.email}`
-    : `Give ${target.email} Root, which confers every permission`;
-
-  if (connection.tier === "production") {
-    // ⚠️ SAFETY: same gate `runStack` uses for `db reset`/`migrate` — see
-    // that function's header for why `--yes` is checked before anything
-    // TTY-dependent runs.
-    if (!rest.includes("--yes")) {
-      if (!process.stdin.isTTY) {
-        process.stderr.write(
-          "devtools grant-root: --yes is required to run non-interactively.\n",
-        );
-        process.exitCode = 1;
-        return;
-      }
-      const confirmed = unwrap(
-        await confirm({
-          message: `${action} on the PRODUCTION database. Continue?`,
-          initialValue: false,
-        }),
-      );
-      if (!confirmed) bail("Left Root where it was.");
-    }
-  } else if (holder) {
-    // Transferring away from someone still asks, even off production —
-    // taking a console away from an existing holder is worth a question
-    // granting to nobody-yet-holding is not.
-    const confirmed = unwrap(
-      await confirm({
-        message: `Root is held by ${holder.email}. Take it away and give it to ${target.email}?`,
-        initialValue: false,
-      }),
-    );
-    if (!confirmed) bail("Left Root where it was.");
-  }
-
-  try {
-    if (holder) {
-      await transferRoot(instance, holder.userId, target.userId);
-    } else {
-      await grantRoot(instance, target.userId);
-    }
-    log.success(
-      `${target.email} now holds Root, which confers every permission. ` +
-        "Sign out and back in if the console was already open.",
-    );
-  } catch (err) {
-    explainError("Could not grant Root.", err, [
-      "Seeds create the Root role definition — try `pnpm devtools db reset` " +
-        "(development) or `pnpm devtools db seed production` (staging/production) first.",
-    ]);
-    process.exitCode = 1;
-  }
-}
-
-/**
- * `env <pull|push|audit> --target <preflight|staging|production>`, plus the
- * three local-only subcommands: `reset`, `example [--check]`, and
- * `init [--target <target>]`.
- *
- * The target has no default for pull/push/audit, and is asked for when
- * `--target` is absent. Every other command here defaults to the local stack
- * because guessing wrong is free; guessing wrong about whose credentials to
- * overwrite is not. (`init` does default, to development: it refuses to touch
- * an existing file, so the worst a wrong guess can do is create a blank one.)
- *
- * One flag, one vocabulary. `--target` names a row in the target table, and
- * the file, the Bitwarden project and whether `DEPLOY_ENV` may say it all come
- * from that row. Its predecessor `--env` named one of two different enums
- * depending on which subcommand read it, which is why `init --env staging`
- * wrote `.env.staging` while `push --env staging` uploaded `.env`.
- */
-async function runEnvCommand(rest: string[]): Promise<void> {
-  const { ENV_TARGETS, isEnvTarget } = await loadEnv();
-  // `positionals` rather than `rest[0]`, so a flag before the subcommand does
-  // not become the subcommand -- and, more to the point, so the VALUE of a flag
-  // never does: in `env --file production pull`, `production` is a filename and
-  // must not be read as anything else.
-  const [sub] = positionals(rest);
-
-  // Validated against the command tree rather than a list kept here. One
-  // declaration means a subcommand cannot exist in the CLI and be missing
-  // from the menu, or the reverse.
-  if (!sub || !subcommandNames(["env"]).includes(sub)) {
-    log.error(`Unknown env subcommand: ${sub ?? "(none)"}`);
-    log.message(`Try ${subcommandList(["env"])}.`);
-    process.exitCode = 1;
-    return;
-  }
-
-  // Refused by name rather than ignored. `--env` used to be this flag, and the
-  // words it took (`staging`, `production`) are still valid `--target` values,
-  // so a stale invocation would otherwise run with NO target: prompting, or
-  // failing as "nobody here to ask", neither of which says what changed.
-  if (rest.includes("--env")) {
-    explain("`--env` is now `--target`.", "", [
-      "It named two different things depending on the subcommand: which file",
-      "(init) and which Bitwarden project (pull/push/audit). --target names",
-      `one row: ${ENV_TARGETS.join(", ")}.`,
-      "wrangler, supabase and gh still have their own --env; this is ours.",
-    ]);
-    process.exitCode = 1;
-    return;
-  }
-
-  // `reset` only edits a local file. Asking which target to clear it against
-  // would imply it reaches one, which is the opposite of what it does.
-  if (sub === "reset") {
-    try {
-      await runEnvReset({
-        file: flagValue(rest, "--file"),
-        yes: rest.includes("--yes"),
-      });
-    } catch (err) {
-      explainError("The reset failed.", err);
-      process.exitCode = 1;
-    }
-    return;
-  }
-
-  // Every remaining subcommand reads the registry, which fills only when the
-  // env manifests are imported. Loaded HERE, lazily, rather than at CLI
-  // start: the import pass touches a manifest in nearly every workspace
-  // package, and `pnpm devtools db reset` (or any stack command) should not pay
-  // for declarations it never reads. `env reset` returned above for the
-  // same reason: it edits the local file and consults no key set.
-  await loadRegistry();
-
-  // `example` and `init` are pure registry → text. They return BEFORE the
-  // Bitwarden token lookup and the pull/push target prompt, and must
-  // keep doing so: CI's credential-free validate job runs `example --check`,
-  // and a generator that needed a secret to describe the secrets could not
-  // live there.
-  if (sub === "example") {
-    try {
-      await runEnvExample({ check: rest.includes("--check") });
-    } catch (err) {
-      explainError("Generating .env.example failed.", err);
-      process.exitCode = 1;
-    }
-    return;
-  }
-
-  if (sub === "init") {
-    // Every target, including `development` and `preflight`: init maps target
-    // → file and nothing else, and every target has a file. It is the one
-    // subcommand here that needs no Bitwarden project, though WHAT it writes
-    // now depends on the target. See `example.ts`'s header for why a vault
-    // target's file is not the development one under a different name.
-    const given = flagValue(rest, "--target") ?? "development";
-    if (!isEnvTarget(given)) {
-      explain(`"${given}" is not a target init can create a file for.`, "", [
-        `Pass --target ${ENV_TARGETS.join(" | ")} (default: development).`,
-      ]);
-      process.exitCode = 1;
-      return;
-    }
-    try {
-      // `--apps` (development only): which projects' sections to render, as
-      // comma-separated app names, plus `devtools` for the operator role.
-      // Absent at a terminal, init asks; absent in a pipe, it renders
-      // everything, which is what every pre-picker caller got.
-      await runEnvInit(given, flagValue(rest, "--apps") ?? undefined);
-    } catch (err) {
-      explainError("env init failed.", err);
-      process.exitCode = 1;
-    }
-    return;
-  }
-
-  // The question names the direction, because the answer means something
-  // different each way: pull overwrites your file, push overwrites theirs.
-  const target = await resolveVaultTarget(
-    flagValue(rest, "--target"),
-    sub === "pull"
-      ? "Which target should I pull into its env file?"
-      : sub === "push"
-        ? "Which target should I push its env file to?"
-        : "Which target should I audit?",
-  );
-  if (!target) {
-    process.exitCode = 1;
-    return;
-  }
-
-  // A target chosen at the prompt (not passed as a flag) is what the rerun
-  // line needs to skip that prompt next time.
-  if (flagValue(rest, "--target") === undefined) {
-    recordResolved("--target", target);
-  }
-
-  // Before any command runs, so every `bws` call in it sees the same token.
-  setExplicitAccessToken(flagValue(rest, "--access-token"));
-
-  const options = {
-    target,
-    file: flagValue(rest, "--file"),
-    yes: rest.includes("--yes"),
-  };
-
-  try {
-    if (sub === "pull") await runEnvPull(options);
-    else if (sub === "push") await runEnvPush(options);
-    else await runEnvAudit(options);
-  } catch (err) {
-    explainError("The env command failed.", err, [
-      "The access token is read from --access-token, then BWS_ACCESS_TOKEN,",
-      "then your Bitwarden vault, and finally by asking.",
-      "`gh auth status` shows whether the GitHub CLI is signed in.",
-    ]);
-    process.exitCode = 1;
-  }
-}
-
-/**
- * `db planner <status|create|reset-password|drop> [--db-url <url>]`
- *
- * Operator-side lifecycle of the `migration_planner` role. See
- * `planner/commands.ts` for the commands themselves and for why there is no
- * `retrieve`. Interactive by design (create and reset confirm before writing
- * to production), so unlike the `deploy` group it talks through clack and is
- * fine to run as plain `pnpm devtools db planner …`.
- */
-async function runPlannerCommand(rest: string[]): Promise<void> {
-  const [sub] = positionals(rest);
-  const options = { dbUrl: flagValue(rest, "--db-url") ?? undefined };
-
-  if (sub === "status") {
-    await runPlannerStatus(options);
-    return;
-  }
-  if (sub === "create") {
-    await runPlannerCreate(options);
-    return;
-  }
-  if (sub === "reset-password") {
-    await runPlannerResetPassword(options);
-    return;
-  }
-  if (sub === "drop") {
-    await runPlannerDrop(options);
-    return;
-  }
-
-  log.error(
-    sub
-      ? `devtools db planner: unknown subcommand "${sub}". Try ${subcommandList(["db", "planner"])}.`
-      : `devtools db planner: which of ${subcommandList(["db", "planner"])}?`,
-  );
-  process.exitCode = 1;
-}
-
-// ── Database ─────────────────────────────────────────────────────────────────
-
-/**
- * `db <subcommand> …` — the merged Supabase/Database group.
- *
- * One dispatcher, replacing the flat `isStackCommand`/`isDbCommand` checks
- * that used to sit in `dispatch` directly: every verb below (`start`,
- * `migrate`, `types`, `seed roles`, `planner status`, …) used to be its own
- * top-level command, so a bare `push` told the reader nothing about what it
- * touched. Nesting them under `db` is what lets `--help db` and the wizard
- * group them by `scope` (see `commands.ts`) instead of listing all of them
- * flat. `planner` keeps its own dispatcher unchanged; this just routes to it
- * one level deeper.
- */
-async function runDbCommand(rest: string[]): Promise<void> {
-  const { fileFor } = await loadEnv();
-  if (refuseRetiredDbFlags(rest)) return;
-
-  const [sub, ...subRest] = rest;
-
-  if (sub === "connect") {
-    const ref = subRest.find((arg) => !arg.startsWith("-"));
-    const code = await connectRemoteProject(ref);
-    process.exitCode = code === 0 ? 0 : 1;
-    return;
-  }
-
-  if (
-    sub === "start" ||
-    sub === "stop" ||
-    sub === "restart" ||
-    sub === "status" ||
-    sub === "migrate" ||
-    sub === "reset"
-  ) {
-    await runStack(sub, subRest);
-    return;
-  }
-
-  if (sub === "migration") {
-    const [msub, ...mrest] = subRest;
-
-    if (msub === "new") {
-      // Skip `--app`'s own value, so `new --app <slug> "<description>"`
-      // doesn't take the slug for the description.
-      const appAt = mrest.indexOf("--app");
-      const positional = mrest.filter(
-        (arg, i) => !arg.startsWith("-") && !(appAt >= 0 && i === appAt + 1),
-      );
-      const code = await runNewMigration(
-        flagValue(mrest, "--app"),
-        positional[0],
-      );
-      process.exitCode = code === 0 ? 0 : 1;
-      return;
-    }
-    log.error(
-      msub
-        ? `devtools db migration: unknown subcommand "${msub}". Try ${subcommandList(["db", "migration"])}.`
-        : `devtools db migration: which of ${subcommandList(["db", "migration"])}?`,
-    );
-    process.exitCode = 1;
-    return;
-  }
-
-  if (sub === "types") {
-    const connection = await resolveDbConnection({
-      label: "devtools db types",
-    });
-    if (!connection) {
-      process.exitCode = 1;
-      return;
-    }
-    const code = await runGenerateTypes(connection.dbUrl);
-    process.exitCode = code === 0 ? 0 : 1;
-    return;
-  }
-
-  if (sub === "seed") {
-    const [ssub] = subRest;
-
-    if (ssub === "buckets") {
-      const connection = await resolveDbConnection({
-        label: "devtools db seed buckets",
-      });
-      if (!connection) {
-        process.exitCode = 1;
-        return;
-      }
-      // `seed buckets` drives the Storage API, which has no `--db-url` mode
-      // (see `db/run.ts`), so this is the one data command still keyed on
-      // local-vs-hosted rather than handed the session's URL.
-      const code = await runSeedBuckets(
-        isLocalConnection(connection)
-          ? { kind: "local" }
-          : { kind: "remote", projectRef: connection.projectRef },
-      );
-      process.exitCode = code === 0 ? 0 : 1;
-      return;
-    }
-    if (ssub === "roles") {
-      const connection = await resolveDbConnection({
-        label: "devtools db seed roles",
-      });
-      if (!connection) {
-        process.exitCode = 1;
-        return;
-      }
-      const code = await runSeedRoles(connection.dbUrl);
-      process.exitCode = code === 0 ? 0 : 1;
-      return;
-    }
-    if (ssub === "production") {
-      const connection = await resolveDbConnection({
-        label: "devtools db seed production",
-      });
-      if (!connection) {
-        process.exitCode = 1;
-        return;
-      }
-
-      // Same non-local gate `runStack` uses for `reset`/`migrate`: named up
-      // front (tier/host only, never the DB_URL) and, absent --yes, refused
-      // outright for a non-interactive caller rather than left to hang on a
-      // prompt nobody is there to answer. `seed production` writes real rows
-      // to whatever it targets, so a staging or production session gets the
-      // same confirmation those destructive commands do; a local session
-      // (the common case — verifying the seed split, or repairing a local
-      // stack after `reset --no-seed`) does not, matching `seed
-      // buckets`/`seed roles` today.
-      if (!isLocalConnection(connection)) {
-        log.message(
-          `This will write supabase/seed/production/*.sql to ${describeDbTarget(connection)}` +
-            (connection.projectRef
-              ? ` (project ${connection.projectRef}).`
-              : "."),
-        );
-
-        if (!subRest.includes("--yes")) {
-          if (!process.stdin.isTTY) {
-            process.stderr.write(
-              "devtools db seed production: --yes is required to run non-interactively.\n",
-            );
-            process.exitCode = 1;
-            return;
-          }
-
-          const confirmed = unwrap(
-            await confirm({
-              message:
-                connection.tier === "production"
-                  ? "This writes the production seed set to the PRODUCTION database " +
-                    `(project ${connection.projectRef ?? "unknown"}). Continue?`
-                  : `This writes the production seed set to ${describeDbTarget(connection)}. Continue?`,
-              initialValue: false,
-            }),
-          );
-          if (!confirmed) bail("Left the database alone.");
-        }
-      }
-
-      const code = await runSeedProduction(connection.dbUrl);
-      process.exitCode = code === 0 ? 0 : 1;
-      return;
-    }
-
-    log.error(
-      ssub
-        ? `devtools db seed: unknown subcommand "${ssub}". Try ${subcommandList(["db", "seed"])}.`
-        : `devtools db seed: which of ${subcommandList(["db", "seed"])}?`,
-    );
-    process.exitCode = 1;
-    return;
-  }
-
-  if (sub === "introspect") {
-    const code = await runIntrospect(flagValue(subRest, "--app"));
-    process.exitCode = code === 0 ? 0 : 1;
-    return;
-  }
-
-  if (sub === "config") {
-    const [csub] = subRest;
-
-    if (csub === "push") {
-      // Hosted-only — `config.toml` is pushed to a project ref, and the
-      // Docker stack has none (it reads the file directly at `db start`).
-      const connection = await resolveDbConnection({
-        label: "devtools db config push",
-      });
-      if (!connection) {
-        process.exitCode = 1;
-        return;
-      }
-      if (isLocalConnection(connection)) {
-        process.stderr.write(
-          "devtools db config push: the local stack reads config.toml " +
-            "directly (`db restart` applies changes). Relaunch with --tier " +
-            "development:remote, staging, or production to push it to a " +
-            "hosted project.\n",
-        );
-        process.exitCode = 1;
-        return;
-      }
-      if (!connection.projectRef) {
-        process.stderr.write(
-          `devtools db config push: ${fileFor(connection.tier)} has no PROJECT_REF.\n`,
-        );
-        process.exitCode = 1;
-        return;
-      }
-      const code = await runConfigPush(connection.projectRef);
-      process.exitCode = code === 0 ? 0 : 1;
-      return;
-    }
-
-    log.error(
-      csub
-        ? `devtools db config: unknown subcommand "${csub}". Try ${subcommandList(["db", "config"])}.`
-        : `devtools db config: which of ${subcommandList(["db", "config"])}?`,
-    );
-    process.exitCode = 1;
-    return;
-  }
-
-  if (sub === "planner") {
-    await runPlannerCommand(subRest);
-    return;
-  }
-
-  if (sub === "exec") {
-    const execArgs = subRest[0] === "--" ? subRest.slice(1) : subRest;
-    const code = await runDbExec(execArgs);
-    process.exitCode = code === 0 ? 0 : 1;
-    return;
-  }
-
-  log.error(
-    sub
-      ? `devtools db: unknown subcommand "${sub}". Try ${subcommandList(["db"])}.`
-      : `devtools db: which of ${subcommandList(["db"])}?`,
-  );
-  process.exitCode = 1;
-}
-
-// ── Docs ─────────────────────────────────────────────────────────────────────
-
-/**
- * `docs index [--target <local|remote>]`, the documentation search index.
- *
- * One subcommand today, and a group rather than a top-level `docs-index`
- * because the artifact it reads has more than one thing worth doing to it
- * (a `--check` that reports drift is the obvious next one).
- */
-async function runDocsCommand(rest: string[]): Promise<void> {
-  const [sub] = positionals(rest);
-
-  if (!sub || !subcommandNames(["docs"]).includes(sub)) {
-    log.error(
-      sub
-        ? `devtools docs: unknown subcommand "${sub}". Try ${subcommandList(["docs"])}.`
-        : `devtools docs: which subcommand? Try ${subcommandList(["docs"])}.`,
-    );
-    process.exitCode = 1;
-    return;
-  }
-
-  // `docs index`'s `--target remote` is NOT the retired db selector: it is
-  // the explicit acknowledgment its destructive delete requires when DB_URL
-  // is not local (see `docs/index-pages.ts`). The database itself still
-  // comes from the session's DB_URL like everything else.
-  const target = flagValue(rest, "--target") === "remote" ? "remote" : "local";
-  await runDocsIndex({ target });
-}
+import { runBw } from "./bws/bw.js";
+import { catalog } from "./catalog.js";
+import { handleCf } from "./cf/commands.js";
+import { handleCompletions } from "./completions/commands.js";
+import { handleCron } from "./cron/commands.js";
+import { handleDb } from "./db/commands.js";
+import { handleDocs } from "./docs/commands.js";
+import { handleDoctor } from "./doctor/commands.js";
+import { handleEmails } from "./emails/commands.js";
+import { handleEnv } from "./env/commands.js";
+import { handleGen } from "./gen/commands.js";
+import { handleGithub } from "./gh/commands.js";
+import { handleGrantRoot } from "./grant-root/commands.js";
+import { handleImages } from "./images/commands.js";
+import { handleModeration } from "./moderation/commands.js";
+import { handleOAuth } from "./oauth/commands.js";
+import { handlePersona } from "./persona/commands.js";
+import { runTask } from "./run/commands.js";
+import { handleSetup } from "./setup/commands.js";
+import { handleWorkflows } from "./workflows/commands.js";
 
 // ── Dispatch ─────────────────────────────────────────────────────────────────
 
-/** The outro line for a command that finished; `null` means one that failed. */
-const DONE = "Done.";
+/**
+ * Commands that work against whatever tier the session points at, keyed by
+ * top-level name. Each handler is owned by its domain's `commands.ts`; this
+ * table is all `cli.ts` knows about them. Two of them carry a
+ * production-credential half that moves to the backstage CLI with the
+ * production commands below: `env pull|push|audit` (declared in
+ * `env/catalog.ts` as `envVaultSubcommands`) and `db planner`
+ * (`planner/catalog.ts`).
+ */
+const CONTRIBUTOR_HANDLERS: Record<string, CommandHandler> = {
+  setup: handleSetup,
+  completions: handleCompletions,
+  // Reached only from the wizard. A typed `run` is handled in `main()` before
+  // `intro()`. It exits with its child's status, so it never returns and
+  // `outro()` is never reached. That is right: by the time a menu walk gets
+  // here the banner is already on screen, above the menu it introduced,
+  // rather than wedged between this CLI and pnpm's output.
+  run: runTask,
+  oauth: handleOAuth,
+  docs: handleDocs,
+  images: handleImages,
+  emails: handleEmails,
+  cf: handleCf,
+  gen: handleGen,
+  cron: handleCron,
+  github: handleGithub,
+  workflows: handleWorkflows,
+  env: handleEnv,
+  db: handleDb,
+  doctor: handleDoctor,
+  persona: handlePersona,
+  moderation: handleModeration,
+  "grant-root": handleGrantRoot,
+};
+
+/**
+ * Commands that ALWAYS need production secrets, which leave this CLI for the
+ * backstage CLI (TASK-399): `bw`, and `deploy` (its own `devtools-ci` bin,
+ * see `ci.ts`). Kept apart so the move is a cut and paste. Like `run`, a
+ * typed `bw` is handled in `main()` before `intro()`.
+ */
+const PRODUCTION_HANDLERS: Record<string, CommandHandler> = {
+  bw: runBw,
+};
+
+export const HANDLERS: Record<string, CommandHandler> = {
+  ...CONTRIBUTOR_HANDLERS,
+  ...PRODUCTION_HANDLERS,
+};
+
+/**
+ * Names retired in favour of a new one, refused with the new name rather than
+ * falling into "Unknown command": they are in this repo's own docs, scripts
+ * and shell histories, so a bare "unknown" would leave the rename to be
+ * rediscovered. `doctor` itself is NOT here: that name now belongs to the
+ * environment checker, a deliberate reuse rather than a collision.
+ */
+const RETIRED: Record<string, { message: string; hints: string[] }> = {
+  secrets: {
+    message: "`secrets` is now `env`.",
+    hints: ["pnpm devtools env <pull|push|audit|reset|example|init>"],
+  },
+  // `catalog` still has an answer (`moderation check`, now folded together);
+  // `roundtrip` does not, because the command it named is gone outright.
+  catalog: {
+    message: "`catalog` is now `devtools moderation check`.",
+    hints: ["pnpm devtools moderation check"],
+  },
+  roundtrip: {
+    message:
+      "`roundtrip` is gone. The app repo's own CI covers the file/quarantine/check round trip more thoroughly than this command ever did.",
+    hints: ["pnpm devtools moderation check --app <slug>"],
+  },
+};
 
 /**
  * Routes an argv to a command, and reports what to print when it returns.
  *
  * The wizard calls THIS rather than the command functions, so a menu walk and
  * a typed command line take the identical path. `deploy` is not routed here.
- * It is dispatched before `intro()` in `main()`, for the reason
- * `runDeployCommand`'s header gives.
+ * It is dispatched before `intro()` in `main()`.
  *
  * Returns the `outro()` line, or `null` where the failure has already been
  * explained and a cheerful "Done." would contradict it.
@@ -954,223 +146,21 @@ async function dispatch(argv: string[]): Promise<string | null> {
   const [first, ...rest] = argv;
   if (!first) return DONE;
 
-  if (first === "setup") {
-    await runSetup();
-    return DONE;
-  }
+  const handler = HANDLERS[first];
+  if (handler) return handler(rest);
 
-  if (first === "completions") {
-    const code = runCompletions(rest);
-    process.exitCode = code;
-    return code === 0 ? DONE : null;
-  }
-
-  // Reached only from the wizard. A typed `run` or `bw` is handled in
-  // `main()` before `intro()`. Both exit with their child's status, so
-  // neither returns and `outro()` is never reached. That is right: by the
-  // time a menu walk gets here the banner is already on screen, above the
-  // menu it introduced, rather than wedged between this CLI and pnpm's
-  // output.
-  if (first === "run") return runTask(rest);
-  if (first === "bw") return runBw(rest);
-
-  if (first === "oauth") {
-    const forceDevice = rest.includes("--device");
-    const forceLoopback = rest.includes("--loopback");
-    if (forceDevice && forceLoopback) {
-      process.stderr.write(
-        "devtools oauth: --device and --loopback are mutually exclusive — pass at most one.\n",
-      );
-      process.exitCode = 1;
-      return null;
-    }
-    await runOAuthSetup(
-      flagValue(rest, "--base-url"),
-      flagValue(rest, "--platform-url"),
-      forceDevice ? "device" : forceLoopback ? "loopback" : undefined,
-    );
-    return 'All done! You\'re ready to "Sign in with DevDogs".';
-  }
-
-  if (first === "docs") {
-    await runDocsCommand(rest);
-    return DONE;
-  }
-
-  if (first === "images") {
-    // No database dependency to pass through any more: event graphics read
-    // `@devdogsuga/events`'s committed config directly (see
-    // `images/events.ts`), so `images` never needs a running stack at all.
-    await runImages(rest);
-    return DONE;
-  }
-
-  if (first === "emails") {
-    await runEmails(rest);
-    return DONE;
-  }
-
-  if (first === "cf") {
-    const code = await runCf(rest);
-    process.exitCode = code;
-    return DONE;
-  }
-
-  if (first === "gen") {
-    const code = await runGen(rest);
-    process.exitCode = code;
-    return DONE;
-  }
-
-  if (first === "cron") {
-    const sub = rest[0];
-    const cronArgs = rest.slice(1);
-    let code: number;
-    if (sub === "list") {
-      code = await runCronList(cronArgs);
-    } else if (sub === "run") {
-      code = await runCronRun(cronArgs);
-    } else {
-      process.stderr.write(
-        `devtools cron: unknown subcommand "${sub ?? "(none)"}". Expected: list or run.\n`,
-      );
-      code = 1;
-    }
-    process.exitCode = code;
-    return DONE;
-  }
-
-  if (first === "github") {
-    const sub = rest[0];
-    const githubArgs = rest.slice(1);
-    let code: number;
-    if (sub === "rulesets") {
-      code = await runGithubRulesets(githubArgs);
-    } else if (sub === "settings") {
-      code = await runGithubSettings(githubArgs);
-    } else {
-      process.stderr.write(
-        `devtools github: unknown subcommand "${sub ?? "(none)"}". Expected: rulesets or settings.\n`,
-      );
-      code = 1;
-    }
-    process.exitCode = code;
-    return DONE;
-  }
-
-  if (first === "workflows") {
-    const code = await runWorkflows(rest);
-    process.exitCode = code;
-    return code === 0 ? DONE : null;
-  }
-
-  if (first === "env") {
-    await runEnvCommand(rest);
-    return DONE;
-  }
-
-  if (first === "db") {
-    await runDbCommand(rest);
-    return DONE;
-  }
-
-  // The old name, refused with the new one rather than falling into "Unknown
-  // command". It is in this repo's own docs, scripts and shell histories, and
-  // the rename came with a flag rename, so a bare "unknown" would leave both
-  // halves to be rediscovered.
-  if (first === "secrets") {
-    explain("`secrets` is now `env`.", "", [
-      "pnpm devtools env <pull|push|audit|reset|example|init>",
-      "`--env` is now `--target`, for the same reason: one name, one meaning.",
-    ]);
+  const retired = RETIRED[first];
+  if (retired) {
+    explain(retired.message, "", retired.hints);
     process.exitCode = 1;
     return null;
-  }
-
-  // The old moderation names, refused with the new namespace rather than
-  // falling into "Unknown command" — same rationale as `secrets` above.
-  // `catalog` still has an answer (`moderation check`, now folded together —
-  // see that function's header); `roundtrip` does not, because the command it
-  // named is gone outright, not renamed. `doctor` itself is NOT here: that
-  // name now belongs to the environment checker below, a deliberate reuse
-  // rather than a collision.
-  if (first === "catalog") {
-    explain("`catalog` is now `devtools moderation check`.", "", [
-      "pnpm devtools moderation check",
-    ]);
-    process.exitCode = 1;
-    return null;
-  }
-  if (first === "roundtrip") {
-    explain(
-      "`roundtrip` is gone. The app repo's own CI covers the file/quarantine/check round trip more thoroughly than this command ever did.",
-      "",
-      ["pnpm devtools moderation check --app <slug>"],
-    );
-    process.exitCode = 1;
-    return null;
-  }
-
-  if (first === "doctor") {
-    await runEnvironmentDoctor({
-      app: flagValue(rest, "--app"),
-      report: rest.includes("--report"),
-    });
-    return DONE;
-  }
-
-  if (first === "persona") {
-    await runPersona(rest);
-    return DONE;
-  }
-
-  if (first === "moderation") {
-    const resolved = await resolveInstance({ label: "devtools moderation" });
-    if (!resolved) {
-      process.exitCode = 1;
-      return null;
-    }
-    if (
-      refuseUnlessDevelopment(resolved.connection, "devtools moderation check")
-    ) {
-      process.exitCode = 1;
-      return null;
-    }
-
-    const [msub, ...mrest] = rest;
-    if (msub === "check") {
-      await runModerationCheck(resolved.instance, flagValue(mrest, "--app"));
-    } else {
-      log.error(
-        msub
-          ? `devtools moderation: unknown subcommand "${msub}". Try ${subcommandList(["moderation"])}.`
-          : `devtools moderation: which of ${subcommandList(["moderation"])}?`,
-      );
-      process.exitCode = 1;
-    }
-    return DONE;
-  }
-
-  if (first === "grant-root") {
-    const resolved = await resolveInstance({ label: "devtools grant-root" });
-    if (!resolved) {
-      process.exitCode = 1;
-      return null;
-    }
-    await runGrantRoot(
-      resolved.connection,
-      resolved.instance,
-      flagValue(rest, "--user"),
-      rest,
-    );
-    return DONE;
   }
 
   log.error(`Unknown command: ${first}`);
   // The top level only. The command is unknown, so there is no level below
   // it to describe, and reprinting the whole tree here is what made the old
   // help unreadable in the first place.
-  log.message(renderHelp());
+  log.message(renderHelp(catalog));
   process.exitCode = 1;
   return null;
 }
@@ -1207,7 +197,7 @@ export async function main(argv: string[]): Promise<void> {
   // `helpPath` so that `env pull --help` answers about `env pull` rather than
   // reprinting the top level, which is the whole point of the split.
   if (argv.includes("--help") || argv.includes("-h")) {
-    console.log(renderHelp(helpPath(argv)));
+    console.log(renderHelp(catalog, helpPath(argv)));
     return;
   }
 
@@ -1218,8 +208,7 @@ export async function main(argv: string[]): Promise<void> {
   // invocation is never part of an interactive wizard walk, so there is no
   // banner worth keeping here the way there is for the menu.
   if (argv[0] === "completions") {
-    const code = runCompletions(argv.slice(1));
-    process.exitCode = code;
+    await handleCompletions(argv.slice(1));
     return;
   }
 
@@ -1248,7 +237,9 @@ export async function main(argv: string[]): Promise<void> {
   // so every group routes the same way (bare `run` resumes too, while
   // `run <task>` resolves to a leaf and falls through). Non-interactive callers
   // get startPath === null and keep the dispatcher's error + exit 1.
-  const startPath = process.stdin.isTTY ? bareGroupStartPath(argv) : null;
+  const startPath = process.stdin.isTTY
+    ? bareGroupStartPath(catalog, argv)
+    : null;
 
   // Also before `intro()`, for the neighbouring reason: this one hands stdout
   // to pnpm, and through it to a Next dev server or a Flutter run that owns
@@ -1270,12 +261,12 @@ export async function main(argv: string[]): Promise<void> {
   // begins here, non-interactive until a runner resolves a flag from a prompt.
   let closing: string | null;
   if (argv.length === 0) {
-    closing = await runMenu(dispatch);
+    closing = await runMenu(catalog, dispatch);
   } else if (startPath) {
     // Same wizard entry as the no-argument path, at the resumed node instead
     // of the first screen. `env` left `undefined` so `runMenu` probes once,
     // identically to the bare-invocation branch above.
-    closing = await runMenu(dispatch, undefined, { startPath });
+    closing = await runMenu(catalog, dispatch, undefined, { startPath });
   } else {
     beginInvocation(argv, false);
     // `launch.ts` already resolved and entered the session's deploy tier —

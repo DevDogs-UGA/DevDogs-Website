@@ -19,7 +19,7 @@
  * except the dependency build (`buildWorkspaceDeps`).
  *
  * The app's workspace dependencies build first, the way `devtools run build`
- * orders them (see `run/pick.ts`): their `exports` resolve to gitignored
+ * orders them (see `run/commands.ts`): their `exports` resolve to gitignored
  * `dist/` output, so on a fresh clone `vinext build` fails to load
  * `next.config.ts` without them.
  */

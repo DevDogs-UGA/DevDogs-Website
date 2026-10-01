@@ -2,30 +2,31 @@
  * The command tree's own invariants, and the coverage claim that rests on it.
  *
  * The claim: **the wizard reaches every interactive command and option.** It
- * holds because one declaration, `commands.ts`, is what the menu
- * walks, `--help` renders, and every dispatcher in `cli.ts` validates against.
+ * holds because one composed tree, `catalog.ts`, is what the menu
+ * walks, `--help` renders, and every dispatcher validates against.
  * This file guards the parts of that which a type cannot: that the names match
  * the ones dispatch actually accepts, that nothing is declared twice, and that
  * a summary stays the one line `--help` prints it as.
  *
- * `cli.ts` is deliberately NOT imported here, because importing it runs
- * `main()`. The names it dispatches on that are not derived from the tree are
- * the two exported tuples below plus a small hand-list, checked against the
- * tree.
+ * `cli.ts` is imported only by `cli.test.ts`, which checks its handler table
+ against the tree; the hand-list below checks the other direction by name.
  */
 import { describe, expect, it } from "vitest";
 import {
-  allPaths,
-  findCommand,
-  GROUPS,
   SCOPES,
-  subcommandList,
-  subcommandNames,
   TIER,
-  TOP_LEVEL,
   type CommandNode,
   type Scope,
-} from "./commands.js";
+} from "@devdogsuga/cli-core/catalog";
+import { catalog, GROUPS } from "./catalog.js";
+
+const {
+  allPaths,
+  findCommand,
+  subcommandList,
+  subcommandNames,
+  topLevel: TOP_LEVEL,
+} = catalog;
 
 /** Every node in the tree, at any depth. */
 function everyNode(): { path: string[]; node: CommandNode }[] {
@@ -227,7 +228,7 @@ describe("prompts", () => {
 
 describe("coverage of what the CLI dispatches", () => {
   /**
-   * The top-level names `cli.ts` routes on.
+   * The top-level names the dispatcher routes on.
    *
    * Hand-written HERE and nowhere else: `dispatch` reaches these through
    * `first === "..."` comparisons, which no import can enumerate. If a command
@@ -506,7 +507,7 @@ describe("style guide", () => {
    * The retired endpoint selector (`--target local|remote`) asked a question
    * the SESSION already answers (`--tier development:local|development:remote|
    * staging|production`, settled by the launcher before dispatch), and
-   * `cli.ts` refuses the flag by name so old scripts fail loudly. This pin
+   * `db`'s dispatcher refuses the flag by name so old scripts fail loudly. This pin
    * keeps a future db subcommand from quietly reintroducing the vocabulary.
    * The `--target` flags that legitimately remain mean OTHER things: the env
    * commands' vault target, `planner`'s tier word, and `docs index`'s delete

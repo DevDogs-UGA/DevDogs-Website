@@ -22,7 +22,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { Condition } from "./commands.js";
+import type { Condition } from "./catalog.js";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import {
   containerPrefix,
@@ -138,7 +138,7 @@ export function probeEnvironment(
  * Whether a `Condition` from the command tree currently holds.
  *
  * The tree declares conditions as strings so that it stays inert data the docs
- * build can render (see `commands.ts`); this is the one place that knows what
+ * build can render (see `catalog.ts`); this is the one place that knows what
  * they mean. `"unknown"` propagates rather than collapsing to false, and both
  * callers below read it as "do nothing".
  */
@@ -155,22 +155,15 @@ export function holds(condition: Condition, env: Environment): Known {
   }
 }
 
-/** What `needs` renders as when it does not hold. Kept short: it is a hint. */
-const UNMET: Record<Condition, string> = {
-  docker: "Docker is not running",
-  "instance-running": "Supabase is not running on this machine",
-  "instance-stopped": "Supabase is already running on this machine",
-};
-
 /**
  * Whether the wizard should offer this command at all.
  *
  * False only for a command whose `when` is definitively unmet: `stop`
  * against a stack that is already stopped. This is reserved for commands that
  * would be *meaningless*, never merely inconvenient: one that would fail with
- * a good error message stays in the menu and carries `needs` instead, because
- * a contributor who cannot find a command they know exists is worse off than
- * one who runs it and is told why it did not work.
+ * a good error message stays in the menu, because a contributor who cannot
+ * find a command they know exists is worse off than one who runs it and is
+ * told why it did not work.
  *
  * Hiding is a wizard-only decision. `--help` still lists these, the dispatcher
  * still accepts them, and the generated reference still documents them. The
@@ -181,21 +174,6 @@ export function isOffered(
   env: Environment,
 ): boolean {
   return node.when === undefined || holds(node.when, env) !== "no";
-}
-
-/**
- * Why this command will not work right now, or `null` if nothing is in the way.
- *
- * Appended to the entry's hint, so the menu says "needs Docker, which is not
- * running" on the line itself, rather than after the reader has chosen it and
- * waited for a connection attempt to fail.
- */
-export function blockedBecause(
-  node: { needs?: Condition },
-  env: Environment,
-): string | null {
-  if (!node.needs) return null;
-  return holds(node.needs, env) === "no" ? UNMET[node.needs] : null;
 }
 
 // ── Reporting ────────────────────────────────────────────────────────────────

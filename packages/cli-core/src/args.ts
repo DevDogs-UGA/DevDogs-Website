@@ -16,36 +16,17 @@
 
 /**
  * Flags that consume the token after them.
- *
- * `--env` is here even though nothing accepts it any more. It was this CLI's
- * spelling of `--target` until the two vocabularies behind it were merged, and
- * a stale `env push --env staging` in somebody's shell history must not read
- * `staging` as the subcommand. `cli.ts` rejects the flag by name instead,
- * which says what happened.
  */
 export const VALUE_FLAGS = new Set([
   "--access-token",
-  // `qr`: every value flag, so `qr --out poster.png https://…` still reads
-  // the URL as the text and not `poster.png`.
-  "--background",
-  "--color",
-  "--ecl",
-  "--format",
   // `images`: so `images --format og page/events` reads `og` as the format and
   // `page/events` as the graphic, not both as graphics.
   "--format",
-  "--logo",
-  "--logo-padding",
-  "--logo-size",
-  "--margin",
   "--out",
-  "--size",
-  "--text",
   "--version",
   "--app",
   "--apps",
   "--base-url",
-  "--env",
   "--file",
   "--source",
   "--target",
@@ -81,4 +62,15 @@ export function positionals(argv: readonly string[]): string[] {
   }
 
   return found;
+}
+
+/**
+ * The value after `flag`, or `undefined` when the flag is absent or is
+ * followed by another flag instead of a value.
+ */
+export function flagValue(rest: string[], flag: string): string | undefined {
+  const index = rest.indexOf(flag);
+  if (index === -1) return undefined;
+  const value = rest[index + 1];
+  return value && !value.startsWith("--") ? value : undefined;
 }

@@ -3,7 +3,7 @@ import { supabase } from "@devdogsuga/cli-core/db/run";
 /**
  * `config.toml` lives on a hosted project only — there is no local
  * `--project-ref` to push to — so this takes the ref directly rather than a
- * `Target`. The caller (`cli.ts`) resolves it from the tier, exactly like
+ * `Target`. The caller (`commands.ts`) resolves it from the tier, exactly like
  * every other remote db operation now does, instead of letting the supabase
  * CLI fall back to whatever project it has `--linked`.
  */

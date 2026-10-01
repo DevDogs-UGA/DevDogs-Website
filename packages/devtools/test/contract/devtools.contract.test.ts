@@ -28,6 +28,7 @@ import {
   existsSync,
   mkdtempSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -244,6 +245,26 @@ describe("devtools contract tests", () => {
       });
     });
   }
+
+  it("ships a bundle with the private core inlined", () => {
+    // `@devdogsuga/cli-core` is a `workspace:*` devDependency that is never
+    // published, so any import of it left in `dist/` would fail on a real
+    // install. tsdown inlines it; this proves the packed tarball agrees.
+    const dist = join(
+      fixtureDir,
+      "node_modules",
+      "@devdogsuga",
+      "devtools",
+      "dist",
+    );
+    const files = readdirSync(dist).filter((name) => name.endsWith(".js"));
+    expect(files).toContain("launch.js");
+    const importsCore = /(?:from|import\()\s*["']@devdogsuga\/cli-core/;
+    for (const name of files) {
+      const imported = importsCore.test(readFileSync(join(dist, name), "utf8"));
+      expect(imported, `${name} imports the private core`).toBe(false);
+    }
+  });
 
   it("--help works from the fixture root", async () => {
     const { status, stdout } = await run(["--help"]);

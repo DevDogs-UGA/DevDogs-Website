@@ -403,8 +403,8 @@ async function connectOneClick(
  * Step 2 (one-click branch): decides loopback vs. device (see `transport.ts`)
  * and runs it.
  *
- * `transportOverride` is `--device`/`--loopback` (see `commands.ts`'s `oauth`
- * node); `cli.ts` refuses passing both, so at most one is set here. Left
+ * `transportOverride` is `--device`/`--loopback` (see `catalog.ts`'s `oauth`
+ * node); `commands.ts` refuses passing both, so at most one is set here. Left
  * undefined, the transport is auto-detected from the environment.
  *
  * `startLoopback()` is called HERE, not inside `connectOneClick`, and ONLY
@@ -542,7 +542,7 @@ export async function runOAuthSetup(
   platformUrlOverride?: string,
   transportOverride?: ConnectTransport,
   /**
-   * A target already resolved by a caller — `setup.ts`'s hosted wizard,
+   * A target already resolved by a caller — `setup/commands.ts`'s hosted wizard,
    * chaining in with the same project/service-role key a contributor just
    * typed, so they are not asked to pick "hosted" and paste the key a
    * second time. Skips Step 1 entirely when given.

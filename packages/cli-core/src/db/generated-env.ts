@@ -6,7 +6,7 @@
  * finds containers by project id, not by which checkout ran `db start`, so
  * a stack a sibling workspace brought up answers for THIS checkout too —
  * except `.env.generated` (the connection block `startLocalStack`,
- * `../stack.ts`, writes) only ever lands in the workspace that actually ran
+ * the CLI's `db/stack.ts`, writes) only ever lands in the workspace that actually ran
  * it. Left alone, this checkout sees port 54321 listening with the file
  * missing, and `@devdogsuga/env/load`'s `selectEnvFiles` either warns (an
  * unqualified session) or throws `LocalStackOfflineError` (an explicit
@@ -15,7 +15,7 @@
  *
  * `ensureGeneratedEnvFile` does that automatically, before a session's env
  * files ever load: `enterSessionEnvironment` (`../env-entry.ts`) calls it on
- * every command dispatch, and `db status` (`../stack.ts`) calls it to
+ * every command dispatch, and `db status` (the CLI's `db/stack.ts`) calls it to
  * report the file's state accurately instead of trusting a stale absence.
  * Both are read-only from THIS checkout's point of view — nothing here
  * starts, stops, or resets anything; it only reads a port, a file, and

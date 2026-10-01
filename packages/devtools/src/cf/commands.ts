@@ -4,6 +4,7 @@
  * Delegates to each app's package scripts for preview/typegen/build, and
  * passes through to wrangler for `cf exec`.
  */
+import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { confirm } from "@clack/prompts";
 import type * as EnvLoadModule from "@devdogsuga/env/load";
 import { loadEnvLoad } from "@devdogsuga/cli-core/repo/peers";
@@ -209,3 +210,8 @@ export async function runCf(argv: readonly string[]): Promise<number> {
   );
   return 1;
 }
+
+export const handleCf: CommandHandler = async (rest) => {
+  process.exitCode = await runCf(rest);
+  return DONE;
+};

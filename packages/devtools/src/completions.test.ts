@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { generateCompletions } from "./completions.js";
+import { generateCompletions as generate } from "@devdogsuga/cli-core/completions";
+import { catalog } from "./catalog.js";
+
+const generateCompletions = (shell: "bash" | "zsh") => generate(catalog, shell);
 
 describe("completion scripts", () => {
   describe("zsh", () => {

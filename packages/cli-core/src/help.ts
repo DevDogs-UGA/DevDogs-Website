@@ -20,17 +20,16 @@
  *      resolved, what a deploy job's environment holds. Help says what a
  *      command does and what it takes.
  *
- * Both fall out of rendering `commands.ts` rather than hand-writing prose, so
+ * Both fall out of rendering the catalog rather than hand-writing prose, so
  * neither can rot back into a wall of text one paragraph at a time.
  */
 import {
-  findCommand,
-  GROUPS,
   SCOPES,
+  type Catalog,
   type CommandNode,
   type CommandOption,
   type Scope,
-} from "./commands.js";
+} from "./catalog.js";
 
 const INDENT = "  ";
 
@@ -104,23 +103,17 @@ function childRows(children: readonly CommandNode[]): [string, string][] {
 // ── The three levels ─────────────────────────────────────────────────────────
 
 /** `pnpm devtools --help`: the groups, and nothing below them. */
-function renderRoot(): string {
+function renderRoot(catalog: Catalog): string {
   const lines = [
-    "pnpm devtools [command] [options]",
+    `${catalog.usage} [command] [options]`,
     "",
     "Run with no command to choose from a menu.",
     "",
     "Common tasks:",
-    ...columns([
-      ["setup", "Prepare a new checkout"],
-      ["run dev", "Start development servers"],
-      ["db start", "Start Supabase on this machine"],
-      ["db reset", "Rebuild the local database"],
-      ["cron run", "Choose and run a scheduled job"],
-    ]),
+    ...columns(catalog.commonTasks.map(([command, what]) => [command, what])),
   ];
 
-  for (const group of GROUPS) {
+  for (const group of catalog.groups) {
     lines.push("", `${group.title}:`, ...scopedBody(group.commands));
   }
 
@@ -135,20 +128,24 @@ function renderRoot(): string {
       ],
     ]),
     "",
-    "`pnpm devtools <command> --help` shows what that command takes.",
+    "`${catalog.usage} <command> --help` shows what that command takes.",
   );
 
   return lines.join("\n");
 }
 
 /** `pnpm devtools <path…> --help`: one command's own children and options. */
-function renderCommand(path: readonly string[], node: CommandNode): string {
+function renderCommand(
+  catalog: Catalog,
+  path: readonly string[],
+  node: CommandNode,
+): string {
   const children = node.subcommands ?? [];
   const options = node.options ?? [];
   const trail = path.join(" ");
 
   const usage = [
-    "pnpm devtools",
+    catalog.usage,
     trail,
     children.length > 0 ? "<subcommand>" : "",
     options.length > 0 ? "[options]" : "",
@@ -169,7 +166,7 @@ function renderCommand(path: readonly string[], node: CommandNode): string {
   if (children.length > 0) {
     lines.push(
       "",
-      `\`pnpm devtools ${trail} <subcommand> --help\` shows what that one takes.`,
+      `\`${catalog.usage} ${trail} <subcommand> --help\` shows what that one takes.`,
     );
   }
 
@@ -183,13 +180,16 @@ function renderCommand(path: readonly string[], node: CommandNode): string {
  * when `--help` was asked for, and answering a mistyped command with the list
  * it was mistyped from is more use than a refusal.
  */
-export function renderHelp(path: readonly string[] = []): string {
-  if (path.length === 0) return renderRoot();
+export function renderHelp(
+  catalog: Catalog,
+  path: readonly string[] = [],
+): string {
+  if (path.length === 0) return renderRoot(catalog);
 
-  const node = findCommand(path);
-  if (!node) return renderRoot();
+  const node = catalog.findCommand(path);
+  if (!node) return renderRoot(catalog);
 
-  return renderCommand(path, node);
+  return renderCommand(catalog, path, node);
 }
 
 /**

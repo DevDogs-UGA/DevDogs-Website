@@ -1,4 +1,4 @@
-import { allPaths } from "./commands.js";
+import type { Catalog } from "./catalog.js";
 
 type Shell = "bash" | "zsh";
 
@@ -7,9 +7,9 @@ type Shell = "bash" | "zsh";
  *
  * e.g. ["env", "pull"] contributes "pull" to the group keyed "env".
  */
-function buildGroups(): Map<string, string[]> {
+function buildGroups(catalog: Catalog): Map<string, string[]> {
   const groups = new Map<string, string[]>();
-  for (const path of allPaths()) {
+  for (const path of catalog.allPaths()) {
     const parent = path.slice(0, -1).join(" ");
     const name = path[path.length - 1]!;
     const existing = groups.get(parent) ?? [];
@@ -19,8 +19,8 @@ function buildGroups(): Map<string, string[]> {
   return groups;
 }
 
-function generateBash(): string {
-  const groups = buildGroups();
+function generateBash(catalog: Catalog): string {
+  const groups = buildGroups(catalog);
   const topLevel = (groups.get("") ?? []).join(" ");
 
   const cases: string[] = [];
@@ -60,8 +60,8 @@ function generateBash(): string {
   ].join("\n");
 }
 
-function generateZsh(): string {
-  const groups = buildGroups();
+function generateZsh(catalog: Catalog): string {
+  const groups = buildGroups(catalog);
   const topLevel = (groups.get("") ?? []).join(" ");
 
   const cases: string[] = [];
@@ -102,11 +102,11 @@ function generateZsh(): string {
   ].join("\n");
 }
 
-export function generateCompletions(shell: Shell): string {
-  return shell === "zsh" ? generateZsh() : generateBash();
+export function generateCompletions(catalog: Catalog, shell: Shell): string {
+  return shell === "zsh" ? generateZsh(catalog) : generateBash(catalog);
 }
 
-export function runCompletions(argv: string[]): number {
+export function runCompletions(catalog: Catalog, argv: string[]): number {
   const shellIdx = argv.indexOf("--shell");
   const shell = shellIdx !== -1 ? argv[shellIdx + 1] : undefined;
 
@@ -118,6 +118,6 @@ export function runCompletions(argv: string[]): number {
     return 1;
   }
 
-  process.stdout.write(generateCompletions(shell));
+  process.stdout.write(generateCompletions(catalog, shell));
   return 0;
 }

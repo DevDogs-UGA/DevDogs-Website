@@ -39,6 +39,17 @@ default, in both `pnpm devtools` and `devtools-ci`:
   stack frames. See Backstage's `packages/telemetry/src/scrub.ts` for exactly what each
   scrubber matches.
 
+## Layout
+
+`src/` is one folder per domain (kebab-case). A domain declares its commands in
+`catalog.ts` (inert data) and owns its handlers in `commands.ts`; `src/catalog.ts`
+composes the tree and `src/cli.ts` maps top-level command names to handlers. The
+shared core (repo and peer loading, ui, telemetry, tier and env entry, the
+catalog, help and menu) lives in the private `@devdogsuga/cli-core` package,
+which `tsdown` inlines into `dist/`. Only the core is bundled: every other
+import stays external and must be declared in this package's `dependencies` or
+`peerDependencies`, and the build fails when one is not.
+
 [Command guide](../../docs/toolkit/guides/devtools.md) ·
 [API reference](https://devdogsuga.org/docs/toolkit/reference/api/devtools) ·
 [Quickstart](../../docs/monorepo/guides/quickstart.md)

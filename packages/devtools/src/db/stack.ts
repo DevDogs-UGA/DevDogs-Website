@@ -19,7 +19,10 @@
 import { existsSync, rmSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { describeEnvironment, probeEnvironment } from "./environment.js";
+import {
+  describeEnvironment,
+  probeEnvironment,
+} from "@devdogsuga/cli-core/environment";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import {
   foreignStackMessage,
@@ -40,9 +43,9 @@ import {
   isLocalConnection,
   type DbConnection,
 } from "@devdogsuga/cli-core/db/connection";
-import { refreshSessionEnv } from "./db/session-refresh.js";
-import { runSeedProduction } from "./db/seed-production.js";
-import { originReachable, resolveBaseUrl } from "./cron/commands.js";
+import { refreshSessionEnv } from "./session-refresh.js";
+import { runSeedProduction } from "./seed-production.js";
+import { originReachable, resolveBaseUrl } from "../cron/commands.js";
 import {
   ensureGeneratedEnvFile,
   realEnsureGeneratedEnvDeps,

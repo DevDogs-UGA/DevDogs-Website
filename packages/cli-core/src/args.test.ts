@@ -50,14 +50,6 @@ describe("positionals", () => {
     ).toEqual([]);
   });
 
-  it("still consumes the retired --env's value", () => {
-    // `--env` was this CLI's spelling of `--target`, and its values are still
-    // valid target names. `cli.ts` refuses the flag by name; that refusal only
-    // gets to run if `production` was not read as the subcommand first.
-    expect(positionals(["pull", "--env", "production"])).toEqual(["pull"]);
-    expect(positionals(["--env", "production", "pull"])).toEqual(["pull"]);
-  });
-
   it("ignores boolean flags wherever they appear", () => {
     expect(positionals(["--yes", "push", "--prune"])).toEqual(["push"]);
   });

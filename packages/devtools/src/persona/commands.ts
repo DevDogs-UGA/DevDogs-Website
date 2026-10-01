@@ -26,6 +26,7 @@
  * reached its `finally` because the process was killed. The marker is what
  * keeps `--clean` from reaching past accounts it is not responsible for.
  */
+import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { randomUUID } from "node:crypto";
 import { confirm, log, note, select } from "@clack/prompts";
 import type { DbConnection } from "@devdogsuga/cli-core/db/connection";
@@ -34,7 +35,7 @@ import {
   resolveInstance,
   type Instance,
 } from "@devdogsuga/cli-core/instance";
-import { grantModerator } from "./moderation.js";
+import { grantModerator } from "../moderation/checks.js";
 import { explain, unwrap } from "@devdogsuga/cli-core/ui";
 
 export const PERSONA_KINDS = ["member", "moderator"] as const;
@@ -298,3 +299,8 @@ export async function runPersona(argv: string[]): Promise<void> {
   );
   log.success("Filed a sample report. Resolve it from /console/moderation.");
 }
+
+export const handlePersona: CommandHandler = async (rest) => {
+  await runPersona(rest);
+  return DONE;
+};

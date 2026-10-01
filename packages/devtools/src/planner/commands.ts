@@ -39,10 +39,12 @@
  * says done: the property the security plan records as "validated working",
  * re-established on every mint instead of remembered from one.
  */
+import { flagValue, positionals } from "@devdogsuga/cli-core/args";
+import { catalog } from "../catalog.js";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { confirm, log, note } from "@clack/prompts";
-import { fingerprint } from "../fingerprint.js";
+import { fingerprint } from "../env/fingerprint.js";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { loadEnv } from "@devdogsuga/cli-core/repo/peers";
 import { bail, unwrap } from "@devdogsuga/cli-core/ui";
@@ -453,4 +455,42 @@ export async function runPlannerResetPassword(
     log.success(`Reset ${PLANNER_ROLE}'s password.`);
     await verifyAndStore(connect, admin, password);
   });
+}
+
+/**
+ * `db planner <status|create|reset-password|drop> [--db-url <url>]`
+ *
+ * Operator-side lifecycle of the `migration_planner` role. See
+ * `planner/commands.ts` for the commands themselves and for why there is no
+ * `retrieve`. Interactive by design (create and reset confirm before writing
+ * to production), so unlike the `deploy` group it talks through clack and is
+ * fine to run as plain `pnpm devtools db planner …`.
+ */
+export async function runPlannerCommand(rest: string[]): Promise<void> {
+  const [sub] = positionals(rest);
+  const options = { dbUrl: flagValue(rest, "--db-url") ?? undefined };
+
+  if (sub === "status") {
+    await runPlannerStatus(options);
+    return;
+  }
+  if (sub === "create") {
+    await runPlannerCreate(options);
+    return;
+  }
+  if (sub === "reset-password") {
+    await runPlannerResetPassword(options);
+    return;
+  }
+  if (sub === "drop") {
+    await runPlannerDrop(options);
+    return;
+  }
+
+  log.error(
+    sub
+      ? `devtools db planner: unknown subcommand "${sub}". Try ${catalog.subcommandList(["db", "planner"])}.`
+      : `devtools db planner: which of ${catalog.subcommandList(["db", "planner"])}?`,
+  );
+  process.exitCode = 1;
 }

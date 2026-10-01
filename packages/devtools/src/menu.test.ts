@@ -11,7 +11,7 @@
  * get asked and what argv comes out, not how a terminal renders them.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Environment } from "./environment.js";
+import type { Environment } from "@devdogsuga/cli-core/environment";
 
 const answers: unknown[] = [];
 const asked: string[] = [];
@@ -65,10 +65,12 @@ vi.mock("@clack/prompts", () => {
   };
 });
 
-const { runMenu, bareGroupStartPath } = await import("./menu.js");
-const { GROUPS, TOP_LEVEL, allPaths, findCommand, groupOf } =
-  await import("./commands.js");
-const { UNKNOWN_ENVIRONMENT } = await import("./environment.js");
+const { runMenu, bareGroupStartPath } =
+  await import("@devdogsuga/cli-core/menu");
+const { catalog, GROUPS } = await import("./catalog.js");
+const { topLevel: TOP_LEVEL, allPaths, findCommand, groupOf } = catalog;
+const { UNKNOWN_ENVIRONMENT } =
+  await import("@devdogsuga/cli-core/environment");
 const { setMenuEnvHook, takeMenuEnvHook } =
   await import("@devdogsuga/cli-core/env-entry");
 
@@ -91,10 +93,14 @@ async function walk(
   answers.push(...scripted);
 
   let dispatched: string[] | null = null;
-  await runMenu((argv) => {
-    dispatched = argv;
-    return Promise.resolve("Done.");
-  }, env);
+  await runMenu(
+    catalog,
+    (argv) => {
+      dispatched = argv;
+      return Promise.resolve("Done.");
+    },
+    env,
+  );
   return dispatched;
 }
 
@@ -115,6 +121,7 @@ async function resume(
 
   let dispatched: string[] | null = null;
   await runMenu(
+    catalog,
     (argv) => {
       dispatched = argv;
       return Promise.resolve("Done.");
@@ -327,36 +334,38 @@ describe("bareGroupStartPath", () => {
   // …?" refusal. Pure and tree-driven, so these assert directly rather than
   // through a scripted walk.
   it("finds a top-level group", () => {
-    expect(bareGroupStartPath(["db"])).toEqual(["db"]);
+    expect(bareGroupStartPath(catalog, ["db"])).toEqual(["db"]);
   });
 
   it("finds a nested group", () => {
-    expect(bareGroupStartPath(["db", "seed"])).toEqual(["db", "seed"]);
+    expect(bareGroupStartPath(catalog, ["db", "seed"])).toEqual(["db", "seed"]);
   });
 
   it("returns null for a leaf command", () => {
-    expect(bareGroupStartPath(["db", "status"])).toBeNull();
+    expect(bareGroupStartPath(catalog, ["db", "status"])).toBeNull();
   });
 
   it("returns null for an unknown subcommand token", () => {
-    expect(bareGroupStartPath(["db", "bogus"])).toBeNull();
+    expect(bareGroupStartPath(catalog, ["db", "bogus"])).toBeNull();
   });
 
   it("returns null for a bare invocation", () => {
     // The no-argument wizard already covers this path; treating it as a
     // "resume" too would just be `pickGroup` reached a second way.
-    expect(bareGroupStartPath([])).toBeNull();
+    expect(bareGroupStartPath(catalog, [])).toBeNull();
   });
 
   it("returns null for a top-level leaf command", () => {
-    expect(bareGroupStartPath(["setup"])).toBeNull();
+    expect(bareGroupStartPath(catalog, ["setup"])).toBeNull();
   });
 
   it("ignores flag values ahead of the group name", () => {
     // `positionals` is what keeps `staging` from being misread as a
     // subcommand token here — the same bug class `args.ts`'s header warns
     // against for `env --file push audit`.
-    expect(bareGroupStartPath(["db", "--tier", "staging"])).toEqual(["db"]);
+    expect(bareGroupStartPath(catalog, ["db", "--tier", "staging"])).toEqual([
+      "db",
+    ]);
   });
 });
 
@@ -416,10 +425,14 @@ describe("the deferred env-entry hook", () => {
     let dispatched: string[] | null = null;
     answers.length = 0;
     answers.push(...answersFor(["db", "status"]));
-    const result = await runMenu((argv) => {
-      dispatched = argv;
-      return Promise.resolve("dispatcher's own answer");
-    }, UNKNOWN_ENVIRONMENT);
+    const result = await runMenu(
+      catalog,
+      (argv) => {
+        dispatched = argv;
+        return Promise.resolve("dispatcher's own answer");
+      },
+      UNKNOWN_ENVIRONMENT,
+    );
 
     expect(result).toBe("hook decided this.");
     // The hook in this test never calls its `dispatchCommand` argument, so

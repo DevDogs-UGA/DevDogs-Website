@@ -52,13 +52,13 @@ import { select } from "@clack/prompts";
 import type { DeployEnvironment } from "@devdogsuga/env";
 import type { DevDatabase } from "@devdogsuga/env/load";
 import type { TierChoice } from "@devdogsuga/env/session";
-import { findCommand } from "./commands.js";
+import { catalog } from "./catalog.js";
 import {
   enterSessionEnvironment,
   realEnvEntryDeps,
   setMenuEnvHook,
 } from "@devdogsuga/cli-core/env-entry";
-import { bareGroupStartPath } from "./menu.js";
+import { bareGroupStartPath } from "@devdogsuga/cli-core/menu";
 import {
   discoverRepoRoot,
   findRepoRoot,
@@ -92,7 +92,7 @@ export function stripTierFlag(argv: readonly string[]): {
   //
   // A following token that is itself a flag is treated the same way, NOT
   // consumed as the value — the guard every other flag-value reader in this
-  // CLI keeps (`cli.ts`'s `flagValue`). Without it,
+  // CLI keeps (`flagValue` in `@devdogsuga/cli-core/args`). Without it,
   // `--tier --help` or `--tier -h` would swallow the flag as a bogus tier and
   // refuse with "unknown tier" instead of reaching the help bypass below.
   const missing = value === undefined || value.startsWith("-");
@@ -102,7 +102,7 @@ export function stripTierFlag(argv: readonly string[]): {
 
 /**
  * Whether the command `rest` dispatches to is declared `envFree` in
- * `commands.ts`'s catalog — the leading run of non-flag tokens is the
+ * the command catalog — the leading run of non-flag tokens is the
  * command path (`["github", "rulesets"]` out of `["github", "rulesets",
  * "--apply"]`), the same convention `stripTierFlag` already uses for
  * pulling a flag out of argv wherever it sits.
@@ -121,13 +121,13 @@ function isEnvFreeCommand(rest: readonly string[]): boolean {
     if (arg.startsWith("-")) break;
     path.push(arg);
   }
-  return findCommand(path)?.envFree === true;
+  return catalog.findCommand(path)?.envFree === true;
 }
 
 /** The offer's stack start (`env-entry.ts` holds the TTY prompt, this holds
  * the lifecycle command), imported lazily like the rest of the commands. */
 async function startStack(): Promise<{ code: number; lines: string[] }> {
-  const { runStackCommand } = await import("./stack.js");
+  const { runStackCommand } = await import("./db/stack.js");
   return runStackCommand("start", null);
 }
 
@@ -187,7 +187,8 @@ export async function launch(argv: readonly string[]): Promise<void> {
   // bareGroupStartPath(argv) : null`.
   const isMenuInvocation =
     rest.length === 0 ||
-    (process.stdin.isTTY === true && bareGroupStartPath(rest) !== null);
+    (process.stdin.isTTY === true &&
+      bareGroupStartPath(catalog, rest) !== null);
 
   // `--help`/`-h` bypasses tier resolution entirely, BEFORE it can refuse.
   // `cli.ts`'s own `main()` already answers these with no env in play (see
