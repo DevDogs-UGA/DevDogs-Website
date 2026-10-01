@@ -78,11 +78,11 @@ declare({
         .optional(),
       {
         doc:
-          "The Cloudflare account the Workers live in. OpenNext's R2 cache " +
-          "provisioning reads it from the environment and cannot infer it " +
-          "from the scoped CLOUDFLARE_API_TOKEN (the first staging deploy " +
-          "hung on exactly that); wrangler honors it too. Identifies, does " +
-          "not authorize — every capability is the token's.",
+          "The Cloudflare account the Workers live in. Wrangler honors this " +
+          "public identifier in the environment; each app's wrangler config " +
+          "pins the same value so scoped deploy tokens never need account " +
+          "discovery. Identifies, does not authorize — every capability is " +
+          "the token's.",
         scope: "default",
         secrecy: "public",
         example: "61d185ff419ef7bd5bd4b3d314081a49",

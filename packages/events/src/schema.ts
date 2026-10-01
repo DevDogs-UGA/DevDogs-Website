@@ -95,10 +95,10 @@ export const MEETING_BUILDING_CHOICES = [
  *
  * Permissive by design, because two very different shapes of id have to fit
  * it. A migrated row keeps its old Airtable record id verbatim ("recXXX...")
- * so the reconcile can match it to the row Airtable already created; a new
- * item gets a human slug ("cold-start-2026") instead. Both are letters,
- * digits and dashes with no leading or trailing dash, which is also exactly
- * what makes an id safe to put in a URL unescaped.
+ * so the reconcile can match the existing database row created during that
+ * migration; a new item gets a human slug ("cold-start-2026") instead. Both
+ * are letters, digits and dashes with no leading or trailing dash, which is
+ * also exactly what makes an id safe to put in a URL unescaped.
  */
 export const ID_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/;
 

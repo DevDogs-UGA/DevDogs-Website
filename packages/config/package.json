@@ -1,7 +1,7 @@
 {
   "name": "@devdogsuga/config",
   "version": "0.1.0",
-  "description": "Shared tsconfig, ESLint, Vitest and OpenNext presets.",
+  "description": "Shared tsconfig, ESLint and Vitest presets.",
   "license": "MIT",
   "private": false,
   "type": "module",

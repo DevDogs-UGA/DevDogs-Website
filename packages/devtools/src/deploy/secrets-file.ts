@@ -109,15 +109,14 @@ export async function runDeploySecretsFile(
     if (!declaredBy(entries, app)) continue;
     const meta = entries[0]!.meta;
 
-    // Public server keys ship alongside the secrets, because nothing else
-    // reaches the Worker's runtime: OpenNext copies the Worker env into
-    // process.env per request, and a value that was only in the composed
-    // .env file at build time is gone by then. The first staging deploy
-    // proved it: the schedule-builder Worker booted without API_URL,
-    // REST_URL, PUBLISHABLE_KEY, STORAGE_S3_URL or S3_PROTOCOL_REGION and
-    // answered 500 on every route. Client (NEXT_PUBLIC) keys are excluded
-    // by `declaredBy` (inlined at build); never-store keys stay excluded
-    // because a Worker secret is a remote copy, the thing they forbid.
+    // Public server keys ship alongside the secrets because a value that was
+    // only in the composed .env file at build time is absent from the deployed
+    // Worker's runtime environment. The first staging deploy proved it: the
+    // schedule-builder Worker booted without API_URL, REST_URL,
+    // PUBLISHABLE_KEY, STORAGE_S3_URL or S3_PROTOCOL_REGION and answered 500
+    // on every route. Client (NEXT_PUBLIC) keys are excluded by `declaredBy`
+    // (inlined at build); never-store keys stay excluded because a Worker
+    // secret is a remote copy, the thing they forbid.
     if (meta.secrecy === "secret") {
       if (!storable.has(key)) {
         minted.push(key);
