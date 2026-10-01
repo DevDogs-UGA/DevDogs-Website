@@ -135,7 +135,7 @@ export function cloudflareOnlyAudit(
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
   if (isNoEnv()) return true;
-  const hasBitwarden = Boolean(options.accessToken || env.BWS_ACCESS_TOKEN);
+  const hasBitwarden = Boolean(options.accessToken ?? env.BWS_ACCESS_TOKEN);
   return isNonInteractive() && !hasBitwarden;
 }
 
