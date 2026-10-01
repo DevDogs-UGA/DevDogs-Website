@@ -67,6 +67,37 @@ export function isLocalDbUrl(url: string): boolean {
   }
 }
 
+/** An env value, with unset and empty both meaning "not given". */
+export function nonEmpty(value: string | undefined): string | undefined {
+  return value === undefined || value === "" ? undefined : value;
+}
+
+/**
+ * Whether the session means the Docker stack on this machine, from the
+ * environment alone. Development with the remote qualifier is NOT local, and
+ * nor is any hosted tier. With no qualifier, a `DB_URL` that is loopback (or
+ * absent, the stack being down) means local.
+ *
+ * The distinction matters to `devtools supabase`: `.env` may name a remote
+ * development project's `PROJECT_REF` even in a local session, and that ref
+ * must never be filled in for it.
+ */
+export function sessionIsLocal(env: NodeJS.ProcessEnv = process.env): boolean {
+  const tier = nonEmpty(env.DEPLOY_ENV) ?? "development";
+  if (tier !== "development") return false;
+  if (env.DEV_DB === "remote") return false;
+  if (env.DEV_DB === "local") return true;
+  const dbUrl = env.DB_URL;
+  return dbUrl === undefined || dbUrl === "" || isLocalDbUrl(dbUrl);
+}
+
+/** The session as the messages name it: `development:local`, `staging`, … */
+export function sessionLabel(env: NodeJS.ProcessEnv = process.env): string {
+  const tier = nonEmpty(env.DEPLOY_ENV) ?? "development";
+  if (tier !== "development") return tier;
+  return `development:${sessionIsLocal(env) ? "local" : "remote"}`;
+}
+
 /** The hostname for messages — never the URL itself, which carries the
  * password. */
 export function dbHost(url: string): string {
