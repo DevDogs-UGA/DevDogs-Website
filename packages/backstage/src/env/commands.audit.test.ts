@@ -110,7 +110,8 @@ import {
   resetPeerCacheForTests,
 } from "@devdogsuga/cli-core/repo/peers";
 import { resetRepoRootCacheForTests } from "@devdogsuga/cli-core/repo/root";
-import { runEnvAudit } from "./commands.js";
+import { cloudflareOnlyAudit, runEnvAudit } from "./commands.js";
+import { setNoEnv } from "@devdogsuga/cli-core/mode";
 import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
 
 const FIXTURE_ROOT = new URL(
@@ -162,7 +163,7 @@ describe("env audit, at the repository scope", () => {
     // ⚠️ The wiring assertion. Every claim below is about what the run SAID;
     // if the command never made this call, the clean-report test would pass
     // for the worst possible reason.
-    await runEnvAudit({ target: "staging", yes: true });
+    await runEnvAudit({ accessToken: "t", target: "staging", yes: true });
 
     expect(listRepositoryVariables).toHaveBeenCalledTimes(1);
     // No arguments: the missing `--env` IS the call. A repository read that
@@ -179,7 +180,7 @@ describe("env audit, at the repository scope", () => {
       { name: "DEMO_VARIABLE", updatedAt: "2026-01-01T00:00:00Z" },
     ]);
 
-    await runEnvAudit({ target: "staging", yes: true });
+    await runEnvAudit({ accessToken: "t", target: "staging", yes: true });
 
     expect(printed()).toContain("DEMO_VARIABLE");
     expect(printed()).toMatch(/shadows it/);
@@ -189,7 +190,7 @@ describe("env audit, at the repository scope", () => {
   it("says the check RAN when it found nothing", async () => {
     // "No detectable drift" is a weaker claim than it reads as, and this is
     // the sentence that keeps it honest about which checks stand behind it.
-    await runEnvAudit({ target: "staging", yes: true });
+    await runEnvAudit({ accessToken: "t", target: "staging", yes: true });
 
     expect(printed()).toMatch(/repository's own variables were listed/);
     expect(printed()).not.toMatch(/could NOT be listed/);
@@ -209,7 +210,7 @@ describe("env audit, at the repository scope", () => {
       ),
     );
 
-    await runEnvAudit({ target: "staging", yes: true });
+    await runEnvAudit({ accessToken: "t", target: "staging", yes: true });
 
     expect(printed()).toMatch(/could not check/);
     expect(printed()).toContain("HTTP 403");
@@ -227,7 +228,7 @@ describe("env audit, at the repository scope", () => {
     );
     process.exitCode = 0;
 
-    await runEnvAudit({ target: "staging", yes: true });
+    await runEnvAudit({ accessToken: "t", target: "staging", yes: true });
 
     expect(process.exitCode).toBe(0);
   });
@@ -239,7 +240,7 @@ describe("env audit, at the repository scope", () => {
       new GhError("HTTP 403"),
     );
 
-    await runEnvAudit({ target: "staging", yes: true });
+    await runEnvAudit({ accessToken: "t", target: "staging", yes: true });
 
     expect(prompts.note).toHaveBeenCalled();
     expect(printed()).toMatch(/write-only/);
@@ -285,7 +286,7 @@ describe("env audit, the accepted wiring", () => {
   });
 
   it("does not report production-apply's superset copy as a stray", async () => {
-    await runEnvAudit({ target: "production", yes: true });
+    await runEnvAudit({ accessToken: "t", target: "production", yes: true });
 
     // The default predicate would flag DEMO_TOKEN's `production-apply` copy
     // ("also set … not where it belongs"). `acceptsKey` knows the superset.
@@ -296,7 +297,7 @@ describe("env audit, the accepted wiring", () => {
     // The positive control for the test above. An `accepted` of "everything is
     // fine" would also produce no stray findings. This copy is the reviewer
     // gate failing open, and it must survive the superset logic.
-    await runEnvAudit({ target: "production", yes: true });
+    await runEnvAudit({ accessToken: "t", target: "production", yes: true });
 
     expect(printed()).toMatch(
       /SUPABASE_ACCESS_TOKEN[^\n]*`production`[^\n]*not where it belongs/,
@@ -328,14 +329,19 @@ describe("env audit, the Worker secrets no app declares", () => {
   });
 
   it("names them against their Worker and deletes nothing", async () => {
-    await runEnvAudit({ target: "staging" });
+    await runEnvAudit({ accessToken: "t", target: "staging" });
 
     expect(printed()).toContain(`staging-platform: ${STALE}`);
     expect(deleteOrphanViaWrangler).not.toHaveBeenCalled();
   });
 
   it("deletes them with --prune --yes, naming app, key and environment", async () => {
-    await runEnvAudit({ target: "staging", prune: true, yes: true });
+    await runEnvAudit({
+      accessToken: "t",
+      target: "staging",
+      prune: true,
+      yes: true,
+    });
 
     expect(deleteOrphanViaWrangler).toHaveBeenCalledTimes(1);
     expect(vi.mocked(deleteOrphanViaWrangler).mock.calls[0]).toEqual([
@@ -348,7 +354,7 @@ describe("env audit, the Worker secrets no app declares", () => {
   it("refuses --prune with nobody to ask and no --yes, deleting nothing", async () => {
     process.exitCode = 0;
 
-    await runEnvAudit({ target: "staging", prune: true });
+    await runEnvAudit({ accessToken: "t", target: "staging", prune: true });
 
     expect(deleteOrphanViaWrangler).not.toHaveBeenCalled();
     expect(prompts.log.error).toHaveBeenCalled();
@@ -358,7 +364,12 @@ describe("env audit, the Worker secrets no app declares", () => {
   it("does not look at Cloudflare without the token, and says so", async () => {
     delete process.env.CLOUDFLARE_API_TOKEN;
 
-    await runEnvAudit({ target: "staging", prune: true, yes: true });
+    await runEnvAudit({
+      accessToken: "t",
+      target: "staging",
+      prune: true,
+      yes: true,
+    });
 
     expect(listWorkerSecrets).not.toHaveBeenCalled();
     expect(deleteOrphanViaWrangler).not.toHaveBeenCalled();
@@ -368,8 +379,86 @@ describe("env audit, the Worker secrets no app declares", () => {
   });
 
   it("has no Workers to look at for the preflight tier", async () => {
-    await runEnvAudit({ target: "preflight", prune: true, yes: true });
+    await runEnvAudit({
+      accessToken: "t",
+      target: "preflight",
+      prune: true,
+      yes: true,
+    });
 
     expect(deleteOrphanViaWrangler).not.toHaveBeenCalled();
+  });
+});
+
+describe("env audit, with only the Cloudflare token", () => {
+  const STALE = "A_NAME_NO_MANIFEST_DECLARES";
+  const savedBws = process.env.BWS_ACCESS_TOKEN;
+
+  beforeEach(() => {
+    delete process.env.BWS_ACCESS_TOKEN;
+    process.env.CLOUDFLARE_API_TOKEN = "a-token";
+    vi.mocked(deleteOrphanViaWrangler).mockClear();
+    vi.mocked(listWorkerSecrets).mockClear();
+    vi.mocked(listBwsSecrets).mockClear();
+    vi.mocked(listGhSecrets).mockClear();
+    vi.mocked(listWorkerSecrets).mockResolvedValue({
+      secrets: new Map([["staging-platform", new Set([STALE])]]),
+      unreadable: [],
+    });
+    prompts.log.error.mockClear();
+    prompts.log.warn.mockClear();
+    process.exitCode = 0;
+  });
+
+  afterEach(() => {
+    delete process.env.CLOUDFLARE_API_TOKEN;
+    if (savedBws !== undefined) process.env.BWS_ACCESS_TOKEN = savedBws;
+    vi.mocked(listWorkerSecrets).mockResolvedValue({
+      secrets: new Map(),
+      unreadable: [],
+    });
+  });
+
+  it("never touches Bitwarden or GitHub, says what it skipped, and exits 0 on orphans", async () => {
+    // Vitest has no TTY, so this is the CI shape: nobody to ask, no token.
+    await runEnvAudit({ target: "staging" });
+
+    expect(listBwsSecrets).not.toHaveBeenCalled();
+    expect(listGhSecrets).not.toHaveBeenCalled();
+    expect(printed()).toContain(`staging-platform: ${STALE}`);
+    expect(prompts.log.info).toHaveBeenCalledWith(
+      expect.stringMatching(/Cloudflare only\. Skipped:.*Bitwarden and GitHub/),
+    );
+    expect(deleteOrphanViaWrangler).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(0);
+  });
+
+  it("deletes the orphans with --prune --yes, as deploy orphans did", async () => {
+    await runEnvAudit({ target: "staging", prune: true, yes: true });
+
+    expect(listBwsSecrets).not.toHaveBeenCalled();
+    expect(vi.mocked(deleteOrphanViaWrangler).mock.calls).toEqual([
+      ["platform", STALE, "staging"],
+    ]);
+    expect(process.exitCode).toBe(0);
+  });
+
+  it("fails on a real error: no Cloudflare token", async () => {
+    delete process.env.CLOUDFLARE_API_TOKEN;
+
+    await expect(runEnvAudit({ target: "staging" })).rejects.toThrow(
+      /CLOUDFLARE_API_TOKEN/,
+    );
+    expect(listWorkerSecrets).not.toHaveBeenCalled();
+  });
+
+  it("is chosen by --no-env even when a Bitwarden token is present", () => {
+    expect(cloudflareOnlyAudit({ accessToken: "t" })).toBe(false);
+    setNoEnv(true);
+    try {
+      expect(cloudflareOnlyAudit({ accessToken: "t" })).toBe(true);
+    } finally {
+      setNoEnv(false);
+    }
   });
 });

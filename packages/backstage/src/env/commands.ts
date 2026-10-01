@@ -86,7 +86,7 @@ import {
   pruneOrphans,
 } from "./orphans.js";
 import { requireCloudflareToken } from "../deploy/token.js";
-import { isNonInteractive } from "@devdogsuga/cli-core/mode";
+import { isNoEnv, isNonInteractive } from "@devdogsuga/cli-core/mode";
 import type { Stamp } from "@devdogsuga/cli-core/env/document";
 import {
   ignoredFor,
@@ -116,6 +116,52 @@ export interface EnvOptions {
   yes?: boolean;
   /** `audit` only: delete the Worker secrets no app declares. */
   prune?: boolean;
+  /** `--access-token`: counts as a Bitwarden credential for `audit`'s mode. */
+  accessToken?: string;
+}
+
+/**
+ * Whether `audit` can only look at Cloudflare.
+ *
+ * `--no-env` says the caller supplied the environment and there is no env file
+ * to compare. Without a terminal and without a Secrets Manager token there is
+ * no way to reach Bitwarden either (the vault and the prompt are interactive),
+ * and a job in that position (CI's orphan audit holds only the Cloudflare
+ * token) must not fail on a store it was never given. With a terminal the
+ * full audit stays the default, and finds its token the usual ways.
+ */
+export function cloudflareOnlyAudit(
+  options: Pick<EnvOptions, "accessToken">,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  if (isNoEnv()) return true;
+  const hasBitwarden = Boolean(options.accessToken || env.BWS_ACCESS_TOKEN);
+  return isNonInteractive() && !hasBitwarden;
+}
+
+/**
+ * The Cloudflare half of `audit`, alone: the Worker-secret orphan check the old
+ * `deploy orphans` made. Says which stores it skipped, and exits 0 when it only
+ * found orphans; only a real error (no token, a refused prune, a failed
+ * deletion) is non-zero.
+ */
+async function runCloudflareOnlyAudit(options: EnvOptions): Promise<void> {
+  const target = options.target;
+  assertVaultTarget(target);
+  log.info(
+    `Auditing Worker secrets on Cloudflare only. Skipped: the env file, ` +
+      `Bitwarden and GitHub (${isNoEnv() ? "--no-env" : "no Bitwarden access token and no terminal"}). ` +
+      `Drift between those stores is not checked in this mode.`,
+  );
+  requireCloudflareToken("audit Worker secrets");
+  const { secrets, unreadable } = await listWorkerSecrets(target);
+  if (unreadable.length > 0) {
+    log.warn(
+      `Could not read Worker secrets for: ${unreadable.join(", ")}. ` +
+        `Usually means the Worker has not been deployed yet.`,
+    );
+  }
+  await reportOrphans(target, secrets, options);
 }
 
 /** Today, as an ISO date. Separated so the document layer stays testable. */
@@ -553,6 +599,10 @@ export async function pushToGithub(
 /** Read-only, and safe to run against anything. */
 export async function runEnvAudit(options: EnvOptions): Promise<void> {
   assertVaultTarget(options.target);
+  if (cloudflareOnlyAudit(options)) {
+    await runCloudflareOnlyAudit(options);
+    return;
+  }
   const target = options.target;
   const spec = environmentSpecs()[target];
   // The target's own file, like pull and push. Auditing `--target staging`
@@ -870,6 +920,7 @@ async function runEnvCommand(rest: string[]): Promise<void> {
     file: flagValue(rest, "--file"),
     yes: rest.includes("--yes"),
     prune: rest.includes("--prune"),
+    accessToken: flagValue(rest, "--access-token"),
   };
 
   try {

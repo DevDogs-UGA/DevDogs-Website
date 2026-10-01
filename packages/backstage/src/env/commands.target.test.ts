@@ -203,7 +203,11 @@ const RUNNERS: {
 }[] = [
   { name: "pull", run: runEnvPull, writes: true },
   { name: "push", run: runEnvPush, writes: true },
-  { name: "audit", run: runEnvAudit, writes: false },
+  {
+    name: "audit",
+    run: (options) => runEnvAudit({ accessToken: "t", ...options }),
+    writes: false,
+  },
 ];
 
 describe.each(RUNNERS)("$name", ({ name, run, writes }) => {
