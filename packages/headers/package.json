@@ -1,0 +1,42 @@
+{
+  "name": "@devdogsuga/headers",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Security response headers for DevDogs apps: the baseline CSP directive map apps spread and extend, the origins every app needs, HSTS/framing/MIME/referrer/Permissions-Policy hardening, and nonce, serialize and apply helpers. No dependencies; each app owns its own origins.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DevDogsUGA/Backstage.git",
+    "directory": "packages/headers"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
