@@ -263,6 +263,13 @@ describe("coverage of what the CLI dispatches", () => {
     // the wizard hands back. They belong here for the second of those.
     "run",
     "bw",
+    // The presets, and the real tools (passthroughs, typed only: `main()`
+    // routes them ahead of `intro()`).
+    "preset",
+    "supabase",
+    "wrangler",
+    "drizzle-kit",
+    "psql",
   ];
 
   it("declares exactly the top-level commands the CLI accepts", () => {
@@ -357,6 +364,8 @@ describe("scopes", () => {
     for (const { path, node } of everyNode()) {
       if (inDb.has(node)) continue;
       if (SCOPED_EXCEPTIONS.has(path.join(" "))) continue;
+      // The presets name the layer they act on, like `db` does.
+      if (path[0] === "preset" && path.length > 1) continue;
       expect(node.scope, path.join(" ")).toBeUndefined();
     }
   });

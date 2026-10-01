@@ -28,6 +28,7 @@ import {
   reproducibleCommand,
 } from "@devdogsuga/cli-core/invocation";
 import { bareGroupStartPath, runMenu } from "@devdogsuga/cli-core/menu";
+import { isNonInteractive } from "@devdogsuga/cli-core/mode";
 import {
   captureDevtoolsError,
   initDevtoolsTelemetry,
@@ -50,7 +51,9 @@ import { handleGrantRoot } from "./grant-root/commands.js";
 import { handleImages } from "./images/commands.js";
 import { handleModeration } from "./moderation/commands.js";
 import { handleOAuth } from "./oauth/commands.js";
+import { handlePassthrough } from "./passthrough/commands.js";
 import { handlePersona } from "./persona/commands.js";
+import { handlePreset } from "./preset/commands.js";
 import { runTask } from "./run/commands.js";
 import { handleSetup } from "./setup/commands.js";
 import { handleWorkflows } from "./workflows/commands.js";
@@ -87,6 +90,7 @@ const CONTRIBUTOR_HANDLERS: Record<string, CommandHandler> = {
   env: handleEnv,
   db: handleDb,
   doctor: handleDoctor,
+  preset: handlePreset,
   persona: handlePersona,
   moderation: handleModeration,
   "grant-root": handleGrantRoot,
@@ -102,8 +106,36 @@ const PRODUCTION_HANDLERS: Record<string, CommandHandler> = {
   bw: runBw,
 };
 
+/**
+ * The real tools with the session's env and tier. A typed one is handled in
+ * `main()` before `intro()`, like `bw`; these entries are for a dispatcher
+ * that reaches them any other way.
+ */
+const PASSTHROUGH_TOOLS = [
+  "supabase",
+  "wrangler",
+  "drizzle-kit",
+  "psql",
+] as const;
+type PassthroughTool = (typeof PASSTHROUGH_TOOLS)[number];
+
+function isPassthroughTool(name: string | undefined): name is PassthroughTool {
+  return (PASSTHROUGH_TOOLS as readonly (string | undefined)[]).includes(name);
+}
+
+const PASSTHROUGH_HANDLERS: Record<string, CommandHandler> = Object.fromEntries(
+  PASSTHROUGH_TOOLS.map((tool) => [
+    tool,
+    async (rest: string[]) => {
+      await handlePassthrough(tool, rest);
+      return process.exitCode ? null : DONE;
+    },
+  ]),
+);
+
 export const HANDLERS: Record<string, CommandHandler> = {
   ...CONTRIBUTOR_HANDLERS,
+  ...PASSTHROUGH_HANDLERS,
   ...PRODUCTION_HANDLERS,
 };
 
@@ -194,6 +226,14 @@ export async function main(argv: string[]): Promise<void> {
     return;
   }
 
+  // The real tools, for the same reason: `devtools supabase --help` is the
+  // Supabase CLI's help. Before `intro()` too, so no banner lands above (or
+  // an outro after) another tool's output.
+  if (isPassthroughTool(argv[0])) {
+    await handlePassthrough(argv[0], argv.slice(1));
+    return;
+  }
+
   // `helpPath` so that `env pull --help` answers about `env pull` rather than
   // reprinting the top level, which is the whole point of the split.
   if (argv.includes("--help") || argv.includes("-h")) {
@@ -254,7 +294,10 @@ export async function main(argv: string[]): Promise<void> {
     return;
   }
 
-  intro("DevDogs devtools");
+  // No banner without a terminal: a log, a pipe or a CI step wants plain
+  // lines (see `@devdogsuga/cli-core/mode`).
+  const banners = !isNonInteractive();
+  if (banners) intro("DevDogs devtools");
 
   // The wizard builds an argv and hands it back to `dispatch`. See `menu.ts`.
   // `runMenu` begins its own recording from the built argv; a typed command
@@ -277,7 +320,7 @@ export async function main(argv: string[]): Promise<void> {
     closing = await dispatch(argv);
   }
 
-  if (closing) {
+  if (closing && banners) {
     // Only prints when a prompt actually decided something — see
     // `reproducibleCommand`. Above the outro, so the takeaway is the last
     // thing on screen.

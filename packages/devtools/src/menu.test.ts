@@ -538,7 +538,7 @@ describe("adapts to the machine", () => {
       (entry) => entry.label === "Runtime & infrastructure",
     );
 
-    expect(database!.hint).toBe("db, cf, cron, workflows");
+    expect(database!.hint).toBe("db, cf, preset, cron, workflows");
   });
 
   /**

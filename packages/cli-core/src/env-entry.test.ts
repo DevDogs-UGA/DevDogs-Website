@@ -317,6 +317,31 @@ describe("enterSessionEnvironment", () => {
       expect(dispatchCommand).toHaveBeenCalledTimes(1);
     });
 
+    it.each([
+      [["supabase", "start"]],
+      [["supabase", "stop"]],
+      [["preset", "restart-stack"]],
+    ])("skips the offer for the stack lifecycle command %j", async (argv) => {
+      Object.defineProperty(process.stdin, "isTTY", {
+        value: true,
+        configurable: true,
+      });
+      const { enterEnvironment, deps } = offlineDeps();
+      const dispatchCommand = vi.fn(async () => "Done.");
+
+      await enterSessionEnvironment(
+        "development",
+        undefined,
+        argv,
+        deps,
+        dispatchCommand,
+      );
+
+      expect(confirm).not.toHaveBeenCalled();
+      expect(enterEnvironment).toHaveBeenCalledTimes(2);
+      expect(dispatchCommand).toHaveBeenCalledTimes(1);
+    });
+
     it("does not offer on a non-TTY, and refuses a non-db command", async () => {
       Object.defineProperty(process.stdin, "isTTY", {
         value: false,

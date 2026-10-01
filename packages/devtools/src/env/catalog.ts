@@ -89,6 +89,9 @@ export const envCommand: CommandNode = {
     {
       name: "example",
       summary: "Regenerate .env.example from the manifests.",
+      // Reads the manifests, never an env file or a database, so it needs no
+      // tier (CI runs it with none).
+      envFree: true,
       options: [
         {
           flag: "--check",

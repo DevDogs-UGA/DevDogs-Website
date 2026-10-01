@@ -24,7 +24,14 @@ import { grantRootCommand } from "./grant-root/catalog.js";
 import { imagesCommand } from "./images/catalog.js";
 import { moderationCommand } from "./moderation/catalog.js";
 import { oauthCommand } from "./oauth/catalog.js";
+import {
+  drizzleKitCommand,
+  psqlCommand,
+  supabaseCommand,
+  wranglerCommand,
+} from "./passthrough/catalog.js";
 import { personaCommand } from "./persona/catalog.js";
+import { presetCommand } from "./preset/catalog.js";
 import { runCommand } from "./run/catalog.js";
 import { setupCommand } from "./setup/catalog.js";
 import { workflowsCommand } from "./workflows/catalog.js";
@@ -37,7 +44,22 @@ export const GROUPS: readonly CommandGroup[] = [
   },
   {
     title: "Runtime & infrastructure",
-    commands: [dbCommand, cfCommand, cronCommand, workflowsCommand],
+    commands: [
+      dbCommand,
+      cfCommand,
+      presetCommand,
+      cronCommand,
+      workflowsCommand,
+    ],
+  },
+  {
+    title: "The real tools",
+    commands: [
+      supabaseCommand,
+      wranglerCommand,
+      drizzleKitCommand,
+      psqlCommand,
+    ],
   },
   {
     title: "Content & communications",
@@ -84,6 +106,8 @@ export const catalog = createCatalog({
     ["run dev", "Start development servers"],
     ["db start", "Start Supabase on this machine"],
     ["db reset", "Rebuild the local database"],
+    ["supabase <args>", "Run the Supabase CLI against this session's tier"],
+    ["preset apply-migrations", "Push migrations, then offer types:db"],
     ["cron run", "Choose and run a scheduled job"],
   ],
   groups: GROUPS,

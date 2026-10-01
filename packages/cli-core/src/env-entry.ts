@@ -105,6 +105,30 @@ export function realEnvEntryDeps(
 }
 
 /**
+ * Commands that bring the local stack up or down themselves: `db
+ * start|stop|restart`, the `supabase start|stop` passthrough, and the
+ * restart-stack preset. An offer to start the stack before one of these would
+ * be asking a question the command is about to answer.
+ */
+function isStackLifecycle(argv: readonly string[]): boolean {
+  const [first, second] = argv;
+  if (first === "db") {
+    return second === "start" || second === "stop" || second === "restart";
+  }
+  if (first === "supabase") return second === "start" || second === "stop";
+  return first === "preset" && second === "restart-stack";
+}
+
+/**
+ * Commands that may continue in a degraded entry while the stack is down:
+ * the ones that can fix it (`db`, `supabase`, the presets), and whose data
+ * commands re-check the connection themselves and say what is missing.
+ */
+function ownsStack(argv: readonly string[]): boolean {
+  return argv[0] === "db" || argv[0] === "supabase" || argv[0] === "preset";
+}
+
+/**
  * Enters `tier` (and `devDatabase`'s overlay) for the current process,
  * handling `LocalStackOfflineError` (the TTY offer to start the local stack,
  * the `db`-exemption degraded-entry fallback) and `MissingEnvFileError` (the
@@ -162,11 +186,7 @@ export async function enterSessionEnvironment<T>(
       // this on their own, and `db stop` against an already-down stack must
       // not be interrupted by an offer to start it. An empty `commandArgv`
       // (nothing chosen yet) is likewise left alone.
-      const lifecycle =
-        commandArgv[0] === "db" &&
-        (commandArgv[1] === "start" ||
-          commandArgv[1] === "stop" ||
-          commandArgv[1] === "restart");
+      const lifecycle = isStackLifecycle(commandArgv);
       if (
         process.stdin.isTTY === true &&
         commandArgv.length !== 0 &&
@@ -205,7 +225,7 @@ export async function enterSessionEnvironment<T>(
       // degraded, unqualified entry; anything else stops here, with the
       // error's own troubleshooting, instead of failing later against
       // whatever `.env` happens to name.
-      if (commandArgv.length !== 0 && commandArgv[0] !== "db") {
+      if (commandArgv.length !== 0 && !ownsStack(commandArgv)) {
         process.exit(1);
       }
       process.stderr.write(
