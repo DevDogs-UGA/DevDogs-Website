@@ -90,10 +90,6 @@ export const supabase = (...args: string[]) =>
 export const supabaseCapture = (...args: string[]) =>
   capture(["exec", "supabase", ...args]);
 
-/** Build the supabase package (compiles database.types.ts into dist/). */
-export const buildSupabase = () =>
-  run(["--filter", "@devdogsuga/supabase", "build"]);
-
 /**
  * Generate and write Database types from the session's database.
  *
@@ -116,7 +112,7 @@ export async function generateTypes(dbUrl: string): Promise<number> {
   } catch {
     return 1;
   }
-  return buildSupabase();
+  return 0;
 }
 
 /**
