@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2025"],
+    "types": ["node"],
+    // tsdown builds dist/ (see tsdown.config.ts); tsc only type-checks, and
+    // follows the inlined @devdogsuga/cli-core into its sibling package.
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}

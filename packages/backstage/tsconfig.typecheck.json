@@ -1,0 +1,21 @@
+{
+  // `pnpm typecheck` covers `env.ts` (the operator manifest) and the vitest
+  // configs too, which `tsconfig.json` does not include: `env.ts` sits at the
+  // package root deliberately rather than under `src/`. `rootDir` reaches up
+  // to `packages/` because the inlined `@devdogsuga/cli-core` is type-checked
+  // from its sibling source.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".."
+  },
+  "include": [
+    "src",
+    "env.ts",
+    "vitest.config.ts",
+    "vitest.contract.config.ts",
+    "test/contract",
+    "test/setup.ts",
+    "tsdown.config.ts"
+  ],
+  "exclude": ["src/**/*.test.ts"]
+}

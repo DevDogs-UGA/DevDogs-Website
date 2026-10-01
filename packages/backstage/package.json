@@ -1,0 +1,75 @@
+{
+  "name": "@devdogsuga/backstage",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Officer and production CLI for DevDogsUGA: deploys, env sync with Bitwarden and GitHub, the migration planner role. Ships built JS; run it anywhere with `pnpm dlx @devdogsuga/backstage` (no checkout needed to start; commands that read a checkout say so).",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DevDogsUGA/Backstage.git",
+    "directory": "packages/backstage"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "bin": {
+    "backstage": "./bin/backstage.mjs"
+  },
+  "exports": {
+    "./ci-alias": "./src/ci-alias.ts",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "env.ts"
+  ],
+  "scripts": {
+    "build": "tsdown && node scripts/write-build-info.mjs && node ../../scripts/check-bundle-imports.mjs",
+    "cli": "node ./bin/backstage.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:contract": "vitest run --config vitest.contract.config.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "@bitwarden/cli": "2026.7.0",
+    "@bitwarden/sdk-napi": "1.0.0",
+    "@clack/prompts": "catalog:",
+    "@devdogsuga/telemetry": "workspace:*",
+    "@sentry/node": "catalog:",
+    "@supabase/supabase-js": "catalog:",
+    "dotenv": "^17.4.2",
+    "postgres": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "@devdogsuga/db": "*",
+    "@devdogsuga/env": "*"
+  },
+  "peerDependenciesMeta": {
+    "@devdogsuga/db": {
+      "optional": true
+    },
+    "@devdogsuga/env": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@devdogsuga/cli-core": "workspace:*",
+    "@devdogsuga/config": "workspace:*",
+    "@devdogsuga/db": "workspace:*",
+    "@devdogsuga/env": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "eslint": "catalog:",
+    "tsdown": "^0.23.0",
+    "vitest": "catalog:"
+  }
+}

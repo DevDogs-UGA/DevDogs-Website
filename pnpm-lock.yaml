@@ -167,6 +167,70 @@ importers:
         specifier: 'catalog:'
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(@vitest/coverage-v8@4.1.11)(jsdom@26.1.0)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.15)(yaml@2.9.1))
 
+  packages/backstage:
+    dependencies:
+      '@bitwarden/cli':
+        specifier: 2026.7.0
+        version: 2026.7.0
+      '@bitwarden/sdk-napi':
+        specifier: 1.0.0
+        version: 1.0.0
+      '@clack/prompts':
+        specifier: 'catalog:'
+        version: 1.7.0
+      '@devdogsuga/telemetry':
+        specifier: workspace:*
+        version: link:../telemetry
+      '@sentry/node':
+        specifier: 'catalog:'
+        version: 10.75.1(@opentelemetry/core@2.11.0(@opentelemetry/api@1.9.1))
+      '@supabase/supabase-js':
+        specifier: 'catalog:'
+        version: 2.116.0(@opentelemetry/api@1.9.1)
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
+      postgres:
+        specifier: 'catalog:'
+        version: 3.4.9
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.15
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
+    devDependencies:
+      '@devdogsuga/cli-core':
+        specifier: workspace:*
+        version: link:../cli-core
+      '@devdogsuga/config':
+        specifier: workspace:*
+        version: link:../config
+      '@devdogsuga/db':
+        specifier: workspace:*
+        version: link:../db
+      '@devdogsuga/env':
+        specifier: workspace:*
+        version: link:../env
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.2
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.11(vitest@4.1.11)
+      eslint:
+        specifier: 'catalog:'
+        version: 9.39.5(jiti@2.7.0)
+      tsdown:
+        specifier: ^0.23.0
+        version: 0.23.0(@vue/language-core@3.3.11)(tsx@4.23.15)(typescript@6.0.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(@vitest/coverage-v8@4.1.11)(jsdom@26.1.0)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.15)(yaml@2.9.1))
+
   packages/brand:
     dependencies:
       next:
@@ -279,6 +343,9 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(@vitest/coverage-v8@4.1.11)(jsdom@26.1.0)(vite@8.3.0(@types/node@26.6.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.16.9)(tsx@4.23.15)(yaml@2.9.1))
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
 
   packages/config:
     dependencies:
@@ -344,12 +411,6 @@ importers:
 
   packages/devtools:
     dependencies:
-      '@bitwarden/cli':
-        specifier: 2026.7.0
-        version: 2026.7.0
-      '@bitwarden/sdk-napi':
-        specifier: 1.0.0
-        version: 1.0.0
       '@clack/prompts':
         specifier: 'catalog:'
         version: 1.7.0
@@ -387,6 +448,9 @@ importers:
         specifier: 'catalog:'
         version: 4.4.3
     devDependencies:
+      '@devdogsuga/backstage':
+        specifier: workspace:*
+        version: link:../backstage
       '@devdogsuga/brand':
         specifier: workspace:*
         version: link:../brand
