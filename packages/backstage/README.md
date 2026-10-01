@@ -13,8 +13,9 @@ match. The two flags matter outside a DevDogsUGA checkout, where the workspace's
 `minimumReleaseAgeExclude` and `dlxCacheMaxAge: 0` do not apply (inside one,
 `pnpm backstage` is the script).
 
-It **starts without a checkout**. Help, `version`, `completions` and anything
-run with `--no-env` never look for one; a command that reads a checkout says
+It **starts without a checkout**. Help, `version`, `completions`, the tools
+below that need no secrets (`graphics`, `qr`, `github`, `newsletter`) and
+anything run with `--no-env` never look for one; a command that reads a checkout says
 "run this from inside a DevDogsUGA clone" and exits 1. The DevDogsUGA libraries
 it reads (`@devdogsuga/env`, `@devdogsuga/db`) are optional peers, resolved
 through the checkout by the commands that need them.
@@ -27,6 +28,9 @@ pnpm backstage env audit --target production --prune
 pnpm backstage deploy platform --tier staging    # token check, secrets file, wrangler deploy
 pnpm backstage --no-env deploy write-env         # the CI steps that supply their own environment
 pnpm backstage --no-env planner status           # the preflight credential, from DB_URL
+pnpm backstage graphics 'event/*' --out ~/images # club images, no checkout
+pnpm backstage qr https://devdogsuga.org --format svg,png,webp --logo acm
+pnpm backstage newsletter send 3.0.1 --to a@uga.edu   # asks first; --yes with no terminal
 ```
 
 ## Commands
@@ -41,6 +45,10 @@ pnpm backstage --no-env planner status           # the preflight credential, fro
 | `deploy reconcile --tier <t>`                  | The platform's config reconcile, after the deploy (`CRON_SECRET`).                     |
 | `env pull\|push\|audit --target <t>`           | One env file per target, synced to Bitwarden and GitHub. `audit` lists orphans.        |
 | `planner status\|create\|reset-password\|drop` | The `migration_planner` role the preflight tier holds.                                 |
+| `graphics [graphic…]`                          | Club images from `@devdogsuga/brand`: `brand/*`, `app/*`, `event/*`.                   |
+| `qr <text>`                                    | QR codes with every option of `/console/qr`.                                           |
+| `github rulesets\|settings`                    | Diff (and with `--apply` write) GitHub config, through `gh`.                           |
+| `newsletter render\|draft\|send <issue…>`      | Changelog issues as files, mailbox drafts, or a send.                                  |
 
 `smoke` and `reconcile` replace DevDogsUGA's `packages/deploy-checks`. The
 per-app data (hosts, public paths, the protected path and its redirect) stays in
@@ -66,6 +74,37 @@ DevDogsUGA, as a `smoke` field on each app's entry in `workers.json`:
 
 Entries may be bare paths or objects. While the field is absent, the table
 `deploy-checks` carried answers for `platform` and `schedule-builder`.
+
+## The tools that need no production secrets
+
+None of these reads an env file or needs a checkout, so the launcher skips env
+entry for them (`envFree` in the command tree).
+
+- **`graphics`** renders the brand, app and event images with
+  `@devdogsuga/brand/render`, reading meetings from the published
+  `@devdogsuga/events`. Files go to `--out` or the current directory, flat, as
+  `<name>-<format>.png`. There is no `page/*` group (the platform renders page
+  cards per request) and no `--default-out`.
+- **`qr`** takes its options from `qrRequestSchema` in `@devdogsuga/brand/qr`,
+  the same schema `/console/qr` parses, so a new option reaches both. Every
+  schema field has a flag (`qr/options.ts` is typed over the schema, and a test
+  checks it): content, `--size`, `--margin`, `--color`, `--background`,
+  `--gradient`, `--shape`, `--error-level`, `--qr-version`, `--logo` (a preset,
+  `none`, or an image file) with `--logo-size`, `--logo-padding` and
+  `--logo-crop x,y,w,h`, and `--format` with any of svg, png, jpg, webp, avif
+  and tiff at once. It prints the same scannability warning as the page.
+  `/console/qr` stays, deprecated; new options are CLI-only.
+- **`github rulesets|settings`** keep GitHub's rulesets and repository settings
+  as code, through `gh` and your own login. They must keep matching what the
+  platform's `server/github/rulesets.ts` and `teamSync.ts` assume.
+- **`newsletter render|draft|send`** are described in the
+  [newsletter package](../newsletter/README.md). Drafts and sends use the club
+  mailbox (`devdogs@uga.edu`) with the officer's own Microsoft sign-in; there
+  is no `--mailbox`. `send` needs `--to` and always asks first, naming the issue
+  and every recipient; with no terminal, `--yes` answers it. The sign-in
+  borrows Thunderbird's public client ID (see `src/newsletter/oauth.ts`); if
+  Microsoft or UGA's tenant blocks it, sending needs a club-owned app
+  registration.
 
 ## Tiers, `--no-env`, CI
 

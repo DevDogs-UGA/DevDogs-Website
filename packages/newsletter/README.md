@@ -5,9 +5,9 @@ components with two callers:
 
 - **`apps/platform`** renders issues as pages at `/changelog` and
   `/changelog/<version>`, straight from `ChangelogEmail`.
-- **`@devdogsuga/newsletter-cli`** exports issues as files — `pnpm
-newsletter` from the Backstage root — an `.html` preview and an
-  Outlook-importable `.eml` per issue, and pushes or sends them.
+- **`@devdogsuga/backstage`**'s `newsletter` command exports issues as files
+  (an `.html` preview and an Outlook-importable `.eml` per issue), drafts them
+  into the club mailbox, and sends them.
 
 It deliberately does not go through `@devdogsuga/email`. That package's
 compiled-slot pipeline exists to prove a template cannot branch on its inputs,
@@ -103,23 +103,22 @@ file; the platform archive and the exported email can never disagree.
 ## Exporting
 
 ```bash
-# rebuilds brand, events and newsletter first, so the export carries the
-# checkout's current issues and club config
-pnpm newsletter                     # pick issues interactively
-pnpm newsletter '*' --out ~/changelog
+# the issues published in this package; no checkout needed
+pnpm dlx @devdogsuga/backstage newsletter render                     # pick issues interactively
+pnpm dlx @devdogsuga/backstage newsletter render '*' --out ~/changelog
 ```
 
 The `.eml` carries `X-Unsent: 1` and no `Message-ID`, so **classic Outlook
 for Windows** opens it as an editable compose draft. New Outlook and Outlook
 on the web do not honor `X-Unsent` and open `.eml` files read-only; for those
-clients the draft has to already be in the mailbox — which is what `--push`
-does. Either way the draft is a review copy: the send happens with `--send`
-(below), because every Outlook composer rewrites what it sends.
+clients the draft has to already be in the mailbox — which is what
+`newsletter draft` does. Either way the draft is a review copy: the send
+happens with `newsletter send` (below), because every Outlook composer rewrites what it sends.
 
 ## Pushing a draft
 
 ```bash
-pnpm newsletter 3.0.1 --push
+pnpm dlx @devdogsuga/backstage newsletter draft 3.0.1
 ```
 
 appends the issue — same MIME as the `.eml`, minus `X-Unsent` — straight into
@@ -138,21 +137,23 @@ differently, into Word HTML, with the same result.)
 ## Sending
 
 ```bash
-pnpm newsletter 3.0.1 --send listserv@listserv.uga.edu
+pnpm dlx @devdogsuga/backstage newsletter send 3.0.1 --to listserv@listserv.uga.edu
 ```
 
 submits the issue over SMTP as the club mailbox, byte-for-byte as authored —
 no composer touches it, so recipients get the document with its stylesheet,
-pins and gradient underlays intact. `--send` takes the recipients, comma-separated;
-there is deliberately no interactive path to a send.
+pins and gradient underlays intact. `--to` is required and takes the
+recipients, comma-separated; there is no default audience. Every send asks
+first, naming the issue and the full recipient list; with no terminal, `--yes`
+answers it.
 
-The first `--push` or `--send` opens a browser; sign in as the mailbox and
+The first `draft` or `send` opens a browser; sign in as the mailbox and
 the CLI catches the redirect itself on a loopback port. (If no local port
 would bind, it falls back to printing the URL and asking for the
 `https://localhost` address the browser lands on.) The refresh token is
 stored at `~/.config/devdogsuga/newsletter-mailbox.json` (mode 600 — it opens
 the club mailbox, treat it like a password) and every later run is silent.
-`--mailbox` overrides the account.
+Drafts and sends always use the club mailbox.
 
 Why IMAP/SMTP and not Microsoft Graph: UGA's tenant blocks user consent for
 every Graph mail scope, but Microsoft's default consent policy allowlists a
