@@ -33,6 +33,7 @@ import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { UnknownEnvironmentError } from "./targets.js";
 import {
+  applyDeployTierAliases,
   applyWranglerLocalDatabaseAlias,
   loadEnvironment,
   LocalStackOfflineError,
@@ -286,6 +287,10 @@ try {
     throw err;
   }
 }
+
+// After the load, so a file-declared `CLOUDFLARE_ENV` counts as explicit too.
+// Covers the missing-file path as well: the tier is known either way.
+applyDeployTierAliases(env, resolution.tier);
 
 /**
  * dotenvx's CLI entry point, resolved through its package rather than a `.bin`

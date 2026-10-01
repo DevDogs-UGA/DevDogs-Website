@@ -192,3 +192,45 @@ describe("with-env tier resolution", () => {
     expect(stderr).toContain("(development)");
   });
 });
+
+describe("with-env deploy tier aliases", () => {
+  const PRINT =
+    "console.log(process.env.CLOUDFLARE_ENV, process.env.NEXT_PUBLIC_DEPLOY_ENV)";
+
+  it("derives both from DEPLOY_ENV", async () => {
+    const { code, stdout } = await withEnv(["node", "-e", PRINT], {
+      DEPLOY_ENV: "staging",
+    });
+    expect(stdout).toBe("staging staging\n");
+    expect(code).toBe(0);
+  });
+
+  it("derives both from --tier", async () => {
+    const { code, stdout } = await withEnv([
+      "--tier",
+      "production",
+      "node",
+      "-e",
+      PRINT,
+    ]);
+    expect(stdout).toBe("production production\n");
+    expect(code).toBe(0);
+  });
+
+  it("keeps an explicit value", async () => {
+    const { code, stdout } = await withEnv(["node", "-e", PRINT], {
+      DEPLOY_ENV: "staging",
+      CLOUDFLARE_ENV: "custom",
+    });
+    expect(stdout).toBe("custom staging\n");
+    expect(code).toBe(0);
+  });
+
+  it("derives nothing in development", async () => {
+    const { code, stdout } = await withEnv(["node", "-e", PRINT], {
+      DEPLOY_ENV: "development",
+    });
+    expect(stdout).toBe("undefined undefined\n");
+    expect(code).toBe(0);
+  });
+});

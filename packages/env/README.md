@@ -30,3 +30,7 @@ value at run time wrap their command in (`build`, `lint`, `typecheck` and
 
 The `-c` form defers `$VAR` expansion until after the env files are loaded; use
 the plain argv form otherwise.
+
+For a staging or production tier, `with-env` also sets `CLOUDFLARE_ENV` and
+`NEXT_PUBLIC_DEPLOY_ENV` to that tier, so `DEPLOY_ENV=staging with-env vinext
+build` needs nothing else. A value you set yourself (shell or env file) wins.

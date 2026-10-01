@@ -140,6 +140,35 @@ export function applyWranglerLocalDatabaseAlias(
 }
 
 /**
+ * The variables a deployed build reads to learn its tier, all of which say the
+ * same thing `DEPLOY_ENV` already does: `CLOUDFLARE_ENV` picks the wrangler
+ * environment, `NEXT_PUBLIC_DEPLOY_ENV` is inlined into the client bundle.
+ * Naming the tier once, as `DEPLOY_ENV` (or `--tier`), is enough; the build
+ * scripts no longer restate it three times.
+ *
+ * An explicit, non-empty value always wins, so a build can still target a
+ * different wrangler environment than the tier it loaded. Development derives
+ * nothing: it has no wrangler environment, and the client bundle already
+ * defaults to it.
+ *
+ * Deliberately NOT part of `loadEnvironment`: that also runs in-process inside
+ * a devtools session, where a derived value written onto `process.env` would
+ * read as "explicitly set" the next time the tier changed. Only the `with-env`
+ * child, whose environment is built fresh per run, derives them.
+ */
+export function applyDeployTierAliases(
+  environment: Record<string, string>,
+  tier: DeployEnvironment,
+): void {
+  if (tier === "development") return;
+  for (const key of ["CLOUDFLARE_ENV", "NEXT_PUBLIC_DEPLOY_ENV"]) {
+    if (environment[key] === undefined || environment[key] === "") {
+      environment[key] = tier;
+    }
+  }
+}
+
+/**
  * A minimal, single-line-only `.env` assignment reader, used ONLY to recover
  * a key's UNEXPANDED value so a `$NAME` reference inside it can be resolved
  * order-independently — see `expandReferences` in `derivation.ts`, and the

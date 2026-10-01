@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { UnknownEnvironmentError } from "./targets.js";
 import {
+  applyDeployTierAliases,
   applyWranglerLocalDatabaseAlias,
   GENERATED_FILE,
   HYPERDRIVE_LOCAL_CONNECTION_ENV,
@@ -258,6 +259,43 @@ describe(".env.generated is development-only", () => {
       expect(s.warnings).toEqual([]);
       expect(probe).not.toHaveBeenCalled();
     }
+  });
+});
+
+describe("deploy tier aliases", () => {
+  it("derives CLOUDFLARE_ENV and NEXT_PUBLIC_DEPLOY_ENV from the tier", () => {
+    for (const tier of ["staging", "production"] as const) {
+      const environment: Record<string, string> = {};
+      applyDeployTierAliases(environment, tier);
+      expect(environment).toEqual({
+        CLOUDFLARE_ENV: tier,
+        NEXT_PUBLIC_DEPLOY_ENV: tier,
+      });
+    }
+  });
+
+  it("lets an explicit value win, per variable", () => {
+    const environment: Record<string, string> = { CLOUDFLARE_ENV: "preview" };
+    applyDeployTierAliases(environment, "production");
+    expect(environment).toEqual({
+      CLOUDFLARE_ENV: "preview",
+      NEXT_PUBLIC_DEPLOY_ENV: "production",
+    });
+  });
+
+  it("treats an empty value as unset", () => {
+    const environment = { CLOUDFLARE_ENV: "", NEXT_PUBLIC_DEPLOY_ENV: "" };
+    applyDeployTierAliases(environment, "staging");
+    expect(environment).toEqual({
+      CLOUDFLARE_ENV: "staging",
+      NEXT_PUBLIC_DEPLOY_ENV: "staging",
+    });
+  });
+
+  it("derives nothing for development", () => {
+    const environment: Record<string, string> = {};
+    applyDeployTierAliases(environment, "development");
+    expect(environment).toEqual({});
   });
 });
 
