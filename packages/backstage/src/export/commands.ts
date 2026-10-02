@@ -68,11 +68,14 @@ import {
 import { askSavePath } from "../production/save-path.js";
 import { parseBound } from "../production/time.js";
 import {
-  ATTENDANCE_FORMATS,
+  bevyFormat,
+  bevySurvey,
   formatFor,
+  FORMATS_BY_KIND,
   parseFormats,
   type Format,
   type FormatName,
+  type Row,
 } from "./formats.js";
 import {
   auditFilters,
@@ -117,7 +120,7 @@ export interface ExportDeps {
   sink?: (path: string, overwrite: boolean, bom: boolean) => Promise<Sink>;
   /** Whether to ask for formats, a meeting and destinations. */
   interactive?: boolean;
-  pickFormats?: () => Promise<FormatName[]>;
+  pickFormats?: (kind: ExportKind) => Promise<FormatName[]>;
   askMeeting?: () => Promise<string>;
   /** A destination, already confirmed if it replaces a file. */
   askPath?: (message: string, suggested: string) => Promise<string>;
@@ -164,11 +167,10 @@ function parse(argv: readonly string[]): { kind: ExportKind; values: Values } {
       allowPositionals: false,
       strict: true,
     });
-    if (values.meeting && kind !== "attendance") {
-      throw new UsageError("--meeting only applies to the attendance export.");
-    }
-    if (values.format && kind !== "attendance") {
-      throw new UsageError("--format only applies to the attendance export.");
+    if (values.meeting && kind !== "attendance" && kind !== "responses") {
+      throw new UsageError(
+        "--meeting only applies to the attendance and responses exports.",
+      );
     }
     return { kind: kind as ExportKind, values };
   } catch (err) {
@@ -214,8 +216,14 @@ export function sourceWith(sql: Sql): ExportSource {
       );
       return String(row!.id);
     },
-    rows: (kind, filters) =>
-      sql.unsafe(EXPORTS[kind].sql, exportParams(filters)).cursor(500),
+    rows: async function* (kind, filters) {
+      const { sql: query, transform } = EXPORTS[kind];
+      for await (const page of sql
+        .unsafe(query, exportParams(filters))
+        .cursor(500)) {
+        yield transform ? page.map(transform) : page;
+      }
+    },
     finish: async (auditId, rowCount) => {
       await sql.unsafe(
         `update "platform"."exportAudit" set "rowCount" = $1 where "id" = $2::uuid`,
@@ -289,11 +297,11 @@ function isDirectory(path: string): boolean {
   }
 }
 
-async function pickFormats(): Promise<FormatName[]> {
+async function pickFormats(kind: ExportKind): Promise<FormatName[]> {
   return unwrap(
     await multiselect<FormatName>({
       message: "Which formats? (space to choose, enter to export)",
-      options: ATTENDANCE_FORMATS.map((name) => {
+      options: FORMATS_BY_KIND[kind].map((name) => {
         const format = formatFor(name, []);
         return { value: name, label: format.label, hint: format.hint };
       }),
@@ -381,26 +389,26 @@ export async function runExport(
 
     let names: FormatName[];
     try {
-      names = values.format ? parseFormats(values.format) : [];
+      names = values.format ? parseFormats(values.format, kind) : [];
     } catch (err) {
       throw new UsageError(errorMessage(err));
     }
     if (names.length === 0) {
       names =
-        kind === "attendance" && interactive
-          ? await (deps.pickFormats ?? pickFormats)()
+        FORMATS_BY_KIND[kind].length > 1 && interactive
+          ? await (deps.pickFormats ?? pickFormats)(kind)
           : ["platform"];
     }
     const { columns } = EXPORTS[kind];
-    const formats = names.map((n) => formatFor(n, columns));
+    let formats = names.map((n) => formatFor(n, columns));
 
     const perEvent = formats.filter((f) => f.perEvent);
     if (perEvent.length > 0 && !values.meeting) {
       if (!interactive) {
         throw new UsageError(
           `The ${perEvent.map((f) => f.label).join(" and ")} ` +
-            `${perEvent.length === 1 ? "file is" : "files are"} one event's ` +
-            "attendance; name it with --meeting.",
+            `${perEvent.length === 1 ? "file is" : "files are"} for one ` +
+            "meeting; name it with --meeting.",
         );
       }
       values.meeting = await (deps.askMeeting ?? askMeeting)();
@@ -428,6 +436,21 @@ export async function runExport(
       filters.meetingId = meeting.id;
       slug = meeting.slug;
       say(`Meeting: ${describeMeeting(meeting)}.`);
+    }
+
+    // The Bevy file carries the meeting's survey answers in its `survey:`
+    // columns, read the way `export responses --meeting` reads them.
+    if (names.includes("bevy") && filters.meetingId) {
+      const answers: Row[] = [];
+      for await (const page of source.rows("responses", {
+        meetingId: filters.meetingId,
+      })) {
+        answers.push(...page);
+      }
+      const survey = bevySurvey(answers);
+      formats = formats.map((f) =>
+        f.name === "bevy" ? bevyFormat(survey) : f,
+      );
     }
 
     const files = await planFiles(
@@ -478,7 +501,12 @@ export async function runExport(
         w.count += count;
       }
     }
-    for (const w of writing) await w.sink.close();
+    for (const w of writing) {
+      const last = w.writer.end?.();
+      if (last?.text) await w.sink.write(last.text);
+      w.count += last?.count ?? 0;
+      await w.sink.close();
+    }
     done = true;
 
     for (const w of writing) {

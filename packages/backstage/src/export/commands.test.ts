@@ -46,6 +46,20 @@ const ROWS: Record<string, unknown>[] = [
   },
 ];
 
+const SURVEY_ROWS = [
+  {
+    user_id: "u-1",
+    preferred_name: "Ada",
+    email: "ada@uga.edu",
+    question_id: "developer_experience",
+    definition: { bevy: "survey:level_of_developer_experience_1" },
+    answer: "Advanced",
+  },
+];
+
+/** Whether the export under test is `responses` itself. */
+let responsesExport = false;
+
 function source(fail = false): ExportSource {
   return {
     officersFor: async (login) => {
@@ -68,10 +82,16 @@ function source(fail = false): ExportSource {
       events.push(`audit:${userId}:${kind}:${JSON.stringify(filters)}`);
       return "audit-1";
     },
-    rows: async function* (_kind, filters) {
+    rows: async function* (kind, filters) {
+      if (kind === "responses" && filters.meetingId && !responsesExport) {
+        // The Bevy file's survey read, separate from the export's own.
+        events.push("survey");
+        yield SURVEY_ROWS;
+        return;
+      }
       lastFilters = filters;
       events.push("rows");
-      yield ROWS;
+      yield kind === "responses" ? SURVEY_ROWS : ROWS;
       if (fail) throw Object.assign(new Error("boom"), { code: "57014" });
     },
     finish: async (id, count) => {
@@ -171,9 +191,11 @@ describe("export", () => {
     expect(events).not.toContain("finish:audit-1:1");
   });
 
-  it("takes --meeting only for attendance", async () => {
+  it("takes --meeting only for attendance and responses", async () => {
     await runExport(["stars", "--meeting", "2026-09-09"], deps());
-    expect(stderr).toContain("--meeting only applies to the attendance export");
+    expect(stderr).toContain(
+      "--meeting only applies to the attendance and responses exports",
+    );
   });
 
   it("dry-runs without auditing", async () => {
@@ -215,9 +237,10 @@ describe("export", () => {
       'audit:u-officer:attendance:{"meetingId":"m-1","format":"involvement"}',
     ]);
     expect(events.filter((e) => e === "rows")).toHaveLength(1);
+    expect(events.filter((e) => e === "survey")).toHaveLength(1);
     expect(files[1]!.text).toBe(
-      "first_name,last_name,email,checked_in,job_title,company,ticket_title,ticket_venue\r\n" +
-        "Ada,Lovelace,ada@uga.edu,TRUE,,,,\r\n",
+      "first_name,last_name,email,checked_in,job_title,company,ticket_title,ticket_venue,survey:level_of_developer_experience_1\r\n" +
+        "Ada,Lovelace,ada@uga.edu,TRUE,,,,,Advanced\r\n",
     );
     expect(files[2]!.text).toBe("ada@uga.edu\r\n");
     expect(events).toContain("finish:audit-1:2");
@@ -225,11 +248,33 @@ describe("export", () => {
     expect(stderr).toContain("Wrote 1 person as Bevy attendee import");
   });
 
+  it("exports one meeting's responses long and wide", async () => {
+    responsesExport = true;
+    try {
+      await runExport(
+        ["responses", "--meeting", "2026-09-09", "--format", "platform,wide"],
+        deps(),
+      );
+    } finally {
+      responsesExport = false;
+    }
+    expect(process.exitCode).toBeUndefined();
+    expect(files.map((f) => f.path)).toEqual([
+      "responses-2026-09-09.csv",
+      "responses-2026-09-09-wide.csv",
+    ]);
+    expect(files[1]!.text).toBe(
+      "user_id,preferred_name,email,developer_experience\r\n" +
+        "u-1,Ada,ada@uga.edu,Advanced\r\n",
+    );
+    expect(stderr).toContain("Wrote 1 person as Wide table");
+  });
+
   it("needs --meeting for a per-event format without a terminal", async () => {
     await runExport(["attendance", "--format", "involvement"], deps());
     expect(process.exitCode).toBe(1);
     expect(stderr).toContain(
-      "The Involvement Network list file is one event's attendance; name it with --meeting.",
+      "The Involvement Network list file is for one meeting; name it with --meeting.",
     );
     expect(files).toEqual([]);
   });
@@ -312,11 +357,11 @@ describe("export", () => {
     expect(files).toEqual([]);
   });
 
-  it("refuses an unknown format, and --format off attendance", async () => {
+  it("refuses an unknown format, and a format an export lacks", async () => {
     await runExport(["attendance", "--format", "excel"], deps());
     expect(stderr).toContain('Unknown format "excel"');
     await runExport(["stars", "--format", "bevy"], deps());
-    expect(stderr).toContain("--format only applies to the attendance export");
+    expect(stderr).toContain("The stars export has one format");
   });
 
   it("discards every partial file when a read fails partway", async () => {

@@ -5,6 +5,9 @@ import {
   parseFormats,
   splitName,
   ugaEmail,
+  bevyFormat,
+  bevySurvey,
+  WIDE,
 } from "./formats.js";
 
 describe("formats", () => {
@@ -50,10 +53,65 @@ describe("formats", () => {
   });
 
   it("takes commas and repeats, once each", () => {
-    expect(parseFormats(["bevy, platform", "bevy"])).toEqual([
+    expect(parseFormats(["bevy, platform", "bevy"], "attendance")).toEqual([
       "bevy",
       "platform",
     ]);
-    expect(() => parseFormats(["csv"])).toThrow('Unknown format "csv"');
+    expect(() => parseFormats(["csv"], "attendance")).toThrow(
+      'Unknown format "csv"',
+    );
+    expect(() => parseFormats(["bevy"], "responses")).toThrow(
+      "Try platform, wide",
+    );
+    expect(() => parseFormats(["wide"], "stars")).toThrow("has one format");
+  });
+
+  it("fills the Bevy survey columns from a meeting's responses", () => {
+    const survey = bevySurvey([
+      {
+        user_id: "u-1",
+        definition: { bevy: "survey:level_of_developer_experience_1" },
+        answer: "Advanced",
+      },
+      { user_id: "u-1", definition: {}, answer: "unmapped" },
+    ]);
+    expect(survey.columns).toEqual(["survey:level_of_developer_experience_1"]);
+    const out = bevyFormat(survey)
+      .writer()
+      .page([{ user_id: "u-1", email: "a@uga.edu", preferred_name: "Ada" }]);
+    expect(out.text).toBe("Ada,,a@uga.edu,TRUE,,,,,Advanced\r\n");
+  });
+
+  it("writes responses wide, one row per person, once every row is in", () => {
+    const writer = WIDE.writer();
+    expect(
+      writer.page([
+        {
+          user_id: "u-1",
+          email: "a@uga.edu",
+          question_id: "q_one",
+          answer: "A",
+        },
+        {
+          user_id: "u-2",
+          email: "b@uga.edu",
+          question_id: "q_two",
+          answer: "B",
+        },
+        {
+          user_id: "u-1",
+          email: "a@uga.edu",
+          question_id: "q_two",
+          answer: "C",
+        },
+      ]),
+    ).toEqual({ text: "", count: 0 });
+    expect(writer.end?.()).toEqual({
+      text:
+        "user_id,preferred_name,email,q_one,q_two\r\n" +
+        "u-1,,a@uga.edu,A,C\r\n" +
+        "u-2,,b@uga.edu,,B\r\n",
+      count: 2,
+    });
   });
 });

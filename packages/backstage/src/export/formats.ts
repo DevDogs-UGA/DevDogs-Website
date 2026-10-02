@@ -5,18 +5,44 @@
  *
  * - `bevy`: GDG's Bevy attendee import (gdg.community.dev, an event's
  *   Registrations, "Import attendees"), its template's fixed columns with
- *   `checked_in` TRUE. The template's `survey:` columns differ per event and
- *   are left off.
+ *   `checked_in` TRUE, then a `survey:` column for each check-in survey
+ *   question mapped to one (`bevy` in questions.json) that anyone at the
+ *   meeting answered, filled with each person's answer as of the meeting.
  * - `involvement`: the UGA Involvement Network's attendance upload, one MyID
  *   email per line and nothing else.
  *
  * Both are one line per person, not per check-in, and only make sense for one
  * event, so they need `--meeting`.
+ *
+ * Survey responses can also be written `wide`: one row per person, one
+ * column per question, for one meeting.
  */
+import type { ExportKind } from "./queries.js";
 import { csvRow, LINE_ENDING } from "../csv/write.js";
 
-export const ATTENDANCE_FORMATS = ["platform", "bevy", "involvement"] as const;
-export type FormatName = (typeof ATTENDANCE_FORMATS)[number];
+export const FORMAT_NAMES = [
+  "platform",
+  "bevy",
+  "involvement",
+  "wide",
+] as const;
+export type FormatName = (typeof FORMAT_NAMES)[number];
+
+/** What each export can be written as; the first is its default. */
+export const FORMATS_BY_KIND: Record<ExportKind, readonly FormatName[]> = {
+  stars: ["platform"],
+  attendance: ["platform", "bevy", "involvement"],
+  reflections: ["platform"],
+  responses: ["platform", "wide"],
+};
+
+/** Survey answers by person, for the Bevy file's `survey:` columns. */
+export interface BevySurvey {
+  /** The `survey:` columns, in order. */
+  columns: string[];
+  /** user id → column → the answer in words. */
+  byUser: Map<string, Map<string, string>>;
+}
 
 export type Row = Record<string, unknown>;
 
@@ -26,6 +52,8 @@ export interface FormatWriter {
   page: (rows: readonly Row[]) => { text: string; count: number };
   /** People left out (no address the format can use). */
   skipped: () => number;
+  /** Anything written only once every row is in, such as a wide table. */
+  end?: () => { text: string; count: number };
 }
 
 export interface Format {
@@ -137,25 +165,94 @@ export function platformFormat(columns: readonly string[]): Format {
   };
 }
 
-export const BEVY: Format = {
-  name: "bevy",
-  label: "Bevy attendee import",
-  hint: "gdg.community.dev; one row per person, checked in",
-  suffix: "bevy",
+export function bevyFormat(
+  survey: BevySurvey = { columns: [], byUser: new Map() },
+): Format {
+  return {
+    name: "bevy",
+    label: "Bevy attendee import",
+    hint: "gdg.community.dev; one row per person, checked in, survey answers",
+    suffix: "bevy",
+    extension: "csv",
+    bom: false,
+    perEvent: true,
+    unit: ["person", "people"],
+    needs: "an email",
+    head: csvRow([...BEVY_COLUMNS, ...survey.columns]),
+    writer: () =>
+      oncePer(
+        (row) => (ugaEmail(row) ?? text(row.email).toLowerCase()) || null,
+        (row, email) => {
+          const [first, last] = splitName(row);
+          const answers = survey.byUser.get(text(row.user_id));
+          return csvRow([
+            first,
+            last,
+            email,
+            "TRUE",
+            "",
+            "",
+            "",
+            "",
+            ...survey.columns.map((c) => answers?.get(c) ?? ""),
+          ]);
+        },
+      ),
+  };
+}
+
+/** `bevy` without survey answers: the template's fixed columns only. */
+export const BEVY: Format = bevyFormat();
+
+/**
+ * Survey responses as one row per person and one column per question (its
+ * id), in the order questions first appear. Every row has to be in before the
+ * header is known, so it writes everything at the end; one meeting's answers
+ * are what it is for, which keeps that small.
+ */
+export const WIDE: Format = {
+  name: "wide",
+  label: "Wide table",
+  hint: "one row per person, one column per question",
+  suffix: "wide",
   extension: "csv",
-  bom: false,
+  bom: true,
   perEvent: true,
   unit: ["person", "people"],
-  needs: "an email",
-  head: csvRow(BEVY_COLUMNS),
-  writer: () =>
-    oncePer(
-      (row) => (ugaEmail(row) ?? text(row.email).toLowerCase()) || null,
-      (row, email) => {
-        const [first, last] = splitName(row);
-        return csvRow([first, last, email, "TRUE", "", "", "", ""]);
+  needs: "",
+  head: "",
+  writer: () => {
+    const questions: string[] = [];
+    const people = new Map<
+      string,
+      { row: Row; answers: Map<string, unknown> }
+    >();
+    return {
+      page: (rows) => {
+        for (const row of rows) {
+          const question = text(row.question_id);
+          if (!questions.includes(question)) questions.push(question);
+          const id = text(row.user_id);
+          const person = people.get(id) ?? { row, answers: new Map() };
+          person.answers.set(question, row.answer);
+          people.set(id, person);
+        }
+        return { text: "", count: 0 };
       },
-    ),
+      skipped: () => 0,
+      end: () => {
+        const lead = ["user_id", "preferred_name", "email"];
+        let out = csvRow([...lead, ...questions]);
+        for (const { row, answers } of people.values()) {
+          out += csvRow([
+            ...lead.map((c) => row[c]),
+            ...questions.map((q) => answers.get(q) ?? ""),
+          ]);
+        }
+        return { text: out, count: people.size };
+      },
+    };
+  },
 };
 
 export const INVOLVEMENT: Format = {
@@ -175,24 +272,54 @@ export const INVOLVEMENT: Format = {
 export function formatFor(
   name: FormatName,
   columns: readonly string[],
+  survey?: BevySurvey,
 ): Format {
-  if (name === "bevy") return BEVY;
+  if (name === "bevy") return bevyFormat(survey);
   if (name === "involvement") return INVOLVEMENT;
+  if (name === "wide") return WIDE;
   return platformFormat(columns);
 }
 
-/** `--format` values, comma-separated or repeated, checked and deduplicated. */
-export function parseFormats(raw: readonly string[]): FormatName[] {
+/**
+ * `--format` values for an export, comma-separated or repeated, checked
+ * against what that export offers and deduplicated.
+ */
+export function parseFormats(
+  raw: readonly string[],
+  kind: ExportKind,
+): FormatName[] {
+  const offered = FORMATS_BY_KIND[kind];
   const names = raw
     .flatMap((r) => r.split(","))
     .map((r) => r.trim().toLowerCase())
     .filter(Boolean);
   for (const name of names) {
-    if (!(ATTENDANCE_FORMATS as readonly string[]).includes(name)) {
+    if (!(offered as readonly string[]).includes(name)) {
       throw new Error(
-        `Unknown format "${name}". Try ${ATTENDANCE_FORMATS.join(", ")}.`,
+        offered.length === 1
+          ? `The ${kind} export has one format; leave --format off.`
+          : `Unknown format "${name}" for ${kind}. Try ${offered.join(", ")}.`,
       );
     }
   }
   return [...new Set(names)] as FormatName[];
+}
+
+/**
+ * The Bevy file's survey columns from a meeting's `responses` rows: each
+ * mapped question anyone answered, and each person's answer in words.
+ */
+export function bevySurvey(rows: readonly Row[]): BevySurvey {
+  const columns: string[] = [];
+  const byUser = new Map<string, Map<string, string>>();
+  for (const row of rows) {
+    const column = (row.definition as { bevy?: string } | null)?.bevy;
+    if (!column) continue;
+    if (!columns.includes(column)) columns.push(column);
+    const id = text(row.user_id);
+    const answers = byUser.get(id) ?? new Map<string, string>();
+    answers.set(column, text(row.answer));
+    byUser.set(id, answers);
+  }
+  return { columns: columns.sort(), byUser };
 }

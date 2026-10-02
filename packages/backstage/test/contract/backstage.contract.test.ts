@@ -338,6 +338,7 @@ describe("backstage contract tests", () => {
       "export stars",
       "export attendance",
       "export reflections",
+      "export responses",
       "graphics",
       "qr",
       "github rulesets",

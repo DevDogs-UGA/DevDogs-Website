@@ -43,18 +43,21 @@ function exportOf(kind: ExportKind, extra: CommandOption[] = []): CommandNode {
   };
 }
 
+const MEETING: CommandOption = {
+  flag: "--meeting",
+  value: "<meeting>",
+  summary: "One meeting: its day (2026-09-09), slug, config id or id.",
+};
+
 export const exportCommand: CommandNode = {
   name: "export",
-  summary: "Member data as CSV: stars, attendance, reflections. Audited.",
+  summary:
+    "Member data as CSV: stars, attendance, reflections, survey responses. Audited.",
   hint: "production database; your gh login is recorded",
   subcommands: [
     exportOf("stars"),
     exportOf("attendance", [
-      {
-        flag: "--meeting",
-        value: "<meeting>",
-        summary: "One meeting: its day (2026-09-09), slug, config id or id.",
-      },
+      MEETING,
       {
         flag: "--format",
         value: "<formats>",
@@ -63,5 +66,14 @@ export const exportCommand: CommandNode = {
       },
     ]),
     exportOf("reflections"),
+    exportOf("responses", [
+      MEETING,
+      {
+        flag: "--format",
+        value: "<formats>",
+        summary:
+          "platform (one row per answer), wide (one row per person; needs --meeting). Asked at a terminal.",
+      },
+    ]),
   ],
 };

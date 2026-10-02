@@ -40,6 +40,7 @@ describe("the tree", () => {
       "export stars",
       "export attendance",
       "export reflections",
+      "export responses",
       "graphics",
       "qr",
       "github rulesets",
@@ -86,6 +87,7 @@ describe("the tree", () => {
       "stars",
       "attendance",
       "reflections",
+      "responses",
     ]);
     expect(subcommandNames(["planner"])).toEqual([
       "status",

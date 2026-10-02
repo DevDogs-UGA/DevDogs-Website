@@ -1,7 +1,8 @@
 /**
- * The three exports, moved from the platform's `server/export/` with their
- * columns unchanged: anything downstream that read `/export/stars` reads
- * `backstage export stars` the same way.
+ * The exports. The first three moved from the platform's `server/export/`
+ * with their columns unchanged: anything downstream that read
+ * `/export/stars` reads `backstage export stars` the same way. `responses`
+ * (the check-in survey's answers) was born here.
  *
  * Each query selects its columns, aliased to the header names, in header
  * order; attendance also selects the names and UGA address the Bevy and
@@ -9,7 +10,14 @@
  * a meeting id; each null when not given.
  */
 
-export const EXPORT_KINDS = ["stars", "attendance", "reflections"] as const;
+import { describeAnswer, type Answer, type Question } from "@devdogsuga/events";
+
+export const EXPORT_KINDS = [
+  "stars",
+  "attendance",
+  "reflections",
+  "responses",
+] as const;
 export type ExportKind = (typeof EXPORT_KINDS)[number];
 
 export interface ExportFilters {
@@ -23,6 +31,8 @@ export interface ExportSpec {
   columns: readonly string[];
   sql: string;
   summary: string;
+  /** Fills columns SQL cannot, from the row's other fields. */
+  transform?: (row: Record<string, unknown>) => Record<string, unknown>;
 }
 
 /** The member columns every export leads with. */
@@ -42,6 +52,95 @@ const MEMBER_COLUMNS = ["user_id", "preferred_name", "email", "github_login"];
 const MEMBER_JOINS = (userId: string) => `
 left join "platform"."profile" p on p."userId" = ${userId}
 left join "auth"."users" u on u."id" = ${userId}`;
+
+/**
+ * The survey answers one export reads: every current answer, or for one
+ * meeting (`$3`), that meeting's answers plus each attendee's member answers
+ * AS THEY STOOD WHEN IT ENDED -- the latest revision at or before its end,
+ * else the first after it (a member who answered on the way out), from the
+ * append-only `surveyAnswerRevisions`. A member answer cleared by then is
+ * left out. `--from`/`--to` filter the unscoped case on when the answer was
+ * last changed.
+ */
+const PICKED_ANSWERS = `
+picked as (
+  select a."userId", a."questionId", a."meetingId", a.answer,
+    a."updatedAt" as "answeredAt"
+  from "platform"."surveyAnswers" a
+  where $3::uuid is null
+    and ($1::timestamptz is null or a."updatedAt" >= $1::timestamptz)
+    and ($2::timestamptz is null or a."updatedAt" < $2::timestamptz)
+
+  union all
+
+  select a."userId", a."questionId", a."meetingId", a.answer, a."updatedAt"
+  from "platform"."surveyAnswers" a
+  where a."meetingId" = $3::uuid
+
+  union all
+
+  select "userId", "questionId", null::uuid, answer, "recordedAt"
+  from (
+    select distinct on (r."userId", r."questionId")
+      r."userId", r."questionId", r.answer, r."recordedAt"
+    from "platform"."surveyAnswerRevisions" r
+    join "platform"."attendance" att
+      on att."userId" = r."userId" and att."meetingId" = $3::uuid
+    join "platform"."meetings" ended on ended.id = $3::uuid
+    where r."meetingId" is null
+    order by r."userId", r."questionId",
+      r."recordedAt" > ended."endsAt",
+      case when r."recordedAt" <= ended."endsAt" then r."recordedAt" end
+        desc nulls last,
+      r."recordedAt"
+  ) as stood
+  where answer is not null
+)`;
+
+/**
+ * One row per survey answer, worded with the question's current definition
+ * (so a relabelled option exports under its new label) beside the stored
+ * value, for anything that needs option ids.
+ */
+const RESPONSES: ExportSpec = {
+  summary: "One row per survey answer; --meeting for one meeting's.",
+  columns: [
+    ...MEMBER_COLUMNS,
+    "meeting_config_id",
+    "meeting_title",
+    "question_id",
+    "question_scope",
+    "question_prompt",
+    "answer",
+    "answer_value",
+    "answered_at",
+  ],
+  sql: `
+with ${PICKED_ANSWERS}
+select ${MEMBER('pa."userId"')},
+  m."configId" as "meeting_config_id",
+  case when m.id is not null
+    then coalesce(m."nameOverride", m."kind", 'Meeting') end as "meeting_title",
+  q.id as "question_id",
+  q.scope as "question_scope",
+  q.definition ->> 'prompt' as "question_prompt",
+  q.definition as "definition",
+  pa.answer as "answer_json",
+  pa."answeredAt" as "answered_at"
+from picked pa
+join "platform"."surveyQuestions" q on q.id = pa."questionId"
+left join "platform"."meetings" m on m.id = pa."meetingId"
+${MEMBER_JOINS('pa."userId"')}
+order by pa."userId", q.scope, q.id, m."startsAt" nulls first`,
+  transform: (row) => ({
+    ...row,
+    answer: describeAnswer(
+      row.definition as Question,
+      row.answer_json as Answer,
+    ),
+    answer_value: JSON.stringify(row.answer_json),
+  }),
+};
 
 export const EXPORTS: Record<ExportKind, ExportSpec> = {
   /**
@@ -162,6 +261,8 @@ where ($1::timestamptz is null or r."createdAt" >= $1::timestamptz)
   and $3::uuid is null
 order by r."createdAt", r."userId", r."id"`,
   },
+
+  responses: RESPONSES,
 };
 
 export function exportParams(filters: ExportFilters): (string | null)[] {
