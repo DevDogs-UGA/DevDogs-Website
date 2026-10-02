@@ -14,7 +14,7 @@ match. The two flags matter outside a DevDogsUGA checkout, where the workspace's
 `pnpm backstage` is the script).
 
 It **starts without a checkout**. Help, `version`, `completions`, the tools
-below that need no secrets (`graphics`, `qr`, `github`, `newsletter`) and
+below that need no secrets (`graphics`, `qr`, `github`, `newsletter`, `creds`) and
 anything run with `--no-env` never look for one; a command that reads a checkout says
 "run this from inside a DevDogsUGA clone" and exits 1. The DevDogsUGA libraries
 it reads (`@devdogsuga/env`, `@devdogsuga/db`) are optional peers, resolved
@@ -31,6 +31,8 @@ pnpm backstage --no-env planner status           # the preflight credential, fro
 pnpm backstage graphics 'event/*' --out ~/images # club images, no checkout
 pnpm backstage qr https://devdogsuga.org --format svg,png,webp --logo acm
 pnpm backstage newsletter send 3.0.1 --to a@uga.edu   # asks first; --yes with no terminal
+pnpm backstage creds                             # share a club login with officers, as a Bitwarden Send
+pnpm backstage creds renew                       # extend every Send 30 days
 ```
 
 ## Commands
@@ -49,6 +51,7 @@ pnpm backstage newsletter send 3.0.1 --to a@uga.edu   # asks first; --yes with n
 | `qr <text>`                                    | QR codes with every option of `/console/qr`.                                           |
 | `github rulesets\|settings`                    | Diff (and with `--apply` write) GitHub config, through `gh`.                           |
 | `newsletter render\|draft\|send <issue…>`      | Changelog issues as files, mailbox drafts, or a send.                                  |
+| `creds send\|add\|renew\|list\|report`         | Club logins from Bitwarden as email-verified Sends, and the Linear report.             |
 
 `smoke` and `reconcile` replace DevDogsUGA's `packages/deploy-checks`. The
 per-app data (hosts, public paths, the protected path and its redirect) stays in
@@ -105,6 +108,47 @@ entry for them (`envFree` in the command tree).
   borrows Thunderbird's public client ID (see `src/newsletter/oauth.ts`); if
   Microsoft or UGA's tenant blocks it, sending needs a club-owned app
   registration.
+
+## Shared logins: `creds`
+
+The club's shared logins (Instagram, Canva, ArchPass, Linktree, later project
+API keys) live only in the **Shared Accounts** collection of the DevDogs
+Bitwarden organization. `creds` hands them to officers as Bitwarden Sends:
+
+- **`send`** picks items and recipients (officers by name or by role, read live
+  from production: everyone holding a role other than `Member`, by UGA MyID
+  email), shows a preview with the password masked as `••••••••`, then creates
+  or updates **one Send per item**, restricted by email verification to its
+  recipients and deleted 30 days out. Removing an address revokes it. Addresses
+  off the roster need `--allow-email`. Non-interactive: `--item`, `--to`,
+  `--role`, `--yes`.
+- **`add`** saves a new login into the collection (org-owned), then sends it.
+  The password is typed at a hidden prompt, or read with `--password-stdin`;
+  never argv.
+- **`renew`** pushes each Send's deletion 30 days out in place (the link stays)
+  and re-syncs its recipients and body from the item. It asks first for any Send
+  with more than 7 days left.
+- **`list`** prints items, recipients and expiry (`--json` for scripts).
+- **`report`** regenerates the **Shared Accounts** Linear document (Platform &
+  DevOps initiative), which `send`, `add` and `renew` also do. It is generated
+  whole; edits there are overwritten.
+
+Each item's custom fields are the only access record: `Recipients`, `Owner`,
+`Send ID`, `Send link`, `Send expires`, `Send account`. Sends belong to the
+Bitwarden account that creates them, so `creds` runs on your own `bw` session
+(signing in and unlocking after asking, or `BW_SESSION`), never on CI; renewing
+a Send another officer made creates a new one, with a new link, under yours.
+
+The roster needs production's `DB_URL`: `--db-url`, else `.env.production` in a
+checkout, else Secrets Manager. The Linear key: `--linear-token`, then
+`LINEAR_API_KEY`, then the vault item "DevDogs Linear API key (backstage)", then
+a prompt; it is never saved.
+
+No secret value reaches stdout, stderr, the failure log, Sentry, an error
+message or argv: values go to `bw` as base64 JSON on stdin, every error is
+scrubbed of every value read so far (`src/creds/secrets.ts`), and the clipboard
+only ever gets the link. `src/creds/commands.test.ts` runs every path against a
+fake `bw` with a sentinel password and looks for it in all of those places.
 
 ## Tiers, `--no-env`, CI
 

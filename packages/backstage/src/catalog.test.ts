@@ -20,6 +20,7 @@ describe("the tree", () => {
       "qr",
       "github",
       "newsletter",
+      "creds",
       "completions",
     ]);
   });
@@ -39,6 +40,11 @@ describe("the tree", () => {
       "newsletter render",
       "newsletter draft",
       "newsletter send",
+      "creds send",
+      "creds add",
+      "creds renew",
+      "creds list",
+      "creds report",
     ]);
   });
 
@@ -60,6 +66,13 @@ describe("the tree", () => {
       "render",
       "draft",
       "send",
+    ]);
+    expect(subcommandNames(["creds"])).toEqual([
+      "send",
+      "add",
+      "renew",
+      "list",
+      "report",
     ]);
     expect(subcommandNames(["planner"])).toEqual([
       "status",
@@ -171,6 +184,23 @@ describe("prompts", () => {
       // Write gate, not a question: the confirmation before writing IS the
       // question.
       "--apply",
+      // `creds` asks for these itself: accounts from the collection,
+      // recipients from the live roster, the new login's details one by one.
+      "--item",
+      "--to",
+      "--role",
+      "--url",
+      "--username",
+      "--owner",
+      // Deliberate overrides and scripting: sharing outside the officer team,
+      // a production connection, a Linear key (a credential), skipping the
+      // report, a password on stdin, and a test document.
+      "--allow-email",
+      "--db-url",
+      "--linear-token",
+      "--no-report",
+      "--password-stdin",
+      "--document",
     ]);
     const unasked = new Set<string>();
     for (const path of allPaths()) {

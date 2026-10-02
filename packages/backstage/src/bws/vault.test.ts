@@ -37,7 +37,11 @@ vi.mock("./bw.js", () => ({
   ],
 }));
 
-import { readTokenFromVault, vaultStatus } from "./vault.js";
+import {
+  forgetVaultSession,
+  readTokenFromVault,
+  vaultStatus,
+} from "./vault.js";
 
 const FAKE_BW = `
 const fs = require("node:fs");
@@ -80,6 +84,7 @@ beforeEach(() => {
   writeFileSync(scripted.fakeBw, FAKE_BW);
   process.env.FAKE_BW_STATE = state;
   delete process.env.BW_SESSION;
+  forgetVaultSession();
   scripted.confirms = [];
   scripted.asked = [];
   terminal(true);

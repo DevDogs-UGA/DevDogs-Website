@@ -12,6 +12,7 @@
  */
 import { createCatalog, type CommandGroup } from "@devdogsuga/cli-core/catalog";
 import { completionsCommand } from "./completions/catalog.js";
+import { credsCommand } from "./creds/catalog.js";
 import { deployCommand } from "./deploy/catalog.js";
 import { envCommand } from "./env/catalog.js";
 import { githubCommand } from "./github/catalog.js";
@@ -38,8 +39,8 @@ export const GROUPS: readonly CommandGroup[] = [
     commands: [graphicsCommand, qrCommand],
   },
   {
-    title: "Your own sign-in (gh login, club mailbox)",
-    commands: [githubCommand, newsletterCommand],
+    title: "Your own sign-in (gh login, club mailbox, Bitwarden)",
+    commands: [githubCommand, newsletterCommand, credsCommand],
   },
   {
     title: "CLI utilities",

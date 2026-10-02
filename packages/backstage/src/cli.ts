@@ -69,6 +69,8 @@ export const HANDLERS: Record<string, CommandHandler> = {
   qr: async (rest) => (await import("./qr/commands.js")).handleQr(rest),
   newsletter: async (rest) =>
     (await import("./newsletter/commands.js")).handleNewsletter(rest),
+  creds: async (rest) =>
+    (await import("./creds/commands.js")).handleCreds(rest),
 };
 
 /**

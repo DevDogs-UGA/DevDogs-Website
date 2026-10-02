@@ -75,13 +75,15 @@ export async function vaultStatus(): Promise<VaultStatus> {
  * their master password into. Without a terminal there is nobody to sign in,
  * so the status comes back unchanged.
  */
-async function signInIfNeeded(status: VaultStatus): Promise<VaultStatus> {
+async function signInIfNeeded(
+  status: VaultStatus,
+  purpose: string,
+): Promise<VaultStatus> {
   if (status !== "unauthenticated" || !process.stdin.isTTY) return status;
 
   const ok = unwrap(
     await confirm({
-      message:
-        "You are not signed in to Bitwarden. Sign in now to look for the access token?",
+      message: `You are not signed in to Bitwarden. Sign in now to ${purpose}?`,
       initialValue: true,
     }),
   );
@@ -110,22 +112,31 @@ async function signInIfNeeded(status: VaultStatus): Promise<VaultStatus> {
  *
  * The password is typed straight into `bw`. stdin is inherited, so it never
  * passes through this process.
+ *
+ * The key is kept for the rest of the process once unlocked: `creds` makes a
+ * dozen `bw` calls in one run, and asking for the master password before each
+ * would be both tiresome and a reason to stop reading the prompt.
  */
-async function session(status: VaultStatus): Promise<string | undefined> {
+let unlockedKey: string | undefined;
+
+async function session(
+  status: VaultStatus,
+  purpose: string,
+): Promise<string | undefined> {
   if (process.env.BW_SESSION) return process.env.BW_SESSION;
+  if (unlockedKey) return unlockedKey;
   if (status !== "locked") return undefined;
   if (!process.stdin.isTTY) return undefined;
 
   const ok = unwrap(
     await confirm({
-      message:
-        "Your Bitwarden vault is locked. Unlock it to look for the access token?",
+      message: `Your Bitwarden vault is locked. Unlock it to ${purpose}?`,
       initialValue: true,
     }),
   );
   if (!ok) return undefined;
 
-  return new Promise<string | undefined>((resolve) => {
+  unlockedKey = await new Promise<string | undefined>((resolve) => {
     // stdin inherited so the master password goes to `bw` and not through here;
     // stdout piped so the session key can be captured rather than printed.
     const child = spawn(...bwCommand(["unlock", "--raw"]), {
@@ -139,6 +150,32 @@ async function session(status: VaultStatus): Promise<string | undefined> {
       resolve(code === 0 && out.trim() !== "" ? out.trim() : undefined),
     );
   });
+  return unlockedKey;
+}
+
+/** Drops the remembered session key. For tests, which each start a fresh vault. */
+export function forgetVaultSession(): void {
+  unlockedKey = undefined;
+}
+
+/**
+ * A vault ready for `bw` calls, signing in and unlocking (after asking) as
+ * needed, or `undefined` when it cannot be used. `key` is the session to pass
+ * to {@link bwArgs}; it is absent only when `bw` itself reports the vault
+ * unlocked without one.
+ *
+ * `purpose` finishes the questions: "Unlock it to <purpose>?".
+ */
+export async function openVault(
+  purpose: string,
+): Promise<{ key: string | undefined } | undefined> {
+  const status = await signInIfNeeded(await vaultStatus(), purpose);
+  if (status === "unavailable" || status === "unauthenticated") {
+    return undefined;
+  }
+  const key = await session(status, purpose);
+  if (status === "locked" && !key) return undefined;
+  return { key };
 }
 
 /**
@@ -151,7 +188,7 @@ async function session(status: VaultStatus): Promise<string | undefined> {
  * turns that into an immediate non-zero exit, which every caller here already
  * treats as "not available, ask instead".
  */
-function bwArgs(args: string[], key?: string): string[] {
+export function bwArgs(args: string[], key?: string): string[] {
   const withNoInteraction = [...args, "--nointeraction"];
   return key ? [...withNoInteraction, "--session", key] : withNoInteraction;
 }
@@ -164,25 +201,44 @@ function bwArgs(args: string[], key?: string): string[] {
  * this means somebody should look, not that this should guess.
  */
 export async function readTokenFromVault(): Promise<string | undefined> {
-  const status = await signInIfNeeded(await vaultStatus());
+  return readPasswordFromVault(
+    VAULT_ITEM_NAME,
+    "the access token",
+    "look for the access token",
+    "BWS_ACCESS_TOKEN",
+  );
+}
+
+/**
+ * The password of the one vault item named `itemName`, or `undefined` for
+ * every reason it might not be there. `what` names it in the spinner; `purpose`
+ * finishes the sign-in and unlock questions.
+ */
+export async function readPasswordFromVault(
+  itemName: string,
+  what: string,
+  purpose: string,
+  envVar: string,
+): Promise<string | undefined> {
+  const status = await signInIfNeeded(await vaultStatus(), purpose);
 
   if (status === "unavailable" || status === "unauthenticated") {
     // Said out loud, and only here. By the time this runs the chain has already
     // found nothing in the flag or the environment, so the person is about to
     // be asked to paste a token. That is when knowing the vault could have
     // answered instead is worth something.
-    log.info(explainVault(status)!);
+    log.info(explainVault(status, envVar)!);
     return undefined;
   }
 
-  const key = await session(status);
+  const key = await session(status, purpose);
   if (status === "locked" && !key) return undefined;
 
   const s = spinner();
   s.start("Looking in your Bitwarden vault");
   try {
     const { stdout } = await run(
-      ...bwCommand(bwArgs(["get", "password", VAULT_ITEM_NAME, "--raw"], key)),
+      ...bwCommand(bwArgs(["get", "password", itemName, "--raw"], key)),
       { shell: false },
     );
     const token = stdout.trim();
@@ -190,7 +246,7 @@ export async function readTokenFromVault(): Promise<string | undefined> {
       s.stop("Nothing stored in the vault yet");
       return undefined;
     }
-    s.stop(`Read the access token from your vault ("${VAULT_ITEM_NAME}")`);
+    s.stop(`Read ${what} from your vault ("${itemName}")`);
     return token;
   } catch {
     // "not found" and "more than one match" both land here, and both mean the
@@ -208,10 +264,11 @@ export async function readTokenFromVault(): Promise<string | undefined> {
  * sits in `ps` output for the length of the call.
  */
 export async function saveTokenToVault(token: string): Promise<boolean> {
-  const status = await signInIfNeeded(await vaultStatus());
+  const purpose = "save the access token";
+  const status = await signInIfNeeded(await vaultStatus(), purpose);
   if (status === "unavailable" || status === "unauthenticated") return false;
 
-  const key = await session(status);
+  const key = await session(status, purpose);
   if (status === "locked" && !key) return false;
 
   const item = {
@@ -247,7 +304,10 @@ export async function saveTokenToVault(token: string): Promise<boolean> {
 }
 
 /** Why the vault could not be used, phrased as something to do about it. */
-export function explainVault(status: VaultStatus): string | undefined {
+export function explainVault(
+  status: VaultStatus,
+  envVar = "BWS_ACCESS_TOKEN",
+): string | undefined {
   if (status === "unavailable") {
     return (
       "The `bw` CLI is not installed, so the vault could not be checked. " +
@@ -257,7 +317,7 @@ export function explainVault(status: VaultStatus): string | undefined {
   if (status === "unauthenticated") {
     return (
       "You are not signed in to Bitwarden, and with no terminal there is " +
-      "nobody to sign in. Set BWS_ACCESS_TOKEN instead."
+      `nobody to sign in. Set ${envVar} instead.`
     );
   }
   return undefined;

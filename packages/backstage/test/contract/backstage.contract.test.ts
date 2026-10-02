@@ -339,6 +339,11 @@ describe("backstage contract tests", () => {
       "newsletter render",
       "newsletter draft",
       "newsletter send",
+      "creds send",
+      "creds add",
+      "creds renew",
+      "creds list",
+      "creds report",
     ]) {
       expect(paths).toContain(path);
     }
@@ -420,6 +425,16 @@ describe("backstage contract tests", () => {
     expect(status).toBe(1);
     expect(stderr).toContain("Pass --yes to send");
     expect(stderr).toContain("a@uga.edu");
+  });
+
+  it("creds runs without a checkout and, with no Bitwarden session, says so", async () => {
+    const { status, stderr } = await outside(["creds", "list"], {
+      BW_SESSION: "",
+    });
+    expect(status).toBe(1);
+    expect(stderr).toContain("Could not use your Bitwarden vault");
+    expect(stderr).not.toContain("run this from inside a DevDogsUGA clone");
+    expect(stderr).not.toMatch(/\n\s+at /);
   });
 
   it("completions prints a script without a checkout", async () => {
