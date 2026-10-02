@@ -10,7 +10,7 @@ import { clubConfigSchema } from "./schema.js";
  * endsAt after startsAt, a listed question existing -- stays CI's alone.
  *
  * Committed beside the data (`data/*.schema.json`) and regenerated with
- * `pnpm --filter @devdogsuga/events schemas`; a test fails when they drift.
+ * `pnpm --filter @devdogsuga/events codegen`; a test fails when they drift.
  */
 export function jsonSchemas(): Record<string, unknown> {
   const generate = (schema: z.ZodType, title: string, description: string) => ({

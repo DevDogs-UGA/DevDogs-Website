@@ -31,7 +31,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check:events": "tsx src/check.ts",
-    "schemas": "tsx src/write-schemas.ts && prettier --write src/data/*.schema.json",
+    "codegen": "tsx src/write-schemas.ts && prettier --write src/data/*.schema.json",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },

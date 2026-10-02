@@ -4,7 +4,7 @@ import { jsonSchemas } from "./json-schema.js";
 
 describe("data/*.schema.json", () => {
   it.each(Object.entries(jsonSchemas()))(
-    "%s matches the zod schema (run `pnpm --filter @devdogsuga/events schemas`)",
+    "%s matches the zod schema (run `pnpm --filter @devdogsuga/events codegen`)",
     (name, schema) => {
       const committed = readFileSync(
         new URL(`./data/${name}`, import.meta.url),

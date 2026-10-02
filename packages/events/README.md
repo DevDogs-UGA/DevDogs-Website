@@ -20,7 +20,7 @@ over-long title as you type. Both schemas are generated from the Zod schemas
 below; after changing one, run
 
 ```bash
-pnpm --filter @devdogsuga/events schemas
+pnpm --filter @devdogsuga/events codegen
 ```
 
 (a test fails when the committed files drift). The editor catches shape
