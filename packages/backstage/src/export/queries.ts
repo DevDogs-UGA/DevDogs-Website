@@ -3,8 +3,9 @@
  * columns unchanged: anything downstream that read `/export/stars` reads
  * `backstage export stars` the same way.
  *
- * Each query selects exactly its columns, aliased to the header names, in
- * header order. Parameters: `$1` from (inclusive), `$2` to (exclusive), `$3`
+ * Each query selects its columns, aliased to the header names, in header
+ * order; attendance also selects the names and UGA address the Bevy and
+ * Involvement Network formats need (see `formats.ts`), past its columns. Parameters: `$1` from (inclusive), `$2` to (exclusive), `$3`
  * a meeting id; each null when not given.
  */
 
@@ -104,7 +105,10 @@ select ${MEMBER('a."userId"')},
   m."startsAt" as "meeting_starts_at",
   a."recordedAt" as "checked_in_at",
   a."method"::text as "check_in_method",
-  m."countsForCredit" as "counts_for_credit"
+  m."countsForCredit" as "counts_for_credit",
+  lower(p."ugaEmail") as "uga_email",
+  coalesce(p."involvementFirstName", p."legalFirstName") as "first_name",
+  coalesce(p."involvementLastName", p."legalLastName") as "last_name"
 from "platform"."attendance" a
 join "platform"."meetings" m on m."id" = a."meetingId"
 ${MEMBER_JOINS('a."userId"')}

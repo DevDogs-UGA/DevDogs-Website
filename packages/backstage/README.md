@@ -37,6 +37,7 @@ pnpm backstage creds renew                       # extend every Send 30 days
 pnpm backstage import involvement --file OrganizationRoster.csv  # verify members; previews, then asks
 pnpm backstage import attendance --meeting 2026-09-09 --file sign-in.csv
 pnpm backstage export stars --from 2026-08-17   # audited under your gh login
+pnpm backstage export attendance --meeting 2026-09-09 --format bevy,involvement
 ```
 
 ## Commands
@@ -208,8 +209,18 @@ star), `attendance` (one row per check-in; `--meeting` for one night) and
 `reflections` (each member's current text). Each export writes a
 `platform.exportAudit` row before reading anything, attributed to the
 platform account linked to the GitHub login `gh` is signed in as, and refuses
-to run when there is none. The file goes to `./<kind>….csv` (owner-readable
-only, never over an existing file without `--yes`) or stdout with `--out -`.
+to run when there is none.
+
+`attendance` can also be written as a Bevy attendee import (GDG's
+gdg.community.dev; one row per person, checked in) and an Involvement Network
+list (one MyID email per line), both for one `--meeting`. `--format
+platform,bevy,involvement` picks any of them, written from one read with an
+audit row each; at a terminal it is asked. At a terminal each file's
+destination is asked for too, with path completion (Tab completes the
+highlighted suggestion; a folder means the suggested name inside it).
+Otherwise files go to `./<kind>…[-<format>].<ext>`, or `--out` (a file, a
+folder for several, or `-` for stdout). Files are owner-readable only and
+never replace an existing file without `--yes` or a yes at the prompt.
 
 No secret value reaches stdout, stderr, the failure log, Sentry, an error
 message or argv: values go to `bw` as base64 JSON on stdin, every error is

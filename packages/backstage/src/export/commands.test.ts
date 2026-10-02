@@ -1,7 +1,8 @@
 /**
- * `export` against a fake production and an in-memory file: the audit row is
+ * `export` against a fake production and in-memory files: the audit rows are
  * written before any row is read, attributed through the gh login, and a
- * failure partway discards the partial file.
+ * failure partway discards every partial file. Formats, prompts and `--out`
+ * decide which files there are.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Meeting } from "../production/meetings.js";
@@ -15,11 +16,19 @@ import type { ExportFilters, ExportKind } from "./queries.js";
 
 let stderr: string;
 let events: string[];
-let file: { path: string; text: string; discarded: boolean } | undefined;
+interface FakeFile {
+  path: string;
+  text: string;
+  discarded: boolean;
+  bom: boolean;
+  overwrite: boolean;
+}
+let files: FakeFile[];
+let file: FakeFile | undefined;
 let officers: string[];
 let lastFilters: ExportFilters | undefined;
 
-const ROWS = [
+const ROWS: Record<string, unknown>[] = [
   {
     user_id: "u-1",
     preferred_name: "=Ada, the first",
@@ -31,6 +40,9 @@ const ROWS = [
     checked_in_at: new Date("2026-09-09T22:05:00Z"),
     check_in_method: "import",
     counts_for_credit: true,
+    uga_email: "ada@uga.edu",
+    first_name: "Ada",
+    last_name: "Lovelace",
   },
 ];
 
@@ -69,12 +81,14 @@ function source(fail = false): ExportSource {
   };
 }
 
-function deps(fail = false): ExportDeps {
+function deps(fail = false, overrides: Partial<ExportDeps> = {}): ExportDeps {
   return {
     ghLogin: async () => "sloanfinger",
     source: async () => source(fail),
-    sink: async (path): Promise<Sink> => {
-      file = { path, text: "", discarded: false };
+    interactive: false,
+    sink: async (path, overwrite, bom): Promise<Sink> => {
+      file = { path, text: "", discarded: false, bom, overwrite };
+      files.push(file);
       const f = file;
       return {
         write: async (text) => {
@@ -86,6 +100,7 @@ function deps(fail = false): ExportDeps {
         },
       };
     },
+    ...overrides,
   };
 }
 
@@ -93,6 +108,7 @@ beforeEach(() => {
   stderr = "";
   events = [];
   file = undefined;
+  files = [];
   officers = ["u-officer"];
   lastFilters = undefined;
   process.exitCode = undefined;
@@ -163,8 +179,151 @@ describe("export", () => {
   it("dry-runs without auditing", async () => {
     await runExport(["reflections", "--dry-run"], deps());
     expect(stderr).toContain(
-      "Would export reflections to reflections.csv, audited as sloanfinger",
+      "Would export reflections to reflections.csv, audited as sloanfinger.",
     );
     expect(events).toEqual(["officer:sloanfinger"]);
+  });
+
+  it("writes several formats from one read, each audited with its format", async () => {
+    // The same person checked in twice still makes one Bevy row and one email.
+    ROWS.push({ ...ROWS[0], checked_in_at: new Date("2026-09-09T23:00:00Z") });
+    try {
+      await runExport(
+        [
+          "attendance",
+          "--meeting",
+          "2026-09-09",
+          "--format",
+          "platform,bevy",
+          "--format",
+          "involvement",
+        ],
+        deps(),
+      );
+    } finally {
+      ROWS.pop();
+    }
+    expect(process.exitCode).toBeUndefined();
+    expect(files.map((f) => [f.path, f.bom])).toEqual([
+      ["attendance-2026-09-09.csv", true],
+      ["attendance-2026-09-09-bevy.csv", false],
+      ["attendance-2026-09-09-involvement.txt", false],
+    ]);
+    expect(events.filter((e) => e.startsWith("audit"))).toEqual([
+      'audit:u-officer:attendance:{"meetingId":"m-1"}',
+      'audit:u-officer:attendance:{"meetingId":"m-1","format":"bevy"}',
+      'audit:u-officer:attendance:{"meetingId":"m-1","format":"involvement"}',
+    ]);
+    expect(events.filter((e) => e === "rows")).toHaveLength(1);
+    expect(files[1]!.text).toBe(
+      "first_name,last_name,email,checked_in,job_title,company,ticket_title,ticket_venue\r\n" +
+        "Ada,Lovelace,ada@uga.edu,TRUE,,,,\r\n",
+    );
+    expect(files[2]!.text).toBe("ada@uga.edu\r\n");
+    expect(events).toContain("finish:audit-1:2");
+    expect(events).toContain("finish:audit-1:1");
+    expect(stderr).toContain("Wrote 1 person as Bevy attendee import");
+  });
+
+  it("needs --meeting for a per-event format without a terminal", async () => {
+    await runExport(["attendance", "--format", "involvement"], deps());
+    expect(process.exitCode).toBe(1);
+    expect(stderr).toContain(
+      "The Involvement Network list file is one event's attendance; name it with --meeting.",
+    );
+    expect(files).toEqual([]);
+  });
+
+  it("asks for formats, the meeting and each destination at a terminal", async () => {
+    const asked: string[] = [];
+    await runExport(
+      ["attendance"],
+      deps(false, {
+        interactive: true,
+        pickFormats: async () => ["bevy", "involvement"],
+        askMeeting: async () => "2026-09-09",
+        askPath: async (message, suggested) => {
+          asked.push(`${message} [${suggested}]`);
+          return `/tmp/out/${suggested}`;
+        },
+      }),
+    );
+    expect(process.exitCode).toBeUndefined();
+    expect(asked).toEqual([
+      "Save the Bevy attendee import to [attendance-2026-09-09-bevy.csv]",
+      "Save the Involvement Network list to [attendance-2026-09-09-involvement.txt]",
+    ]);
+    // The prompt confirmed any replacement itself.
+    expect(files.map((f) => [f.path, f.overwrite])).toEqual([
+      ["/tmp/out/attendance-2026-09-09-bevy.csv", true],
+      ["/tmp/out/attendance-2026-09-09-involvement.txt", true],
+    ]);
+  });
+
+  it("asks where to save the other exports too, without asking for a format", async () => {
+    const asked: string[] = [];
+    await runExport(
+      ["stars"],
+      deps(false, {
+        interactive: true,
+        pickFormats: async () => {
+          throw new Error("stars has one format");
+        },
+        askPath: async (_message, suggested) => {
+          asked.push(suggested);
+          return suggested;
+        },
+      }),
+    );
+    expect(asked).toEqual(["stars.csv"]);
+  });
+
+  it("puts several files in an --out folder, and refuses one file name for several", async () => {
+    await runExport(
+      [
+        "attendance",
+        "--meeting",
+        "2026-09-09",
+        "--format",
+        "bevy,involvement",
+        "--out",
+        "/tmp",
+      ],
+      deps(),
+    );
+    expect(files.map((f) => f.path)).toEqual([
+      "/tmp/attendance-2026-09-09-bevy.csv",
+      "/tmp/attendance-2026-09-09-involvement.txt",
+    ]);
+    files = [];
+    await runExport(
+      [
+        "attendance",
+        "--meeting",
+        "2026-09-09",
+        "--format",
+        "bevy,involvement",
+        "--out",
+        "x.csv",
+      ],
+      deps(),
+    );
+    expect(stderr).toContain("for several formats, give it a folder");
+    expect(files).toEqual([]);
+  });
+
+  it("refuses an unknown format, and --format off attendance", async () => {
+    await runExport(["attendance", "--format", "excel"], deps());
+    expect(stderr).toContain('Unknown format "excel"');
+    await runExport(["stars", "--format", "bevy"], deps());
+    expect(stderr).toContain("--format only applies to the attendance export");
+  });
+
+  it("discards every partial file when a read fails partway", async () => {
+    await runExport(
+      ["attendance", "--meeting", "2026-09-09", "--format", "platform,bevy"],
+      deps(true),
+    );
+    expect(files.map((f) => f.discarded)).toEqual([true, true]);
   });
 });

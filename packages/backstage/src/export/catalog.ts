@@ -28,8 +28,9 @@ const TO: CommandOption = {
 
 const OUT: CommandOption = {
   flag: "--out",
-  value: "<path|->",
-  summary: "Where to write. Defaults to ./<kind>….csv; - for stdout.",
+  value: "<path|dir|->",
+  summary:
+    "Where to write (a folder for several files; - for stdout). Asked at a terminal.",
 };
 
 function exportOf(kind: ExportKind, extra: CommandOption[] = []): CommandNode {
@@ -53,6 +54,12 @@ export const exportCommand: CommandNode = {
         flag: "--meeting",
         value: "<meeting>",
         summary: "One meeting: its day (2026-09-09), slug, config id or id.",
+      },
+      {
+        flag: "--format",
+        value: "<formats>",
+        summary:
+          "platform, bevy (GDG attendee import), involvement (MyID emails); comma-separated. Asked at a terminal.",
       },
     ]),
     exportOf("reflections"),
