@@ -1,0 +1,373 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+                "description": "Permanent id, lowercase snake_case (developer_experience). Answers point at it."
+              },
+              "scope": {
+                "type": "string",
+                "enum": ["member", "meeting"],
+                "description": "member: one answer per person, asked until answered, then editable. meeting: asked at each meeting that lists it."
+              },
+              "prompt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200,
+                "description": "The question as shown."
+              },
+              "help": {
+                "description": "A smaller line under the prompt.",
+                "type": "string",
+                "maxLength": 280
+              },
+              "required": {
+                "description": "Needed to submit the survey (never to check in). Default false.",
+                "type": "boolean"
+              },
+              "retired": {
+                "description": "Stop asking it, even where listed; answers are kept.",
+                "type": "boolean"
+              },
+              "prefill": {
+                "description": "Meeting questions only. last: start from the person's previous answer. Default none.",
+                "type": "string",
+                "enum": ["last", "none"]
+              },
+              "bevy": {
+                "description": "The Bevy attendee import column this answer fills (survey:…).",
+                "type": "string",
+                "pattern": "^survey:[a-z0-9_]+$"
+              },
+              "type": {
+                "type": "string",
+                "const": "text",
+                "description": "One line of text."
+              },
+              "maxLength": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4000
+              }
+            },
+            "required": ["id", "scope", "prompt", "type"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+                "description": "Permanent id, lowercase snake_case (developer_experience). Answers point at it."
+              },
+              "scope": {
+                "type": "string",
+                "enum": ["member", "meeting"],
+                "description": "member: one answer per person, asked until answered, then editable. meeting: asked at each meeting that lists it."
+              },
+              "prompt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200,
+                "description": "The question as shown."
+              },
+              "help": {
+                "description": "A smaller line under the prompt.",
+                "type": "string",
+                "maxLength": 280
+              },
+              "required": {
+                "description": "Needed to submit the survey (never to check in). Default false.",
+                "type": "boolean"
+              },
+              "retired": {
+                "description": "Stop asking it, even where listed; answers are kept.",
+                "type": "boolean"
+              },
+              "prefill": {
+                "description": "Meeting questions only. last: start from the person's previous answer. Default none.",
+                "type": "string",
+                "enum": ["last", "none"]
+              },
+              "bevy": {
+                "description": "The Bevy attendee import column this answer fills (survey:…).",
+                "type": "string",
+                "pattern": "^survey:[a-z0-9_]+$"
+              },
+              "type": {
+                "type": "string",
+                "const": "longText",
+                "description": "A paragraph."
+              },
+              "maxLength": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4000
+              }
+            },
+            "required": ["id", "scope", "prompt", "type"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+                "description": "Permanent id, lowercase snake_case (developer_experience). Answers point at it."
+              },
+              "scope": {
+                "type": "string",
+                "enum": ["member", "meeting"],
+                "description": "member: one answer per person, asked until answered, then editable. meeting: asked at each meeting that lists it."
+              },
+              "prompt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200,
+                "description": "The question as shown."
+              },
+              "help": {
+                "description": "A smaller line under the prompt.",
+                "type": "string",
+                "maxLength": 280
+              },
+              "required": {
+                "description": "Needed to submit the survey (never to check in). Default false.",
+                "type": "boolean"
+              },
+              "retired": {
+                "description": "Stop asking it, even where listed; answers are kept.",
+                "type": "boolean"
+              },
+              "prefill": {
+                "description": "Meeting questions only. last: start from the person's previous answer. Default none.",
+                "type": "string",
+                "enum": ["last", "none"]
+              },
+              "bevy": {
+                "description": "The Bevy attendee import column this answer fills (survey:…).",
+                "type": "string",
+                "pattern": "^survey:[a-z0-9_]+$"
+              },
+              "type": {
+                "type": "string",
+                "const": "choice",
+                "description": "Pick one."
+              },
+              "options": {
+                "minItems": 2,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+                      "description": "Permanent id within the question. Answers store it."
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "retired": {
+                      "description": "Stop offering it; earlier answers keep it.",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["id", "label"],
+                  "additionalProperties": false
+                },
+                "description": "The choices, in order."
+              },
+              "other": {
+                "description": "Add a free-text \"Other\". Default false.",
+                "type": "boolean"
+              }
+            },
+            "required": ["id", "scope", "prompt", "type", "options"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+                "description": "Permanent id, lowercase snake_case (developer_experience). Answers point at it."
+              },
+              "scope": {
+                "type": "string",
+                "enum": ["member", "meeting"],
+                "description": "member: one answer per person, asked until answered, then editable. meeting: asked at each meeting that lists it."
+              },
+              "prompt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200,
+                "description": "The question as shown."
+              },
+              "help": {
+                "description": "A smaller line under the prompt.",
+                "type": "string",
+                "maxLength": 280
+              },
+              "required": {
+                "description": "Needed to submit the survey (never to check in). Default false.",
+                "type": "boolean"
+              },
+              "retired": {
+                "description": "Stop asking it, even where listed; answers are kept.",
+                "type": "boolean"
+              },
+              "prefill": {
+                "description": "Meeting questions only. last: start from the person's previous answer. Default none.",
+                "type": "string",
+                "enum": ["last", "none"]
+              },
+              "bevy": {
+                "description": "The Bevy attendee import column this answer fills (survey:…).",
+                "type": "string",
+                "pattern": "^survey:[a-z0-9_]+$"
+              },
+              "type": {
+                "type": "string",
+                "const": "multiChoice",
+                "description": "Pick any number."
+              },
+              "options": {
+                "minItems": 2,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+                      "description": "Permanent id within the question. Answers store it."
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "retired": {
+                      "description": "Stop offering it; earlier answers keep it.",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["id", "label"],
+                  "additionalProperties": false
+                },
+                "description": "The choices, in order."
+              },
+              "other": {
+                "description": "Add a free-text \"Other\". Default false.",
+                "type": "boolean"
+              },
+              "minSelected": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "maxSelected": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["id", "scope", "prompt", "type", "options"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+                "description": "Permanent id, lowercase snake_case (developer_experience). Answers point at it."
+              },
+              "scope": {
+                "type": "string",
+                "enum": ["member", "meeting"],
+                "description": "member: one answer per person, asked until answered, then editable. meeting: asked at each meeting that lists it."
+              },
+              "prompt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200,
+                "description": "The question as shown."
+              },
+              "help": {
+                "description": "A smaller line under the prompt.",
+                "type": "string",
+                "maxLength": 280
+              },
+              "required": {
+                "description": "Needed to submit the survey (never to check in). Default false.",
+                "type": "boolean"
+              },
+              "retired": {
+                "description": "Stop asking it, even where listed; answers are kept.",
+                "type": "boolean"
+              },
+              "prefill": {
+                "description": "Meeting questions only. last: start from the person's previous answer. Default none.",
+                "type": "string",
+                "enum": ["last", "none"]
+              },
+              "bevy": {
+                "description": "The Bevy attendee import column this answer fills (survey:…).",
+                "type": "string",
+                "pattern": "^survey:[a-z0-9_]+$"
+              },
+              "type": {
+                "type": "string",
+                "const": "scale",
+                "description": "A number on a range."
+              },
+              "min": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "max": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 10
+              },
+              "minLabel": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "maxLabel": {
+                "type": "string",
+                "maxLength": 80
+              }
+            },
+            "required": ["id", "scope", "prompt", "type", "min", "max"],
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "required": ["questions"],
+  "additionalProperties": false,
+  "title": "DevDogs check-in survey questions",
+  "description": "Questions the check-in survey asks (Backstage packages/events)."
+}

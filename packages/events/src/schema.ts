@@ -129,11 +129,23 @@ const isoInstant = z
  * & DogPack"), the same way an officer would say it out loud, with nothing to
  * keep in sync.
  */
-export const workshopSchema = z.object({
-  id: stableId,
-  title: z.string().min(1).max(WORKSHOP_TITLE_MAX_LENGTH),
-  description: z.string().max(WORKSHOP_DESCRIPTION_MAX_LENGTH).nullable(),
-  project: z.string().min(1).nullable(),
+export const workshopSchema = z.strictObject({
+  id: stableId.meta({
+    description: "Permanent id, unique across the whole file. A slug.",
+  }),
+  title: z
+    .string()
+    .min(1)
+    .max(WORKSHOP_TITLE_MAX_LENGTH)
+    .meta({ description: "One schedule row's worth." }),
+  description: z
+    .string()
+    .max(WORKSHOP_DESCRIPTION_MAX_LENGTH)
+    .nullable()
+    .meta({ description: "Shown in the meeting's detail dialog." }),
+  project: z.string().min(1).nullable().meta({
+    description: 'The work it recommends, in words ("DogDays & DogPack").',
+  }),
 });
 
 export type Workshop = z.infer<typeof workshopSchema>;
@@ -145,32 +157,73 @@ export type Workshop = z.infer<typeof workshopSchema>;
  * to point at one independently.
  */
 export const meetingSchema = z
-  .object({
-    id: stableId,
+  .strictObject({
+    id: stableId.meta({
+      description:
+        "Permanent id, unique across the whole file: a slug for a new meeting, or the old Airtable record id.",
+    }),
     // Title, summary and location are required even though their columns
     // are nullable: every meeting is also a newsletter card, and a card needs
     // a heading, copy and a place ("TBA" until there is one). Stricter than
     // the database is allowed; looser is not.
-    title: z.string().min(1).max(MEETING_TITLE_MAX_LENGTH),
-    summary: z.string().min(1).max(MEETING_SUMMARY_MAX_LENGTH),
-    kind: z.enum(MEETING_KIND_CHOICES).nullable(),
+    title: z.string().min(1).max(MEETING_TITLE_MAX_LENGTH).meta({
+      description: "The heading on the events page and newsletter card.",
+    }),
+    summary: z
+      .string()
+      .min(1)
+      .max(MEETING_SUMMARY_MAX_LENGTH)
+      .meta({ description: "About two sentences, for the events card." }),
+    kind: z
+      .enum(MEETING_KIND_CHOICES)
+      .nullable()
+      .meta({ description: "The kind of night, or null for a one-off." }),
     building: z.enum(MEETING_BUILDING_CHOICES).nullable(),
-    location: z.string().min(1),
-    startsAt: isoInstant,
-    endsAt: isoInstant,
-    rsvpUrl: z.url().nullable(),
-    cancelledAt: isoInstant.nullable(),
+    location: z
+      .string()
+      .min(1)
+      .meta({ description: 'The room, or "TBA" until there is one.' }),
+    startsAt: isoInstant.meta({
+      description:
+        "ISO 8601 instant, e.g. 2026-09-14T22:00:00.000Z (6 PM Eastern).",
+    }),
+    endsAt: isoInstant.meta({
+      description: "ISO 8601 instant, after startsAt.",
+    }),
+    rsvpUrl: z.url().nullable().meta({
+      description: "The Involvement Network event page (uga.campuslabs.com).",
+    }),
+    cancelledAt: isoInstant
+      .nullable()
+      .meta({ description: "When it was cancelled; null while it is on." }),
     cancellationReason: z
       .string()
       .max(MEETING_CANCELLATION_REASON_MAX_LENGTH)
-      .nullable(),
+      .nullable()
+      .meta({
+        description: "Shown beside the struck-through row. Needs cancelledAt.",
+      }),
     /** The one flag that governs both star credit and EL eligibility -- see
      * the migration note on `meetings.countsForCredit`. */
-    countsForCredit: z.boolean(),
+    countsForCredit: z.boolean().meta({
+      description:
+        "Whether checking in earns a star and counts toward EL credit.",
+    }),
     /** Where to send a member after a successful check-in. Null is the
      * ordinary case: most nights have nothing to redirect to. */
-    surveyUrl: z.url().nullable(),
-    agenda: z.array(workshopSchema),
+    surveyUrl: z.url().nullable().meta({
+      description: "An outside survey linked after check-in; usually null.",
+    }),
+    /** This meeting's survey: meeting-scoped question ids from
+     * `questions.json`, asked in this order after check-in. Member-scoped
+     * questions are asked everywhere and never listed. */
+    questions: z.array(z.string()).optional().meta({
+      description:
+        "Ids of meeting-scoped questions from questions.json to ask after check-in, in order.",
+    }),
+    agenda: z
+      .array(workshopSchema)
+      .meta({ description: "The workshops running that night." }),
   })
   .refine((meeting) => new Date(meeting.endsAt) > new Date(meeting.startsAt), {
     message: "endsAt must be after startsAt",
@@ -179,7 +232,9 @@ export const meetingSchema = z
 
 export type Meeting = z.infer<typeof meetingSchema>;
 
-export const clubConfigSchema = z.object({
+export const clubConfigSchema = z.strictObject({
+  /** The editor's pointer to `meetings.schema.json`; ignored otherwise. */
+  $schema: z.string().optional(),
   meetings: z.array(meetingSchema),
 });
 

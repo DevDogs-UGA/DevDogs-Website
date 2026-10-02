@@ -11,6 +11,7 @@ import {
   type Meeting,
   type Workshop,
 } from "./schema.js";
+import type { QuestionsConfig } from "./questions.js";
 
 /**
  * Publishability rules: lengths, the RSVP-host allowlist, cancellation
@@ -48,9 +49,23 @@ export type ValidationIssueCode =
   | "meeting_cancellation_reason_without_date"
   | "meeting_rsvp_host"
   | "workshop_title_too_long"
-  | "workshop_description_too_long";
+  | "workshop_description_too_long"
+  | "duplicate_question_id"
+  | "duplicate_option_id"
+  | "member_question_prefill"
+  | "unknown_question"
+  | "member_question_listed"
+  | "question_listed_twice";
 
-export function validateClubConfig(config: ClubConfig): ValidationIssue[] {
+/**
+ * `questions` is `questions.json`, checked on its own and against the
+ * meetings that list its questions. Without it (a caller with only the
+ * meetings), the meetings are checked alone.
+ */
+export function validateClubConfig(
+  config: ClubConfig,
+  questions?: QuestionsConfig,
+): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
   checkIdsUnique(config, issues);
@@ -61,6 +76,8 @@ export function validateClubConfig(config: ClubConfig): ValidationIssue[] {
       checkWorkshop(workshop, issues);
     }
   }
+
+  if (questions) checkQuestions(questions, config.meetings, issues);
 
   return issues;
 }
@@ -202,5 +219,85 @@ function checkWorkshop(workshop: Workshop, issues: ValidationIssue[]): void {
       code: "workshop_description_too_long",
       message: `Description is ${workshop.description.length} characters; the dialog fits about ${WORKSHOP_DESCRIPTION_MAX_LENGTH}.`,
     });
+  }
+}
+
+// ── Questions ────────────────────────────────────────────────────────────────
+
+/**
+ * Question and option ids are unique (answers point at them); `prefill` is a
+ * meeting question's (a member question already carries its one answer); and
+ * a meeting lists only meeting questions that exist, each once. A retired
+ * question may stay listed: it is simply not asked.
+ */
+function checkQuestions(
+  config: QuestionsConfig,
+  meetings: readonly Meeting[],
+  issues: ValidationIssue[],
+): void {
+  const byId = new Map<string, QuestionsConfig["questions"][number]>();
+  for (const question of config.questions) {
+    if (byId.has(question.id)) {
+      issues.push({
+        id: question.id,
+        code: "duplicate_question_id",
+        message: `"${question.id}" names more than one question; answers are stored by id.`,
+      });
+    }
+    byId.set(question.id, question);
+
+    if (question.scope === "member" && question.prefill !== undefined) {
+      issues.push({
+        id: question.id,
+        code: "member_question_prefill",
+        message:
+          `"${question.id}" is a member question, which always shows the ` +
+          "person's saved answer; prefill is for meeting questions.",
+      });
+    }
+
+    if ("options" in question) {
+      const seen = new Set<string>();
+      for (const option of question.options) {
+        if (seen.has(option.id)) {
+          issues.push({
+            id: question.id,
+            code: "duplicate_option_id",
+            message: `"${question.id}" has more than one option "${option.id}".`,
+          });
+        }
+        seen.add(option.id);
+      }
+    }
+  }
+
+  for (const meeting of meetings) {
+    const listed = new Set<string>();
+    for (const id of meeting.questions ?? []) {
+      const question = byId.get(id);
+      if (!question) {
+        issues.push({
+          id: meeting.id,
+          code: "unknown_question",
+          message: `Meeting "${meeting.id}" lists "${id}", which is not in questions.json.`,
+        });
+      } else if (question.scope === "member") {
+        issues.push({
+          id: meeting.id,
+          code: "member_question_listed",
+          message:
+            `Meeting "${meeting.id}" lists "${id}", a member question. Member ` +
+            "questions are asked at every check-in and are never listed.",
+        });
+      }
+      if (listed.has(id)) {
+        issues.push({
+          id: meeting.id,
+          code: "question_listed_twice",
+          message: `Meeting "${meeting.id}" lists "${id}" more than once.`,
+        });
+      }
+      listed.add(id);
+    }
   }
 }

@@ -1,7 +1,10 @@
 import meetings from "./data/meetings.json" with { type: "json" };
+import questions from "./data/questions.json" with { type: "json" };
+import { questionsConfigSchema, type QuestionsConfig } from "./questions.js";
 import { clubConfigSchema, type ClubConfig } from "./schema.js";
 import { validateClubConfig, type ValidationIssue } from "./validator.js";
 
+export * from "./questions.js";
 export * from "./schema.js";
 export * from "./validator.js";
 
@@ -18,7 +21,7 @@ export class ClubConfigError extends Error {
 }
 
 /**
- * Parses and validates the committed data file, throwing a readable
+ * Parses and validates the committed data files, throwing a readable
  * `ClubConfigError` if either step fails.
  *
  * This is the ONE function most callers want. `check.ts` (the CI gate) and
@@ -28,11 +31,23 @@ export class ClubConfigError extends Error {
  * read, rather than reconcile trusting a file CI would have rejected.
  */
 export function getClubConfig(): ClubConfig {
+  return getConfigFiles().meetings;
+}
+
+/** The survey's questions, validated with the meetings that list them. */
+export function getQuestions(): QuestionsConfig {
+  return getConfigFiles().questions;
+}
+
+function getConfigFiles(): {
+  meetings: ClubConfig;
+  questions: QuestionsConfig;
+} {
   // A static import, never a read from disk: a bundler inlines it, and the
   // platform calls this from a Cloudflare Worker, which has no filesystem to
   // read `dist/` from. The data file sits under `src/` so `tsc` copies it into
   // `dist/` beside the module that imports it.
-  return parseClubConfig(meetings);
+  return parseConfigFiles(meetings, questions);
 }
 
 /** The same two-step validation `getClubConfig` runs, over an in-memory
@@ -43,4 +58,16 @@ export function parseClubConfig(raw: unknown): ClubConfig {
   const issues = validateClubConfig(parsed);
   if (issues.length > 0) throw new ClubConfigError(issues);
   return parsed;
+}
+
+/** Both files, each parsed, then validated together. */
+export function parseConfigFiles(
+  rawMeetings: unknown,
+  rawQuestions: unknown,
+): { meetings: ClubConfig; questions: QuestionsConfig } {
+  const parsedMeetings = clubConfigSchema.parse(rawMeetings);
+  const parsedQuestions = questionsConfigSchema.parse(rawQuestions);
+  const issues = validateClubConfig(parsedMeetings, parsedQuestions);
+  if (issues.length > 0) throw new ClubConfigError(issues);
+  return { meetings: parsedMeetings, questions: parsedQuestions };
 }

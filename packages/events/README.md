@@ -1,14 +1,37 @@
 # @devdogsuga/events
 
-Config-as-code for the club's meetings and workshops: a Zod schema, a
-publishability validator, and the authored data itself
-(`src/data/meetings.json`).
+Config-as-code for the club's meetings and workshops and the check-in
+survey's questions: Zod schemas, a publishability validator, and the authored
+data itself (`src/data/meetings.json`, `src/data/questions.json`).
 
 ```ts
 import { getClubConfig } from "@devdogsuga/events";
 
 const config = getClubConfig(); // parses + validates src/data/meetings.json, or throws
 ```
+
+## Editing the data files
+
+Each data file names its JSON Schema in `$schema`
+(`src/data/meetings.schema.json`, `src/data/questions.schema.json`), so VS
+Code, JetBrains and other JSON-aware editors complete keys and choices, show
+each field's description on hover, and flag a misspelled key or an
+over-long title as you type. Both schemas are generated from the Zod schemas
+below; after changing one, run
+
+```bash
+pnpm --filter @devdogsuga/events schemas
+```
+
+(a test fails when the committed files drift). The editor catches shape
+mistakes only; rules across fields or files (`endsAt` after `startsAt`, a
+meeting listing a question that exists) are `check:events`'s.
+
+`questions.json` holds every survey question (`src/questions.ts`). A
+`member` question is one answer per person, asked until answered and then
+editable; a `meeting` question is asked at each meeting whose `questions`
+lists its id. Ids are permanent once answered: retire a question or option
+rather than deleting it.
 
 ## Two kinds of "is this config good"
 
@@ -37,7 +60,7 @@ both steps in order and throw a readable `ClubConfigError` if either fails.
 pnpm --filter @devdogsuga/events check:events
 ```
 
-Runs `getClubConfig()` against the committed `src/data/meetings.json` and prints
+Checks the committed `src/data/meetings.json` and `src/data/questions.json`, each against its schema and then together, and prints
 a pass/fail summary. This is the only place a config author gets a readable
 validation error — the runtime reader trusts what it parses and refuses to
 partially apply a bad file rather than re-validating field by field. Wired

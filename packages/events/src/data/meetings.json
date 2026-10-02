@@ -1,4 +1,5 @@
 {
+  "$schema": "./meetings.schema.json",
   "meetings": [
     {
       "id": "rectaW4iGmfDA3uwQ",
