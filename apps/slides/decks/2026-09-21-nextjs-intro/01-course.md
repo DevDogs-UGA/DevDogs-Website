@@ -10,12 +10,11 @@ docsPage:
 
 # Get Set Up
 
-<!-- Presenter notes: Adapted from Kyle Quach's Next.js room at Framework Intros (2026-09-21). The installs happened in the shared half of the night; this deck starts once everyone has Node and pnpm. -->
+> [!NOTE]
+> Adapted by Sloan Finger from Kyle Quach's Next.js workshop, Sep 21, 2026.
 
 ---
-layout: bullets-card
 accent: rose
-cardTitle: Before you start
 ---
 
 # What You'll Build
@@ -24,11 +23,8 @@ cardTitle: Before you start
 - A navigation bar shared by every page
 - A guestbook visitors can sign
 
-::card::
-
-Install Git, VS Code, Node and pnpm first: the [Prerequisites](/docs/workshops/getting-started/prerequisites#for-the-nextjs-track) cover all of them.
-
-This course is adapted by Sloan Finger from Kyle Quach's Next.js workshop at Framework Intros, Sep 21, 2026.
+> [!IMPORTANT]
+> Install Git, VS Code, Node and pnpm first: the [Prerequisites](/docs/workshops/getting-started/prerequisites#for-the-nextjs-track) cover all of them.
 
 ---
 layout: terminal
@@ -47,7 +43,14 @@ git switch -c <github-username>/01-nextjs-intro 01-nextjs-intro/00-start
 pnpm install
 ```
 
-Open the `Web-Workshops` folder in VS Code (`code .` from that terminal works too). The workshop started from `pnpm create next-app@latest my-app --yes`, which makes a fresh Next.js app. `01-nextjs-intro/00-start` is that same starter, trimmed down, and every step below ends at a checkpoint like it, so you can catch up if you fall behind.
+Open the `Web-Workshops` folder in VS Code (`code .` from that terminal works too). Every step below ends at a checkpoint, so you can catch up if you fall behind.
+
+<details>
+<summary>Where does the starter come from?</summary>
+
+`01-nextjs-intro/00-start` is a fresh app from `pnpm create next-app@latest my-app --yes`, trimmed down to one page.
+
+</details>
 
 ---
 layout: terminal
@@ -61,7 +64,10 @@ titlebar: Terminal
 pnpm dev
 ```
 
-Open [localhost:3000](http://localhost:3000): a page with one heading. Leave the server running while you work; the page reloads every time you save a file. If something else already uses port 3000, run `pnpm dev --port 3001` and use that port instead.
+Open [localhost:3000](http://localhost:3000): a page with one heading. Leave the server running while you work; the page reloads every time you save a file.
+
+> [!TIP]
+> If something else already uses port 3000, run `pnpm dev --port 3001` and use that port instead.
 
 ---
 layout: statement
@@ -77,26 +83,22 @@ docsPage:
 React is a library for building user interfaces out of components. Next.js is a framework around React that adds what a whole site needs: routing, server rendering, and data fetching. This step covers routing, how a URL finds its page.
 
 ---
-layout: bullets-card
 accent: rose
-cardTitle: "Pages Router: the traditional way"
 ---
 
 # App Router, Not Pages Router
 
-**App Router**, what we use:
+This workshop uses the **App Router**, which lives in an `app/` directory.
 
-- Lives in an `app/` directory
-- The current default, and where the framework is heading
-- Unlocks Server Components (step 5)
+> [!WARNING]
+> Tutorials online also use the older **Pages Router**. If a guide talks about a `pages/` directory, it's the old router, and its code won't fit here.
 
-::card::
+<details>
+<summary>How do the two routers differ?</summary>
 
-- Lives in a `pages/` directory
-- Still supported, no longer the default
-- Doesn't get the latest features
+The App Router is the current default and where the framework is heading, and it unlocks Server Components (step 5). The Pages Router is still supported, but no longer the default, and doesn't get the latest features.
 
-You'll see both in tutorials online. If a guide talks about `pages/`, it's the old router.
+</details>
 
 ---
 accent: rose
@@ -126,11 +128,19 @@ A few file names mean something to Next.js wherever they appear in `app`:
 | --------------- | ------------------------------------------------- |
 | `page.tsx`      | The page itself.                                  |
 | `layout.tsx`    | A shared wrapper around pages: a nav, a sidebar.  |
-| `loading.tsx`   | Shown as a placeholder while the page loads.      |
-| `error.tsx`     | Shown when something went wrong.                  |
-| `not-found.tsx` | Shown when nothing matches the URL.               |
 
-This workshop uses the first two.
+This workshop uses those two.
+
+<details>
+<summary>The other special files</summary>
+
+| File            | What it is                                   |
+| --------------- | -------------------------------------------- |
+| `loading.tsx`   | Shown as a placeholder while the page loads. |
+| `error.tsx`     | Shown when something went wrong.             |
+| `not-found.tsx` | Shown when nothing matches the URL.          |
+
+</details>
 
 ---
 layout: terminal
@@ -267,20 +277,19 @@ docsPage:
 Make a Projects page at `/projects` that lists a few projects, each with a name and a short description. Try it before you open our version below.
 
 ---
-layout: bullets-card
 accent: rose
-cardTitle: Stuck?
 ---
 
 # Hints
 
+<details>
+<summary>Stuck? Show the hints</summary>
+
 - It's a new folder under `app`, with a `page.tsx` in it
 - Keep the projects in an array, and turn each into a list item with `.map`
-- Give each list item a `key`
+- Give each list item a `key`: it's how React tells list items apart. Use something unique to each item, like its name.
 
-::card::
-
-`key` is how React tells list items apart. Use something unique to each item, like its name.
+</details>
 
 ---
 layout: terminal
@@ -328,21 +337,22 @@ docsPage:
 A component is a reusable building block of a user interface: you write it once and use it anywhere. Every page so far is one. This step makes one that isn't a page: a navigation bar.
 
 ---
-layout: bullets-card
 accent: rose
-cardTitle: Built in to Next.js
 ---
 
 # Where Components Live
 
-- Make a `components` folder beside `app`, not inside it
-- Inside `app`, folders are routes. Outside it, a file is just code you import.
+> [!IMPORTANT]
+> Make a `components` folder beside `app`, not inside it. Inside `app`, folders are routes. Outside it, a file is just code you import.
 
-::card::
+<details>
+<summary>Which components come built in to Next.js?</summary>
 
 - **`Link`** (`next/link`) moves between pages without a full reload
 - **`Image`** (`next/image`) resizes images and serves smaller formats, so pages load faster
 - **`Script`** (`next/script`) controls when a script loads, so it doesn't slow the page down
+
+</details>
 
 ---
 layout: terminal
@@ -503,7 +513,7 @@ file: ~/components/Counter.tsx
 <CodeTips>
 <template #0>
 
-`"use client"` on the first line makes `Counter` a Client Component, and the button counts. Keep the server the default: mark the smallest piece that needs to be interactive, like this button, not the page around it.
+`"use client"` on the first line makes `Counter` a Client Component, and the button counts.
 
 </template>
 </CodeTips>
@@ -513,6 +523,9 @@ accent: rose
 ---
 
 # Try It
+
+> [!TIP]
+> Keep the server the default: mark the smallest piece that needs to be interactive, like this button, not the page around it.
 
 Open [localhost:3000](http://localhost:3000). The home page is just the button for now, under the navbar. Click it: the count goes up with each click. Refresh, and it starts from zero again.
 
@@ -581,7 +594,10 @@ file: ~/components/Guestbook.tsx
 <CodeTips>
 <template #0>
 
-The file is long, so it comes in four parts: put them one after another, in order (the line numbers show where each goes), or copy the whole file from the link after the last part. `Guestbook` is a Client Component: it holds state, and its form reacts to typing. `Entry` describes one message. The component keeps three pieces of state: the list of entries, and what's typed in each field so far.
+> [!TIP]
+> The file is long, so it comes in four parts: put them one after another, in order (the line numbers show where each goes), or copy the whole file from the link after the last part.
+
+`Guestbook` is a Client Component: it holds state, and its form reacts to typing. `Entry` describes one message. The component keeps three pieces of state: the list of entries, and what's typed in each field so far.
 
 </template>
 <template #1>
@@ -609,7 +625,8 @@ accent: rose
 
 Sign the guestbook a few times, then refresh the page. The entries are gone: they only ever lived in the component's state, in that one browser tab.
 
-Giving them somewhere to live is what the [Supabase workshop](/docs/workshops/supabase/nextjs/setup) does next, starting from exactly this code.
+> [!NOTE]
+> The [Supabase workshop](/docs/workshops/supabase/nextjs/setup) gives them somewhere to live, starting from exactly this code.
 
 ---
 layout: numbered-list

@@ -10,12 +10,11 @@ docsPage:
 
 # Get Set Up
 
-<!-- Presenter notes: Adapted from Nandan Praveen's Flutter room at Framework Intros (2026-09-21), run with GDGC. The SDK and emulator installs from that room live in the docs' Prerequisites now; this deck starts once everyone has `flutter doctor` passing. -->
+> [!NOTE]
+> Adapted by Sloan Finger from Nandan Praveen's Flutter workshop with GDGC, Sep 21, 2026.
 
 ---
-layout: bullets-card
 accent: indigo
-cardTitle: Before you start
 ---
 
 # What You'll Build
@@ -23,11 +22,8 @@ cardTitle: Before you start
 - A two-tab app: a home screen, and a guestbook visitors can sign
 - A bar along the bottom to switch between them
 
-::card::
-
-Install Git, VS Code, the Flutter SDK and an Android emulator first: the [Prerequisites](/docs/workshops/getting-started/prerequisites#for-the-flutter-track) cover all of them.
-
-This course is adapted by Sloan Finger from Nandan Praveen's Flutter workshop with GDGC at Framework Intros, Sep 21, 2026.
+> [!IMPORTANT]
+> Install Git, VS Code, the Flutter SDK and an Android emulator first: the [Prerequisites](/docs/workshops/getting-started/prerequisites#for-the-flutter-track) cover all of them.
 
 ---
 layout: bullets-card
@@ -63,7 +59,17 @@ git switch -c <github-username>/01-flutter-intro 01-flutter-intro/00-start
 flutter pub get
 ```
 
-Open the `Mobile-Workshops` folder in VS Code (`code .` from that terminal works too). If `flutter pub get` says your Dart SDK is too old, run `flutter upgrade`. The workshop started from `flutter create workshop_demo`, which makes a fresh Flutter app. `01-flutter-intro/00-start` is that same starter, trimmed down, and every step below ends at a checkpoint like it, so you can catch up if you fall behind.
+Open the `Mobile-Workshops` folder in VS Code (`code .` from that terminal works too). Every step below ends at a checkpoint, so you can catch up if you fall behind.
+
+> [!TIP]
+> If `flutter pub get` says your Dart SDK is too old, run `flutter upgrade`.
+
+<details>
+<summary>Where does the starter come from?</summary>
+
+`01-flutter-intro/00-start` is a fresh app from `flutter create workshop_demo`, trimmed down to one screen.
+
+</details>
 
 ---
 layout: terminal
@@ -79,7 +85,10 @@ Start your emulator first: in Android Studio, **More Actions → Virtual Device 
 flutter run
 ```
 
-The emulator shows "Hello, World!" in teal. Leave `flutter run` going while you work: after you save a file, press `r` in its terminal to **hot reload**, which swaps in your change in about a second, keeping the app where it was. `R` is a **hot restart**, which starts the app over.
+The emulator shows "Hello, World!" in teal. Leave `flutter run` going while you work.
+
+> [!IMPORTANT]
+> After you save a file, press `r` in the `flutter run` terminal to **hot reload**, which swaps in your change in about a second, keeping the app where it was. `R` is a **hot restart**, which starts the app over.
 
 ---
 layout: statement
@@ -147,7 +156,14 @@ file: ~/lib/main.dart
 <CodeTips>
 <template #0>
 
-`main()` runs the app. `MyApp` sets its title and theme, and `home` is the first screen. Delete the old `HomePage` class from the bottom of this file, and add the import of the new one as the first line. `package:flutter_workshop/` is this app's own `lib` folder: `flutter_workshop` is the name in `pubspec.yaml`.
+`main()` runs the app. `MyApp` sets its title and theme, and `home` is the first screen. Delete the old `HomePage` class from the bottom of this file, and add the import of the new one as the first line.
+
+<details>
+<summary>What is <code>package:flutter_workshop/</code>?</summary>
+
+This app's own `lib` folder: `flutter_workshop` is the name in `pubspec.yaml`.
+
+</details>
 
 </template>
 </CodeTips>
@@ -178,7 +194,8 @@ accent: indigo
 
 In `homepage.dart`, wrap the `Text` in a `Column`, add a second `Text` under it, and put the whole thing in a `Card`. Save, and press `r` in the terminal running the app: the change appears without restarting.
 
-This one's for practice, with no checkpoint. Undo it before step 2 (**Ctrl+Z**, or **Cmd+Z** on macOS, in the editor), so your code matches ours.
+> [!WARNING]
+> This one's for practice, with no checkpoint. Undo it before step 2 (**Ctrl+Z**, or **Cmd+Z** on macOS, in the editor), so your code matches ours.
 
 ---
 layout: statement
@@ -276,7 +293,10 @@ file: ~/lib/guestbook.dart
 <CodeTips>
 <template #0>
 
-Make `lib/guestbook.dart`. It's long, so it comes in five parts: put them one after another, in order, or copy the whole file from the link after the last part. `GuestbookEntry` is plain Dart: one entry's name, message and time. `required` means every entry has all three.
+> [!TIP]
+> The file is long, so it comes in five parts: put them one after another, in order, or copy the whole file from the link after the last part.
+
+Make `lib/guestbook.dart`. `GuestbookEntry` is plain Dart: one entry's name, message and time. `required` means every entry has all three.
 
 </template>
 <template #1>
@@ -328,7 +348,8 @@ accent: indigo
 
 Hot reload, open the Guestbook tab, and sign it a few times. Then press `R` for a hot restart. The entries are gone: they only ever lived in the screen's state, in memory.
 
-Giving them somewhere to live is what the [Supabase workshop](/docs/workshops/supabase/flutter/setup) does next, starting from exactly this code.
+> [!NOTE]
+> The [Supabase workshop](/docs/workshops/supabase/flutter/setup) gives them somewhere to live, starting from exactly this code.
 
 ---
 layout: numbered-list

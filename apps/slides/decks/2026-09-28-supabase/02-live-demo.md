@@ -32,6 +32,9 @@ git switch -c <github-username>/02-supabase origin/01-nextjs-intro
 pnpm install
 ```
 
+> [!NOTE]
+> Skipped [Intro to Next.js](/docs/workshops/framework-intros/nextjs/setup)? That's fine: this branch already has its code, guestbook included.
+
 ::right::
 
 ```bash {*}{cwd:'~'}
@@ -43,6 +46,9 @@ git switch -c <github-username>/02-supabase origin/01-flutter-intro
 # Install dependencies
 flutter pub get
 ```
+
+> [!NOTE]
+> Skipped [Intro to Flutter](/docs/workshops/framework-intros/flutter/setup)? That's fine: this branch already has its code, guestbook included.
 
 <!-- Presenter notes: Everyone already has this from Setup Night; this is just the Supabase branch point. Both branches are "what you built, plus the guestbook we didn't get to." -->
 
@@ -58,6 +64,16 @@ file: ~/.env.local
 - Create a Supabase project at **supabase.com/dashboard** (it takes about a minute)
 - Copy the **Project URL** and the **publishable key** from Project Settings → API
 - Copy `.env.example` to `.env.local` and paste them in
+
+> [!WARNING]
+> The publishable key is safe in your app. The **secret** key never is: keep it out of `.env.local`, and out of git.
+
+<Track mobile>
+
+> [!IMPORTANT]
+> From now on, run the app with `flutter run --dart-define-from-file=.env.local`. Flutter doesn't read `.env.local` on its own: that flag bakes its values in.
+
+</Track>
 
 ::code::
 
@@ -143,6 +159,13 @@ pnpm add @supabase/supabase-js
 # Add the Supabase client
 flutter pub add supabase_flutter gotrue
 ```
+
+<details>
+<summary>Why add <code>gotrue</code> too?</summary>
+
+`supabase_flutter` already depends on it, but custom OIDC providers like DevDogs need `gotrue` 2.20 or newer. Adding it directly makes sure you get one.
+
+</details>
 
 </Track>
 
@@ -332,6 +355,9 @@ chip: DEVDOGS
   - For example, `https://abcdefghij.supabase.co/auth/v1/callback`
 - Copy the **client ID** and **client secret**
 
+> [!WARNING]
+> The client secret is shown once. Keep the tab open until you've pasted it into Supabase, next.
+
 <!-- Presenter notes: The redirect URI is the Project URL everyone already saved in .env.local, plus /auth/v1/callback. The secret is shown once, so keep the tab open until it's pasted into Supabase on the next slide. -->
 
 ---
@@ -345,6 +371,15 @@ chip: DASHBOARD
 - Authentication → **Sign In / Providers** → Add a Custom **OIDC** Provider
 - Fill it in, save, and check that it's enabled:
   - <table class="dd-config-table"><tbody><tr><th>Identifier</th><td><code>custom:devdogsuga</code></td></tr><tr><th>Name</th><td><code>DevDogs</code></td></tr><tr><th>Issuer URL</th><td><code>https://crhqsbngqmwtsplabmhj.supabase.co/auth/v1</code></td></tr><tr><th>Client ID</th><td><a href="https://devdogsuga.org/tools/oauth#credentials">Copy from your OAuth page</a></td></tr><tr><th>Client Secret</th><td><a href="https://devdogsuga.org/tools/oauth#credentials">Copy from your OAuth page</a></td></tr><tr><th>Scopes</th><td><code>openid email profile</code></td></tr></tbody></table>
+
+<details>
+<summary>Why <code>custom:</code>, and why a <code>supabase.co</code> issuer?</summary>
+
+Supabase requires a custom provider's identifier to start with `custom:`, which is why the app signs in with `custom:devdogsuga`.
+
+The issuer is the DevDogs Supabase project's own host, not `api.devdogsuga.org`: Supabase's OAuth server reports that host in its discovery document and ID tokens, so a provider set to the custom domain fails the issuer check. Your OAuth page shows the current issuer with a copy button.
+
+</details>
 
 <!-- Presenter notes: Supabase requires custom provider identifiers to start with `custom:`, which is why the app signs in with `custom:devdogsuga`. The issuer is the raw project host, not api.devdogsuga.org: Supabase's OAuth server ignores the custom domain in its discovery document and ID tokens, and a provider set to api.devdogsuga.org fails the issuer check (TASK-347). The OAuth page shows the current issuer with a copy button. `devtools oauth` does all of this in one command; it comes back in the local bonus section at the end. -->
 
@@ -581,11 +616,16 @@ chip: QUESTION
 
 # What's Wrong with This?
 
-<v-click>
+Think about it before you open the answer.
+
+<details>
+<summary>Show the answer</summary>
 
 The **app** decides whose name goes on each message: type any name you like, and the database stores it. Nothing ties the name to the person who's signed in.
 
-</v-click>
+A client is just a program anyone can change: they can edit the request, or call the API directly. Row-level security checks who you are (`auth.uid() = user_id`), but nothing checks the name.
+
+</details>
 
 <!-- Presenter notes: Ask the room first and take a few guesses before clicking to reveal. The insert trusts a name the client sends, and a client is just a program anyone can change: type someone else's name, edit the request, or call the API directly. RLS checks who you are (auth.uid() = user_id), but nothing checks the name. This sets up the profiles fix next. -->
 
@@ -662,6 +702,13 @@ Messages now point at profiles, and the `author_name` column goes away.
 
 </template>
 </CodeTips>
+
+<details>
+<summary>Why <code>security definer</code> and an empty <code>search_path</code>?</summary>
+
+`security definer` runs the function as the table's owner, so it can write to `profiles` even though signed-in users have no write policy there. `set search_path = ''` stops it from being tricked by a same-named function or table planted earlier in a caller's search path.
+
+</details>
 
 <!-- Presenter notes: One paste, on one laptop (shared project); the clicks walk it. A profiles table with the same shape as messages: create, RLS on, one read-for-everyone policy. Then the trigger function: security definer + empty search_path so it can write to profiles even though the signed-in user has no write policy there, and can't be tricked by a planted function; the name comes from the first of name, full_name, preferred_username, or the email prefix. The trigger runs it on every sign-up, the backfill covers anyone who signed up before this ran, and the last change points messages at profiles and removes the author_name column. -->
 
@@ -764,6 +811,13 @@ Names live in `profiles` now, so the page fetches them along with each message.
 </template>
 </CodeTips>
 
+<details>
+<summary>Why <code>overrideTypes</code>?</summary>
+
+Each message has exactly one author, so `profiles(name)` comes back as one object, or `null`, never a list. Without generated database types, supabase-js guesses a list, and the names render blank.
+
+</details>
+
 ::right::
 
 <<< mobile@step-4:lib/guestbook.dart {build:[1,2,4,5,6,7,8,9]3|10|11}
@@ -860,6 +914,9 @@ Deleting takes a handler and a button, shown only on your own messages.
 </template>
 </CodeTips>
 
+> [!IMPORTANT]
+> Hiding the button isn't what protects other people's messages: the delete policy is. Postgres refuses to delete someone else's message, whatever the app shows.
+
 ::right::
 
 <<< mobile@step-5:lib/guestbook.dart {build:1,2|3,4}
@@ -882,6 +939,9 @@ Deleting takes a handler and a button, shown only on your own messages.
 </template>
 </CodeTips>
 
+> [!IMPORTANT]
+> Hiding the button isn't what protects other people's messages: the delete policy is. Postgres refuses to delete someone else's message, whatever the app shows.
+
 <!-- Presenter notes: The delete button only renders for your own rows client-side, but the real guard is the RLS policy: try deleting someone else's id from devtools or curl and Postgres refuses it regardless of what the UI shows. -->
 
 ---
@@ -899,6 +959,11 @@ docsPage:
 
 # Everything We Clicked, as Files
 
+Everything so far ran in your Supabase project's Dashboard. This page turns the same SQL into migration files in the repo, and runs the whole stack on your machine.
+
+> [!IMPORTANT]
+> This page is optional, and needs [Docker](https://docs.docker.com/get-started/get-docker/) running.
+
 <!-- Presenter notes: Demo only: nobody needs to follow along, and it needs Docker. Everything so far ran in the shared project's Dashboard; this turns the same SQL into migration files in the repo, which is how the monorepo works. Before starting: `supabase stop` any other local stack on this laptop (same ports, 54321-54324). -->
 
 ---
@@ -915,6 +980,9 @@ pnpm dlx supabase start
 # Print the local API URL, Studio URL, and publishable key
 pnpm dlx supabase status
 ```
+
+> [!TIP]
+> The first `supabase start` downloads Docker images, which takes a few minutes. If another local Supabase stack is running, stop it first with `pnpm dlx supabase stop` in its folder: they use the same ports.
 
 <!-- Presenter notes: start boots Postgres, Auth, and Studio in Docker (the first run downloads images, so do it before the meeting). status prints the local API URL (http://127.0.0.1:54321), Studio (http://127.0.0.1:54323), and the local publishable key. Open Studio: it's the same dashboard, empty. -->
 
@@ -979,7 +1047,14 @@ firstFile: ~/supabase/config.toml
 secondLabel: Terminal
 ---
 
+Built-in providers like Apple, GitHub or Google are config: a block in `supabase/config.toml`, with the secret in an environment variable. DevDogs is a custom provider, so it isn't in `config.toml`, and `db reset` wipes one you set up by hand.
+
+<details>
+<summary>What a built-in provider's config looks like</summary>
+
 <<< web:supabase/config.toml {321-334}
+
+</details>
 
 ::second::
 
@@ -988,6 +1063,11 @@ secondLabel: Terminal
 # (a custom provider, so it isn't in config.toml)
 pnpm dlx @devdogsuga/devtools oauth
 ```
+
+Then point `.env.local` at the local API URL and publishable key from `supabase status`, restart the app, and sign in against your own machine.
+
+> [!NOTE]
+> Run `devtools oauth` again after every `db reset`.
 
 <!-- Presenter notes: Built-in providers like Apple, GitHub, or Google are just config: a block like this one in supabase/config.toml, with the secret in an env var. DevDogs is a custom OIDC provider, so it isn't in config.toml, and `db reset` wipes the one we set up by hand. Click: `devtools oauth` registers it on the local stack in one step. Then point `.env.local` at the local URL and publishable key from `supabase status`, restart the app, and sign in against your own machine. -->
 
