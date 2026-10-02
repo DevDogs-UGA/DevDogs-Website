@@ -4,6 +4,7 @@ import { questionsConfigSchema, type QuestionsConfig } from "./questions.js";
 import { clubConfigSchema, type ClubConfig } from "./schema.js";
 import { validateClubConfig, type ValidationIssue } from "./validator.js";
 
+export * from "./answers.js";
 export * from "./questions.js";
 export * from "./schema.js";
 export * from "./validator.js";
