@@ -66,6 +66,7 @@ describe("the tree", () => {
       "migrate",
       "smoke",
       "reconcile",
+      "prune-monitors",
     ]);
     expect(subcommandNames(["env"])).toEqual(["pull", "push", "audit"]);
     expect(subcommandNames(["github"])).toEqual(["rulesets", "settings"]);

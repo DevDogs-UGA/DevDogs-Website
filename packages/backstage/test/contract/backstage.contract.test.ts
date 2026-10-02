@@ -327,6 +327,7 @@ describe("backstage contract tests", () => {
       "deploy write-env",
       "deploy smoke",
       "deploy reconcile",
+      "deploy prune-monitors",
       "env pull",
       "env push",
       "env audit",

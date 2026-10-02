@@ -94,5 +94,11 @@ export const deployCommand: CommandNode = {
       hint: "needs CRON_SECRET",
       options: [DEPLOY_TIER, SMOKE_APP],
     },
+    {
+      name: "prune-monitors",
+      summary: "Delete the Sentry Crons monitors an app no longer declares.",
+      hint: "needs SENTRY_MONITORS_TOKEN; production only",
+      options: [DEPLOY_TIER, SMOKE_APP, DRY_RUN],
+    },
   ],
 };

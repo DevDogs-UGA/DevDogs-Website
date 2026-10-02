@@ -96,7 +96,22 @@ declare({
       doc:
         "A Sentry organization auth token. Deploys use it to create each " +
         "release and upload its source maps, and the smoke test uses it to " +
-        "read cron check-ins. One token serves every environment.",
+        "confirm the release landed. One token serves every environment.",
+      scope: "environment",
+      secrecy: "secret",
+      commented: true,
+    }),
+    // Read only by `deploy prune-monitors`, in its own step's `env:`: an
+    // organization token (above) can neither list nor delete Crons monitors,
+    // and one that can delete monitors and alert rules org-wide should not
+    // sit in every step of the deploy job. Without it, pruning is skipped
+    // with a notice.
+    SENTRY_MONITORS_TOKEN: define(z.string().min(1).optional(), {
+      doc:
+        "A Sentry internal integration token with Alerts: Read & Write and " +
+        "nothing else. The production deploy uses it to delete the Crons " +
+        "monitors an app no longer declares, which would otherwise alert " +
+        "on missed check-ins forever.",
       scope: "environment",
       secrecy: "secret",
       commented: true,

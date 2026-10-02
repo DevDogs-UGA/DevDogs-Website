@@ -19,10 +19,11 @@
  * Sandbox (plain Worker) always used this shape, so all three apps share one
  * deploy step.
  *
- * Steps (`write-env`, `preflight`, `plan`, `migrate`, `smoke`, `reconcile`) are
- * individually addressable for jobs that run only one. The ones that hold a
- * single credential in the job's own `env:` block and compose no env file
- * (`preflight`, `plan`, `migrate`, `smoke`, `reconcile`), and `write-env`,
+ * Steps (`write-env`, `preflight`, `plan`, `migrate`, `smoke`, `reconcile`,
+ * `prune-monitors`) are individually addressable for jobs that run only one.
+ * The ones that hold a single credential in the job's own `env:` block and
+ * compose no env file (`preflight`, `plan`, `migrate`, `smoke`, `reconcile`,
+ * `prune-monitors`), and `write-env`,
  * which CREATES the file tier resolution would otherwise insist on reading,
  * run with `--no-env`.
  */
@@ -38,6 +39,7 @@ import {
 import { isWorkerApp } from "@devdogsuga/cli-core/workers";
 import { catalog } from "../catalog.js";
 import { runDeployMigrate, runDeployPlan } from "./migrations.js";
+import { runPruneMonitors } from "./monitors.js";
 import { runPreflight } from "./preflight.js";
 import { DeployError, say } from "./report.js";
 import { runDeploySecretsFile } from "./secrets-file.js";
@@ -254,6 +256,14 @@ async function runStep(sub: string, rest: string[]): Promise<boolean> {
     await runReconcile({
       app: flagValue(rest, "--app") ?? "platform",
       tier: requireTier(rest),
+    });
+    return true;
+  }
+  if (sub === "prune-monitors") {
+    await runPruneMonitors({
+      app: flagValue(rest, "--app") ?? "platform",
+      tier: requireTier(rest),
+      dryRun: rest.includes("--dry-run"),
     });
     return true;
   }

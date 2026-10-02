@@ -49,6 +49,7 @@ pnpm backstage export stars --from 2026-08-17   # audited under your gh login
 | `deploy plan`, `deploy migrate`                  | Dry-run the migrations into the job summary; apply them to `DB_URL`.                   |
 | `deploy smoke --tier <t> [--app]`                | Public routes answer 200, the auth redirect works, this deploy's Sentry release shows. |
 | `deploy reconcile --tier <t>`                    | The platform's config reconcile, after the deploy (`CRON_SECRET`).                     |
+| `deploy prune-monitors --tier <t> [--app]`       | Deletes the app's Sentry Crons monitors it no longer declares (production only).       |
 | `env pull\|push\|audit --target <t>`             | One env file per target, synced to Bitwarden and GitHub. `audit` lists orphans.        |
 | `planner status\|create\|reset-password\|drop`   | The `migration_planner` role the preflight tier holds.                                 |
 | `graphics [graphic…]`                            | Club images from `@devdogsuga/brand`: `brand/*`, `app/*`, `event/*`.                   |
@@ -234,7 +235,8 @@ stderr, and every confirmation needs `--yes`. Against staging or production a
 command that is not read-only asks once first (`--yes` answers it).
 
 Each command checks for the secrets it uses up front: `deploy <app>` for
-`CLOUDFLARE_API_TOKEN`, `deploy reconcile` for `CRON_SECRET`, `env` for the
+`CLOUDFLARE_API_TOKEN`, `deploy reconcile` for `CRON_SECRET`, `deploy
+prune-monitors` for `SENTRY_MONITORS_TOKEN` (skipped without it), `env` for the
 Secrets Manager token (flag, environment, then the Bitwarden vault, which `env`
 signs in to and unlocks itself, then asking).
 
