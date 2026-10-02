@@ -1,4 +1,54 @@
 {
   "$schema": "./questions.schema.json",
-  "questions": []
+  "questions": [
+    {
+      "id": "how_did_you_learn",
+      "scope": "meeting",
+      "prompt": "How did you learn about this event?",
+      "type": "choice",
+      "options": [
+        { "id": "discord", "label": "Discord" },
+        { "id": "instagram", "label": "Instagram" },
+        { "id": "involvement_network", "label": "Involvement Network" },
+        { "id": "gdg_community", "label": "GDG community page" },
+        { "id": "newsletter", "label": "Newsletter or email" },
+        { "id": "friend", "label": "A friend or classmate" },
+        { "id": "flyer", "label": "Flyer or poster" }
+      ],
+      "other": true,
+      "bevy": "survey:how_did_you_learn_about_this_event_1"
+    },
+    {
+      "id": "developer_experience",
+      "scope": "member",
+      "prompt": "My level of developer experience is…",
+      "type": "choice",
+      "options": [
+        { "id": "beginner", "label": "Beginner" },
+        { "id": "intermediate", "label": "Intermediate" },
+        { "id": "advanced", "label": "Advanced" }
+      ],
+      "bevy": "survey:level_of_developer_experience_1"
+    },
+    {
+      "id": "google_tools_familiarity",
+      "scope": "member",
+      "prompt": "How familiar are you with Google Developer Tools?",
+      "type": "choice",
+      "options": [
+        { "id": "not_familiar", "label": "Not familiar" },
+        { "id": "somewhat_familiar", "label": "Somewhat familiar" },
+        { "id": "very_familiar", "label": "Very familiar" }
+      ],
+      "bevy": "survey:how_familiar_are_you_with_google_developer_tools"
+    },
+    {
+      "id": "organization",
+      "scope": "member",
+      "prompt": "What company or organization are you a part of, if any?",
+      "type": "text",
+      "maxLength": 120,
+      "bevy": "survey:what_company_or_organization_are_you_a_part_of_if_any"
+    }
+  ]
 }
