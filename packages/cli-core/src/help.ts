@@ -85,7 +85,7 @@ function scopedBody(commands: readonly CommandNode[]): string[] {
       lines.push(`${INDENT}${SCOPES[open].help}:`);
     }
     lines.push(
-      `${INDENT.repeat(2)}${command.name.padEnd(width)}  ${command.summary}`,
+      `${INDENT.repeat(2)}${command.name.padEnd(width)}  ${describe(command)}`,
     );
   }
 
@@ -96,11 +96,28 @@ function optionRows(options: readonly CommandOption[]): [string, string][] {
   return options.map((option) => [optionLabel(option), option.summary]);
 }
 
+/** A command's summary as a list prints it, with what else it answers to. */
+function describe(command: CommandNode): string {
+  const aliases = (command.aliases ?? []).map((alias) => alias.name);
+  const also = aliases.length > 0 ? ` (also: ${aliases.join(", ")})` : "";
+  const deprecated = command.deprecated ? " (deprecated)" : "";
+  return `${command.summary}${also}${deprecated}`;
+}
+
 function childRows(children: readonly CommandNode[]): [string, string][] {
-  return children.map((child) => [
-    child.name,
-    child.deprecated ? `${child.summary} (deprecated)` : child.summary,
-  ]);
+  return children.map((child) => [child.name, describe(child)]);
+}
+
+/** `cron` is `jobs --kind sync`, for a command page's alias line. */
+function aliasLine(node: CommandNode): string | undefined {
+  const aliases = node.aliases ?? [];
+  if (aliases.length === 0) return undefined;
+  const each = aliases.map((alias) =>
+    alias.implies?.length
+      ? `${alias.name} (${node.name} … ${alias.implies.join(" ")})`
+      : alias.name,
+  );
+  return `Also typed as ${each.join(", ")}.`;
 }
 
 // ── The three levels ─────────────────────────────────────────────────────────
@@ -162,6 +179,9 @@ function renderCommand(
 
   const lines = [usage, "", node.summary];
 
+  const also = aliasLine(node);
+  if (also) lines.push("", also);
+
   if (node.deprecated) lines.push("", `Deprecated. ${node.deprecated}`);
 
   if (children.length > 0) {
@@ -196,9 +216,11 @@ export function renderHelp(
   if (path.length === 0) return renderRoot(catalog);
 
   const node = catalog.findCommand(path);
-  if (!node) return renderRoot(catalog);
+  const canonical = catalog.canonicalPath(path);
+  if (!node || !canonical) return renderRoot(catalog);
 
-  return renderCommand(catalog, path, node);
+  // An alias's page is its command's page, under the command's own name.
+  return renderCommand(catalog, canonical, node);
 }
 
 /**
@@ -228,6 +250,12 @@ export interface CommandListEntry {
   surface: "interactive" | "cli-only";
   /** What replaces a deprecated command. Absent otherwise. */
   deprecated?: string;
+  /**
+   * Other names the command answers to (`cron` for `jobs`). Not paths of
+   * their own: a docs check that validates paths should hold docs to the
+   * command's own name.
+   */
+  aliases?: string[];
 }
 
 /**
@@ -253,6 +281,9 @@ export function commandList(catalog: Catalog): CommandListEntry[] {
         summary: node.summary,
         surface: cliOnly ? "cli-only" : "interactive",
         ...(node.deprecated ? { deprecated: node.deprecated } : {}),
+        ...(node.aliases?.length
+          ? { aliases: node.aliases.map((alias) => alias.name) }
+          : {}),
       });
       visit(node.subcommands ?? [], path, cliOnly);
     }

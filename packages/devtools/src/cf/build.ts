@@ -15,7 +15,7 @@
  * a checkout from running a stale bundle — or one a previous `cf preview
  * --tier staging` baked for another tier.
  *
- * `workflows run`/`serve` use `vinext dev` instead and need none of this
+ * `jobs run`/`serve` use `vinext dev` instead and need none of this
  * except the dependency build (`buildWorkspaceDeps`).
  *
  * The app's workspace dependencies build first, the way `devtools run build`

@@ -91,7 +91,7 @@ export function checkEventsSeeded(
     fix:
       empty.length === 0
         ? undefined
-        : "With the platform dev server running: `pnpm devtools cron run --app platform --cron '*/15 * * * *'`.",
+        : "With the platform dev server running: `pnpm devtools jobs run --app platform --cron '*/15 * * * *'`.",
   };
 }
 

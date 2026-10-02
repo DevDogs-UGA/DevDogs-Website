@@ -320,7 +320,7 @@ describe("enterSessionEnvironment", () => {
     it.each([
       [["supabase", "start"]],
       [["supabase", "stop"]],
-      [["preset", "restart-stack"]],
+      [["restart-stack"]],
     ])("skips the offer for the stack lifecycle command %j", async (argv) => {
       Object.defineProperty(process.stdin, "isTTY", {
         value: true,

@@ -5,8 +5,8 @@
  * runs. Two layers honour it, so no command has to remember to:
  *
  *   * `runInGroup` (every tool the CLI spawns) prints `Would run: <command>`
- *     and does not spawn. A passthrough, a preset or the `run` alias therefore
- *     shows the exact tool calls it would make.
+ *     and does not spawn. A passthrough, a Supabase job or the `run` alias
+ *     therefore shows the exact tool calls it would make.
  *   * the dispatcher stops any command that has not said how it treats the
  *     flag (see `CommandNode.dryRun`) and prints the devtools command it
  *     stopped, so a command that spawns or writes can never run by accident.

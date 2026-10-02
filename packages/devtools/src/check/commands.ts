@@ -36,7 +36,7 @@ function migrations(rest: string[]): number {
     violations.map(
       (v) =>
         `${v.filename} (${v.timestamp}) sorts before ${base}'s newest migration (${baseLatest}). ` +
-        "Recreate it with a fresh timestamp (`devtools preset new-migration`) and regenerate types.",
+        "Recreate it with a fresh timestamp (`devtools new-migration`) and regenerate types.",
     ),
     `in order (${base}'s newest: ${baseLatest ?? "none"}).`,
   );

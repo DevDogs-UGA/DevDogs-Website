@@ -7,7 +7,7 @@
  * to carry its own copy of both, one of two the wizard's tier question also
  * used to keep before it moved into `launch.ts`).
  *
- * `cf preview`, `cron run` and `workflows run` still need a resolver of their
+ * `cf preview` and `jobs run` still need a resolver of their
  * own: each names the tier something it is doing right now — running a
  * workflow, previewing a build — SEPARATELY from the tier the session as a
  * whole is running under (`process.env.DEPLOY_ENV`, honoured here as the

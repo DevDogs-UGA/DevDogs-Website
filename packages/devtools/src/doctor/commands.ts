@@ -543,7 +543,7 @@ export async function runEnvironmentDoctor(
         id: "database-unreachable",
         status: "skip",
         summary: `Could not read the session's database (${err instanceof Error ? err.message : String(err)})`,
-        fix: "Start the stack with `pnpm devtools supabase start`, or apply migrations with `pnpm devtools preset apply-migrations`.",
+        fix: "Start the stack with `pnpm devtools supabase start`, or apply migrations with `pnpm devtools apply-migrations`.",
       });
     }
   }

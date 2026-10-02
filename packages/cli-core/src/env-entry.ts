@@ -106,8 +106,8 @@ export function realEnvEntryDeps(
 
 /**
  * Commands that bring the local stack up or down themselves: `db
- * start|stop|restart`, the `supabase start|stop` passthrough, and the
- * restart-stack preset. An offer to start the stack before one of these would
+ * start|stop|restart`, the `supabase start|stop` passthrough, and
+ * `restart-stack`. An offer to start the stack before one of these would
  * be asking a question the command is about to answer.
  */
 function isStackLifecycle(argv: readonly string[]): boolean {
@@ -116,16 +116,25 @@ function isStackLifecycle(argv: readonly string[]): boolean {
     return second === "start" || second === "stop" || second === "restart";
   }
   if (first === "supabase") return second === "start" || second === "stop";
-  return first === "preset" && second === "restart-stack";
+  return first === "restart-stack";
 }
 
 /**
  * Commands that may continue in a degraded entry while the stack is down:
- * the ones that can fix it (`db`, `supabase`, the presets), and whose data
- * commands re-check the connection themselves and say what is missing.
+ * the ones that can fix it (`db`, `supabase`, the Supabase jobs), and whose
+ * data commands re-check the connection themselves and say what is missing.
  */
+const STACK_OWNERS = new Set([
+  "db",
+  "supabase",
+  "restart-stack",
+  "new-migration",
+  "apply-migrations",
+  "push-config",
+]);
+
 function ownsStack(argv: readonly string[]): boolean {
-  return argv[0] === "db" || argv[0] === "supabase" || argv[0] === "preset";
+  return argv[0] !== undefined && STACK_OWNERS.has(argv[0]);
 }
 
 /**

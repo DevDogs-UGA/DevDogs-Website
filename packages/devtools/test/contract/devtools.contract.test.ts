@@ -289,6 +289,8 @@ describe("devtools contract tests", () => {
     expect(stdout).toContain("pnpm devtools [command] [options]");
   });
 
+  // Through the `cron` alias on purpose: the one contract test that proves a
+  // typed alias still reaches `jobs` end to end.
   it("cron list discovers the fixture's real wrangler config and scheduled.ts", async () => {
     const { status, stdout } = await run([
       "cron",
@@ -302,15 +304,15 @@ describe("devtools contract tests", () => {
     expect(stdout).toContain("Demo sync (every 30 minutes)");
   });
 
-  it("cron list resolves the fixture's production override too", async () => {
+  it("jobs list resolves the fixture's production override too", async () => {
     const { status, stdout } = await run([
-      "cron",
+      "jobs",
       "list",
       "--tier",
       "development",
     ]);
     expect(status).toBe(0);
-    // Both tiers print in one `cron list` call (see cron/commands.ts); the
+    // Both tiers print in one `jobs list` call (see jobs/commands.ts); the
     // production cron comes from wrangler.jsonc's env.production override.
     expect(stdout).toContain("0 6 * * *");
     expect(stdout).toContain("production");
@@ -355,7 +357,7 @@ describe("devtools contract tests", () => {
   it("root discovery works from a nested subdirectory", async () => {
     const nested = join(fixtureDir, "apps", "demo-app", "cloudflare");
     const { status, stdout } = await run(
-      ["cron", "list", "--tier", "development"],
+      ["jobs", "list", "--tier", "development"],
       {
         cwd: nested,
       },
@@ -366,7 +368,7 @@ describe("devtools contract tests", () => {
 
   it("refuses with the clear not-in-a-repo error outside any checkout", async () => {
     const { status, stderr } = await run(
-      ["cron", "list", "--tier", "development"],
+      ["jobs", "list", "--tier", "development"],
       {
         cwd: tmpdir(),
       },
@@ -377,7 +379,7 @@ describe("devtools contract tests", () => {
 
   it("refuses to guess a tier when nobody can answer", async () => {
     // The harness has no TTY, so this is the non-interactive path.
-    const { status, stderr } = await run(["cron", "list"], {
+    const { status, stderr } = await run(["jobs", "list"], {
       env: { DEPLOY_ENV: "", DEV_DB: "", CI: "" },
     });
     expect(status).toBe(1);
@@ -398,7 +400,7 @@ describe("devtools contract tests", () => {
 
   it("--no-env runs a command against a named tier without loading any env file", async () => {
     const { status, stdout, stderr } = await run(
-      ["--no-env", "--tier", "development", "cron", "list"],
+      ["--no-env", "--tier", "development", "jobs", "list"],
       { env: { CI: "true" } },
     );
     expect(status).toBe(0);
@@ -436,8 +438,8 @@ describe("devtools contract tests", () => {
       "check workers",
       "check scripts",
       "supabase",
-      "preset apply-migrations",
-      "cron run",
+      "apply-migrations",
+      "jobs run",
     ]) {
       expect(byPath.has(path), path).toBe(true);
     }
@@ -452,6 +454,9 @@ describe("devtools contract tests", () => {
       "moderation check",
       "db reset",
       "cf build",
+      "preset apply-migrations",
+      // An alias, not a path: it rides on `jobs` instead.
+      "cron run",
     ]) {
       expect(byPath.has(path), path).toBe(false);
     }
@@ -568,13 +573,13 @@ describe("devtools contract tests", () => {
 
   // ── cron contract (was repo-checks' live cron-contract test) ──────────────
 
-  it("cron list refuses a scheduled.ts that breaks the cron contract", async () => {
+  it("jobs list refuses a scheduled.ts that breaks the cron contract", async () => {
     await withFile(
       "apps/demo-app/cloudflare/scheduled.ts",
       'export const CRON_ROUTES = { "*/30 * * * *": { routes: ["/cron/x"], label: "" } };\n',
       async () => {
         const { status, stderr, stdout } = await run(
-          ["cron", "list", "--tier", "development"],
+          ["jobs", "list", "--tier", "development"],
           { env: { CI: "true" } },
         );
         expect(status).not.toBe(0);
@@ -673,7 +678,7 @@ describe("devtools contract tests", () => {
   it("--dry-run stops a command that writes and says what it would run", async () => {
     const { status, stderr } = await run(
       [
-        "cron",
+        "jobs",
         "run",
         "--app",
         "demo-app",
@@ -684,7 +689,7 @@ describe("devtools contract tests", () => {
       { env: { CI: "true", DEVTOOLS_TELEMETRY: "0" } },
     );
     expect(status).toBe(0);
-    expect(stderr).toContain("Would run: devtools cron run --app demo-app");
+    expect(stderr).toContain("Would run: devtools jobs run --app demo-app");
   });
 
   it("a failed run writes a log and prints its path", async () => {

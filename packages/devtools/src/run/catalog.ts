@@ -15,7 +15,7 @@ import {
  * asked "every package?", "which filter?" and "which tier?" up front would
  * ask the same question three times and let the answers disagree. `--tier`
  * is promptless for a different reason than `--filter`/`--all`, though: it is
- * not a question `run` asks itself elsewhere (unlike `cron run`'s own
+ * not a question `run` asks itself elsewhere (unlike `jobs run`'s own
  * `--tier`, which opens a live picker) — it is a scripting input with no
  * wizard equivalent, the same category `--json` sits in. `--help` still
  * documents all three, which is where someone scripting this will look.
@@ -45,6 +45,9 @@ export const runCommand: CommandNode = {
   dryRun: "handled",
   summary: "Run a pnpm workspace task, asking which apps first.",
   hint: "deprecated: pnpm -r run <task>",
+  // Deprecated, so typed-only: the wizard should not teach a name that is
+  // going away.
+  surface: "cli-only",
   deprecated:
     "Use `pnpm -r run <task>` for every package or `pnpm -F <app> <task>` for one. " +
     "It still runs, and each use is reported so it can be removed (TASK-404).",

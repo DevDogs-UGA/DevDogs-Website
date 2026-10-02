@@ -124,7 +124,7 @@ function toPath(location: string): string {
 }
 
 /**
- * `GET /cron/config-reconcile`, authenticated. Unlike `devtools cron run`
+ * `GET /cron/config-reconcile`, authenticated. Unlike `devtools jobs run`
  * (which only checks the HTTP status), this reads the JSON body: the route
  * answers 200 even when the reconcile itself failed
  * (`{ success: false, reason: … }`, see

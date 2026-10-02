@@ -33,25 +33,23 @@ describe("the top level", () => {
   });
 
   /**
-   * The scoped lines are the presets', one level down in `preset --help`, so
-   * the root stays a plain list with no scope headings.
+   * The Supabase jobs each name the layer they act on, and the headings are
+   * what stop a short list from making the reader guess which is which.
    */
-  it("renders the presets as a plain root entry without their scopes", () => {
-    expect(root).not.toContain(`${SCOPES.repo.help}:`);
-    expect(root).toContain("preset");
+  it("heads each layer of the Supabase group, in scope order", () => {
+    const machine = root.indexOf(`${SCOPES.machine.help}:`);
+    const repo = root.indexOf(`${SCOPES.repo.help}:`);
+    const endpoint = root.indexOf(`${SCOPES.endpoint.help}:`);
+
+    expect(machine).toBeGreaterThan(-1);
+    expect(repo).toBeGreaterThan(machine);
+    expect(endpoint).toBeGreaterThan(repo);
+    expect(root.indexOf("restart-stack")).toBeGreaterThan(machine);
   });
 
-  /**
-   * Each preset names the layer it acts on, and the headings are what stop a
-   * short list from making the reader guess which is which.
-   */
-  it("heads each layer of preset, in scope order", () => {
-    const preset = renderHelp(catalog, ["preset"]);
-    const repo = preset.indexOf(SCOPES.repo.help);
-    const endpoint = preset.indexOf(SCOPES.endpoint.help);
-
-    expect(repo).toBeGreaterThan(-1);
-    expect(endpoint).toBeGreaterThan(repo);
+  it("lists jobs once, naming its aliases beside it", () => {
+    expect(root).toMatch(/^ {2}jobs .*\(also: cron, workflows\)$/m);
+    expect(root).not.toMatch(/^ {2}(cron|workflows) /m);
   });
 
   it("marks a deprecated command and says what replaces it", () => {
@@ -66,7 +64,7 @@ describe("the top level", () => {
     // every entry would sit under it and the heading adds noise.
     // Structural rather than "contains no colon": a summary may hold one.
     const body = root
-      .slice(root.indexOf("\nEnvironment:") + 1)
+      .slice(root.indexOf("\nConfiguration & integrations:") + 1)
       .split("\n\n")[0]!
       .split("\n")
       .slice(1);

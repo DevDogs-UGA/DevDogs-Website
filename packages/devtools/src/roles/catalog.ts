@@ -10,6 +10,7 @@ import { JSON_FLAG, YES, type CommandNode } from "@devdogsuga/cli-core/catalog";
 
 export const rolesCommand: CommandNode = {
   name: "roles",
+  title: "Manage platform roles",
   summary: "See who holds each role, and grant or revoke one.",
   hint: "list, grant, revoke",
   subcommands: [

@@ -381,7 +381,7 @@ export interface DevPlan {
  * `.env` is at the root, so through the app's own `with-env vinext dev` script
  * the Worker gets nothing and env validation fails. So a vinext app skips its
  * script and runs `pnpm --filter <app> exec vinext dev` with the env
- * `scopedProcessEnv` builds, the same way `workflows run` starts one: the
+ * `scopedProcessEnv` builds, the same way `jobs run` starts one: the
  * flag set, and every other app's variables left out. Its script's own
  * `with-env` would load the whole `.env` back in, so it is not used.
  *
@@ -687,7 +687,7 @@ export async function runTask(argv: string[]): Promise<never> {
   const { tier, rest } = tierArg;
 
   // No `--yes` here, deliberately: `run` is a bare pnpm passthrough with no
-  // confirmation flag of its own to spare, unlike `cron run`/`workflows run`.
+  // confirmation flag of its own to spare, unlike `jobs run`.
   // A non-interactive caller that wants production has no way to say so, and
   // that is the point — the same exposure those two gate behind `--yes` gets
   // gated behind a terminal existing at all.

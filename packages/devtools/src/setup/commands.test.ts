@@ -12,7 +12,7 @@ describe("localNextSteps", () => {
       "pnpm devtools oauth",
       "pnpm -F platform dev",
       "pnpm -F schedule-builder dev",
-      "pnpm devtools cron run --app platform --cron '*/15 * * * *'",
+      "pnpm devtools jobs run --app platform --cron '*/15 * * * *'",
       "pnpm -F schedule-builder populate:courses",
     ].map((command) => text.indexOf(command));
 
@@ -29,17 +29,17 @@ describe("localNextSteps", () => {
 
   it("leaves out a step for an app that was not picked", () => {
     const text = localNextSteps(["platform"]);
-    expect(text).toContain("cron run --app platform");
+    expect(text).toContain("jobs run --app platform");
     expect(text).not.toContain("populate:courses");
 
     expect(localNextSteps(["schedule-builder"])).not.toContain(
-      "cron run --app platform",
+      "jobs run --app platform",
     );
   });
 
   it("lists every app-specific step when nothing was asked", () => {
     const text = localNextSteps(null);
-    expect(text).toContain("cron run --app platform");
+    expect(text).toContain("jobs run --app platform");
     expect(text).toContain("populate:courses");
   });
 

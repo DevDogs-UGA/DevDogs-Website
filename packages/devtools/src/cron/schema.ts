@@ -30,7 +30,7 @@ export type CronEntry = z.infer<typeof CronEntry>;
 
 /**
  * A native workflow schedule. `binding` names the Workflows binding (e.g.
- * `SCRAPE_WORKFLOW`); `cron list` reconciles the expression against that
+ * `SCRAPE_WORKFLOW`); `jobs list` reconciles the expression against that
  * binding's `workflows[].schedules` in the tier's `wrangler.jsonc`. `label` is
  * the audit's English description, same contract as routes.
  */

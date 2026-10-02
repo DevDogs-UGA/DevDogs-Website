@@ -13,8 +13,9 @@
  *   * `completions.ts` enumerates it, and contributor documentation uses the
  *     same group and command vocabulary.
  *
- * It is deliberately inert: no imports of anything that runs, so the launcher
- * can read it (for `envFree`) before the session's environment is entered.
+ * It is deliberately inert: no imports of anything that runs (`args.ts` is
+ * data too), so the launcher can read it (for `envFree`) before the session's
+ * environment is entered.
  * The CLI's dispatcher owns the handlers, and the wizard turns a walk of this
  * tree into an argv and hands it to that same dispatcher, which keeps menu and
  * CLI behavior aligned by construction rather than by review.
@@ -26,6 +27,8 @@
  * order and deploy internals live in `docs/`, not here: `--help` is a map, and
  * a map that reprints the territory is the thing this replaced.
  */
+
+import { VALUE_FLAGS } from "./args.js";
 
 /**
  * One choice in a select prompt.
@@ -127,12 +130,39 @@ export const SCOPES: Record<Scope, { menu: string; help: string }> = {
   },
 };
 
+/**
+ * Another name a command answers to.
+ *
+ * A typed alias resolves to its command everywhere: dispatch, `--help`, the
+ * wizard's resume and completions. The wizard never draws one, and `--help`
+ * lists it beside the command rather than as a command of its own, so there
+ * is still one node to keep in step.
+ */
+export interface CommandAlias {
+  name: string;
+  /**
+   * Flags the alias stands for, appended to what was typed: `cron run` is
+   * `jobs run --kind sync`. `canonicalArgv` adds them, so a handler only ever
+   * sees the command's own name and flags it already declares.
+   */
+  implies?: readonly string[];
+}
+
 export interface CommandNode {
   name: string;
+  /**
+   * The wizard's label, in words a contributor who knows no command names can
+   * pick from ("Restart local Supabase"). The menu only: `--help`, the argv a
+   * walk builds and completions keep `name`, and the wizard prints `name`
+   * beside the title so the reader learns it.
+   */
+  title?: string;
   /** One line. See the header. */
   summary: string;
   /** Sits beside the name in the wizard; shorter than the summary. */
   hint?: string;
+  /** Other names this command answers to. See `CommandAlias`. */
+  aliases?: readonly CommandAlias[];
   options?: readonly CommandOption[];
   subcommands?: readonly CommandNode[];
   /**
@@ -211,7 +241,11 @@ export interface CommandNode {
   dryRun?: "read-only" | "handled";
 }
 
-/** Top-level sections. Only `--help` and the wizard's first screen use these. */
+/**
+ * Top-level sections of `--help`. The wizard's first screen is flat (every
+ * top-level command, in group order), so a group decides where a command sits
+ * in that list but draws nothing of its own there.
+ */
 export interface CommandGroup {
   title: string;
   commands: readonly CommandNode[];
@@ -230,7 +264,7 @@ export const EXIT_DRIFT = 2;
 
 /**
  * The deployment-tier selector, for the commands that resolve a tier of
- * their OWN (cron/workflows run against a chosen tier's env). The session's
+ * their OWN (`jobs run` against a chosen tier's env). The session's
  * global `--tier` — `development:local|development:remote|staging|production`,
  * stripped by the launcher before dispatch — is a superset of this
  * vocabulary; this per-command flag still reads plain tiers.
@@ -303,8 +337,19 @@ export interface Catalog {
   findCommand: (path: readonly string[]) => CommandNode | null;
   /** `findCommand` over the CI tree. */
   findCiCommand: (path: readonly string[]) => CommandNode | null;
-  /** The group a top-level command sits in, for the wizard's first screen. */
+  /** The `--help` section a top-level command sits in. */
   groupOf: (name: string) => CommandGroup | undefined;
+  /**
+   * A path with every alias replaced by the name it stands for: `["cron",
+   * "run"]` is `["jobs", "run"]`. `null` where `findCommand` would be.
+   */
+  canonicalPath: (path: readonly string[]) => string[] | null;
+  /**
+   * The argv a typed alias stands for: its command path renamed, and its
+   * `implies` flags appended. Anything that is not a command path passes
+   * through untouched, so this is safe to run on every argv before dispatch.
+   */
+  canonicalArgv: (argv: readonly string[]) => string[];
   /**
    * The subcommand names under a path, in the order they are declared.
    *
@@ -326,21 +371,68 @@ export interface Catalog {
   allPaths: () => string[][];
 }
 
+/** The node a typed token names among `nodes`, by its name or an alias. */
+function named(
+  nodes: readonly CommandNode[],
+  token: string,
+): { node: CommandNode; alias?: CommandAlias } | undefined {
+  for (const node of nodes) {
+    if (node.name === token) return { node };
+    const alias = node.aliases?.find((candidate) => candidate.name === token);
+    if (alias) return { node, alias };
+  }
+  return undefined;
+}
+
+/** Each step of a path, resolved through aliases; `null` at the first miss. */
+function resolve(
+  roots: readonly CommandNode[],
+  path: readonly string[],
+): { node: CommandNode; alias?: CommandAlias }[] | null {
+  let nodes = roots;
+  const steps: { node: CommandNode; alias?: CommandAlias }[] = [];
+
+  for (const token of path) {
+    const step = named(nodes, token);
+    if (!step) return null;
+    steps.push(step);
+    nodes = step.node.subcommands ?? [];
+  }
+
+  return steps;
+}
+
 function walk(
   roots: readonly CommandNode[],
   path: readonly string[],
 ): CommandNode | null {
-  let nodes = roots;
-  let found: CommandNode | null = null;
+  return resolve(roots, path)?.at(-1)?.node ?? null;
+}
 
-  for (const name of path) {
-    const next = nodes.find((node) => node.name === name);
-    if (!next) return null;
-    found = next;
-    nodes = next.subcommands ?? [];
+/**
+ * Refuses a tree where one token could name two siblings. An alias that
+ * shadowed another command would make which one runs depend on declaration
+ * order, the kind of thing nobody finds until it has run the wrong one.
+ */
+function assertUnambiguous(
+  nodes: readonly CommandNode[],
+  prefix: readonly string[],
+): void {
+  const seen = new Set<string>();
+  for (const node of nodes) {
+    for (const token of [
+      node.name,
+      ...(node.aliases ?? []).map((a) => a.name),
+    ]) {
+      if (seen.has(token)) {
+        throw new Error(
+          `Command tree: "${[...prefix, token].join(" ")}" names two commands.`,
+        );
+      }
+      seen.add(token);
+    }
+    assertUnambiguous(node.subcommands ?? [], [...prefix, node.name]);
   }
-
-  return found;
 }
 
 export function createCatalog(trees: {
@@ -353,6 +445,8 @@ export function createCatalog(trees: {
   const ciGroups = trees.ciGroups ?? [];
   const topLevel = groups.flatMap((group) => group.commands);
   const ciTopLevel = ciGroups.flatMap((group) => group.commands);
+  assertUnambiguous(topLevel, []);
+  assertUnambiguous(ciTopLevel, []);
 
   const subcommandNames = (path: readonly string[]): string[] =>
     (walk(topLevel, path)?.subcommands ?? []).map((node) => node.name);
@@ -370,6 +464,35 @@ export function createCatalog(trees: {
       groups.find((group) =>
         group.commands.some((command) => command.name === name),
       ),
+    canonicalPath: (path) =>
+      resolve(topLevel, path)?.map((step) => step.node.name) ?? null,
+    canonicalArgv: (argv) => {
+      // The command path is the leading run of positionals; flags (and the
+      // values `VALUE_FLAGS` take) can sit anywhere around it.
+      const out = [...argv];
+      const implied: string[] = [];
+      let nodes: readonly CommandNode[] = topLevel;
+      for (let i = 0; i < out.length; i += 1) {
+        const arg = out[i]!;
+        if (arg.startsWith("-")) {
+          const next = out[i + 1];
+          if (
+            VALUE_FLAGS.has(arg) &&
+            next !== undefined &&
+            !next.startsWith("-")
+          ) {
+            i += 1;
+          }
+          continue;
+        }
+        const step = named(nodes, arg);
+        if (!step) break;
+        out[i] = step.node.name;
+        implied.push(...(step.alias?.implies ?? []));
+        nodes = step.node.subcommands ?? [];
+      }
+      return [...out, ...implied];
+    },
     subcommandNames,
     subcommandCiNames: (path) =>
       (walk(ciTopLevel, path)?.subcommands ?? []).map((node) => node.name),

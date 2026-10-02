@@ -13,15 +13,23 @@
  * this file.
  *
  * Walking the catalog means an interactive command added there is in the
- * menu the same day, with its options. Commands marked `cli-only` and deploy
- * commands in the separate `devtools-ci` bin do not appear here.
+ * menu the same day, with its options. Commands marked `cli-only` do not appear here.
+ *
+ * ## One flat first screen
+ *
+ * The first screen lists every top-level command, in the catalog's order,
+ * under its `title`: "Restart local Supabase" rather than `restart-stack`.
+ * There used to be a screen of groups above it, which put a door between the
+ * reader and every command and named the doors after how the CLI is built
+ * rather than what the reader came to do. The command's real name rides in
+ * the hint (`restart-stack · …`), so a walk still teaches what to type next
+ * time. Aliases are never drawn: the menu builds an argv for a real command.
  */
 import { confirm, note, select, text } from "@clack/prompts";
 import { positionals } from "@devdogsuga/cli-core/args";
 import {
   SCOPES,
   type Catalog,
-  type CommandGroup,
   type CommandNode,
   type CommandOption,
 } from "./catalog.js";
@@ -74,59 +82,32 @@ function hintFor(node: CommandNode): string {
   return node.scope ? `${SCOPES[node.scope].menu} · ${said}` : said;
 }
 
-// ── Screens ──────────────────────────────────────────────────────────────────
-
-async function pickGroup(
-  catalog: Catalog,
-  env: Environment,
-): Promise<CommandGroup | null> {
-  // A group whose every command is hidden has nothing behind its door, so the
-  // door is not drawn. No group in the tree can empty out today; this is here
-  // so that a later `when` cannot leave a dead entry on the first screen.
-  const groups = catalog.groups.filter(
-    (group) => offered(group.commands, env).length > 0,
-  );
-
-  const choice = unwrap(
-    await select<CommandGroup | null>({
-      message: "What would you like to do?",
-      options: [
-        ...groups.map((group) => ({
-          value: group,
-          label: group.title,
-          // The group's own commands, so the first screen says what is behind
-          // each door rather than making the reader open every one to find out.
-          hint: offered(group.commands, env)
-            .map((command) => command.name)
-            .join(", "),
-        })),
-        { value: null, label: "Quit" },
-      ],
-    }),
-  );
-  return choice;
+/**
+ * One command's entry on a screen: its title, with its real name leading the
+ * hint so the reader learns what to type. A command with no title is labelled
+ * by its name, which then has no reason to appear twice.
+ */
+function entryFor(node: CommandNode): { label: string; hint: string } {
+  return node.title
+    ? { label: node.title, hint: `${node.name} · ${hintFor(node)}` }
+    : { label: node.name, hint: hintFor(node) };
 }
 
-async function pickCommand(
-  group: CommandGroup,
+// ── Screens ──────────────────────────────────────────────────────────────────
+
+async function pickTopLevel(
+  catalog: Catalog,
   env: Environment,
-): Promise<CommandNode | Back> {
-  const commands = offered(group.commands, env);
-
-  // A group with one command has nothing to choose; asking would be a screen
-  // whose only real option is the one already implied by the group's title.
-  if (commands.length === 1) return commands[0]!;
-
+): Promise<CommandNode | null> {
   return unwrap(
-    await select<CommandNode | Back>({
-      message: `${group.title}:`,
+    await select<CommandNode | null>({
+      message: "What would you like to do?",
       options: [
-        ...commands.map((command) => ({
+        ...offered(catalog.topLevel, env).map((command) => ({
           value: command,
-          label: command.name,
-          hint: hintFor(command),
+          ...entryFor(command),
         })),
-        BACK_OPTION,
+        { value: null, label: "Quit" },
       ],
     }),
   );
@@ -138,12 +119,11 @@ async function pickSubcommand(
 ): Promise<CommandNode | Back> {
   return unwrap(
     await select<CommandNode | Back>({
-      message: `${node.name}:`,
+      message: `${node.title ?? node.name}:`,
       options: [
         ...offered(node.subcommands ?? [], env).map((child) => ({
           value: child,
-          label: child.name,
-          hint: hintFor(child),
+          ...entryFor(child),
         })),
         BACK_OPTION,
       ],
@@ -219,7 +199,7 @@ interface Chosen {
  * that leaf's options.
  *
  * Shared by both entries into a walk: the top-of-tree loop below, which calls
- * this once a group and its first command are chosen, and a resumed walk
+ * this once a top-level command is chosen, and a resumed walk
  * (`walk`'s `startPath` branch), which calls it directly on a node the caller
  * already picked by argv. `while` rather than a single step because the tree
  * is two deep today and this does not care. The condition counts the OFFERED
@@ -231,6 +211,7 @@ async function descendFrom(
   start: CommandNode,
   pathNames: string[],
   env: Environment,
+  carried: readonly string[] = [],
 ): Promise<Chosen | Back> {
   let node = start;
   const path = [...pathNames];
@@ -240,7 +221,7 @@ async function descendFrom(
     node = child;
     path.push(node.name);
   }
-  return { node, argv: [...path, ...(await askOptions(node))] };
+  return { node, argv: [...path, ...(await askOptions(node)), ...carried] };
 }
 
 /**
@@ -248,30 +229,30 @@ async function descendFrom(
  * a known group.
  *
  * `startPath`, when given, is a path to a group node from `bareGroupStartPath`
- * — `["db"]` for `devtools db` — and lands here instead of at `pickGroup`.
- * There is no group screen above a resumed node (the caller already named it
- * by typing `db`), so BACK on its first subcommand screen has nowhere to
+ * — `["jobs"]` for `devtools jobs` — and lands here instead of at the first
+ * screen. There is no screen above a resumed node (the caller already named
+ * it by typing `jobs`), so BACK on its first subcommand screen has nowhere to
  * return to but out, unlike BACK from the top of the tree, which returns to
- * `pickGroup`.
+ * the first screen. `startFlags` are the flags typed beside it, carried onto
+ * the end of the argv the walk builds.
  */
 async function walk(
   catalog: Catalog,
   env: Environment,
   startPath?: string[],
+  startFlags: readonly string[] = [],
 ): Promise<Chosen | null> {
   if (startPath) {
     const start = catalog.findCommand(startPath);
-    if (!start) return null; // defensive: the caller guarantees a group node
-    const chosen = await descendFrom(start, [...startPath], env);
+    const path = catalog.canonicalPath(startPath);
+    if (!start || !path) return null; // defensive: the caller guarantees a group node
+    const chosen = await descendFrom(start, path, env, startFlags);
     return chosen === BACK ? null : chosen;
   }
 
   for (;;) {
-    const group = await pickGroup(catalog, env);
-    if (!group) return null;
-
-    const first = await pickCommand(group, env);
-    if (first === BACK) continue;
+    const first = await pickTopLevel(catalog, env);
+    if (!first) return null;
 
     const chosen = await descendFrom(first, [first.name], env);
     if (chosen === BACK) continue;
@@ -300,6 +281,23 @@ export function bareGroupStartPath(
   return path;
 }
 
+/**
+ * The flags in `argv` beside a bare group's `path`, for `runMenu`'s
+ * `startFlags`: what `devtools jobs --kind sync` (or the `cron` alias that
+ * stands for it) keeps once the wizard resumes at `jobs`.
+ */
+export function bareGroupStartFlags(
+  argv: readonly string[],
+  path: readonly string[],
+): string[] {
+  const rest = [...argv];
+  for (const name of path) {
+    const at = rest.indexOf(name);
+    if (at !== -1) rest.splice(at, 1);
+  }
+  return rest;
+}
+
 // ── Entry ────────────────────────────────────────────────────────────────────
 
 /**
@@ -313,7 +311,8 @@ export function bareGroupStartPath(
  * from the command line.
  *
  * `options.startPath`, from `bareGroupStartPath`, skips straight to that
- * node's subcommand screen — see `walk`'s `startPath` branch.
+ * node's subcommand screen — see `walk`'s `startPath` branch — and
+ * `options.startFlags` (from `bareGroupStartFlags`) rides along to the end.
  *
  * The deploy tier is NOT asked here any more. `src/launch.ts` resolves it
  * before `cli.ts` — and therefore this module — is even imported, and
@@ -339,6 +338,7 @@ export async function runMenu(
   env: Environment = probeEnvironment(),
   options: {
     startPath?: string[];
+    startFlags?: readonly string[];
   } = {},
 ): Promise<string | null> {
   // Before the first question, not after a failure. Three lines saying what
@@ -348,12 +348,17 @@ export async function runMenu(
   // instead of the one they happen to run on.
   note(describeEnvironment(env), "This machine");
 
-  const chosen = await walk(catalog, env, options.startPath);
+  const chosen = await walk(
+    catalog,
+    env,
+    options.startPath,
+    options.startFlags,
+  );
   // Quitting is not a failure, but it has nothing to announce either.
   if (!chosen) return null;
 
   // Every step here was a prompt, so the built argv is the reproducible
-  // command — a runner that prompts further (a bare `workflows run`) appends
+  // command — a runner that prompts further (a bare `jobs run`) appends
   // the rest through `recordResolved`, and the entered tier rides along as the
   // `--tier` flag `recordEnteredTier` adds.
   beginInvocation(chosen.argv, true);

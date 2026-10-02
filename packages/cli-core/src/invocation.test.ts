@@ -73,4 +73,14 @@ describe("invocation recorder", () => {
     beginInvocation(["db", "reset", "--target", "local"], false);
     expect(reproducibleCommand()).toBeNull();
   });
+
+  it("quotes a token the shell would split or glob", () => {
+    beginInvocation(["jobs", "run"], false);
+    recordResolved("--cron", "0 0 * * *");
+    recordResolved("--params", `{"term":"it's"}`);
+    expect(reproducibleCommand()).toBe(
+      "pnpm devtools jobs run --cron '0 0 * * *' " +
+        `--params '{"term":"it'\\''s"}'`,
+    );
+  });
 });

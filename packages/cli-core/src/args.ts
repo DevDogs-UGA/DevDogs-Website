@@ -32,6 +32,8 @@ export const VALUE_FLAGS = new Set([
   "--target",
   "--tier",
   "--cron",
+  // `jobs`: so `cron --kind sync` reads `sync` as the kind, not a subcommand.
+  "--kind",
   "--workflow",
   "--params",
   "--port",

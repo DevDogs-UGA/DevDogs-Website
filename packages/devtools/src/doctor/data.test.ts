@@ -61,7 +61,7 @@ describe("checkEventsSeeded", () => {
     );
     expect(checkEventsSeeded(2, 0).summary).toContain("workshops");
     expect(checkEventsSeeded(0, 0).summary).toContain("meetings or workshops");
-    expect(checkEventsSeeded(0, 0).fix).toContain("cron run --app platform");
+    expect(checkEventsSeeded(0, 0).fix).toContain("jobs run --app platform");
   });
 
   it("passes when both have rows", () => {

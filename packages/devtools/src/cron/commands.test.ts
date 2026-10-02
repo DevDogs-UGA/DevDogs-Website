@@ -124,7 +124,7 @@ describe("runCronRun MissingEnvFileError", () => {
 
     expect(code).toBe(1);
     const lines = stderr.mock.calls.map(([chunk]) => String(chunk));
-    expect(lines.some((line) => line.startsWith("devtools cron run:"))).toBe(
+    expect(lines.some((line) => line.startsWith("devtools jobs run:"))).toBe(
       true,
     );
 

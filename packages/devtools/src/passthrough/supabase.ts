@@ -78,7 +78,7 @@ export async function refuseLocalConfigPush(
     "The local stack has no project to push config.toml to.",
     "It reads config.toml when it starts, so restarting the stack is how a " +
       "change there takes effect.",
-    isNonInteractive() ? ["pnpm devtools preset restart-stack"] : [],
+    isNonInteractive() ? ["pnpm devtools restart-stack"] : [],
   );
   if (isNonInteractive() || isDryRun()) return 1;
   const again = unwrap(

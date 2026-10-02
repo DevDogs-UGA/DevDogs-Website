@@ -6,6 +6,7 @@ import { type CommandNode } from "@devdogsuga/cli-core/catalog";
 
 export const doctorCommand: CommandNode = {
   name: "doctor",
+  title: "Troubleshoot my setup",
   dryRun: "read-only",
   summary: "Check this machine's environment against what the repo needs.",
   hint: "node, pnpm, Docker, .env, hosted Supabase, OAuth — read-only",

@@ -9,7 +9,7 @@
  * A command's inputs arrive from two places that never meet: the wizard walks
  * `commands.ts` and gathers the *declared* options into the argv it dispatches
  * (see `menu.ts`), while a runner resolves anything it prompts for *itself* —
- * `workflows run` picking a tier, `env init` picking projects — deep inside its
+ * `jobs run` picking a tier, `env init` picking projects — deep inside its
  * own call stack, where the dispatched argv is long out of reach. Threading a
  * return value back up through every runner would touch each one's signature;
  * a recorder every layer can reach touches only the layers that actually
@@ -75,6 +75,16 @@ export function recordResolved(...fragment: string[]): void {
 }
 
 /**
+ * One argv token as a POSIX shell reads it back. A cron expression is the case
+ * that forced this: `--cron 0 0 * * *` pasted unquoted is three stray words
+ * and two globs.
+ */
+function shellQuote(token: string): string {
+  if (/^[\w@%+=:,./-]+$/.test(token)) return token;
+  return `'${token.replaceAll("'", `'\\''`)}'`;
+}
+
+/**
  * The command to print, or `null` when there is nothing worth printing —
  * either no invocation ran, or the user typed a complete command and answered
  * no prompts, so echoing it back would be noise.
@@ -82,5 +92,5 @@ export function recordResolved(...fragment: string[]): void {
 export function reproducibleCommand(): string | null {
   if (argv === null || !interactive || argv.length === 0) return null;
   const tierFlag = enteredTier ? ["--tier", enteredTier] : [];
-  return `pnpm devtools ${[...tierFlag, ...argv].join(" ")}`;
+  return `pnpm devtools ${[...tierFlag, ...argv].map(shellQuote).join(" ")}`;
 }

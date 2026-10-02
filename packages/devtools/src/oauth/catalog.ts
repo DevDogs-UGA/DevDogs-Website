@@ -6,6 +6,7 @@ import { type CommandNode } from "@devdogsuga/cli-core/catalog";
 
 export const oauthCommand: CommandNode = {
   name: "oauth",
+  title: 'Set up "Sign in with DevDogs"',
   summary: 'Configure "Sign in with DevDogs" for this directory.',
   hint: "works outside a DevDogsUGA checkout too",
   // Talks only to whatever local Supabase project is running in `cwd`

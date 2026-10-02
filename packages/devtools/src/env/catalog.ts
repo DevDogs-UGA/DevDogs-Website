@@ -16,7 +16,9 @@ const ENV_FILE: CommandOption = {
 
 export const envCommand: CommandNode = {
   name: "env",
+  title: "Manage local env files",
   summary: "Create, regenerate and clear the local env files.",
+  hint: "create, regenerate or clear .env files",
   subcommands: [
     {
       name: "init",

@@ -27,8 +27,8 @@ const shown: Entry[][] = [];
  * Selects whichever option the current screen drew last, rather than a
  * literal scripted value.
  *
- * `pickCommand` and `pickSubcommand` both append `BACK_OPTION` after every
- * entry they offer, so "last" is always Back. `BACK` itself is a symbol
+ * `pickSubcommand` appends `BACK_OPTION` after every entry it offers, so
+ * "last" is always Back there. `BACK` itself is a symbol
  * private to `menu.ts` — there is no literal a test can import and push onto
  * `answers` — so this is how the "reader backs out" tests select it anyway.
  */
@@ -65,10 +65,10 @@ vi.mock("@clack/prompts", () => {
   };
 });
 
-const { runMenu, bareGroupStartPath } =
+const { runMenu, bareGroupStartFlags, bareGroupStartPath } =
   await import("@devdogsuga/cli-core/menu");
-const { catalog, GROUPS } = await import("./catalog.js");
-const { topLevel: TOP_LEVEL, allPaths, findCommand, groupOf } = catalog;
+const { catalog } = await import("./catalog.js");
+const { topLevel: TOP_LEVEL, allPaths, findCommand } = catalog;
 const { UNKNOWN_ENVIRONMENT } =
   await import("@devdogsuga/cli-core/environment");
 const { setMenuEnvHook, takeMenuEnvHook } =
@@ -106,13 +106,14 @@ async function walk(
 
 /**
  * Runs one walk resumed at `startPath`, mirroring `walk` above but through
- * `runMenu`'s `options.startPath` instead of `pickGroup`. What `main()` does
- * for a bare command group — `devtools preset` — at a terminal.
+ * `runMenu`'s `options.startPath` instead of the first screen. What `main()`
+ * does for a bare command group — `devtools jobs` — at a terminal.
  */
 async function resume(
   startPath: string[],
   scripted: unknown[],
   env: Environment = UNKNOWN_ENVIRONMENT,
+  startFlags: string[] = [],
 ): Promise<string[] | null> {
   answers.length = 0;
   asked.length = 0;
@@ -127,25 +128,14 @@ async function resume(
       return Promise.resolve("Done.");
     },
     env,
-    { startPath },
+    { startPath, startFlags },
   );
   return dispatched;
 }
 
 /** The answers that select a command, before any option question. */
 function answersFor(path: string[]): unknown[] {
-  const group = groupOf(path[0]!)!;
-  const chosen: unknown[] = [group];
-
-  // A group with one command asks nothing; see `pickCommand`.
-  let node = findCommand([path[0]!])!;
-  if (group.commands.length > 1) chosen.push(node);
-
-  for (const name of path.slice(1)) {
-    node = findCommand(path.slice(0, path.indexOf(name) + 1))!;
-    chosen.push(node);
-  }
-  return chosen;
+  return path.map((_, depth) => findCommand(path.slice(0, depth + 1))!);
 }
 
 beforeEach(() => {
@@ -197,51 +187,105 @@ describe("reach", () => {
     }
   });
 
-  it("offers interactive groups and omits CLI-only utilities", async () => {
-    await walk([GROUPS[0]!, ...[]]).catch(() => null);
-    expect(asked[0]).toBe("What would you like to do?");
-    expect(shown[0]?.map((entry) => entry.label)).not.toContain(
-      "CLI utilities",
-    );
+  it("never offers a CLI-only command", async () => {
+    await walk([]).catch(() => null);
+    const labels = shown[0]!.map((entry) => entry.label);
+    for (const node of TOP_LEVEL.filter((n) => n.surface === "cli-only")) {
+      expect(labels, node.name).not.toContain(node.title ?? node.name);
+    }
   });
 });
 
 describe("options become argv", () => {
   it("adds a flag when the confirm is answered yes", async () => {
-    const argv = await walk([
-      groupOf("env")!,
-      findCommand(["env"])!,
-      findCommand(["env", "example"])!,
-      true,
-    ]);
+    const argv = await walk([...answersFor(["env", "example"]), true]);
     expect(argv).toEqual(["env", "example", "--check"]);
   });
 
   it("adds nothing when it is answered no", async () => {
-    const argv = await walk([
-      groupOf("env")!,
-      findCommand(["env"])!,
-      findCommand(["env", "example"])!,
-      false,
-    ]);
+    const argv = await walk([...answersFor(["env", "example"]), false]);
     expect(argv).toEqual(["env", "example"]);
   });
 
   it("emits a select choice that is a value after its flag", async () => {
-    const argv = await walk([
-      groupOf("completions")!,
-      findCommand(["completions"])!,
-      "bash",
-    ]);
-    expect(argv).toEqual(["completions", "--shell", "bash"]);
+    const argv = await walk([...answersFor(["jobs", "list"]), "staging"]);
+    expect(argv).toEqual(["jobs", "list", "--tier", "staging"]);
   });
 });
 
-describe("navigation", () => {
-  it("opens the Workspace command screen before run's tasks", async () => {
-    const argv = await walk(answersFor(["run", "build"]));
-    expect(argv).toEqual(["run", "build"]);
-    expect(asked).toEqual(["What would you like to do?", "Workspace:", "run:"]);
+describe("the first screen", () => {
+  /** The agreed order and wording, top to bottom. */
+  const FIRST_SCREEN = [
+    ["Set up this checkout", "setup"],
+    ["Run a package script", "script"],
+    ['Set up "Sign in with DevDogs"', "oauth"],
+    ["Troubleshoot my setup", "doctor"],
+    ["Restart local Supabase", "restart-stack"],
+    ["Create a new migration", "new-migration"],
+    ["Apply migrations to the database", "apply-migrations"],
+    ["Push Supabase settings", "push-config"],
+    ["Background jobs", "jobs"],
+    ["Manage local env files", "env"],
+    ["Manage platform roles", "roles"],
+  ] as const;
+
+  async function firstScreen(env: Environment = UNKNOWN_ENVIRONMENT) {
+    await walk([], env).catch(() => null);
+    return shown[0]!;
+  }
+
+  it("lists every interactive command by title, in order, then Quit", async () => {
+    const drawn = await firstScreen();
+    expect(asked[0]).toBe("What would you like to do?");
+    expect(drawn.map((entry) => entry.label)).toEqual([
+      ...FIRST_SCREEN.map(([title]) => title),
+      "Quit",
+    ]);
+  });
+
+  it("leads each hint with the command to type", async () => {
+    const drawn = await firstScreen();
+    for (const [title, name] of FIRST_SCREEN) {
+      const entry = drawn.find((candidate) => candidate.label === title)!;
+      expect(entry.hint, title).toMatch(new RegExp(`^${name} · `));
+    }
+  });
+
+  it("draws no alias, deprecated or CLI-only command", async () => {
+    const hints = (await firstScreen()).map((entry) => entry.hint ?? "");
+    for (const name of ["cron", "workflows", "run", "preset", "check"]) {
+      expect(
+        hints.some((hint) => hint.startsWith(`${name} · `)),
+        name,
+      ).toBe(false);
+    }
+  });
+
+  it("dispatches a top-level leaf straight from the first screen", async () => {
+    expect(await walk(answersFor(["setup"]))).toEqual(["setup"]);
+    expect(asked).toEqual(["What would you like to do?"]);
+  });
+
+  it("opens a group's own screen under its title", async () => {
+    const argv = await walk(answersFor(["jobs", "serve"]));
+    expect(argv).toEqual(["jobs", "serve"]);
+    expect(asked).toEqual(["What would you like to do?", "Background jobs:"]);
+    const serve = shown[1]!.find((entry) => entry.hint?.startsWith("serve · "));
+    expect(serve?.label).toBe("Keep a local Workflow runtime open");
+  });
+
+  it("returns to the first screen when the reader backs out", async () => {
+    const argv = await walk([
+      findCommand(["jobs"])!,
+      PICK_BACK,
+      findCommand(["setup"])!,
+    ]);
+    expect(argv).toEqual(["setup"]);
+    expect(asked).toEqual([
+      "What would you like to do?",
+      "Background jobs:",
+      "What would you like to do?",
+    ]);
   });
 
   it("dispatches nothing when the reader quits", async () => {
@@ -267,9 +311,9 @@ describe("entered-tier recording", () => {
     process.env.DEPLOY_ENV = "staging";
     const { reproducibleCommand } =
       await import("@devdogsuga/cli-core/invocation");
-    await walk(answersFor(["preset", "restart-stack"]));
+    await walk(answersFor(["restart-stack"]));
     expect(reproducibleCommand()).toBe(
-      "pnpm devtools --tier staging preset restart-stack",
+      "pnpm devtools --tier staging restart-stack",
     );
   });
 
@@ -278,22 +322,22 @@ describe("entered-tier recording", () => {
     delete process.env.DEV_DB;
     const { reproducibleCommand } =
       await import("@devdogsuga/cli-core/invocation");
-    await walk(answersFor(["preset", "restart-stack"]));
-    expect(reproducibleCommand()).toBe("pnpm devtools preset restart-stack");
+    await walk(answersFor(["restart-stack"]));
+    expect(reproducibleCommand()).toBe("pnpm devtools restart-stack");
   });
 
   it("records the qualified selector for a development session with DEV_DB", async () => {
     // Reproducing a session that ANSWERED the development-database question
-    // with a bare `pnpm devtools preset restart-stack` would re-ask it (or refuse,
+    // with a bare `pnpm devtools restart-stack` would re-ask it (or refuse,
     // non-interactively) on the same machine — the hint must carry the whole
     // session.
     delete process.env.DEPLOY_ENV;
     process.env.DEV_DB = "remote";
     const { reproducibleCommand } =
       await import("@devdogsuga/cli-core/invocation");
-    await walk(answersFor(["preset", "restart-stack"]));
+    await walk(answersFor(["restart-stack"]));
     expect(reproducibleCommand()).toBe(
-      "pnpm devtools --tier development:remote preset restart-stack",
+      "pnpm devtools --tier development:remote restart-stack",
     );
   });
 });
@@ -304,20 +348,24 @@ describe("bareGroupStartPath", () => {
   // …?" refusal. Pure and tree-driven, so these assert directly rather than
   // through a scripted walk.
   it("finds a top-level group", () => {
-    expect(bareGroupStartPath(catalog, ["preset"])).toEqual(["preset"]);
+    expect(bareGroupStartPath(catalog, ["jobs"])).toEqual(["jobs"]);
+  });
+
+  it("finds a group through its alias", () => {
+    expect(bareGroupStartPath(catalog, ["cron"])).toEqual(["cron"]);
   });
 
   it("returns null for a leaf command", () => {
-    expect(bareGroupStartPath(catalog, ["preset", "restart-stack"])).toBeNull();
+    expect(bareGroupStartPath(catalog, ["jobs", "run"])).toBeNull();
   });
 
   it("returns null for an unknown subcommand token", () => {
-    expect(bareGroupStartPath(catalog, ["preset", "bogus"])).toBeNull();
+    expect(bareGroupStartPath(catalog, ["jobs", "bogus"])).toBeNull();
   });
 
   it("returns null for a bare invocation", () => {
     // The no-argument wizard already covers this path; treating it as a
-    // "resume" too would just be `pickGroup` reached a second way.
+    // "resume" too would just be the first screen reached a second way.
     expect(bareGroupStartPath(catalog, [])).toBeNull();
   });
 
@@ -326,12 +374,21 @@ describe("bareGroupStartPath", () => {
   });
 
   it("ignores flag values ahead of the group name", () => {
-    // `positionals` is what keeps `staging` from being misread as a
-    // subcommand token here — the same bug class `args.ts`'s header warns
+    // `positionals` is what keeps `staging` and `sync` from being misread as
+    // subcommand tokens here — the same bug class `args.ts`'s header warns
     // against for `env --file push audit`.
+    expect(bareGroupStartPath(catalog, ["jobs", "--tier", "staging"])).toEqual([
+      "jobs",
+    ]);
     expect(
-      bareGroupStartPath(catalog, ["preset", "--tier", "staging"]),
-    ).toEqual(["preset"]);
+      bareGroupStartPath(catalog, catalog.canonicalArgv(["cron"])),
+    ).toEqual(["jobs"]);
+  });
+
+  it("keeps the flags typed beside the group", () => {
+    expect(
+      bareGroupStartFlags(catalog.canonicalArgv(["cron"]), ["jobs"]),
+    ).toEqual(["--kind", "sync"]);
   });
 });
 
@@ -339,24 +396,32 @@ describe("resuming at a node", () => {
   // The property `main()` relies on: a walk resumed at a group's path reaches
   // the same leaf, with the same argv, as walking there from the top of the
   // tree — it just skips the screens above that group.
-  it("reaches the same leaf as a full walk, skipping the group screens", async () => {
-    const full = await walk(answersFor(["preset", "restart-stack"]));
-    expect(full).toEqual(["preset", "restart-stack"]);
+  it("reaches the same leaf as a full walk, skipping the first screen", async () => {
+    const full = await walk(answersFor(["jobs", "serve"]));
+    expect(full).toEqual(["jobs", "serve"]);
 
-    const resumed = await resume(
-      ["preset"],
-      [findCommand(["preset", "restart-stack"])!],
-    );
+    const resumed = await resume(["jobs"], [findCommand(["jobs", "serve"])!]);
     expect(resumed).toEqual(full);
 
-    // The first question is preset's own subcommand screen, not the top-level
-    // "What would you like to do?" — there is no group screen to skip past
-    // because a resumed walk never opens one.
-    expect(asked[0]).toBe("preset:");
+    // The first question is jobs' own subcommand screen, not the top-level
+    // "What would you like to do?" — a resumed walk never opens that one.
+    expect(asked[0]).toBe("Background jobs:");
+  });
+
+  it("builds the canonical name, carrying an alias's kind to the end", async () => {
+    // `devtools cron` at a terminal: `main()` has already turned it into
+    // `jobs --kind sync`, and the wizard keeps the kind on the leaf it builds.
+    const resumed = await resume(
+      ["jobs"],
+      [findCommand(["jobs", "serve"])!],
+      UNKNOWN_ENVIRONMENT,
+      ["--kind", "sync"],
+    );
+    expect(resumed).toEqual(["jobs", "serve", "--kind", "sync"]);
   });
 
   it("dispatches nothing when the reader backs out of the resumed screen", async () => {
-    expect(await resume(["preset"], [PICK_BACK])).toBeNull();
+    expect(await resume(["jobs"], [PICK_BACK])).toBeNull();
   });
 });
 
@@ -379,10 +444,10 @@ describe("the deferred env-entry hook", () => {
       return dispatchCommand();
     });
 
-    const argv = await walk(answersFor(["preset", "restart-stack"]));
+    const argv = await walk(answersFor(["restart-stack"]));
 
-    expect(argv).toEqual(["preset", "restart-stack"]);
-    expect(seen.argv).toEqual(["preset", "restart-stack"]);
+    expect(argv).toEqual(["restart-stack"]);
+    expect(seen.argv).toEqual(["restart-stack"]);
   });
 
   it("uses the hook's own return value as runMenu's result", async () => {
@@ -390,7 +455,7 @@ describe("the deferred env-entry hook", () => {
 
     let dispatched: string[] | null = null;
     answers.length = 0;
-    answers.push(...answersFor(["preset", "restart-stack"]));
+    answers.push(...answersFor(["restart-stack"]));
     const result = await runMenu(
       catalog,
       (argv) => {
@@ -409,7 +474,7 @@ describe("the deferred env-entry hook", () => {
   it("clears the hook after one use — a nested walk does not inherit it", async () => {
     setMenuEnvHook(async (_argv, dispatchCommand) => dispatchCommand());
 
-    await walk(answersFor(["preset", "restart-stack"]));
+    await walk(answersFor(["restart-stack"]));
 
     expect(takeMenuEnvHook()).toBeUndefined();
   });
@@ -419,8 +484,8 @@ describe("the deferred env-entry hook", () => {
     // a hook, and `walk()`'s own dispatcher still runs. This just says so
     // explicitly.
     expect(takeMenuEnvHook()).toBeUndefined();
-    const argv = await walk(answersFor(["preset", "restart-stack"]));
-    expect(argv).toEqual(["preset", "restart-stack"]);
+    const argv = await walk(answersFor(["restart-stack"]));
+    expect(argv).toEqual(["restart-stack"]);
   });
 });
 
@@ -432,37 +497,25 @@ describe("adapts to the machine", () => {
   };
   const STOPPED: Environment = { docker: "yes", stack: "no", envFile: "yes" };
 
-  /**
-   * The entries one screen drew, for a machine in the given state.
-   *
-   * Walks far enough to open the screen and then runs out of answers on
-   * purpose: the mock records what it drew before it gives up, so this reads
-   * the list without scripting a complete walk to a leaf.
-   */
-  async function screen(env: Environment, to: string[]): Promise<Entry[]> {
-    const path: string[] = [];
-    const scripted: unknown[] = [groupOf(to[0]!)!];
-    for (const name of to) {
-      path.push(name);
-      scripted.push(findCommand(path)!);
-    }
-    await walk(scripted, env).catch(() => null);
-    return shown.at(-1) ?? [];
+  /** The entries the first screen drew, for a machine in the given state. */
+  async function firstScreen(env: Environment): Promise<Entry[]> {
+    await walk([], env).catch(() => null);
+    return shown[0] ?? [];
   }
 
   const labels = (entries: Entry[]): (string | undefined)[] =>
     entries.map((entry) => entry.label);
 
-  it("offers the restart preset only while the stack is running", async () => {
-    expect(labels(await screen(RUNNING, ["preset"]))).toContain(
-      "restart-stack",
+  it("offers the restart only while the stack is running", async () => {
+    expect(labels(await firstScreen(RUNNING))).toContain(
+      "Restart local Supabase",
     );
-    expect(labels(await screen(STOPPED, ["preset"]))).not.toContain(
-      "restart-stack",
+    expect(labels(await firstScreen(STOPPED))).not.toContain(
+      "Restart local Supabase",
     );
-    // The presets that do not need a running stack stay on offer.
-    expect(labels(await screen(STOPPED, ["preset"]))).toContain(
-      "apply-migrations",
+    // The Supabase jobs that do not need a running stack stay on offer.
+    expect(labels(await firstScreen(STOPPED))).toContain(
+      "Apply migrations to the database",
     );
   });
 
@@ -474,47 +527,40 @@ describe("adapts to the machine", () => {
    * was before any of this existed.
    */
   it("hides nothing when it cannot read the machine", async () => {
-    const drawn = labels(await screen(UNKNOWN_ENVIRONMENT, ["preset"]));
-    for (const command of findCommand(["preset"])!.subcommands ?? []) {
-      expect(drawn, command.name).toContain(command.name);
+    const drawn = labels(await firstScreen(UNKNOWN_ENVIRONMENT));
+    for (const command of TOP_LEVEL) {
+      if (command.surface === "cli-only") continue;
+      expect(drawn, command.name).toContain(command.title ?? command.name);
     }
   });
 
   /**
-   * The group's own hint names only what it actually contains: the deprecated
-   * `db` and `cf` aliases are typed-only, so the wizard's line leaves them out.
-   */
-  it("names the runtime commands in the group's hint", async () => {
-    await walk([], STOPPED).catch(() => null);
-    const database = shown[0]!.find(
-      (entry) => entry.label === "Runtime & infrastructure",
-    );
-
-    expect(database!.hint).toBe("preset, cron, workflows");
-  });
-
-  /**
-   * The layers the presets cover, told apart on the line.
+   * The layers the Supabase jobs cover, told apart on the line.
    *
    * `restart-stack` and `apply-migrations` act on different things: the
    * containers, and the database inside them. A reader choosing between them
    * should not have to already know that.
    */
-  it("says which layer each preset acts on", async () => {
-    const drawn = await screen(RUNNING, ["preset"]);
-    const hintOf = (name: string) =>
-      drawn.find((entry) => entry.label === name)?.hint ?? "";
+  it("says which layer each Supabase job acts on, after its name", async () => {
+    const drawn = await firstScreen(RUNNING);
+    const hintOf = (title: string) =>
+      drawn.find((entry) => entry.label === title)?.hint ?? "";
 
-    expect(hintOf("restart-stack")).toContain("This machine · ");
-    expect(hintOf("new-migration")).toContain("Repo · ");
-    expect(hintOf("apply-migrations")).toContain("Database · ");
+    expect(hintOf("Restart local Supabase")).toMatch(
+      /^restart-stack · This machine · /,
+    );
+    expect(hintOf("Create a new migration")).toMatch(
+      /^new-migration · Repo · /,
+    );
+    expect(hintOf("Apply migrations to the database")).toMatch(
+      /^apply-migrations · Database · /,
+    );
   });
 
-  it("leaves a group without scopes unlabelled", async () => {
-    const drawn = await screen(RUNNING, ["cron"]);
-    for (const entry of drawn) {
-      expect(entry.hint ?? "", entry.label).not.toContain(" · ");
-    }
+  it("leaves a command without a scope unlabelled", async () => {
+    const drawn = await firstScreen(RUNNING);
+    const jobs = drawn.find((entry) => entry.label === "Background jobs");
+    expect(jobs?.hint).toBe(`jobs · ${findCommand(["jobs"])!.hint}`);
   });
 });
 
@@ -522,5 +568,10 @@ describe("the tree it walks", () => {
   it("has more top-level commands than the old menu had entries", () => {
     // The menu this replaced listed ten. The gap was the bug.
     expect(TOP_LEVEL.length).toBeGreaterThan(10);
+  });
+
+  it("never draws an alias as an entry of its own", () => {
+    expect(TOP_LEVEL.map((node) => node.name)).not.toContain("cron");
+    expect(TOP_LEVEL.map((node) => node.name)).not.toContain("workflows");
   });
 });

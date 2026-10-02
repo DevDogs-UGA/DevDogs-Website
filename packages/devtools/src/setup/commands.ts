@@ -250,7 +250,7 @@ export function localNextSteps(chosenApps: string[] | null): string {
     steps.push([
       "With the platform dev server running, reconcile meetings and workshops",
       "from config (the platform's 15-minute cron):",
-      "     pnpm devtools cron run --app platform --cron '*/15 * * * *'",
+      "     pnpm devtools jobs run --app platform --cron '*/15 * * * *'",
     ]);
   }
   if (picked("schedule-builder")) {
@@ -345,7 +345,7 @@ async function runHostedWizard(repoRoot: string): Promise<void> {
   } else {
     s.stop("Migrations failed — see the Supabase CLI output above");
     log.warn(
-      "Fix the problem above, then re-run `pnpm devtools setup` (your .env answers are kept), or run `pnpm devtools preset apply-migrations` and `pnpm devtools oauth` yourself.",
+      "Fix the problem above, then re-run `pnpm devtools setup` (your .env answers are kept), or run `pnpm devtools apply-migrations` and `pnpm devtools oauth` yourself.",
     );
     process.exitCode = 1;
     return;

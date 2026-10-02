@@ -1,5 +1,5 @@
 /**
- * The TUI presets: the tool calls they make, in order, and the questions they
+ * The Supabase jobs: the tool calls they make, in order, and the questions they
  * ask between them.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -52,7 +52,12 @@ const runNewMigration = vi.hoisted(() =>
 );
 vi.mock("../db/new-migration.js", () => ({ runNewMigration }));
 
-import { handlePreset } from "./commands.js";
+import {
+  handleApplyMigrations,
+  handleNewMigration,
+  handlePushConfig,
+  handleRestartStack,
+} from "./commands.js";
 
 const HOSTED_URL = "postgresql://u:secret@db.example.com:5432/postgres";
 const KEYS = ["DEPLOY_ENV", "DEV_DB", "DB_URL", "PROJECT_REF"] as const;
@@ -96,28 +101,28 @@ afterEach(() => {
   runNewMigration.mockClear();
 });
 
-describe("preset restart-stack", () => {
+describe("restart-stack", () => {
   it("restarts the local stack", async () => {
-    await handlePreset(["restart-stack"]);
+    await handleRestartStack([]);
     expect(runStackCommand).toHaveBeenCalledWith("restart");
   });
 });
 
-describe("preset new-migration", () => {
+describe("new-migration", () => {
   it("hands the app and description to the migration creator", async () => {
-    await handlePreset(["new-migration", "--app", "platform", "add_widgets"]);
+    await handleNewMigration(["--app", "platform", "add_widgets"]);
     expect(runNewMigration).toHaveBeenCalledWith("platform", "add_widgets");
   });
 
   it("will not wait on a question nobody can answer", async () => {
     mode.nonInteractive = true;
-    await handlePreset(["new-migration"]);
+    await handleNewMigration([]);
     expect(runNewMigration).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);
   });
 });
 
-describe("preset apply-migrations", () => {
+describe("apply-migrations", () => {
   beforeEach(() =>
     session({ DEPLOY_ENV: "staging", DB_URL: HOSTED_URL, PROJECT_REF: "ref" }),
   );
@@ -125,7 +130,7 @@ describe("preset apply-migrations", () => {
   it("pushes, then offers types:db, and runs it on yes", async () => {
     confirm.mockResolvedValue(true);
 
-    await handlePreset(["apply-migrations"]);
+    await handleApplyMigrations([]);
 
     expect(commands()).toEqual([
       "exec supabase db push --db-url",
@@ -136,7 +141,7 @@ describe("preset apply-migrations", () => {
   it("stops after the push on no", async () => {
     confirm.mockResolvedValue(false);
 
-    await handlePreset(["apply-migrations"]);
+    await handleApplyMigrations([]);
 
     expect(commands()).toEqual(["exec supabase db push --db-url"]);
   });
@@ -144,7 +149,7 @@ describe("preset apply-migrations", () => {
   it("asks nothing and hints when there is no terminal", async () => {
     mode.nonInteractive = true;
 
-    await handlePreset(["apply-migrations"]);
+    await handleApplyMigrations([]);
 
     expect(confirm).not.toHaveBeenCalled();
     expect(commands()).toEqual(["exec supabase db push --db-url"]);
@@ -153,19 +158,19 @@ describe("preset apply-migrations", () => {
   it("does not offer types after a failed push", async () => {
     runInGroup.mockResolvedValueOnce({ code: 1, signal: null });
 
-    await handlePreset(["apply-migrations"]);
+    await handleApplyMigrations([]);
 
     expect(confirm).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);
   });
 });
 
-describe("preset push-config", () => {
+describe("push-config", () => {
   it("shows the diff, asks, then pushes", async () => {
     session({ DEPLOY_ENV: "staging", DB_URL: HOSTED_URL, PROJECT_REF: "ref" });
     confirm.mockResolvedValue(true);
 
-    await handlePreset(["push-config"]);
+    await handlePushConfig([]);
 
     expect(commands()).toEqual([
       "exec supabase config diff --project-ref ref",
@@ -177,7 +182,7 @@ describe("preset push-config", () => {
     session({ DEPLOY_ENV: "staging", DB_URL: HOSTED_URL, PROJECT_REF: "ref" });
     confirm.mockResolvedValue(false);
 
-    await handlePreset(["push-config"]);
+    await handlePushConfig([]);
 
     expect(commands()).toEqual(["exec supabase config diff --project-ref ref"]);
     expect(process.exitCode).toBe(1);
@@ -187,11 +192,11 @@ describe("preset push-config", () => {
     session({ DEPLOY_ENV: "staging", DB_URL: HOSTED_URL, PROJECT_REF: "ref" });
     mode.nonInteractive = true;
 
-    await handlePreset(["push-config"]);
+    await handlePushConfig([]);
     expect(commands()).toEqual(["exec supabase config diff --project-ref ref"]);
 
     runInGroup.mockClear();
-    await handlePreset(["push-config", "--yes"]);
+    await handlePushConfig(["--yes"]);
     expect(commands()).toEqual([
       "exec supabase config diff --project-ref ref",
       "exec supabase config push --project-ref ref",
@@ -205,16 +210,9 @@ describe("preset push-config", () => {
     });
     confirm.mockResolvedValue(true);
 
-    await handlePreset(["push-config"]);
+    await handlePushConfig([]);
 
     expect(commands()).toEqual([]);
     expect(runStackCommand).toHaveBeenCalledWith("restart");
-  });
-});
-
-describe("preset", () => {
-  it("rejects an unknown name", async () => {
-    expect(await handlePreset(["nope"])).toBeNull();
-    expect(process.exitCode).toBe(1);
   });
 });

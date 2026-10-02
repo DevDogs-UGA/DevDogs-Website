@@ -36,7 +36,11 @@ import {
   recordEnteredTier,
   reproducibleCommand,
 } from "@devdogsuga/cli-core/invocation";
-import { bareGroupStartPath, runMenu } from "@devdogsuga/cli-core/menu";
+import {
+  bareGroupStartFlags,
+  bareGroupStartPath,
+  runMenu,
+} from "@devdogsuga/cli-core/menu";
 import { isNonInteractive } from "@devdogsuga/cli-core/mode";
 import {
   captureDevtoolsError,
@@ -48,20 +52,22 @@ import { catalog } from "./catalog.js";
 import { handleCf } from "./cf/commands.js";
 import { handleCheck } from "./check/commands.js";
 import { handleCompletions } from "./completions/commands.js";
-import { handleCron } from "./cron/commands.js";
-import { handleDb } from "./db/commands.js";
 import { handleDoctor } from "./doctor/commands.js";
 import { handleEmails } from "./emails/commands.js";
 import { handleEnv } from "./env/commands.js";
-import { handleGen } from "./gen/commands.js";
-import { handleGrantRoot, handleRoles } from "./roles/commands.js";
+import { handleJobs } from "./jobs/commands.js";
+import { handleRoles } from "./roles/commands.js";
 import { handleOAuth } from "./oauth/commands.js";
 import { handlePassthrough } from "./passthrough/commands.js";
-import { handlePreset } from "./preset/commands.js";
+import {
+  handleApplyMigrations,
+  handleNewMigration,
+  handlePushConfig,
+  handleRestartStack,
+} from "./preset/commands.js";
 import { runTask } from "./run/commands.js";
 import { handleScript } from "./script/commands.js";
 import { handleSetup } from "./setup/commands.js";
-import { handleWorkflows } from "./workflows/commands.js";
 
 // ── Dispatch ─────────────────────────────────────────────────────────────────
 
@@ -84,15 +90,14 @@ const CONTRIBUTOR_HANDLERS: Record<string, CommandHandler> = {
   run: runTask,
   oauth: handleOAuth,
   script: handleScript,
-  emails: handleEmails,
-  cf: handleCf,
-  gen: handleGen,
-  cron: handleCron,
-  workflows: handleWorkflows,
+  jobs: handleJobs,
   env: handleEnv,
   db: handleDb,
   doctor: handleDoctor,
-  preset: handlePreset,
+  "restart-stack": handleRestartStack,
+  "new-migration": handleNewMigration,
+  "apply-migrations": handleApplyMigrations,
+  "push-config": handlePushConfig,
   roles: handleRoles,
   "grant-root": handleGrantRoot,
 };
@@ -136,7 +141,15 @@ export const HANDLERS: Record<string, CommandHandler> = {
  * rediscovered. `doctor` itself is NOT here: that name now belongs to the
  * environment checker, a deliberate reuse rather than a collision.
  */
-const RETIRED: Record<string, { message: string; hints: string[] }> = {
+const RETIRED: Record<
+  string,
+  {
+    message: string;
+    hints: string[];
+    /** Subcommands now top-level under their own names: `preset push-config`. */
+    hoisted?: readonly string[];
+  }
+> = {
   secrets: {
     message: "`secrets` is now `backstage env`.",
     hints: ["pnpm dlx @devdogsuga/backstage env <pull|push|audit>"],
@@ -161,6 +174,46 @@ const RETIRED: Record<string, { message: string; hints: string[] }> = {
   github: {
     message: "`github` moved to backstage.",
     hints: ["pnpm dlx @devdogsuga/backstage github <rulesets|settings>"],
+  },
+  // Gone since the restructure; each names what replaced it.
+  db: {
+    message: "The `db` namespace is gone.",
+    hints: [
+      "start:      pnpm devtools supabase start",
+      "types:      pnpm -F @devdogsuga/supabase types:db",
+      "introspect: pnpm -F <app> types:drizzle",
+    ],
+  },
+  cf: {
+    message: "`cf preview` is now each app's own `preview` script.",
+    hints: ["pnpm -F <app> preview"],
+  },
+  "grant-root": {
+    message: "`grant-root` is now `roles grant`.",
+    hints: ["pnpm devtools roles grant <email> President"],
+  },
+  gen: {
+    message: "`gen campus-map` is now the platform's `fetch:campus-map`.",
+    hints: ["pnpm -F platform fetch:campus-map"],
+  },
+  emails: {
+    message: "`emails` is gone; previews run from the email package.",
+    hints: ["pnpm -F @devdogsuga/email preview"],
+  },
+  preset: {
+    message: "`preset` is gone; each preset is a command of its own.",
+    hoisted: [
+      "restart-stack",
+      "new-migration",
+      "apply-migrations",
+      "push-config",
+    ],
+    hints: [
+      "pnpm devtools restart-stack",
+      "pnpm devtools new-migration",
+      "pnpm devtools apply-migrations",
+      "pnpm devtools push-config",
+    ],
   },
 };
 
@@ -191,7 +244,13 @@ async function dispatch(argv: string[]): Promise<string | null> {
 
   const retired = RETIRED[first];
   if (retired) {
-    explain(retired.message, "", retired.hints);
+    const [sub] = rest;
+    const hoisted = sub !== undefined && retired.hoisted?.includes(sub);
+    explain(
+      hoisted ? `\`${first} ${sub}\` is now \`${sub}\`.` : retired.message,
+      "",
+      hoisted ? [`pnpm devtools ${rest.join(" ")}`] : retired.hints,
+    );
     process.exitCode = 1;
     return null;
   }
@@ -217,7 +276,12 @@ async function dispatch(argv: string[]): Promise<string | null> {
  * `main()` does, and nothing calls it but `launch.ts` and the `import.meta.url`
  * guard at the bottom of this file, for a direct `tsx src/cli.ts` run.
  */
-export async function main(argv: string[]): Promise<void> {
+export async function main(typed: string[]): Promise<void> {
+  // An alias becomes the command it stands for before anything reads argv, so
+  // help, dispatch, the wizard's resume and the "run it directly next time"
+  // line all see one name: `cron run` is `jobs run --kind sync` from here on.
+  const argv = catalog.canonicalArgv(typed);
+
   // Bootstrapped here — after `argv` is parsed off `process.argv`, before any
   // dispatch below touches it — so the
   // `command` tag on whatever this run reports is the same argv every branch
@@ -235,7 +299,7 @@ export async function main(argv: string[]): Promise<void> {
 
   // `--help --json` is the supported command list, for tools: every path the
   // CLI accepts, deprecated ones marked. Plain stdout, no banner. Only with no
-  // command named, so `cron list --json --help` still answers about `cron list`.
+  // command named, so `jobs list --json --help` still answers about `jobs list`.
   if (
     (argv.includes("--help") || argv.includes("-h")) &&
     argv.includes("--json") &&
@@ -320,7 +384,10 @@ export async function main(argv: string[]): Promise<void> {
     // Same wizard entry as the no-argument path, at the resumed node instead
     // of the first screen. `env` left `undefined` so `runMenu` probes once,
     // identically to the bare-invocation branch above.
-    closing = await runMenu(catalog, dispatch, undefined, { startPath });
+    closing = await runMenu(catalog, dispatch, undefined, {
+      startPath,
+      startFlags: bareGroupStartFlags(argv, startPath),
+    });
   } else {
     beginInvocation(argv, false);
     // `launch.ts` already resolved and entered the session's deploy tier —

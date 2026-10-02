@@ -320,18 +320,18 @@ describe("local Wrangler connection diagnostics", () => {
     expect(hint).toContain("`next dev`");
     expect(hint).toContain("does not register Cloudflare Workflow bindings");
     expect(hint).toContain(
-      "pnpm devtools workflows serve --app schedule-builder --port 9999",
+      "pnpm devtools jobs serve --app schedule-builder --port 9999",
     );
     expect(hint).toContain("only this app's declared environment");
     expect(hint).toContain(
-      "pnpm devtools workflows run --app schedule-builder --tier development --port 9999",
+      "pnpm devtools jobs run --app schedule-builder --tier development --port 9999",
     );
 
     const missing = wranglerDevNotRunningHint("schedule-builder", "9999");
     expect(missing).toContain("no Wrangler dev session was found");
     expect(missing).toContain("`next dev` only serves the Next.js UI");
     expect(missing).toContain(
-      "pnpm devtools workflows serve --app schedule-builder --port 9999",
+      "pnpm devtools jobs serve --app schedule-builder --port 9999",
     );
     expect(missing).toContain("--port <number>");
   });

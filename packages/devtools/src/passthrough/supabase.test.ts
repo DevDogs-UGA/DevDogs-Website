@@ -206,7 +206,7 @@ describe("devtools supabase", () => {
 describe("config push on the local tier", () => {
   beforeEach(() => session({ DEPLOY_ENV: "development", DB_URL: LOCAL_URL }));
 
-  it("does not run, explains the restart, and names the preset without a terminal", async () => {
+  it("does not run, explains the restart, and names restart-stack without a terminal", async () => {
     const restart = vi.fn(async () => 0);
 
     const code = await runSupabase(["config", "push"], restart);
@@ -216,7 +216,7 @@ describe("config push on the local tier", () => {
     expect(restart).not.toHaveBeenCalled();
     const printed = stderr.join("");
     expect(printed).toContain("config.toml");
-    expect(printed).toContain("preset restart-stack");
+    expect(printed).toContain("pnpm devtools restart-stack");
   });
 
   it("offers the restart at a terminal and runs it on yes", async () => {

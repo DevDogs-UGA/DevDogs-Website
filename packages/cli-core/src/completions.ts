@@ -1,4 +1,4 @@
-import type { Catalog } from "./catalog.js";
+import type { Catalog, CommandNode } from "./catalog.js";
 import { cliName } from "./cli-name.js";
 
 type Shell = "bash" | "zsh";
@@ -6,17 +6,32 @@ type Shell = "bash" | "zsh";
 /**
  * Groups all paths by their parent prefix to build per-parent completion lists.
  *
- * e.g. ["env", "pull"] contributes "pull" to the group keyed "env".
+ * e.g. ["env", "pull"] contributes "pull" to the group keyed "env". Aliases
+ * complete too, after the name they stand for, and the children under an
+ * alias are its command's: `cron <TAB>` offers what `jobs <TAB>` does.
  */
 function buildGroups(catalog: Catalog): Map<string, string[]> {
   const groups = new Map<string, string[]>();
-  for (const path of catalog.allPaths()) {
-    const parent = path.slice(0, -1).join(" ");
-    const name = path[path.length - 1]!;
-    const existing = groups.get(parent) ?? [];
-    existing.push(name);
-    groups.set(parent, existing);
-  }
+  const visit = (
+    nodes: readonly CommandNode[],
+    parents: readonly string[],
+  ): void => {
+    for (const node of nodes) {
+      const names = [node.name, ...(node.aliases ?? []).map((a) => a.name)];
+      for (const parent of parents) {
+        const existing = groups.get(parent) ?? [];
+        existing.push(...names);
+        groups.set(parent, existing);
+      }
+      visit(
+        node.subcommands ?? [],
+        parents.flatMap((parent) =>
+          names.map((name) => (parent ? `${parent} ${name}` : name)),
+        ),
+      );
+    }
+  };
+  visit(catalog.topLevel, [""]);
   return groups;
 }
 

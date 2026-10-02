@@ -1,39 +1,36 @@
 /**
- * `devtools cron list` and `devtools cron run`.
+ * The quick-sync half of `devtools jobs` (`jobs/commands.ts` decides which
+ * half a request is about).
  *
- * `cron list` reconciles each app's Worker `triggers.crons` and native
+ * `reconcileMap` reconciles each app's Worker `triggers.crons` and native
  * `workflows[].schedules` (per tier) against its `CRON_ROUTES` and
- * `WORKFLOW_CRONS` exports and surfaces every
- * failure shape:
+ * `WORKFLOW_CRONS` exports, for `jobs list`, and surfaces every failure shape:
  *   - a Worker cron matching no route map → fires nothing
  *   - a CRON_ROUTES / WORKFLOW_CRONS key no tier schedules → never fires
  *   - a WORKFLOW_CRONS key whose binding that tier's wrangler never declares →
  *     misconfigured
  *
- * `cron run` selects route-backed schedules from the same maps and sends their
- * authenticated GETs sequentially, mirroring `cloudflare/scheduled.ts`.
- * Workflow-backed schedules stay visible in the audit but are triggered by the
- * separate `devtools workflows` command, which reads Wrangler bindings directly.
+ * `runCronRun` sends a route-backed schedule's authenticated GETs
+ * sequentially, mirroring `cloudflare/scheduled.ts`. Workflow-backed schedules
+ * are long-running jobs, run through `workflows/commands.ts`.
  *
  * The local run path pre-flights the target origin and, if nothing is
  * listening, prints a tailored hint rather than a raw ECONNREFUSED.
  */
-import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { confirm, select } from "@clack/prompts";
+import { confirm } from "@clack/prompts";
 import { parse as parseEnv } from "dotenv";
 import { loadEnvLoad } from "@devdogsuga/cli-core/repo/peers";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { positionals } from "@devdogsuga/cli-core/args";
+import { recordResolved } from "@devdogsuga/cli-core/invocation";
 import { resolveTier } from "@devdogsuga/cli-core/tier";
 import { unwrap } from "@devdogsuga/cli-core/ui";
 import {
-  CRON_TIERS,
   cronsForTier,
   discoverCronMaps,
   discoverWranglerConfigs,
-  isCronTier,
   workflowsForTier,
   type AppCronMap,
   type CronTier,
@@ -67,7 +64,7 @@ export async function originReachable(
 
 // ── Human-readable schedule translator ───────────────────────────────────────
 
-function describeExpr(expr: string): string {
+export function describeExpr(expr: string): string {
   let m: RegExpExecArray | null;
   if (/^0 0 \* \* \*$/.test(expr)) return "daily at midnight UTC";
   if ((m = /^\*\/(\d+) \* \* \* \*$/.exec(expr)))
@@ -80,17 +77,11 @@ function describeExpr(expr: string): string {
   return expr;
 }
 
-// ── cron list ─────────────────────────────────────────────────────────────────
-
-interface CronListOptions {
-  app?: string;
-  tier?: string;
-  json?: boolean;
-}
+// ── reconciliation ───────────────────────────────────────────────────────────
 
 export interface CronListRow {
   app: string;
-  tier: string;
+  tier: CronTier;
   expr: string;
   human: string;
   label: string;
@@ -184,90 +175,7 @@ export function reconcileMap(
   return rows;
 }
 
-export async function runCronList(argv: readonly string[]): Promise<number> {
-  const opts = parseCronListOptions(argv);
-  if (opts.tier && !isCronTier(opts.tier)) {
-    process.stderr.write(
-      `devtools cron list: unknown tier "${opts.tier}". Expected: ${CRON_TIERS.join(", ")}.\n`,
-    );
-    return 1;
-  }
-  const maps = await discoverCronMaps();
-  const configs = new Map(
-    discoverWranglerConfigs().map(({ app, config }) => [app, config]),
-  );
-
-  const appMaps = opts.app ? maps.filter((m) => m.app === opts.app) : maps;
-
-  if (opts.app && appMaps.length === 0) {
-    process.stderr.write(
-      `devtools cron list: no cron map found for app "${opts.app}".\n`,
-    );
-    return 1;
-  }
-
-  const tiers: CronTier[] = opts.tier
-    ? [opts.tier as CronTier]
-    : [...CRON_TIERS];
-
-  const rows = appMaps.flatMap((map) => {
-    const config = configs.get(map.app);
-    if (!config) throw new Error(`${map.app}: wrangler.jsonc is missing`);
-    return reconcileMap(map, config, tiers);
-  });
-
-  if (opts.json) {
-    console.log(JSON.stringify(rows, null, 2));
-    return 0;
-  }
-
-  renderCronList(rows);
-  return 0;
-}
-
-function renderCronList(rows: CronListRow[]): void {
-  let currentApp = "";
-  let currentTier = "";
-
-  for (const row of rows) {
-    if (row.app !== currentApp || row.tier !== currentTier) {
-      currentApp = row.app;
-      currentTier = row.tier;
-      console.log(`\n${row.app}  [${row.tier}]`);
-    }
-
-    const warn =
-      row.status === "never-fires"
-        ? "  ⚠  never fires (no wrangler schedule)"
-        : row.status === "fires-nothing"
-          ? "  ⚠  fires nothing (no CRON_ROUTES or WORKFLOW_CRONS entry)"
-          : row.status === "misconfigured"
-            ? `  ⚠  misconfigured (no "${row.binding}" workflow bound in this tier)`
-            : "";
-
-    console.log(`  ${row.expr.padEnd(18)}  ${row.human}`);
-    console.log(`    ${row.label}${warn}`);
-    if (row.kind === "workflow") {
-      const named = row.workflowName ? ` (${row.workflowName})` : "";
-      console.log(`    → workflow: ${row.binding}${named}`);
-    }
-    for (const route of row.routes) console.log(`    ${route}`);
-  }
-
-  if (rows.length === 0) console.log("(no cron maps found)");
-}
-
-function parseCronListOptions(argv: readonly string[]): CronListOptions {
-  const opts: CronListOptions = {};
-  for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--app") opts.app = argv[i + 1];
-    else if (argv[i] === "--tier") opts.tier = argv[i + 1];
-    else if (argv[i] === "--json") opts.json = true;
-  }
-  return opts;
-}
-
-// ── cron run ──────────────────────────────────────────────────────────────────
+// ── run ──────────────────────────────────────────────────────────────────────
 
 interface CronRunOptions {
   app?: string;
@@ -314,7 +222,7 @@ async function confirmDeployed(
   if (tier === "development" || yes) return true;
   if (!process.stdin.isTTY) {
     process.stderr.write(
-      `devtools cron run: --yes is required to fire a job on ${tier}.\n`,
+      `devtools jobs run: --yes is required to fire a job on ${tier}.\n`,
     );
     return false;
   }
@@ -332,58 +240,43 @@ export async function runCronRun(argv: readonly string[]): Promise<number> {
   const tier = await resolveTier(
     opts.tier,
     "Which tier should receive the cron job?",
-    { label: "devtools cron run" },
+    { label: "devtools jobs run" },
   );
   if (!tier) return 1;
+  // As in `runWorkflowsRun`: only a tier this prompt decided, not the session's.
+  if (
+    opts.tier === undefined &&
+    tier !== (process.env.DEPLOY_ENV ?? "development")
+  ) {
+    recordResolved("--tier", tier);
+  }
 
   const maps = await discoverCronMaps();
   const discovered = discoverWranglerConfigs();
   const configs = new Map(discovered.map(({ app, config }) => [app, config]));
   const choices = cronChoices(maps, configs, tier, opts.app);
+  // `jobs run` has already picked, or refused, when neither was given.
   let choice: CronChoice | undefined;
-
   if (opts.cron) {
     const matches = choices.filter((item) => item.expr === opts.cron);
     if (matches.length > 1 && !opts.app) {
       process.stderr.write(
-        `devtools cron run: "${opts.cron}" exists in more than one app; pass --app.\n`,
+        `devtools jobs run: "${opts.cron}" exists in more than one app; pass --app.\n`,
       );
       return 1;
     }
     choice = matches[0];
-  } else if (!route) {
-    if (choices.length === 0) {
-      process.stderr.write(
-        "devtools cron run: no route cron jobs were discovered.\n",
-      );
-      return 1;
-    }
-    if (!process.stdin.isTTY) {
-      process.stderr.write(
-        "devtools cron run: pass --cron <expr> (and --app when needed) when no terminal is available.\n",
-      );
-      return 1;
-    }
-    choice = unwrap(
-      await select<CronChoice>({
-        message: "Which cron job should run?",
-        options: choices.map((item) => ({
-          value: item,
-          label: `${item.app} · ${item.label}`,
-          hint: `${item.expr} · ${item.scheduled ? "scheduled" : `manual only on ${tier}`}`,
-        })),
-      }),
-    );
   }
 
   if (!route && !choice) {
-    const workflow = maps.some(
-      (map) => (!opts.app || map.app === opts.app) && map.workflows[opts.cron!],
-    );
+    const legacy = maps
+      .filter((map) => !opts.app || map.app === opts.app)
+      .map((map) => map.workflows[opts.cron ?? ""])
+      .find((entry) => entry !== undefined);
     process.stderr.write(
-      workflow
-        ? `devtools cron run: "${opts.cron}" starts a Workflow; use devtools workflows run.\n`
-        : `devtools cron run: no route job found for "${opts.cron}".\n`,
+      legacy
+        ? `devtools jobs run: "${opts.cron}" starts a Workflow; run it with devtools jobs run --workflow ${legacy.binding}.\n`
+        : `devtools jobs run: no quick sync found for "${opts.cron}".\n`,
     );
     return 1;
   }
@@ -394,7 +287,7 @@ export async function runCronRun(argv: readonly string[]): Promise<number> {
   let tierEnv: Record<string, string>;
   const envLoad = await loadEnvLoad();
   try {
-    // override: true because `devtools cron run` itself runs under `with-env`
+    // override: true because `devtools jobs run` itself runs under `with-env`
     // (development), so process.env already holds development's values; the
     // tier picked here — development, staging or production, `resolveTier`
     // above refuses anything else — must win over whatever this process
@@ -402,7 +295,7 @@ export async function runCronRun(argv: readonly string[]): Promise<number> {
     tierEnv = (await envLoad.loadEnvironment(tier, { override: true })).env;
   } catch (err) {
     if (err instanceof envLoad.MissingEnvFileError) {
-      process.stderr.write(`devtools cron run: ${err.message}\n`);
+      process.stderr.write(`devtools jobs run: ${err.message}\n`);
       return 1;
     }
     throw err;
@@ -485,7 +378,7 @@ export function devServerHint(
 ): string {
   const filter = app ? `--filter ${app}` : "--filter <app>";
   return (
-    `devtools cron run: nothing is listening at ${new URL(baseUrl).origin}.\n` +
+    `devtools jobs run: nothing is listening at ${new URL(baseUrl).origin}.\n` +
     "The dev server doesn't appear to be running. Start it, then re-run:\n" +
     `  pnpm ${filter} dev\n`
   );
@@ -501,21 +394,3 @@ function parseCronRunOptions(argv: readonly string[]): CronRunOptions {
   }
   return opts;
 }
-
-export const handleCron: CommandHandler = async (rest) => {
-  const sub = rest[0];
-  const cronArgs = rest.slice(1);
-  let code: number;
-  if (sub === "list") {
-    code = await runCronList(cronArgs);
-  } else if (sub === "run") {
-    code = await runCronRun(cronArgs);
-  } else {
-    process.stderr.write(
-      `devtools cron: unknown subcommand "${sub ?? "(none)"}". Expected: list or run.\n`,
-    );
-    code = 1;
-  }
-  process.exitCode = code;
-  return DONE;
-};

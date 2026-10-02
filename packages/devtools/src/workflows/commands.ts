@@ -1,5 +1,8 @@
-/** Config-derived listing and manual triggering for Cloudflare Workflows. */
-import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
+/**
+ * The long-running half of `devtools jobs` (`jobs/commands.ts` decides which
+ * half a request is about): config-derived discovery, manual triggering and a
+ * local runtime for Cloudflare Workflows.
+ */
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -19,7 +22,6 @@ import { unwrap } from "@devdogsuga/cli-core/ui";
 import {
   CRON_TIERS,
   discoverWranglerConfigs,
-  isCronTier,
   workflowsForTier,
   type AppWranglerConfig,
   type CronTier,
@@ -31,6 +33,8 @@ export interface WorkflowChoice {
   binding: string;
   name: string;
   className?: string;
+  /** The tier's native cron schedules for this Workflow; none means on demand. */
+  schedules?: readonly string[];
 }
 
 interface WorkflowOptions {
@@ -40,7 +44,6 @@ interface WorkflowOptions {
   params?: string;
   port?: string;
   yes: boolean;
-  json: boolean;
   instanceId?: string;
 }
 
@@ -78,6 +81,9 @@ export function workflowChoices(
           binding: workflow.binding,
           name: workflow.name,
           className: workflow.class_name,
+          ...(workflow.schedules?.length
+            ? { schedules: workflow.schedules }
+            : {}),
         })),
       ),
     )
@@ -92,7 +98,6 @@ export function workflowChoices(
 function parseOptions(argv: readonly string[]): WorkflowOptions {
   const options: WorkflowOptions = {
     yes: argv.includes("--yes"),
-    json: argv.includes("--json"),
   };
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index];
@@ -104,18 +109,6 @@ function parseOptions(argv: readonly string[]): WorkflowOptions {
     else if (flag === "--port") options.port = value;
   }
   return options;
-}
-
-function validateTier(
-  value: string | undefined,
-  command: "list" | "run",
-): CronTier | undefined | null {
-  if (value === undefined) return undefined;
-  if (isCronTier(value)) return value;
-  process.stderr.write(
-    `devtools workflows ${command}: unknown tier "${value}". Expected: ${CRON_TIERS.join(", ")}.\n`,
-  );
-  return null;
 }
 
 export function workflowTriggerArgs(
@@ -210,7 +203,7 @@ export async function waitForLocalWorkflow(
           : [];
       if (failures.length > 0) {
         process.stderr.write(
-          `devtools workflows run: Workflow ${instanceId} completed with ${failures.length} recorded failure${failures.length === 1 ? "" : "s"}:\n`,
+          `devtools jobs run: Workflow ${instanceId} completed with ${failures.length} recorded failure${failures.length === 1 ? "" : "s"}:\n`,
         );
         for (const failure of failures) {
           if (typeof failure === "object" && failure !== null) {
@@ -234,7 +227,7 @@ export async function waitForLocalWorkflow(
         ? `: ${error.name ? `${error.name}: ` : ""}${error.message}`
         : "";
       process.stderr.write(
-        `devtools workflows run: Workflow ${instanceId} ${status}${detail}\n`,
+        `devtools jobs run: Workflow ${instanceId} ${status}${detail}\n`,
       );
       return 1;
     }
@@ -242,7 +235,7 @@ export async function waitForLocalWorkflow(
   }
 
   process.stderr.write(
-    `devtools workflows run: Workflow ${instanceId} did not finish within ${Math.round(timeoutMs / 60_000)} minutes.\n`,
+    `devtools jobs run: Workflow ${instanceId} did not finish within ${Math.round(timeoutMs / 60_000)} minutes.\n`,
   );
   return 1;
 }
@@ -391,7 +384,7 @@ async function startTemporaryWrangler(
     const free = await findFreePort(Number(port) + 1);
     if (free === null) {
       process.stderr.write(
-        `devtools workflows: port ${requestedPort} is in use and no free port ` +
+        `devtools jobs: port ${requestedPort} is in use and no free port ` +
           `was found near it for a temporary dev session.\n`,
       );
       return null;
@@ -407,7 +400,7 @@ async function startTemporaryWrangler(
     `Preparing and starting a temporary ${runtime} session for ${app} on port ${port}…\n`,
   );
 
-  // Both callers of this function (`workflows serve`, `workflows run --tier
+  // Both callers of this function (`jobs serve`, `jobs run --tier
   // development`) are local-only, so the tier is always development — but
   // load it explicitly rather than letting the scoped `.dev.vars` fall back
   // to this process's own inherited env: `override: true` re-reads `.env`
@@ -418,7 +411,7 @@ async function startTemporaryWrangler(
     loaded = await envLoad.loadEnvironment("development", { override: true });
   } catch (err) {
     if (err instanceof envLoad.MissingEnvFileError) {
-      process.stderr.write(`devtools workflows: ${err.message}\n`);
+      process.stderr.write(`devtools jobs: ${err.message}\n`);
       return null;
     }
     throw err;
@@ -429,7 +422,7 @@ async function startTemporaryWrangler(
   const buildCode = await buildWorkspaceDeps(app);
   if (buildCode !== 0) {
     process.stderr.write(
-      `devtools workflows: building ${app}'s workspace dependencies failed (exit ${buildCode}); not starting ${runtime}.\n`,
+      `devtools jobs: building ${app}'s workspace dependencies failed (exit ${buildCode}); not starting ${runtime}.\n`,
     );
     return null;
   }
@@ -479,7 +472,7 @@ async function startTemporaryWrangler(
           ? ` (killed by ${child.signalCode}).`
           : ` (exit ${child.exitCode}).`;
       process.stderr.write(
-        `devtools workflows run: ${runtime} stopped before it became ready${how}\n`,
+        `devtools jobs run: ${runtime} stopped before it became ready${how}\n`,
       );
       return null;
     }
@@ -488,7 +481,7 @@ async function startTemporaryWrangler(
 
   await stopTemporaryWrangler(child);
   process.stderr.write(
-    `devtools workflows run: ${runtime} did not become ready on port ${port} within ${WRANGLER_READY_TIMEOUT_MS / 60_000} minutes.\n`,
+    `devtools jobs run: ${runtime} did not become ready on port ${port} within ${WRANGLER_READY_TIMEOUT_MS / 60_000} minutes.\n`,
   );
   return null;
 }
@@ -576,8 +569,8 @@ export function wranglerDevConnectionHint(app: string, port: string): string {
     "does not register Cloudflare Workflow bindings or expose Wrangler's " +
     "local control API.\n\n" +
     "Start a separate app-scoped Wrangler session, then retry the trigger:\n" +
-    `  pnpm devtools workflows serve --app ${app} --port ${port}\n` +
-    `  pnpm devtools workflows run --app ${app} --tier development --port ${port}\n\n` +
+    `  pnpm devtools jobs serve --app ${app} --port ${port}\n` +
+    `  pnpm devtools jobs run --app ${app} --tier development --port ${port}\n\n` +
     "The serve command loads only this app's declared environment. Keep " +
     "`next dev` running too if you also need the Next.js development UI.\n"
   );
@@ -585,42 +578,12 @@ export function wranglerDevConnectionHint(app: string, port: string): string {
 
 export function wranglerDevNotRunningHint(app: string, port: string): string {
   return (
-    `devtools workflows run: no Wrangler dev session was found on port ${port}.\n` +
+    `devtools jobs run: no Wrangler dev session was found on port ${port}.\n` +
     "A local Workflow needs Wrangler's Worker runtime; `next dev` only serves " +
     "the Next.js UI and does not register Workflow bindings.\n" +
-    `Start it with: pnpm devtools workflows serve --app ${app} --port ${port}\n` +
+    `Start it with: pnpm devtools jobs serve --app ${app} --port ${port}\n` +
     `If Wrangler uses another port, rerun this command with --port <number>.\n`
   );
-}
-
-export async function runWorkflowsList(
-  argv: readonly string[],
-): Promise<number> {
-  const options = parseOptions(argv);
-  const tier = validateTier(options.tier, "list");
-  if (tier === null) return 1;
-  let choices = workflowChoices(
-    discoverWranglerConfigs(),
-    tier ? [tier] : CRON_TIERS,
-  );
-  if (options.app) choices = choices.filter((item) => item.app === options.app);
-
-  if (options.json) {
-    process.stdout.write(`${JSON.stringify(choices, null, 2)}\n`);
-    return 0;
-  }
-  if (choices.length === 0) {
-    process.stdout.write("(no configured Workflows found)\n");
-    return 0;
-  }
-  for (const item of choices) {
-    process.stdout.write(
-      `${item.app}  [${item.tier}]\n` +
-        `  ${item.name}\n` +
-        `    binding: ${item.binding}${item.className ? ` · class: ${item.className}` : ""}\n`,
-    );
-  }
-  return 0;
 }
 
 export async function runWorkflowsRun(
@@ -637,7 +600,7 @@ export async function runWorkflowsRun(
   const tier = await resolveTier(
     options.tier,
     "Which tier should receive the Workflow?",
-    { label: "devtools workflows run" },
+    { label: "devtools jobs run" },
   );
   if (!tier) return 1;
 
@@ -645,9 +608,7 @@ export async function runWorkflowsRun(
     try {
       JSON.parse(options.params);
     } catch {
-      process.stderr.write(
-        "devtools workflows run: --params must be valid JSON.\n",
-      );
+      process.stderr.write("devtools jobs run: --params must be valid JSON.\n");
       return 1;
     }
   }
@@ -655,7 +616,7 @@ export async function runWorkflowsRun(
     const error = validatePort(options.port);
     if (error) {
       process.stderr.write(
-        "devtools workflows run: --port must be an integer from 1 to 65535.\n",
+        "devtools jobs run: --port must be an integer from 1 to 65535.\n",
       );
       return 1;
     }
@@ -672,7 +633,7 @@ export async function runWorkflowsRun(
     );
     if (matches.length > 1 && !options.app) {
       process.stderr.write(
-        `devtools workflows run: "${options.workflow}" is ambiguous; pass --app.\n`,
+        `devtools jobs run: "${options.workflow}" is ambiguous; pass --app.\n`,
       );
       return 1;
     }
@@ -695,8 +656,8 @@ export async function runWorkflowsRun(
   if (!choice) {
     process.stderr.write(
       options.workflow
-        ? `devtools workflows run: no configured Workflow named "${options.workflow}" for ${tier}.\n`
-        : "devtools workflows run: no Workflow was selected; pass --workflow when no terminal is available.\n",
+        ? `devtools jobs run: no configured Workflow named "${options.workflow}" for ${tier}.\n`
+        : "devtools jobs run: no Workflow was selected; pass --workflow when no terminal is available.\n",
     );
     return 1;
   }
@@ -704,7 +665,7 @@ export async function runWorkflowsRun(
   if (tier !== "development" && !options.yes) {
     if (!process.stdin.isTTY) {
       process.stderr.write(
-        `devtools workflows run: --yes is required to trigger ${tier}.\n`,
+        `devtools jobs run: --yes is required to trigger ${tier}.\n`,
       );
       return 1;
     }
@@ -775,7 +736,7 @@ export async function runWorkflowsRun(
         .env;
     } catch (err) {
       if (err instanceof envLoad.MissingEnvFileError) {
-        process.stderr.write(`devtools workflows run: ${err.message}\n`);
+        process.stderr.write(`devtools jobs run: ${err.message}\n`);
         return 1;
       }
       throw err;
@@ -827,7 +788,7 @@ export async function runWorkflowsRun(
         );
       } catch (error) {
         process.stderr.write(
-          `devtools workflows run: ${error instanceof Error ? error.message : String(error)}\n`,
+          `devtools jobs run: ${error instanceof Error ? error.message : String(error)}\n`,
         );
         return 1;
       }
@@ -849,7 +810,7 @@ export async function runWorkflowsServe(
   const port = options.port ?? "8787";
   if (validatePort(port)) {
     process.stderr.write(
-      "devtools workflows serve: --port must be an integer from 1 to 65535.\n",
+      "devtools jobs serve: --port must be an integer from 1 to 65535.\n",
     );
     return 1;
   }
@@ -864,7 +825,7 @@ export async function runWorkflowsServe(
   let app = options.app;
   if (app && !apps.includes(app)) {
     process.stderr.write(
-      `devtools workflows serve: no development Workflow is configured for "${app}".\n`,
+      `devtools jobs serve: no development Workflow is configured for "${app}".\n`,
     );
     return 1;
   }
@@ -878,7 +839,7 @@ export async function runWorkflowsServe(
   }
   if (!app) {
     process.stderr.write(
-      "devtools workflows serve: pass --app when no terminal is available.\n",
+      "devtools jobs serve: pass --app when no terminal is available.\n",
     );
     return 1;
   }
@@ -892,7 +853,7 @@ export async function runWorkflowsServe(
 
   if (await isWranglerDevRunning(port)) {
     process.stderr.write(
-      `devtools workflows serve: a Workflow runtime is already running on port ${port}.\n`,
+      `devtools jobs serve: a Workflow runtime is already running on port ${port}.\n`,
     );
     return 1;
   }
@@ -900,8 +861,8 @@ export async function runWorkflowsServe(
   const running = dir === undefined ? undefined : runningVinextDevPort(dir);
   if (running !== undefined) {
     process.stderr.write(
-      `devtools workflows serve: vinext dev is already running for ${app} on port ${running}; ` +
-        "vinext allows one per app, and `workflows run` reuses it.\n",
+      `devtools jobs serve: vinext dev is already running for ${app} on port ${running}; ` +
+        "vinext allows one per app, and `jobs run` reuses it.\n",
     );
     return 1;
   }
@@ -942,20 +903,3 @@ export async function runWorkflowsServe(
   await session.stop();
   return 0;
 }
-
-export async function runWorkflows(argv: readonly string[]): Promise<number> {
-  const [sub, ...rest] = argv;
-  if (sub === "list") return runWorkflowsList(rest);
-  if (sub === "run") return runWorkflowsRun(rest);
-  if (sub === "serve") return runWorkflowsServe(rest);
-  process.stderr.write(
-    `devtools workflows: unknown subcommand "${sub ?? "(none)"}". Expected: list, run or serve.\n`,
-  );
-  return 1;
-}
-
-export const handleWorkflows: CommandHandler = async (rest) => {
-  const code = await runWorkflows(rest);
-  process.exitCode = code;
-  return code === 0 ? DONE : null;
-};

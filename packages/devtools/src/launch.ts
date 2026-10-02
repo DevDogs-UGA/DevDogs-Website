@@ -7,7 +7,7 @@
  *
  * A deploy tier used to be resolved deep inside `menu.ts`, after the wizard
  * had already opened, and a typed command's tier lived wherever that command
- * happened to resolve one — `cf preview`, `cron run` and `db --target remote`
+ * happened to resolve one — `cf preview`, `jobs run` and `db --target remote`
  * each asking their own question. That meant `--tier` only worked for the
  * commands that had been taught to parse it, and a contributor who wanted
  * `pnpm devtools db status --target remote --tier staging` piped through a
@@ -43,7 +43,7 @@
  * `--tier <t>` is accepted at ANY position in argv and stripped here before
  * `cli.ts` ever sees the rest, precisely so it cannot collide with a
  * command's own flag of the same name (`db --target remote --tier staging`,
- * `cron run --tier production`) — those still parse their OWN `--tier` out of
+ * `jobs run --tier production`) — those still parse their OWN `--tier` out of
  * the argv `cli.ts` receives, but by then the session's tier decision has
  * already been made, and `resolveTier` (see `tier.ts`) falls back to reading
  * it off `process.env.DEPLOY_ENV` rather than asking again.

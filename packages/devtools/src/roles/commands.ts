@@ -267,7 +267,7 @@ async function withInstance(
   } catch (err) {
     explainError("Could not change roles.", err, [
       "Migrations create the built-in roles: `pnpm devtools supabase db reset` " +
-        "(development) or `pnpm devtools preset apply-migrations` (staging/production).",
+        "(development) or `pnpm devtools apply-migrations` (staging/production).",
     ]);
     process.exitCode = 1;
   }

@@ -1,7 +1,8 @@
 /**
- * `devtools preset <name>`: the TUI's jobs, each a few tool calls in a row.
+ * `restart-stack`, `new-migration`, `apply-migrations` and `push-config`: the
+ * Supabase jobs, each a few tool calls in a row.
  *
- * A preset exists only where it sequences several tools or asks a question
+ * One exists only where it sequences several tools or asks a question
  * between them. It prints the commands it ran (after they finish, on stderr)
  * and may offer one clearly labelled next step; everything else is a
  * passthrough. Hosted tiers are gated by the launcher before any of this runs.
@@ -18,8 +19,7 @@ import {
   sessionIsLocal,
   sessionLabel,
 } from "@devdogsuga/cli-core/db/connection";
-import { explain, unwrap } from "@devdogsuga/cli-core/ui";
-import { catalog } from "../catalog.js";
+import { unwrap } from "@devdogsuga/cli-core/ui";
 import { runNewMigration } from "../db/new-migration.js";
 import { runStackCommand } from "../db/stack.js";
 import {
@@ -51,7 +51,7 @@ async function newMigration(args: string[]): Promise<number> {
   );
   if (isNonInteractive() && (!app || !description)) {
     process.stderr.write(
-      "devtools preset new-migration: --app <slug> and a description are " +
+      "devtools new-migration: --app <slug> and a description are " +
         "required when there is no terminal to ask.\n",
     );
     return 1;
@@ -70,7 +70,7 @@ async function regenerateTypes(): Promise<number> {
 async function applyMigrations(): Promise<number> {
   const planned = await planSupabase(
     ["db", "push"],
-    "devtools preset apply-migrations",
+    "devtools apply-migrations",
   );
   if (!planned) return 1;
   const code = await runSupabaseRaw(planned);
@@ -101,10 +101,7 @@ async function pushConfig(args: string[]): Promise<number> {
   // The diff first, always: `config push` proceeds without asking when it has
   // no terminal, and a value the file declares only because `supabase init`
   // wrote it can overwrite a deliberate hosted setting.
-  const diff = await planSupabase(
-    ["config", "diff"],
-    "devtools preset push-config",
-  );
+  const diff = await planSupabase(["config", "diff"], "devtools push-config");
   if (!diff) return 1;
   const diffCode = await runSupabaseRaw(diff);
   if (diffCode !== 0) return diffCode;
@@ -114,7 +111,7 @@ async function pushConfig(args: string[]): Promise<number> {
   } else if (isNonInteractive()) {
     if (!hasYes(args)) {
       process.stderr.write(
-        "devtools preset push-config: --yes is required to push with no " +
+        "devtools push-config: --yes is required to push with no " +
           "terminal to confirm. The diff is above.\n",
       );
       return 1;
@@ -134,38 +131,26 @@ async function pushConfig(args: string[]): Promise<number> {
 
   const planned = await planSupabase(
     ["config", "push"],
-    "devtools preset push-config",
+    "devtools push-config",
   );
   if (!planned) return 1;
   return runSupabaseRaw(planned);
 }
 
-export const handlePreset: CommandHandler = async (rest) => {
-  const [name, ...args] = rest;
-  let code: number;
-  switch (name) {
-    case "restart-stack":
-      code = await restartStack();
-      break;
-    case "new-migration":
-      code = await newMigration(args);
-      break;
-    case "apply-migrations":
-      code = await applyMigrations();
-      break;
-    case "push-config":
-      code = await pushConfig(args);
-      break;
-    default:
-      explain(
-        name
-          ? `devtools preset: unknown preset "${name}".`
-          : "devtools preset: which one?",
-        `Try ${catalog.subcommandList(["preset"])}.`,
-      );
-      process.exitCode = 1;
-      return null;
-  }
+/** The exit code becomes the outro: "Done." only for a clean finish. */
+function finish(code: number): string | null {
   process.exitCode = code;
   return code === 0 ? DONE : null;
-};
+}
+
+export const handleRestartStack: CommandHandler = async () =>
+  finish(await restartStack());
+
+export const handleNewMigration: CommandHandler = async (rest) =>
+  finish(await newMigration(rest));
+
+export const handleApplyMigrations: CommandHandler = async () =>
+  finish(await applyMigrations());
+
+export const handlePushConfig: CommandHandler = async (rest) =>
+  finish(await pushConfig(rest));
