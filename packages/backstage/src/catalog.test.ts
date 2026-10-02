@@ -16,6 +16,7 @@ describe("the tree", () => {
       "deploy",
       "env",
       "planner",
+      "involvement",
       "graphics",
       "qr",
       "github",
@@ -33,6 +34,7 @@ describe("the tree", () => {
       .filter((path) => catalog.findCommand(path)!.envFree)
       .map((path) => path.join(" "));
     expect(envFree).toEqual([
+      "involvement import",
       "graphics",
       "qr",
       "github rulesets",
@@ -74,6 +76,7 @@ describe("the tree", () => {
       "list",
       "report",
     ]);
+    expect(subcommandNames(["involvement"])).toEqual(["import"]);
     expect(subcommandNames(["planner"])).toEqual([
       "status",
       "create",
@@ -105,7 +108,7 @@ describe("the tree", () => {
 
 describe("help", () => {
   it("fits the top level on a screen", () => {
-    expect(renderHelp(catalog).split("\n").length).toBeLessThan(40);
+    expect(renderHelp(catalog).split("\n").length).toBeLessThan(42);
   });
 
   it("renders every path, under the name people type", () => {

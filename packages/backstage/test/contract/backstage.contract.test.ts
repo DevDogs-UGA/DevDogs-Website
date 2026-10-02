@@ -332,6 +332,7 @@ describe("backstage contract tests", () => {
       "env audit",
       "planner status",
       "planner create",
+      "involvement import",
       "graphics",
       "qr",
       "github rulesets",

@@ -71,6 +71,8 @@ export const HANDLERS: Record<string, CommandHandler> = {
     (await import("./newsletter/commands.js")).handleNewsletter(rest),
   creds: async (rest) =>
     (await import("./creds/commands.js")).handleCreds(rest),
+  involvement: async (rest) =>
+    (await import("./involvement/commands.js")).handleInvolvement(rest),
 };
 
 /**

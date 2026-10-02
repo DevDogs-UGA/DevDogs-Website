@@ -16,6 +16,7 @@ import { credsCommand } from "./creds/catalog.js";
 import { deployCommand } from "./deploy/catalog.js";
 import { envCommand } from "./env/catalog.js";
 import { githubCommand } from "./github/catalog.js";
+import { involvementCommand } from "./involvement/catalog.js";
 import { graphicsCommand } from "./graphics/catalog.js";
 import { newsletterCommand } from "./newsletter/catalog.js";
 import { plannerCommand } from "./planner/catalog.js";
@@ -31,8 +32,8 @@ export const GROUPS: readonly CommandGroup[] = [
     commands: [envCommand],
   },
   {
-    title: "Database roles",
-    commands: [plannerCommand],
+    title: "Production database",
+    commands: [plannerCommand, involvementCommand],
   },
   {
     title: "Graphics & QR codes (no credentials)",

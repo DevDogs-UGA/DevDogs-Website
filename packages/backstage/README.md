@@ -14,7 +14,8 @@ match. The two flags matter outside a DevDogsUGA checkout, where the workspace's
 `pnpm backstage` is the script).
 
 It **starts without a checkout**. Help, `version`, `completions`, the tools
-below that need no secrets (`graphics`, `qr`, `github`, `newsletter`, `creds`) and
+below that need no secrets (`graphics`, `qr`, `github`, `newsletter`, `creds`),
+`involvement` and
 anything run with `--no-env` never look for one; a command that reads a checkout says
 "run this from inside a DevDogsUGA clone" and exits 1. The DevDogsUGA libraries
 it reads (`@devdogsuga/env`, `@devdogsuga/db`) are optional peers, resolved
@@ -33,6 +34,7 @@ pnpm backstage qr https://devdogsuga.org --format svg,png,webp --logo acm
 pnpm backstage newsletter send 3.0.1 --to a@uga.edu   # asks first; --yes with no terminal
 pnpm backstage creds                             # share a club login with officers, as a Bitwarden Send
 pnpm backstage creds renew                       # extend every Send 30 days
+pnpm backstage involvement import --file OrganizationRoster.csv  # verify members; previews, then asks
 ```
 
 ## Commands
@@ -52,6 +54,7 @@ pnpm backstage creds renew                       # extend every Send 30 days
 | `github rulesets\|settings`                    | Diff (and with `--apply` write) GitHub config, through `gh`.                           |
 | `newsletter render\|draft\|send <issue…>`      | Changelog issues as files, mailbox drafts, or a send.                                  |
 | `creds send\|add\|renew\|list\|report`         | Club logins from Bitwarden as email-verified Sends, and the Linear report.             |
+| `involvement import --file <csv>`              | Verifies the members on the Involvement Network roster, unverifies everyone else.      |
 
 `smoke` and `reconcile` replace DevDogsUGA's `packages/deploy-checks`. The
 per-app data (hosts, public paths, the protected path and its redirect) stays in
@@ -147,6 +150,27 @@ The roster needs production's `DB_URL`: `--db-url`, else `.env.production` in a
 checkout, else Secrets Manager. The Linear key: `--linear-token`, then
 `LINEAR_API_KEY`, then the vault item "DevDogs Linear API key (backstage)", then
 a prompt; it is never saved.
+
+## Member verification: `involvement import`
+
+Replaces the platform's `/console/verification` upload. Export the roster from
+the UGA Involvement Network (Roster → Export → Organization Roster) and pass the
+file as it downloads: the title lines above the header, the `(Hidden)` columns
+and the one-row-per-position layout are all expected. A roster for another
+organization is refused.
+
+The roster is the whole truth: everyone on it is verified, and everyone
+verified who is not on it loses that status. A roster email finds its account
+by the profile's UGA email first, then the sign-in address; with no account,
+one is created (confirmed, no invite email) so the member is verified the first
+time they sign in. Every run previews the counts, who is newly verified, who
+loses verification, and whose preferred name differs from the roster, then
+asks; `--dry-run` stops there, `--yes` answers with no terminal. Preferred
+names are never changed. Rerunning the same export changes nothing.
+
+It writes to production only: `DB_URL`, `API_URL` and `SECRET_KEY` come from
+`.env.production` in a checkout, else Secrets Manager. There is no `--db-url`,
+since a database override would leave account creation pointed at production.
 
 No secret value reaches stdout, stderr, the failure log, Sentry, an error
 message or argv: values go to `bw` as base64 JSON on stdin, every error is
