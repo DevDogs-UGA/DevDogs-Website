@@ -9,25 +9,13 @@
  * name a member goes by, and the preferred name is what the site shows. A
  * difference is listed for an officer to follow up on.
  *
- * A roster email finds its account by the profile's `ugaEmail` first, then by
- * the sign-in address. Officers often sign in with a personal address and
- * have their MyID one recorded as `ugaEmail`; matching only the sign-in
- * address would make them a second, empty account.
+ * A roster email finds its account the way `production/accounts.ts` says:
+ * the profile's `ugaEmail` first, then the sign-in address.
  */
+import { accountFinder, type AccountRow } from "../production/accounts.js";
 import type { InvolvementMember } from "./csv.js";
 
-/** One account, as the snapshot query reads it. */
-export interface AccountRow {
-  userId: string;
-  /** Lowercased sign-in address, when the account has one. */
-  authEmail: string | null;
-  /** Lowercased `profile.ugaEmail`. */
-  ugaEmail: string | null;
-  hasProfile: boolean;
-  preferredName: string | null;
-  involvementFirstName: string | null;
-  involvementLastName: string | null;
-}
+export type { AccountRow };
 
 export interface Match {
   member: InvolvementMember;
@@ -53,19 +41,6 @@ export interface ImportPlan {
   nameDiffers: Match[];
 }
 
-function index(
-  rows: readonly AccountRow[],
-  key: "authEmail" | "ugaEmail",
-): Map<string, AccountRow[]> {
-  const map = new Map<string, AccountRow[]>();
-  for (const row of rows) {
-    const email = row[key];
-    if (!email) continue;
-    map.set(email, [...(map.get(email) ?? []), row]);
-  }
-  return map;
-}
-
 function nonBlank(value: string | null): string | undefined {
   const v = value?.trim();
   if (!v) return undefined;
@@ -76,8 +51,7 @@ export function planImport(
   members: readonly InvolvementMember[],
   accounts: readonly AccountRow[],
 ): ImportPlan {
-  const byUga = index(accounts, "ugaEmail");
-  const byAuth = index(accounts, "authEmail");
+  const find = accountFinder(accounts);
   const plan: ImportPlan = {
     create: [],
     verify: [],
@@ -89,11 +63,7 @@ export function planImport(
   const claimed = new Set<string>();
 
   for (const member of members) {
-    const viaUga = byUga.get(member.email);
-    const account =
-      viaUga?.find((a) => a.authEmail === member.email) ??
-      viaUga?.[0] ??
-      byAuth.get(member.email)?.[0];
+    const account = find(member.email);
     if (!account) {
       plan.create.push(member);
       continue;

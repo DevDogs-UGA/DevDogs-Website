@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseCsv, parseRoster, RosterFormatError } from "./csv.js";
+import { parseRoster, RosterFormatError } from "./csv.js";
 
 /** The real export's shape: a preamble, CRLF, `(Hidden)` columns, one row per position. */
 const EXPORT = [
@@ -13,15 +13,6 @@ const EXPORT = [
   '(Hidden),(Hidden),"","NoFirst","nf00000@uga.edu","(Hidden)","DevDogs","Member"',
   "",
 ].join("\r\n");
-
-describe("parseCsv", () => {
-  it("handles quotes, escaped quotes, embedded commas and newlines", () => {
-    expect(parseCsv('a,"b,c","d ""e""","f\ng"\r\nh')).toEqual([
-      ["a", "b,c", 'd "e"', "f\ng"],
-      ["h"],
-    ]);
-  });
-});
 
 describe("parseRoster", () => {
   it("finds the header past the preamble and merges a person's positions", () => {

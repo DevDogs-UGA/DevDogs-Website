@@ -1,5 +1,5 @@
 /**
- * `involvement import` end to end against fake production: a fixed account
+ * `import involvement` end to end against fake production: a fixed account
  * list, an Auth admin that hands out ids, and an apply step that records what
  * it was given.
  */
@@ -76,9 +76,9 @@ afterEach(() => {
   process.exitCode = undefined;
 });
 
-describe("involvement import", () => {
+describe("import involvement", () => {
   it("previews without writing on --dry-run", async () => {
-    await runInvolvement(["import", "--file", "r.csv", "--dry-run"], deps());
+    await runInvolvement(["--file", "r.csv", "--dry-run"], deps());
     expect(process.exitCode).toBeUndefined();
     expect(stderr).toContain("1 newly verified");
     expect(stderr).toContain("1 without an account");
@@ -89,14 +89,14 @@ describe("involvement import", () => {
   });
 
   it("refuses to write without --yes when nobody can answer", async () => {
-    await runInvolvement(["import", "--file", "r.csv"], deps());
+    await runInvolvement(["--file", "r.csv"], deps());
     expect(process.exitCode).toBe(1);
     expect(stderr).toContain("--yes");
     expect(applied).toBeUndefined();
   });
 
   it("creates the missing accounts, then writes everyone on the roster", async () => {
-    await runInvolvement(["import", "--file", "r.csv", "--yes"], deps());
+    await runInvolvement(["--file", "r.csv", "--yes"], deps());
     expect(process.exitCode).toBeUndefined();
     expect(created).toEqual(["alan@uga.edu"]);
     expect(applied).toEqual([
@@ -117,7 +117,7 @@ describe("involvement import", () => {
 
   it("still imports the rest when an account cannot be created, and exits 1", async () => {
     await runInvolvement(
-      ["import", "--file", "r.csv", "--yes"],
+      ["--file", "r.csv", "--yes"],
       deps({
         createAccount: async () => {
           throw new Error("rate limited");
@@ -131,7 +131,7 @@ describe("involvement import", () => {
 
   it("refuses another organization's roster", async () => {
     await runInvolvement(
-      ["import", "--file", "r.csv", "--yes"],
+      ["--file", "r.csv", "--yes"],
       deps({
         readFile: async () => ROSTER.replaceAll('"DevDogs"', '"Chess Club"'),
       }),
@@ -142,7 +142,7 @@ describe("involvement import", () => {
   });
 
   it("asks for --file when nobody can answer", async () => {
-    await runInvolvement(["import"], deps());
+    await runInvolvement([], deps());
     expect(process.exitCode).toBe(1);
     expect(stderr).toContain("--file");
   });

@@ -1,5 +1,5 @@
 /**
- * `backstage involvement import --file <OrganizationRoster.csv>`: verify the
+ * `backstage import involvement --file <OrganizationRoster.csv>`: verify the
  * members on the UGA Involvement Network roster.
  *
  * Replaces the platform's /console/verification upload. Officers export the
@@ -19,19 +19,25 @@
  * Preferred names are never changed, so the homepage's officer board (which
  * caches them) needs no invalidation.
  */
-import { readFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
-import { confirm, log, text as askText } from "@clack/prompts";
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { isDryRun } from "@devdogsuga/cli-core/dry-run";
-import { isNonInteractive } from "@devdogsuga/cli-core/mode";
+import { errorMessage, UsageError } from "@devdogsuga/cli-core/ui";
+import { requireProductionKey } from "../production/access.js";
 import {
-  errorMessage,
-  explain,
-  explainError,
-  unwrap,
-  UsageError,
-} from "@devdogsuga/cli-core/ui";
+  createAccountFor,
+  createAccounts,
+  readAccounts,
+  type CreateAccount,
+} from "../production/accounts.js";
+import {
+  canPrompt,
+  confirmWrite,
+  plural,
+  readInputFile,
+  reportFailure,
+  say,
+} from "../production/cli.js";
 import { parseRoster, RosterFormatError } from "./csv.js";
 import {
   matches,
@@ -41,20 +47,12 @@ import {
 } from "./plan.js";
 import {
   applyImportFor,
-  createAccountFor,
-  InvolvementError,
-  readAccounts,
-  requireProductionKey,
   type ApplyImport,
-  type CreateAccount,
   type ProfileWrite,
 } from "./store.js";
 
 /** The organization a roster must be for. Compared case-insensitively. */
 export const ORGANIZATION = "DevDogs";
-
-/** How many new accounts are created at once. */
-const CREATE_CONCURRENCY = 4;
 
 /** Seams for tests. Everything defaults to production. */
 export interface InvolvementDeps {
@@ -73,17 +71,9 @@ interface Values {
 }
 
 function parse(argv: readonly string[]): Values {
-  const [sub, ...rest] = argv;
-  if (sub !== "import") {
-    throw new UsageError(
-      sub
-        ? `Unknown involvement command "${sub}". Try import.`
-        : "Name what to do: import.",
-    );
-  }
   try {
     return parseArgs({
-      args: rest,
+      args: [...argv],
       options: {
         file: { type: "string" },
         yes: { type: "boolean" },
@@ -95,37 +85,6 @@ function parse(argv: readonly string[]): Values {
   } catch (err) {
     throw new UsageError(errorMessage(err));
   }
-}
-
-function say(message: string, level: "info" | "success" | "warn" = "info") {
-  if (isNonInteractive()) process.stderr.write(`${message}\n`);
-  else log[level](message);
-}
-
-function plural(n: number, one: string, many = `${one}s`) {
-  return `${n} ${n === 1 ? one : many}`;
-}
-
-async function pickFile(values: Values, interactive: boolean) {
-  if (values.file) return values.file;
-  if (!interactive) {
-    throw new UsageError(
-      "Pass the roster export with --file <OrganizationRoster.csv>.",
-    );
-  }
-  return unwrap(
-    await askText({
-      message: "Path to the Involvement Network roster export",
-      placeholder: "~/Downloads/OrganizationRoster.csv",
-      validate: (v) => (v?.trim() ? undefined : "A path, please."),
-    }),
-  ).trim();
-}
-
-function expandHome(path: string): string {
-  return path.startsWith("~/")
-    ? `${process.env.HOME ?? "~"}${path.slice(1)}`
-    : path;
 }
 
 /** The preview: what changes, by whom. Never lists every kept member. */
@@ -174,53 +133,23 @@ export function describePlan(plan: ImportPlan, members: number): string {
   return lines.join("\n");
 }
 
-async function createAll(
-  plan: ImportPlan,
-  create: CreateAccount,
-): Promise<{
-  writes: ProfileWrite[];
-  failed: { email: string; reason: string }[];
-}> {
-  const writes: ProfileWrite[] = [];
-  const failed: { email: string; reason: string }[] = [];
-  const queue = [...plan.create];
-  const worker = async () => {
-    for (let m = queue.shift(); m; m = queue.shift()) {
-      try {
-        const userId = await create(m.email);
-        writes.push({
-          userId,
-          email: m.email,
-          firstName: m.firstName,
-          lastName: m.lastName,
-        });
-      } catch (err) {
-        failed.push({ email: m.email, reason: errorMessage(err) });
-      }
-    }
-  };
-  await Promise.all(Array.from({ length: CREATE_CONCURRENCY }, () => worker()));
-  return { writes, failed };
-}
-
 export async function runInvolvement(
   argv: readonly string[],
   deps: InvolvementDeps = {},
 ): Promise<void> {
-  const interactive =
-    deps.interactive ?? (!isNonInteractive() && process.stdin.isTTY === true);
+  const interactive = deps.interactive ?? canPrompt();
   try {
     const values = parse(argv);
     const dryRun = values["dry-run"] === true || isDryRun();
 
-    const path = expandHome(await pickFile(values, interactive));
-    let text: string;
-    try {
-      text = await (deps.readFile ?? ((p) => readFile(p, "utf8")))(path);
-    } catch {
-      throw new UsageError(`Could not read ${path}.`);
-    }
-    const roster = parseRoster(text);
+    const roster = parseRoster(
+      await readInputFile(values.file, {
+        interactive,
+        message: "Path to the Involvement Network roster export",
+        placeholder: "OrganizationRoster.csv",
+        read: deps.readFile,
+      }),
+    );
     const wrongOrg = roster.organizations.filter(
       (o) => o.toLowerCase() !== ORGANIZATION.toLowerCase(),
     );
@@ -267,16 +196,11 @@ export async function runInvolvement(
     }
 
     const question = `Import into production: create ${plural(plan.create.length, "account")}, verify ${plan.verify.length}, unverify ${plan.drop.length}?`;
-    if (!values.yes) {
-      if (!interactive) {
-        throw new UsageError(
-          `${question} Pass --yes to answer yes without a terminal.`,
-        );
-      }
-      if (!unwrap(await confirm({ message: question, initialValue: false }))) {
-        say("Nothing written.");
-        return;
-      }
+    if (
+      !(await confirmWrite(question, { yes: values.yes === true, interactive }))
+    ) {
+      say("Nothing written.");
+      return;
     }
 
     let create = deps.createAccount;
@@ -286,9 +210,25 @@ export async function runInvolvement(
         await requireProductionKey("SECRET_KEY"),
       );
     }
-    const { writes: created, failed } = create
-      ? await createAll(plan, create)
-      : { writes: [], failed: [] };
+    const { created: createdIds, failed } = create
+      ? await createAccounts(
+          plan.create.map((m) => m.email),
+          create,
+        )
+      : { created: new Map<string, string>(), failed: [] };
+    const created: ProfileWrite[] = plan.create.flatMap((m) => {
+      const userId = createdIds.get(m.email);
+      return userId
+        ? [
+            {
+              userId,
+              email: m.email,
+              firstName: m.firstName,
+              lastName: m.lastName,
+            },
+          ]
+        : [];
+    });
     if (failed.length > 0) {
       say(
         `Could not create ${plural(failed.length, "account")}; they stay unverified until the next import:\n${failed
@@ -315,16 +255,7 @@ export async function runInvolvement(
     );
     if (failed.length > 0) process.exitCode = 1;
   } catch (err) {
-    process.exitCode = 1;
-    if (
-      err instanceof UsageError ||
-      err instanceof InvolvementError ||
-      err instanceof RosterFormatError
-    ) {
-      explain(err.message, "");
-      return;
-    }
-    explainError("involvement import failed.", err);
+    reportFailure("import involvement", err, [RosterFormatError]);
   }
 }
 

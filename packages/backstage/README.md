@@ -15,7 +15,7 @@ match. The two flags matter outside a DevDogsUGA checkout, where the workspace's
 
 It **starts without a checkout**. Help, `version`, `completions`, the tools
 below that need no secrets (`graphics`, `qr`, `github`, `newsletter`, `creds`),
-`involvement` and
+`import`, `export` and
 anything run with `--no-env` never look for one; a command that reads a checkout says
 "run this from inside a DevDogsUGA clone" and exits 1. The DevDogsUGA libraries
 it reads (`@devdogsuga/env`, `@devdogsuga/db`) are optional peers, resolved
@@ -34,27 +34,31 @@ pnpm backstage qr https://devdogsuga.org --format svg,png,webp --logo acm
 pnpm backstage newsletter send 3.0.1 --to a@uga.edu   # asks first; --yes with no terminal
 pnpm backstage creds                             # share a club login with officers, as a Bitwarden Send
 pnpm backstage creds renew                       # extend every Send 30 days
-pnpm backstage involvement import --file OrganizationRoster.csv  # verify members; previews, then asks
+pnpm backstage import involvement --file OrganizationRoster.csv  # verify members; previews, then asks
+pnpm backstage import attendance --meeting 2026-09-09 --file sign-in.csv
+pnpm backstage export stars --from 2026-08-17   # audited under your gh login
 ```
 
 ## Commands
 
-| Command                                        | What it does                                                                           |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `deploy <app> --tier <t>`                      | Checks `CLOUDFLARE_API_TOKEN`, writes the Worker's secrets file, deploys, removes it.  |
-| `deploy write-env`                             | Composes `.env.<DEPLOY_ENV>` from the GitHub environment.                              |
-| `deploy preflight`                             | Classifies the project: paused (skip) or broken (fail).                                |
-| `deploy plan`, `deploy migrate`                | Dry-run the migrations into the job summary; apply them to `DB_URL`.                   |
-| `deploy smoke --tier <t> [--app]`              | Public routes answer 200, the auth redirect works, this deploy's Sentry release shows. |
-| `deploy reconcile --tier <t>`                  | The platform's config reconcile, after the deploy (`CRON_SECRET`).                     |
-| `env pull\|push\|audit --target <t>`           | One env file per target, synced to Bitwarden and GitHub. `audit` lists orphans.        |
-| `planner status\|create\|reset-password\|drop` | The `migration_planner` role the preflight tier holds.                                 |
-| `graphics [graphic…]`                          | Club images from `@devdogsuga/brand`: `brand/*`, `app/*`, `event/*`.                   |
-| `qr <text>`                                    | QR codes with every option of `/console/qr`.                                           |
-| `github rulesets\|settings`                    | Diff (and with `--apply` write) GitHub config, through `gh`.                           |
-| `newsletter render\|draft\|send <issue…>`      | Changelog issues as files, mailbox drafts, or a send.                                  |
-| `creds send\|add\|renew\|list\|report`         | Club logins from Bitwarden as email-verified Sends, and the Linear report.             |
-| `involvement import --file <csv>`              | Verifies the members on the Involvement Network roster, unverifies everyone else.      |
+| Command                                          | What it does                                                                           |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `deploy <app> --tier <t>`                        | Checks `CLOUDFLARE_API_TOKEN`, writes the Worker's secrets file, deploys, removes it.  |
+| `deploy write-env`                               | Composes `.env.<DEPLOY_ENV>` from the GitHub environment.                              |
+| `deploy preflight`                               | Classifies the project: paused (skip) or broken (fail).                                |
+| `deploy plan`, `deploy migrate`                  | Dry-run the migrations into the job summary; apply them to `DB_URL`.                   |
+| `deploy smoke --tier <t> [--app]`                | Public routes answer 200, the auth redirect works, this deploy's Sentry release shows. |
+| `deploy reconcile --tier <t>`                    | The platform's config reconcile, after the deploy (`CRON_SECRET`).                     |
+| `env pull\|push\|audit --target <t>`             | One env file per target, synced to Bitwarden and GitHub. `audit` lists orphans.        |
+| `planner status\|create\|reset-password\|drop`   | The `migration_planner` role the preflight tier holds.                                 |
+| `graphics [graphic…]`                            | Club images from `@devdogsuga/brand`: `brand/*`, `app/*`, `event/*`.                   |
+| `qr <text>`                                      | QR codes with every option of `/console/qr`.                                           |
+| `github rulesets\|settings`                      | Diff (and with `--apply` write) GitHub config, through `gh`.                           |
+| `newsletter render\|draft\|send <issue…>`        | Changelog issues as files, mailbox drafts, or a send.                                  |
+| `creds send\|add\|renew\|list\|report`           | Club logins from Bitwarden as email-verified Sends, and the Linear report.             |
+| `import involvement --file <csv>`                | Verifies the members on the Involvement Network roster, unverifies everyone else.      |
+| `import attendance --meeting <day> --file <csv>` | Records a meeting's attendance from a sign-in sheet (method `import`).                 |
+| `export stars\|attendance\|reflections`          | Member data as CSV, each export audited under the officer's gh login.                  |
 
 `smoke` and `reconcile` replace DevDogsUGA's `packages/deploy-checks`. The
 per-app data (hosts, public paths, the protected path and its redirect) stays in
@@ -151,7 +155,16 @@ checkout, else Secrets Manager. The Linear key: `--linear-token`, then
 `LINEAR_API_KEY`, then the vault item "DevDogs Linear API key (backstage)", then
 a prompt; it is never saved.
 
-## Member verification: `involvement import`
+## Member data: `import` and `export`
+
+These replace the platform's `/console/verification` upload and
+`/console/exports` downloads. They read and write production only:
+`DB_URL`, `API_URL` and `SECRET_KEY` come from `.env.production` in a checkout,
+else Secrets Manager. There is no `--db-url`, since a database override would
+leave account creation pointed at production. Days (`--meeting 2026-09-09`,
+`--from`, `--to`) are Eastern, and `--to` includes the whole day.
+
+### `import involvement`
 
 Replaces the platform's `/console/verification` upload. Export the roster from
 the UGA Involvement Network (Roster → Export → Organization Roster) and pass the
@@ -168,9 +181,35 @@ loses verification, and whose preferred name differs from the roster, then
 asks; `--dry-run` stops there, `--yes` answers with no terminal. Preferred
 names are never changed. Rerunning the same export changes nothing.
 
-It writes to production only: `DB_URL`, `API_URL` and `SECRET_KEY` come from
-`.env.production` in a checkout, else Secrets Manager. There is no `--db-url`,
-since a database override would leave account creation pointed at production.
+### `import attendance`
+
+Records a meeting's attendance from a sign-in sheet, for members who could not
+check in on the platform. The sheet is a Google or Microsoft Forms response
+export or a hand-made spreadsheet, saved as CSV; one sheet is one meeting,
+named with `--meeting` (its day, slug, config id or id; a day with two meetings
+asks for the slug). The header and columns are found, not assumed: the email
+column is the one holding UGA addresses, the name is "First/Last Name" or a
+column mentioning "name", and `--email-column`/`--name-column` override
+either. A sheet with no header is read as every address in it. Only UGA
+addresses count; anything else is listed and skipped.
+
+Check-ins are written with method `import`, stamped with the meeting's start,
+and count for stars like any other. A member's own check-in is never touched.
+Someone with no account gets one (confirmed, no invite), named from the sheet;
+with no name on the sheet they are listed and skipped. Cancelled and future
+meetings are refused. Rerunning a sheet records nothing new; `--replace`
+makes the sheet the meeting's whole imported set, removing earlier imported
+rows it no longer lists. Every run previews, then asks (`--dry-run`, `--yes`).
+
+### `export stars|attendance|reflections`
+
+The platform's three CSVs, columns unchanged: `stars` (one row per earned
+star), `attendance` (one row per check-in; `--meeting` for one night) and
+`reflections` (each member's current text). Each export writes a
+`platform.exportAudit` row before reading anything, attributed to the
+platform account linked to the GitHub login `gh` is signed in as, and refuses
+to run when there is none. The file goes to `./<kind>….csv` (owner-readable
+only, never over an existing file without `--yes`) or stdout with `--out -`.
 
 No secret value reaches stdout, stderr, the failure log, Sentry, an error
 message or argv: values go to `bw` as base64 JSON on stdin, every error is

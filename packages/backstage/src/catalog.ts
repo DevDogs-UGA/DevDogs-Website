@@ -15,9 +15,10 @@ import { completionsCommand } from "./completions/catalog.js";
 import { credsCommand } from "./creds/catalog.js";
 import { deployCommand } from "./deploy/catalog.js";
 import { envCommand } from "./env/catalog.js";
+import { exportCommand } from "./export/catalog.js";
 import { githubCommand } from "./github/catalog.js";
-import { involvementCommand } from "./involvement/catalog.js";
 import { graphicsCommand } from "./graphics/catalog.js";
+import { importCommand } from "./import/catalog.js";
 import { newsletterCommand } from "./newsletter/catalog.js";
 import { plannerCommand } from "./planner/catalog.js";
 import { qrCommand } from "./qr/catalog.js";
@@ -33,7 +34,7 @@ export const GROUPS: readonly CommandGroup[] = [
   },
   {
     title: "Production database",
-    commands: [plannerCommand, involvementCommand],
+    commands: [plannerCommand, importCommand, exportCommand],
   },
   {
     title: "Graphics & QR codes (no credentials)",

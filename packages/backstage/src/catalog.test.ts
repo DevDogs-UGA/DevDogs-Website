@@ -16,7 +16,8 @@ describe("the tree", () => {
       "deploy",
       "env",
       "planner",
-      "involvement",
+      "import",
+      "export",
       "graphics",
       "qr",
       "github",
@@ -34,7 +35,11 @@ describe("the tree", () => {
       .filter((path) => catalog.findCommand(path)!.envFree)
       .map((path) => path.join(" "));
     expect(envFree).toEqual([
-      "involvement import",
+      "import involvement",
+      "import attendance",
+      "export stars",
+      "export attendance",
+      "export reflections",
       "graphics",
       "qr",
       "github rulesets",
@@ -76,7 +81,12 @@ describe("the tree", () => {
       "list",
       "report",
     ]);
-    expect(subcommandNames(["involvement"])).toEqual(["import"]);
+    expect(subcommandNames(["import"])).toEqual(["involvement", "attendance"]);
+    expect(subcommandNames(["export"])).toEqual([
+      "stars",
+      "attendance",
+      "reflections",
+    ]);
     expect(subcommandNames(["planner"])).toEqual([
       "status",
       "create",
@@ -205,6 +215,16 @@ describe("prompts", () => {
       "--no-report",
       "--password-stdin",
       "--document",
+      // `export` and `import attendance`: filters and paths a person types
+      // once, not choices a menu could offer. `import attendance` asks for
+      // the meeting itself when it is missing.
+      "--from",
+      "--to",
+      "--meeting",
+      "--out",
+      "--email-column",
+      "--name-column",
+      "--replace",
     ]);
     const unasked = new Set<string>();
     for (const path of allPaths()) {
