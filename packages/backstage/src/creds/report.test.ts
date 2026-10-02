@@ -48,13 +48,14 @@ describe("the Shared Accounts document", () => {
     expect(content).toContain("Manual edits are overwritten");
   });
 
-  it("has a row per account, with status, expiry and link", () => {
+  it("has a row per shared account, with status, expiry and link", () => {
     expect(content).toContain(
       "| Instagram | instagram-login | Ada <a@uga.edu> | Sloan | Expires Soon | 2026-10-09 | [Open](https://send.bitwarden.com/#a/b) |",
     );
-    expect(content).toContain(
-      "| Linktree | linktree-login | — | — | No Send | — | — |",
-    );
+  });
+
+  it("leaves out what has never been shared", () => {
+    expect(content).not.toContain("Linktree");
   });
 
   it("never holds a password", () => {

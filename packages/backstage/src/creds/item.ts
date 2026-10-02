@@ -1,10 +1,10 @@
 /**
- * A shared account as `creds` sees it: a Bitwarden item in the Shared Accounts
- * collection, plus the custom fields that record who has it.
+ * A shared account as `creds` sees it: a login or secure note in the DevDogs
+ * Bitwarden organization, plus the custom fields that record who has it.
  *
  * Those fields are the only access record. The Send, the Linear report and
  * every "who has Canva?" answer are generated from them, so they are plain
- * text fields anyone in the collection can read and correct in Bitwarden
+ * text fields anyone with the item can read and correct in Bitwarden
  * itself:
  *
  *   Recipients    comma-separated UGA emails, the Send's `--emails` list

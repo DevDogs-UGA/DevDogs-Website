@@ -1,6 +1,6 @@
 /**
- * The Shared Accounts collection and the Sends made from it, through the
- * bundled `bw` on the officer's personal session (`bws/vault.ts`).
+ * The DevDogs Bitwarden organization's items and the Sends made from them,
+ * through the bundled `bw` on the officer's personal session (`bws/vault.ts`).
  *
  * Sends belong to the account that creates them, not to the organization, so
  * this always runs as a person and never on CI.
@@ -8,26 +8,35 @@
  * ## Secret handling
  *
  * * Every value travels to `bw` on **stdin**, base64 JSON as `bw create`,
- *   `bw edit` and `bw send create|edit` document. argv carries only ids,
- *   the collection id and the session key `bwArgs` already passes.
+ *   `bw edit` and `bw send create|edit` document. argv carries only ids and
+ *   the session key `bwArgs` already passes.
  * * `bw`'s stdout is parsed and never printed: an item or a Send read back
  *   holds the password.
  * * `bw`'s stderr is only shown through `CredsError`, which scrubs every value
  *   registered so far.
  *
- * ## The collection fence
+ * ## The organization fence
  *
- * `creds` reads and writes items in ONE collection, found by name. An item
- * that is not in it (a personal login, a production secret) is never listed,
- * never edited and never sent; `updateItem` re-checks before every write.
+ * `creds` reads and writes the logins and secure notes of ONE organization,
+ * found by name. Anything else the account can see (a personal login, another
+ * organization's item) is never listed, never edited and never sent;
+ * `updateItem` re-checks before every write. Production secrets are not
+ * vault items at all: they live in Secrets Manager, which `bw` cannot read.
  */
 import { spawn } from "node:child_process";
 import { bwCommand } from "../bws/bw.js";
 import { bwArgs, openVault } from "../bws/vault.js";
-import { FIELD, parseItem, type BwItem, type SharedItem } from "./item.js";
+import {
+  FIELD,
+  ITEM_TYPE,
+  parseItem,
+  type BwItem,
+  type SharedItem,
+} from "./item.js";
 import { CredsError, registerSecret } from "./secrets.js";
 
-export const COLLECTION_NAME = "Shared Accounts";
+/** Matched case-insensitively against the organizations the account belongs to. */
+export const ORGANIZATION_NAME = "DevDogs";
 
 /** Days until a new or renewed Send is deleted. Bitwarden allows 31. */
 export const SEND_DAYS = 30;
@@ -40,6 +49,11 @@ export interface BwResult {
 
 /** Runs `bw <args>` with `stdin` piped in. Session and `--nointeraction` are the runner's job. */
 export type BwRunner = (args: string[], stdin?: string) => Promise<BwResult>;
+
+export interface Organization {
+  id: string;
+  name: string;
+}
 
 export interface Collection {
   id: string;
@@ -91,7 +105,7 @@ export function setBwRunner(runner: BwRunner | undefined): void {
   runnerOverride = runner;
 }
 
-/** Opens the vault (asking first) and the Shared Accounts collection in it. */
+/** Opens the vault (asking first) and finds the DevDogs organization in it. */
 export async function connectSharedVault(): Promise<SharedVault> {
   let runner = runnerOverride;
   if (!runner) {
@@ -106,12 +120,12 @@ export async function connectSharedVault(): Promise<SharedVault> {
   }
   const shared = new SharedVault(runner);
   await shared.sync();
-  await shared.collection();
+  await shared.organization();
   return shared;
 }
 
 export class SharedVault {
-  private found: Collection | undefined;
+  private found: Organization | undefined;
 
   constructor(private readonly run: BwRunner) {}
 
@@ -147,48 +161,66 @@ export class SharedVault {
     return status.userEmail ?? "unknown";
   }
 
-  /** The one collection named {@link COLLECTION_NAME} this account can see. */
-  async collection(): Promise<Collection> {
+  /** The one organization named like {@link ORGANIZATION_NAME} this account belongs to. */
+  async organization(): Promise<Organization> {
     if (this.found) return this.found;
-    const all = await this.json<Collection[]>(["list", "collections"]);
-    const matches = all.filter((c) => c.name === COLLECTION_NAME);
+    const all = await this.json<Organization[]>(["list", "organizations"]);
+    const matches = all.filter((o) =>
+      o.name.toLowerCase().includes(ORGANIZATION_NAME.toLowerCase()),
+    );
     if (matches.length !== 1) {
       throw new CredsError(
         matches.length === 0
-          ? `No "${COLLECTION_NAME}" collection is visible to your Bitwarden account. ` +
-              "Ask a DevDogs organization admin to create it or give you access."
-          : `${matches.length} collections are called "${COLLECTION_NAME}"; ` +
-              "rename the extras so `creds` cannot pick the wrong one.",
+          ? `Your Bitwarden account is not in the ${ORGANIZATION_NAME} organization. ` +
+              "Ask an organization admin to invite you."
+          : `Your Bitwarden account is in ${matches.length} organizations named like ` +
+              `"${ORGANIZATION_NAME}" (${matches.map((o) => o.name).join(", ")}); ` +
+              "creds cannot tell which one to use.",
       );
     }
     this.found = matches[0]!;
     return this.found;
   }
 
-  private inCollection(raw: BwItem, collection: Collection): boolean {
+  private shareable(raw: BwItem, org: Organization): boolean {
     return (
-      raw.organizationId === collection.organizationId &&
-      (raw.collectionIds ?? []).includes(collection.id)
+      raw.organizationId === org.id &&
+      (raw.type === ITEM_TYPE.login || raw.type === ITEM_TYPE.secureNote)
     );
   }
 
-  /** Every item in the collection, by name. */
+  /** Every login and secure note in the organization, by name. */
   async listItems(): Promise<SharedItem[]> {
-    const collection = await this.collection();
+    const org = await this.organization();
     const raw = await this.json<BwItem[]>([
       "list",
       "items",
-      "--collectionid",
-      collection.id,
+      "--organizationid",
+      org.id,
     ]);
     return raw
-      .filter((item) => this.inCollection(item, collection))
+      .filter((item) => this.shareable(item, org))
       .map(parseItem)
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  /** A new login, owned by the organization and placed in the collection. */
+  /** The organization's collections this account can see, by name. */
+  async collections(): Promise<Collection[]> {
+    const org = await this.organization();
+    const all = await this.json<Collection[]>([
+      "list",
+      "collections",
+      "--organizationid",
+      org.id,
+    ]);
+    return all
+      .filter((c) => c.organizationId === org.id)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  /** A new login, owned by the organization and placed in `collection`. */
   async createLogin(input: {
+    collection: Collection;
     name: string;
     url: string | undefined;
     username: string | undefined;
@@ -197,10 +229,15 @@ export class SharedVault {
     owner: string | undefined;
   }): Promise<SharedItem> {
     registerSecret(input.password);
-    const collection = await this.collection();
+    const org = await this.organization();
+    if (input.collection.organizationId !== org.id) {
+      throw new CredsError(
+        `The "${input.collection.name}" collection is not in the ${org.name} organization.`,
+      );
+    }
     const item = {
-      organizationId: collection.organizationId,
-      collectionIds: [collection.id],
+      organizationId: org.id,
+      collectionIds: [input.collection.id],
       folderId: null,
       type: 1,
       name: input.name,
@@ -221,12 +258,12 @@ export class SharedVault {
     return parseItem(created);
   }
 
-  /** Saves `raw`, which must still be an item of the collection. */
+  /** Saves `raw`, which must still be a login or secure note of the organization. */
   async updateItem(raw: BwItem): Promise<SharedItem> {
-    const collection = await this.collection();
-    if (!this.inCollection(raw, collection)) {
+    const org = await this.organization();
+    if (!this.shareable(raw, org)) {
       throw new CredsError(
-        `"${raw.name}" is not in the ${COLLECTION_NAME} collection; creds will not change it.`,
+        `"${raw.name}" is not a login or secure note of the ${org.name} organization; creds will not change it.`,
       );
     }
     const saved = await this.json<BwItem>(
@@ -315,7 +352,7 @@ function sendName(item: SharedItem): string {
 
 /** Private to the sender: how to find the item this Send came from. */
 function sendNotes(item: SharedItem): string {
-  return `Made by backstage creds from the ${COLLECTION_NAME} item "${item.name}" (${item.id}).`;
+  return `Made by backstage creds from the ${ORGANIZATION_NAME} item "${item.name}" (${item.id}).`;
 }
 
 export function deletionDate(now: Date): string {

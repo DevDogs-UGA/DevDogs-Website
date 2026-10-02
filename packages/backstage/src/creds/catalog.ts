@@ -17,7 +17,7 @@ import {
 const ITEM: CommandOption = {
   flag: "--item",
   value: "<name>",
-  summary: "A Shared Accounts item, by name or id. Repeat for several.",
+  summary: "A DevDogs organization item, by name or id. Repeat for several.",
 };
 
 const TO: CommandOption = {
@@ -79,7 +79,7 @@ export const credsCommand: CommandNode = {
     {
       name: "add",
       envFree: true,
-      summary: "Save a new shared login to the collection, then send it.",
+      summary: "Save a new login to the DevDogs organization, then send it.",
       options: [
         {
           flag: "--name",
@@ -92,6 +92,11 @@ export const credsCommand: CommandNode = {
           flag: "--owner",
           value: "<name>",
           summary: "The officer responsible for the account.",
+        },
+        {
+          flag: "--collection",
+          value: "<name>",
+          summary: "Where to save it, when you can see more than one.",
         },
         {
           flag: "--password-stdin",

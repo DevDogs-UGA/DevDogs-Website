@@ -192,6 +192,7 @@ describe("prompts", () => {
       "--url",
       "--username",
       "--owner",
+      "--collection",
       // Deliberate overrides and scripting: sharing outside the officer team,
       // a production connection, a Linear key (a credential), skipping the
       // report, a password on stdin, and a test document.

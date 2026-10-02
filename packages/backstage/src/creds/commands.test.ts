@@ -1,7 +1,7 @@
 /**
  * `creds` end to end against a fake `bw`, with a sentinel password.
  *
- * The fake keeps the collection and the Sends in memory and answers the same
+ * The fake keeps the organization's items and the Sends in memory and answers the same
  * argv and base64-on-stdin shapes the real CLI does. Every run captures
  * stdout, stderr, the failure log `cli-core` would write, what went to Sentry,
  * every argv handed to `bw`, and what was sent to Linear, and the sentinel
@@ -53,7 +53,26 @@ class FakeBw {
         { name: "Owner", value: "Sloan", type: 0 },
       ],
     });
-    // Outside the collection: must never be listed or touched.
+    // In the organization but neither a login nor a note: never listed.
+    this.items.set("card", {
+      id: "card",
+      organizationId: "org",
+      collectionIds: ["col"],
+      name: "Club card",
+      notes: null,
+      type: 3,
+    });
+    // Another organization's login: never listed, never touched.
+    this.items.set("elsewhere", {
+      id: "elsewhere",
+      organizationId: "other-org",
+      collectionIds: ["other-col"],
+      name: "Job login",
+      notes: null,
+      type: 1,
+      login: { username: "me", password: "not-shared", totp: null },
+    });
+    // Personal: must never be listed or touched.
     this.items.set("personal", {
       id: "personal",
       organizationId: null,
@@ -91,15 +110,22 @@ class FakeBw {
         return { code: 0, stdout: "Syncing complete.", stderr: "" };
       case "status":
         return ok({ userEmail: "officer@uga.edu", status: "unlocked" });
-      case "list collections":
+      case "list organizations":
         return ok([
-          { id: "col", organizationId: "org", name: "Shared Accounts" },
+          { id: "org", name: "DevDogs UGA" },
+          { id: "other-org", name: "Some Job" },
         ]);
+      case "list collections":
+        return ok(
+          [
+            { id: "col", organizationId: "org", name: "Social" },
+            { id: "col-2", organizationId: "org", name: "Design" },
+            { id: "other-col", organizationId: "other-org", name: "Work" },
+          ].filter((c) => c.organizationId === args[3]),
+        );
       case "list items":
         return ok(
-          [...this.items.values()].filter((i) =>
-            i.collectionIds?.includes(args[3]!),
-          ),
+          [...this.items.values()].filter((i) => i.organizationId === args[3]),
         );
       case "create item": {
         const item = {
@@ -344,15 +370,19 @@ describe("creds send", () => {
     expect(everywhere()).not.toContain(SENTINEL);
   });
 
-  it("never touches an item outside the collection", async () => {
-    await runCreds(["send", "--item", "My bank", "--yes"], deps());
-    expect(process.exitCode).toBe(1);
-    expect(err).toContain('No shared account called "My bank"');
+  it("never touches a personal item, another organization's, or a card", async () => {
+    for (const name of ["My bank", "Job login", "Club card"]) {
+      process.exitCode = undefined;
+      err = "";
+      await runCreds(["send", "--item", name, "--yes"], deps());
+      expect(process.exitCode).toBe(1);
+      expect(err).toContain(`No shared account called "${name}"`);
+    }
   });
 });
 
 describe("creds add", () => {
-  it("saves an org-owned login into the collection, password from stdin, then sends it", async () => {
+  it("saves an org-owned login into the named collection, password from stdin, then sends it", async () => {
     await runCreds(
       [
         "add",
@@ -364,6 +394,8 @@ describe("creds add", () => {
         "devdogsuga",
         "--owner",
         "Sloan",
+        "--collection",
+        "social",
         "--password-stdin",
         "--role",
         "devops",
@@ -378,6 +410,28 @@ describe("creds add", () => {
     expect(created.login?.password).toBe(SENTINEL);
     expect([...bw.sends.values()][0]!.emails).toEqual(["sf12345@uga.edu"]);
     expect(everywhere()).not.toContain(SENTINEL);
+  });
+});
+
+describe("creds add without --collection", () => {
+  it("names the collections to choose from when there is no terminal", async () => {
+    await runCreds(
+      [
+        "add",
+        "--name",
+        "Figma",
+        "--password-stdin",
+        "--role",
+        "devops",
+        "--yes",
+      ],
+      deps(),
+    );
+    expect(process.exitCode).toBe(1);
+    expect(err).toContain(
+      "Name the collection with --collection: Design, Social.",
+    );
+    expect([...bw.items.values()].some((i) => i.name === "Figma")).toBe(false);
   });
 });
 

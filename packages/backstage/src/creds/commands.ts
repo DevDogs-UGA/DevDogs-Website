@@ -3,7 +3,7 @@
  * shared as Bitwarden Sends that only the officers they name can open.
  *
  *   send    pick shared accounts and officers; create or update one Send each
- *   add     save a new login into the Shared Accounts collection, then send it
+ *   add     save a new login to the DevDogs organization, then send it
  *   renew   push every Send's deletion 30 days out and re-sync its recipients
  *   list    what is shared with whom, until when
  *   report  regenerate the Shared Accounts Linear document
@@ -12,8 +12,8 @@
  *
  * ## Where things live
  *
- * The values live only in the DevDogs Bitwarden organization's Shared
- * Accounts collection. Each item's custom fields record its recipients and its
+ * The values live only in the DevDogs Bitwarden organization: any login or
+ * secure note in it can be shared. Each item's custom fields record its recipients and its
  * Send (`item.ts`); the Linear document is generated from them (`report.ts`);
  * the roster of who may receive one is read live from production
  * (`roster.ts`).
@@ -41,6 +41,7 @@ import {
   multiselect,
   note,
   password as askPassword,
+  select,
   text as askText,
 } from "@clack/prompts";
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
@@ -54,6 +55,7 @@ import {
 } from "@devdogsuga/cli-core/ui";
 import {
   connectSharedVault,
+  type Collection,
   type SendJson,
   type SharedVault,
 } from "./bitwarden.js";
@@ -116,6 +118,7 @@ interface Values {
   url?: string;
   username?: string;
   owner?: string;
+  collection?: string;
   "password-stdin"?: boolean;
   document?: string;
 }
@@ -146,6 +149,7 @@ function parse(argv: readonly string[]): { sub: Subcommand; values: Values } {
         url: { type: "string" },
         username: { type: "string" },
         owner: { type: "string" },
+        collection: { type: "string" },
         "password-stdin": { type: "boolean" },
         document: { type: "string" },
         "dry-run": { type: "boolean" },
@@ -209,7 +213,7 @@ async function pickItems(
   if (typed && typed.length > 0) return typed.map((t) => findItem(items, t));
   if (items.length === 0) {
     throw new UsageError(
-      "The Shared Accounts collection is empty. Add one with `backstage creds add`.",
+      "The DevDogs organization has no logins you can see. Add one with `backstage creds add`.",
     );
   }
   if (!interactive()) {
@@ -578,12 +582,51 @@ async function ask(
   return value?.trim() || undefined;
 }
 
+/** `--collection`, the only one there is, or a choice. Every organization item needs one. */
+async function pickCollection(
+  vault: SharedVault,
+  typed: string | undefined,
+): Promise<Collection> {
+  const all = await vault.collections();
+  if (typed !== undefined) {
+    const needle = typed.trim().toLowerCase();
+    const match = all.find((c) => c.name.toLowerCase() === needle);
+    if (!match) {
+      throw new UsageError(
+        `No collection called "${typed}" that you can see. There are: ${
+          all.map((c) => c.name).join(", ") || "none"
+        }.`,
+      );
+    }
+    return match;
+  }
+  if (all.length === 0) {
+    throw new UsageError(
+      "You cannot see any collection in the DevDogs organization to save to. " +
+        "Ask an organization admin for access to one.",
+    );
+  }
+  if (all.length === 1) return all[0]!;
+  if (!interactive()) {
+    throw new UsageError(
+      `Name the collection with --collection: ${all.map((c) => c.name).join(", ")}.`,
+    );
+  }
+  const id = unwrap(
+    await select({
+      message: "Which collection?",
+      options: all.map((c) => ({ value: c.id, label: c.name })),
+    }),
+  );
+  return all.find((c) => c.id === id)!;
+}
+
 async function runAdd(vault: SharedVault, values: Values, deps: CredsDeps) {
   const existing = await vault.listItems();
   const name = (await ask(values.name, "Name? (e.g. Instagram)", true))!;
   if (existing.some((i) => i.name.toLowerCase() === name.toLowerCase())) {
     throw new UsageError(
-      `"${name}" is already in the collection. Use \`backstage creds send --item "${name}"\`.`,
+      `"${name}" is already in the organization. Use \`backstage creds send --item "${name}"\`.`,
     );
   }
   const url = await ask(values.url, "Login page URL? (optional)", false);
@@ -607,7 +650,9 @@ async function runAdd(vault: SharedVault, values: Values, deps: CredsDeps) {
     false,
   );
 
+  const collection = await pickCollection(vault, values.collection);
   const item = await vault.createLogin({
+    collection,
     name,
     url,
     username,
@@ -615,7 +660,7 @@ async function runAdd(vault: SharedVault, values: Values, deps: CredsDeps) {
     notes,
     owner,
   });
-  say(`Saved ${item.name} to the Shared Accounts collection.`, "success");
+  say(`Saved ${item.name} to the ${collection.name} collection.`, "success");
   await sendItems(vault, [item], values, deps);
 }
 

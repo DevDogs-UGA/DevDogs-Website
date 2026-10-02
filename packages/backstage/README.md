@@ -112,8 +112,10 @@ entry for them (`envFree` in the command tree).
 ## Shared logins: `creds`
 
 The club's shared logins (Instagram, Canva, ArchPass, Linktree, later project
-API keys) live only in the **Shared Accounts** collection of the DevDogs
-Bitwarden organization. `creds` hands them to officers as Bitwarden Sends:
+API keys) live in the DevDogs Bitwarden organization, in whatever collection
+suits them. `creds` hands any login or secure note there to officers as a
+Bitwarden Send. Personal items, other organizations' items and production
+secrets (which are in Secrets Manager, not the vault) are out of its reach.
 
 - **`send`** picks items and recipients (officers by name or by role, read live
   from production: everyone holding a role other than `Member`, by UGA MyID
@@ -122,16 +124,18 @@ Bitwarden organization. `creds` hands them to officers as Bitwarden Sends:
   recipients and deleted 30 days out. Removing an address revokes it. Addresses
   off the roster need `--allow-email`. Non-interactive: `--item`, `--to`,
   `--role`, `--yes`.
-- **`add`** saves a new login into the collection (org-owned), then sends it.
-  The password is typed at a hidden prompt, or read with `--password-stdin`;
-  never argv.
+- **`add`** saves a new login to the organization, then sends it. It goes in
+  the one collection you can see, or the one you pick (`--collection` with no
+  terminal). The password is typed at a hidden prompt, or read with
+  `--password-stdin`; never argv.
 - **`renew`** pushes each Send's deletion 30 days out in place (the link stays)
   and re-syncs its recipients and body from the item. It asks first for any Send
   with more than 7 days left.
 - **`list`** prints items, recipients and expiry (`--json` for scripts).
 - **`report`** regenerates the **Shared Accounts** Linear document (Platform &
-  DevOps initiative), which `send`, `add` and `renew` also do. It is generated
-  whole; edits there are overwritten.
+  DevOps initiative), which `send`, `add` and `renew` also do. It lists only
+  items that have been shared, and is generated whole; edits there are
+  overwritten.
 
 Each item's custom fields are the only access record: `Recipients`, `Owner`,
 `Send ID`, `Send link`, `Send expires`, `Send account`. Sends belong to the
