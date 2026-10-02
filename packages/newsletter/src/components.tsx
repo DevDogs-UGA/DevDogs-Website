@@ -812,7 +812,7 @@ export function ChangelogEmail({
               upcoming
             </SectionHeading>
             {issue.upcoming.map((meeting) => (
-              <EventRow key={meeting.id} meeting={meeting} ctx={ctx} />
+              <EventRow key={meeting.slug} meeting={meeting} ctx={ctx} />
             ))}
             <div style={{ padding: "2px 0 4px", textAlign: "center" }}>
               <a

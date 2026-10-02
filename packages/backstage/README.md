@@ -187,7 +187,7 @@ names are never changed. Rerunning the same export changes nothing.
 Records a meeting's attendance from a sign-in sheet, for members who could not
 check in on the platform. The sheet is a Google or Microsoft Forms response
 export or a hand-made spreadsheet, saved as CSV; one sheet is one meeting,
-named with `--meeting` (its day, slug, config id or id; a day with two meetings
+named with `--meeting` (its day, slug or id; a day with two meetings
 asks for the slug). The header and columns are found, not assumed: the email
 column is the one holding UGA addresses, the name is "First/Last Name" or a
 column mentioning "name", and `--email-column`/`--name-column` override

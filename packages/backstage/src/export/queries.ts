@@ -106,7 +106,7 @@ const RESPONSES: ExportSpec = {
   summary: "One row per survey answer; --meeting for one meeting's.",
   columns: [
     ...MEMBER_COLUMNS,
-    "meeting_config_id",
+    "meeting_slug",
     "meeting_title",
     "question_id",
     "question_scope",
@@ -118,7 +118,7 @@ const RESPONSES: ExportSpec = {
   sql: `
 with ${PICKED_ANSWERS}
 select ${MEMBER('pa."userId"')},
-  m."configId" as "meeting_config_id",
+  m."slug" as "meeting_slug",
   case when m.id is not null
     then coalesce(m."nameOverride", m."kind", 'Meeting') end as "meeting_title",
   q.id as "question_id",
@@ -190,7 +190,7 @@ order by ms."startsAt", ms."userId", ms."activityType", ms."activityId"`,
     summary: "One row per check-in: who, which meeting, when, and how.",
     columns: [
       ...MEMBER_COLUMNS,
-      "meeting_config_id",
+      "meeting_slug",
       "meeting_title",
       "meeting_starts_at",
       "checked_in_at",
@@ -199,7 +199,7 @@ order by ms."startsAt", ms."userId", ms."activityType", ms."activityId"`,
     ],
     sql: `
 select ${MEMBER('a."userId"')},
-  m."configId" as "meeting_config_id",
+  m."slug" as "meeting_slug",
   coalesce(m."nameOverride", m."kind", 'Meeting') as "meeting_title",
   m."startsAt" as "meeting_starts_at",
   a."recordedAt" as "checked_in_at",

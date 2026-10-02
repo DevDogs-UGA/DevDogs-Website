@@ -4,7 +4,6 @@ import { validateClubConfig } from "./validator";
 
 function workshop(overrides: Partial<Workshop> = {}): Workshop {
   return {
-    id: "supabase",
     title: "Supabase",
     description: null,
     project: null,
@@ -14,9 +13,7 @@ function workshop(overrides: Partial<Workshop> = {}): Workshop {
 
 function meeting(overrides: Partial<Meeting> = {}): Meeting {
   return {
-    id: "cold-start",
-    // Unique per id by default, so a test about ids is not also about slugs.
-    slug: `2026-09-14-${(overrides.id ?? "cold-start").toLowerCase()}`,
+    slug: "2026-09-14",
     title: "Cold Start",
     summary: "The first meeting of the year.",
     kind: null,
@@ -38,54 +35,35 @@ function config(meetings: Meeting[]): ClubConfig {
   return { meetings };
 }
 
-describe("id uniqueness", () => {
-  it("allows distinct ids across meetings and workshops", () => {
+describe("workshop titles", () => {
+  it("allows one title in two meetings", () => {
     const result = validateClubConfig(
       config([
-        meeting({ id: "a", agenda: [workshop({ id: "a-1" })] }),
-        meeting({ id: "b", agenda: [workshop({ id: "b-1" })] }),
+        meeting({ slug: "2026-09-14-a", agenda: [workshop()] }),
+        meeting({ slug: "2026-09-14-b", agenda: [workshop()] }),
       ]),
     );
     expect(result).toEqual([]);
   });
 
-  it("refuses two meetings sharing an id", () => {
+  it("refuses one title twice in a meeting, whatever its case", () => {
     const result = validateClubConfig(
       config([
-        meeting({ id: "dup", slug: "2026-09-14-one" }),
-        meeting({ id: "dup", slug: "2026-09-14-two" }),
+        meeting({
+          agenda: [workshop(), workshop({ title: "supabase" })],
+        }),
       ]),
     );
-    expect(result.map((i) => i.code)).toEqual(["duplicate_id"]);
-  });
-
-  it("refuses a workshop id colliding with a meeting id", () => {
-    // Ambiguous, not merely confusing: the reconcile looks up a row by
-    // configId with no table qualifier.
-    const result = validateClubConfig(
-      config([meeting({ id: "shared", agenda: [workshop({ id: "shared" })] })]),
-    );
-    expect(result.map((i) => i.code)).toEqual(["duplicate_id"]);
-  });
-
-  it("refuses a workshop id colliding across two different meetings", () => {
-    const result = validateClubConfig(
-      config([
-        meeting({ id: "a", agenda: [workshop({ id: "dup" })] }),
-        meeting({ id: "b", agenda: [workshop({ id: "dup" })] }),
-      ]),
-    );
-    expect(result.map((i) => i.code)).toEqual(["duplicate_id"]);
+    expect(result.map((i) => [i.code, i.id])).toEqual([
+      ["duplicate_workshop_title", "2026-09-14 › supabase"],
+    ]);
   });
 });
 
 describe("slugs", () => {
   it("refuses two meetings sharing a slug", () => {
     const result = validateClubConfig(
-      config([
-        meeting({ id: "a", slug: "2026-09-14" }),
-        meeting({ id: "b", slug: "2026-09-14" }),
-      ]),
+      config([meeting({ title: "A" }), meeting({ title: "B" })]),
     );
     expect(result.map((i) => i.code)).toEqual(["duplicate_slug"]);
   });

@@ -41,7 +41,7 @@ const active = computed(() => {
   <ol v-if="shown.length > 0" class="dd-upcoming-stack">
     <li
       v-for="(meeting, i) in shown"
-      :key="meeting.id"
+      :key="meeting.slug"
       :class="i === active ? 'dd-upcoming-active' : 'dd-upcoming-recessed'"
     >
       <NextMeetingStrip

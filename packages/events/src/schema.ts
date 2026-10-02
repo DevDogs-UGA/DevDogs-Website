@@ -14,8 +14,9 @@ import { z } from "zod";
  * Mirrors the columns `meetings` and `workshops` actually read today. Left
  * out on purpose: everything that exists only for a synced wire format --
  * a foreign record id, sync-status bookkeeping, attendance counts. Config has
- * no such plumbing: identity is the authored `id` itself, and there is
- * nothing to write status back onto -- a bad file simply fails CI.
+ * no such plumbing: a meeting's identity is its authored `slug`, a workshop's
+ * is its title within its meeting, and there is nothing to write status back
+ * onto -- a bad file simply fails CI.
  */
 
 // ── Shared constants ─────────────────────────────────────────────────────────
@@ -90,37 +91,19 @@ export const MEETING_BUILDING_CHOICES = [
 ] as const;
 
 /**
- * The id pattern every meeting and workshop must match: a slug the
- * validator's uniqueness check and a URL can both trust.
- *
- * Permissive by design, because two very different shapes of id have to fit
- * it. A migrated row keeps its old Airtable record id verbatim ("recXXX...")
- * so the reconcile can match the existing database row created during that
- * migration; a new item gets a human slug ("cold-start-2026") instead. Both
- * are letters, digits and dashes with no leading or trailing dash, which is
- * also exactly what makes an id safe to put in a URL unescaped.
- */
-export const ID_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/;
-
-/**
  * A meeting's slug: its Eastern date, plus a lowercase descriptor when it
  * shares the date with another meeting ("2026-10-05-judging").
  *
- * This is the meeting's address on the platform (`/events/<slug>`) and on
- * every poster. The platform takes it from here verbatim, so it is authored,
- * reviewed and printed in one place rather than derived in two. Changing one
- * changes a URL people may already have. The leading date also keeps a
+ * This is the meeting's identity and its address on the platform
+ * (`/events/<slug>`) and on every poster. The platform matches its rows on
+ * it, so changing one makes a new meeting: the old one is archived with its
+ * attendance, and its URL stops resolving. The leading date also keeps a
  * slug clear of the static routes beside it (`/events/directions`).
  */
 export const MEETING_SLUG_PATTERN =
   /^(\d{4}-\d{2}-\d{2})(?:-[a-z0-9]+(?:-[a-z0-9]+)*)?$/;
 
 // ── Schema ───────────────────────────────────────────────────────────────────
-
-const stableId = z
-  .string()
-  .min(1)
-  .regex(ID_PATTERN, "must be letters, digits and dashes only (a slug)");
 
 /** A ISO-8601 instant. Validated as a string parseable by `Date`, rather than
  * with zod's own `.datetime()`, so the format tolerates whatever an author's
@@ -143,14 +126,10 @@ const isoInstant = z
  * keep in sync.
  */
 export const workshopSchema = z.strictObject({
-  id: stableId.meta({
-    description: "Permanent id, unique across the whole file. A slug.",
+  title: z.string().min(1).max(WORKSHOP_TITLE_MAX_LENGTH).meta({
+    description:
+      "One schedule row's worth. Unique within its meeting: it is the workshop's identity.",
   }),
-  title: z
-    .string()
-    .min(1)
-    .max(WORKSHOP_TITLE_MAX_LENGTH)
-    .meta({ description: "One schedule row's worth." }),
   description: z
     .string()
     .max(WORKSHOP_DESCRIPTION_MAX_LENGTH)
@@ -171,10 +150,6 @@ export type Workshop = z.infer<typeof workshopSchema>;
  */
 export const meetingSchema = z
   .strictObject({
-    id: stableId.meta({
-      description:
-        "Permanent id, unique across the whole file: a slug for a new meeting, or the old Airtable record id.",
-    }),
     slug: z
       .string()
       .regex(
@@ -183,7 +158,7 @@ export const meetingSchema = z
       )
       .meta({
         description:
-          "The meeting's URL on the platform and its posters: its Eastern date (YYYY-MM-DD), plus a lowercase descriptor when another meeting shares the date. Unique across the file.",
+          "The meeting's identity and its URL on the platform and posters: its Eastern date (YYYY-MM-DD), plus a lowercase descriptor when another meeting shares the date. Unique across the file. Changing it makes a new meeting.",
       }),
     // Title, summary and location are required even though their columns
     // are nullable: every meeting is also a newsletter card, and a card needs

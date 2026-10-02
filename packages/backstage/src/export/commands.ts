@@ -314,7 +314,7 @@ async function pickFormats(kind: ExportKind): Promise<FormatName[]> {
 async function askMeeting(): Promise<string> {
   return unwrap(
     await askText({
-      message: "Which meeting? Its day, slug, config id or id.",
+      message: "Which meeting? Its day, slug or id.",
       placeholder: "2026-09-09",
       validate: (v) => (v?.trim() ? undefined : "A meeting, please."),
     }),

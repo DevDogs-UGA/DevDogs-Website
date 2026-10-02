@@ -32,29 +32,29 @@ export interface ChangelogIssue {
   signoff: string;
 }
 
-const MEETINGS = new Map(getClubConfig().meetings.map((m) => [m.id, m]));
+const MEETINGS = new Map(getClubConfig().meetings.map((m) => [m.slug, m]));
 
-/** A meeting from the club config, by id. Throws on a typo rather than
+/** A meeting from the club config, by slug. Throws on a typo rather than
  * rendering an issue with a hole in it. */
-function meeting(id: string): Meeting {
-  const found = MEETINGS.get(id);
+function meeting(slug: string): Meeting {
+  const found = MEETINGS.get(slug);
   if (found === undefined) {
-    throw new Error(`No meeting "${id}" in the club config.`);
+    throw new Error(`No meeting "${slug}" in the club config.`);
   }
   return found;
 }
 
-/** Every event an issue lists, by its id in the club config. */
+/** Every event an issue lists, by its slug in the club config. */
 const EVENTS = {
-  coldstart: meeting("rectaW4iGmfDA3uwQ"),
-  build1: meeting("rec1BrdXl7u8bYGXH"),
-  nextflutter: meeting("recBF3KxHMKsT4Mz8"),
-  build2: meeting("recGqvQqUDFlrXPRc"),
-  supabase: meeting("recqDUR1D3CQNBVe5"),
-  build3: meeting("rec6aLjA2ZhT45xuh"),
-  judging1: meeting("feature-competition-1-judging-2026"),
-  career: meeting("recljv0crLDtLIBPc"),
-  touchgrass1: meeting("touch-grass-1-2026"),
+  coldstart: meeting("2026-09-14"),
+  build1: meeting("2026-09-16"),
+  nextflutter: meeting("2026-09-21"),
+  build2: meeting("2026-09-23"),
+  supabase: meeting("2026-09-28"),
+  build3: meeting("2026-09-30"),
+  judging1: meeting("2026-10-05-judging"),
+  career: meeting("2026-10-05-workshop"),
+  touchgrass1: meeting("2026-10-07"),
 };
 
 export const ISSUES: ChangelogIssue[] = [

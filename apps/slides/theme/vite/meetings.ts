@@ -24,7 +24,7 @@ const RESOLVED_ID = `\0${VIRTUAL_ID}`;
 const CUTOFF = "2026-09-28T22:00:00.000Z";
 
 export interface DeckMeeting {
-  id: string;
+  slug: string;
   title: string | null;
   kind: string | null;
   building: string | null;
@@ -35,7 +35,7 @@ export interface DeckMeeting {
 
 function toDeckMeeting(m: Meeting): DeckMeeting {
   return {
-    id: m.id,
+    slug: m.slug,
     title: m.title,
     kind: m.kind,
     building: m.building,

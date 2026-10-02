@@ -34,7 +34,7 @@ const ROWS: Record<string, unknown>[] = [
     preferred_name: "=Ada, the first",
     email: "ada@uga.edu",
     github_login: null,
-    meeting_config_id: "rec1",
+    meeting_slug: "2026-09-09",
     meeting_title: "Build Session",
     meeting_starts_at: new Date("2026-09-09T22:00:00Z"),
     checked_in_at: new Date("2026-09-09T22:05:00Z"),
@@ -70,7 +70,6 @@ function source(fail = false): ExportSource {
       {
         id: "m-1",
         slug: "2026-09-09",
-        configId: "rec1",
         title: "Build Session",
         startsAt: new Date("2026-09-09T22:00:00Z"),
         endsAt: new Date("2026-09-10T00:00:00Z"),
@@ -168,8 +167,8 @@ describe("export", () => {
     ]);
     expect(lastFilters?.meetingId).toBe("m-1");
     expect(file?.text).toBe(
-      "user_id,preferred_name,email,github_login,meeting_config_id,meeting_title,meeting_starts_at,checked_in_at,check_in_method,counts_for_credit\r\n" +
-        'u-1,"\t=Ada, the first",ada@uga.edu,,rec1,Build Session,2026-09-09T22:00:00.000Z,2026-09-09T22:05:00.000Z,import,true\r\n',
+      "user_id,preferred_name,email,github_login,meeting_slug,meeting_title,meeting_starts_at,checked_in_at,check_in_method,counts_for_credit\r\n" +
+        'u-1,"\t=Ada, the first",ada@uga.edu,,2026-09-09,Build Session,2026-09-09T22:00:00.000Z,2026-09-09T22:05:00.000Z,import,true\r\n',
     );
   });
 

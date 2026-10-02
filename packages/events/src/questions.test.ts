@@ -27,7 +27,7 @@ const rating: Question = {
 
 function meeting(questions?: string[]): Meeting {
   return {
-    id: "cold-start",
+    slug: "2026-09-14",
     title: "Cold Start",
     summary: "The first meeting of the year.",
     kind: null,

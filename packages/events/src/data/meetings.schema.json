@@ -10,16 +10,10 @@
       "items": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$",
-            "description": "Permanent id, unique across the whole file: a slug for a new meeting, or the old Airtable record id."
-          },
           "slug": {
             "type": "string",
             "pattern": "^(\\d{4}-\\d{2}-\\d{2})(?:-[a-z0-9]+(?:-[a-z0-9]+)*)?$",
-            "description": "The meeting's URL on the platform and its posters: its Eastern date (YYYY-MM-DD), plus a lowercase descriptor when another meeting shares the date. Unique across the file."
+            "description": "The meeting's identity and its URL on the platform and posters: its Eastern date (YYYY-MM-DD), plus a lowercase descriptor when another meeting shares the date. Unique across the file. Changing it makes a new meeting."
           },
           "title": {
             "type": "string",
@@ -150,17 +144,11 @@
             "items": {
               "type": "object",
               "properties": {
-                "id": {
-                  "type": "string",
-                  "minLength": 1,
-                  "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$",
-                  "description": "Permanent id, unique across the whole file. A slug."
-                },
                 "title": {
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 80,
-                  "description": "One schedule row's worth."
+                  "description": "One schedule row's worth. Unique within its meeting: it is the workshop's identity."
                 },
                 "description": {
                   "anyOf": [
@@ -187,14 +175,13 @@
                   "description": "The work it recommends, in words (\"DogDays & DogPack\")."
                 }
               },
-              "required": ["id", "title", "description", "project"],
+              "required": ["title", "description", "project"],
               "additionalProperties": false
             },
             "description": "The workshops running that night."
           }
         },
         "required": [
-          "id",
           "slug",
           "title",
           "summary",

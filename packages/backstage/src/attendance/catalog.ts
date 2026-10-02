@@ -18,7 +18,7 @@ export const attendanceImport: CommandNode = {
     {
       flag: "--meeting",
       value: "<meeting>",
-      summary: "The meeting: its day (2026-09-09), slug, config id or id.",
+      summary: "The meeting: its day (2026-09-09), slug or id.",
     },
     {
       flag: "--file",

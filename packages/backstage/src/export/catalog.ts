@@ -46,7 +46,7 @@ function exportOf(kind: ExportKind, extra: CommandOption[] = []): CommandNode {
 const MEETING: CommandOption = {
   flag: "--meeting",
   value: "<meeting>",
-  summary: "One meeting: its day (2026-09-09), slug, config id or id.",
+  summary: "One meeting: its day (2026-09-09), slug or id.",
 };
 
 export const exportCommand: CommandNode = {

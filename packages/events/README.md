@@ -31,8 +31,13 @@ Every meeting has a `slug`: its address on the platform (`/events/<slug>`)
 and the URL printed on its posters. It is the meeting's Eastern date
 (`2026-10-14`), plus a lowercase descriptor when another meeting shares the
 date (`2026-10-05-judging` and `2026-10-05-workshop`). `check:events` refuses
-a duplicate slug or one whose date isn't the meeting's own. Changing a slug
-changes a URL people may already have, so set it once.
+a duplicate slug or one whose date isn't the meeting's own.
+
+The slug is also the meeting's identity: the platform matches its rows on it.
+Changing one makes a new meeting, and the old one is archived along with the
+attendance recorded against it, so set it once. A workshop's identity is its
+title within its meeting, so two workshops in one meeting can't share a
+title.
 
 `questions.json` holds every survey question (`src/questions.ts`). A
 `member` question is one answer per person, asked until answered and then

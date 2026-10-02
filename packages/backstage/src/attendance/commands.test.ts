@@ -16,7 +16,6 @@ import type { AttendanceWrite } from "./store.js";
 const MEETING: Meeting = {
   id: "m-1",
   slug: "2026-09-09",
-  configId: "rec1",
   title: "Build Session",
   startsAt: new Date("2026-09-09T22:00:00Z"),
   endsAt: new Date("2026-09-10T00:00:00Z"),

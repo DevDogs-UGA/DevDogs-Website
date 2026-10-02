@@ -1,5 +1,4 @@
 import {
-  ID_PATTERN,
   MEETING_CANCELLATION_REASON_MAX_LENGTH,
   MEETING_SLUG_PATTERN,
   MEETING_SUMMARY_MAX_LENGTH,
@@ -16,7 +15,7 @@ import type { QuestionsConfig } from "./questions.js";
 
 /**
  * Publishability rules: lengths, the RSVP-host allowlist, cancellation
- * reason/date pairing, id uniqueness and shape. There is no such thing as a
+ * reason/date pairing, slug and workshop-title uniqueness. There is no such thing as a
  * half-typed row here. A config file either parses and validates whole, or
  * CI fails the merge -- there is no "officer is still mid-edit" state to stay
  * silent about, because nothing reaches `main` until it is complete. So a
@@ -32,7 +31,8 @@ import type { QuestionsConfig } from "./questions.js";
  */
 
 export interface ValidationIssue {
-  /** Which meeting or workshop this finding is about, by its authored id. */
+  /** Which meeting (its slug) or workshop ("<slug> › <title>") this finding
+   * is about. */
   id: string;
   /** Machine-readable, for tests and for `check.ts`'s exit-code decision. */
   code: ValidationIssueCode;
@@ -42,8 +42,7 @@ export interface ValidationIssue {
 }
 
 export type ValidationIssueCode =
-  | "duplicate_id"
-  | "invalid_id"
+  | "duplicate_workshop_title"
   | "duplicate_slug"
   | "meeting_slug_date"
   | "meeting_title_too_long"
@@ -71,13 +70,13 @@ export function validateClubConfig(
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
-  checkIdsUnique(config, issues);
+  checkWorkshopTitles(config, issues);
   checkSlugs(config, issues);
 
   for (const meeting of config.meetings) {
     checkMeeting(meeting, issues);
     for (const workshop of meeting.agenda) {
-      checkWorkshop(workshop, issues);
+      checkWorkshop(meeting, workshop, issues);
     }
   }
 
@@ -88,52 +87,36 @@ export function validateClubConfig(
 
 // ── Identity ─────────────────────────────────────────────────────────────────
 
+/** How a workshop is named in a finding: its meeting, then its title. */
+function workshopLabel(meeting: Meeting, workshop: Workshop): string {
+  return `${meeting.slug} › ${workshop.title}`;
+}
+
 /**
- * Every id -- a meeting's or a workshop's -- has to be unique across the
- * WHOLE config, not merely within its own list. The reconcile matches rows
- * onto meetings and workshops by `configId` alone, with no table qualifier in
- * the lookup, so a meeting and a workshop sharing an id would be genuinely
- * ambiguous rather than merely confusing.
- *
- * `ID_PATTERN` is checked by the schema already (`stableId`'s `.regex()`),
- * which only runs when the shape otherwise parses. This function assumes it
- * has already been called on a value that reached here as a plain string, so
- * it re-checks the pattern rather than trusting the caller -- `check.ts` may
- * hand this raw JSON that skipped the schema in a future caller, and a
- * validator that trusts its input is the harder bug to find.
+ * A workshop's identity is its title within its meeting: the reconcile
+ * matches workshop rows on (meeting, title). Two workshops with one title in
+ * one meeting would be the same row. Case-insensitive, because two titles
+ * differing only in case are a typo, not two sessions.
  */
-function checkIdsUnique(config: ClubConfig, issues: ValidationIssue[]): void {
-  const seen = new Map<string, "meeting" | "workshop">();
-
-  const visit = (id: string, kind: "meeting" | "workshop") => {
-    if (!ID_PATTERN.test(id)) {
-      issues.push({
-        id,
-        code: "invalid_id",
-        message:
-          `"${id}" is not a valid id -- ids are letters, digits and dashes ` +
-          "only, with no leading or trailing dash.",
-      });
-    }
-    const owner = seen.get(id);
-    if (owner !== undefined) {
-      issues.push({
-        id,
-        code: "duplicate_id",
-        message:
-          `"${id}" is used by more than one ${owner === kind ? kind : "item"} ` +
-          "in this config. Every meeting and workshop id must be unique " +
-          "across the whole file -- the reconcile matches rows onto this id " +
-          "alone.",
-      });
-      return;
-    }
-    seen.set(id, kind);
-  };
-
+function checkWorkshopTitles(
+  config: ClubConfig,
+  issues: ValidationIssue[],
+): void {
   for (const meeting of config.meetings) {
-    visit(meeting.id, "meeting");
-    for (const workshop of meeting.agenda) visit(workshop.id, "workshop");
+    const seen = new Set<string>();
+    for (const workshop of meeting.agenda) {
+      const key = workshop.title.toLowerCase();
+      if (seen.has(key)) {
+        issues.push({
+          id: workshopLabel(meeting, workshop),
+          code: "duplicate_workshop_title",
+          message:
+            `"${workshop.title}" is on ${meeting.slug}'s agenda more than ` +
+            "once. A workshop is identified by its title within its meeting.",
+        });
+      }
+      seen.add(key);
+    }
   }
 }
 
@@ -158,24 +141,24 @@ function easternDate(iso: string): string {
 function checkSlugs(config: ClubConfig, issues: ValidationIssue[]): void {
   const owner = new Map<string, string>();
   for (const meeting of config.meetings) {
-    const { id, slug } = meeting;
+    const { slug } = meeting;
     const other = owner.get(slug);
     if (other !== undefined) {
       issues.push({
-        id,
+        id: slug,
         code: "duplicate_slug",
         message:
           `"${slug}" is also the slug of "${other}". Slugs are URLs; give ` +
           'each meeting on a shared date its own descriptor ("2026-10-05-judging").',
       });
     } else {
-      owner.set(slug, id);
+      owner.set(slug, meeting.title);
     }
     const date = MEETING_SLUG_PATTERN.exec(slug)?.[1];
     const starts = easternDate(meeting.startsAt);
     if (date !== undefined && date !== starts) {
       issues.push({
-        id,
+        id: slug,
         code: "meeting_slug_date",
         message:
           `"${slug}" starts with ${date}, but the meeting starts on ${starts} ` +
@@ -196,7 +179,7 @@ function checkMeeting(meeting: Meeting, issues: ValidationIssue[]): void {
   // must not silently lose the check.
   if (meeting.title.length > MEETING_TITLE_MAX_LENGTH) {
     issues.push({
-      id: meeting.id,
+      id: meeting.slug,
       code: "meeting_title_too_long",
       message: `Title is ${meeting.title.length} characters; a schedule row fits about ${MEETING_TITLE_MAX_LENGTH}.`,
     });
@@ -204,7 +187,7 @@ function checkMeeting(meeting: Meeting, issues: ValidationIssue[]): void {
 
   if (meeting.summary.length > MEETING_SUMMARY_MAX_LENGTH) {
     issues.push({
-      id: meeting.id,
+      id: meeting.slug,
       code: "meeting_summary_too_long",
       message: `Summary is ${meeting.summary.length} characters; the card fits about ${MEETING_SUMMARY_MAX_LENGTH}.`,
     });
@@ -215,7 +198,7 @@ function checkMeeting(meeting: Meeting, issues: ValidationIssue[]): void {
     meeting.cancellationReason.length > MEETING_CANCELLATION_REASON_MAX_LENGTH
   ) {
     issues.push({
-      id: meeting.id,
+      id: meeting.slug,
       code: "meeting_cancellation_reason_too_long",
       message: `Cancellation reason is ${meeting.cancellationReason.length} characters; the notice fits about ${MEETING_CANCELLATION_REASON_MAX_LENGTH}.`,
     });
@@ -227,7 +210,7 @@ function checkMeeting(meeting: Meeting, issues: ValidationIssue[]): void {
   // Mirrors `meetings_cancellationReason_needs_cancellation`.
   if (meeting.cancellationReason !== null && meeting.cancelledAt === null) {
     issues.push({
-      id: meeting.id,
+      id: meeting.slug,
       code: "meeting_cancellation_reason_without_date",
       message:
         "cancellationReason is set but cancelledAt is null -- the reason is " +
@@ -242,7 +225,7 @@ function checkMeeting(meeting: Meeting, issues: ValidationIssue[]): void {
   // and userinfo URLs the DB's check constraint exists to reject.
   if (meeting.rsvpUrl !== null && !RSVP_URL_PATTERN.test(meeting.rsvpUrl)) {
     issues.push({
-      id: meeting.id,
+      id: meeting.slug,
       code: "meeting_rsvp_host",
       message:
         `rsvpUrl "${meeting.rsvpUrl}" is not on an allowed host. It has to ` +
@@ -253,10 +236,14 @@ function checkMeeting(meeting: Meeting, issues: ValidationIssue[]): void {
 
 // ── Workshops ────────────────────────────────────────────────────────────────
 
-function checkWorkshop(workshop: Workshop, issues: ValidationIssue[]): void {
+function checkWorkshop(
+  meeting: Meeting,
+  workshop: Workshop,
+  issues: ValidationIssue[],
+): void {
   if (workshop.title.length > WORKSHOP_TITLE_MAX_LENGTH) {
     issues.push({
-      id: workshop.id,
+      id: workshopLabel(meeting, workshop),
       code: "workshop_title_too_long",
       message: `Title is ${workshop.title.length} characters; a schedule row fits about ${WORKSHOP_TITLE_MAX_LENGTH}.`,
     });
@@ -267,7 +254,7 @@ function checkWorkshop(workshop: Workshop, issues: ValidationIssue[]): void {
     workshop.description.length > WORKSHOP_DESCRIPTION_MAX_LENGTH
   ) {
     issues.push({
-      id: workshop.id,
+      id: workshopLabel(meeting, workshop),
       code: "workshop_description_too_long",
       message: `Description is ${workshop.description.length} characters; the dialog fits about ${WORKSHOP_DESCRIPTION_MAX_LENGTH}.`,
     });
@@ -329,24 +316,24 @@ function checkQuestions(
       const question = byId.get(id);
       if (!question) {
         issues.push({
-          id: meeting.id,
+          id: meeting.slug,
           code: "unknown_question",
-          message: `Meeting "${meeting.id}" lists "${id}", which is not in questions.json.`,
+          message: `Meeting "${meeting.slug}" lists "${id}", which is not in questions.json.`,
         });
       } else if (question.scope === "member") {
         issues.push({
-          id: meeting.id,
+          id: meeting.slug,
           code: "member_question_listed",
           message:
-            `Meeting "${meeting.id}" lists "${id}", a member question. Member ` +
+            `Meeting "${meeting.slug}" lists "${id}", a member question. Member ` +
             "questions are asked at every check-in and are never listed.",
         });
       }
       if (listed.has(id)) {
         issues.push({
-          id: meeting.id,
+          id: meeting.slug,
           code: "question_listed_twice",
-          message: `Meeting "${meeting.id}" lists "${id}" more than once.`,
+          message: `Meeting "${meeting.slug}" lists "${id}" more than once.`,
         });
       }
       listed.add(id);

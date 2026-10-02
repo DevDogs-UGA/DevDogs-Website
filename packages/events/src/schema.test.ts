@@ -3,7 +3,6 @@ import { clubConfigSchema, meetingSchema, workshopSchema } from "./schema";
 
 function workshop(overrides: Record<string, unknown> = {}) {
   return {
-    id: "supabase",
     title: "Supabase",
     description: null,
     project: null,
@@ -13,7 +12,6 @@ function workshop(overrides: Record<string, unknown> = {}) {
 
 function meeting(overrides: Record<string, unknown> = {}) {
   return {
-    id: "cold-start",
     slug: "2026-09-14",
     title: "Cold Start",
     summary: "The first meeting of the year.",
@@ -34,7 +32,9 @@ function meeting(overrides: Record<string, unknown> = {}) {
 
 describe("workshopSchema", () => {
   it("accepts a minimal workshop", () => {
-    expect(workshopSchema.parse(workshop())).toMatchObject({ id: "supabase" });
+    expect(workshopSchema.parse(workshop())).toMatchObject({
+      title: "Supabase",
+    });
   });
 
   it("accepts a free-text project recommendation", () => {
@@ -44,10 +44,8 @@ describe("workshopSchema", () => {
     expect(parsed.project).toBe("DogDays & DogPack");
   });
 
-  it("rejects an id with spaces", () => {
-    expect(() =>
-      workshopSchema.parse(workshop({ id: "not a slug" })),
-    ).toThrow();
+  it("rejects an id: the title is a workshop's identity", () => {
+    expect(() => workshopSchema.parse(workshop({ id: "supabase" }))).toThrow();
   });
 
   it("rejects an empty title", () => {
@@ -57,13 +55,13 @@ describe("workshopSchema", () => {
 
 describe("meetingSchema", () => {
   it("accepts a minimal meeting", () => {
-    expect(meetingSchema.parse(meeting())).toMatchObject({ id: "cold-start" });
+    expect(meetingSchema.parse(meeting())).toMatchObject({
+      slug: "2026-09-14",
+    });
   });
 
-  it("accepts a legacy migrated record id shape", () => {
-    expect(meetingSchema.parse(meeting({ id: "rectaW4iGmfDA3uwQ" })).id).toBe(
-      "rectaW4iGmfDA3uwQ",
-    );
+  it("rejects an id: the slug is a meeting's identity", () => {
+    expect(() => meetingSchema.parse(meeting({ id: "cold-start" }))).toThrow();
   });
 
   it.each(["title", "summary", "location"])(
