@@ -16,10 +16,6 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { parseWorkerEntries } from "@devdogsuga/cli-core/workers";
 
-/** Worker apps that ship a `wrangler.jsonc` but are deliberately left out of
- * the automated deploy matrix (see `deploy-app.yaml`'s own comment). */
-const NOT_IN_DEPLOY_MATRIX: readonly string[] = ["sandbox"];
-
 /** The `packages:` glob list from `pnpm-workspace.yaml`, e.g. `["apps/*",
  * "packages/*", "docs"]`. Stops at the next top-level (column-0) key. */
 export function workspaceGlobs(yamlText: string): string[] {
@@ -146,11 +142,10 @@ export function checkWorkers(root: string): string[] {
       `deploy-app.yaml should define its deploy matrix once; found ${blocks.length}.`,
     );
   }
-  const deployed = apps.filter((app) => !NOT_IN_DEPLOY_MATRIX.includes(app));
   for (const block of blocks) {
-    if (!sameSet(block, deployed)) {
+    if (!sameSet(block, apps)) {
       problems.push(
-        `deploy-app.yaml's matrix is [${block.join(", ")}]; workers.json implies [${deployed.join(", ")}] (minus ${NOT_IN_DEPLOY_MATRIX.join(", ")}).`,
+        `deploy-app.yaml's matrix is [${block.join(", ")}]; workers.json lists [${apps.join(", ")}].`,
       );
     }
   }

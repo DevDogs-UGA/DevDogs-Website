@@ -143,12 +143,7 @@ export async function runSetup(): Promise<void> {
     await loadRegistry();
     const sections = await resolveSections();
     if (sections) {
-      const order = [
-        "schedule-builder",
-        "study-group-finder",
-        "platform",
-        "sandbox",
-      ];
+      const order = ["schedule-builder", "study-group-finder", "platform"];
       chosenApps = order.filter((app) => sections.has(app));
     }
     writeFileSync(

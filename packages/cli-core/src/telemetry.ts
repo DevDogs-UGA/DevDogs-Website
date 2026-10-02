@@ -1,7 +1,7 @@
 /**
  * devtools' own Sentry wiring — the CLI is a consumer of
- * `@devdogsuga/telemetry` like `apps/platform`, `apps/schedule-builder`, and
- * `apps/sandbox`, but on `@sentry/node` rather than a framework SDK: a CLI
+ * `@devdogsuga/telemetry` like `apps/platform` and `apps/schedule-builder`,
+ * but on `@sentry/node` rather than a framework SDK: a CLI
  * process starts, runs one command, and exits, with none of a server's
  * request lifecycle for a framework integration to hook into.
  *

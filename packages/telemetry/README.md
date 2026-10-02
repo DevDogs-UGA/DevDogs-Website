@@ -2,9 +2,9 @@
 
 Shared Sentry constants, options builder, scrubbers, and `alert()` — the one
 place that knows what "the workspace's Sentry setup" means, so
-`apps/platform`, `apps/schedule-builder`, `apps/sandbox`, and
-`packages/devtools` each call `Sentry.init()` the same way instead of
-re-deriving sample rates and a `beforeSend` chain four times.
+`apps/platform`, `apps/schedule-builder` and `packages/devtools` each call
+`Sentry.init()` the same way instead of re-deriving sample rates and a
+`beforeSend` chain three times.
 
 This package ships no `Sentry.init()` call of its own — each consumer still
 picks its own `@sentry/nextjs` / `@sentry/cloudflare` / `@sentry/node`
@@ -126,7 +126,5 @@ returned object is valid input to whichever one a consumer calls.
   `@sentry/nextjs` / `@sentry/cloudflare` `init()`. Cron routes and
   `ScrapeWorkflow` wrap with Sentry Crons check-ins. Alert call sites swap
   `postAlert(...)` for `alert(...)`.
-- `apps/sandbox`: same shape as the two Next apps, scoped to the `sandbox`
-  service.
 - `packages/devtools`: a Node CLI init using `@sentry/node`, environment
   `"ci"` in CI and `"local"` otherwise (see `ENVIRONMENTS`).

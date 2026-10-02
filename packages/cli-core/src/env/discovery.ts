@@ -46,16 +46,12 @@
  * Most workspace packages declare nothing, so "no env.ts found" means
  * not-a-manifest rather than an error.
  *
- * ⚠️ `apps/sandbox` was once listed here as having no manifest ON PURPOSE, on
- * the grounds that a Worker reads bindings that arrive as a function argument
- * rather than `process.env`. That premise is still true and the conclusion
- * drawn from it was still wrong: a manifest is also the only thing that routes
- * a credential to a deployed environment and the only thing that tells
- * `env audit` a Worker secret is supposed to be there. Without one,
- * `SANDBOX_PROXY_TOKEN`, minted at deploy time and therefore in no Bitwarden
- * project by design, was reported as an orphan, i.e. as safe for the §3.6 prune
- * path to delete. `apps/sandbox/env.ts` exists now, and states that reasoning
- * at length.
+ * ⚠️ A Worker still needs a manifest, even though its bindings arrive as a
+ * function argument rather than `process.env`: a manifest is the only thing
+ * that routes a credential to a deployed environment and the only thing that
+ * tells `env audit` a Worker secret is supposed to be there. Without one, a
+ * minted secret (in no Bitwarden project by design) is reported as an orphan,
+ * i.e. as safe for the §3.6 prune path to delete.
  */
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";

@@ -6,13 +6,8 @@
  * pass — never pulls in the SDK.
  */
 
-/** The four Sentry projects. Browser + server for a Next app share one. */
-export const SERVICES = [
-  "platform",
-  "schedule-builder",
-  "sandbox",
-  "devtools",
-] as const;
+/** The three Sentry projects. Browser + server for a Next app share one. */
+export const SERVICES = ["platform", "schedule-builder", "devtools"] as const;
 
 export type Service = (typeof SERVICES)[number];
 

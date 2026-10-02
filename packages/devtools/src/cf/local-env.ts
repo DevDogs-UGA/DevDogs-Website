@@ -143,10 +143,7 @@ function installSignalCleanup(cleanup: () => void): () => void {
  * (e.g. the developer's Ctrl+C on a `wrangler dev` child `fn` is awaiting)
  * arrives while `fn` is still running: without this, the signal kills the
  * process before the `finally` below gets to run, leaving the credential-
- * bearing temp directory behind in a world-findable location. Prefer this
- * over `createTemporaryWranglerEnv` below for anything whose credential-
- * bearing file's lifetime matches a single call's lifetime: a credential-
- * bearing temp file can never outlive the call that needed it.
+ * bearing temp directory behind in a world-findable location.
  */
 export async function withWranglerEnv<T>(
   app: string,
@@ -175,42 +172,4 @@ export async function withWranglerEnv<T>(
     uninstall();
     cleanup();
   }
-}
-
-export interface TemporaryWranglerEnv {
-  path: string;
-  remove: () => void;
-}
-
-/**
- * Create an app-scoped, mode-0600 env file for a local Worker runtime whose
- * lifetime a single bracket callback cannot express.
- *
- * ⚠️ KEPT DELIBERATELY, not an oversight: `workflows/commands.ts` holds this
- * file open across a long-lived `wrangler dev` child process, and in the
- * `workflows run` temporary-session path that span crosses a `finally` that
- * is unrelated to starting Wrangler at all — it also triggers a Workflow and
- * polls for its completion before the session stops. Squeezing that into a
- * single `withWranglerEnv` callback would mean merging two previously
- * independent concerns (spinning up a dev session; triggering-and-waiting)
- * into one control path, which is a real redesign of a 700-line orchestrator,
- * not a mechanical bracket swap — and duplicating this function's
- * retry/readiness loop across a bracket-shaped variant just to convert the
- * `workflows serve` half would fragment one shared, tested implementation
- * into two for no behavioural gain.
- *
- * `env` mirrors `withWranglerEnv`'s `options.env`: pass a tier's loaded map to
- * materialize a scoped file from THAT tier rather than the inherited process
- * environment; omit it to keep today's behavior.
- */
-export async function createTemporaryWranglerEnv(
-  app: string,
-  env?: NodeJS.ProcessEnv,
-): Promise<TemporaryWranglerEnv> {
-  const keys = await scopedKeys(app);
-  const { directory, path } = materializeEnvFile(keys, env ?? process.env);
-  return {
-    path,
-    remove: () => rmSync(directory, { recursive: true, force: true }),
-  };
 }

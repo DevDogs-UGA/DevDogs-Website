@@ -8,11 +8,8 @@ import { basename, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { confirm, select, text } from "@clack/prompts";
 import { loadEnvLoad } from "@devdogsuga/cli-core/repo/peers";
-import {
-  createTemporaryWranglerEnv,
-  scopedProcessEnv,
-} from "../cf/local-env.js";
-import { buildWorkspaceDeps, needsFrameworkBuild } from "../cf/build.js";
+import { scopedProcessEnv } from "../cf/local-env.js";
+import { buildWorkspaceDeps } from "../cf/build.js";
 import { runWithStderr } from "@devdogsuga/cli-core/db/run";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { workerPaths } from "@devdogsuga/cli-core/workers";
@@ -250,19 +247,6 @@ export async function waitForLocalWorkflow(
   return 1;
 }
 
-export function wranglerDevArgs(app: string, port: string): string[] {
-  return [
-    "--filter",
-    app,
-    "exec",
-    "wrangler",
-    "dev",
-    "--port",
-    port,
-    "--show-interactive-dev-session=false",
-  ];
-}
-
 /** `vinext dev` bound to loopback, where `isWranglerDevRunning` probes. */
 export function vinextDevArgs(app: string, port: string): string[] {
   return [
@@ -418,7 +402,7 @@ async function startTemporaryWrangler(
     port = String(free);
   }
 
-  const runtime = needsFrameworkBuild(app) ? "vinext dev" : "Wrangler";
+  const runtime = "vinext dev";
   process.stdout.write(
     `Preparing and starting a temporary ${runtime} session for ${app} on port ${port}…\n`,
   );
@@ -450,28 +434,17 @@ async function startTemporaryWrangler(
     return null;
   }
 
-  // A vinext app runs on `vinext dev`: the Cloudflare Vite plugin serves the
+  // Every app runs on `vinext dev`: the Cloudflare Vite plugin serves the
   // same Workflow bindings and local explorer API as `wrangler dev`, straight
   // from source. A bare `wrangler dev` against its pre-build wrangler.jsonc
   // cannot bundle it at all (see `cf/build.ts`). The plugin takes no env file,
   // so the scoped env rides the child's own environment instead.
-  const runtimeEnv = needsFrameworkBuild(app)
-    ? undefined
-    : await createTemporaryWranglerEnv(app, loaded.env);
-  const child = spawn(
-    "pnpm",
-    runtimeEnv
-      ? [...wranglerDevArgs(app, port), "--env-file", runtimeEnv.path]
-      : vinextDevArgs(app, port),
-    {
-      cwd: findRepoRoot(),
-      stdio: "inherit",
-      detached: process.platform !== "win32",
-      ...(runtimeEnv
-        ? {}
-        : { env: await scopedProcessEnv(app, loaded.env, "development") }),
-    },
-  );
+  const child = spawn("pnpm", vinextDevArgs(app, port), {
+    cwd: findRepoRoot(),
+    stdio: "inherit",
+    detached: process.platform !== "win32",
+    env: await scopedProcessEnv(app, loaded.env, "development"),
+  });
   let startupError: Error | undefined;
   child.once("error", (error) => {
     startupError = error;
@@ -483,19 +456,16 @@ async function startTemporaryWrangler(
       process.stdout.write(`${runtime} is ready.\n`);
       const stopOnParentExit = () => {
         signalProcessGroup(child, "SIGTERM");
-        runtimeEnv?.remove();
       };
       process.once("exit", stopOnParentExit);
       return {
         stop: async () => {
           process.off("exit", stopOnParentExit);
           await stopTemporaryWrangler(child);
-          runtimeEnv?.remove();
         },
         forceStop: () => {
           process.off("exit", stopOnParentExit);
           signalProcessGroup(child, "SIGKILL");
-          runtimeEnv?.remove();
         },
         port,
       };
@@ -511,14 +481,12 @@ async function startTemporaryWrangler(
       process.stderr.write(
         `devtools workflows run: ${runtime} stopped before it became ready${how}\n`,
       );
-      runtimeEnv?.remove();
       return null;
     }
     await delay(250);
   }
 
   await stopTemporaryWrangler(child);
-  runtimeEnv?.remove();
   process.stderr.write(
     `devtools workflows run: ${runtime} did not become ready on port ${port} within ${WRANGLER_READY_TIMEOUT_MS / 60_000} minutes.\n`,
   );
@@ -950,7 +918,7 @@ export async function runWorkflowsServe(
     // signal, so a second Ctrl+C arriving during `session.stop()`'s up-to-
     // 3-second graceful escalation has no listener left to catch it — Node's
     // default SIGINT/SIGTERM disposition then kills the process before the
-    // `stop()` below (and its `runtimeEnv.remove()`) ever runs. The
+    // `stop()` below ever runs. The
     // reentrancy guard tells the two calls apart: the first starts the
     // graceful stop below; any further signal forces it instead, then
     // re-raises the signal so the exit status still reflects it.

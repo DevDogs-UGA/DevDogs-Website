@@ -115,7 +115,7 @@ export interface AppCronMap {
  * Imports every app's `cloudflare/scheduled.ts` and returns the parsed
  * `CRON_ROUTES` for each app that has one.
  *
- * `apps/sandbox` has no scheduled.ts and no crons; absent is not an error.
+ * An app with no scheduled.ts has no crons; absent is not an error.
  */
 export async function discoverCronMaps(): Promise<AppCronMap[]> {
   const results: AppCronMap[] = [];

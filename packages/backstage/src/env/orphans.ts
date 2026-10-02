@@ -16,9 +16,9 @@
  *
  * The expected set is derived from the app's own manifest: every key it
  * declares with `secrecy: "secret"`. That deliberately includes the MINTED
- * ones. `SANDBOX_PROXY_TOKEN` has no copy in Bitwarden or GitHub by design, and
- * an audit that reasoned from stored copies alone would report the live proxy
- * credential as safe to delete. (`env audit` had exactly that bug; see
+ * ones. A minted key has no copy in Bitwarden or GitHub by design, and an
+ * audit that reasoned from stored copies alone would report a live credential
+ * as safe to delete. (`env audit` had exactly that bug; see
  * `EnvMeta.minted`.)
  *
  * ## Report always, prune almost never (security plan §3.6)

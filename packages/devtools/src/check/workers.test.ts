@@ -49,21 +49,24 @@ describe("checkWorkers", () => {
   function repo(matrix: string[]): void {
     root = mkdtempSync(join(tmpdir(), "check-workers-"));
     write("pnpm-workspace.yaml", "packages:\n  - apps/*\n");
-    write("workers.json", JSON.stringify(["apps/platform", "apps/sandbox"]));
+    write(
+      "workers.json",
+      JSON.stringify(["apps/platform", "apps/schedule-builder"]),
+    );
     write("apps/platform/package.json", '{"name":"platform"}');
     write("apps/platform/wrangler.jsonc", "{}");
-    write("apps/sandbox/package.json", '{"name":"sandbox"}');
-    write("apps/sandbox/wrangler.jsonc", "{}");
+    write("apps/schedule-builder/package.json", '{"name":"schedule-builder"}');
+    write("apps/schedule-builder/wrangler.jsonc", "{}");
     write(".github/workflows/deploy-app.yaml", MATRIX(matrix));
   }
 
-  it("passes when everything agrees (sandbox stays out of the matrix)", () => {
-    repo(["platform"]);
+  it("passes when everything agrees", () => {
+    repo(["platform", "schedule-builder"]);
     expect(checkWorkers(root)).toEqual([]);
   });
 
   it("flags a wrangler config workers.json does not list", () => {
-    repo(["platform"]);
+    repo(["platform", "schedule-builder"]);
     write("apps/new/package.json", '{"name":"new"}');
     write("apps/new/wrangler.jsonc", "{}");
     expect(checkWorkers(root)).toEqual([
@@ -72,7 +75,7 @@ describe("checkWorkers", () => {
   });
 
   it("flags a package name that disagrees with its directory", () => {
-    repo(["platform"]);
+    repo(["platform", "schedule-builder"]);
     write("apps/platform/package.json", '{"name":"web"}');
     expect(checkWorkers(root).join("\n")).toContain('named "web"');
   });

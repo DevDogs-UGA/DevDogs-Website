@@ -25,13 +25,6 @@
  */
 import { run } from "@devdogsuga/cli-core/db/run";
 
-/** Apps deployed without a framework build: Wrangler bundles `main` itself. */
-const NO_FRAMEWORK_BUILD = new Set(["sandbox"]);
-
-export function needsFrameworkBuild(app: string): boolean {
-  return !NO_FRAMEWORK_BUILD.has(app);
-}
-
 function workspaceDepsBuildCommand(app: string): string[] {
   return ["-r", "--if-present", "--filter", `${app}^...`, "run", "build"];
 }
@@ -44,11 +37,10 @@ export function buildWorkspaceDeps(app: string): Promise<number> {
 
 /** The pnpm invocations `buildWorkerApp` runs, in order. */
 export function workerBuildCommands(app: string): string[][] {
-  const commands = [workspaceDepsBuildCommand(app)];
-  if (needsFrameworkBuild(app)) {
-    commands.push(["--filter", app, "exec", "vinext", "build"]);
-  }
-  return commands;
+  return [
+    workspaceDepsBuildCommand(app),
+    ["--filter", app, "exec", "vinext", "build"],
+  ];
 }
 
 /**

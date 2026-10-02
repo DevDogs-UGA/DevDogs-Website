@@ -86,7 +86,6 @@ const SECTION_ORDER = [
   "platform",
   "schedule-builder",
   "study-group-finder",
-  "sandbox",
   "supabase",
   "devtools",
 ] as const;
@@ -95,9 +94,6 @@ const SECTION_LABELS: Record<string, string> = {
   platform: "platform (apps/platform/src/env.ts)",
   "schedule-builder": "schedule-builder (apps/schedule-builder/src/env.ts)",
   "study-group-finder": "study-group-finder (apps/study-group-finder/env.ts)",
-  sandbox:
-    "sandbox — a dormant Worker's bindings; nothing provisions or deploys " +
-    "it from the platform side any more (apps/sandbox/env.ts)",
   supabase:
     "supabase — read by config.toml and the Supabase CLI (supabase/env.ts)",
   devtools:
@@ -110,13 +106,12 @@ function sectionOf(source: string): string {
 }
 
 /**
- * The sections a development init may narrow to: the four apps.
+ * The sections a development init may narrow to: the three apps.
  *
  * Order is the PICKER's order, not the file's (that is `SECTION_ORDER`, fixed
  * so `.env.example` stays byte-stable). The two projects most contributors
  * join come first; `platform` follows as the shared auth infrastructure you
- * depend on but rarely edit, and `sandbox` last as the dormant one almost
- * nobody touches.
+ * depend on but rarely edit.
  *
  * `supabase` is NOT here and NOT optional. It is the shared database and auth
  * layer every app runs against, so any selection implies it (the caller adds
@@ -128,7 +123,6 @@ export const APP_SECTIONS = [
   "schedule-builder",
   "study-group-finder",
   "platform",
-  "sandbox",
 ] as const;
 
 /**
@@ -264,7 +258,7 @@ function renderBlock(
 
   // A minted credential gets the same treatment, for a different reason. There
   // is no value to write: it is signed at deploy time and lives only on the
-  // deploy target. A blank `SANDBOX_PROXY_TOKEN=` line would read as a field
+  // deploy target. A blank `KEY=` line would read as a field
   // awaiting a paste, and the paste would be a hand-made token that never
   // rotates, the exact failure minting exists to remove.
   if (meta.minted) {
@@ -581,16 +575,12 @@ export async function resolveSections(
 
   // The platform hint frames it as shared infrastructure: keep it in reach
   // (running the local auth server yourself needs its keys), but say plainly
-  // that most contributors are not editing it. Sandbox gets the opposite
-  // framing: it is dormant, kept in the registry only so its own bindings
-  // stay visible, not because anyone is likely to run it.
+  // that most contributors are not editing it.
   const APP_HINTS: Record<string, string> = {
     "schedule-builder": "the DogDays course-schedule planner (Next.js)",
     "study-group-finder": "the Dog Pack study-group app (Flutter)",
     platform:
       "shared auth server — needed only if you run it locally for sign-in; usually you don't edit it",
-    sandbox:
-      "dormant Worker — no platform integration left; almost never touched",
   };
   const chosen = unwrap(
     await multiselect({

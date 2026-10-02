@@ -22,16 +22,6 @@ import { join } from "node:path";
 import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
 import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
 
-/** `sandbox`'s runtime manifest declares exactly these four; none may be
- * storable, or `deploy secrets-file` would upload a long-lived secret to the
- * internet-facing proxy Worker. */
-const SANDBOX_RUNTIME_KEYS = [
-  "DEPLOY_ENV",
-  "PLATFORM_REST_URL",
-  "SANDBOX_PROXY_TOKEN",
-  "SANDBOX_SENTRY_DSN",
-];
-
 /** Public per-environment values the local stack also supplies. `localStack`
  * describes development only; staging and production have no stack to supply
  * these, so they must still reach a deploy. */
@@ -102,27 +92,6 @@ export async function checkEnv(root: string): Promise<string[]> {
   const minted = env.mintedKeys();
   const narrowed = env.narrowedKeys();
 
-  const sandbox = everyEntry.filter((e) => e.source === "sandbox");
-  if (
-    JSON.stringify(sandbox.map((e) => e.key).sort()) !==
-    JSON.stringify(SANDBOX_RUNTIME_KEYS)
-  ) {
-    problems.push(
-      `The sandbox runtime manifest declares [${sandbox
-        .map((e) => e.key)
-        .sort()
-        .join(", ")}], not [${SANDBOX_RUNTIME_KEYS.join(", ")}].`,
-    );
-  }
-  for (const entry of sandbox) {
-    if (storable.has(entry.key)) {
-      problems.push(
-        `${entry.key} is declared by the sandbox runtime manifest and is storable, so \`deploy secrets-file\` would upload it to the proxy Worker. ` +
-          'Move it to the "sandbox:tooling" manifest if the deploy needs it rather than the Worker.',
-      );
-    }
-  }
-
   // GitHub Actions refuses secret and variable names beginning GITHUB_ (HTTP
   // 422), and this registry uses one name from env file to vault to GitHub to
   // Worker, so a routed key with the prefix would leave the stores disagreeing.
@@ -176,7 +145,7 @@ export async function checkEnv(root: string): Promise<string[]> {
   // routing decision (see the header).
   const pins: [string, readonly string[], readonly string[]][] = [
     ["apply-only", env.applyOnlyKeys(), ["SUPABASE_ACCESS_TOKEN"]],
-    ["minted", minted, ["SANDBOX_PROXY_TOKEN"]],
+    ["minted", minted, []],
     ["narrowed", narrowed, ["DB_URL"]],
   ];
   for (const [label, actual, expected] of pins) {

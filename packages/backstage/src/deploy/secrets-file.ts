@@ -39,8 +39,7 @@
  * ## Minted keys are refused, not filled
  *
  * A `secrecy: "secret"` key `storableKeys()` excludes is "minted": signed at
- * deploy time rather than stored anywhere, which is what `SANDBOX_PROXY_TOKEN`
- * is declared as. This has no minter of its own — there is nothing in
+ * deploy time rather than stored anywhere. This has no minter of its own — there is nothing in
  * this repository that produces one — so a declared minted key is always a
  * hard failure here rather than a silent omission: a Worker that expects a
  * value substituted fails loudly at the file it never got, not at whatever

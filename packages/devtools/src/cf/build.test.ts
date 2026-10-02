@@ -21,12 +21,6 @@ describe("workerBuildCommands", () => {
       ["--filter", "schedule-builder", "exec", "vinext", "build"],
     ]);
   });
-
-  it("builds only the sandbox app's deps, since it has no framework build", () => {
-    expect(workerBuildCommands("sandbox")).toEqual([
-      ["-r", "--if-present", "--filter", "sandbox^...", "run", "build"],
-    ]);
-  });
 });
 
 describe("buildWorkerApp", () => {

@@ -16,8 +16,7 @@
  * which leaves a Wrangler "config redirect" at `.wrangler/deploy/config.json`
  * pointing at the generated `dist/server/wrangler.json`; a bare `wrangler
  * deploy` from the app dir resolves through it with no `--config` needed.
- * Sandbox (plain Worker) always used this shape, so all three apps share one
- * deploy step.
+ * Both apps share one deploy step.
  *
  * Steps (`write-env`, `preflight`, `plan`, `migrate`, `smoke`, `reconcile`,
  * `prune-monitors`) are individually addressable for jobs that run only one.
@@ -131,14 +130,13 @@ export async function runAppDeploy(
   const tier = requireTier(rest);
   const dryRun = rest.includes("--dry-run");
 
-  // All three apps share one deploy shape: a bare `wrangler deploy -e <tier>`
-  // from the app directory. Both Next.js apps' target environment is baked in
-  // at BUILD time (the workflow's "Build" step ran `vinext build` with
-  // `CLOUDFLARE_ENV=$tier`), which leaves a Wrangler "config redirect";
-  // sandbox is a plain Worker with no such redirect and no build step at all.
-  // `-e` is passed regardless: for the vinext apps, Wrangler cross-checks it
-  // against the environment the build was tagged with and errors loudly on a
-  // mismatch, rather than silently deploying the wrong tier.
+  // Both apps share one deploy shape: a bare `wrangler deploy -e <tier>` from
+  // the app directory. The target environment is baked in at BUILD time (the
+  // workflow's "Build" step ran `vinext build` with `CLOUDFLARE_ENV=$tier`),
+  // which leaves a Wrangler "config redirect". `-e` is passed regardless:
+  // Wrangler cross-checks it against the environment the build was tagged
+  // with and errors loudly on a mismatch, rather than silently deploying the
+  // wrong tier.
   const deployArgs = [
     "--filter",
     app,
@@ -186,9 +184,6 @@ export async function runAppDeploy(
       secretsFile = written.file;
     }
 
-    // sandbox has no Hyperdrive binding, so the local-database alias is a
-    // no-op for it; passing it unconditionally keeps this one step shape for
-    // all three apps rather than branching again just to omit it.
     const code = await pnpm(
       [...deployArgs, "--secrets-file", secretsFile, ...release],
       await hyperdriveLocalAliasEnv(),

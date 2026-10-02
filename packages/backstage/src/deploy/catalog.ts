@@ -43,7 +43,6 @@ export const deployCommand: CommandNode = {
     // ── Apps ────────────────────────────────────────────────────────────
     app("platform"),
     app("schedule-builder"),
-    app("sandbox"),
     // ── Steps ───────────────────────────────────────────────────────────
     {
       name: "write-env",

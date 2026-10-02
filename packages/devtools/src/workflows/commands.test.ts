@@ -88,7 +88,6 @@ const {
   workflowChoices,
   workflowTriggerArgs,
   vinextDevArgs,
-  wranglerDevArgs,
   wranglerDevConnectionHint,
   wranglerDevNotRunningHint,
 } = await import("./commands.js");
@@ -288,19 +287,6 @@ describe("local Wrangler connection diagnostics", () => {
     await expect(
       waitForLocalWorkflow("scrape", "partial", "9999", { fetcher }),
     ).resolves.toBe(1);
-  });
-
-  it("builds a non-interactive temporary Wrangler command", () => {
-    expect(wranglerDevArgs("schedule-builder", "9999")).toEqual([
-      "--filter",
-      "schedule-builder",
-      "exec",
-      "wrangler",
-      "dev",
-      "--port",
-      "9999",
-      "--show-interactive-dev-session=false",
-    ]);
   });
 
   it("binds vinext dev to the loopback address the readiness probe uses", () => {

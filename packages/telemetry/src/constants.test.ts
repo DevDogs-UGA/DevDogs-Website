@@ -23,15 +23,15 @@ describe("tracesSampleRateFor", () => {
 });
 
 describe("isService", () => {
-  it("accepts the four known services", () => {
+  it("accepts the three known services", () => {
     expect(isService("platform")).toBe(true);
     expect(isService("schedule-builder")).toBe(true);
-    expect(isService("sandbox")).toBe(true);
     expect(isService("devtools")).toBe(true);
   });
 
   it("rejects anything else", () => {
     expect(isService("discord")).toBe(false);
+    expect(isService("sandbox")).toBe(false);
     expect(isService("")).toBe(false);
   });
 });

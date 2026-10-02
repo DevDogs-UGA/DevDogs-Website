@@ -78,8 +78,7 @@ DevDogsUGA, as a `smoke` field on each app's entry in `workers.json`:
       "protectedPath": "/console/permissions",
       "protectedRedirectPrefix": "/auth"
     }
-  },
-  "apps/sandbox"
+  }
 ]
 ```
 
