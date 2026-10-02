@@ -1,9 +1,5 @@
-# One approval from the reviewers hierarchy is the ordinary merge gate.
-* @DevDogsUGA/reviewers
+* @DevDogsUGA/devops
 
-# Workflow and repository-policy changes require DevOps review.
-/.github/** @DevDogsUGA/devops
-
-# Only admins own the ownership policy itself. This must stay after /.github/**
-# because the last matching CODEOWNERS pattern wins.
+# Only admins own the ownership policy itself. This must remain last because
+# the last matching CODEOWNERS pattern wins.
 /.github/CODEOWNERS @DevDogsUGA/admins

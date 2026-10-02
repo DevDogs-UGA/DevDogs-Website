@@ -9,12 +9,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * pure shape and the diff; `api.test.ts`/`actors.test.ts` cover the `gh`
  * invocations themselves.
  */
-const teamIds = vi.hoisted(() => ({ devops: 9002, admins: 9001 }));
+const teamIds = vi.hoisted(() => ({
+  devops: 9002,
+  admins: 9001,
+  reviewers: 9003,
+}));
 
 vi.mock("./actors.js", () => ({
   resolveTeamId: vi.fn(async (_org: string, slug: string) => {
     if (slug === "devops") return teamIds.devops;
     if (slug === "admins") return teamIds.admins;
+    if (slug === "reviewers") return teamIds.reviewers;
     throw new Error(`resolveTeamId: unexpected slug "${slug}"`);
   }),
   resolveAppId: vi.fn(),

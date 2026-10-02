@@ -53,12 +53,25 @@ export interface PullRequestRule {
   };
 }
 
+export interface RequiredStatusChecksRule {
+  type: "required_status_checks";
+  parameters: {
+    do_not_enforce_on_create: boolean;
+    strict_required_status_checks_policy: boolean;
+    required_status_checks: {
+      context: string;
+      integration_id: number;
+    }[];
+  };
+}
+
 export type Rule =
   | UpdateRule
   | DeletionRule
   | NonFastForwardRule
   | CreationRule
-  | PullRequestRule;
+  | PullRequestRule
+  | RequiredStatusChecksRule;
 
 export interface RulesetConditions {
   ref_name: { include: string[]; exclude: string[] };

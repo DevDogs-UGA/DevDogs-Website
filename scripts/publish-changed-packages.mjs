@@ -66,6 +66,8 @@ import {
   readdirSync,
   statSync,
   existsSync,
+  mkdirSync,
+  copyFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
@@ -76,6 +78,18 @@ const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const packagesDir = join(repoRoot, "packages");
 
 const dryRun = process.argv.includes("--dry-run");
+
+function optionValue(name) {
+  const index = process.argv.indexOf(name);
+  return index === -1 ? null : (process.argv[index + 1] ?? null);
+}
+
+const prepareDir = optionValue("--prepare");
+const publishPlanPath = optionValue("--publish-plan");
+
+if (prepareDir && publishPlanPath) {
+  throw new Error("Use either --prepare or --publish-plan, not both.");
+}
 
 function readPackageJson(dir) {
   const path = join(dir, "package.json");
@@ -88,6 +102,10 @@ function writePackageJson(path, json) {
 
 function sha1OfFile(path) {
   return createHash("sha1").update(readFileSync(path)).digest("hex");
+}
+
+function sha256OfFile(path) {
+  return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
 // pnpm --filter <name> pack --json prints one array entry per selected
@@ -341,6 +359,9 @@ async function main() {
     .filter(
       ({ json }) => json.private !== true && typeof json.name === "string",
     );
+  const originalPackageFiles = new Map(
+    pkgs.map((pkg) => [pkg.path, readFileSync(pkg.path, "utf8")]),
+  );
 
   console.log(
     `Found ${pkgs.length} publishable package(s): ${pkgs.map((p) => p.json.name).join(", ") || "(none)"}`,
@@ -368,6 +389,13 @@ async function main() {
   const ordered = topoSort(pkgs);
   const published = [];
   const unchanged = [];
+  const plan = {
+    schemaVersion: 1,
+    commit: git(["rev-parse", "HEAD"]),
+    packages: [],
+  };
+
+  if (prepareDir) mkdirSync(prepareDir, { recursive: true });
 
   for (const pkg of ordered) {
     const name = pkg.json.name;
@@ -378,7 +406,13 @@ async function main() {
 
       if (state && state.shasum && state.shasum === shasum) {
         unchanged.push(name);
-        ensureRelease(pkg, state.latest);
+        if (!prepareDir) ensureRelease(pkg, state.latest);
+        plan.packages.push({
+          name,
+          action: "unchanged",
+          version: state.latest,
+          registryShasum: state.shasum,
+        });
         continue;
       }
 
@@ -395,13 +429,26 @@ async function main() {
       );
 
       let publishedVersion = nextVersion;
-      if (dryRun) {
+      if (prepareDir) {
+        const filename = `${name.replaceAll("/", "-").replaceAll("@", "")}-${nextVersion}.tgz`;
+        const destination = join(prepareDir, filename);
+        copyFileSync(finalTarball, destination);
+        plan.packages.push({
+          name,
+          action: "publish",
+          version: nextVersion,
+          file: filename,
+          sha1: sha1OfFile(destination),
+          sha256: sha256OfFile(destination),
+        });
+        console.log(`  prepared ${destination}`);
+      } else if (dryRun) {
         console.log(`  [dry run] would publish ${finalTarball}`);
       } else {
         publishedVersion = publishWithRetry(repoRoot, pkg, finalTarball, tmp);
       }
       published.push(`${name}@${publishedVersion}`);
-      ensureRelease(pkg, publishedVersion);
+      if (!prepareDir) ensureRelease(pkg, publishedVersion);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
@@ -412,11 +459,103 @@ async function main() {
     `Unchanged (${unchanged.length}): ${unchanged.join(", ") || "(none)"}`,
   );
   console.log(
-    `${dryRun ? "Would publish" : "Published"} (${published.length}): ${published.join(", ") || "(none)"}`,
+    `${prepareDir ? "Prepared" : dryRun ? "Would publish" : "Published"} (${published.length}): ${published.join(", ") || "(none)"}`,
   );
+
+  if (prepareDir) {
+    const path = join(prepareDir, "npm-plan.json");
+    writeFileSync(path, `${JSON.stringify(plan, null, 2)}\n`);
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      const rows = plan.packages.map(
+        (entry) =>
+          `| \`${entry.name}\` | ${entry.action} | \`${entry.version}\` | ${entry.sha256 ? `\`${entry.sha256}\`` : "—"} |`,
+      );
+      writeFileSync(
+        process.env.GITHUB_STEP_SUMMARY,
+        [
+          "## npm release candidate",
+          "",
+          `Commit: \`${plan.commit}\``,
+          "",
+          "| Package | Action | Version | SHA-256 |",
+          "| --- | --- | --- | --- |",
+          ...rows,
+          "",
+        ].join("\n"),
+        { flag: "a" },
+      );
+    }
+    for (const [path, contents] of originalPackageFiles) {
+      writeFileSync(path, contents);
+    }
+  }
 }
 
-main().catch((err) => {
+async function publishPreparedPlan(path) {
+  const plan = JSON.parse(readFileSync(path, "utf8"));
+  const actualCommit = git(["rev-parse", "HEAD"]);
+  if (plan.schemaVersion !== 1 || plan.commit !== actualCommit) {
+    throw new Error(
+      `Release plan commit ${plan.commit ?? "(missing)"} does not match checkout ${actualCommit}.`,
+    );
+  }
+  const packages = new Map(
+    discoverPackages()
+      .map((dir) => readPackageJson(dir))
+      .filter(({ json }) => typeof json.name === "string")
+      .map((pkg) => [pkg.json.name, pkg]),
+  );
+  for (const entry of plan.packages) {
+    const pkg = packages.get(entry.name);
+    if (!pkg)
+      throw new Error(`Release plan names unknown package ${entry.name}.`);
+    if (entry.action === "unchanged") {
+      ensureRelease(pkg, entry.version);
+      continue;
+    }
+    const tarball = join(dirname(path), entry.file);
+    if (
+      sha1OfFile(tarball) !== entry.sha1 ||
+      sha256OfFile(tarball) !== entry.sha256
+    ) {
+      throw new Error(
+        `Artifact hash mismatch for ${entry.name}@${entry.version}.`,
+      );
+    }
+    const live = await fetchRegistryState(entry.name);
+    if (live?.latest === entry.version) {
+      if (live.shasum !== entry.sha1) {
+        throw new Error(
+          `${entry.name}@${entry.version} already exists with a different tarball.`,
+        );
+      }
+      console.log(
+        `${entry.name}@${entry.version}: already published; repairing release metadata.`,
+      );
+    } else {
+      if (
+        live &&
+        highestVersion([live.latest, entry.version]) !== entry.version
+      ) {
+        throw new Error(
+          `${entry.name}: registry advanced to ${live.latest}; prepare a new candidate instead of recalculating after approval.`,
+        );
+      }
+      execFileSync(
+        "npm",
+        ["publish", tarball, "--access", "public", "--provenance"],
+        { cwd: repoRoot, stdio: "inherit" },
+      );
+      console.log(`Published ${entry.name}@${entry.version}`);
+    }
+    ensureRelease(pkg, entry.version);
+  }
+}
+
+const operation = publishPlanPath
+  ? publishPreparedPlan(publishPlanPath)
+  : main();
+operation.catch((err) => {
   console.error(err);
   process.exit(1);
 });

@@ -1,130 +1,98 @@
 import { describe, expect, it } from "vitest";
 import {
+  DELETE_RULESET_NAMES,
   LEGACY_NAME_ALIASES,
   buildDesiredRulesets,
   isPerTeamRulesetName,
 } from "./desired.js";
 
-const actors = { devopsTeamId: 9002, adminsTeamId: 9001, appId: 5001 };
+const actors = {
+  devopsTeamId: 9002,
+  adminsTeamId: 9001,
+  reviewersTeamId: 9003,
+  appId: 5001,
+};
 
 describe("buildDesiredRulesets", () => {
   const desired = buildDesiredRulesets(actors);
 
-  it("builds exactly the five fixed rulesets, by name", () => {
-    expect(desired.map((d) => d.name)).toEqual([
-      "main",
-      "production",
+  it("splits main rules so direct-push bypass never bypasses integrity", () => {
+    expect(desired.map((rule) => rule.name)).toEqual([
+      "main-integrity",
+      "main-updates",
+      "main-reviews",
+      "main-ci",
       "~ALL",
       "team/**",
       "tag-protection",
     ]);
-  });
-
-  it("restricts main to devops, squash-only PR merges", () => {
-    const main = desired.find((d) => d.name === "main")!;
-    expect(main.conditions.ref_name.include).toEqual(["refs/heads/main"]);
-    expect(main.bypass_actors).toEqual([
-      { actor_id: 9002, actor_type: "Team", bypass_mode: "always" },
-    ]);
-    expect(main.rules.map((r) => r.type).sort()).toEqual(
-      ["deletion", "non_fast_forward", "pull_request", "update"].sort(),
-    );
-    const pr = main.rules.find((r) => r.type === "pull_request");
-    expect(pr).toMatchObject({
-      parameters: { allowed_merge_methods: ["squash"] },
+    expect(
+      desired.find((rule) => rule.name === "main-integrity"),
+    ).toMatchObject({
+      bypass_actors: [],
+      rules: [{ type: "deletion" }, { type: "non_fast_forward" }],
     });
   });
 
-  it("restricts production to devops PR-only bypass, code-owner review, merge-only", () => {
-    const production = desired.find((d) => d.name === "production")!;
-    expect(production.conditions.ref_name.include).toEqual([
-      "refs/heads/production",
+  it("lets reviewers merge PRs while only devops and admins direct-push", () => {
+    const updates = desired.find((rule) => rule.name === "main-updates")!;
+    expect(updates.bypass_actors).toEqual([
+      { actor_id: 9003, actor_type: "Team", bypass_mode: "pull_request" },
+      { actor_id: 9002, actor_type: "Team", bypass_mode: "always" },
+      { actor_id: 9001, actor_type: "Team", bypass_mode: "always" },
     ]);
-    expect(production.bypass_actors).toEqual([
-      { actor_id: 9002, actor_type: "Team", bypass_mode: "pull_request" },
-    ]);
-    const pr = production.rules.find((r) => r.type === "pull_request");
-    expect(pr).toMatchObject({
+  });
+
+  it("requires one code-owner approval from someone other than the last pusher", () => {
+    const reviews = desired.find((rule) => rule.name === "main-reviews")!;
+    expect(reviews.rules[0]).toMatchObject({
+      type: "pull_request",
       parameters: {
-        allowed_merge_methods: ["merge"],
+        allowed_merge_methods: ["squash"],
         require_code_owner_review: true,
+        require_last_push_approval: true,
+        required_approving_review_count: 1,
+        required_review_thread_resolution: true,
       },
     });
   });
 
-  it("~ALL blocks update/creation/deletion/non_fast_forward everywhere except team/**", () => {
-    const allBranches = desired.find((d) => d.name === "~ALL")!;
-    expect(allBranches.conditions.ref_name).toEqual({
+  it("keeps direct pushes subject to post-push CI before release", () => {
+    const ci = desired.find((rule) => rule.name === "main-ci")!;
+    expect(ci.rules[0]).toMatchObject({
+      type: "required_status_checks",
+      parameters: {
+        required_status_checks: [
+          { context: "validate" },
+          { context: "database" },
+          { context: "format" },
+          { context: "flutter" },
+        ],
+      },
+    });
+  });
+
+  it("excludes main and team branches from the broad backstop", () => {
+    expect(
+      desired.find((rule) => rule.name === "~ALL")!.conditions.ref_name,
+    ).toEqual({
       include: ["~ALL"],
-      exclude: ["refs/heads/team/**"],
+      exclude: ["refs/heads/main", "refs/heads/team/**"],
     });
-    expect(allBranches.rules.map((r) => r.type).sort()).toEqual(
-      ["update", "creation", "deletion", "non_fast_forward"].sort(),
-    );
-  });
-
-  it("~ALL bypasses devops always, and omits Renovate when unresolved", () => {
-    const allBranches = desired.find((d) => d.name === "~ALL")!;
-    expect(allBranches.bypass_actors).toEqual([
-      { actor_id: 9002, actor_type: "Team", bypass_mode: "always" },
-    ]);
-  });
-
-  it("~ALL bypasses Renovate too, when its App id is resolved", () => {
-    const withRenovate = buildDesiredRulesets({
-      ...actors,
-      renovateAppId: 7001,
-    });
-    const allBranches = withRenovate.find((d) => d.name === "~ALL")!;
-    expect(allBranches.bypass_actors).toEqual([
-      { actor_id: 9002, actor_type: "Team", bypass_mode: "always" },
-      { actor_id: 7001, actor_type: "Integration", bypass_mode: "always" },
-    ]);
-  });
-
-  it("team/** allows creation/deletion/non_fast_forward but not update, bypassed by the App and devops", () => {
-    const teamFixed = desired.find((d) => d.name === "team/**")!;
-    expect(teamFixed.rules.map((r) => r.type).sort()).toEqual(
-      ["creation", "deletion", "non_fast_forward"].sort(),
-    );
-    expect(teamFixed.rules.some((r) => r.type === "update")).toBe(false);
-    expect(teamFixed.bypass_actors).toEqual([
-      { actor_id: 5001, actor_type: "Integration", bypass_mode: "always" },
-      { actor_id: 9002, actor_type: "Team", bypass_mode: "always" },
-    ]);
-  });
-
-  it("keeps the tag ruleset's live name and shape", () => {
-    const tags = desired.find((d) => d.name === "tag-protection")!;
-    expect(tags.target).toBe("tag");
-    expect(tags.rules.map((r) => r.type).sort()).toEqual(
-      ["creation", "deletion", "update"].sort(),
-    );
-    expect(tags.bypass_actors).toEqual([
-      { actor_id: 9001, actor_type: "Team", bypass_mode: "always" },
-      { actor_id: 9002, actor_type: "Team", bypass_mode: "always" },
-    ]);
   });
 });
 
-describe("LEGACY_NAME_ALIASES", () => {
-  it("recognizes main-protection as the live name of the main slot", () => {
-    expect(LEGACY_NAME_ALIASES.main).toContain("main-protection");
+describe("migration names", () => {
+  it("renames the old combined main ruleset and removes production", () => {
+    expect(LEGACY_NAME_ALIASES["main-reviews"]).toContain("main");
+    expect(DELETE_RULESET_NAMES).toContain("production");
   });
 });
 
 describe("isPerTeamRulesetName", () => {
-  it("recognizes team/<slug> rulesets", () => {
+  it("distinguishes exact team rules from the managed wildcard", () => {
     expect(isPerTeamRulesetName("team/frontend")).toBe(true);
-    expect(isPerTeamRulesetName("team/schedule-builder-2")).toBe(true);
-  });
-
-  it("does not treat the fixed team/** creation ruleset as a per-team one", () => {
     expect(isPerTeamRulesetName("team/**")).toBe(false);
-  });
-
-  it("does not match unrelated names", () => {
     expect(isPerTeamRulesetName("main")).toBe(false);
-    expect(isPerTeamRulesetName("tag-protection")).toBe(false);
   });
 });

@@ -65,9 +65,23 @@ jobs:
       # devtools'/telemetry's/env's `dist/`.
       - name: devtools contract tests
         run: pnpm --filter @devdogsuga/devtools run test:contract
+      # backstage's, the same way: the packed tarball installed outside any
+      # repo (it must start without a checkout, with install scripts off) and
+      # inside the fixture repo. A bad publish reaches every officer and every
+      # CI run through `pnpm dlx` at the latest version.
+      - name: backstage contract tests
+        run: pnpm --filter @devdogsuga/backstage run test:contract
       # `check:events` is its own script, not `test`, because it exercises the CLI
       # a config author actually runs (`pnpm --filter @devdogsuga/events
       # check:events`), not just the package's own vitest suite. Merge-blocking
       # here, matching how it gates merges in the product repo's ci.yaml.
       - name: Events config passes its publishability checks
         run: pnpm --filter @devdogsuga/events check:events
+
+  publish:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/publish.yaml

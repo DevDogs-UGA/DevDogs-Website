@@ -31,15 +31,27 @@
 // the token nor network, and writes no tag.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const extDir = join(repoRoot, "apps/workshops-vscode");
 const pkgPath = join(extDir, "package.json");
 const TAG_PREFIX = "workshops-vscode@";
+
+function optionValue(name) {
+  const index = process.argv.indexOf(name);
+  return index === -1 ? null : (process.argv[index + 1] ?? null);
+}
 
 export function patchBump(version) {
   const parts = version.split(".");
@@ -136,7 +148,16 @@ function pack(version, dir) {
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
-  if (!dryRun && !process.env.VSCE_PAT) {
+  const prepareDir = optionValue("--prepare");
+  const publishPlanPath = optionValue("--publish-plan");
+  if (prepareDir && publishPlanPath) {
+    throw new Error("Use either --prepare or --publish-plan, not both.");
+  }
+  if (publishPlanPath) {
+    await publishPreparedPlan(publishPlanPath);
+    return;
+  }
+  if (!dryRun && !prepareDir && !process.env.VSCE_PAT) {
     console.log(
       "::notice title=Marketplace publish skipped::VSCE_PAT is not set, so the extension was not published.",
     );
@@ -160,10 +181,57 @@ async function main() {
     console.log(`Content hash: ${hash}`);
     if (last?.hash === hash) {
       console.log("Unchanged since the last release; nothing to publish.");
+      if (prepareDir) {
+        mkdirSync(prepareDir, { recursive: true });
+        writeFileSync(
+          join(prepareDir, "extension-plan.json"),
+          `${JSON.stringify({ schemaVersion: 1, commit: git("rev-parse", "HEAD"), action: "unchanged", version: last.version, contentHash: hash }, null, 2)}\n`,
+        );
+      }
       return;
     }
 
     let version = last ? patchBump(last.version) : committed;
+    if (prepareDir) {
+      mkdirSync(prepareDir, { recursive: true });
+      const vsix = pack(version, dir);
+      const filename = `workshops-${version}.vsix`;
+      const destination = join(prepareDir, filename);
+      copyFileSync(vsix, destination);
+      const artifactHash = createHash("sha256")
+        .update(readFileSync(destination))
+        .digest("hex");
+      const plan = {
+        schemaVersion: 1,
+        commit: git("rev-parse", "HEAD"),
+        action: "publish",
+        version,
+        file: filename,
+        contentHash: hash,
+        sha256: artifactHash,
+      };
+      writeFileSync(
+        join(prepareDir, "extension-plan.json"),
+        `${JSON.stringify(plan, null, 2)}\n`,
+      );
+      console.log(`Prepared ${destination}`);
+      if (process.env.GITHUB_STEP_SUMMARY) {
+        writeFileSync(
+          process.env.GITHUB_STEP_SUMMARY,
+          [
+            "## VS Code release candidate",
+            "",
+            `Commit: \`${plan.commit}\``,
+            `Version: \`${version}\``,
+            `Content hash: \`${hash}\``,
+            `Artifact SHA-256: \`${artifactHash}\``,
+            "",
+          ].join("\n"),
+          { flag: "a" },
+        );
+      }
+      return;
+    }
     for (let attempt = 1; ; attempt++) {
       const vsix = pack(version, dir);
       console.log(
@@ -232,6 +300,90 @@ async function main() {
     // The version bump is for the package only; never leave it in the working tree.
     writeVersion(committed);
   }
+}
+
+function ensureExtensionRelease(version, contentHash) {
+  const tag = `${TAG_PREFIX}${version}`;
+  const tags = git("tag", "--list", tag);
+  if (tags === tag) return;
+  git(
+    "tag",
+    "-a",
+    tag,
+    "-m",
+    `DevDogs Workshops ${version}\n\ncontent-hash: ${contentHash}`,
+  );
+  git("push", "origin", `refs/tags/${tag}`);
+  run(
+    "gh",
+    [
+      "release",
+      "create",
+      tag,
+      "--verify-tag",
+      "--title",
+      tag,
+      "--latest=false",
+      "--notes",
+      `Marketplace: https://marketplace.visualstudio.com/items?itemName=devdogsuga.workshops\n\nContent hash: \`${contentHash}\``,
+    ],
+    { stdio: "inherit" },
+  );
+}
+
+async function publishPreparedPlan(path) {
+  if (!process.env.VSCE_PAT) {
+    console.log(
+      "::notice title=Marketplace publish skipped::VSCE_PAT is not set, so the prepared extension was not published.",
+    );
+    return;
+  }
+  const plan = JSON.parse(readFileSync(path, "utf8"));
+  const actualCommit = git("rev-parse", "HEAD");
+  if (plan.schemaVersion !== 1 || plan.commit !== actualCommit) {
+    throw new Error(
+      `Release plan commit ${plan.commit ?? "(missing)"} does not match checkout ${actualCommit}.`,
+    );
+  }
+  if (plan.action === "unchanged") return;
+  const vsix = join(dirname(path), plan.file);
+  const artifactHash = createHash("sha256")
+    .update(readFileSync(vsix))
+    .digest("hex");
+  if (
+    artifactHash !== plan.sha256 ||
+    hashEntries(readVsix(vsix)) !== plan.contentHash
+  ) {
+    throw new Error(
+      `Artifact hash mismatch for workshops-vscode@${plan.version}.`,
+    );
+  }
+  const existing = lastRelease();
+  if (existing?.version === plan.version) {
+    if (existing.hash !== plan.contentHash) {
+      throw new Error(
+        `${TAG_PREFIX}${plan.version} exists with a different content hash.`,
+      );
+    }
+    console.log(`${TAG_PREFIX}${plan.version}: already published.`);
+    return;
+  }
+  run(
+    "pnpm",
+    [
+      "--filter",
+      "workshops",
+      "exec",
+      "vsce",
+      "publish",
+      "--no-dependencies",
+      "--packagePath",
+      vsix,
+    ],
+    { stdio: ["ignore", "inherit", "inherit"] },
+  );
+  ensureExtensionRelease(plan.version, plan.contentHash);
+  console.log(`Published ${TAG_PREFIX}${plan.version}`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

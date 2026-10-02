@@ -112,6 +112,22 @@ function canonicalizeRule(rule: Rule): Rule {
       },
     };
   }
+  if (rule.type === "required_status_checks") {
+    return {
+      type: "required_status_checks",
+      parameters: {
+        do_not_enforce_on_create: rule.parameters.do_not_enforce_on_create,
+        strict_required_status_checks_policy:
+          rule.parameters.strict_required_status_checks_policy,
+        required_status_checks: [...rule.parameters.required_status_checks]
+          .sort((a, b) => a.context.localeCompare(b.context))
+          .map((check) => ({
+            context: check.context,
+            integration_id: check.integration_id,
+          })),
+      },
+    };
+  }
   return { type: rule.type };
 }
 

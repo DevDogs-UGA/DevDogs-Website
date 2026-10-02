@@ -1,172 +1,93 @@
-name: Publish
+name: Prepare and publish
 
-# Auto patch-bump + publish to npm, on every push to `main`. No human step,
-# no changesets — per the parent plan (§3 "Releases: fully automatic"). The
-# actual bump/diff/publish logic lives in scripts/publish-changed-packages.mjs;
-# this file is just the trigger, the workspace build, and the trust boundary
-# around the registry credential.
-#
-# ============================================================================
-# INERT UNTIL ALL OF THE FOLLOWING ARE TRUE — written now per the build
-# sheet, on the assumption they will be, but NONE of it is configured yet:
-# ============================================================================
-#
-#   1. A GitHub remote exists for this repository (Backstage), so `push` to
-#      `main` can fire at all.
-#   2. The `@devdogsuga` npm org is claimed on npmjs.com.
-#   3. EVERY package this workflow might publish has npm Trusted Publishing
-#      configured for it individually (npmjs.com → package → Settings →
-#      Publishing access → Trusted Publisher → GitHub Actions), pointing at:
-#        - this repository (owner/Backstage)
-#        - workflow filename: .github/workflows/publish.yaml
-#        - environment: (none configured below — leave blank unless a
-#          `environment:` key is added to the job)
-#      This has to be done once per package AFTER its first publish exists
-#      as a name on the registry — trusted publishing is configured on an
-#      existing package, it doesn't create one. The very first publish of
-#      each new package therefore needs a one-time manual `npm publish` with
-#      a real token from a maintainer's machine (or npm's "pending trusted
-#      publisher" flow, if available, which lets you register trust before
-#      the first version exists — check npm's current docs at
-#      implementation time). Either way, this is a Sloan-side task, tracked
-#      as a cutover flag.
-#   4. package.json in each publishable package under packages/* has
-#      "private": false, a "repository" field, and "publishConfig": {
-#      "access": "public", "provenance": true } — per the build sheet's Hard
-#      Rule 3. Package-owning agents are responsible for this; this workflow
-#      does not set it and does not check for it beyond what `npm publish`
-#      itself enforces (it will refuse an unscoped-private package).
-#
-# WHY NO TOKEN: with Trusted Publishing configured (point 3), npm exchanges
-# this job's OIDC token (minted because of `permissions: id-token: write`
-# below) for a short-lived publish credential itself — no NODE_AUTH_TOKEN,
-# no NPM_TOKEN, no secret of any kind lives in this repo or its settings.
-# That is the whole point (see the ledger: "no npm token secrets").
-#
-# WHY `npm publish`, NOT `pnpm publish`: pnpm's packing natively rewrites
-# `workspace:*` dependency ranges to real versions (used to build the
-# tarball), but Trusted Publishing is an npm-CLI/npm-registry OIDC protocol.
-# `npm publish <tarball>` is what actually authenticates and uploads;
-# pnpm never touches the registry in this pipeline. See
-# scripts/publish-changed-packages.mjs for the full mechanism and its
-# documented v1 limitations.
-#
-# WHY `workflow_run`: a `push` trigger starts this in parallel with CI, so a
-# commit could publish before (or despite) failing CI. Instead this starts
-# when CI completes and runs only if CI passed on a push to this repo's
-# `main`, then checks out exactly the commit CI validated. The job still runs
-# from this file, so Trusted Publishing's workflow filename is unchanged.
+# Called by CI after the validation job succeeds on a push to main. Keeping
+# preparation and publication in the push-initiated run preserves GitHub's
+# self-review attribution: the person who pushed the candidate cannot approve
+# its publishing environment deployment.
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+  workflow_call:
 
 concurrency:
-  # One publish run at a time — the script mutates package.json on disk and
-  # shells out to the registry; two runs racing would double-bump.
   group: publish-main
   cancel-in-progress: false
 
 permissions:
-  # write: the publish script tags each published version and creates its
-  # GitHub release (`<name>@<version>`, in step with npm).
-  contents: write
-  id-token: write # required for npm OIDC / Trusted Publishing
+  contents: read
 
 jobs:
-  publish:
-    # `branches: [main]` above matches a PR from a fork's `main` too, so the
-    # event and repository are checked as well.
-    if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_repository.full_name == github.repository
+  prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          # Full history and tags: release notes list each package's commits
-          # since its previous release tag.
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
-      # Trusted Publishing needs npm >=11.5.1 (the version it shipped in).
-      # setup-node's bundled npm tracks the Node release, not a fixed npm
-      # version, so this is pinned explicitly rather than assumed.
-      - name: Ensure npm supports Trusted Publishing
-        run: npm install -g npm@^11.5.1
-      # Everything a publishable package might import from a sibling
-      # workspace package needs to exist as real dist/ output before
-      # `pnpm pack` reads its `files` list. Only packages/*: apps/ never
-      # publishes, and apps/slides can't build without the private workshop
-      # submodules.
-      - name: Build (packages)
-        # devtools and backstage bake their Sentry DSN into dist/build-info.json
-        # at build time (their scripts/write-build-info.mjs). A public
-        # ingest-only value, so an Actions variable, not a secret; unset
-        # builds a CLI that reports nothing.
+      - name: Build publishable packages
         env:
           DEVTOOLS_SENTRY_DSN: ${{ vars.DEVTOOLS_SENTRY_DSN }}
+          WORKSHOPS_VSCODE_SENTRY_DSN: ${{ vars.WORKSHOPS_VSCODE_SENTRY_DSN }}
         run: pnpm -r --filter './packages/**' --if-present run build
-      # Plan §8's risk mitigation: "devtools CI must run its own contract
-      # tests against a fixture repo before publish" — a bad devtools
-      # publish reaches every contributor via dlx within ~24h with no
-      # library-bump-PR review gate in between (see the plan's Risks
-      # section), so this runs unconditionally here rather than trusting
-      # that `ci.yaml` already ran it on the merged commit.
-      - name: devtools contract tests
-        run: pnpm --filter @devdogsuga/devtools run test:contract
-      # Same for backstage: it too is run at the latest version, everywhere.
-      - name: backstage contract tests
-        run: pnpm --filter @devdogsuga/backstage run test:contract
-      - name: Patch-bump + publish changed packages, with GitHub releases
+      - name: Re-run CLI contract tests against the release build
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: node scripts/publish-changed-packages.mjs
-      # When the OIDC exchange fails, npm silently falls back to token auth
-      # and reports only ENEEDAUTH. The real reason (no trusted publisher,
-      # repo/workflow mismatch, ...) is only in npm's debug log.
-      - name: Show npm's OIDC diagnostics
-        if: failure()
-        run: grep -iE 'oidc|trusted|provenance' ~/.npm/_logs/*-debug-0.log || true
+          DEVTOOLS_TELEMETRY: "0"
+        run: |
+          pnpm --filter @devdogsuga/devtools run test:contract
+          pnpm --filter @devdogsuga/backstage run test:contract
+      - name: Prepare immutable npm artifacts and release plan
+        run: node scripts/publish-changed-packages.mjs --prepare "$RUNNER_TEMP/release"
+      - name: Prepare immutable VS Code artifact and release plan
+        env:
+          WORKSHOPS_VSCODE_SENTRY_DSN: ${{ vars.WORKSHOPS_VSCODE_SENTRY_DSN }}
+        run: node scripts/publish-workshops-vscode.mjs --prepare "$RUNNER_TEMP/release"
+      - name: Record candidate hashes
+        run: |
+          cd "$RUNNER_TEMP/release"
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload release candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-${{ github.sha }}
+          path: ${{ runner.temp }}/release
+          if-no-files-found: error
+          retention-days: 30
 
-  # The DevDogs Workshops VS Code extension (apps/workshops-vscode) goes to the
-  # Marketplace, not npm, so it has its own job: nothing here needs the npm
-  # OIDC permission, and the Marketplace token stays out of the npm job. Same
-  # trigger as above (CI passed on main). See
-  # scripts/publish-workshops-vscode.mjs for how "changed" is decided.
-  #
-  # Needs the VSCE_PAT secret (an Azure DevOps personal access token scoped to
-  # Marketplace: Manage, for the `devdogsuga` publisher). Without it the job
-  # succeeds and says it skipped. WORKSHOPS_VSCODE_SENTRY_DSN is the extension's
-  # public, ingest-only Sentry key, an Actions variable like DEVTOOLS_SENTRY_DSN;
-  # unset builds an extension that reports nothing.
-  extension:
-    if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_repository.full_name == github.repository
+  publish:
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    environment: publishing
     permissions:
-      # Tags and a GitHub release (`workshops-vscode@<version>`) record what
-      # was published.
       contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          # Tags: the last release's tag holds the hash of what it published.
           fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
-      - name: Publish the extension if it changed
+      - name: Download approved release candidate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-${{ github.sha }}
+          path: ${{ runner.temp }}/release
+      - name: Verify candidate hashes
+        run: cd "$RUNNER_TEMP/release" && sha256sum --check SHA256SUMS
+      - name: Ensure npm supports Trusted Publishing
+        run: npm install -g npm@^11.5.1
+      - name: Publish exact npm artifacts
         env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
-          WORKSHOPS_VSCODE_SENTRY_DSN: ${{ vars.WORKSHOPS_VSCODE_SENTRY_DSN }}
           GH_TOKEN: ${{ github.token }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        run: >-
+          node scripts/publish-changed-packages.mjs
+          --publish-plan "$RUNNER_TEMP/release/npm-plan.json"
+      - name: Publish exact VS Code artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: >-
           node scripts/publish-workshops-vscode.mjs
+          --publish-plan "$RUNNER_TEMP/release/extension-plan.json"
+      - name: Show npm OIDC diagnostics
+        if: failure()
+        run: grep -iE 'oidc|trusted|provenance' ~/.npm/_logs/*-debug-0.log || true
