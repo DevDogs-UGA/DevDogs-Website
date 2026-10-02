@@ -25,7 +25,7 @@ export interface EventReader {
 /**
  * Builds the reader from `@devdogsuga/events`'s committed data file.
  *
- * `Meeting.id` is the card's `slug` and `Meeting.title` is its authored name
+ * `Meeting.slug` is the card's `slug` (its platform URL) and `Meeting.title` is its authored name
  * (`nameOverride` on the platform's meetings table).
  */
 export function configEvents(): EventReader {
@@ -39,7 +39,7 @@ export function configEvents(): EventReader {
 
       return meetings.map((row) => {
         const meeting = {
-          slug: row.id,
+          slug: row.slug,
           startsAt: new Date(row.startsAt),
           endsAt: new Date(row.endsAt),
           building: row.building,
@@ -75,7 +75,7 @@ export function configEvents(): EventReader {
         });
 
         return {
-          slug: row.id,
+          slug: row.slug,
           hint: describeMeeting(meeting),
           detail,
           items: items.map((item) => {

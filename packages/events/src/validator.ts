@@ -1,6 +1,7 @@
 import {
   ID_PATTERN,
   MEETING_CANCELLATION_REASON_MAX_LENGTH,
+  MEETING_SLUG_PATTERN,
   MEETING_SUMMARY_MAX_LENGTH,
   MEETING_TITLE_MAX_LENGTH,
   RSVP_URL_ALLOWED_HOSTS,
@@ -43,6 +44,8 @@ export interface ValidationIssue {
 export type ValidationIssueCode =
   | "duplicate_id"
   | "invalid_id"
+  | "duplicate_slug"
+  | "meeting_slug_date"
   | "meeting_title_too_long"
   | "meeting_summary_too_long"
   | "meeting_cancellation_reason_too_long"
@@ -69,6 +72,7 @@ export function validateClubConfig(
   const issues: ValidationIssue[] = [];
 
   checkIdsUnique(config, issues);
+  checkSlugs(config, issues);
 
   for (const meeting of config.meetings) {
     checkMeeting(meeting, issues);
@@ -130,6 +134,54 @@ function checkIdsUnique(config: ClubConfig, issues: ValidationIssue[]): void {
   for (const meeting of config.meetings) {
     visit(meeting.id, "meeting");
     for (const workshop of meeting.agenda) visit(workshop.id, "workshop");
+  }
+}
+
+/** The club's timezone. Duplicated from `@devdogsuga/brand`'s `EVENT_TZ`,
+ * which this package cannot import without a dependency cycle. */
+const CLUB_TIME_ZONE = "America/New_York";
+
+/** `YYYY-MM-DD` for an instant, on the club's clock. */
+function easternDate(iso: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: CLUB_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(iso));
+}
+
+/**
+ * Slugs are URLs: unique, and on the meeting's own Eastern date. The pattern
+ * itself is the schema's.
+ */
+function checkSlugs(config: ClubConfig, issues: ValidationIssue[]): void {
+  const owner = new Map<string, string>();
+  for (const meeting of config.meetings) {
+    const { id, slug } = meeting;
+    const other = owner.get(slug);
+    if (other !== undefined) {
+      issues.push({
+        id,
+        code: "duplicate_slug",
+        message:
+          `"${slug}" is also the slug of "${other}". Slugs are URLs; give ` +
+          'each meeting on a shared date its own descriptor ("2026-10-05-judging").',
+      });
+    } else {
+      owner.set(slug, id);
+    }
+    const date = MEETING_SLUG_PATTERN.exec(slug)?.[1];
+    const starts = easternDate(meeting.startsAt);
+    if (date !== undefined && date !== starts) {
+      issues.push({
+        id,
+        code: "meeting_slug_date",
+        message:
+          `"${slug}" starts with ${date}, but the meeting starts on ${starts} ` +
+          "(Eastern). A slug leads with the meeting's own date.",
+      });
+    }
   }
 }
 

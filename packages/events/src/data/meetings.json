@@ -3,6 +3,7 @@
   "meetings": [
     {
       "id": "rectaW4iGmfDA3uwQ",
+      "slug": "2026-09-14",
       "title": "Cold Start",
       "summary": "The inaugural meeting for the 2026-2027 school year. Get set up to contribute to this year's projects! We've simplified the onboarding process this year, and we're excited to get everyone rocking and rolling for the rest of the semester.",
       "kind": null,
@@ -26,6 +27,7 @@
     },
     {
       "id": "rec35J32rSMauwtwV",
+      "slug": "2026-09-09",
       "title": "Interest Meeting",
       "summary": "Come meet the new leadership team and get the details on all things DevDogs! If you're returning, you can learn more about what's changing, what's staying the same, and how to get involved this year. We'll have free food!",
       "kind": "Interest Meeting",
@@ -42,6 +44,7 @@
     },
     {
       "id": "rec1BrdXl7u8bYGXH",
+      "slug": "2026-09-16",
       "title": "Build Session #1",
       "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
       "kind": "Build Session",
@@ -58,6 +61,7 @@
     },
     {
       "id": "recBF3KxHMKsT4Mz8",
+      "slug": "2026-09-21",
       "title": "Workshops: Next.js and Flutter",
       "summary": "A framework double-header: build for the web with Next.js and go cross-platform with Flutter.",
       "kind": null,
@@ -87,6 +91,7 @@
     },
     {
       "id": "recGqvQqUDFlrXPRc",
+      "slug": "2026-09-23",
       "title": "Build Session #2",
       "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
       "kind": "Build Session",
@@ -103,6 +108,7 @@
     },
     {
       "id": "recqDUR1D3CQNBVe5",
+      "slug": "2026-09-28",
       "title": "Workshop: Supabase",
       "summary": "Get hands-on with Supabase: Postgres, auth, and realtime data for this year's projects.",
       "kind": null,
@@ -126,6 +132,7 @@
     },
     {
       "id": "rec6aLjA2ZhT45xuh",
+      "slug": "2026-09-30",
       "title": "Build Session #3",
       "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
       "kind": "Build Session",
@@ -142,6 +149,7 @@
     },
     {
       "id": "feature-competition-1-judging-2026",
+      "slug": "2026-10-05-judging",
       "title": "Feature Competition #1: Presentations & Judging",
       "summary": "Teams present their entries for the year's first feature competition, then officers score them and the room votes. Entries close when this meeting starts.",
       "kind": "Demo Night",
@@ -158,6 +166,7 @@
     },
     {
       "id": "recljv0crLDtLIBPc",
+      "slug": "2026-10-05-workshop",
       "title": "Workshop: Career Fair Readiness",
       "summary": "Get ready for the fall career fair: resume polish, portfolio pointers, and how to talk about what you've built.",
       "kind": null,
@@ -181,6 +190,7 @@
     },
     {
       "id": "production-test-2026-09-27-workshop",
+      "slug": "2026-09-27-workshop",
       "title": "Production test (not a real event): workshop",
       "summary": "Not a real event. Used to test attendance, reflections and credit during the production test call; cancelled afterwards.",
       "kind": "Interest Meeting",
@@ -204,6 +214,7 @@
     },
     {
       "id": "production-test-2026-09-27-build-session",
+      "slug": "2026-09-27-build-session",
       "title": "Production test (not a real event): build session",
       "summary": "Not a real event. Used to test attendance without credit during the production test call; cancelled afterwards.",
       "kind": "Build Session",
@@ -220,6 +231,7 @@
     },
     {
       "id": "touch-grass-1-2026",
+      "slug": "2026-10-07",
       "title": "DevDogs Touch Grass #1",
       "summary": "No laptops required -- just come outside, get some air, and hang out with the club before the semester gets busy again.",
       "kind": "Social",
@@ -236,6 +248,7 @@
     },
     {
       "id": "workshop-2026-10-12",
+      "slug": "2026-10-12",
       "title": "Workshops: Next.js II & Flutter II",
       "summary": "Two UI workshops in separate rooms: components, state, and styling in Next.js, and screens, forms, and navigation in Flutter.",
       "kind": null,
@@ -265,6 +278,7 @@
     },
     {
       "id": "build-session-4-2026",
+      "slug": "2026-10-14",
       "title": "Build Session #4",
       "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
       "kind": "Build Session",
@@ -281,6 +295,7 @@
     },
     {
       "id": "workshop-2026-10-19",
+      "slug": "2026-10-19",
       "title": "Workshops: Supabase II",
       "summary": "Supabase, round two, split by track: search, filters, and pagination on the web, and CRUD, joins, and RLS on mobile.",
       "kind": null,
@@ -310,6 +325,7 @@
     },
     {
       "id": "build-session-5-2026",
+      "slug": "2026-10-21",
       "title": "Build Session #5",
       "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
       "kind": "Build Session",
@@ -326,6 +342,7 @@
     },
     {
       "id": "workshop-2026-10-26",
+      "slug": "2026-10-26",
       "title": "Workshop: Topic TBA",
       "summary": "Topic to be announced. Check back here or on Discord for what we are building this week.",
       "kind": null,
@@ -342,6 +359,7 @@
     },
     {
       "id": "build-session-6-2026",
+      "slug": "2026-10-28",
       "title": "Build Session #6",
       "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
       "kind": "Build Session",
@@ -358,6 +376,7 @@
     },
     {
       "id": "workshop-2026-11-02",
+      "slug": "2026-11-02",
       "title": "Workshop: Topic TBA",
       "summary": "Topic to be announced. Check back here or on Discord for what we are building this week.",
       "kind": null,
@@ -374,6 +393,7 @@
     },
     {
       "id": "build-session-7-2026",
+      "slug": "2026-11-04",
       "title": "Build Session #7",
       "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
       "kind": "Build Session",
@@ -390,6 +410,7 @@
     },
     {
       "id": "workshop-2026-11-09",
+      "slug": "2026-11-09",
       "title": "Workshop: Topic TBA",
       "summary": "Topic to be announced. Check back here or on Discord for what we are building this week.",
       "kind": null,
@@ -406,6 +427,7 @@
     },
     {
       "id": "build-session-8-2026",
+      "slug": "2026-11-11",
       "title": "Build Session #8",
       "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
       "kind": "Build Session",
@@ -422,6 +444,7 @@
     },
     {
       "id": "workshop-2026-11-16",
+      "slug": "2026-11-16",
       "title": "Workshop: Topic TBA",
       "summary": "Topic to be announced. Check back here or on Discord for what we are building this week.",
       "kind": null,
@@ -438,6 +461,7 @@
     },
     {
       "id": "touch-grass-2-2026",
+      "slug": "2026-11-18",
       "title": "DevDogs Touch Grass #2",
       "summary": "No laptops required -- just come outside, get some air, and hang out with the club one last time before finals.",
       "kind": "Social",
@@ -454,6 +478,7 @@
     },
     {
       "id": "workshop-2026-11-30",
+      "slug": "2026-11-30",
       "title": "Workshop: Topic TBA (tentative)",
       "summary": "Tentative: confirmed or cancelled at the Nov 11 meeting.",
       "kind": null,

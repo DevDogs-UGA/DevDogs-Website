@@ -102,6 +102,19 @@ export const MEETING_BUILDING_CHOICES = [
  */
 export const ID_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/;
 
+/**
+ * A meeting's slug: its Eastern date, plus a lowercase descriptor when it
+ * shares the date with another meeting ("2026-10-05-judging").
+ *
+ * This is the meeting's address on the platform (`/events/<slug>`) and on
+ * every poster. The platform takes it from here verbatim, so it is authored,
+ * reviewed and printed in one place rather than derived in two. Changing one
+ * changes a URL people may already have. The leading date also keeps a
+ * slug clear of the static routes beside it (`/events/directions`).
+ */
+export const MEETING_SLUG_PATTERN =
+  /^(\d{4}-\d{2}-\d{2})(?:-[a-z0-9]+(?:-[a-z0-9]+)*)?$/;
+
 // ── Schema ───────────────────────────────────────────────────────────────────
 
 const stableId = z
@@ -162,6 +175,16 @@ export const meetingSchema = z
       description:
         "Permanent id, unique across the whole file: a slug for a new meeting, or the old Airtable record id.",
     }),
+    slug: z
+      .string()
+      .regex(
+        MEETING_SLUG_PATTERN,
+        'must be the Eastern date, optionally with a lowercase descriptor ("2026-10-05-judging")',
+      )
+      .meta({
+        description:
+          "The meeting's URL on the platform and its posters: its Eastern date (YYYY-MM-DD), plus a lowercase descriptor when another meeting shares the date. Unique across the file.",
+      }),
     // Title, summary and location are required even though their columns
     // are nullable: every meeting is also a newsletter card, and a card needs
     // a heading, copy and a place ("TBA" until there is one). Stricter than

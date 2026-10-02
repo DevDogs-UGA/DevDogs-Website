@@ -15,6 +15,8 @@ function workshop(overrides: Partial<Workshop> = {}): Workshop {
 function meeting(overrides: Partial<Meeting> = {}): Meeting {
   return {
     id: "cold-start",
+    // Unique per id by default, so a test about ids is not also about slugs.
+    slug: `2026-09-14-${(overrides.id ?? "cold-start").toLowerCase()}`,
     title: "Cold Start",
     summary: "The first meeting of the year.",
     kind: null,
@@ -49,7 +51,10 @@ describe("id uniqueness", () => {
 
   it("refuses two meetings sharing an id", () => {
     const result = validateClubConfig(
-      config([meeting({ id: "dup" }), meeting({ id: "dup" })]),
+      config([
+        meeting({ id: "dup", slug: "2026-09-14-one" }),
+        meeting({ id: "dup", slug: "2026-09-14-two" }),
+      ]),
     );
     expect(result.map((i) => i.code)).toEqual(["duplicate_id"]);
   });
@@ -71,6 +76,34 @@ describe("id uniqueness", () => {
       ]),
     );
     expect(result.map((i) => i.code)).toEqual(["duplicate_id"]);
+  });
+});
+
+describe("slugs", () => {
+  it("refuses two meetings sharing a slug", () => {
+    const result = validateClubConfig(
+      config([
+        meeting({ id: "a", slug: "2026-09-14" }),
+        meeting({ id: "b", slug: "2026-09-14" }),
+      ]),
+    );
+    expect(result.map((i) => i.code)).toEqual(["duplicate_slug"]);
+  });
+
+  it("refuses a slug dated other than the meeting's Eastern day", () => {
+    // 22:00Z on the 14th is 6 PM Eastern on the 14th; 02:00Z on the 15th is
+    // still the evening of the 14th in Athens.
+    const late = meeting({
+      slug: "2026-09-15",
+      startsAt: "2026-09-15T02:00:00.000Z",
+      endsAt: "2026-09-15T03:00:00.000Z",
+    });
+    expect(validateClubConfig(config([late])).map((i) => i.code)).toEqual([
+      "meeting_slug_date",
+    ]);
+    expect(
+      validateClubConfig(config([{ ...late, slug: "2026-09-14" }])),
+    ).toEqual([]);
   });
 });
 

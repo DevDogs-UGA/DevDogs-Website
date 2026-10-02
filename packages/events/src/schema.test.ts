@@ -14,6 +14,7 @@ function workshop(overrides: Record<string, unknown> = {}) {
 function meeting(overrides: Record<string, unknown> = {}) {
   return {
     id: "cold-start",
+    slug: "2026-09-14",
     title: "Cold Start",
     summary: "The first meeting of the year.",
     kind: null,
@@ -72,6 +73,21 @@ describe("meetingSchema", () => {
       expect(() => meetingSchema.parse(meeting({ [field]: "" }))).toThrow();
     },
   );
+
+  it("accepts a date slug with a descriptor", () => {
+    expect(
+      meetingSchema.parse(meeting({ slug: "2026-09-14-cold-start" })).slug,
+    ).toBe("2026-09-14-cold-start");
+  });
+
+  it("rejects a slug that does not lead with a date", () => {
+    expect(() =>
+      meetingSchema.parse(meeting({ slug: "cold-start" })),
+    ).toThrow();
+    expect(() =>
+      meetingSchema.parse(meeting({ slug: "2026-09-14-Judging" })),
+    ).toThrow();
+  });
 
   it("rejects endsAt at or before startsAt", () => {
     expect(() =>
