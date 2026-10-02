@@ -158,6 +158,11 @@ export function CardShell({
     </div>
   ) : null;
 
+  const footerText = footer ?? CONTACT.site;
+  // The address line's width, less the globe icon and its gap.
+  const footerRoom =
+    (wide ? RAIL_WIDTH * u : width - horizontalPad * 2) - 36 * u;
+
   const address = (
     <div
       style={{
@@ -182,12 +187,16 @@ export function CardShell({
         <div
           style={{
             fontFamily: "Hanken Grotesk",
-            fontSize: 26 * u,
+            // A long event path would wrap in the wide card's rail and push
+            // the rule up into the chip; shrink it to fit on one line instead
+            // (Hanken Grotesk averages about 0.52em a character).
+            fontSize: Math.min(26 * u, footerRoom / (footerText.length * 0.52)),
+            whiteSpace: "nowrap",
             color: MAUVE[400],
             textAlign: square ? "center" : "left",
           }}
         >
-          {footer ?? CONTACT.site}
+          {footerText}
         </div>
       </div>
     </div>

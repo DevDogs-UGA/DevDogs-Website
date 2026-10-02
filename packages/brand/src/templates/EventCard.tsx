@@ -22,7 +22,10 @@ export interface EventCardProps extends EventDetail {
   cobrand?: boolean;
 }
 
-function titleSize(title: string, { layout }: CardContext): number {
+function titleSize(
+  title: string,
+  { layout, u, contentWidth }: CardContext,
+): number {
   if (layout === "square") {
     if (title.length > 46) return 36;
     if (title.length > 30) return 44;
@@ -31,10 +34,14 @@ function titleSize(title: string, { layout }: CardContext): number {
   }
 
   const base = layout === "wide" ? 92 : 80;
-  if (title.length > 34) return base * 0.68;
-  if (title.length > 22) return base * 0.82;
+  const tiered =
+    title.length > 34 ? base * 0.68 : title.length > 22 ? base * 0.82 : base;
+  if (layout !== "wide") return tiered;
 
-  return base;
+  // The banner is 650px tall: a two-line title plus the three detail rows
+  // overflows it and gets clipped. So the title gets one line here, shrunk to
+  // the content column (Alan Sans 800 averages about 0.54em a character).
+  return Math.min(tiered, contentWidth / u / (title.length * 0.54));
 }
 
 export function EventCard({
@@ -118,6 +125,9 @@ export function EventCard({
             width: "100%",
             textAlign: square ? "center" : "left",
             overflowWrap: "anywhere",
+            // Even lines rather than a full first line and a stranded word:
+            // "Presentations & / Judging" reads as a mistake on a poster.
+            textWrap: "balance",
           }}
         >
           {title}
@@ -171,6 +181,7 @@ export function EventCard({
               fontFamily: "Hanken Grotesk",
               fontSize: 30 * u,
               color: MAUVE[300],
+              textWrap: "balance",
             }}
           >
             {cancelled.reason}
@@ -195,6 +206,7 @@ export function EventCard({
                   fontSize: (denseWide ? 21 : wide ? 32 : 26) * u,
                   color: MAUVE[400],
                   textAlign: square ? "center" : "left",
+                  textWrap: "balance",
                 }}
               >
                 {index === listed.length - 1 && rest > 0
