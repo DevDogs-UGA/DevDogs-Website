@@ -58,6 +58,19 @@ vi.mock("../cron/discovery.js", async (importOriginal) => ({
         },
         workflows: {},
       },
+      {
+        app: "schedule-builder",
+        path: "/repo/apps/schedule-builder/cloudflare/scheduled.ts",
+        routes: {},
+        // Labels a schedule the fake wrangler config never declares, so it
+        // lists as a warning in place of the binding's "on demand" row.
+        workflows: {
+          "30 2 * * *": {
+            label: "Nightly rebuild",
+            binding: "REBUILD_WORKFLOW",
+          },
+        },
+      },
     ]),
 }));
 
@@ -227,9 +240,16 @@ describe("jobs run", () => {
       "  platform · Sync events",
       "  platform · Nightly cleanup",
       "Long-running jobs",
-      "  schedule-builder · rebuild",
+      // Its WORKFLOW_CRONS label, in words, over its wrangler name.
+      "  schedule-builder · Nightly rebuild",
       "  schedule-builder · scrape",
     ]);
+    const hintOf = (label: string) =>
+      (drawn() as { label: string; hint?: string }[]).find(
+        (row) => row.label === label,
+      )?.hint;
+    expect(hintOf("  schedule-builder · Nightly rebuild")).toBe("on demand");
+    expect(hintOf("  schedule-builder · scrape")).toBe("0 */6 * * *");
   });
 
   it("offers only the alias's kind", async () => {
@@ -305,7 +325,7 @@ describe("jobs serve", () => {
 });
 
 describe("jobs list", () => {
-  it("collects both kinds, a Workflow nothing schedules as on demand", async () => {
+  it("collects both kinds, folding a WORKFLOW_CRONS label into its binding", async () => {
     const rows = await collectJobs({
       kinds: ["sync", "long-running"],
       tiers: ["development"],
@@ -321,7 +341,13 @@ describe("jobs list", () => {
     ).toEqual([
       ["sync", "platform", "0 0 * * *", "Nightly cleanup", "ok"],
       ["sync", "platform", "*/15 * * * *", "Sync events", "never-fires"],
-      ["long-running", "schedule-builder", null, "rebuild", "ok"],
+      [
+        "long-running",
+        "schedule-builder",
+        "30 2 * * *",
+        "Nightly rebuild",
+        "never-fires",
+      ],
       ["long-running", "schedule-builder", "0 */6 * * *", "scrape", "ok"],
     ]);
   });
@@ -342,8 +368,8 @@ describe("jobs list", () => {
       "  Multi-step work that retries and resumes where it stopped.",
     );
     expect(text.indexOf("Nightly cleanup")).toBeLessThan(long);
-    expect(text).toMatch(/on demand\s+rebuild/);
     expect(text).toContain("never fires");
+    expect(text).not.toContain("on demand");
   });
 
   it("emits one flat JSON array with a kind on each row", async () => {

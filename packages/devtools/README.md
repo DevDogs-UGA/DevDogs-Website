@@ -8,16 +8,21 @@ pnpm devtools                           # no arguments: menu of interactive comm
 pnpm devtools setup                     # prepare a checkout, then print the database next steps
 pnpm devtools doctor                    # first stop: machine, tier, stack, types, buckets, seeded data
 pnpm devtools supabase start            # boot Supabase on this machine
-pnpm devtools cron run                  # choose a configured route cron
-pnpm devtools workflows run             # choose a configured Cloudflare Workflow
-pnpm devtools workflows serve           # keep an app-scoped Wrangler runtime open
+pnpm devtools jobs run                  # choose a background job (a cron sync or a Workflow) and run it
+pnpm devtools jobs list                 # every job, its schedule, and schedules that never fire
+pnpm devtools jobs serve                # keep an app-scoped Workflow runtime open
 ```
 
 ```bash
 pnpm devtools supabase db push     # the real tool, with the tier's --db-url filled in
 pnpm devtools wrangler|drizzle-kit|psql …
-pnpm devtools preset apply-migrations   # db push, then asks about types:db
+pnpm devtools apply-migrations     # db push, then asks about types:db
+pnpm devtools restart-stack|new-migration|push-config
 ```
+
+`cron` and `workflows` are aliases of `jobs` that narrow it to one kind:
+`cron run` is `jobs run --kind sync` (quick syncs, the Worker cron routes) and
+`workflows run` is `jobs run --kind long-running` (Cloudflare Workflows).
 
 `supabase` adds `--db-url` or `--project-ref` from the session's tier unless you
 passed `--local`, `--linked`, `--db-url` or `--project-ref` yourself. It never
@@ -51,9 +56,11 @@ command path (deprecated ones marked), for tools that check what a page shows.
 
 The `db` and `cf` namespaces are gone: `supabase`, `wrangler`, `drizzle-kit`
 and `psql` plus package scripts (`types:db`, `types:drizzle`, `types:cf`,
-`preview`) replace them. What is left of `db` (`start`, `types`, `introspect`),
-`cf preview` and `run` are deprecated aliases, hidden from the menu, for
-callers that have not moved yet; `--help` names each replacement.
+`preview`) replace them. `run` stays as a deprecated alias, hidden from the
+menu, for callers that have not moved yet (TASK-404 removes it); `--help` names
+its replacement. The retired `db`, `cf`, `gen`, `emails`, `grant-root` and
+`preset` names are refused with where they went (`preset apply-migrations` is
+now `apply-migrations`, and so on).
 
 What always needs production secrets is not here. `deploy`, `env
 pull|push|audit` and `planner` are in `@devdogsuga/backstage`
@@ -65,7 +72,9 @@ workflows keep working until they move to `backstage`.
 
 The menu is generated from the same command tree the argv parser walks, so
 there is no second list to fall out of step — reach for `--help` at any level
-rather than a table here.
+rather than a table here. Its first screen lists every interactive command
+under a plain-English title ("Restart local Supabase") with the command to
+type beside it (`restart-stack`).
 
 ## Telemetry disclosure
 

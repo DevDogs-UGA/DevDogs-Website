@@ -8,8 +8,8 @@
  *   * quick syncs: a Worker cron trigger that calls a route from the app's
  *     `CRON_ROUTES` (`cron/commands.ts` runs one);
  *   * long-running jobs: a Cloudflare Workflow binding (`workflows/commands.ts`
- *     runs and serves one). A legacy `WORKFLOW_CRONS` schedule starts a
- *     Workflow, so it lists here too.
+ *     runs and serves one). An app's `WORKFLOW_CRONS` labels the schedules
+ *     that start its Workflows, so those list here too.
  *
  * This module only decides which of the two a request is about, draws the one
  * picker and the one list over both, and hands off. `--cron` implies a sync and
@@ -150,10 +150,16 @@ export function pickerRows(picks: readonly JobPick[]): PickerRow[] {
   });
 }
 
-/** `0 0 * * *` as words, or "on demand" for a Workflow nothing schedules. */
+/** `0 0 * * * · daily at midnight UTC`, or just the expression it has no words for. */
+function scheduleText(expr: string): string {
+  const words = describeExpr(expr);
+  return words === expr ? expr : `${expr} · ${words}`;
+}
+
+/** A Workflow's schedules, or "on demand" when nothing schedules it. */
 function scheduleHint(schedules: readonly string[] | undefined): string {
   return schedules && schedules.length > 0
-    ? schedules.map(describeExpr).join(", ")
+    ? schedules.map(scheduleText).join(", ")
     : "on demand";
 }
 
@@ -169,10 +175,12 @@ async function discoverPicks(
   app: string | undefined,
 ): Promise<JobPick[]> {
   const configs = discoverWranglerConfigs();
+  // Read for the long-running half too: `WORKFLOW_CRONS` says in words what
+  // a Workflow does, where its wrangler name only says where it runs.
+  const maps = await discoverCronMaps();
   const picks: JobPick[] = [];
 
   if (kinds.includes("sync")) {
-    const maps = await discoverCronMaps();
     const byApp = new Map(
       configs.map(({ app: name, config }) => [name, config]),
     );
@@ -183,7 +191,7 @@ async function discoverPicks(
         expr: choice.expr,
         label: choice.label,
         hint: choice.scheduled
-          ? `${choice.expr} · ${describeExpr(choice.expr)}`
+          ? scheduleText(choice.expr)
           : `${choice.expr} · manual only on ${tier}`,
       });
     }
@@ -192,11 +200,14 @@ async function discoverPicks(
   if (kinds.includes("long-running")) {
     for (const choice of workflowChoices(configs, [tier])) {
       if (app && choice.app !== app) continue;
+      const described = Object.values(
+        maps.find((map) => map.app === choice.app)?.workflows ?? {},
+      ).find((entry) => entry.binding === choice.binding);
       picks.push({
         kind: "long-running",
         app: choice.app,
         binding: choice.binding,
-        label: choice.name,
+        label: described?.label ?? choice.name,
         hint: scheduleHint(choice.schedules),
       });
     }
@@ -324,9 +335,11 @@ export type JobRow =
  *
  * Syncs come from reconciling each app's `CRON_ROUTES` against its Worker
  * crons. Long-running jobs are the Workflow bindings, one row per native
- * schedule (or one "on demand" row), plus any legacy `WORKFLOW_CRONS` entry:
+ * schedule (or one "on demand" row), plus the app's `WORKFLOW_CRONS` labels:
  * one that matches a binding's schedule just lends that row its label, and
- * one that does not is kept as its own row, because its status is the warning.
+ * one that does not (a tier that never schedules it) is kept as its own row,
+ * because its status is the warning, and stands in for the binding's "on
+ * demand" row.
  */
 export async function collectJobs(options: {
   kinds: readonly JobKind[];
@@ -337,8 +350,8 @@ export async function collectJobs(options: {
   const configs = discoverWranglerConfigs().filter(
     (config) => !app || config.app === app,
   );
-  // Legacy `WORKFLOW_CRONS` schedules live in scheduled.ts beside the syncs,
-  // so a long-running-only listing reads it too.
+  // `WORKFLOW_CRONS` lives in scheduled.ts beside the syncs, so a
+  // long-running-only listing reads it too.
   const maps = (await discoverCronMaps()).filter(
     (map) => !app || map.app === app,
   );
@@ -414,13 +427,29 @@ export async function collectJobs(options: {
         status: row.status,
       });
     }
-    rows.push(
-      ...longRunning.sort(
-        (a, b) =>
-          a.app.localeCompare(b.app) ||
-          CRON_TIERS.indexOf(a.tier) - CRON_TIERS.indexOf(b.tier) ||
-          a.label.localeCompare(b.label),
+    // A `WORKFLOW_CRONS` entry names its binding, so the binding's own "on demand"
+    // row would describe the same Workflow twice in a tier that does not
+    // schedule it natively.
+    const covered = new Set(
+      reconciled.flatMap((row) =>
+        row.kind === "workflow"
+          ? [`${row.app} ${row.tier} ${row.binding}`]
+          : [],
       ),
+    );
+    rows.push(
+      ...longRunning
+        .filter(
+          (row) =>
+            row.schedule !== null ||
+            !covered.has(`${row.app} ${row.tier} ${row.binding}`),
+        )
+        .sort(
+          (a, b) =>
+            a.app.localeCompare(b.app) ||
+            CRON_TIERS.indexOf(a.tier) - CRON_TIERS.indexOf(b.tier) ||
+            a.label.localeCompare(b.label),
+        ),
     );
   }
 
