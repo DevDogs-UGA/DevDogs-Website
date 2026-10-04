@@ -3,8 +3,8 @@ import type { DesiredRuleset } from "./types.js";
 /** Numeric actors resolved from the live organization before planning. */
 export interface RulesetActors {
   devopsTeamId: number;
+  focusLeadsTeamId: number;
   adminsTeamId: number;
-  reviewersTeamId: number;
   appId: number;
   renovateAppId?: number;
 }
@@ -57,11 +57,15 @@ export function buildDesiredRulesets(actors: RulesetActors): DesiredRuleset[] {
       conditions: main,
       bypass_actors: [
         {
-          actor_id: actors.reviewersTeamId,
+          actor_id: actors.focusLeadsTeamId,
           actor_type: "Team",
           bypass_mode: "pull_request",
         },
-        always(actors.devopsTeamId),
+        {
+          actor_id: actors.devopsTeamId,
+          actor_type: "Team",
+          bypass_mode: "pull_request",
+        },
         always(actors.adminsTeamId),
       ],
       rules: [
@@ -76,7 +80,7 @@ export function buildDesiredRulesets(actors: RulesetActors): DesiredRuleset[] {
       target: "branch",
       enforcement: "active",
       conditions: main,
-      bypass_actors: [always(actors.devopsTeamId), always(actors.adminsTeamId)],
+      bypass_actors: [always(actors.adminsTeamId)],
       rules: [
         {
           type: "pull_request",
@@ -96,7 +100,7 @@ export function buildDesiredRulesets(actors: RulesetActors): DesiredRuleset[] {
       target: "branch",
       enforcement: "active",
       conditions: main,
-      bypass_actors: [always(actors.devopsTeamId), always(actors.adminsTeamId)],
+      bypass_actors: [always(actors.adminsTeamId)],
       rules: [
         {
           type: "required_status_checks",
@@ -124,6 +128,7 @@ export function buildDesiredRulesets(actors: RulesetActors): DesiredRuleset[] {
         },
       },
       bypass_actors: [
+        always(actors.focusLeadsTeamId),
         always(actors.devopsTeamId),
         always(actors.adminsTeamId),
         ...(actors.renovateAppId === undefined
@@ -159,7 +164,6 @@ export function buildDesiredRulesets(actors: RulesetActors): DesiredRuleset[] {
           actor_type: "Integration",
           bypass_mode: "always",
         },
-        always(actors.devopsTeamId),
         always(actors.adminsTeamId),
       ],
       rules: [

@@ -8,8 +8,8 @@ import {
 
 const actors = {
   devopsTeamId: 9002,
+  focusLeadsTeamId: 9004,
   adminsTeamId: 9001,
-  reviewersTeamId: 9003,
   appId: 5001,
 };
 
@@ -34,11 +34,11 @@ describe("buildDesiredRulesets", () => {
     });
   });
 
-  it("lets reviewers merge PRs while only devops and admins direct-push", () => {
+  it("lets reviewers merge PRs while only admins direct-push", () => {
     const updates = desired.find((rule) => rule.name === "main-updates")!;
     expect(updates.bypass_actors).toEqual([
-      { actor_id: 9003, actor_type: "Team", bypass_mode: "pull_request" },
-      { actor_id: 9002, actor_type: "Team", bypass_mode: "always" },
+      { actor_id: 9004, actor_type: "Team", bypass_mode: "pull_request" },
+      { actor_id: 9002, actor_type: "Team", bypass_mode: "pull_request" },
       { actor_id: 9001, actor_type: "Team", bypass_mode: "always" },
     ]);
   });
@@ -55,10 +55,16 @@ describe("buildDesiredRulesets", () => {
         required_review_thread_resolution: true,
       },
     });
+    expect(reviews.bypass_actors).toEqual([
+      { actor_id: 9001, actor_type: "Team", bypass_mode: "always" },
+    ]);
   });
 
-  it("keeps direct pushes subject to post-push CI before release", () => {
+  it("requires CI for everyone except the admin break-glass team", () => {
     const ci = desired.find((rule) => rule.name === "main-ci")!;
+    expect(ci.bypass_actors).toEqual([
+      { actor_id: 9001, actor_type: "Team", bypass_mode: "always" },
+    ]);
     expect(ci.rules[0]).toMatchObject({
       type: "required_status_checks",
       parameters: {
@@ -73,12 +79,29 @@ describe("buildDesiredRulesets", () => {
   });
 
   it("excludes main and team branches from the broad backstop", () => {
-    expect(
-      desired.find((rule) => rule.name === "~ALL")!.conditions.ref_name,
-    ).toEqual({
+    const all = desired.find((rule) => rule.name === "~ALL")!;
+    expect(all.conditions.ref_name).toEqual({
       include: ["~ALL"],
       exclude: ["refs/heads/main", "refs/heads/team/**"],
     });
+    expect(all.bypass_actors).toContainEqual({
+      actor_id: 9004,
+      actor_type: "Team",
+      bypass_mode: "always",
+    });
+    expect(all.bypass_actors).toContainEqual({
+      actor_id: 9002,
+      actor_type: "Team",
+      bypass_mode: "always",
+    });
+  });
+
+  it("reserves team branches for the platform, competition team, and admins", () => {
+    const team = desired.find((rule) => rule.name === "team/**")!;
+    expect(team.bypass_actors).toEqual([
+      { actor_id: 5001, actor_type: "Integration", bypass_mode: "always" },
+      { actor_id: 9001, actor_type: "Team", bypass_mode: "always" },
+    ]);
   });
 });
 

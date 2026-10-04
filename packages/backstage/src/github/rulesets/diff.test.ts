@@ -5,8 +5,8 @@ import type { LiveRuleset, LiveRulesetSummary } from "./types.js";
 
 const actors = {
   devopsTeamId: 9002,
+  focusLeadsTeamId: 9004,
   adminsTeamId: 9001,
-  reviewersTeamId: 9003,
   appId: 5001,
 };
 const desired = buildDesiredRulesets(actors);

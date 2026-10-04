@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * `commands.ts` orchestrates four resolved ids and a handful of `gh` calls;
+ * `commands.ts` orchestrates resolved ids and a handful of `gh` calls;
  * every one of those is mocked here so this suite is about ORCHESTRATION —
  * what happens when Renovate's App id cannot be resolved, and what happens
  * when a REQUIRED id (devops/admins/the platform App) cannot be — not about
@@ -11,15 +11,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 const teamIds = vi.hoisted(() => ({
   devops: 9002,
+  focusLeads: 9004,
   admins: 9001,
-  reviewers: 9003,
 }));
 
 vi.mock("./actors.js", () => ({
   resolveTeamId: vi.fn(async (_org: string, slug: string) => {
     if (slug === "devops") return teamIds.devops;
+    if (slug === "focus-leads") return teamIds.focusLeads;
     if (slug === "admins") return teamIds.admins;
-    if (slug === "reviewers") return teamIds.reviewers;
     throw new Error(`resolveTeamId: unexpected slug "${slug}"`);
   }),
   resolveAppId: vi.fn(),

@@ -35,7 +35,6 @@ const DEFAULT_REPO = "DevDogsUGA";
 const DEFAULT_APP_SLUG = "devdogs-platform";
 const DEFAULT_DEVOPS_SLUG = "devops";
 const DEFAULT_ADMINS_SLUG = "admins";
-const DEFAULT_REVIEWERS_SLUG = "reviewers";
 /** TASK-299 — installed separately from the platform App; may not exist yet. */
 const DEFAULT_RENOVATE_SLUG = "renovate";
 
@@ -173,14 +172,14 @@ export async function runGithubRulesets(
   const r: Repo = { owner: opts.org, repo: opts.repo };
 
   let devopsTeamId: number;
+  let focusLeadsTeamId: number;
   let adminsTeamId: number;
-  let reviewersTeamId: number;
   let appId: number;
   try {
-    [devopsTeamId, adminsTeamId, reviewersTeamId, appId] = await Promise.all([
+    [devopsTeamId, focusLeadsTeamId, adminsTeamId, appId] = await Promise.all([
       resolveTeamId(opts.org, DEFAULT_DEVOPS_SLUG),
+      resolveTeamId(opts.org, "focus-leads"),
       resolveTeamId(opts.org, DEFAULT_ADMINS_SLUG),
-      resolveTeamId(opts.org, DEFAULT_REVIEWERS_SLUG),
       resolveAppId(opts.org, opts.appSlug),
     ]);
   } catch (err) {
@@ -208,8 +207,8 @@ export async function runGithubRulesets(
 
   const actors = {
     devopsTeamId,
+    focusLeadsTeamId,
     adminsTeamId,
-    reviewersTeamId,
     appId,
     renovateAppId,
   };
