@@ -153,8 +153,10 @@ a Send another officer made creates a new one, with a new link, under yours.
 
 The roster needs production's `DB_URL`: `--db-url`, else `.env.production` in a
 checkout, else Secrets Manager. The Linear key: `--linear-token`, then
-`LINEAR_API_KEY`, then the vault item "DevDogs Linear API key (backstage)", then
-a prompt; it is never saved.
+`LINEAR_API_KEY`, then the item "DevDogs Linear API key (backstage)" in your
+personal vault, then a prompt, which offers to save it there. Use your own key,
+never one shared through the DevDogs organization: Linear records every edit
+under the key's owner, and creds ignores organization items of that name.
 
 ## Member data: `import` and `export`
 
@@ -254,8 +256,10 @@ command that is not read-only asks once first (`--yes` answers it).
 Each command checks for the secrets it uses up front: `deploy <app>` for
 `CLOUDFLARE_API_TOKEN`, `deploy reconcile` for `CRON_SECRET`, `deploy
 prune-monitors` for `SENTRY_MONITORS_TOKEN` (skipped without it), `env` for the
-Secrets Manager token (flag, environment, then the Bitwarden vault, which `env`
-signs in to and unlocks itself, then asking).
+Secrets Manager token (flag, environment, then your personal Bitwarden vault,
+which `env` signs in to and unlocks itself, then asking). The token is each
+person's own: the vault read skips organization items, and a save sets no
+organization, so one person's token can be revoked without the rest.
 
 ## The deprecated `devtools-ci` bins
 

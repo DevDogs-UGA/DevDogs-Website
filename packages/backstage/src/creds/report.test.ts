@@ -64,6 +64,22 @@ describe("the Shared Accounts document", () => {
 });
 
 describe("the Linear key", () => {
+  it("offers to save only a key that was typed", async () => {
+    const offerSave = vi.fn(async () => undefined);
+    await resolveLinearToken({
+      fromVault: async () => "lin_vault",
+      prompt: async () => "lin_prompt",
+      offerSave,
+    });
+    expect(offerSave).not.toHaveBeenCalled();
+    await resolveLinearToken({
+      fromVault: async () => undefined,
+      prompt: async () => "lin_prompt",
+      offerSave,
+    });
+    expect(offerSave).toHaveBeenCalledWith("lin_prompt");
+  });
+
   it("prefers the flag, then LINEAR_API_KEY, then the vault, then a prompt", async () => {
     const vault = vi.fn(async () => "lin_vault");
     const prompt = vi.fn(async () => "lin_prompt");
@@ -82,7 +98,11 @@ describe("the Linear key", () => {
       "lin_vault",
     );
     expect(
-      await resolveLinearToken({ fromVault: async () => undefined, prompt }),
+      await resolveLinearToken({
+        fromVault: async () => undefined,
+        prompt,
+        offerSave: async () => undefined,
+      }),
     ).toBe("lin_prompt");
     expect(vault).toHaveBeenCalledTimes(1);
   });

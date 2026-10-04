@@ -108,7 +108,8 @@ export async function promptForToken(): Promise<string | undefined> {
 
   const typed = unwrap(
     await password({
-      message: "Paste the Secrets Manager access token for the `admin` account",
+      message:
+        "Paste your own Secrets Manager access token (`admin` machine account)",
       mask: "•",
       validate: (v) =>
         (v ?? "").trim() === "" ? "An access token is required." : undefined,

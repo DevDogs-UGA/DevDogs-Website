@@ -12,10 +12,10 @@
  * no secret values: names, usernames, addresses, dates and Send links, each
  * of which opens only for the addresses Bitwarden verifies.
  */
-import { password as askPassword } from "@clack/prompts";
+import { password as askPassword, confirm, log } from "@clack/prompts";
 import { nonEmpty } from "@devdogsuga/cli-core/db/connection";
 import { unwrap } from "@devdogsuga/cli-core/ui";
-import { readPasswordFromVault } from "../bws/vault.js";
+import { readPasswordFromVault, savePasswordToVault } from "../bws/vault.js";
 import { isoDay, sendStatus, type SharedItem } from "./item.js";
 import { describeRecipient, type Roster } from "./roster.js";
 import { CredsError, registerSecret } from "./secrets.js";
@@ -24,6 +24,12 @@ import { CredsError, registerSecret } from "./secrets.js";
 export const SHARED_ACCOUNTS_DOCUMENT_ID =
   "209799db-5981-4796-a41e-2bb433020d06";
 
+/**
+ * In the officer's PERSONAL vault, never the DevDogs organization: a Linear
+ * key acts as the person who made it, so a shared one would put every edit to
+ * the document under one name. It would also be an organization login that
+ * `creds send` could hand out.
+ */
 export const LINEAR_VAULT_ITEM = "DevDogs Linear API key (backstage)";
 
 const LINEAR_API = "https://api.linear.app/graphql";
@@ -85,11 +91,13 @@ export interface LinearTokenSources {
   env?: string;
   fromVault?: () => Promise<string | undefined>;
   prompt?: () => Promise<string | undefined>;
+  /** Asked only after a successful prompt; saves to the personal vault. */
+  offerSave?: (token: string) => Promise<void>;
 }
 
 /**
- * `--linear-token`, then `LINEAR_API_KEY`, then the vault item, then a prompt.
- * Never saved anywhere: the vault is where it lives.
+ * `--linear-token`, then `LINEAR_API_KEY`, then your personal vault item, then
+ * a prompt, which offers to save what was typed to your personal vault.
  */
 export async function resolveLinearToken(
   sources: LinearTokenSources,
@@ -97,15 +105,21 @@ export async function resolveLinearToken(
   const token =
     nonEmpty(sources.explicit) ??
     nonEmpty(sources.env) ??
-    (await (sources.fromVault ?? readLinearTokenFromVault)()) ??
-    (await (sources.prompt ?? promptForLinearToken)());
-  if (!token) {
+    (await (sources.fromVault ?? readLinearTokenFromVault)());
+  if (token) {
+    registerSecret(token);
+    return token;
+  }
+
+  const typed = await (sources.prompt ?? promptForLinearToken)();
+  if (!typed) {
     throw new CredsError(
-      `No Linear API key. Set LINEAR_API_KEY, or store one in your vault as "${LINEAR_VAULT_ITEM}".`,
+      `No Linear API key. Set LINEAR_API_KEY, or store your own in your personal vault as "${LINEAR_VAULT_ITEM}".`,
     );
   }
-  registerSecret(token);
-  return token;
+  registerSecret(typed);
+  await (sources.offerSave ?? offerToSaveLinearToken)(typed);
+  return typed;
 }
 
 function readLinearTokenFromVault(): Promise<string | undefined> {
@@ -117,11 +131,32 @@ function readLinearTokenFromVault(): Promise<string | undefined> {
   );
 }
 
+async function offerToSaveLinearToken(token: string): Promise<void> {
+  if (!process.stdin.isTTY) return;
+  const ok = unwrap(
+    await confirm({
+      message: `Save it to your personal Bitwarden vault as "${LINEAR_VAULT_ITEM}"?`,
+      initialValue: true,
+    }),
+  );
+  if (!ok) return;
+  const saved = await savePasswordToVault(
+    LINEAR_VAULT_ITEM,
+    "Your own Linear API key, read by `backstage creds` to update the Shared " +
+      "Accounts document. Keep it in your personal vault, never the DevDogs " +
+      "organization: Linear records every edit under the key's owner.",
+    token,
+    "save the Linear API key",
+  );
+  if (saved) log.success(`Stored as "${LINEAR_VAULT_ITEM}" in your vault.`);
+  else log.warn("Could not save it; continuing with the key you typed.");
+}
+
 async function promptForLinearToken(): Promise<string | undefined> {
   if (!process.stdin.isTTY) return undefined;
   const value = unwrap(
     await askPassword({
-      message: "Linear API key? (Settings → Security & access → API keys)",
+      message: "Your Linear API key? (Settings → Security & access → API keys)",
     }),
   );
   return nonEmpty(value.trim());

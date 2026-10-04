@@ -13,9 +13,14 @@
  * prerequisite.
  *
  * ⚠️ The token never passes through argv in either direction. Reads use
- * `bw get password <search>`, which puts only the item NAME on the command
+ * `bw list items --search <name>`, which puts only the item NAME on the command
  * line, and writes pipe base64 JSON through **stdin**, which `bw create item`
  * documents as an accepted input.
+ *
+ * ⚠️ Only the PERSONAL vault. A token read from, or saved to, an organization
+ * item would be one token for everybody who can see that item: every call made
+ * with it looks the same, and revoking one person means revoking everyone.
+ * Reads skip organization items and say so; writes set no organization.
  */
 import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
@@ -193,13 +198,7 @@ export function bwArgs(args: string[], key?: string): string[] {
   return key ? [...withNoInteraction, "--session", key] : withNoInteraction;
 }
 
-/**
- * The stored token, or `undefined` for every reason it might not be there.
- *
- * `bw get password` takes a search term and fails when it matches more than one
- * item, which is the behaviour worth having: two items called something like
- * this means somebody should look, not that this should guess.
- */
+/** The stored token, or `undefined` for every reason it might not be there. */
 export async function readTokenFromVault(): Promise<string | undefined> {
   return readPasswordFromVault(
     VAULT_ITEM_NAME,
@@ -209,10 +208,23 @@ export async function readTokenFromVault(): Promise<string | undefined> {
   );
 }
 
+interface ListedItem {
+  name?: string;
+  type?: number;
+  organizationId?: string | null;
+  login?: { password?: string | null } | null;
+}
+
 /**
- * The password of the one vault item named `itemName`, or `undefined` for
- * every reason it might not be there. `what` names it in the spinner; `purpose`
- * finishes the sign-in and unlock questions.
+ * The password of the one PERSONAL vault item named exactly `itemName`, or
+ * `undefined` for every reason it might not be there. `what` names it in the
+ * spinner; `purpose` finishes the sign-in and unlock questions.
+ *
+ * `bw list items --search` rather than `bw get password`: `get` takes the
+ * first item it can see, organization items included, and an item of that
+ * name in an organization is precisely the shared token this must not use.
+ * Two personal items of the same name mean somebody should look, not that
+ * this should guess, so that is "not found" too.
  */
 export async function readPasswordFromVault(
   itemName: string,
@@ -236,35 +248,60 @@ export async function readPasswordFromVault(
 
   const s = spinner();
   s.start("Looking in your Bitwarden vault");
+  let items: ListedItem[];
   try {
+    // stdout is captured and parsed, never printed: it holds the password.
     const { stdout } = await run(
-      ...bwCommand(bwArgs(["get", "password", itemName, "--raw"], key)),
-      { shell: false },
+      ...bwCommand(bwArgs(["list", "items", "--search", itemName], key)),
+      { shell: false, maxBuffer: 16 * 1024 * 1024 },
     );
-    const token = stdout.trim();
-    if (token === "") {
-      s.stop("Nothing stored in the vault yet");
-      return undefined;
-    }
-    s.stop(`Read ${what} from your vault ("${itemName}")`);
-    return token;
+    items = (JSON.parse(stdout) as ListedItem[]).filter(
+      (item) => item.name === itemName,
+    );
   } catch {
-    // "not found" and "more than one match" both land here, and both mean the
-    // same thing to the caller: ask instead.
-    s.stop("No single matching item in your vault");
+    s.stop("Could not read your Bitwarden vault");
     return undefined;
   }
+
+  const personal = items.filter((item) => !item.organizationId);
+  if (personal.length > 1) {
+    s.stop(`More than one "${itemName}" in your vault; delete the extras`);
+    return undefined;
+  }
+  const token = personal[0]?.login?.password?.trim();
+  if (token) {
+    s.stop(`Read ${what} from your vault ("${itemName}")`);
+    return token;
+  }
+
+  if (items.length > personal.length) {
+    s.stop(`"${itemName}" is in an organization, not your personal vault`);
+    log.warn(
+      `Not using it: an organization item is one ${what} for everyone who can ` +
+        "see it, so nothing it does can be told apart. Use your own, saved in " +
+        "your personal vault (no organization).",
+    );
+    return undefined;
+  }
+  s.stop("Nothing stored in the vault yet");
+  return undefined;
 }
 
 /**
- * Creates the item, with the token arriving on **stdin** as base64 JSON.
+ * Saves `token` as a login item named `itemName` in the PERSONAL vault, the
+ * token arriving on **stdin** as base64 JSON.
  *
  * `bw create item` documents an encoded-JSON positional AND stdin. Using stdin
  * is the difference between a live credential that is invisible and one that
- * sits in `ps` output for the length of the call.
+ * sits in `ps` output for the length of the call. `organizationId: null` is
+ * what makes it personal, and it is not a parameter.
  */
-export async function saveTokenToVault(token: string): Promise<boolean> {
-  const purpose = "save the access token";
+export async function savePasswordToVault(
+  itemName: string,
+  notes: string,
+  token: string,
+  purpose: string,
+): Promise<boolean> {
   const status = await signInIfNeeded(await vaultStatus(), purpose);
   if (status === "unavailable" || status === "unauthenticated") return false;
 
@@ -275,13 +312,9 @@ export async function saveTokenToVault(token: string): Promise<boolean> {
     organizationId: null,
     collectionIds: null,
     folderId: null,
-    type: 1, // login, so `bw get password` can retrieve it in one call
-    name: VAULT_ITEM_NAME,
-    notes:
-      "Bitwarden Secrets Manager access token for the `admin` machine account, " +
-      "read/write on preflight, staging and production.\n\n" +
-      "Read automatically by `backstage env`. Never put this in a .env " +
-      "file: it unlocks all three projects, and the tool refuses to upload it.",
+    type: 1, // login, so the password is one field to read back
+    name: itemName,
+    notes,
     favorite: false,
     reprompt: 0,
     login: { username: null, password: token, totp: null },
@@ -301,6 +334,22 @@ export async function saveTokenToVault(token: string): Promise<boolean> {
     });
     child.stdin.end(Buffer.from(JSON.stringify(item)).toString("base64"));
   });
+}
+
+/** Saves the Secrets Manager access token. See {@link savePasswordToVault}. */
+export function saveTokenToVault(token: string): Promise<boolean> {
+  return savePasswordToVault(
+    VAULT_ITEM_NAME,
+    "Your own Bitwarden Secrets Manager access token for the `admin` machine " +
+      "account, read/write on preflight, staging and production.\n\n" +
+      "Read automatically by `backstage env`. Keep it in your personal vault, " +
+      "never an organization: one token per person is what keeps calls " +
+      "attributable and lets one person's be revoked alone. Never put this in " +
+      "a .env that leaves this machine: it unlocks all three projects, and " +
+      "the tool refuses to upload it.",
+    token,
+    "save the access token",
+  );
 }
 
 /** Why the vault could not be used, phrased as something to do about it. */

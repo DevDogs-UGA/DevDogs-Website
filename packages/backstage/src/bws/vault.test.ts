@@ -40,6 +40,8 @@ vi.mock("./bw.js", () => ({
 import {
   forgetVaultSession,
   readTokenFromVault,
+  saveTokenToVault,
+  VAULT_ITEM_NAME,
   vaultStatus,
 } from "./vault.js";
 
@@ -48,6 +50,12 @@ const fs = require("node:fs");
 const [command, ...rest] = process.argv.slice(2);
 const state = process.env.FAKE_BW_STATE;
 const read = () => fs.readFileSync(state, "utf8").trim();
+const personal = (password) => ({
+  name: "DevDogs Secrets Manager access token (admin)",
+  type: 1,
+  organizationId: null,
+  login: { password },
+});
 if (command === "status") {
   console.log(JSON.stringify({ status: read() }));
 } else if (command === "login") {
@@ -55,9 +63,20 @@ if (command === "status") {
 } else if (command === "unlock") {
   fs.writeFileSync(state, "unlocked");
   process.stdout.write("SESSION");
-} else if (command === "get") {
+} else if (command === "list") {
   if (read() !== "unlocked" || !rest.includes("SESSION")) process.exit(1);
-  process.stdout.write("0.11111111-1111-1111-1111-111111111111.secret");
+  const items = fs.existsSync(state + ".items")
+    ? JSON.parse(fs.readFileSync(state + ".items", "utf8"))
+    : [personal("0.11111111-1111-1111-1111-111111111111.secret")];
+  const search = rest[rest.indexOf("--search") + 1];
+  console.log(JSON.stringify(items.filter((i) => i.name.includes(search))));
+} else if (command === "create") {
+  if (read() !== "unlocked" || !rest.includes("SESSION")) process.exit(1);
+  let input = "";
+  process.stdin.on("data", (c) => (input += c));
+  process.stdin.on("end", () => {
+    fs.writeFileSync(state + ".created", Buffer.from(input, "base64").toString());
+  });
 } else {
   process.exit(2);
 }
@@ -68,6 +87,21 @@ const isTTY = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
 
 function setState(value: string): void {
   writeFileSync(state, value);
+}
+
+function setItems(
+  items: { name: string; organizationId: string | null; password: string }[],
+): void {
+  writeFileSync(
+    `${state}.items`,
+    JSON.stringify(
+      items.map(({ password, ...rest }) => ({
+        ...rest,
+        type: 1,
+        login: { password },
+      })),
+    ),
+  );
 }
 
 function terminal(on: boolean): void {
@@ -143,5 +177,57 @@ describe("reading the Secrets Manager token from the vault", () => {
   it("reports the status the fake CLI gives", async () => {
     setState("locked");
     expect(await vaultStatus()).toBe("locked");
+  });
+});
+
+describe("only the personal vault", () => {
+  beforeEach(() => {
+    setState("unlocked");
+    process.env.BW_SESSION = "SESSION";
+  });
+  afterEach(() => {
+    delete process.env.BW_SESSION;
+  });
+
+  it("ignores an organization item of the same name, and reads the personal one", async () => {
+    setItems([
+      { name: VAULT_ITEM_NAME, organizationId: "org", password: "shared" },
+      { name: VAULT_ITEM_NAME, organizationId: null, password: "mine" },
+    ]);
+    expect(await readTokenFromVault()).toBe("mine");
+  });
+
+  it("refuses a token that exists only as an organization item", async () => {
+    setItems([
+      { name: VAULT_ITEM_NAME, organizationId: "org", password: "shared" },
+    ]);
+    expect(await readTokenFromVault()).toBeUndefined();
+  });
+
+  it("refuses to guess between two personal items", async () => {
+    setItems([
+      { name: VAULT_ITEM_NAME, organizationId: null, password: "a" },
+      { name: VAULT_ITEM_NAME, organizationId: null, password: "b" },
+    ]);
+    expect(await readTokenFromVault()).toBeUndefined();
+  });
+
+  it("matches the name exactly, not by search", async () => {
+    setItems([
+      { name: `${VAULT_ITEM_NAME} (old)`, organizationId: null, password: "x" },
+    ]);
+    expect(await readTokenFromVault()).toBeUndefined();
+  });
+
+  it("saves with no organization, the token on stdin", async () => {
+    expect(await saveTokenToVault("0.tok")).toBe(true);
+    const created = JSON.parse(readFileSync(`${state}.created`, "utf8")) as {
+      organizationId: unknown;
+      collectionIds: unknown;
+      login: { password: string };
+    };
+    expect(created.organizationId).toBeNull();
+    expect(created.collectionIds).toBeNull();
+    expect(created.login.password).toBe("0.tok");
   });
 });
