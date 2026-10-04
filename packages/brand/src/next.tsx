@@ -11,8 +11,9 @@ import { PageCard } from "./templates/PageCard.js";
  *
  * ## Why `next/og` and not `@vercel/og`
  *
- * `next/og` is Next's file-convention renderer, and vinext bundles Next's own
- * vendored copy of `@vercel/og` into the Worker. A directly installed
+ * `next/og` is Next's file-convention renderer. vinext shims it with a wrapper
+ * around its own pinned `@vercel/og` dependency, and a Vite plugin inlines that
+ * package's asset fetches so it runs in the Worker. A directly installed
  * `@vercel/og` would bypass that integration and duplicate the renderer.
  *
  * ## Fonts
