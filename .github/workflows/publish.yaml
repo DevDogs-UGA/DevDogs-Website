@@ -56,7 +56,9 @@ jobs:
   publish:
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Room for the script to wait out npm's CDN after each publish (up to 15
+    # minutes per package, usually seconds; see waitUntilInstallable).
+    timeout-minutes: 45
     environment: publishing
     permissions:
       contents: write

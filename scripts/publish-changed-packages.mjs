@@ -161,6 +161,49 @@ async function fetchRegistryState(name) {
   return { latest, shasum };
 }
 
+// Block until installers can resolve name@version. fetchRegistryState asks
+// for the full packument with the cache bypassed; installers don't. pnpm
+// requests the abbreviated "install-v1" packument through the CDN, a
+// separately cached document that can keep serving the old version list for
+// minutes after a publish. That window broke a DevDogsUGA production deploy
+// (2026-10-04): it installed @devdogsuga/backstage@0.1.12, published 6s after
+// @devdogsuga/newsletter@0.1.14, while the CDN still said newsletter's latest
+// was 0.1.13. Waiting here after every publish means a dependency is
+// installable before anything depending on it is published, and a finished
+// publish job means everything it published is installable.
+async function waitUntilInstallable(
+  name,
+  version,
+  { timeoutMs = 15 * 60_000, intervalMs = 10_000 } = {},
+) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const res = await fetch(
+      `https://registry.npmjs.org/${encodeURIComponent(name)}`,
+      {
+        headers: {
+          accept:
+            "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*",
+        },
+      },
+    );
+    if (res.ok) {
+      const body = await res.json();
+      if (body.versions?.[version]) {
+        console.log(`${name}@${version}: installable from the registry`);
+        return;
+      }
+    }
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `${name}@${version} was published but installers still cannot resolve it after ${timeoutMs / 60_000} minutes.`,
+      );
+    }
+    console.log(`${name}@${version}: waiting for the registry CDN to catch up`);
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+}
+
 function highestVersion(versions) {
   const plain = versions.filter((v) => /^\d+\.\d+\.\d+$/.test(v));
   const key = (v) => v.split(".").map(Number);
@@ -446,6 +489,7 @@ async function main() {
         console.log(`  [dry run] would publish ${finalTarball}`);
       } else {
         publishedVersion = publishWithRetry(repoRoot, pkg, finalTarball, tmp);
+        await waitUntilInstallable(name, publishedVersion);
       }
       published.push(`${name}@${publishedVersion}`);
       if (!prepareDir) ensureRelease(pkg, publishedVersion);
@@ -548,6 +592,9 @@ async function publishPreparedPlan(path) {
       );
       console.log(`Published ${entry.name}@${entry.version}`);
     }
+    // Also on the "already published" path: a re-run after a failure must not
+    // go on to publish dependents of a version installers can't see yet.
+    await waitUntilInstallable(entry.name, entry.version);
     ensureRelease(pkg, entry.version);
   }
 }
