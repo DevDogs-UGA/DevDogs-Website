@@ -47,7 +47,7 @@ vi.mock("node:child_process", async (importOriginal) => {
   return { ...actual, spawn: fake.spawn };
 });
 
-const { run, seedBuckets } = await import("./run.js");
+const { dbPush, run, seedBuckets } = await import("./run.js");
 
 beforeEach(() => {
   fake.state.spawnCalls.length = 0;
@@ -117,5 +117,24 @@ describe("seedBuckets", () => {
         ],
       },
     ]);
+  });
+});
+
+describe("dbPush", () => {
+  it("adds --include-seed only when asked", async () => {
+    await dbPush("postgresql://x", { yes: true });
+    await dbPush("postgresql://x", { yes: true, includeSeed: true });
+    const [plain, seeded] = fake.state.spawnCalls.map((c) => c.args);
+    expect(plain).not.toContain("--include-seed");
+    expect(seeded).toEqual(
+      expect.arrayContaining([
+        "db",
+        "push",
+        "--db-url",
+        "postgresql://x",
+        "--include-seed",
+        "--yes",
+      ]),
+    );
   });
 });

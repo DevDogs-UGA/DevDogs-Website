@@ -4,6 +4,8 @@
  *   1. Who did Postgres authenticate? (`current_user`)
  *   2. Can it read an application schema? (it must not)
  *   3. Can it read the migrations table? (it must, the dry run is next)
+ *   4. Can it read the seed ledger? (it must, once the table exists, for
+ *      `deploy plan --include-seed`)
  *
  * Shared between `deploy require-planner` (which turns a bad answer into a
  * red CI job) and `planner create` / `planner reset-password` (which run the
@@ -30,6 +32,8 @@ export const CHECK_IDENTITY = "select current_user as who";
 export const CHECK_OVERREACH = "select * from platform.profile limit 1";
 export const CHECK_MIGRATIONS =
   "select count(*)::int as n from supabase_migrations.schema_migrations";
+export const CHECK_SEEDS =
+  "select count(*)::int as n from supabase_migrations.seed_files";
 
 export interface PlannerVerdict {
   ok: boolean;
@@ -114,7 +118,38 @@ export async function checkPlanner(db: PlannerDb): Promise<PlannerVerdict> {
     };
   }
 
+  try {
+    const [row] = await db.run(CHECK_SEEDS);
+    lines.push(
+      `can read supabase_migrations.seed_files (${String(row?.n)} rows)`,
+    );
+  } catch (error) {
+    // 42P01: the CLI has not run a seeded push here yet, so there is no
+    // ledger to read and the dry run creates nothing: not a fault.
+    if (isMissingTable(error)) {
+      lines.push("no supabase_migrations.seed_files yet (no seeded push)");
+    } else {
+      return {
+        ok: false,
+        lines,
+        problem:
+          `${PLANNER_ROLE} cannot read supabase_migrations.seed_files, so ` +
+          "`deploy plan --include-seed` would fail. As an admin, run: " +
+          `grant select on supabase_migrations.seed_files to ${PLANNER_ROLE};`,
+      };
+    }
+  }
+
   return { ok: true, lines };
+}
+
+/** Postgres 42P01 (undefined_table), with a text fallback. */
+export function isMissingTable(error: unknown): boolean {
+  const e = error as { code?: string; message?: string };
+  return (
+    e.code === "42P01" ||
+    /relation "?[\w.]*seed_files"? does not exist/i.test(e.message ?? "")
+  );
 }
 
 /** Postgres 3F000 (invalid_schema_name), with a text fallback. */

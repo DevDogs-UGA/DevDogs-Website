@@ -3,6 +3,7 @@ import {
   CHECK_IDENTITY,
   CHECK_MIGRATIONS,
   CHECK_OVERREACH,
+  CHECK_SEEDS,
   checkPlanner,
 } from "./checks.js";
 import type { PlannerDb } from "./db.js";
@@ -37,12 +38,51 @@ function db(
 const DENIED = new Error("permission denied for schema platform");
 
 describe("checkPlanner", () => {
+  const planner = {
+    [CHECK_IDENTITY]: [{ who: "migration_planner" }],
+    [CHECK_OVERREACH]: DENIED,
+    [CHECK_MIGRATIONS]: [{ n: 50 }],
+  };
+
+  it("refuses a planner that cannot read the seed ledger, naming the grant", async () => {
+    const verdict = await checkPlanner(
+      db({
+        ...planner,
+        [CHECK_SEEDS]: Object.assign(
+          new Error("permission denied for table seed_files"),
+          { code: "42501" },
+        ),
+      }),
+    );
+    expect(verdict.ok).toBe(false);
+    expect(verdict.problem).toMatch(
+      /grant select on supabase_migrations\.seed_files to migration_planner/,
+    );
+  });
+
+  it("passes when no seeded push has created the ledger yet", async () => {
+    const verdict = await checkPlanner(
+      db({
+        ...planner,
+        [CHECK_SEEDS]: Object.assign(
+          new Error('relation "supabase_migrations.seed_files" does not exist'),
+          { code: "42P01" },
+        ),
+      }),
+    );
+    expect(verdict.ok).toBe(true);
+    expect(verdict.lines.join("\n")).toMatch(
+      /no supabase_migrations\.seed_files yet/,
+    );
+  });
+
   it("passes the credential that authenticates as the planner, is denied platform, and reads migrations", async () => {
     const verdict = await checkPlanner(
       db({
         [CHECK_IDENTITY]: [{ who: "migration_planner" }],
         [CHECK_OVERREACH]: DENIED,
         [CHECK_MIGRATIONS]: [{ n: 50 }],
+        [CHECK_SEEDS]: [{ n: 23 }],
       }),
     );
     expect(verdict.ok).toBe(true);

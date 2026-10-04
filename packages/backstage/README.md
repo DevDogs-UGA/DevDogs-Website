@@ -47,7 +47,8 @@ pnpm backstage export attendance --meeting 2026-09-09 --format bevy,involvement
 | `deploy <app> --tier <t>`                          | Checks `CLOUDFLARE_API_TOKEN`, writes the Worker's secrets file, deploys, removes it.  |
 | `deploy write-env`                                 | Composes `.env.<DEPLOY_ENV>` from the GitHub environment.                              |
 | `deploy preflight`                                 | Classifies the project: paused (skip) or broken (fail).                                |
-| `deploy plan`, `deploy migrate`                    | Dry-run the migrations into the job summary; apply them to `DB_URL`.                   |
+| `deploy plan`, `deploy migrate [--include-seed]`   | Dry-run the migrations (and new seed files) into the job summary; apply them.          |
+| `deploy avatars`                                   | Uploads seeded headshots the bucket lacks; never replaces one (`SECRET_KEY`).          |
 | `deploy smoke --tier <t> [--app]`                  | Public routes answer 200, the auth redirect works, this deploy's Sentry release shows. |
 | `deploy reconcile --tier <t>`                      | The platform's config reconcile, after the deploy (`CRON_SECRET`).                     |
 | `deploy prune-monitors --tier <t> [--app]`         | Deletes the app's Sentry Crons monitors it no longer declares (production only).       |

@@ -20,6 +20,19 @@
 import { dbPush, dbPushDryRun } from "@devdogsuga/cli-core/db/run";
 import { DeployError, say, summary } from "./report.js";
 
+/**
+ * `--include-seed`: plan and apply the `[db.seed]` files with the migrations.
+ * The CLI runs each new seed file once and records its hash in
+ * `supabase_migrations.seed_files`, so an unchanged file never runs again, and
+ * the seeds are insert-only, so an edited one only has its hash updated. The
+ * plan lists the files it would run, which is what makes them reviewable at
+ * the production approval. Planning them needs `migration_planner` to read
+ * `seed_files` (see `planner/role.ts`).
+ */
+export interface SeedOption {
+  includeSeed?: boolean;
+}
+
 const MISSING_DB_URL = [
   "This step runs with the environment's DB_URL. An empty value usually",
   "means the environment secret was never pushed, or the workflow step",
@@ -38,7 +51,8 @@ const MISSING_DB_URL = [
 export async function runDeployPlan(
   label = "Migration plan",
   env: NodeJS.ProcessEnv = process.env,
-  plan: (dbUrl: string) => Promise<string> = dbPushDryRun,
+  plan?: (dbUrl: string) => Promise<string>,
+  { includeSeed = false }: SeedOption = {},
 ): Promise<void> {
   const url = env.DB_URL;
   if (!url) {
@@ -47,7 +61,7 @@ export async function runDeployPlan(
       MISSING_DB_URL,
     );
   }
-  const text = await plan(url);
+  const text = await (plan ?? ((u) => dbPushDryRun(u, { includeSeed })))(url);
   // Echoed to stderr as well as the summary, so the plan is visible in the live
   // job log too — stdout belongs to the machine for this group (see report.ts).
   say([text]);
@@ -57,7 +71,7 @@ export async function runDeployPlan(
 /**
  * Apply the migrations to DB_URL.
  *
- * `dbPush(url, { yes: true })` — the bare push, WITHOUT the type regeneration
+ * `dbPush(url, { yes: true, includeSeed })` — the bare push, WITHOUT the type regeneration
  * the contributor path layers on, so a production apply never writes back into
  * the checkout. A non-zero exit becomes a DeployError so the job fails with a
  * line a person can read; the supabase CLI's own output (inherited stdio) says
@@ -65,8 +79,8 @@ export async function runDeployPlan(
  */
 export async function runDeployMigrate(
   env: NodeJS.ProcessEnv = process.env,
-  push: (dbUrl: string) => Promise<number> = (url) =>
-    dbPush(url, { yes: true }),
+  push?: (dbUrl: string) => Promise<number>,
+  { includeSeed = false }: SeedOption = {},
 ): Promise<void> {
   const url = env.DB_URL;
   if (!url) {
@@ -75,7 +89,9 @@ export async function runDeployMigrate(
       MISSING_DB_URL,
     );
   }
-  const code = await push(url);
+  const code = await (push ?? ((u) => dbPush(u, { yes: true, includeSeed })))(
+    url,
+  );
   if (code !== 0) {
     throw new DeployError(`\`supabase db push\` failed (exit ${code}).`, [
       "The migration was not applied. The supabase CLI output above says why.",

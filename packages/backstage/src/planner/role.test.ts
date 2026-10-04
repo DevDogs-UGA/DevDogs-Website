@@ -7,7 +7,7 @@ import {
 } from "./role.js";
 
 describe("createRoleSql", () => {
-  it("issues the validated grant pair, byte for byte", () => {
+  it("issues the validated grants, byte for byte", () => {
     // The security plan's §3.5 grants, asserted rather than paraphrased. A
     // wider grant here is the credential `main` must not hold.
     const [create, ...grants] = createRoleSql("pw");
@@ -15,6 +15,7 @@ describe("createRoleSql", () => {
     expect(grants).toEqual([
       "grant usage on schema supabase_migrations to migration_planner",
       "grant select on supabase_migrations.schema_migrations to migration_planner",
+      "do $$ begin if to_regclass('supabase_migrations.seed_files') is not null then grant select on supabase_migrations.seed_files to migration_planner; end if; end $$",
     ]);
   });
 

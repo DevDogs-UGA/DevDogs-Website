@@ -64,6 +64,7 @@ describe("the tree", () => {
       "preflight",
       "plan",
       "migrate",
+      "avatars",
       "smoke",
       "reconcile",
       "prune-monitors",
@@ -164,6 +165,7 @@ describe("prompts", () => {
       // Scripting-only.
       "--json",
       "--label",
+      "--include-seed",
       "--source",
       "--dry-run",
       // The menu offers the prune itself, after showing the audit.

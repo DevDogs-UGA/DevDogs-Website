@@ -52,7 +52,12 @@ vi.mock("@devdogsuga/cli-core/ui", async (importOriginal) => ({
   }),
 }));
 
-import { CHECK_IDENTITY, CHECK_MIGRATIONS, CHECK_OVERREACH } from "./checks.js";
+import {
+  CHECK_IDENTITY,
+  CHECK_MIGRATIONS,
+  CHECK_OVERREACH,
+  CHECK_SEEDS,
+} from "./checks.js";
 import type { PlannerDb } from "./db.js";
 import type * as Ui from "@devdogsuga/cli-core/ui";
 import {
@@ -94,6 +99,7 @@ function fake(roleExists: boolean, schemaExists = true): Fake {
             throw new Error("permission denied for schema platform");
           }
           if (query === CHECK_MIGRATIONS) return [{ n: 1 }];
+          if (query === CHECK_SEEDS) return [{ n: 1 }];
           throw new Error(`unexpected planner query: ${query}`);
         }
         if (query.includes("from pg_roles where")) {
@@ -147,6 +153,7 @@ describe("planner create", () => {
     expect(harness.statements.slice(2)).toEqual([
       "grant usage on schema supabase_migrations to migration_planner",
       "grant select on supabase_migrations.schema_migrations to migration_planner",
+      "do $$ begin if to_regclass('supabase_migrations.seed_files') is not null then grant select on supabase_migrations.seed_files to migration_planner; end if; end $$",
       "commit",
     ]);
 

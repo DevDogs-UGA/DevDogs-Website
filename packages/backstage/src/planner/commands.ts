@@ -75,7 +75,10 @@ const QUERY_SCHEMA =
   "select 1 from pg_namespace where nspname = 'supabase_migrations'";
 const QUERY_GRANTS =
   `select has_schema_privilege('${PLANNER_ROLE}', 'supabase_migrations', 'usage') as schema_usage, ` +
-  `has_table_privilege('${PLANNER_ROLE}', 'supabase_migrations.schema_migrations', 'select') as table_select`;
+  `has_table_privilege('${PLANNER_ROLE}', 'supabase_migrations.schema_migrations', 'select') as table_select, ` +
+  "to_regclass('supabase_migrations.seed_files') is not null as seed_table, " +
+  `case when to_regclass('supabase_migrations.seed_files') is null then false ` +
+  `else has_table_privilege('${PLANNER_ROLE}', 'supabase_migrations.seed_files', 'select') end as seed_select`;
 /**
  * Membership is the quiet way a "narrow" role widens: `grant postgres to
  * migration_planner` leaves both privilege queries above looking correct.
@@ -239,6 +242,12 @@ async function inspectRole(connect: Connect, admin: string): Promise<void> {
         grants?.table_select
           ? "has select on supabase_migrations.schema_migrations"
           : "⚠️ MISSING select on supabase_migrations.schema_migrations",
+        !grants?.seed_table
+          ? "no supabase_migrations.seed_files yet (granted on the next create once it exists)"
+          : grants.seed_select
+            ? "has select on supabase_migrations.seed_files"
+            : "⚠️ MISSING select on supabase_migrations.seed_files — " +
+              `grant select on supabase_migrations.seed_files to ${PLANNER_ROLE};`,
       );
     }
 
@@ -407,7 +416,7 @@ export async function runPlannerCreate(
     await confirm({
       message:
         `Create role ${PLANNER_ROLE} on the PRODUCTION database, with its ` +
-        "two grants and a generated password?",
+        "three grants and a generated password?",
       initialValue: false,
     }),
   );
@@ -445,7 +454,7 @@ export async function runPlannerCreate(
       await db.run("rollback").catch(() => undefined);
       throw error;
     }
-    log.success(`Created ${PLANNER_ROLE} with the two validated grants.`);
+    log.success(`Created ${PLANNER_ROLE} with the validated grants.`);
     await verifyAndStore(connect, admin, password);
   });
 }

@@ -34,6 +34,11 @@ function app(name: string): CommandNode {
   };
 }
 
+const INCLUDE_SEED: CommandOption = {
+  flag: "--include-seed",
+  summary: "Also run the seed files the database has not recorded.",
+};
+
 export const deployCommand: CommandNode = {
   name: "deploy",
   dryRun: "handled",
@@ -72,11 +77,18 @@ export const deployCommand: CommandNode = {
           value: "<title>",
           summary: "Heading for the summary section.",
         },
+        INCLUDE_SEED,
       ],
     },
     {
       name: "migrate",
       summary: "Apply the migrations to DB_URL.",
+      options: [INCLUDE_SEED, DRY_RUN],
+    },
+    {
+      name: "avatars",
+      summary: "Upload seeded headshots the avatars bucket does not have yet.",
+      hint: "never replaces an existing photo",
       options: [DRY_RUN],
     },
     {

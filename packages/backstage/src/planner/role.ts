@@ -5,11 +5,17 @@
  * production" from `main`, so whatever it authenticates with is reachable
  * from the `main` trust tier. The plan refuses even a general read-only role
  * there, because that puts every row of production data behind that boundary.
- * What is left is a role that can read the migrations-history table and
- * nothing else. Two grants are the whole of it:
+ * What is left is a role that can read the CLI's two ledgers and nothing
+ * else. Three grants are the whole of it:
  *
  *   grant usage  on schema supabase_migrations            to migration_planner;
  *   grant select on supabase_migrations.schema_migrations to migration_planner;
+ *   grant select on supabase_migrations.seed_files        to migration_planner;
+ *
+ * The third lets the dry run plan seeds too (`deploy plan --include-seed`).
+ * `seed_files` holds a path and a content hash per seed file, no member data.
+ * The CLI creates it on the first seeded push, so the grant is skipped while
+ * it does not exist, and `planner status` says when it is missing.
  *
  * This module is the pure half: names, SQL text, password generation, URL
  * derivation. Everything that talks to a database lives beside it.
@@ -34,8 +40,18 @@ export function createRoleSql(password: string): string[] {
     `create role ${PLANNER_ROLE} login password '${password}'`,
     `grant usage on schema supabase_migrations to ${PLANNER_ROLE}`,
     `grant select on supabase_migrations.schema_migrations to ${PLANNER_ROLE}`,
+    GRANT_SEED_FILES,
   ];
 }
+
+/**
+ * The seed-ledger grant, applied only when the table exists. Also what
+ * `planner status` tells you to run when it is missing.
+ */
+export const GRANT_SEED_FILES =
+  "do $$ begin if to_regclass('supabase_migrations.seed_files') is not null " +
+  `then grant select on supabase_migrations.seed_files to ${PLANNER_ROLE}; ` +
+  "end if; end $$";
 
 /** ALTER ROLE, same interpolation contract as `createRoleSql`. */
 export function resetPasswordSql(password: string): string {

@@ -133,16 +133,18 @@ export async function generateTypes(dbUrl: string): Promise<number> {
  * The one spelling of the migration push, shared by the contributor `db
  * migrate` path (`stack.ts`'s `pushMigrations`) and CI's `deploy migrate`.
  * `--yes` is the unattended apply CI wants; the contributor path omits it so a
- * human still confirms. Neither variant regenerates types — that is
+ * human still confirms. `includeSeed` adds the `[db.seed]` files, which the
+ * CLI runs once each and records in `supabase_migrations.seed_files`. Neither variant regenerates types — that is
  * `pushMigrations`' own second step, layered on top only where a checkout is
  * meant to be rewritten. A CI apply must NOT write back into the repo, which is
  * exactly why the bare push is factored out here rather than reused whole.
  */
 export function dbPush(
   dbUrl: string,
-  opts: { yes?: boolean } = {},
+  opts: { yes?: boolean; includeSeed?: boolean } = {},
 ): Promise<number> {
   const args = ["db", "push", "--db-url", dbUrl];
+  if (opts.includeSeed) args.push("--include-seed");
   if (opts.yes) args.push("--yes");
   return supabase(...args);
 }
@@ -158,13 +160,19 @@ export function dbPush(
  * apply". The child's own output is surfaced in the thrown message, because for
  * a dry run that output is precisely the reason the operator needs.
  */
-export async function dbPushDryRun(dbUrl: string): Promise<string> {
+export async function dbPushDryRun(
+  dbUrl: string,
+  opts: { includeSeed?: boolean } = {},
+): Promise<string> {
+  const args = ["exec", "supabase", "db", "push", "--db-url", dbUrl];
+  if (opts.includeSeed) args.push("--include-seed");
+  args.push("--dry-run");
   try {
-    const { stdout, stderr } = await runFile(
-      "pnpm",
-      ["exec", "supabase", "db", "push", "--db-url", dbUrl, "--dry-run"],
-      { cwd: findRepoRoot(), encoding: "utf8", maxBuffer: 32 * 1024 * 1024 },
-    );
+    const { stdout, stderr } = await runFile("pnpm", args, {
+      cwd: findRepoRoot(),
+      encoding: "utf8",
+      maxBuffer: 32 * 1024 * 1024,
+    });
     return `${stdout}${stderr}`;
   } catch (err) {
     const e = err as { stdout?: string; stderr?: string; message?: string };

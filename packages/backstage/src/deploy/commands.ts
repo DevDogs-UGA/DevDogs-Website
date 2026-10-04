@@ -18,11 +18,11 @@
  * deploy` from the app dir resolves through it with no `--config` needed.
  * Both apps share one deploy step.
  *
- * Steps (`write-env`, `preflight`, `plan`, `migrate`, `smoke`, `reconcile`,
- * `prune-monitors`) are individually addressable for jobs that run only one.
- * The ones that hold a single credential in the job's own `env:` block and
- * compose no env file (`preflight`, `plan`, `migrate`, `smoke`, `reconcile`,
- * `prune-monitors`), and `write-env`,
+ * Steps (`write-env`, `preflight`, `plan`, `migrate`, `avatars`, `smoke`,
+ * `reconcile`, `prune-monitors`) are individually addressable for jobs that run
+ * only one. The ones that hold their credentials in the job's own `env:` block
+ * and compose no env file (`preflight`, `plan`, `migrate`, `avatars`, `smoke`,
+ * `reconcile`, `prune-monitors`), and `write-env`,
  * which CREATES the file tier resolution would otherwise insist on reading,
  * run with `--no-env`.
  */
@@ -37,6 +37,7 @@ import {
 } from "@devdogsuga/cli-core/telemetry";
 import { isWorkerApp } from "@devdogsuga/cli-core/workers";
 import { catalog } from "../catalog.js";
+import { runDeployAvatars } from "./avatars.js";
 import { runDeployMigrate, runDeployPlan } from "./migrations.js";
 import { runPruneMonitors } from "./monitors.js";
 import { runPreflight } from "./preflight.js";
@@ -220,7 +221,7 @@ export function renderDeployFailure(label: string, err: unknown): void {
 
 /** Whether a dry run stops before this step, because the step writes. */
 function writesWhenLive(sub: string): boolean {
-  return sub === "write-env" || sub === "migrate";
+  return sub === "write-env" || sub === "migrate" || sub === "avatars";
 }
 
 /**
@@ -229,11 +230,19 @@ function writesWhenLive(sub: string): boolean {
  */
 async function runStep(sub: string, rest: string[]): Promise<boolean> {
   if (sub === "plan") {
-    await runDeployPlan(flagValue(rest, "--label"));
+    await runDeployPlan(flagValue(rest, "--label"), process.env, undefined, {
+      includeSeed: rest.includes("--include-seed"),
+    });
     return true;
   }
   if (sub === "migrate") {
-    await runDeployMigrate();
+    await runDeployMigrate(process.env, undefined, {
+      includeSeed: rest.includes("--include-seed"),
+    });
+    return true;
+  }
+  if (sub === "avatars") {
+    await runDeployAvatars();
     return true;
   }
   if (sub === "preflight") {
