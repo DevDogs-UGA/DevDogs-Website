@@ -137,10 +137,10 @@
       "agenda": []
     },
     {
-      "slug": "2026-10-05-judging",
-      "title": "Feature Competition #1: Presentations & Judging",
-      "summary": "Teams present their entries for the year's first feature competition, then officers score them and the room votes. Entries close when this meeting starts.",
-      "kind": "Demo Night",
+      "slug": "2026-10-05-build-session",
+      "title": "Build Session #4",
+      "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
+      "kind": "Build Session",
       "building": "DLW",
       "location": "124",
       "startsAt": "2026-10-05T22:00:00.000Z",
@@ -219,7 +219,7 @@
     },
     {
       "slug": "2026-10-14",
-      "title": "Build Session #4",
+      "title": "Build Session #5",
       "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
       "kind": "Build Session",
       "building": "DLW",
@@ -262,7 +262,7 @@
     },
     {
       "slug": "2026-10-21",
-      "title": "Build Session #5",
+      "title": "Build Session #6",
       "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
       "kind": "Build Session",
       "building": "DLW",
@@ -294,7 +294,7 @@
     },
     {
       "slug": "2026-10-28",
-      "title": "Build Session #6",
+      "title": "Build Session #7",
       "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
       "kind": "Build Session",
       "building": "DLW",
@@ -326,7 +326,7 @@
     },
     {
       "slug": "2026-11-04",
-      "title": "Build Session #7",
+      "title": "Build Session #8",
       "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
       "kind": "Build Session",
       "building": "DLW",
@@ -358,7 +358,7 @@
     },
     {
       "slug": "2026-11-11",
-      "title": "Build Session #8",
+      "title": "Build Session #9",
       "summary": "Catch up on workshop materials, meet up with your teammates for hackathons, get unblocked with support from focus leads and club officers, or just come hang out and get work done!",
       "kind": "Build Session",
       "building": "DLW",

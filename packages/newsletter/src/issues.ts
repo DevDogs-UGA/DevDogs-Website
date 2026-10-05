@@ -57,11 +57,11 @@ const EVENTS = {
   build2: meeting("2026-09-23"),
   supabase: meeting("2026-09-28"),
   build3: meeting("2026-09-30"),
-  judging1: meeting("2026-10-05-judging"),
+  build4: meeting("2026-10-05-build-session"),
   career: meeting("2026-10-05-workshop"),
   touchgrass1: meeting("2026-10-07"),
   nextflutter2: meeting("2026-10-12"),
-  build4: meeting("2026-10-14"),
+  build5: meeting("2026-10-14"),
 };
 
 export const ISSUES: ChangelogIssue[] = [
@@ -119,12 +119,7 @@ export const ISSUES: ChangelogIssue[] = [
       "Tonight's workshop adds Supabase to the app you started at the Next.js and Flutter workshops: sign-in, a Postgres database, and row-level security. Web and mobile tracks share one project. Then our first feature competition of the year kicks off: form a team of 2 to 4 and build a feature for the club's own platform. Entries close at 6 PM next Monday, when teams present their work.",
     featuredLabel: "happening_tonight",
     featured: [{ meeting: EVENTS.supabase, cta: "See the schedule" }],
-    upcoming: [
-      EVENTS.build3,
-      EVENTS.judging1,
-      EVENTS.career,
-      EVENTS.touchgrass1,
-    ],
+    upcoming: [EVENTS.build3, EVENTS.build4, EVENTS.career, EVENTS.touchgrass1],
     signoff:
       "Doors tonight at 6 in DLW 124. Turn on GitHub two-factor before you come: you need it to join a team.",
   },
@@ -136,18 +131,18 @@ export const ISSUES: ChangelogIssue[] = [
     title:
       "Meet Recruiters from FAST Tonight, Free Food Included (DevDogs Changelog v3.0.3)",
     preview:
-      "Tonight at 7: career fair prep with recruiters from FAST, plus free food. Feature competition demos start at 6.",
+      "Tonight at 7: career fair prep with recruiters from FAST, plus free food. Build Session #4 starts at 6.",
     tagline: "Meet FAST tonight. We'll feed you.",
     intro:
-      "The career fair is coming up, and tonight at 7 recruiters from FAST join us in DLW 110 to help you get ready: resume polish, portfolio pointers, and practice talking about what you've built. Bring your resume and your questions; we'll bring free food. Before that, at 6 in DLW 124, teams present their entries for our first feature competition and the room votes on a winner.",
+      "The career fair is coming up, and tonight at 7 recruiters from FAST join us in DLW 110 to help you get ready: resume polish, portfolio pointers, and practice talking about what you've built. Bring your resume and your questions; we'll bring free food. Before that, Build Session #4 runs at 6 in DLW 124: catch up on workshop materials, work with your team, or get unblocked.",
     featuredLabel: "happening_tonight",
     featured: [
       { meeting: EVENTS.career, partner: "fast" },
-      { meeting: EVENTS.judging1, cta: "See the schedule" },
+      { meeting: EVENTS.build4, cta: "See the schedule" },
     ],
-    upcoming: [EVENTS.touchgrass1, EVENTS.nextflutter2, EVENTS.build4],
+    upcoming: [EVENTS.touchgrass1, EVENTS.nextflutter2, EVENTS.build5],
     signoff:
-      "FAST and free food tonight at 7 in DLW 110. Come at 6 to DLW 124 to catch the demos first.",
+      "FAST and free food tonight at 7 in DLW 110. Come at 6 to DLW 124 to get some building in first.",
   },
 ];
 
