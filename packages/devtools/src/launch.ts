@@ -50,6 +50,9 @@
  */
 import type { DeployEnvironment } from "@devdogsuga/env";
 import type { DevDatabase } from "@devdogsuga/env/load";
+import type * as EnvLoadModule from "@devdogsuga/env/load";
+import type * as EnvSessionModule from "@devdogsuga/env/session";
+import type { SessionTierResolution } from "@devdogsuga/env/session";
 import { helpPath } from "@devdogsuga/cli-core/help";
 import { catalog } from "./catalog.js";
 import {
@@ -88,7 +91,7 @@ import {
   lastSentryEventId,
 } from "@devdogsuga/cli-core/telemetry";
 import { ignoreClosedPipes } from "@devdogsuga/cli-core/pipes";
-import { errorMessage } from "@devdogsuga/cli-core/ui";
+import { bail, errorMessage } from "@devdogsuga/cli-core/ui";
 
 export { stripTierFlag };
 
@@ -175,6 +178,46 @@ async function gated<T>(
   // again.
   process.env[GATE_PASSED_ENV] = tier;
   return proceed();
+}
+
+/**
+ * The session resolution from before `askSession` existed, for a repo whose
+ * `@devdogsuga/env` does not have it yet: the development database is asked
+ * about every time and never remembered.
+ */
+async function resolveAskingEveryTime(
+  envSession: typeof EnvSessionModule,
+  envLoad: typeof EnvLoadModule,
+  opts: {
+    root: string;
+    explicit: string | undefined;
+    available: DeployEnvironment[];
+  },
+): Promise<SessionTierResolution> {
+  const deployEnv = process.env.DEPLOY_ENV ?? "";
+  const couldBeBareDevelopment =
+    (process.env.DEV_DB ?? "") === "" &&
+    (opts.explicit === "development" ||
+      (opts.explicit === undefined &&
+        (deployEnv === "" || deployEnv === "development")));
+  const remoteCandidate = couldBeBareDevelopment
+    ? await envSession.developmentRemoteCandidate(opts.root)
+    : undefined;
+  const localStackOnline =
+    typeof remoteCandidate === "string"
+      ? await envLoad.probeLocalStack()
+      : undefined;
+  return envSession.resolveSessionTier({
+    explicit: opts.explicit,
+    deployEnv: process.env.DEPLOY_ENV,
+    devDb: process.env.DEV_DB,
+    available: opts.available,
+    isTTY: process.stdin.isTTY === true,
+    prompt: promptTier,
+    promptMessage: "Which environment should this session use?",
+    remoteCandidate,
+    localStackOnline,
+  });
 }
 
 /**
@@ -318,36 +361,33 @@ export async function launch(argv: readonly string[]): Promise<void> {
       process.exit(1);
     }
 
-    const deployEnv = process.env.DEPLOY_ENV ?? "";
-    const couldBeBareDevelopment =
-      !noEnv &&
-      (process.env.DEV_DB ?? "") === "" &&
-      (explicit === "development" ||
-        (explicit === undefined &&
-          (deployEnv === "" || deployEnv === "development")));
-    const remoteCandidate = couldBeBareDevelopment
-      ? await envSession.developmentRemoteCandidate(findRepoRoot())
-      : undefined;
-    const localStackOnline =
-      typeof remoteCandidate === "string"
-        ? await envLoad.probeLocalStack()
-        : undefined;
-
     // `--no-env`: the caller supplies the environment, so there are no env
     // files to look for and no picker to show. The tier is whatever it names.
+    // Otherwise `askSession`, shared with `with-env`, asks the same questions
+    // it does, including offering to remember the development database as
+    // `DEV_DB` in `.env`. An `@devdogsuga/env` older than that (the repo's
+    // copy is the one loaded) gets the previous, ask-every-time resolution.
+    const repoRoot = findRepoRoot();
+    const available = noEnv ? [] : await envSession.availableTiers(repoRoot);
     const resolution = noEnv
       ? resolveWithoutEnv(envSession, explicit)
-      : await envSession.resolveSessionTier({
-          explicit,
-          deployEnv: process.env.DEPLOY_ENV,
-          devDb: process.env.DEV_DB,
-          available: await envSession.availableTiers(findRepoRoot()),
-          isTTY: process.stdin.isTTY === true,
-          prompt: promptTier,
-          promptMessage: "Which environment should this session use?",
-          remoteCandidate,
-          localStackOnline,
-        });
+      : typeof envSession.askSession === "function"
+        ? await envSession.askSession({
+            root: repoRoot,
+            explicit,
+            deployEnv: process.env.DEPLOY_ENV,
+            devDb: process.env.DEV_DB,
+            available,
+            canAsk: !isNonInteractive(),
+            unanswered: "refuse",
+            name: "devtools",
+            onCancel: () => bail(),
+          })
+        : await resolveAskingEveryTime(envSession, envLoad, {
+            root: repoRoot,
+            explicit,
+            available,
+          });
 
     if (!resolution.ok) {
       process.stderr.write(`devtools: ${resolution.reason}\n`);

@@ -6,9 +6,11 @@
  *   with-env --worker <app> [--yes] -- <command> [args...]
  *
  * `--tier` is also taken from the END of the wrapped command, because that is
- * where `pnpm <script> --tier staging` puts it. With no tier named and more
- * than one tier file present, a terminal gets a picker; anything else is
- * refused.
+ * where `pnpm <script> --tier staging` puts it. On a terminal, the questions
+ * `askSession` (in `ask.ts`) shares with the devtools launcher are asked:
+ * which tier when several tier files are present and none is named, and which
+ * development database (remembered in `.env` if you say so) when `.env` names
+ * a remote one. With no terminal, an unnamed tier among several is refused.
  *
  * Loads the environment `DEPLOY_ENV` selects, where unset means development
  * means the root `.env`. In development only, it also loads the
@@ -60,13 +62,7 @@ import {
   MissingEnvFileError,
   probeLocalStack,
 } from "./load.js";
-import {
-  availableTiers,
-  developmentRemoteCandidate,
-  resolveSessionTier,
-  SESSION_SELECTORS,
-  type TierChoice,
-} from "./session.js";
+import { availableTiers, askSession, SESSION_SELECTORS } from "./session.js";
 
 // ALMOST NOTHING ELSE IS IMPORTED AT THE TOP LEVEL, deliberately.
 //
@@ -232,69 +228,81 @@ const cwd = process.cwd();
 // file present) the sole tier — the ONE policy in `session.ts`, shared with
 // the devtools launcher.
 //
-// A picker is offered ONLY when someone is at the keyboard: stdin AND stdout
+// A question is asked ONLY when someone is at the keyboard: stdin AND stdout
 // are terminals and CI is unset. `pnpm -F <app> dev` gives the script the
-// terminal; `pnpm -r` / `--parallel` pipe stdout to prefix it, so those still
-// get the refusal below rather than a hang waiting on stdin nobody can type
-// into. The question is also asked only where the answer used to be a
-// refusal: two or more tier files present, with neither `--tier`,
-// `DEPLOY_ENV` nor `DEV_DB` set. Anything that resolved before resolves the
-// same way now, with no prompt.
+// terminal; `pnpm -r` / `--parallel` pipe stdout to prefix it, so those get a
+// refusal (or the probe, below) rather than a hang waiting on stdin nobody
+// can type into. `askSession` is shared with the devtools launcher, so both
+// ask the same questions: which tier when two or more tier files are present
+// and none is named, and which development database when `.env` names a
+// remote one and none is chosen yet. That second answer can be remembered as
+// `DEV_DB` in `.env` (see `ask.ts`).
 //
 // This is also what keeps `pnpm devtools` itself working: its launcher sets
-// `DEPLOY_ENV` on every child task before spawning it, so each child
-// resolves by `deployEnv` (case (b) in `resolveSessionTier`) and never
-// reaches the ambiguity refusal above, even on a machine that has pulled
-// down every tier's file.
+// `DEPLOY_ENV` (and `DEV_DB` when it was answered) on every child task, so
+// each child resolves without asking again.
 //
-// ⚠️ `remoteCandidate` IS SUPPLIED ONLY TO THE PICKER, and that is a policy
-// choice, not an omission: bare development under `with-env` keeps the
+// ⚠️ `unanswered: "probe"` is a policy choice, not an omission: with nobody
+// to ask and nothing remembered, bare development under `with-env` keeps the
 // probe deciding the overlay exactly as it always has, even on a machine
 // whose `.env` names a remote database. Refusing there would break every
-// wrapped dev-server and pnpm task on such a machine overnight. When the
-// picker is shown anyway, the candidate splits its development row into
-// `development:local` and `development:remote`; otherwise the answer
-// reaches this wrapper as `DEV_DB` (resolved below) or an explicit
-// `--tier development:<local|remote>`.
+// `pnpm -r` task and CI run on such a machine overnight. The launcher, the
+// home of the destructive db commands, refuses instead.
 const tierExists = (relPath: string) => existsSync(join(root, relPath));
-const available = await availableTiers(root, tierExists);
 const canAsk =
   process.stdin.isTTY === true &&
   process.stdout.isTTY === true &&
   process.env.CI !== "true" &&
-  process.env.CI !== "1" &&
-  explicitTier === undefined &&
-  !process.env.DEPLOY_ENV &&
-  !process.env.DEV_DB &&
-  available.length > 1;
-const resolution = await resolveSessionTier({
+  process.env.CI !== "1";
+const resolution = await askSession({
+  root,
   explicit: explicitTier,
   deployEnv: process.env.DEPLOY_ENV,
   devDb: process.env.DEV_DB,
-  available,
-  isTTY: canAsk,
-  ...(canAsk && (await askingProps())),
+  available: await availableTiers(root, tierExists),
+  canAsk,
+  unanswered: "probe",
+  name: "with-env",
 });
 if (!resolution.ok) {
   console.error(`with-env: ${resolution.reason}`);
   process.exit(1);
 }
 
-/** The picker and its development hints, imported only when it is shown. */
-async function askingProps() {
-  const { select, isCancel } = await import("@clack/prompts");
-  const remoteCandidate = await developmentRemoteCandidate(root);
-  return {
-    remoteCandidate,
-    localStackOnline:
-      typeof remoteCandidate === "string" ? await probeLocalStack() : undefined,
-    promptMessage: "Which environment should this command use?",
-    prompt: async (message: string, options: TierChoice[]) => {
-      const choice = await select<string>({ message, options });
-      if (isCancel(choice)) process.exit(130);
-      return choice;
-    },
-  };
+// The session wants the local database and the stack is down: offer to start
+// it, as the devtools launcher does, through the same `db start` (which also
+// writes `.env.generated` and seeds the buckets). Declined, or nobody to ask,
+// and the load below refuses with LocalStackOfflineError's own advice.
+if (
+  canAsk &&
+  resolution.tier === "development" &&
+  resolution.devDatabase === "local" &&
+  !(await probeLocalStack())
+) {
+  const { cancel, confirm, isCancel } = await import("@clack/prompts");
+  const start = await confirm({
+    message: "The local Supabase stack is not running. Start it now?",
+  });
+  if (isCancel(start)) {
+    cancel("Cancelled.");
+    process.exit(1);
+  }
+  if (start) {
+    const code = await new Promise<number>((done) => {
+      spawn("pnpm", ["devtools", "db", "start"], {
+        cwd: root,
+        env: { ...process.env, DEPLOY_ENV: "development", DEV_DB: "local" },
+        stdio: "inherit",
+        shell: process.platform === "win32",
+      })
+        .on("error", () => done(1))
+        .on("exit", (exitCode) => done(exitCode ?? 1));
+    });
+    if (code !== 0) {
+      console.error("with-env: `pnpm devtools db start` failed; see above.");
+      process.exit(1);
+    }
+  }
 }
 
 if (opts.worker !== undefined) {

@@ -55,10 +55,17 @@ running `with-env` tries to load `{env-file}` itself and exits with
 
 The tier comes from `--tier`, then `DEPLOY_ENV`, then the only tier file
 present. `--tier` also works at the end of the command, which is where
-`pnpm -F platform dev --tier staging` puts it. With more than one tier file and
-no tier named, a terminal gets a picker; without a terminal (`pnpm -r`, CI)
-`with-env` refuses. The resolved tier reaches the command as `DEPLOY_ENV` (and
-`DEV_DB` for `development:local|remote`), so nested runs agree.
+`pnpm -F platform dev --tier staging` puts it. On a terminal, `with-env` and the
+devtools launcher ask the same questions (`askSession` in
+`@devdogsuga/env/session`): which tier, when several tier files are present and
+none is named; and, when `.env` names a remote `DB_URL`, whether development
+means the local stack or that database. The second answer can be remembered as
+`DEV_DB` in `.env` ("Remember my decision") or used once ("Just this once"),
+and an exported `DEV_DB` beats a remembered one. Choosing the local database
+while the stack is down offers to run `pnpm devtools db start`. Without a
+terminal (`pnpm -r`, CI), an unnamed tier among several is refused and an
+unanswered development database is left to the local-stack probe. The resolved
+tier reaches the command as `DEPLOY_ENV` (and `DEV_DB`), so nested runs agree.
 
 `buildWorkerEnv(app, env, "dev" | "deploy")` builds that env, and the one
 `wrangler deploy --secrets-file` uploads, from the app's manifest.

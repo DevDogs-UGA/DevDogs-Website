@@ -474,3 +474,13 @@ export async function enterEnvironment(
     environment: loaded.env,
   };
 }
+
+// The terminal-facing half, re-exported so a caller holding this module (the
+// devtools launcher loads it from the target repo) can tell whether the
+// installed version has it.
+export {
+  askSession,
+  rememberDevDatabase,
+  rememberedDevDatabase,
+  type AskSessionOptions,
+} from "./ask.js";
