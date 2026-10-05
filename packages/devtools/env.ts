@@ -148,6 +148,16 @@ declare({
       scope: "developer",
       secrecy: "public",
     }),
+    DEV_DB: define(z.enum(["local", "remote"]).optional(), {
+      doc:
+        "Which development database this machine uses when .env names a " +
+        "remote DB_URL: local (the Docker stack) or remote (that DB_URL). " +
+        "Written by the first-run question in with-env and devtools when " +
+        "you choose \"Remember my decision\"; delete it to be asked again. " +
+        "An exported DEV_DB, or --tier development:local|remote, wins.",
+      scope: "developer",
+      secrecy: "public",
+    }),
     SKIP_ENV_VALIDATION: define(z.string().optional(), {
       doc:
         "Any non-empty value skips env-schema validation, for builds that " +
