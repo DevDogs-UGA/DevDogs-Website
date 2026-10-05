@@ -14,17 +14,9 @@
  * only programmatically (`src/repo/tsx-loader.ts`) to load that repo's own
  * TypeScript (env manifests, cron contracts, `devdogs-source` packages).
  */
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-
-const launchEntry = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "dist",
-  "launch.js",
-);
-
-const { launch } = await import(launchEntry);
+// Relative specifiers, not joined paths: `import()` takes URLs, and a Windows
+// absolute path (`C:\...`) reads as the URL scheme `c:`.
+const { launch } = await import("../dist/launch.js");
 try {
   await launch(process.argv.slice(2));
 } catch (err) {
@@ -34,9 +26,7 @@ try {
   process.stderr.write(
     `devtools: ${err instanceof Error ? err.message : String(err)}\n`,
   );
-  const { captureDevtoolsError } = await import(
-    join(dirname(fileURLToPath(import.meta.url)), "..", "dist", "telemetry.js")
-  );
+  const { captureDevtoolsError } = await import("../dist/telemetry.js");
   await captureDevtoolsError(err);
   process.exitCode = 1;
 }

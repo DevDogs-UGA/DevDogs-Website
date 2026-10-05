@@ -8,12 +8,9 @@
  * reads (`@devdogsuga/env`, `@devdogsuga/db`) are optional peers, resolved
  * through the checkout only by the commands that need one.
  */
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-
-const dist = join(dirname(fileURLToPath(import.meta.url)), "..", "dist");
-
-const { launch } = await import(join(dist, "launch.js"));
+// Relative specifiers, not joined paths: `import()` takes URLs, and a Windows
+// absolute path (`C:\...`) reads as the URL scheme `c:`.
+const { launch } = await import("../dist/launch.js");
 try {
   await launch(process.argv.slice(2));
 } catch (err) {
@@ -22,7 +19,7 @@ try {
   process.stderr.write(
     `backstage: ${err instanceof Error ? err.message : String(err)}\n`,
   );
-  const { captureDevtoolsError } = await import(join(dist, "telemetry.js"));
+  const { captureDevtoolsError } = await import("../dist/telemetry.js");
   await captureDevtoolsError(err);
   process.exitCode = 1;
 }
