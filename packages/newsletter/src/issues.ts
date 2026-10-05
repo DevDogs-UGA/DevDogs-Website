@@ -132,9 +132,9 @@ export const ISSUES: ChangelogIssue[] = [
       "Meet Recruiters from FAST Tonight, Free Food Included (DevDogs Changelog v3.0.3)",
     preview:
       "Tonight at 7: career fair prep with recruiters from FAST, plus free food. Build Session #4 starts at 6.",
-    tagline: "Meet FAST tonight. We'll feed you.",
+    tagline: "Meet FAST tonight: be prepared for tomorrow.",
     intro:
-      "The career fair is coming up, and tonight at 7 recruiters from FAST join us in DLW 110 to help you get ready: resume polish, portfolio pointers, and practice talking about what you've built. Bring your resume and your questions; we'll bring free food. Before that, Build Session #4 runs at 6 in DLW 124: catch up on workshop materials, work with your team, or get unblocked.",
+      "The career fair is tomorrow, and tonight at 7 recruiters from FAST join us in DLW 110 to help you get ready: resume polish, portfolio pointers, and practice talking about what you've built. Bring your resume and your questions; we'll bring free food. Before that, Build Session #4 runs at 6 in DLW 124: catch up on workshop materials, work with your team, or get unblocked.",
     featuredLabel: "happening_tonight",
     featured: [
       { meeting: EVENTS.career, partner: "fast" },
