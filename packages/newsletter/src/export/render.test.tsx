@@ -28,7 +28,9 @@ describe("renderIssueDocument", () => {
       const html = renderIssueDocument(issue);
       expect(html.startsWith("<!doctype html>")).toBe(true);
       expect(html).toContain(escaped(issue.tagline));
-      expect(html).toContain(escaped(issue.featured.title));
+      for (const { meeting } of issue.featured) {
+        expect(html).toContain(escaped(meeting.title));
+      }
       expect(html).toContain(escaped(issue.signoff));
       expect(html).toContain(`v${issue.version}`);
     }

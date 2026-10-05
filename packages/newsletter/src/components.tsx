@@ -24,7 +24,7 @@
  * font stacks and `cid:` references to embedded PNGs (Gmail and Outlook strip
  * SVG, which is also why og ships its email signature as PNG).
  */
-import type { CSSProperties, ReactNode } from "react";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
 import { EVENT_TZ, meetingLocation } from "@devdogsuga/brand/event";
 import type { Meeting } from "@devdogsuga/events";
 
@@ -38,7 +38,7 @@ import {
   SLANTS_CLASS,
   tc,
 } from "./darkmode.js";
-import type { ChangelogIssue } from "./issues.js";
+import type { ChangelogIssue, FeaturedEvent } from "./issues.js";
 import {
   blockShadow,
   chipColors,
@@ -404,6 +404,117 @@ function EventRow({ meeting, ctx }: { meeting: Meeting; ctx: RenderContext }) {
 }
 
 /** A `## heading` in the terminal voice. */
+/** A hero card: the big version of an event, with its own button. */
+function FeaturedCard({
+  featured: { meeting, cta },
+  fonts,
+}: {
+  featured: FeaturedEvent;
+  fonts: RenderContext["fonts"];
+}) {
+  const card = eventCard(meeting);
+  return (
+    <table
+      {...TABLE_RESET}
+      width="100%"
+      bgcolor={PALETTE.card2}
+      className={`${bc(PALETTE.card2)} ${brc(card.color)}`}
+      style={{
+        border: `1px solid ${card.color}`,
+        borderRadius: "10px",
+        ...blockShadow(card.color),
+      }}
+    >
+      <tbody>
+        <tr>
+          <td style={{ padding: "22px 22px 24px" }}>
+            <Chip
+              label={card.chip}
+              color={card.color}
+              ground={PALETTE.card2}
+              fonts={fonts}
+            />
+            <div
+              className={tc(PALETTE.ink)}
+              style={{
+                ...font(700, 30, 1.1, fonts.display),
+                color: PALETTE.ink,
+                letterSpacing: "-0.4px",
+                padding: "14px 0 8px",
+              }}
+            >
+              {meeting.title}
+            </div>
+            <table {...TABLE_RESET} style={{ margin: "2px 0 4px" }}>
+              <tbody>
+                <tr>
+                  <td
+                    className={tc(PALETTE.ink)}
+                    style={{
+                      ...font(700, 14, 1.5, fonts.sans),
+                      color: PALETTE.ink,
+                      paddingRight: "8px",
+                    }}
+                  >
+                    {card.dow}, {card.month} {card.day}
+                  </td>
+                  <DividerCell vertical />
+                  <td
+                    className={tc(PALETTE.mute)}
+                    style={{
+                      ...font(400, 14, 1.5, fonts.sans),
+                      color: PALETTE.mute,
+                      padding: "0 8px",
+                    }}
+                  >
+                    {card.time}
+                  </td>
+                  <DividerCell vertical />
+                  <td
+                    className={tc(PALETTE.mute)}
+                    style={{
+                      ...font(400, 14, 1.5, fonts.sans),
+                      color: PALETTE.mute,
+                      padding: "0 8px",
+                    }}
+                  >
+                    {card.loc}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div
+              className={tc(PALETTE.mute)}
+              style={{
+                ...font(400, 15, 1.6, fonts.sans),
+                color: PALETTE.mute,
+                paddingTop: "10px",
+              }}
+            >
+              {meeting.summary}
+            </div>
+            <div
+              style={{
+                height: "18px",
+                lineHeight: "18px",
+                fontSize: "0px",
+              }}
+            >
+              {" "}
+            </div>
+            <CtaButton
+              label={cta}
+              url={meeting.rsvpUrl ?? `${SITE}/events`}
+              color={UGA}
+              fonts={fonts}
+            />
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
 function SectionHeading({
   children,
   color,
@@ -463,8 +574,7 @@ export function ChangelogEmail({
   ctx: RenderContext;
 }) {
   const { fonts, assets } = ctx;
-  const featured = issue.featured;
-  const featuredCard = eventCard(featured);
+  const headingColor = eventCard(issue.featured[0].meeting).color;
   const arrowLinkStyle: CSSProperties = {
     color: PALETTE.ink,
     textDecoration: "none",
@@ -700,108 +810,25 @@ export function ChangelogEmail({
         {/* featured / hero event */}
         <tr>
           <td style={{ padding: "20px 22px 6px" }}>
-            <SectionHeading color={featuredCard.color} fonts={fonts}>
+            <SectionHeading color={headingColor} fonts={fonts}>
               {issue.featuredLabel}
             </SectionHeading>
-            <table
-              {...TABLE_RESET}
-              width="100%"
-              bgcolor={PALETTE.card2}
-              className={`${bc(PALETTE.card2)} ${brc(featuredCard.color)}`}
-              style={{
-                border: `1px solid ${featuredCard.color}`,
-                borderRadius: "10px",
-                ...blockShadow(featuredCard.color),
-              }}
-            >
-              <tbody>
-                <tr>
-                  <td style={{ padding: "22px 22px 24px" }}>
-                    <Chip
-                      label={featuredCard.chip}
-                      color={featuredCard.color}
-                      ground={PALETTE.card2}
-                      fonts={fonts}
-                    />
-                    <div
-                      className={tc(PALETTE.ink)}
-                      style={{
-                        ...font(700, 30, 1.1, fonts.display),
-                        color: PALETTE.ink,
-                        letterSpacing: "-0.4px",
-                        padding: "14px 0 8px",
-                      }}
-                    >
-                      {featured.title}
-                    </div>
-                    <table {...TABLE_RESET} style={{ margin: "2px 0 4px" }}>
-                      <tbody>
-                        <tr>
-                          <td
-                            className={tc(PALETTE.ink)}
-                            style={{
-                              ...font(700, 14, 1.5, fonts.sans),
-                              color: PALETTE.ink,
-                              paddingRight: "8px",
-                            }}
-                          >
-                            {featuredCard.dow}, {featuredCard.month}{" "}
-                            {featuredCard.day}
-                          </td>
-                          <DividerCell vertical />
-                          <td
-                            className={tc(PALETTE.mute)}
-                            style={{
-                              ...font(400, 14, 1.5, fonts.sans),
-                              color: PALETTE.mute,
-                              padding: "0 8px",
-                            }}
-                          >
-                            {featuredCard.time}
-                          </td>
-                          <DividerCell vertical />
-                          <td
-                            className={tc(PALETTE.mute)}
-                            style={{
-                              ...font(400, 14, 1.5, fonts.sans),
-                              color: PALETTE.mute,
-                              padding: "0 8px",
-                            }}
-                          >
-                            {featuredCard.loc}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <div
-                      className={tc(PALETTE.mute)}
-                      style={{
-                        ...font(400, 15, 1.6, fonts.sans),
-                        color: PALETTE.mute,
-                        paddingTop: "10px",
-                      }}
-                    >
-                      {featured.summary}
-                    </div>
-                    <div
-                      style={{
-                        height: "18px",
-                        lineHeight: "18px",
-                        fontSize: "0px",
-                      }}
-                    >
-                      {" "}
-                    </div>
-                    <CtaButton
-                      label={issue.cta}
-                      url={featured.rsvpUrl ?? `${SITE}/events`}
-                      color={UGA}
-                      fonts={fonts}
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            {issue.featured.map((featured, index) => (
+              <Fragment key={featured.meeting.slug}>
+                {index > 0 ? (
+                  <div
+                    style={{
+                      height: "20px",
+                      lineHeight: "20px",
+                      fontSize: "0px",
+                    }}
+                  >
+                    {" "}
+                  </div>
+                ) : null}
+                <FeaturedCard featured={featured} fonts={fonts} />
+              </Fragment>
+            ))}
           </td>
         </tr>
 

@@ -9,6 +9,12 @@
  */
 import { getClubConfig, type Meeting } from "@devdogsuga/events";
 
+/** A hero card: the meeting plus its button label. */
+export interface FeaturedEvent {
+  meeting: Meeting;
+  cta: string;
+}
+
 export interface ChangelogIssue {
   /** Semver, doubling as the URL segment and the export filename. */
   version: string;
@@ -23,11 +29,10 @@ export interface ChangelogIssue {
   preview: string;
   tagline: string;
   intro: string;
-  /** The `##` heading over the hero card, e.g. `"happening_today"`. */
+  /** The `##` heading over the hero cards, e.g. `"happening_today"`. */
   featuredLabel: string;
-  featured: Meeting;
-  /** The hero card's button label. */
-  cta: string;
+  /** One hero card per event, in order; usually one. */
+  featured: [FeaturedEvent, ...FeaturedEvent[]];
   upcoming: Meeting[];
   signoff: string;
 }
@@ -72,8 +77,7 @@ export const ISSUES: ChangelogIssue[] = [
     intro:
       "Missed the interest meeting? No problem. Cold Start is the inaugural meeting of the year. Get set up to contribute to this semester's projects, with onboarding we've streamlined so you leave ready to build.",
     featuredLabel: "happening_tonight",
-    featured: EVENTS.coldstart,
-    cta: "RSVP for Cold Start",
+    featured: [{ meeting: EVENTS.coldstart, cta: "RSVP for Cold Start" }],
     upcoming: [
       EVENTS.build1,
       EVENTS.nextflutter,
@@ -97,8 +101,7 @@ export const ISSUES: ChangelogIssue[] = [
     intro:
       "But first, they're saying it's the most important workshops of the semester: Flutter and Next.js, the frameworks underpinning this year's projects. Then, we'll be kicking off our first feature competition!",
     featuredLabel: "happening_tonight",
-    featured: EVENTS.nextflutter,
-    cta: "RSVP for Cold Start",
+    featured: [{ meeting: EVENTS.nextflutter, cta: "RSVP for Cold Start" }],
     upcoming: [EVENTS.build2, EVENTS.supabase, EVENTS.build3, EVENTS.career],
     signoff:
       "Doors tonight at 6 in DLW 124. Bring a laptop if you have one, but we'll get you set up to ship either way.",
@@ -115,8 +118,7 @@ export const ISSUES: ChangelogIssue[] = [
     intro:
       "Tonight's workshop adds Supabase to the app you started at the Next.js and Flutter workshops: sign-in, a Postgres database, and row-level security. Web and mobile tracks share one project. Then our first feature competition of the year kicks off: form a team of 2 to 4 and build a feature for the club's own platform. Entries close at 6 PM next Monday, when teams present their work.",
     featuredLabel: "happening_tonight",
-    featured: EVENTS.supabase,
-    cta: "See the schedule",
+    featured: [{ meeting: EVENTS.supabase, cta: "See the schedule" }],
     upcoming: [
       EVENTS.build3,
       EVENTS.judging1,
@@ -131,23 +133,20 @@ export const ISSUES: ChangelogIssue[] = [
     term: "Fall 2026",
     sendLabel: "Mon · Oct 5",
     command: "changelog --date 2026-10-05",
-    title: "Demo Night Is Tonight (DevDogs Changelog v3.0.3)",
+    title: "Demo Night + Career Fair Prep Tonight (DevDogs Changelog v3.0.3)",
     preview:
-      "Tonight at 6: teams present their feature competition entries, then Career Fair Readiness at 7.",
+      "Tonight at 6: teams present their feature competition entries. At 7: career fair prep with recruiters from FAST, plus free food.",
     tagline: "Time to demo.",
     intro:
-      "Entries for our first feature competition close at 6 PM tonight, and every team gets the floor to show what they built for the club's platform. Officers score each entry and the room votes, so come cheer on your friends even if you didn't compete. At 7 we move to DLW 110 for Career Fair Readiness: resume polish, portfolio pointers, and practice talking about what you've built.",
+      "Two events tonight. At 6, entries for our first feature competition close and every team gets the floor to show what they built for the club's platform. Officers score each entry and the room votes, so come cheer on your friends even if you didn't compete. At 7, we move to DLW 110 for Career Fair Readiness with recruiters from FAST. Bring your resume and your questions; we'll bring free food.",
     featuredLabel: "happening_tonight",
-    featured: EVENTS.judging1,
-    cta: "See the schedule",
-    upcoming: [
-      EVENTS.career,
-      EVENTS.touchgrass1,
-      EVENTS.nextflutter2,
-      EVENTS.build4,
+    featured: [
+      { meeting: EVENTS.judging1, cta: "See the schedule" },
+      { meeting: EVENTS.career, cta: "See the schedule" },
     ],
+    upcoming: [EVENTS.touchgrass1, EVENTS.nextflutter2, EVENTS.build4],
     signoff:
-      "Doors tonight at 6 in DLW 124. Bring your demo, or just bring a vote.",
+      "Doors tonight at 6 in DLW 124. Bring your demo, or just bring a vote, and stay for food and FAST at 7.",
   },
 ];
 
