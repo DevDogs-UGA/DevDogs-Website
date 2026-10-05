@@ -171,6 +171,7 @@ function CtaButton({
   ground,
   fonts,
   compact = false,
+  align,
 }: {
   label: string;
   url: string;
@@ -178,10 +179,12 @@ function CtaButton({
   ground?: string;
   fonts: FontStacks;
   compact?: boolean;
+  /** The table's `align` attribute, for clients that ignore the cell's. */
+  align?: "left" | "right";
 }) {
   const fill = ground ?? color;
   return (
-    <table {...TABLE_RESET}>
+    <table {...TABLE_RESET} align={align}>
       <tbody>
         <tr>
           <td
@@ -504,27 +507,42 @@ function FeaturedCard({
             >
               {" "}
             </div>
-            {"cta" in featured ? (
-              <CtaButton
-                label={featured.cta}
-                url={meeting.rsvpUrl ?? `${SITE}/events`}
-                color={UGA}
-                fonts={fonts}
-              />
-            ) : (
-              <a
-                href={PARTNERS[featured.partner].url}
-                style={{ textDecoration: "none" }}
-              >
-                <img
-                  src={assets.partnerLogo(featured.partner)}
-                  alt={PARTNERS[featured.partner].name}
-                  width={partnerLogoSize(featured.partner).width}
-                  height={partnerLogoSize(featured.partner).height}
-                  style={{ display: "block", border: 0, outline: "none" }}
-                />
-              </a>
-            )}
+            {/* the card's action, right-justified */}
+            <table {...TABLE_RESET} width="100%">
+              <tbody>
+                <tr>
+                  <td align="right" style={{ textAlign: "right" }}>
+                    {"cta" in featured ? (
+                      <CtaButton
+                        label={featured.cta}
+                        url={meeting.rsvpUrl ?? `${SITE}/events`}
+                        color={UGA}
+                        fonts={fonts}
+                        align="right"
+                      />
+                    ) : (
+                      <a
+                        href={PARTNERS[featured.partner].url}
+                        style={{ textDecoration: "none" }}
+                      >
+                        <img
+                          src={assets.partnerLogo(featured.partner)}
+                          alt={PARTNERS[featured.partner].name}
+                          width={partnerLogoSize(featured.partner).width}
+                          height={partnerLogoSize(featured.partner).height}
+                          style={{
+                            display: "inline-block",
+                            verticalAlign: "middle",
+                            border: 0,
+                            outline: "none",
+                          }}
+                        />
+                      </a>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </td>
         </tr>
       </tbody>
