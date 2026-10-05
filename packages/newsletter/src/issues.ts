@@ -133,20 +133,21 @@ export const ISSUES: ChangelogIssue[] = [
     term: "Fall 2026",
     sendLabel: "Mon · Oct 5",
     command: "changelog --date 2026-10-05",
-    title: "Demo Night + Career Fair Prep Tonight (DevDogs Changelog v3.0.3)",
+    title:
+      "Meet Recruiters from FAST Tonight, Free Food Included (DevDogs Changelog v3.0.3)",
     preview:
-      "Tonight at 6: teams present their feature competition entries. At 7: career fair prep with recruiters from FAST, plus free food.",
-    tagline: "Time to demo.",
+      "Tonight at 7: career fair prep with recruiters from FAST, plus free food. Feature competition demos start at 6.",
+    tagline: "Meet FAST tonight. We'll feed you.",
     intro:
-      "Two events tonight. At 6, entries for our first feature competition close and every team gets the floor to show what they built for the club's platform. Officers score each entry and the room votes, so come cheer on your friends even if you didn't compete. At 7, we move to DLW 110 for Career Fair Readiness with recruiters from FAST. Bring your resume and your questions; we'll bring free food.",
+      "The career fair is coming up, and tonight at 7 recruiters from FAST join us in DLW 110 to help you get ready: resume polish, portfolio pointers, and practice talking about what you've built. Bring your resume and your questions; we'll bring free food. Before that, at 6 in DLW 124, teams present their entries for our first feature competition and the room votes on a winner.",
     featuredLabel: "happening_tonight",
     featured: [
-      { meeting: EVENTS.judging1, cta: "See the schedule" },
       { meeting: EVENTS.career, cta: "See the schedule" },
+      { meeting: EVENTS.judging1, cta: "See the schedule" },
     ],
     upcoming: [EVENTS.touchgrass1, EVENTS.nextflutter2, EVENTS.build4],
     signoff:
-      "Doors tonight at 6 in DLW 124. Bring your demo, or just bring a vote, and stay for food and FAST at 7.",
+      "FAST and free food tonight at 7 in DLW 110. Come at 6 to DLW 124 to catch the demos first.",
   },
 ];
 
