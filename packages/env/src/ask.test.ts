@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type * as LoadModule from "./load.js";
 
 const answers: unknown[] = [];
 const asked: string[] = [];
@@ -15,7 +16,7 @@ vi.mock("@clack/prompts", () => ({
 }));
 // The stack probe would otherwise reach for a real port.
 vi.mock("./load.js", async (original) => ({
-  ...(await original<typeof import("./load.js")>()),
+  ...(await original<typeof LoadModule>()),
   probeLocalStack: () => Promise.resolve(false),
 }));
 
