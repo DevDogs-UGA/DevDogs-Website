@@ -502,7 +502,7 @@ titlebar: Dashboard → SQL Editor
 <CodeTips>
 <template #0>
 
-The table and read policy from step 1. The new policy goes at the end.
+The table and read policy are in place from step 1: only the new policy at the end runs.
 
 </template>
 <template #1>
@@ -658,7 +658,7 @@ heading: Move Names into Profiles
 titlebar: Dashboard → SQL Editor
 ---
 
-<<< web@step-4:supabase/migrations/20260928000100_profiles.sql {6-11|13-19|25-30|31-37|38-44|46-48|50-61|63-70}
+<<< web@step-4:supabase/migrations/20260928000100_profiles.sql {6-11|13-19|25-30|31-34|35-44|46-48|50-61|63-70}
 
 <CodeTips>
 <template #0>
@@ -872,7 +872,7 @@ titlebar: Dashboard → SQL Editor
 <CodeTips>
 <template #0>
 
-One more policy, at the end.
+Everything above is in place already: only the new policy at the end runs.
 
 </template>
 <template #1>

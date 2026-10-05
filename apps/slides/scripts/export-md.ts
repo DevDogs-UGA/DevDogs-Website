@@ -14,6 +14,9 @@
 //   can expand its context, and links to the commit's compare view. A ranged
 //   import becomes one excerpt per range that has a tip, or every range's
 //   lines at once when none do, each linking to its lines on GitHub.
+// - An SQL import on a Dashboard → SQL Editor slide becomes one query to run,
+//   its tips as comments: the whole file for a ranged import, only the added
+//   statements for a `{build}`.
 // - `<CodeTips>` become the prose between the code; presenter notes are
 //   dropped.
 //

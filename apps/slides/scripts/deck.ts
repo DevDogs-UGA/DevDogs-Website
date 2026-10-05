@@ -273,6 +273,62 @@ function dropLitLines(tip: string): string {
     .join(" ");
 }
 
+// The Dashboard's SQL editor runs what's pasted into it as one query, so a
+// slide for it becomes a single block: excerpts would each read as something
+// to run on its own, and one ends partway through a function. Each tip goes
+// into the query as a comment above its lines, in place of the file's own
+// comment there.
+const isComment = (line: string) => /^\s*--/.test(line);
+
+function sqlComment(tip: string, indent: string, where: string): string[] {
+  if (/\n\s*\n|^>|<details/m.test(tip))
+    throw new Error(`${where}: a SQL editor tip has to fit in one comment`);
+  const words = tip
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/[`*]/g, "")
+    .split(/\s+/)
+    .filter(Boolean);
+  const out: string[] = [];
+  let line = `${indent}--`;
+  for (const word of words) {
+    if (line.length + word.length >= 80 && line.trim() !== "--") {
+      out.push(line);
+      line = `${indent}--`;
+    }
+    line += ` ${word}`;
+  }
+  out.push(line);
+  return out;
+}
+
+// `lines` with each tip (keyed by the index of its first line) above its
+// lines, the file's comments next to it dropped, and blank runs collapsed.
+function editorQuery(
+  lines: string[],
+  tipAt: Map<number, string>,
+  where: string,
+): string[] {
+  const replaced = new Set<number>();
+  for (const at of tipAt.keys()) {
+    for (let i = at; i < lines.length && isComment(lines[i]); i++)
+      replaced.add(i);
+    for (let i = at - 1; i >= 0 && isComment(lines[i]); i--) replaced.add(i);
+  }
+  const out: string[] = [];
+  lines.forEach((line, i) => {
+    const tip = tipAt.get(i);
+    if (tip) {
+      const at = lines.slice(i).find((l) => l.trim() && !isComment(l)) ?? "";
+      out.push(...sqlComment(tip, at.match(/^\s*/)![0], where));
+    }
+    if (replaced.has(i)) return;
+    if (!line.trim() && (!out.length || !out.at(-1)!.trim())) return;
+    out.push(line);
+  });
+  while (out.length && !out.at(-1)!.trim()) out.pop();
+  return out;
+}
+
 function codeImport(line: string, tips: string[], caption: string): string {
   const m = [...line.matchAll(RE_IMPORT)][0];
   const [, repo, rev, file, ranges = "", options = ""] = m;
@@ -280,10 +336,12 @@ function codeImport(line: string, tips: string[], caption: string): string {
   if (options)
     throw new Error(`${where}: import options aren't supported in the export`);
   const lang = langOf(file);
+  const editor = lang === "sql" && /sql editor/i.test(caption);
   const parts: string[] = [];
   // Every block names its own file in its tab; a caption only adds where it
   // goes (Dashboard → SQL Editor).
-  if (caption) parts.push(`${caption}:`);
+  if (caption && !editor) parts.push(`${caption}:`);
+  const runIn = `Run it as one query in ${caption}:`;
 
   const buildSpec = ranges.match(/^build(?::(.+))?$/);
   if (buildSpec) {
@@ -312,6 +370,31 @@ function codeImport(line: string, tips: string[], caption: string): string {
         )
       : "";
     const open = openLink(track, to, file, undefined, where);
+    if (editor) {
+      // Only what the slide adds runs: the rest is in the database already.
+      const query: string[] = [];
+      const tipAt = new Map<number, string>();
+      groups.forEach((group, g) => {
+        const mine = ops.filter(
+          (op) => op.chunk !== undefined && group.includes(op.chunk),
+        );
+        if (mine.some((op) => op.kind === "-"))
+          throw new Error(
+            `${where}: the SQL editor can only add statements; changing one needs its own alter`,
+          );
+        if (query.length) query.push("");
+        const start = mine.findIndex((op) => op.line.trim());
+        if (tips[g + 1] && start !== -1)
+          tipAt.set(query.length + start, tips[g + 1]);
+        query.push(...mine.map((op) => op.line));
+      });
+      parts.push(
+        runIn,
+        fence("sql", editorQuery(query, tipAt, where)),
+        wholeFile(track, rev, file, where),
+      );
+      return parts.join("\n\n");
+    }
     groups.forEach((group, g) => {
       const prior = new Set(applied);
       group.forEach((n) => applied.add(n));
@@ -344,6 +427,29 @@ function codeImport(line: string, tips: string[], caption: string): string {
   const open = (selection: string | undefined) =>
     openLink(repo as Track, ref, file, selection, where);
   const steps = ranges ? ranges.split("|") : ["*"];
+  if (editor) {
+    const covered = steps.map((r) => numbersIn(r, lines.length));
+    const first = Math.min(...covered.flat());
+    const last = Math.max(...covered.flat());
+    lines.forEach((l, i) => {
+      if ((i + 1 < first || i + 1 > last) && l.trim() && !isComment(l))
+        throw new Error(
+          `${where}: the SQL editor runs the slide as one query, but line ${i + 1} is outside its ranges`,
+        );
+    });
+    const tipAt = new Map<number, string>();
+    covered.forEach((numbers, k) => {
+      if (!tips[k]) return;
+      const at = Math.min(...numbers) - first;
+      tipAt.set(at, [tipAt.get(at), tips[k]].filter(Boolean).join(" "));
+    });
+    parts.push(
+      runIn,
+      fence("sql", editorQuery(lines.slice(first - 1, last), tipAt, where)),
+      wholeFile(repo as Track, rev, file, where),
+    );
+    return parts.join("\n\n");
+  }
   if (!tips.some(Boolean)) {
     parts.push(
       excerpt(
