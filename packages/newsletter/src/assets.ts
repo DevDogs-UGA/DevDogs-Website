@@ -9,6 +9,7 @@
  */
 import { GDGC_UGA, LOCKUP_ON_DARK, type Asset } from "@devdogsuga/brand";
 import { socialIconDataUri, type SocialIconName } from "./icons.js";
+import { PARTNERS, partnerDataUri, type PartnerName } from "./partners.js";
 import type { FontStacks } from "./theme.js";
 
 export { GDGC_UGA };
@@ -34,6 +35,16 @@ export const MARK_SIZES = {
   socialIcon: { width: 17, height: 17 },
 } as const;
 
+/** A partner logo's on-screen size: a fixed height, the width from its artwork. */
+export function partnerLogoSize(name: PartnerName): {
+  width: number;
+  height: number;
+} {
+  const [width, height] = PARTNERS[name].viewBox;
+  const display = 40;
+  return { width: Math.round((display * width) / height), height: display };
+}
+
 /** Where the components find their three `<img>` sources. */
 export interface NewsletterAssets {
   /** `<img>` src for the DevDogs mascot+wordmark lockup (dark ground). */
@@ -42,6 +53,8 @@ export interface NewsletterAssets {
   gdgcLockup: string;
   /** `<img>` src for a footer social icon. */
   socialIcon: (name: SocialIconName) => string;
+  /** `<img>` src for a partner's logo on a hero card. */
+  partnerLogo: (name: PartnerName) => string;
 }
 
 /**
@@ -63,4 +76,5 @@ export const DATA_URI_ASSETS: NewsletterAssets = {
   devdogsLockup: DEVDOGS_LOCKUP.src,
   gdgcLockup: GDGC_UGA.src,
   socialIcon: socialIconDataUri,
+  partnerLogo: partnerDataUri,
 };

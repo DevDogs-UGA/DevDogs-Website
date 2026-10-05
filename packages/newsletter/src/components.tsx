@@ -28,7 +28,7 @@ import { Fragment, type CSSProperties, type ReactNode } from "react";
 import { EVENT_TZ, meetingLocation } from "@devdogsuga/brand/event";
 import type { Meeting } from "@devdogsuga/events";
 
-import { MARK_SIZES, type RenderContext } from "./assets.js";
+import { MARK_SIZES, partnerLogoSize, type RenderContext } from "./assets.js";
 import {
   bc,
   brc,
@@ -39,6 +39,7 @@ import {
   tc,
 } from "./darkmode.js";
 import type { ChangelogIssue, FeaturedEvent } from "./issues.js";
+import { PARTNERS } from "./partners.js";
 import {
   blockShadow,
   chipColors,
@@ -406,12 +407,13 @@ function EventRow({ meeting, ctx }: { meeting: Meeting; ctx: RenderContext }) {
 /** A `## heading` in the terminal voice. */
 /** A hero card: the big version of an event, with its own button. */
 function FeaturedCard({
-  featured: { meeting, cta },
-  fonts,
+  featured,
+  ctx: { fonts, assets },
 }: {
   featured: FeaturedEvent;
-  fonts: RenderContext["fonts"];
+  ctx: RenderContext;
 }) {
+  const { meeting } = featured;
   const card = eventCard(meeting);
   return (
     <table
@@ -502,12 +504,27 @@ function FeaturedCard({
             >
               {" "}
             </div>
-            <CtaButton
-              label={cta}
-              url={meeting.rsvpUrl ?? `${SITE}/events`}
-              color={UGA}
-              fonts={fonts}
-            />
+            {"cta" in featured ? (
+              <CtaButton
+                label={featured.cta}
+                url={meeting.rsvpUrl ?? `${SITE}/events`}
+                color={UGA}
+                fonts={fonts}
+              />
+            ) : (
+              <a
+                href={PARTNERS[featured.partner].url}
+                style={{ textDecoration: "none" }}
+              >
+                <img
+                  src={assets.partnerLogo(featured.partner)}
+                  alt={PARTNERS[featured.partner].name}
+                  width={partnerLogoSize(featured.partner).width}
+                  height={partnerLogoSize(featured.partner).height}
+                  style={{ display: "block", border: 0, outline: "none" }}
+                />
+              </a>
+            )}
           </td>
         </tr>
       </tbody>
@@ -826,7 +843,7 @@ export function ChangelogEmail({
                     {" "}
                   </div>
                 ) : null}
-                <FeaturedCard featured={featured} fonts={fonts} />
+                <FeaturedCard featured={featured} ctx={ctx} />
               </Fragment>
             ))}
           </td>

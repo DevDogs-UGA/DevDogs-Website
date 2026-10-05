@@ -14,6 +14,7 @@ import {
   DEVDOGS_LOCKUP,
   GDGC_UGA,
   MARK_SIZES,
+  partnerLogoSize,
   type RenderContext,
 } from "../assets.js";
 import { ChangelogDocument } from "../components.js";
@@ -23,6 +24,7 @@ import {
   type SocialIconName,
 } from "../icons.js";
 import type { ChangelogIssue } from "../issues.js";
+import { PARTNER_NAMES, partnerSvg, type PartnerName } from "../partners.js";
 import { EMAIL_FONTS } from "../theme.js";
 
 export { buildEml, type EmlImage, type EmlInput } from "./eml.js";
@@ -77,6 +79,12 @@ export function emailImages(): EmailImage[] {
       svg: socialIconSvg(name),
       rasterWidth: MARK_SIZES.socialIcon.width * 2,
     })),
+    ...PARTNER_NAMES.map((name) => ({
+      cid: cidFor(`partner-${name}`),
+      filename: `partner-${name}@2x.png`,
+      svg: partnerSvg(name),
+      rasterWidth: partnerLogoSize(name).width * 2,
+    })),
   ];
 }
 
@@ -92,6 +100,7 @@ export function emailRenderContext(): RenderContext {
       devdogsLockup: `cid:${cidFor("devdogs-lockup")}`,
       gdgcLockup: `cid:${cidFor("gdgc-lockup")}`,
       socialIcon,
+      partnerLogo: (name: PartnerName) => `cid:${cidFor(`partner-${name}`)}`,
     },
   };
 }

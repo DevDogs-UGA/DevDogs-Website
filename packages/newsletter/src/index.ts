@@ -13,10 +13,24 @@ export {
   DEVDOGS_LOCKUP,
   GDGC_UGA,
   MARK_SIZES,
+  partnerLogoSize,
   type NewsletterAssets,
   type RenderContext,
 } from "./assets.js";
-export { type ChangelogIssue, ISSUES, issueByVersion } from "./issues.js";
+export {
+  type ChangelogIssue,
+  type FeaturedEvent,
+  ISSUES,
+  issueByVersion,
+} from "./issues.js";
+export {
+  type Partner,
+  PARTNER_NAMES,
+  PARTNERS,
+  partnerDataUri,
+  partnerSvg,
+  type PartnerName,
+} from "./partners.js";
 export {
   SOCIAL_ICON_NAMES,
   socialIconDataUri,

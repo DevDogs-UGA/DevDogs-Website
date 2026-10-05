@@ -8,12 +8,12 @@
  * disagree about what an issue said.
  */
 import { getClubConfig, type Meeting } from "@devdogsuga/events";
+import type { PartnerName } from "./partners.js";
 
-/** A hero card: the meeting plus its button label. */
-export interface FeaturedEvent {
-  meeting: Meeting;
-  cta: string;
-}
+/** A hero card: the meeting plus either a button or a partner's logo. */
+export type FeaturedEvent =
+  | { meeting: Meeting; cta: string }
+  | { meeting: Meeting; partner: PartnerName };
 
 export interface ChangelogIssue {
   /** Semver, doubling as the URL segment and the export filename. */
@@ -142,7 +142,7 @@ export const ISSUES: ChangelogIssue[] = [
       "The career fair is coming up, and tonight at 7 recruiters from FAST join us in DLW 110 to help you get ready: resume polish, portfolio pointers, and practice talking about what you've built. Bring your resume and your questions; we'll bring free food. Before that, at 6 in DLW 124, teams present their entries for our first feature competition and the room votes on a winner.",
     featuredLabel: "happening_tonight",
     featured: [
-      { meeting: EVENTS.career, cta: "See the schedule" },
+      { meeting: EVENTS.career, partner: "fast" },
       { meeting: EVENTS.judging1, cta: "See the schedule" },
     ],
     upcoming: [EVENTS.touchgrass1, EVENTS.nextflutter2, EVENTS.build4],

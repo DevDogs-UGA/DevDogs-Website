@@ -31,10 +31,15 @@ import {
   spinner,
   text as askText,
 } from "@clack/prompts";
-import { ISSUES, issueByVersion } from "@devdogsuga/newsletter";
+import {
+  ISSUES,
+  issueByVersion,
+  type ChangelogIssue,
+} from "@devdogsuga/newsletter";
 import {
   buildEml,
   emailImages,
+  type EmlImage,
   previewRenderContext,
   renderIssueDocument,
 } from "@devdogsuga/newsletter/export";
@@ -341,7 +346,7 @@ async function mailboxAccessToken(): Promise<string> {
   return tokens.accessToken;
 }
 
-/** The email's marks, rasterised once: they are the same in every issue. */
+/** Every image an issue could use, rasterised once for the whole run. */
 async function attachments() {
   return Promise.all(
     emailImages().map(async (image) => ({
@@ -353,6 +358,25 @@ async function attachments() {
       ),
     })),
   );
+}
+
+/**
+ * One issue's MIME, carrying only the images its HTML references: a partner
+ * logo rides along with the issue that features it and no other, since some
+ * clients list an unreferenced inline part as an attachment.
+ */
+function emlFor(
+  issue: ChangelogIssue,
+  images: EmlImage[],
+  { unsent }: { unsent?: boolean } = {},
+): string {
+  const html = renderIssueDocument(issue);
+  return buildEml({
+    subject: issue.title,
+    html,
+    images: images.filter((image) => html.includes(`cid:${image.cid}`)),
+    unsent,
+  });
 }
 
 export async function runNewsletter(argv: string[]): Promise<void> {
@@ -394,11 +418,7 @@ async function newsletter(parsed: NewsletterOptions): Promise<void> {
         await writeFile(
           file,
           format === "eml"
-            ? buildEml({
-                subject: issue.title,
-                html: renderIssueDocument(issue),
-                images,
-              })
+            ? emlFor(issue, images)
             : renderIssueDocument(issue, previewRenderContext()),
         );
         written.push(file);
@@ -419,13 +439,7 @@ async function newsletter(parsed: NewsletterOptions): Promise<void> {
 
   const images = await attachments();
   const message = (version: string): string => {
-    const issue = issueByVersion(version)!;
-    return buildEml({
-      subject: issue.title,
-      html: renderIssueDocument(issue),
-      images,
-      unsent: false,
-    });
+    return emlFor(issueByVersion(version)!, images, { unsent: false });
   };
   const accessToken = await mailboxAccessToken();
 

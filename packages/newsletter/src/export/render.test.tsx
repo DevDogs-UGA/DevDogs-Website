@@ -172,5 +172,6 @@ describe("emailImages", () => {
     expect(cids.has(ctx.assets.devdogsLockup)).toBe(true);
     expect(cids.has(ctx.assets.gdgcLockup)).toBe(true);
     expect(cids.has(ctx.assets.socialIcon("discord"))).toBe(true);
+    expect(cids.has(ctx.assets.partnerLogo("fast"))).toBe(true);
   });
 });
