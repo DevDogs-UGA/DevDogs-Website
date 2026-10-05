@@ -62,4 +62,10 @@ export const PAGE_CARDS: Record<string, PageCardCopy> = {
     eyebrow: "Legal",
     accent: ACCENT.red400,
   },
+  "/legal/terms": {
+    title: "Terms of Service",
+    description: "The rules for using DevDogs, its platform, and its apps.",
+    eyebrow: "Legal",
+    accent: ACCENT.red400,
+  },
 };

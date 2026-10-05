@@ -65,6 +65,7 @@ export const FALLBACK_SMOKE: Readonly<Record<string, AppSmokeConfig>> = {
       "/changelog",
       "/attendance",
       "/legal/privacy",
+      "/legal/terms",
     ],
     protectedPath: "/console/permissions",
     protectedRedirectPrefix: "/auth",
