@@ -1,9 +1,14 @@
 /**
  * Single env-loading helper for every workspace script:
  *
- *   with-env <command> [args...]
+ *   with-env [--tier <tier>] <command> [args...] [--tier <tier>]
  *   with-env -c '<shell command>'
- *   with-env --worker <app> [--yes] <command> [args...]
+ *   with-env --worker <app> [--yes] -- <command> [args...]
+ *
+ * `--tier` is also taken from the END of the wrapped command, because that is
+ * where `pnpm <script> --tier staging` puts it. With no tier named and more
+ * than one tier file present, a terminal gets a picker; anything else is
+ * refused.
  *
  * Loads the environment `DEPLOY_ENV` selects, where unset means development
  * means the root `.env`. In development only, it also loads the
@@ -27,8 +32,14 @@
  * `--worker <app>` additionally writes the app's Worker env (see
  * `worker-env.ts`) to a private mode-0600 file for the life of the command and
  * substitutes its path for any argument spelled `{env-file}`, e.g.
- * `with-env --worker platform wrangler dev --env-file {env-file}`. Previewing
- * the production tier asks first (`--yes` when there is no terminal).
+ * `with-env --worker platform -- wrangler dev --env-file {env-file}`.
+ * Previewing the production tier asks first (`--yes` when there is no
+ * terminal).
+ *
+ * ⚠️ The `--` there is load-bearing. Node scans a script's WHOLE argv for
+ * `--env-file`, not just its own options, and stops only at `--`: without it,
+ * the node running this file tries to load the literal `{env-file}` and dies
+ * with `node: {env-file}: not found` before any of this code runs.
  *
  * Neither mode spawns a platform shell, so this works on Windows and POSIX.
  */
@@ -51,8 +62,10 @@ import {
 } from "./load.js";
 import {
   availableTiers,
+  developmentRemoteCandidate,
   resolveSessionTier,
   SESSION_SELECTORS,
+  type TierChoice,
 } from "./session.js";
 
 // ALMOST NOTHING ELSE IS IMPORTED AT THE TOP LEVEL, deliberately.
@@ -161,6 +174,38 @@ const opts = program.opts<{
 }>();
 const args = program.args;
 
+// `pnpm -F platform dev --tier staging` appends the flag to the END of the
+// script body, so with-env receives `vinext dev --tier staging`: behind the
+// positional boundary above, where commander passes it on to the wrapped
+// command. Take it back. No command with-env wraps has a `--tier` of its own,
+// and the devtools launcher already treats `--tier` as global wherever it
+// sits, so this is the same rule. (`-c` scripts have no trailing argv, and
+// commander already parses a `--tier` after one.)
+let trailingTier: string | undefined;
+for (let i = 1; i < args.length; i++) {
+  const arg = args[i]!;
+  if (arg !== "--tier" && !arg.startsWith("--tier=")) continue;
+  const value = arg === "--tier" ? args[i + 1] : arg.slice("--tier=".length);
+  if (value === undefined || value === "" || value.startsWith("-")) {
+    console.error("with-env: --tier needs a value");
+    process.exit(1);
+  }
+  trailingTier = value;
+  args.splice(i, arg === "--tier" ? 2 : 1);
+  i--;
+}
+if (
+  trailingTier !== undefined &&
+  opts.tier !== undefined &&
+  trailingTier !== opts.tier
+) {
+  console.error(
+    `with-env: the script names --tier ${opts.tier} and its arguments name --tier ${trailingTier}`,
+  );
+  process.exit(1);
+}
+const explicitTier = opts.tier ?? trailingTier;
+
 const usage =
   "with-env: usage: with-env <command> [args...]\n" +
   "                 with-env -c '<shell command>'";
@@ -187,11 +232,14 @@ const cwd = process.cwd();
 // file present) the sole tier — the ONE policy in `session.ts`, shared with
 // the devtools launcher.
 //
-// ⚠️ NO `prompt` IS PASSED, EVER. `with-env` fronts pnpm's parallel tasks and
-// dev servers, none of which has anyone at a keyboard to answer a picker —
-// `isTTY: false` plus an absent `prompt` means two-or-more tier files
-// present with neither `--tier` nor `DEPLOY_ENV` set is ALWAYS an explicit
-// refusal here, never a silent guess or a hang waiting on stdin.
+// A picker is offered ONLY when someone is at the keyboard: stdin AND stdout
+// are terminals and CI is unset. `pnpm -F <app> dev` gives the script the
+// terminal; `pnpm -r` / `--parallel` pipe stdout to prefix it, so those still
+// get the refusal below rather than a hang waiting on stdin nobody can type
+// into. The question is also asked only where the answer used to be a
+// refusal: two or more tier files present, with neither `--tier`,
+// `DEPLOY_ENV` nor `DEV_DB` set. Anything that resolved before resolves the
+// same way now, with no prompt.
 //
 // This is also what keeps `pnpm devtools` itself working: its launcher sets
 // `DEPLOY_ENV` on every child task before spawning it, so each child
@@ -199,26 +247,54 @@ const cwd = process.cwd();
 // reaches the ambiguity refusal above, even on a machine that has pulled
 // down every tier's file.
 //
-// ⚠️ `remoteCandidate` IS DELIBERATELY NOT SUPPLIED, and that is a policy
+// ⚠️ `remoteCandidate` IS SUPPLIED ONLY TO THE PICKER, and that is a policy
 // choice, not an omission: bare development under `with-env` keeps the
 // probe deciding the overlay exactly as it always has, even on a machine
 // whose `.env` names a remote database. Refusing there would break every
-// wrapped dev-server and pnpm task on such a machine overnight. The
-// devtools launcher — the interactive front door, and the home of the
-// destructive db commands — is where that ambiguity gets asked about; its
-// answer reaches this wrapper as `DEV_DB` (resolved below) or an explicit
+// wrapped dev-server and pnpm task on such a machine overnight. When the
+// picker is shown anyway, the candidate splits its development row into
+// `development:local` and `development:remote`; otherwise the answer
+// reaches this wrapper as `DEV_DB` (resolved below) or an explicit
 // `--tier development:<local|remote>`.
 const tierExists = (relPath: string) => existsSync(join(root, relPath));
+const available = await availableTiers(root, tierExists);
+const canAsk =
+  process.stdin.isTTY === true &&
+  process.stdout.isTTY === true &&
+  process.env.CI !== "true" &&
+  process.env.CI !== "1" &&
+  explicitTier === undefined &&
+  !process.env.DEPLOY_ENV &&
+  !process.env.DEV_DB &&
+  available.length > 1;
 const resolution = await resolveSessionTier({
-  explicit: opts.tier,
+  explicit: explicitTier,
   deployEnv: process.env.DEPLOY_ENV,
   devDb: process.env.DEV_DB,
-  available: await availableTiers(root, tierExists),
-  isTTY: false,
+  available,
+  isTTY: canAsk,
+  ...(canAsk && (await askingProps())),
 });
 if (!resolution.ok) {
   console.error(`with-env: ${resolution.reason}`);
   process.exit(1);
+}
+
+/** The picker and its development hints, imported only when it is shown. */
+async function askingProps() {
+  const { select, isCancel } = await import("@clack/prompts");
+  const remoteCandidate = await developmentRemoteCandidate(root);
+  return {
+    remoteCandidate,
+    localStackOnline:
+      typeof remoteCandidate === "string" ? await probeLocalStack() : undefined,
+    promptMessage: "Which environment should this command use?",
+    prompt: async (message: string, options: TierChoice[]) => {
+      const choice = await select<string>({ message, options });
+      if (isCancel(choice)) process.exit(130);
+      return choice;
+    },
+  };
 }
 
 if (opts.worker !== undefined) {
@@ -347,6 +423,13 @@ try {
 // After the load, so a file-declared `CLOUDFLARE_ENV` counts as explicit too.
 // Covers the missing-file path as well: the tier is known either way.
 applyDeployTierAliases(env, resolution.tier);
+
+// Name the session for the command, so a nested `with-env` (or a devtools
+// run) resolves to the same tier instead of asking again or refusing.
+env.DEPLOY_ENV = resolution.tier;
+if (resolution.devDatabase !== undefined) {
+  env.DEV_DB = resolution.devDatabase;
+}
 
 /**
  * dotenvx's CLI entry point, resolved through its package rather than a `.bin`

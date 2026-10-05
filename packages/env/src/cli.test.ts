@@ -193,6 +193,108 @@ describe("with-env tier resolution", () => {
   });
 });
 
+describe("with-env --tier after the wrapped command", () => {
+  // `pnpm <script> --tier staging` appends to the script body, so the flag
+  // arrives behind the command with-env wraps.
+  const PRINT =
+    "console.log(JSON.stringify([process.env.TIER_MARK, process.env.DEPLOY_ENV, process.argv.slice(1)]))";
+
+  it("is taken by with-env, not passed on", async () => {
+    const { code, stdout, stderr } = await withEnv([
+      "node",
+      "-e",
+      PRINT,
+      "--",
+      "--port",
+      "3001",
+      "--tier",
+      "staging",
+    ]);
+    expect(stderr).toContain("(staging)");
+    expect(JSON.parse(stdout)).toEqual([
+      "staging",
+      "staging",
+      ["--port", "3001"],
+    ]);
+    expect(code).toBe(0);
+  });
+
+  it("accepts --tier=<tier>", async () => {
+    const { code, stdout } = await withEnv([
+      "node",
+      "-e",
+      PRINT,
+      "--tier=production",
+    ]);
+    expect(JSON.parse(stdout)).toEqual(["production", "production", []]);
+    expect(code).toBe(0);
+  });
+
+  it("names the development database to the command", async () => {
+    const { code, stdout } = await withEnv([
+      "node",
+      "-e",
+      "console.log(process.env.DEV_DB)",
+      "--tier",
+      "development:remote",
+    ]);
+    expect(stdout).toBe("remote\n");
+    expect(code).toBe(0);
+  });
+
+  it("refuses when it disagrees with the script's own --tier", async () => {
+    const { code, stderr } = await withEnv([
+      "--tier",
+      "staging",
+      "node",
+      "-e",
+      "0",
+      "--tier",
+      "production",
+    ]);
+    expect(stderr).toContain("--tier staging");
+    expect(stderr).toContain("--tier production");
+    expect(code).toBe(1);
+  });
+
+  it("refuses a --tier with no value", async () => {
+    const { code, stderr } = await withEnv(["node", "-e", "0", "--tier"]);
+    expect(stderr).toContain("--tier needs a value");
+    expect(code).toBe(1);
+  });
+});
+
+describe("with-env through its bin", () => {
+  // Node reads `--env-file` from a script's whole argv, stopping only at
+  // `--`, so the `--worker` scripts (`… -- wrangler dev --env-file
+  // {env-file}`) depend on the separator reaching node through the bin.
+  const BIN = join(PACKAGE_ROOT, "bin", "with-env.mjs");
+  const viaBin = (args: string[]) =>
+    run(process.execPath, [BIN, ...args], {
+      cwd: PACKAGE_ROOT,
+      env: {
+        PATH: process.env.PATH ?? "",
+        HOME: process.env.HOME ?? "",
+        WITH_ENV_ROOT_FOR_TESTS: fixtureRoot,
+      },
+    });
+
+  it("passes a wrapped --env-file through after --", async () => {
+    const { stdout } = await viaBin([
+      "--tier",
+      "development",
+      "--",
+      "node",
+      "-e",
+      "console.log(JSON.stringify(process.argv.slice(1)))",
+      "--",
+      "--env-file",
+      "{env-file}",
+    ]);
+    expect(JSON.parse(stdout)).toEqual(["--env-file", "{env-file}"]);
+  });
+});
+
 describe("with-env deploy tier aliases", () => {
   const PRINT =
     "console.log(process.env.CLOUDFLARE_ENV, process.env.NEXT_PUBLIC_DEPLOY_ENV)";

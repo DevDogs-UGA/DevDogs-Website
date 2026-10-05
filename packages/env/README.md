@@ -44,8 +44,21 @@ the command with its path; previewing production asks first (`--yes` without a
 terminal):
 
 ```jsonc
-"start": "with-env --worker platform wrangler dev --config dist/server/wrangler.json --env-file {env-file}"
+"start": "with-env --worker platform -- wrangler dev --config dist/server/wrangler.json --env-file \"{env-file}\""
 ```
+
+Both the `--` and the quotes are needed. Node reads `--env-file` out of a
+script's whole argv, stopping only at `--`, so without the separator the node
+running `with-env` tries to load `{env-file}` itself and exits with
+`node: {env-file}: not found`. pnpm 11's shell emulator crashes on an unquoted
+`{env-file}` and reports only `Command failed.`
+
+The tier comes from `--tier`, then `DEPLOY_ENV`, then the only tier file
+present. `--tier` also works at the end of the command, which is where
+`pnpm -F platform dev --tier staging` puts it. With more than one tier file and
+no tier named, a terminal gets a picker; without a terminal (`pnpm -r`, CI)
+`with-env` refuses. The resolved tier reaches the command as `DEPLOY_ENV` (and
+`DEV_DB` for `development:local|remote`), so nested runs agree.
 
 `buildWorkerEnv(app, env, "dev" | "deploy")` builds that env, and the one
 `wrangler deploy --secrets-file` uploads, from the app's manifest.
