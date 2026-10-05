@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": false,
   "type": "module",
-  "description": "Contributor CLI for a DevDogsUGA checkout: the real tools with the session's tier filled in, a menu over them, and the checks CI runs. Ships built JS; run via `pnpm dlx @devdogsuga/devtools` (or the `devtools` bin once installed) from inside a DevDogsUGA clone. `devtools-ci` and `devtools-ci-bare` are deprecated aliases that forward to @devdogsuga/backstage's code.",
-  "license": "MIT",
+  "description": "Contributor CLI for a DevDogsUGA checkout: the real tools with the session's tier filled in, a menu over them, and the checks CI runs. Ships built JS; run via `pnpm dlx @devdogsuga/devtools` (or the `devtools` bin once installed) from inside a DevDogsUGA clone.",
+  "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
     "url": "https://github.com/DevDogsUGA/Backstage.git",

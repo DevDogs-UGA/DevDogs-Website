@@ -4,7 +4,7 @@
   "private": false,
   "type": "module",
   "description": "The club's brand identity: palette, Satori templates, app marks, embedded fonts and artwork, plus the QR generator and the PNG and next/og renderers",
-  "license": "MIT",
+  "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
     "url": "https://github.com/DevDogsUGA/Backstage",

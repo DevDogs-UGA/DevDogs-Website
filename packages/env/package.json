@@ -4,7 +4,7 @@
   "private": false,
   "type": "module",
   "description": "Env-registry machinery: declare()/define() manifests, target/tier resolution, with-env session loading, and a @t3-oss/env-nextjs re-export. Ships no variables — the registry of actual names and schemas is repo data that stays in the consuming app.",
-  "license": "MIT",
+  "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
     "url": "https://github.com/DevDogsUGA/Backstage.git",

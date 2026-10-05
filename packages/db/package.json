@@ -4,7 +4,7 @@
   "private": false,
   "type": "module",
   "description": "Supabase client factories and the Drizzle/postgres-js client factory, merged. Generic over a consumer-supplied `Database` type — no generated types or schema data ship here.",
-  "license": "MIT",
+  "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
     "url": "https://github.com/DevDogsUGA/Backstage.git",

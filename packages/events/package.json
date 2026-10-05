@@ -4,7 +4,7 @@
   "private": false,
   "type": "module",
   "description": "Config-as-code for the club's meetings and workshops: the Zod schema, the publishability validator, and the authored data itself",
-  "license": "MIT",
+  "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
     "url": "https://github.com/DevDogsUGA/Backstage.git",

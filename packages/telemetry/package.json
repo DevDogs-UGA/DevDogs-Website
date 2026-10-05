@@ -4,7 +4,7 @@
   "private": false,
   "type": "module",
   "description": "Shared Sentry constants, options builder, scrubbers, and alert() for every service that reports telemetry. Standalone by design — devtools bundles this as a regular dep so error reporting works with no/broken repo.",
-  "license": "MIT",
+  "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
     "url": "https://github.com/DevDogsUGA/Backstage.git",

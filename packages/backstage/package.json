@@ -4,7 +4,7 @@
   "private": false,
   "type": "module",
   "description": "Officer and production CLI for DevDogsUGA: deploys, env sync with Bitwarden and GitHub, the migration planner role, club graphics and QR codes, GitHub rulesets and settings, and the newsletter. Ships built JS; run it anywhere with `pnpm dlx @devdogsuga/backstage` (no checkout needed to start; commands that read a checkout say so).",
-  "license": "MIT",
+  "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
     "url": "https://github.com/DevDogsUGA/Backstage.git",

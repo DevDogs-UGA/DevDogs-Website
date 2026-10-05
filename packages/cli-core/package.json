@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "The shared core of the published CLIs (devtools, backstage): repo root and peer loading, ui, telemetry, tier and env entry, env discovery, db/run, instance, args and the command catalog. Never published; each CLI inlines it with tsdown, so it is only ever a workspace:* devDependency.",
-  "license": "MIT",
+  "license": "BSD-3-Clause",
   "exports": {
     "./*": "./src/*.ts"
   },
