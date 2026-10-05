@@ -55,6 +55,8 @@ const EVENTS = {
   judging1: meeting("2026-10-05-judging"),
   career: meeting("2026-10-05-workshop"),
   touchgrass1: meeting("2026-10-07"),
+  nextflutter2: meeting("2026-10-12"),
+  build4: meeting("2026-10-14"),
 };
 
 export const ISSUES: ChangelogIssue[] = [
@@ -123,6 +125,29 @@ export const ISSUES: ChangelogIssue[] = [
     ],
     signoff:
       "Doors tonight at 6 in DLW 124. Turn on GitHub two-factor before you come: you need it to join a team.",
+  },
+  {
+    version: "3.0.3",
+    term: "Fall 2026",
+    sendLabel: "Mon · Oct 5",
+    command: "changelog --date 2026-10-05",
+    title: "Demo Night Is Tonight (DevDogs Changelog v3.0.3)",
+    preview:
+      "Tonight at 6: teams present their feature competition entries, then Career Fair Readiness at 7.",
+    tagline: "Time to demo.",
+    intro:
+      "Entries for our first feature competition close at 6 PM tonight, and every team gets the floor to show what they built for the club's platform. Officers score each entry and the room votes, so come cheer on your friends even if you didn't compete. At 7 we move to DLW 110 for Career Fair Readiness: resume polish, portfolio pointers, and practice talking about what you've built.",
+    featuredLabel: "happening_tonight",
+    featured: EVENTS.judging1,
+    cta: "See the schedule",
+    upcoming: [
+      EVENTS.career,
+      EVENTS.touchgrass1,
+      EVENTS.nextflutter2,
+      EVENTS.build4,
+    ],
+    signoff:
+      "Doors tonight at 6 in DLW 124. Bring your demo, or just bring a vote.",
   },
 ];
 
