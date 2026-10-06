@@ -3,6 +3,14 @@
 //
 //   pnpm export:md decks/<deck>.md --out <docs>/workshops/<workshop>
 //
+// Decks link docs pages the way slides must, by site URL (`/docs/<project>/…`).
+// The docs repository wants relative `.md` paths instead, so every such link
+// is rewritten as a page is written, against where that file lands under
+// `docs/` (see docs-links.ts). That folder is the nearest `docs` ancestor of
+// `--out`, or `--docs <dir>`; the tree there says which targets are pages and
+// which are `_shared` mounts. With neither, the slug rules alone apply and the
+// output is taken to sit at `docs/workshops/<out's name>`.
+//
 // A slide deck is a poor handout: its code windows pan and build click by
 // click, so a PDF only catches one frame of each. This reads the same slides
 // and writes what a reader needs instead, in slide order:
@@ -42,9 +50,10 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { basename, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { rewriteDocsLinks } from "./docs-links.ts";
 import {
   fence,
   loadDeck,
@@ -59,7 +68,7 @@ import {
 const APP = fileURLToPath(new URL("..", import.meta.url));
 const { values, positionals } = parseArgs({
   allowPositionals: true,
-  options: { out: { type: "string" } },
+  options: { out: { type: "string" }, docs: { type: "string" } },
 });
 if (!positionals[0])
   throw new Error(
@@ -185,6 +194,28 @@ if (scheduled instanceof Date) docs.scheduled = scheduled.toISOString();
 const pages = pagesOf(slides);
 const out = resolve(values.out ?? join(APP, "export", basename(entry, ".md")));
 mkdirSync(out, { recursive: true });
+
+// The docs folder the output lands in, when there is one to read.
+function docsRootOf(dir: string): string | undefined {
+  if (values.docs) return resolve(values.docs);
+  const parts = dir.split(sep);
+  const at = parts.lastIndexOf("docs");
+  return at === -1 ? undefined : parts.slice(0, at + 1).join(sep);
+}
+const docsRoot = docsRootOf(out);
+const exists = docsRoot
+  ? (path: string) => existsSync(join(docsRoot, path))
+  : undefined;
+// A page's links are relative to where its file sits under `docs/`.
+function withDocsLinks(file: string, markdown: string): string {
+  const inDocs = docsRoot
+    ? relative(docsRoot, file)
+    : join("workshops", basename(out), relative(out, file));
+  return rewriteDocsLinks(markdown, {
+    file: inDocs.split(sep).join("/"),
+    exists,
+  });
+}
 const shared = new Map<string, string>();
 
 for (const track of tracksOf(deck)) {
@@ -236,14 +267,20 @@ for (const track of tracksOf(deck)) {
       shared.set(start.file, body);
       writeFileSync(
         join(out, `${start.file}.md`),
-        pageFile(start, content.title, body, start.order, docs.scheduled),
+        withDocsLinks(
+          join(out, `${start.file}.md`),
+          pageFile(start, content.title, body, start.order, docs.scheduled),
+        ),
       );
       continue;
     }
     const file = join(dir, `${start.file}.md`);
     writeFileSync(
       file,
-      pageFile(start, content.title, body, step++, undefined, checkpoint),
+      withDocsLinks(
+        file,
+        pageFile(start, content.title, body, step++, undefined, checkpoint),
+      ),
     );
     console.log(`wrote ${file}`);
   }
