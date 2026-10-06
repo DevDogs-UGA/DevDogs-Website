@@ -228,6 +228,45 @@ describe("planSettings — drift", () => {
     });
   });
 
+  it("plans a createIfMissing environment as fixable drift", () => {
+    const desired = desiredFixture();
+    desired.environments = desired.environments.map((e) =>
+      e.name === "production" ? { ...e, createIfMissing: true } : e,
+    );
+    const live = matchingSnapshot();
+    live.environments.production.environment = null;
+    live.environments.production.branchPolicies = [];
+    const plan = planSettings(desired, live, []);
+    expect(
+      plan.checks.find((c) => c.key === "environments.production"),
+    ).toMatchObject({ status: "drift", fixable: true });
+    // Nothing further is checked on an environment that does not exist yet.
+    expect(
+      plan.checks.some(
+        (c) => c.key === "environments.production.branch_policy",
+      ),
+    ).toBe(false);
+  });
+
+  it("matches a glob deployment branch policy by its stored name", () => {
+    const desired = desiredFixture();
+    desired.environments = desired.environments.map((e) =>
+      e.name === "staging"
+        ? { ...e, allowedBranches: ["main", "gh-readonly-queue/main/*"] }
+        : e,
+    );
+    const live = matchingSnapshot();
+    live.environments.staging.branchPolicies = [
+      { id: 1, name: "main" },
+      { id: 2, name: "gh-readonly-queue/main/*" },
+    ];
+    const plan = planSettings(desired, live, []);
+    expect(
+      plan.checks.find((c) => c.key === "environments.staging.branch_policy")!
+        .status,
+    ).toBe("ok");
+  });
+
   it("flags production with no required reviewers as drift, NEVER fixable", () => {
     const live = matchingSnapshot();
     live.environments.production.environment!.protection_rules = [];

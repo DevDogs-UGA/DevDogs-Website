@@ -68,6 +68,10 @@ export interface RulesetPlan {
   perTeamSkipped: string[];
   /** Live rulesets that matched no desired slot and no delete name — reported, never acted on. */
   unmanaged: string[];
+  /** Creates/updates `gates.ts` withheld from `--apply`, with why. Absent until gated. */
+  blocked?: { name: string; reason: string }[];
+  /** Informational lines (skipped rulesets, unresolved Apps). Absent until gated. */
+  notes?: string[];
 }
 
 /**
@@ -125,6 +129,21 @@ function canonicalizeRule(rule: Rule): Rule {
             context: check.context,
             integration_id: check.integration_id,
           })),
+      },
+    };
+  }
+  if (rule.type === "merge_queue") {
+    const p = rule.parameters;
+    return {
+      type: "merge_queue",
+      parameters: {
+        check_response_timeout_minutes: p.check_response_timeout_minutes,
+        grouping_strategy: p.grouping_strategy,
+        max_entries_to_build: p.max_entries_to_build,
+        max_entries_to_merge: p.max_entries_to_merge,
+        merge_method: p.merge_method,
+        min_entries_to_merge: p.min_entries_to_merge,
+        min_entries_to_merge_wait_minutes: p.min_entries_to_merge_wait_minutes,
       },
     };
   }

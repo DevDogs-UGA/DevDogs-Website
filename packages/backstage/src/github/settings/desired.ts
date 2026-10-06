@@ -10,13 +10,36 @@
  * report; `commands.ts` is the `backstage github settings` command that
  * prints or applies the difference.
  */
-export type SettingsEnvironment =
-  "preflight" | "staging" | "production-build" | "production";
+export type SettingsEnvironment = string;
+
+/** Repositories this reconciler carries a desired state for. */
+export const MANAGED_REPOS = ["DevDogsUGA", "Backstage"] as const;
+export type ManagedRepo = (typeof MANAGED_REPOS)[number];
+
+export function isManagedRepo(repo: string): repo is ManagedRepo {
+  return (MANAGED_REPOS as readonly string[]).includes(repo);
+}
 
 export interface DesiredEnvironmentPolicy {
   name: SettingsEnvironment;
-  /** Deployment-branch-policy patterns this environment allows — exact branch names here, not glob patterns. */
+  /**
+   * Deployment-branch-policy names this environment allows. Exact branch
+   * names, or a glob pattern (GitHub stores both as `type: branch` policies;
+   * `*` does not match `/`, so the merge queue's
+   * `gh-readonly-queue/main/pr-N-<sha>` needs `gh-readonly-queue/main/*`).
+   */
   allowedBranches: readonly string[];
+  /**
+   * Whether `--apply` may CREATE this environment when it does not exist.
+   * Off for DevDogsUGA (its four environments are reported only, as always).
+   * When on, the environment is created with its branch policies AND — the
+   * one place reviewers are ever written — `reviewerTeams` plus
+   * `preventSelfReview`. An environment that already exists never has its
+   * reviewers touched: those stay report-only.
+   */
+  createIfMissing?: boolean;
+  /** Org team slugs set as required reviewers when this environment is created. */
+  reviewerTeams?: readonly string[];
   /** Whether this environment must carry at least one required reviewer (never auto-added — see `diff.ts`). */
   requireReviewers: boolean;
   /**
@@ -61,7 +84,72 @@ export interface DesiredSettings {
  */
 export function buildDesiredSettings(
   actionPatterns: readonly string[],
+  repo: ManagedRepo = "DevDogsUGA",
 ): DesiredSettings {
+  return {
+    ...baseSettings(actionPatterns),
+    environments:
+      repo === "Backstage" ? BACKSTAGE_ENVIRONMENTS : DEVDOGSUGA_ENVIRONMENTS,
+  };
+}
+
+const plain = (
+  name: string,
+  allowedBranches: readonly string[] = ["main"],
+): DesiredEnvironmentPolicy => ({
+  name,
+  allowedBranches,
+  requireReviewers: false,
+  preventSelfReview: false,
+});
+
+/** `staging-build`/`production-build` also run for the merge queue's temporary branches. */
+const MAIN_AND_QUEUE = ["main", "gh-readonly-queue/main/*"] as const;
+
+/**
+ * Backstage: `publishing` is the manual-approval gate for npm publishes
+ * (what is live today: reviewer team `devops`, self-review prevented, `main`
+ * only). The `*-build` environments hold public variables only and also run
+ * on merge-queue branches. Created on `--apply` when missing.
+ */
+const BACKSTAGE_ENVIRONMENTS: readonly DesiredEnvironmentPolicy[] = [
+  {
+    name: "publishing",
+    allowedBranches: ["main"],
+    requireReviewers: true,
+    preventSelfReview: true,
+    createIfMissing: true,
+    reviewerTeams: ["devops"],
+  },
+  { ...plain("staging"), createIfMissing: true },
+  { ...plain("preflight"), createIfMissing: true },
+  { ...plain("staging-build", MAIN_AND_QUEUE), createIfMissing: true },
+  { ...plain("production-build", MAIN_AND_QUEUE), createIfMissing: true },
+  {
+    name: "production",
+    allowedBranches: ["main"],
+    requireReviewers: true,
+    preventSelfReview: true,
+    createIfMissing: true,
+    reviewerTeams: ["devops"],
+  },
+];
+
+const DEVDOGSUGA_ENVIRONMENTS: readonly DesiredEnvironmentPolicy[] = [
+  plain("preflight"),
+  plain("staging"),
+  plain("production-build"),
+  {
+    name: "production",
+    allowedBranches: ["main"],
+    requireReviewers: true,
+    preventSelfReview: true,
+  },
+];
+
+function baseSettings(
+  actionPatterns: readonly string[],
+): Omit<DesiredSettings, "environments"> {
   return {
     securityAndAnalysis: {
       secretScanning: true,
@@ -82,36 +170,5 @@ export function buildDesiredSettings(
       defaultWorkflowPermissions: "read",
       canApprovePullRequestReviews: false,
     },
-    // `production` is THE reviewer gate: it holds every production secret,
-    // including the apply-tier credential (`gh/environments.ts`). No other
-    // environment may receive an apply-tier key, so none needs reviewers.
-    // `production-build` holds public variables only and builds production
-    // artifacts without credentials.
-    environments: [
-      {
-        name: "preflight",
-        allowedBranches: ["main"],
-        requireReviewers: false,
-        preventSelfReview: false,
-      },
-      {
-        name: "staging",
-        allowedBranches: ["main"],
-        requireReviewers: false,
-        preventSelfReview: false,
-      },
-      {
-        name: "production-build",
-        allowedBranches: ["main"],
-        requireReviewers: false,
-        preventSelfReview: false,
-      },
-      {
-        name: "production",
-        allowedBranches: ["main"],
-        requireReviewers: true,
-        preventSelfReview: true,
-      },
-    ],
   };
 }

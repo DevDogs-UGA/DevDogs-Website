@@ -5,9 +5,18 @@ export interface RulesetActors {
   devopsTeamId: number;
   focusLeadsTeamId: number;
   adminsTeamId: number;
-  appId: number;
+  /** The platform App (`team/**` bypass); DevDogsUGA only. */
+  appId?: number;
   renovateAppId?: number;
+  /**
+   * The deploy-PR App (`devdogs-deploy-pr`), which force-pushes
+   * `deploy/devdogsuga`. Absent until the App is created and installed;
+   * Backstage's `deploy/devdogsuga` ruleset is then skipped.
+   */
+  deployPrAppId?: number;
 }
+
+export type RulesetRepo = "DevDogsUGA" | "Backstage";
 
 /** Earlier live names which occupy the same managed slot. */
 export const LEGACY_NAME_ALIASES: Readonly<Record<string, readonly string[]>> =
@@ -40,7 +49,220 @@ const always = (actor_id: number) => ({
  * in one ruleset, so combining immutable history, PR reviews, updates and CI
  * would make a direct-push exception an accidental force-push exception too.
  */
-export function buildDesiredRulesets(actors: RulesetActors): DesiredRuleset[] {
+export function buildDesiredRulesets(
+  actors: RulesetActors,
+  repo: RulesetRepo = "DevDogsUGA",
+): DesiredRuleset[] {
+  return repo === "Backstage"
+    ? buildBackstageRulesets(actors)
+    : buildDevDogsUgaRulesets(actors);
+}
+
+/**
+ * Merge queue parameters for Backstage `main`: squash (matching
+ * `main-reviews`' squash-only), ALLGREEN grouping (every entry in a group
+ * must pass), up to 5 entries built and merged together, merge as soon as 1
+ * entry is ready after waiting 5 minutes for more, 60 minute check timeout.
+ */
+export const BACKSTAGE_MERGE_QUEUE = {
+  type: "merge_queue",
+  parameters: {
+    check_response_timeout_minutes: 60,
+    grouping_strategy: "ALLGREEN",
+    max_entries_to_build: 5,
+    max_entries_to_merge: 5,
+    merge_method: "SQUASH",
+    min_entries_to_merge: 1,
+    min_entries_to_merge_wait_minutes: 5,
+  },
+} as const;
+
+/** Rule types that gate `--apply` on the target repo's CI having a `merge_group` trigger. */
+export function hasMergeQueueRule(ruleset: DesiredRuleset): boolean {
+  return ruleset.rules.some((r) => r.type === "merge_queue");
+}
+
+/**
+ * Backstage's fixed rulesets. Same split as DevDogsUGA's (a bypass actor
+ * bypasses every rule in its ruleset), with:
+ *
+ * - `main-merge-queue` on its own: admins must still push directly
+ *   (TASK-478), and a queue-only ruleset lets them bypass the queue without
+ *   widening any other rule's bypass.
+ * - `deploy/devdogsuga`: only admins and the deploy-PR App bypass, and the
+ *   App bypasses `always` because it creates, force-pushes and updates the
+ *   branch; every other actor is blocked from all four operations. Omitted
+ *   (and `~ALL` then covers the branch) until the App is installed.
+ * - no Renovate bypass: its install on Backstage is not readable from here.
+ * - no `team/**` rulesets (a DevDogsUGA concern).
+ */
+function buildBackstageRulesets(actors: RulesetActors): DesiredRuleset[] {
+  const deployBranch = "refs/heads/deploy/devdogsuga";
+  const deployRuleset: DesiredRuleset[] =
+    actors.deployPrAppId === undefined
+      ? []
+      : [
+          {
+            name: "deploy/devdogsuga",
+            target: "branch",
+            enforcement: "active",
+            conditions: {
+              ref_name: { include: [deployBranch], exclude: [] },
+            },
+            bypass_actors: [
+              {
+                actor_id: actors.deployPrAppId,
+                actor_type: "Integration",
+                bypass_mode: "always",
+              },
+              always(actors.adminsTeamId),
+            ],
+            rules: [
+              {
+                type: "update",
+                parameters: { update_allows_fetch_and_merge: false },
+              },
+              { type: "creation" },
+              { type: "deletion" },
+              { type: "non_fast_forward" },
+            ],
+          },
+        ];
+  return [
+    {
+      name: "main-integrity",
+      target: "branch",
+      enforcement: "active",
+      conditions: main,
+      bypass_actors: [],
+      rules: [{ type: "deletion" }, { type: "non_fast_forward" }],
+    },
+    {
+      name: "main-updates",
+      target: "branch",
+      enforcement: "active",
+      conditions: main,
+      bypass_actors: [
+        {
+          actor_id: actors.focusLeadsTeamId,
+          actor_type: "Team",
+          bypass_mode: "pull_request",
+        },
+        {
+          actor_id: actors.devopsTeamId,
+          actor_type: "Team",
+          bypass_mode: "pull_request",
+        },
+        always(actors.adminsTeamId),
+      ],
+      rules: [
+        {
+          type: "update",
+          parameters: { update_allows_fetch_and_merge: false },
+        },
+      ],
+    },
+    {
+      name: "main-reviews",
+      target: "branch",
+      enforcement: "active",
+      conditions: main,
+      bypass_actors: [always(actors.adminsTeamId)],
+      rules: [
+        {
+          type: "pull_request",
+          parameters: {
+            allowed_merge_methods: ["squash"],
+            dismiss_stale_reviews_on_push: false,
+            require_code_owner_review: true,
+            require_last_push_approval: true,
+            required_approving_review_count: 1,
+            required_review_thread_resolution: true,
+          },
+        },
+      ],
+    },
+    {
+      name: "main-ci",
+      target: "branch",
+      enforcement: "active",
+      conditions: main,
+      bypass_actors: [always(actors.adminsTeamId)],
+      rules: [
+        {
+          type: "required_status_checks",
+          parameters: {
+            do_not_enforce_on_create: false,
+            strict_required_status_checks_policy: false,
+            required_status_checks: [
+              { context: "validate", integration_id: 15368 },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      name: "main-merge-queue",
+      target: "branch",
+      enforcement: "active",
+      conditions: main,
+      bypass_actors: [always(actors.adminsTeamId)],
+      rules: [
+        {
+          ...BACKSTAGE_MERGE_QUEUE,
+          parameters: { ...BACKSTAGE_MERGE_QUEUE.parameters },
+        },
+      ],
+    },
+    {
+      name: "~ALL",
+      target: "branch",
+      enforcement: "active",
+      conditions: {
+        ref_name: {
+          include: ["~ALL"],
+          // Excluding the deploy branch only once its own ruleset exists —
+          // until then `~ALL` keeps protecting it from everyone but the
+          // admins, devops and focus-leads bypass teams.
+          exclude: [
+            "refs/heads/main",
+            ...(deployRuleset.length > 0 ? [deployBranch] : []),
+          ],
+        },
+      },
+      bypass_actors: [
+        always(actors.focusLeadsTeamId),
+        always(actors.devopsTeamId),
+        always(actors.adminsTeamId),
+      ],
+      rules: [
+        {
+          type: "update",
+          parameters: { update_allows_fetch_and_merge: false },
+        },
+        { type: "creation" },
+        { type: "deletion" },
+        { type: "non_fast_forward" },
+      ],
+    },
+    ...deployRuleset,
+    {
+      name: "tag-protection",
+      target: "tag",
+      enforcement: "active",
+      conditions: {
+        ref_name: { include: ["refs/tags/**"], exclude: [] },
+      },
+      bypass_actors: [always(actors.adminsTeamId), always(actors.devopsTeamId)],
+      rules: [{ type: "creation" }, { type: "update" }, { type: "deletion" }],
+    },
+  ];
+}
+
+function buildDevDogsUgaRulesets(actors: RulesetActors): DesiredRuleset[] {
+  if (actors.appId === undefined) {
+    throw new Error("DevDogsUGA rulesets need the platform App id (appId)");
+  }
   return [
     {
       name: "main-integrity",

@@ -60,6 +60,29 @@ export async function listRulesets(r: Repo): Promise<LiveRulesetSummary[]> {
   }
 }
 
+/**
+ * `GET /repos/{owner}/{repo}/contents/{path}` on the default branch, decoded.
+ * `null` when the file does not exist (404).
+ */
+export async function getFileContent(
+  r: Repo,
+  filePath: string,
+): Promise<string | null> {
+  try {
+    const { stdout } = await run(
+      "gh",
+      ["api", `repos/${r.owner}/${r.repo}/contents/${filePath}`],
+      { maxBuffer: MAX_BUFFER, shell: false },
+    );
+    const data = JSON.parse(stdout) as { content?: string; encoding?: string };
+    if (typeof data.content !== "string") return null;
+    return Buffer.from(data.content, "base64").toString("utf8");
+  } catch (err) {
+    if (/\b404\b|Not Found/.test(describe(err))) return null;
+    throw new GhRulesetsError(describe(err));
+  }
+}
+
 /** `GET /repos/{owner}/{repo}/rulesets/{id}` — the full ruleset. */
 export async function getRuleset(r: Repo, id: number): Promise<LiveRuleset> {
   try {

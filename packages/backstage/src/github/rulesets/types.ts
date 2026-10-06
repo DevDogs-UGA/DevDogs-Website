@@ -65,13 +65,31 @@ export interface RequiredStatusChecksRule {
   };
 }
 
+/**
+ * The merge queue (`merge_queue` rule). Parameters are GitHub's own field
+ * names and enums; GitHub echoes all seven back, so they diff exactly.
+ */
+export interface MergeQueueRule {
+  type: "merge_queue";
+  parameters: {
+    check_response_timeout_minutes: number;
+    grouping_strategy: "ALLGREEN" | "HEADGREEN";
+    max_entries_to_build: number;
+    max_entries_to_merge: number;
+    merge_method: "MERGE" | "SQUASH" | "REBASE";
+    min_entries_to_merge: number;
+    min_entries_to_merge_wait_minutes: number;
+  };
+}
+
 export type Rule =
   | UpdateRule
   | DeletionRule
   | NonFastForwardRule
   | CreationRule
   | PullRequestRule
-  | RequiredStatusChecksRule;
+  | RequiredStatusChecksRule
+  | MergeQueueRule;
 
 export interface RulesetConditions {
   ref_name: { include: string[]; exclude: string[] };

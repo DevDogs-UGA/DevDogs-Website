@@ -64,4 +64,59 @@ describe("buildDesiredSettings", () => {
       expect(env.preventSelfReview, env.name).toBe(env.name === "production");
     }
   });
+
+  describe("Backstage", () => {
+    const desired = buildDesiredSettings([], "Backstage");
+    const env = (name: string) =>
+      desired.environments.find((e) => e.name === name)!;
+
+    it("names its six environments", () => {
+      expect(desired.environments.map((e) => e.name)).toEqual([
+        "publishing",
+        "staging",
+        "preflight",
+        "staging-build",
+        "production-build",
+        "production",
+      ]);
+    });
+
+    it("lets the two build environments run on merge-queue branches by glob", () => {
+      for (const name of ["staging-build", "production-build"]) {
+        expect(env(name).allowedBranches).toEqual([
+          "main",
+          "gh-readonly-queue/main/*",
+        ]);
+      }
+    });
+
+    it("gates publishing and production on the devops team, self-review prevented", () => {
+      for (const name of ["publishing", "production"]) {
+        expect(env(name)).toMatchObject({
+          allowedBranches: ["main"],
+          requireReviewers: true,
+          preventSelfReview: true,
+          reviewerTeams: ["devops"],
+        });
+      }
+      for (const name of ["staging", "preflight"]) {
+        expect(env(name).requireReviewers).toBe(false);
+      }
+    });
+
+    it("creates every environment when missing, unlike DevDogsUGA", () => {
+      expect(desired.environments.every((e) => e.createIfMissing)).toBe(true);
+      expect(
+        buildDesiredSettings([]).environments.some((e) => e.createIfMissing),
+      ).toBe(false);
+    });
+
+    it("shares DevDogsUGA's security, Dependabot and Actions settings", () => {
+      const other = buildDesiredSettings([]);
+      expect({ ...desired, environments: [] }).toEqual({
+        ...other,
+        environments: [],
+      });
+    });
+  });
 });

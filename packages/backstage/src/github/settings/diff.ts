@@ -12,7 +12,7 @@
  * ever report: a missing environment (nothing here creates one), and a
  * missing required reviewer (nothing here invents one).
  */
-import type { DesiredEnvironmentPolicy, DesiredSettings } from "./desired.js";
+import type { DesiredSettings } from "./desired.js";
 import type {
   LiveActionsPermissions,
   LiveAutomatedSecurityFixes,
@@ -49,10 +49,7 @@ export interface LiveSettingsSnapshot {
   actionsPermissions: LiveActionsPermissions;
   selectedActions: LiveSelectedActions;
   workflowPermissions: LiveWorkflowPermissions;
-  environments: Record<
-    DesiredEnvironmentPolicy["name"],
-    LiveEnvironmentSnapshot
-  >;
+  environments: Record<string, LiveEnvironmentSnapshot>;
 }
 
 export interface SettingsPlan {
@@ -225,14 +222,20 @@ export function planSettings(
 
   for (const env of desired.environments) {
     const snapshot = live.environments[env.name];
-    if (!snapshot.environment) {
+    if (!snapshot?.environment) {
+      const create = env.createIfMissing === true;
       checks.push({
         key: `environments.${env.name}`,
         description: `Environment "${env.name}"`,
-        desired: `branches=[${env.allowedBranches.join(", ")}], reviewers=${env.requireReviewers}`,
+        desired: `branches=[${env.allowedBranches.join(", ")}], reviewers=${
+          env.requireReviewers
+            ? `required (${(env.reviewerTeams ?? []).join(", ") || "none named"}${env.preventSelfReview ? ", self-review prevented" : ""})`
+            : "none"
+        }`,
         live: "environment does not exist",
-        status: "unsupported",
-        fixable: false,
+        // Creatable only where `desired.ts` opts in; otherwise reported.
+        status: create ? "drift" : "unsupported",
+        fixable: create,
       });
       continue;
     }

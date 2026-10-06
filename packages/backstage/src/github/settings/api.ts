@@ -307,3 +307,24 @@ export async function deleteDeploymentBranchPolicy(
     ),
   );
 }
+
+/**
+ * `PUT .../environments/{name}` — creates the environment if absent. Used
+ * only for a `createIfMissing` environment; `reviewers` are written here
+ * and nowhere else (an existing environment's reviewers are never touched).
+ */
+export async function createEnvironment(
+  r: Repo,
+  name: string,
+  body: {
+    reviewers: { type: "Team"; id: number }[];
+    prevent_self_review: boolean;
+    deployment_branch_policy: LiveDeploymentBranchPolicy;
+  },
+): Promise<void> {
+  await writeJson(
+    "PUT",
+    repoPath(r, `/environments/${encodeURIComponent(name)}`),
+    body,
+  );
+}

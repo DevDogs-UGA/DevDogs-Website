@@ -20,12 +20,22 @@ import { resolveAppId, resolveTeamId } from "./actors.js";
 import {
   createRuleset,
   deleteRuleset,
+  getFileContent,
   getRuleset,
   listRulesets,
   updateRuleset,
   type Repo,
 } from "./api.js";
-import { buildDesiredRulesets, isPerTeamRulesetName } from "./desired.js";
+import {
+  buildDesiredRulesets,
+  isPerTeamRulesetName,
+  type RulesetActors,
+} from "./desired.js";
+import {
+  applyGates,
+  hasMergeGroupTrigger,
+  type MergeQueueGate,
+} from "./gates.js";
 import { planHasChanges, planRulesets, type RulesetPlan } from "./diff.js";
 import type { LiveRuleset } from "./types.js";
 import { unwrap } from "@devdogsuga/cli-core/ui";
@@ -37,6 +47,9 @@ const DEFAULT_DEVOPS_SLUG = "devops";
 const DEFAULT_ADMINS_SLUG = "admins";
 /** TASK-299 — installed separately from the platform App; may not exist yet. */
 const DEFAULT_RENOVATE_SLUG = "renovate";
+/** Backstage's deploy-PR App; the wizard creates it, so it may not exist yet. */
+const DEFAULT_DEPLOY_PR_SLUG = "devdogs-deploy-pr";
+const CI_WORKFLOW_PATH = ".github/workflows/ci.yaml";
 
 interface RulesetsOptions {
   org: string;
@@ -145,6 +158,12 @@ export function renderPlan(plan: RulesetPlan): string {
       `  unmanaged  ${plan.unmanaged.join(", ")} — not a fixed ruleset or a deletion target, left alone`,
     );
   }
+  for (const b of plan.blocked ?? []) {
+    lines.push(`! blocked  "${b.name}" — ${b.reason}`);
+  }
+  for (const note of plan.notes ?? []) {
+    lines.push(`  note     ${note}`);
+  }
   if (lines.length === 0) return "(nothing to report)";
   return lines.join("\n");
 }
@@ -171,16 +190,25 @@ export async function runGithubRulesets(
   const opts = parseOptions(argv);
   const r: Repo = { owner: opts.org, repo: opts.repo };
 
+  const backstage = opts.repo === "Backstage";
+  if (!backstage && opts.repo !== "DevDogsUGA") {
+    process.stderr.write(
+      `backstage github rulesets: no desired rulesets for repo "${opts.repo}" (managed: DevDogsUGA, Backstage).\n`,
+    );
+    return 1;
+  }
+
   let devopsTeamId: number;
   let focusLeadsTeamId: number;
   let adminsTeamId: number;
-  let appId: number;
+  let appId: number | undefined;
   try {
     [devopsTeamId, focusLeadsTeamId, adminsTeamId, appId] = await Promise.all([
       resolveTeamId(opts.org, DEFAULT_DEVOPS_SLUG),
       resolveTeamId(opts.org, "focus-leads"),
       resolveTeamId(opts.org, DEFAULT_ADMINS_SLUG),
-      resolveAppId(opts.org, opts.appSlug),
+      // Backstage has no `team/**` rulesets, so no platform App bypass.
+      backstage ? undefined : resolveAppId(opts.org, opts.appSlug),
     ]);
   } catch (err) {
     process.stderr.write(
@@ -189,30 +217,70 @@ export async function runGithubRulesets(
     return 1;
   }
 
-  // Renovate (TASK-299) is resolved SEPARATELY and is allowed to fail: Sloan
-  // may not have installed it yet, and that must not block reconciling
-  // everything else. A failure here prints a warning and the plan simply
-  // omits it from `~ALL`'s bypass list — re-running after the App is
-  // installed picks it up with no further action.
+  const notes: string[] = [];
   let renovateAppId: number | undefined;
-  try {
-    renovateAppId = await resolveAppId(opts.org, DEFAULT_RENOVATE_SLUG);
-  } catch (err) {
-    process.stderr.write(
-      `backstage github rulesets: warning: could not resolve the Renovate App ` +
-        `("${DEFAULT_RENOVATE_SLUG}") — ~ALL's plan omits it as a bypass actor ` +
-        `until it is installed (TASK-299). ${err instanceof Error ? err.message : String(err)}\n`,
-    );
+  let deployPrAppId: number | undefined;
+  if (backstage) {
+    // Renovate's installation on Backstage is not readable (the installation
+    // repository list needs the App's own token), so it is never a bypass
+    // actor here. The deploy-PR App may not exist yet; its ruleset is then
+    // skipped with a note.
+    try {
+      deployPrAppId = await resolveAppId(opts.org, DEFAULT_DEPLOY_PR_SLUG);
+    } catch {
+      notes.push(
+        `ruleset "deploy/devdogsuga" skipped: the "${DEFAULT_DEPLOY_PR_SLUG}" App is not installed in ${opts.org} — create the App first (wizard). ` +
+          `Until then "~ALL" still covers deploy/devdogsuga (the App is not a bypass actor on it, so it cannot create or push the branch).`,
+      );
+    }
+  } else {
+    // Renovate (TASK-299) is resolved SEPARATELY and is allowed to fail: Sloan
+    // may not have installed it yet, and that must not block reconciling
+    // everything else. A failure here prints a warning and the plan simply
+    // omits it from `~ALL`'s bypass list — re-running after the App is
+    // installed picks it up with no further action.
+    try {
+      renovateAppId = await resolveAppId(opts.org, DEFAULT_RENOVATE_SLUG);
+    } catch (err) {
+      process.stderr.write(
+        `backstage github rulesets: warning: could not resolve the Renovate App ` +
+          `("${DEFAULT_RENOVATE_SLUG}") — ~ALL's plan omits it as a bypass actor ` +
+          `until it is installed (TASK-299). ${err instanceof Error ? err.message : String(err)}\n`,
+      );
+    }
   }
 
-  const actors = {
+  const actors: RulesetActors = {
     devopsTeamId,
     focusLeadsTeamId,
     adminsTeamId,
     appId,
     renovateAppId,
+    deployPrAppId,
   };
-  const desired = buildDesiredRulesets(actors);
+  const desired = buildDesiredRulesets(
+    actors,
+    backstage ? "Backstage" : "DevDogsUGA",
+  );
+
+  let gate: MergeQueueGate | null = null;
+  if (backstage) {
+    try {
+      const ci = await getFileContent(r, CI_WORKFLOW_PATH);
+      gate =
+        ci !== null && hasMergeGroupTrigger(ci)
+          ? { ready: true, reason: "" }
+          : {
+              ready: false,
+              reason: `merge queue not enabled: ${opts.org}/${opts.repo}'s default-branch ${CI_WORKFLOW_PATH} ${ci === null ? "was not found" : "has no merge_group trigger"} (push the commit adding it first)`,
+            };
+    } catch (err) {
+      gate = {
+        ready: false,
+        reason: `merge queue not enabled: could not read ${CI_WORKFLOW_PATH} (${err instanceof Error ? err.message : String(err)})`,
+      };
+    }
+  }
 
   let summaries;
   let details;
@@ -226,7 +294,9 @@ export async function runGithubRulesets(
     return 1;
   }
 
-  const plan = planRulesets(summaries, details, actors, desired);
+  const plan = backstage
+    ? applyGates(planRulesets(summaries, details, actors, desired), gate, notes)
+    : planRulesets(summaries, details, actors, desired);
 
   if (opts.json) {
     console.log(JSON.stringify(plan, null, 2));

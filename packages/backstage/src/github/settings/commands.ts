@@ -9,13 +9,18 @@
  * `../rulesets/commands.ts`, same flag shape (`--org`, `--repo`, `--apply`,
  * `--yes`, `--json`).
  *
- * Never invents a required reviewer, and never creates a missing
- * environment — both are reported only. See `../diff.ts`'s header for why.
+ * Desired state depends on `--repo` (see `desired.ts`): DevDogsUGA's four
+ * environments are report-only for reviewers and for missing environments;
+ * Backstage's are created on `--apply` when missing, with reviewers set at
+ * creation only. An existing environment's reviewers are never touched.
+ * `--root <path>` points the workflow scan (action allow-list, SHA-pin gate)
+ * at a local checkout of the target repo when cwd is a different one.
  */
 import { confirm } from "@clack/prompts";
 import { isDryRun } from "@devdogsuga/cli-core/dry-run";
 import {
   addDeploymentBranchPolicy,
+  createEnvironment,
   deleteDeploymentBranchPolicy,
   getActionsPermissions,
   getAutomatedSecurityFixes,
@@ -34,7 +39,13 @@ import {
   setWorkflowPermissions,
   type Repo,
 } from "./api.js";
-import { buildDesiredSettings, type DesiredSettings } from "./desired.js";
+import { resolveTeamId } from "../rulesets/actors.js";
+import {
+  MANAGED_REPOS,
+  buildDesiredSettings,
+  isManagedRepo,
+  type DesiredSettings,
+} from "./desired.js";
 import {
   planHasFixableChanges,
   planSettings,
@@ -59,6 +70,7 @@ interface SettingsOptions {
   apply: boolean;
   yes: boolean;
   json: boolean;
+  root?: string;
 }
 
 function parseOptions(argv: readonly string[]): SettingsOptions {
@@ -76,11 +88,15 @@ function parseOptions(argv: readonly string[]): SettingsOptions {
     else if (arg === "--apply") opts.apply = !isDryRun();
     else if (arg === "--yes") opts.yes = true;
     else if (arg === "--json") opts.json = true;
+    else if (arg === "--root") opts.root = argv[++i] ?? opts.root;
   }
   return opts;
 }
 
-async function fetchSnapshot(r: Repo): Promise<LiveSettingsSnapshot> {
+async function fetchSnapshot(
+  r: Repo,
+  desired: DesiredSettings,
+): Promise<LiveSettingsSnapshot> {
   const [
     repo,
     vulnerabilityAlerts,
@@ -88,10 +104,7 @@ async function fetchSnapshot(r: Repo): Promise<LiveSettingsSnapshot> {
     actionsPermissions,
     selectedActions,
     workflowPermissions,
-    preflight,
-    staging,
-    productionBuild,
-    production,
+    environmentSnapshots,
   ] = await Promise.all([
     getRepo(r),
     getVulnerabilityAlertsEnabled(r),
@@ -99,10 +112,12 @@ async function fetchSnapshot(r: Repo): Promise<LiveSettingsSnapshot> {
     getActionsPermissions(r),
     getSelectedActions(r),
     getWorkflowPermissions(r),
-    fetchEnvironmentSnapshot(r, "preflight"),
-    fetchEnvironmentSnapshot(r, "staging"),
-    fetchEnvironmentSnapshot(r, "production-build"),
-    fetchEnvironmentSnapshot(r, "production"),
+    Promise.all(
+      desired.environments.map(
+        async (env) =>
+          [env.name, await fetchEnvironmentSnapshot(r, env.name)] as const,
+      ),
+    ),
   ]);
 
   return {
@@ -112,12 +127,7 @@ async function fetchSnapshot(r: Repo): Promise<LiveSettingsSnapshot> {
     actionsPermissions,
     selectedActions,
     workflowPermissions,
-    environments: {
-      preflight,
-      staging,
-      "production-build": productionBuild,
-      production,
-    },
+    environments: Object.fromEntries(environmentSnapshots),
   };
 }
 
@@ -179,6 +189,7 @@ async function confirmApply(yes: boolean): Promise<boolean> {
  */
 async function applyPlan(
   r: Repo,
+  org: string,
   desired: DesiredSettings,
   live: LiveSettingsSnapshot,
   plan: SettingsPlan,
@@ -272,6 +283,29 @@ async function applyPlan(
   }
 
   for (const env of desired.environments) {
+    if (drift.has(`environments.${env.name}`)) {
+      // Missing environment (only ever drift when `createIfMissing`): create
+      // it with its reviewers, then branch policies. Reviewers are written
+      // here and nowhere else.
+      const reviewers = await Promise.all(
+        (env.reviewerTeams ?? []).map(async (slug) => ({
+          type: "Team" as const,
+          id: await resolveTeamId(org, slug),
+        })),
+      );
+      await createEnvironment(r, env.name, {
+        reviewers,
+        prevent_self_review: env.preventSelfReview,
+        deployment_branch_policy: {
+          protected_branches: false,
+          custom_branch_policies: true,
+        },
+      });
+      for (const branch of env.allowedBranches) {
+        await addDeploymentBranchPolicy(r, env.name, branch);
+      }
+      continue;
+    }
     if (!drift.has(`environments.${env.name}.branch_policy`)) continue;
 
     await setDeploymentBranchPolicyMode(r, env.name, {
@@ -298,9 +332,16 @@ export async function runGithubSettings(
   const opts = parseOptions(argv);
   const r: Repo = { owner: opts.org, repo: opts.repo };
 
+  if (!isManagedRepo(opts.repo)) {
+    process.stderr.write(
+      `backstage github settings: no desired settings for repo "${opts.repo}" (managed: ${MANAGED_REPOS.join(", ")}).\n`,
+    );
+    return 1;
+  }
+
   let uses;
   try {
-    uses = collectActionUses(findRepoRoot());
+    uses = collectActionUses(opts.root ?? findRepoRoot());
   } catch (err) {
     process.stderr.write(
       `backstage github settings: ${err instanceof Error ? err.message : String(err)}\n`,
@@ -309,11 +350,11 @@ export async function runGithubSettings(
   }
   const unpinned = unpinnedActionUses(uses);
   const patterns = computeActionPatterns(uses);
-  const desired = buildDesiredSettings(patterns);
+  const desired = buildDesiredSettings(patterns, opts.repo);
 
   let live: LiveSettingsSnapshot;
   try {
-    live = await fetchSnapshot(r);
+    live = await fetchSnapshot(r, desired);
   } catch (err) {
     process.stderr.write(
       `backstage github settings: ${err instanceof Error ? err.message : String(err)}\n`,
@@ -341,7 +382,7 @@ export async function runGithubSettings(
   if (!(await confirmApply(opts.yes))) return 1;
 
   try {
-    await applyPlan(r, desired, live, plan);
+    await applyPlan(r, opts.org, desired, live, plan);
   } catch (err) {
     process.stderr.write(
       `backstage github settings: apply failed: ${err instanceof Error ? err.message : String(err)}\n`,

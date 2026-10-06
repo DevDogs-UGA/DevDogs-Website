@@ -76,9 +76,13 @@ const api = vi.hoisted(() => ({
   setDeploymentBranchPolicyMode: vi.fn(async () => undefined),
   addDeploymentBranchPolicy: vi.fn(async () => undefined),
   deleteDeploymentBranchPolicy: vi.fn(async () => undefined),
+  createEnvironment: vi.fn(async () => undefined),
 }));
 
 vi.mock("./api.js", () => api);
+vi.mock("../rulesets/actors.js", () => ({
+  resolveTeamId: vi.fn(async () => 18883125),
+}));
 
 const workflowsMock = vi.hoisted(() => ({
   uses: [] as {
@@ -264,6 +268,111 @@ describe("read failures", () => {
     const code = await runGithubSettings([]);
     expect(code).toBe(1);
     expect(err).toHaveBeenCalledWith(expect.stringContaining("403"));
+    restore();
+  });
+});
+
+describe("--repo Backstage", () => {
+  const liveBackstage = async (_r: unknown, name: string) => {
+    if (name === "publishing") {
+      return {
+        name,
+        protection_rules: [
+          {
+            type: "required_reviewers",
+            prevent_self_review: true,
+            reviewers: [{ type: "Team" }],
+          },
+        ],
+        deployment_branch_policy: {
+          protected_branches: false,
+          custom_branch_policies: true,
+        },
+      };
+    }
+    return null;
+  };
+
+  it("rejects an unmanaged repo", async () => {
+    const { err, restore } = captureConsole();
+    expect(await runGithubSettings(["--repo", "Other"])).toBe(1);
+    expect(err).toHaveBeenCalledWith(expect.stringContaining("no desired"));
+    restore();
+  });
+
+  it("plans creating the missing environments and writes nothing in a dry run", async () => {
+    api.getEnvironment.mockImplementation(liveBackstage);
+    const { log, restore } = captureConsole();
+    const code = await runGithubSettings(["--repo", "Backstage", "--json"]);
+    expect(code).toBe(0);
+    const plan = JSON.parse(log.mock.calls[0]![0] as string) as {
+      checks: { key: string; status: string; fixable: boolean }[];
+    };
+    const creates = plan.checks.filter(
+      (c) => /^environments\.[^.]+$/.test(c.key) && c.status === "drift",
+    );
+    expect(creates.map((c) => c.key).sort()).toEqual([
+      "environments.preflight",
+      "environments.production",
+      "environments.production-build",
+      "environments.staging",
+      "environments.staging-build",
+    ]);
+    expect(creates.every((c) => c.fixable)).toBe(true);
+    expect(api.createEnvironment).not.toHaveBeenCalled();
+    restore();
+  });
+
+  it("creates a missing environment with its reviewers and glob branch policies on --apply", async () => {
+    api.getEnvironment.mockImplementation(liveBackstage);
+    const { restore } = captureConsole();
+    const code = await runGithubSettings([
+      "--repo",
+      "Backstage",
+      "--apply",
+      "--yes",
+    ]);
+    expect(code).toBe(0);
+    const created = api.createEnvironment.mock.calls.map((c) => c[1]);
+    expect(created.sort()).toEqual([
+      "preflight",
+      "production",
+      "production-build",
+      "staging",
+      "staging-build",
+    ]);
+    const production = api.createEnvironment.mock.calls.find(
+      (c) => c[1] === "production",
+    )![2] as {
+      reviewers: { type: string; id: number }[];
+      prevent_self_review: boolean;
+    };
+    expect(production.reviewers).toEqual([{ type: "Team", id: 18883125 }]);
+    expect(production.prevent_self_review).toBe(true);
+    const staging = api.createEnvironment.mock.calls.find(
+      (c) => c[1] === "staging",
+    )![2] as { reviewers: unknown[] };
+    expect(staging.reviewers).toEqual([]);
+    expect(api.addDeploymentBranchPolicy).toHaveBeenCalledWith(
+      expect.anything(),
+      "staging-build",
+      "gh-readonly-queue/main/*",
+    );
+    expect(api.addDeploymentBranchPolicy).toHaveBeenCalledWith(
+      expect.anything(),
+      "staging-build",
+      "main",
+    );
+    // `publishing` exists: never re-created.
+    expect(created).not.toContain("publishing");
+    restore();
+  });
+
+  it("never creates a missing environment for DevDogsUGA", async () => {
+    api.getEnvironment.mockImplementation(async () => null);
+    const { restore } = captureConsole();
+    await runGithubSettings(["--apply", "--yes", "--json"]);
+    expect(api.createEnvironment).not.toHaveBeenCalled();
     restore();
   });
 });

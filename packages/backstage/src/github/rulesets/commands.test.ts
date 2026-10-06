@@ -31,9 +31,11 @@ vi.mock("./api.js", () => ({
   createRuleset: vi.fn(async () => ({})),
   updateRuleset: vi.fn(async () => ({})),
   deleteRuleset: vi.fn(async () => undefined),
+  getFileContent: vi.fn(async () => null as string | null),
 }));
 
 import { resolveAppId } from "./actors.js";
+import { createRuleset, getFileContent } from "./api.js";
 import { runGithubRulesets } from "./commands.js";
 
 const mockResolveAppId = vi.mocked(resolveAppId);
@@ -118,6 +120,68 @@ describe("resolving the platform App and Renovate", () => {
 
     expect(code).toBe(1);
     expect(err).toHaveBeenCalled();
+    restore();
+  });
+});
+
+describe("--repo Backstage", () => {
+  const ciWith = "on:\n  pull_request:\n  merge_group:\n";
+
+  function resolveWithDeployApp(deploy: boolean) {
+    mockResolveAppId.mockImplementation(async (_org, slug) => {
+      if (slug === "devdogs-deploy-pr" && deploy) return 7777;
+      throw new Error(`no installation for "${slug}"`);
+    });
+  }
+
+  beforeEach(() => {
+    vi.mocked(createRuleset).mockClear();
+    vi.mocked(getFileContent).mockReset();
+  });
+
+  it("rejects an unmanaged repo", async () => {
+    const { err, restore } = captureConsole();
+    expect(await runGithubRulesets(["--repo", "Other"])).toBe(1);
+    expect(err).toHaveBeenCalledWith(expect.stringContaining("no desired"));
+    restore();
+  });
+
+  it("explains in a dry run why the merge queue is withheld, and notes the missing deploy-PR App", async () => {
+    resolveWithDeployApp(false);
+    vi.mocked(getFileContent).mockResolvedValue("on:\n  push:\n");
+    const { log, restore } = captureConsole();
+    expect(await runGithubRulesets(["--repo", "Backstage"])).toBe(0);
+    const printed = log.mock.calls.map((c) => String(c[0])).join("\n");
+    expect(printed).toContain('blocked  "main-merge-queue"');
+    expect(printed).toContain("no merge_group trigger");
+    expect(printed).toContain("create the App first");
+    expect(printed).not.toContain('create   "deploy/devdogsuga"');
+    restore();
+  });
+
+  it("refuses to create the merge queue on --apply while ci.yaml lacks merge_group", async () => {
+    resolveWithDeployApp(false);
+    vi.mocked(getFileContent).mockResolvedValue("on:\n  push:\n");
+    const { restore } = captureConsole();
+    expect(
+      await runGithubRulesets(["--repo", "Backstage", "--apply", "--yes"]),
+    ).toBe(0);
+    const created = vi.mocked(createRuleset).mock.calls.map((c) => c[1].name);
+    expect(created).toContain("main-ci");
+    expect(created).not.toContain("main-merge-queue");
+    restore();
+  });
+
+  it("creates the merge queue and deploy ruleset once merge_group exists and the App resolves", async () => {
+    resolveWithDeployApp(true);
+    vi.mocked(getFileContent).mockResolvedValue(ciWith);
+    const { restore } = captureConsole();
+    expect(
+      await runGithubRulesets(["--repo", "Backstage", "--apply", "--yes"]),
+    ).toBe(0);
+    const created = vi.mocked(createRuleset).mock.calls.map((c) => c[1].name);
+    expect(created).toContain("main-merge-queue");
+    expect(created).toContain("deploy/devdogsuga");
     restore();
   });
 });
