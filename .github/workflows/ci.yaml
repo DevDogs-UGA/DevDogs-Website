@@ -18,8 +18,15 @@ name: CI
 # protected branch, so any credential in scope here is readable by whoever
 # opened the PR. Actions are pinned to full commit SHAs rather than tags for
 # the same reason DevDogsUGA's are — a tag is mutable.
+#
+# `merge_group` is what the merge queue on `main` waits for: a queued PR is
+# merged only once `validate` passes on the exact commit the queue built
+# (TASK-478). It has to be here before the queue is turned on, or every
+# queued PR waits forever for a check that never starts. `publish` below
+# stays push-only.
 on:
   pull_request:
+  merge_group:
   push:
     branches: [main]
 
