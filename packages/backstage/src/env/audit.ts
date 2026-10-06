@@ -116,6 +116,18 @@ export interface AuditInput {
    */
   route: (key: string) => string | null;
   /**
+   * EVERY environment that must hold the key: `route`'s primary plus any
+   * other environment fed from the same project, today the credential-free
+   * `<target>-build` one for a `build: true` key. Each is checked for
+   * absence and, for variables, for value drift.
+   *
+   * Absent means `[route(key)]`, the single-environment behaviour. Separate
+   * from `accepted` on purpose: `accepted` says where a copy MAY be, this says
+   * where one MUST be, and a build variable missing from `production-build`
+   * is an error rather than something merely tolerated.
+   */
+  routes?: (key: string) => readonly string[];
+  /**
    * Whether a copy found in some OTHER environment is legitimate.
    *
    * Separate from `route` because a project can feed more than one
@@ -474,7 +486,7 @@ export function audit(input: AuditInput): Finding[] {
       ? githubVariables
       : input.github;
     const copies = pool.filter((g) => g.name === key);
-    const here = copies.find((g) => g.environment === expected);
+    const required = input.routes?.(key) ?? [expected];
 
     // A copy somewhere it does not belong. Listed FIRST because for the
     // apply-only credentials this is the reviewer gate failing open: the token
@@ -491,53 +503,58 @@ export function audit(input: AuditInput): Finding[] {
         store: "github",
         summary:
           `also set as a ${noun} on \`${stray.environment}\`, which is not ` +
-          `where it belongs (\`${expected}\`) — delete it there`,
+          `where it belongs (${required.map((e) => `\`${e}\``).join(", ")}) ` +
+          "— delete it there",
       });
     }
 
-    if (!here) {
-      findings.push({
-        key,
-        severity: "error",
-        store: "github",
-        summary:
-          `in Bitwarden, NOT a ${noun} on the \`${expected}\` GitHub ` +
-          "environment — the deploy cannot see it",
-      });
-      continue;
-    }
-
-    // The comparison a secret cannot have. Kept distinct from the missing case
-    // above on purpose: "absent" is fixed by a push, "drifted" means somebody
-    // edited the value in the GitHub UI and the two stores now disagree about
-    // which is real, and the fix has to start by deciding that.
-    if (isVariable) {
-      const mine = githubVariables.find(
-        (g) => g.name === key && g.environment === expected,
-      );
-      if (mine !== undefined && mine.value !== entry.value) {
+    for (const environment of required) {
+      const here = copies.find((g) => g.environment === environment);
+      if (!here) {
         findings.push({
           key,
           severity: "error",
           store: "github",
           summary:
-            `the \`${expected}\` GitHub variable's VALUE disagrees with ` +
-            "Bitwarden — push to overwrite GitHub, or fix Bitwarden if the " +
-            "edit there was the deliberate one",
+            `in Bitwarden, NOT a ${noun} on the \`${environment}\` GitHub ` +
+            "environment — the deploy cannot see it",
+        });
+        continue;
+      }
+
+      // The comparison a secret cannot have. Kept distinct from the missing
+      // case above on purpose: "absent" is fixed by a push, "drifted" means
+      // somebody edited the value in the GitHub UI and the two stores now
+      // disagree about which is real, and the fix has to start by deciding
+      // that.
+      if (isVariable) {
+        const mine = githubVariables.find(
+          (g) => g.name === key && g.environment === environment,
+        );
+        if (mine !== undefined && mine.value !== entry.value) {
+          findings.push({
+            key,
+            severity: "error",
+            store: "github",
+            summary:
+              `the \`${environment}\` GitHub variable's VALUE disagrees with ` +
+              "Bitwarden — push to overwrite GitHub, or fix Bitwarden if the " +
+              "edit there was the deliberate one",
+          });
+        }
+        continue;
+      }
+
+      if (isStale(entry.revisionDate, here.updatedAt)) {
+        findings.push({
+          key,
+          severity: "error",
+          store: "github",
+          summary:
+            "rotated in Bitwarden after GitHub was last updated — the deploy is " +
+            "still using the previous value",
         });
       }
-      continue;
-    }
-
-    if (isStale(entry.revisionDate, here.updatedAt)) {
-      findings.push({
-        key,
-        severity: "error",
-        store: "github",
-        summary:
-          "rotated in Bitwarden after GitHub was last updated — the deploy is " +
-          "still using the previous value",
-      });
     }
   }
 

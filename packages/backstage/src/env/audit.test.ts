@@ -1026,3 +1026,92 @@ describe("reporting", () => {
     expect(hasErrors(run({}))).toBe(false);
   });
 });
+
+describe("build environments", () => {
+  // One public key that must sit in BOTH `staging` and `staging-build`.
+  const both = {
+    route: () => "staging",
+    routes: () => ["staging", "staging-build"],
+    accepted: (_key: string, environment: string) =>
+      environment === "staging" || environment === "staging-build",
+    variables: new Set(["API_URL"]),
+    declared: new Set(["API_URL"]),
+    local: new Map([["API_URL", "https://x"]]),
+    bws: bws({ API_URL: "https://x" }),
+  } satisfies Partial<AuditInput>;
+
+  it("is clean when both environments hold the same value", () => {
+    expect(
+      run({
+        ...both,
+        githubVariables: [
+          ghVar("API_URL", "https://x", "staging"),
+          ghVar("API_URL", "https://x", "staging-build"),
+        ],
+      }),
+    ).toEqual([]);
+  });
+
+  it("flags a build variable missing from the build environment", () => {
+    const findings = run({
+      ...both,
+      githubVariables: [ghVar("API_URL", "https://x", "staging")],
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ key: "API_URL", severity: "error" });
+    expect(findings[0]!.summary).toMatch(
+      /NOT a variable on the `staging-build`/,
+    );
+  });
+
+  it("flags value drift in the build environment alone", () => {
+    const findings = run({
+      ...both,
+      githubVariables: [
+        ghVar("API_URL", "https://x", "staging"),
+        ghVar("API_URL", "https://stale", "staging-build"),
+      ],
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.summary).toMatch(
+      /`staging-build` GitHub variable's VALUE/,
+    );
+  });
+
+  it("flags a key that is not a build key sitting in the build environment", () => {
+    const findings = run({
+      ...both,
+      routes: () => ["staging"],
+      accepted: (_key: string, environment: string) =>
+        environment === "staging",
+      githubVariables: [
+        ghVar("API_URL", "https://x", "staging"),
+        ghVar("API_URL", "https://x", "staging-build"),
+      ],
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.summary).toMatch(
+      /also set as a variable on `staging-build`/,
+    );
+  });
+
+  it("flags a secret found in a build environment", () => {
+    const findings = run({
+      ...both,
+      local: new Map([["TOKEN", "t"]]),
+      bws: bws({ TOKEN: "t" }),
+      variables: new Set(),
+      route: () => "staging",
+      routes: () => ["staging"],
+      accepted: (_key: string, environment: string) =>
+        environment === "staging",
+      github: [
+        gh("TOKEN", undefined, "staging"),
+        gh("TOKEN", undefined, "staging-build"),
+      ],
+    });
+    expect(findings.map((f) => f.summary).join("\n")).toMatch(
+      /also set as a secret on `staging-build`/,
+    );
+  });
+});

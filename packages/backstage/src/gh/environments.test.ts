@@ -1,5 +1,15 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { applyOnlyKeys, planOnlyKeys } from "@devdogsuga/env";
+import {
+  applyOnlyKeys,
+  buildKeys,
+  declare,
+  define,
+  neverStoreKeys,
+  planOnlyKeys,
+  storableKeys,
+  variableKeys,
+} from "@devdogsuga/env";
+import { z } from "zod";
 import { buildDesiredSettings } from "../github/settings/desired.js";
 import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
 import {
@@ -7,6 +17,7 @@ import {
   acceptedBy,
   acceptsKey,
   GITHUB_ENVIRONMENTS,
+  GITHUB_ENVIRONMENT_SPECS,
   githubTargets,
   routeTo,
 } from "./environments.js";
@@ -38,6 +49,30 @@ import {
 
 beforeAll(async () => {
   await loadRegistry();
+  // Build keys come from the manifests, and the fixture registry declares
+  // none, so the routing under test gets its own: one build variable, one
+  // public variable that is not baked into anything, and a secret.
+  declare({
+    source: "environments-test",
+    server: {
+      TEST_BUILD_URL: define(z.string(), {
+        doc: "Public, baked into the bundle.",
+        scope: "environment",
+        secrecy: "public",
+        build: true,
+      }),
+      TEST_PLAIN_VARIABLE: define(z.string(), {
+        doc: "Public, read at runtime only.",
+        scope: "environment",
+        secrecy: "public",
+      }),
+      TEST_PLAIN_SECRET: define(z.string(), {
+        doc: "A secret.",
+        scope: "environment",
+        secrecy: "secret",
+      }),
+    },
+  });
 });
 
 // A literal, because vitest collects the `it` blocks before `beforeAll` fills
@@ -48,17 +83,25 @@ const APPLY_KEYS = ["SUPABASE_ACCESS_TOKEN"] as const;
 const APPLY_KEY = APPLY_KEYS[0];
 
 describe("githubTargets", () => {
-  it("gives every project exactly one environment", () => {
-    expect(githubTargets("production")).toEqual(["production"]);
-    expect(githubTargets("staging")).toEqual(["staging"]);
+  it("feeds each build environment from its tier's project, after it", () => {
+    // Order is the primary-environment rule: `routeTo()` takes the first
+    // environment that accepts a key, so the build environment must follow
+    // the one the key always went to.
+    expect(githubTargets("staging")).toEqual(["staging", "staging-build"]);
+    expect(githubTargets("production")).toEqual([
+      "production",
+      "production-build",
+    ]);
     expect(githubTargets("preflight")).toEqual(["preflight"]);
   });
 
-  it("does not model production-apply or production-build", () => {
+  it("does not model production-apply", () => {
     expect([...GITHUB_ENVIRONMENTS]).toEqual([
       "preflight",
       "staging",
+      "staging-build",
       "production",
+      "production-build",
     ]);
   });
 
@@ -101,20 +144,102 @@ describe("the reviewer gate", () => {
       expect(accepts("staging", key), `${key} in staging`).toBe(false);
       expect(accepts("preflight", key), `${key} in preflight`).toBe(false);
     }
-    // production-build is not a routed environment at all, and holds only
-    // variables; an unknown name is refused by the audit's predicate.
+    // The build environments hold variables only and no reviewers.
     for (const key of APPLY_KEYS) {
+      expect(accepts("staging-build", key), key).toBe(false);
+      expect(accepts("production-build", key), key).toBe(false);
       expect(acceptsKey(key, "production-build"), key).toBe(false);
     }
   });
 
-  it("describes the same four environments `github settings` checks", () => {
-    const names = buildDesiredSettings([]).environments.map((e) => e.name);
+  it("describes the same environments `github settings` checks", () => {
+    // Backstage's repo carries all five; DevDogsUGA's has no `staging-build`
+    // (its staging deploy moved here), and a push from there reports that
+    // environment as unreadable rather than inventing one.
+    const names = buildDesiredSettings([], "Backstage").environments.map(
+      (e) => e.name,
+    );
     for (const environment of GITHUB_ENVIRONMENTS) {
       expect(names).toContain(environment);
     }
-    expect(names).toContain("production-build");
     expect(names).not.toContain("production-apply");
+    const legacy = buildDesiredSettings([]).environments.map((e) => e.name);
+    expect(legacy).toContain("production-build");
+  });
+});
+
+describe("the build environments", () => {
+  const BUILD_ENVIRONMENTS = ["staging-build", "production-build"] as const;
+
+  it("takes exactly the build: true keys and nothing else", () => {
+    expect(buildKeys()).toContain("TEST_BUILD_URL");
+    for (const environment of BUILD_ENVIRONMENTS) {
+      expect(accepts(environment, "TEST_BUILD_URL"), environment).toBe(true);
+      expect(accepts(environment, "TEST_PLAIN_VARIABLE"), environment).toBe(
+        false,
+      );
+      expect(accepts(environment, "TEST_PLAIN_SECRET"), environment).toBe(
+        false,
+      );
+    }
+    // And it is still where the key already went: build is an addition.
+    expect(acceptedBy("staging", "TEST_BUILD_URL")).toEqual([
+      "staging",
+      "staging-build",
+    ]);
+    expect(routeTo("production", "TEST_BUILD_URL")).toBe("production");
+    expect(acceptedBy("production", "TEST_PLAIN_VARIABLE")).toEqual([
+      "production",
+    ]);
+  });
+
+  it("⚠️ never routes a secret or never-store key to a build environment", () => {
+    // THE INVARIANT, over the whole registry rather than the fixtures above:
+    // these environments have no reviewers and their variables are readable
+    // by anyone who can read the Actions config.
+    const secrets = [...storableKeys(), ...neverStoreKeys()];
+    expect(secrets.length).toBeGreaterThan(0); // not vacuous
+    for (const key of secrets) {
+      for (const environment of BUILD_ENVIRONMENTS) {
+        expect(accepts(environment, key), `${key} in ${environment}`).toBe(
+          false,
+        );
+        expect(acceptsKey(key, environment), `${key} in ${environment}`).toBe(
+          false,
+        );
+      }
+    }
+  });
+
+  it("only ever accepts keys the registry would push as variables", () => {
+    const variables = new Set(variableKeys());
+    for (const environment of BUILD_ENVIRONMENTS) {
+      for (const key of GITHUB_ENVIRONMENT_SPECS[environment].onlyKeys ?? []) {
+        expect(variables.has(key), `${key} in ${environment}`).toBe(true);
+      }
+    }
+  });
+
+  it("is variables-only, and no other environment is", () => {
+    for (const environment of GITHUB_ENVIRONMENTS) {
+      expect(
+        GITHUB_ENVIRONMENT_SPECS[environment].variablesOnly,
+        environment,
+      ).toBe(BUILD_ENVIRONMENTS.includes(environment as never));
+    }
+  });
+
+  it("holds no reviewer gate, so it must never take an apply-tier key", () => {
+    const desired = buildDesiredSettings([], "Backstage");
+    for (const environment of BUILD_ENVIRONMENTS) {
+      const policy = desired.environments.find((e) => e.name === environment);
+      expect(policy?.requireReviewers).toBe(false);
+      for (const key of applyOnlyKeys()) {
+        expect(accepts(environment, key), `${key} in ${environment}`).toBe(
+          false,
+        );
+      }
+    }
   });
 });
 

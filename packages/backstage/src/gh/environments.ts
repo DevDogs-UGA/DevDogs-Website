@@ -3,14 +3,16 @@
  * (if any) backs each.
  *
  * GitHub environments and BWS projects are NOT the same set, and conflating
- * them is the mistake this file exists to prevent. There are THREE routed
- * GitHub environments and THREE BWS projects, one to one:
+ * them is the mistake this file exists to prevent. There are FIVE routed
+ * GitHub environments fed by THREE BWS projects:
  *
  *   | GitHub environment | BWS project  | Receives                        |
  *   |--------------------|--------------|---------------------------------|
  *   | `preflight`        | `preflight`  | everything EXCEPT apply-tier    |
  *   | `staging`          | `staging`    | everything EXCEPT apply/plan    |
+ *   | `staging-build`    | `staging`    | `build: true` keys, VARIABLES   |
  *   | `production`       | `production` | everything, apply-tier included |
+ *   | `production-build` | `production` | `build: true` keys, VARIABLES   |
  *
  * ⚠️ THE REVIEWER GATE is `production`'s required reviewers (team `devops`,
  * self-review prevented; see `github/settings/desired.ts`). The invariant is:
@@ -23,13 +25,15 @@
  * front of it. `environments.test.ts` asserts the invariant against the desired
  * settings rather than restating it.
  *
- * ⚠️ `production-build` is NOT routed here. It is the fourth GitHub
- * environment (branch `main`, no reviewers, VARIABLES only, no secrets) used to
- * build production artifacts without credentials. Its variables are a
- * hand-picked subset of the production project's public values (the build-time
- * ones), and no env manifest declares that subset, so routing it would need a
- * new per-key "build-time" declaration for one environment. Its variables are
- * set by hand in GitHub; `github settings` still checks its branch policy.
+ * ⚠️ THE BUILD ENVIRONMENTS (`staging-build`, `production-build`) are the
+ * opposite: branch `main` plus the merge queue's temporary branches, no
+ * reviewers, and VARIABLES ONLY, used to build the deploy artifacts without
+ * credentials. They take exactly the keys marked `build: true` in the env
+ * manifests (`EnvMeta.build`), pushed from the `staging` / `production`
+ * project alongside the environment those keys already go to. `onlyKeys` is
+ * what makes that a whitelist, `variablesOnly` keeps a secret out of a store
+ * anyone who can read the Actions config can read, and `environments.test.ts`
+ * asserts that no `secret` or `never-store` key can route to either.
  */
 import { assertRegistryLoaded } from "@devdogsuga/cli-core/env/discovery";
 import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
@@ -37,7 +41,9 @@ import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
 export const GITHUB_ENVIRONMENTS = [
   "preflight",
   "staging",
+  "staging-build",
   "production",
+  "production-build",
 ] as const;
 
 export type GithubEnvironment = (typeof GITHUB_ENVIRONMENTS)[number];
@@ -54,12 +60,20 @@ export interface GithubEnvironmentSpec {
   /**
    * Keys allowed here, or null for "whatever the file defines".
    *
-   * NULL ON EVERY ROW TODAY, deliberately. Kept as a field because the
-   * mechanism costs one branch in `accepts()`: an environment that genuinely
-   * holds a fixed short list states it here rather than as an `excludeKeys` of
-   * everything else.
+   * Null on the three deployed environments. The build environments state
+   * their list here, DERIVED from `build: true` in the manifests rather than
+   * written out, because a short list is exactly what an `excludeKeys` of
+   * everything else cannot express.
    */
   onlyKeys: readonly string[] | null;
+  /**
+   * Takes GitHub VARIABLES and never secrets: the credential-free build
+   * environments, whose contents are readable by anyone who can read the
+   * repository's Actions config. `pushToGithub` drops every secret bound for
+   * one of these, and `onlyKeys` is additionally intersected with the variable
+   * set, so neither half alone is what keeps a credential out.
+   */
+  variablesOnly: boolean;
   /**
    * Keys that must never reach this environment.
    *
@@ -88,6 +102,23 @@ function applyOnly(): readonly string[] {
 }
 
 /**
+ * The keys the build environments take, derived from `build: true`, same shape
+ * and same load-time caveat as `applyOnly()`.
+ *
+ * Intersected with the variable set. `define()` already refuses `build: true`
+ * on anything but a public, environment-scoped key, which is exactly
+ * `variableKeys()`; re-checking here means a registry built some other way
+ * (a stale published `@devdogsuga/env`, a test fixture) still cannot route a
+ * secret into a variables-only environment.
+ */
+function buildOnly(): readonly string[] {
+  assertRegistryLoaded();
+  const env = getEnvSync();
+  const variables = new Set<string>(env.variableKeys());
+  return env.buildKeys().filter((key) => variables.has(key));
+}
+
+/**
  * The plan-tier set, same shape and same load-time caveat as `applyOnly()`.
  * Read by the plan jobs in `preflight` and `production`; a copy anywhere else
  * is a credential nothing reads, so `staging` excludes it.
@@ -105,6 +136,7 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
     bwsProject: "preflight",
     branch: "main",
     onlyKeys: null,
+    variablesOnly: false,
     // Reads plan-tier keys (DB_URL, AIRTABLE_PLAN_PAT) but never applies.
     get excludeKeys() {
       return applyOnly();
@@ -115,10 +147,26 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
     bwsProject: "staging",
     branch: "main",
     onlyKeys: null,
+    variablesOnly: false,
     // Both narrow tiers: no staging job plans, and none may apply.
     get excludeKeys() {
       return [...applyOnly(), ...planOnly()];
     },
+    guarded: false,
+  },
+  // The credential-free build of staging's artifacts: `staging`'s public
+  // build-time values, as variables. Listed after `staging` so that
+  // `routeTo()`, which takes the first environment accepting a key, still
+  // names `staging` as the primary and the audit treats this as the second
+  // copy it is.
+  "staging-build": {
+    bwsProject: "staging",
+    branch: "main, merge queue",
+    get onlyKeys() {
+      return buildOnly();
+    },
+    variablesOnly: true,
+    excludeKeys: [],
     guarded: false,
   },
   // ⚠️ THE REVIEWED ENVIRONMENT: required reviewers gate every job that runs
@@ -133,8 +181,22 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
     bwsProject: "production",
     branch: "main",
     onlyKeys: null,
+    variablesOnly: false,
     excludeKeys: [],
     guarded: true,
+  },
+  // Production's build twin. Not `guarded`: it holds public values only, and
+  // the confirmation for the `production` environment already names the push
+  // as a production write.
+  "production-build": {
+    bwsProject: "production",
+    branch: "main, merge queue",
+    get onlyKeys() {
+      return buildOnly();
+    },
+    variablesOnly: true,
+    excludeKeys: [],
+    guarded: false,
   },
 };
 

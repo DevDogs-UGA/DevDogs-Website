@@ -161,24 +161,26 @@ below). Only what a workflow names directly is listed; `write-env` composes the
 rest of a tier's `.env` from the env manifests and refuses to write a file missing
 a schema-required key, naming each one.
 
-| Where                               | Variables                                                                                                                                                                       | Secrets                                                                                                                              |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Repository                          | `BACKSTAGE_DEPLOYS_STAGING`, `BACKSTAGE_DEPLOYS_PRODUCTION` (unset = off), `DEVTOOLS_SENTRY_DSN`, `WORKSHOPS_VSCODE_SENTRY_DSN` (publish)                                       | none                                                                                                                                 |
-| `staging-build`, `production-build` | `API_URL`, `BASE_URL`, `PUBLISHABLE_KEY` (required); `PLATFORM_SENTRY_DSN`, `SCHEDULE_BUILDER_SENTRY_DSN`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (optional). Set by hand, no secrets | none                                                                                                                                 |
-| `staging`                           | `PROJECT_REF`, `PUBLISHABLE_KEY`, `API_URL`, plus every non-secret key the server schema declares for the tier                                                                  | `DB_URL`, `SECRET_KEY`, `SENTRY_AUTH_TOKEN` (optional), `CRON_SECRET`, `CLOUDFLARE_API_TOKEN`, plus every other secret in the schema |
-| `preflight` (production plan)       | none read directly                                                                                                                                                              | `DB_URL` (the read-only planner credential)                                                                                          |
-| `production`                        | `PROJECT_REF`, `API_URL`, plus the schema's non-secret keys for the tier                                                                                                        | everything `staging` has, and `SUPABASE_ACCESS_TOKEN`, `SENTRY_MONITORS_TOKEN` (optional)                                            |
-| `publishing` (existing)             | none                                                                                                                                                                            | `VSCE_PAT`                                                                                                                           |
+| Where                               | Variables                                                                                                                                                                                                                       | Secrets                                                                                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Repository                          | `BACKSTAGE_DEPLOYS_STAGING`, `BACKSTAGE_DEPLOYS_PRODUCTION` (unset = off), `DEVTOOLS_SENTRY_DSN`, `WORKSHOPS_VSCODE_SENTRY_DSN` (publish)                                                                                       | none                                                                                                                                 |
+| `staging-build`, `production-build` | `API_URL`, `BASE_URL`, `PUBLISHABLE_KEY` (required); `PLATFORM_SENTRY_DSN`, `SCHEDULE_BUILDER_SENTRY_DSN`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (optional). Pushed by `env push` from the manifests' `build: true` flag, no secrets | none                                                                                                                                 |
+| `staging`                           | `PROJECT_REF`, `PUBLISHABLE_KEY`, `API_URL`, plus every non-secret key the server schema declares for the tier                                                                                                                  | `DB_URL`, `SECRET_KEY`, `SENTRY_AUTH_TOKEN` (optional), `CRON_SECRET`, `CLOUDFLARE_API_TOKEN`, plus every other secret in the schema |
+| `preflight` (production plan)       | none read directly                                                                                                                                                                                                              | `DB_URL` (the read-only planner credential)                                                                                          |
+| `production`                        | `PROJECT_REF`, `API_URL`, plus the schema's non-secret keys for the tier                                                                                                                                                        | everything `staging` has, and `SUPABASE_ACCESS_TOKEN`, `SENTRY_MONITORS_TOKEN` (optional)                                            |
+| `publishing` (existing)             | none                                                                                                                                                                                                                            | `VSCE_PAT`                                                                                                                           |
 
 The schema-required keys per tier come from `apps/platform/src/env.ts`,
 `devdogsuga/apps/schedule-builder/src/env.ts`, `devdogsuga/supabase/env.ts` and
 `packages/backstage/env.ts`; `pnpm dlx @devdogsuga/devtools env example` lists them.
 
 `backstage env push` addresses the repository `gh` resolves from the current
-directory (it passes no `--repo`) and only knows `preflight`, `staging` and
-`production`. Run from a Backstage checkout, or with `GH_REPO=DevDogsUGA/Backstage`,
-it writes Backstage's environments. `staging-build` and `production-build` are not
-routed: set their variables by hand.
+directory (it passes no `--repo`). Run from a Backstage checkout, or with
+`GH_REPO=DevDogsUGA/Backstage`, it writes Backstage's environments. A push for
+`staging` or `production` also writes the keys marked `build: true` in the env
+manifests (the six above) to `staging-build` / `production-build`, as variables
+only and as a separate confirmation; `env audit` checks them too. Run from a
+checkout whose repository lacks a build environment, it warns and skips it.
 
 ## Releases
 

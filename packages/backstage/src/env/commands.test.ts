@@ -50,9 +50,22 @@ vi.mock("../bws/client.js", () => ({
 import { setSecret, setVariable } from "../gh/client.js";
 import { pushToGithub } from "./commands.js";
 import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
+import { declare, define } from "@devdogsuga/env";
+import { z } from "zod";
 
 beforeAll(async () => {
   await loadRegistry();
+  declare({
+    source: "commands-test",
+    server: {
+      TEST_BUILD_URL: define(z.string(), {
+        doc: "Public, baked into the bundle.",
+        scope: "environment",
+        secrecy: "public",
+        build: true,
+      }),
+    },
+  });
 });
 
 beforeEach(() => {
@@ -119,7 +132,7 @@ describe("pushToGithub", () => {
       ]);
     });
 
-    it("never writes anything to production-apply or production-build", async () => {
+    it("never writes anything to production-apply, or a non-build key to production-build", async () => {
       await pushToGithub(
         "production",
         new Map([["DISCORD_TOKEN", "tok"]]),
@@ -131,6 +144,63 @@ describe("pushToGithub", () => {
         ...vi.mocked(setVariable).mock.calls,
       ].map(([env]) => env);
       expect(new Set(written)).toEqual(new Set(["production"]));
+    });
+
+    it("writes build: true keys to <target>-build as variables, and only those", async () => {
+      for (const [target, build] of [
+        ["staging", "staging-build"],
+        ["production", "production-build"],
+      ] as const) {
+        vi.mocked(setSecret).mockClear();
+        vi.mocked(setVariable).mockClear();
+        await pushToGithub(
+          target,
+          new Map([["DISCORD_TOKEN", "tok"]]),
+          new Map([
+            ["TEST_BUILD_URL", "https://example.org"],
+            ["PROJECT_REF", "abcdefghijklmnop"],
+          ]),
+          true,
+        );
+        // Whole-call comparisons: a secret reaching the build environment, or
+        // a runtime-only variable, fails these.
+        expect(vi.mocked(setSecret).mock.calls).toEqual([
+          [target, "DISCORD_TOKEN", "tok"],
+        ]);
+        expect(vi.mocked(setVariable).mock.calls).toEqual([
+          [target, "TEST_BUILD_URL", "https://example.org"],
+          [target, "PROJECT_REF", "abcdefghijklmnop"],
+          [build, "TEST_BUILD_URL", "https://example.org"],
+        ]);
+      }
+    });
+
+    it("never hands a secret to a build environment, even one the key set would take", async () => {
+      // A build key that somehow arrived as a SECRET (it cannot through
+      // `selectForPush`, which sends public keys to the variable map) is still
+      // not written to the build environment.
+      await pushToGithub(
+        "staging",
+        new Map([["TEST_BUILD_URL", "https://example.org"]]),
+        new Map(),
+        true,
+      );
+      expect(vi.mocked(setSecret).mock.calls.map(([env]) => env)).not.toContain(
+        "staging-build",
+      );
+      expect(vi.mocked(setVariable).mock.calls).toEqual([]);
+    });
+
+    it("does not push to the build environments for a preflight push", async () => {
+      await pushToGithub(
+        "preflight",
+        new Map(),
+        new Map([["TEST_BUILD_URL", "https://example.org"]]),
+        true,
+      );
+      expect(vi.mocked(setVariable).mock.calls.map(([env]) => env)).toEqual([
+        "preflight",
+      ]);
     });
 
     it("keeps the apply-tier credential out of staging and preflight", async () => {

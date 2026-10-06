@@ -25,6 +25,10 @@ name: Build artifacts
 #   SCHEDULE_BUILDER_SENTRY_DSN  optional: schedule-builder's Sentry DSN
 #   NEXT_PUBLIC_TURNSTILE_SITE_KEY  optional: the Turnstile site key (public by design)
 #
+# `backstage env push --target <tier>` writes these, from the `build: true` flag
+# on each key's `define()` in the env manifests; add a variable here and mark
+# its key, not the environment. `check env` pins the set.
+#
 # The same public composition DevDogsUGA's `production-artifacts` job used.
 on:
   workflow_call:

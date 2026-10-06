@@ -66,6 +66,7 @@ import {
 import {
   GITHUB_ENVIRONMENT_SPECS,
   accepts,
+  acceptedBy,
   acceptsKey,
   githubTargets,
   routeTo,
@@ -521,8 +522,8 @@ export async function pushToGithub(
   const project = environmentSpecs()[target].project;
 
   // `ghEnvironment`, not `target`: a GitHub environment is a THIRD vocabulary
-  // (`production-build` is one and is not an env target at all), so it keeps a
-  // name of its own. Reusing `target` here is how the two
+  // (`production-build` is one and is not an env target at all, though a push
+  // for `production` now feeds it), so it keeps a name of its own. Reusing `target` here is how the two
   // vocabularies got confused in the first place.
   for (const ghEnvironment of githubTargets(project)) {
     // Routing applies to both stores, and the two loops below are the same
@@ -530,8 +531,16 @@ export async function pushToGithub(
     //
     // The gate is `preflight`/`staging` `excludeKeys`: the apply-tier
     // credential reaches only `production`, behind required reviewers.
+    //
+    // A variables-only environment (`staging-build`, `production-build`) gets
+    // NO secrets, whatever `accepts()` says: its contents are readable by
+    // anyone who can read the Actions config, so the store is refused here
+    // rather than relying on the key set alone being clean.
+    const variablesOnly = GITHUB_ENVIRONMENT_SPECS[ghEnvironment].variablesOnly;
     const chosenSecrets = new Map(
-      [...secrets].filter(([key]) => accepts(ghEnvironment, key)),
+      variablesOnly
+        ? []
+        : [...secrets].filter(([key]) => accepts(ghEnvironment, key)),
     );
     const chosenVariables = new Map(
       [...publicValues].filter(([key]) => accepts(ghEnvironment, key)),
@@ -539,12 +548,31 @@ export async function pushToGithub(
     const total = chosenSecrets.size + chosenVariables.size;
     if (total === 0) continue;
 
-    const knownSecrets = new Set(
-      (await listGhSecrets(ghEnvironment)).map((s) => s.name),
-    );
-    const knownVariables = new Set(
-      (await listGhVariables(ghEnvironment)).map((v) => v.name),
-    );
+    const knownSecrets = new Set<string>();
+    const knownVariables = new Set<string>();
+    try {
+      if (!variablesOnly) {
+        for (const s of await listGhSecrets(ghEnvironment)) {
+          knownSecrets.add(s.name);
+        }
+      }
+      for (const v of await listGhVariables(ghEnvironment)) {
+        knownVariables.add(v.name);
+      }
+    } catch (err) {
+      // The deployed environments are required, so a failure there ends the
+      // push as it always did. A build environment is an addition to a push
+      // that has otherwise succeeded, and the repository `gh` points at may
+      // not have one (DevDogsUGA has no `staging-build`), so it is reported
+      // and skipped rather than failing a push whose other half is done.
+      if (!variablesOnly) throw err;
+      log.warn(
+        `Skipped \`${ghEnvironment}\`: could not read it (${errorMessage(err).split("\n")[0]}). ` +
+          "Create it with `backstage github settings --apply` in the " +
+          "repository `gh` targets, then push again.",
+      );
+      continue;
+    }
     const fresh =
       [...chosenSecrets.keys()].filter((k) => !knownSecrets.has(k)).length +
       [...chosenVariables.keys()].filter((k) => !knownVariables.has(k)).length;
@@ -552,10 +580,13 @@ export async function pushToGithub(
     if (!yes) {
       const ok = unwrap(
         await confirm({
-          message:
-            `Sync ${chosenSecrets.size} secret(s) and ` +
-            `${chosenVariables.size} variable(s) to the \`${ghEnvironment}\` ` +
-            `GitHub environment (${fresh} new)?`,
+          message: variablesOnly
+            ? `Sync ${chosenVariables.size} build variable(s) (variables ` +
+              `only, no secrets) to the \`${ghEnvironment}\` GitHub ` +
+              `environment (${fresh} new)?`
+            : `Sync ${chosenSecrets.size} secret(s) and ` +
+              `${chosenVariables.size} variable(s) to the \`${ghEnvironment}\` ` +
+              `GitHub environment (${fresh} new)?`,
           // The gated environments hold what a reviewer is meant to see before
           // it can be used, so the default answer there is no.
           initialValue: !GITHUB_ENVIRONMENT_SPECS[ghEnvironment].guarded,
@@ -581,8 +612,11 @@ export async function pushToGithub(
       await setVariable(ghEnvironment, key, value);
     }
     log.success(
-      `Synced ${chosenSecrets.size} secret(s) and ${chosenVariables.size} ` +
-        `variable(s) to \`${ghEnvironment}\`.`,
+      variablesOnly
+        ? `Synced ${chosenVariables.size} build variable(s) to ` +
+            `\`${ghEnvironment}\`.`
+        : `Synced ${chosenSecrets.size} secret(s) and ` +
+            `${chosenVariables.size} variable(s) to \`${ghEnvironment}\`.`,
     );
   }
 }
@@ -704,6 +738,11 @@ export async function runEnvAudit(options: EnvOptions): Promise<void> {
       const routed = routeTo(spec.project, key);
       return routed && unreachable.includes(routed) ? null : routed;
     },
+    // Every environment that must hold the key: the primary plus, for a
+    // `build: true` key, `<target>-build`. A target that could not be read is
+    // left out for the reason `route` leaves it out.
+    routes: (key) =>
+      acceptedBy(spec.project, key).filter((e) => !unreachable.includes(e)),
     // Whether a copy outside `route`'s environment is legitimate. Comparing
     // against `route` alone would report every second copy as a stray,
     // burying the one that matters: an apply-tier key in an environment

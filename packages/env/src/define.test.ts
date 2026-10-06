@@ -10,6 +10,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
   applyOnlyKeys,
+  buildKeys,
+  BuildKeyError,
   declarations,
   declare,
   define,
@@ -167,6 +169,76 @@ describe("declare", () => {
         .get("DISCORD_TOKEN")
         ?.map((e) => e.source),
     ).toEqual(["platform", "sandbox"]);
+  });
+});
+
+describe("build keys", () => {
+  it("accepts build: true on a public, environment-scoped key", () => {
+    declare({
+      source: "test-app",
+      server: {
+        API_URL: define(z.string(), {
+          doc: "Baked into the bundle.",
+          scope: "environment",
+          secrecy: "public",
+          build: true,
+        }),
+        PROJECT_REF: define(z.string(), {
+          doc: "Public, not baked.",
+          scope: "environment",
+          secrecy: "public",
+        }),
+        CRON_SECRET: define(z.string(), {
+          doc: "A secret.",
+          scope: "environment",
+          secrecy: "secret",
+        }),
+      },
+    });
+    expect(buildKeys()).toEqual(["API_URL"]);
+    // Every build key is a variable, never a secret.
+    expect(variableKeys()).toContain("API_URL");
+    expect(storableKeys()).not.toContain("API_URL");
+  });
+
+  it("refuses build: true on a secret, at runtime and in the types", () => {
+    expect(() =>
+      define(z.string(), {
+        doc: "A secret.",
+        scope: "environment",
+        // @ts-expect-error build: true needs secrecy "public"
+        secrecy: "secret",
+        build: true,
+      }),
+    ).toThrow(BuildKeyError);
+    expect(() =>
+      define(z.string(), {
+        doc: "Never stored.",
+        scope: "environment",
+        // @ts-expect-error build: true needs secrecy "public"
+        secrecy: "never-store",
+        build: true,
+      }),
+    ).toThrow(BuildKeyError);
+  });
+
+  it("refuses build: true outside the environment scope", () => {
+    for (const scope of ["default", "developer"] as const) {
+      expect(() =>
+        define(z.string(), {
+          doc: "Not per-environment.",
+          // @ts-expect-error build: true needs scope "environment"
+          scope,
+          secrecy: "public",
+          build: true,
+        }),
+      ).toThrow(BuildKeyError);
+    }
+  });
+
+  it("leaves a key without the flag out of the set", () => {
+    define(z.string(), { doc: "x", scope: "environment", secrecy: "public" });
+    expect(buildKeys()).toEqual([]);
   });
 });
 

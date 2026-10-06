@@ -204,6 +204,28 @@ export type EnvMeta = {
    */
   narrowed?: true;
   /**
+   * The value is baked into a BUILD ARTIFACT, so the credential-free build
+   * environments (`staging-build`, `production-build`) need it as a GitHub
+   * variable. `env push --target staging|production` writes exactly the keys
+   * marked here to `<target>-build`, and `env audit` checks them there.
+   *
+   * What it replaces is a hand-maintained list: those environments hold no
+   * secrets, so their variables were a subset of each project's public values
+   * that nothing declared and somebody set by hand, discovered at the first
+   * build that read an empty `API_URL`. Mark a key when a build workflow reads
+   * it (`build-artifacts.yaml`, DevDogsUGA's `production-artifacts`), and
+   * unmark it when none does.
+   *
+   * ⚠️ ONLY a `public`, `environment`-scoped key may carry it, and `define()`
+   * refuses anything else, at the type level and again at runtime. The build
+   * environments have no required reviewers and run on the merge queue's
+   * temporary branches, and their variables are readable by anyone who can read
+   * the repository's Actions config. A secret there is published; a
+   * `default`- or `developer`-scoped value has no per-environment copy to
+   * push. Setting the flag on one of those is a mistake, not a feature.
+   */
+  build?: true;
+  /**
    * Supplied by `supabase status` when the local stack is running, so it is
    * absent from `.env` by design rather than by oversight.
    *
@@ -263,6 +285,20 @@ export type EnvMeta = {
    */
   commented?: true;
 };
+
+/**
+ * What `define()` accepts: `EnvMeta`, except that `build: true` is only
+ * assignable alongside `secrecy: "public"` and `scope: "environment"`.
+ *
+ * Separate from `EnvMeta` because that one is the shape zod's `GlobalMeta`
+ * extends, and an interface cannot extend a union. The runtime check in
+ * `define()` backs this for callers that cast, or are plain JavaScript.
+ */
+export type DefineMeta = EnvMeta &
+  (
+    | { build: true; secrecy: "public"; scope: "environment" }
+    | { build?: undefined }
+  );
 
 /**
  * Registered under zod's global metadata namespace, so `.meta()` accepts these

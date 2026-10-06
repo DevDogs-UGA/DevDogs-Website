@@ -14,9 +14,15 @@
  * package exists.
  */
 import { z } from "zod";
-import type { EnvMeta } from "./meta.js";
+import type { DefineMeta, EnvMeta } from "./meta.js";
 
-export type { EnvMeta, EnvScope, EnvSecrecy, EnvTier } from "./meta.js";
+export type {
+  DefineMeta,
+  EnvMeta,
+  EnvScope,
+  EnvSecrecy,
+  EnvTier,
+} from "./meta.js";
 
 /**
  * One registered variable: its schema, its metadata, and where it was declared.
@@ -59,9 +65,30 @@ export const envRegistry = z.registry<EnvMeta>();
  * somebody can forget; a wrapper that will not typecheck without it cannot be
  * forgotten. This is the difference between a convention and a rule.
  */
-export function define<T extends z.ZodType>(schema: T, meta: EnvMeta): T {
+export function define<T extends z.ZodType>(schema: T, meta: DefineMeta): T {
+  // The runtime half of `DefineMeta`'s type-level rule. Needed regardless: a
+  // cast, an `any`, or a manifest written in JavaScript skips the type.
+  if (
+    meta.build === true &&
+    !(meta.secrecy === "public" && meta.scope === "environment")
+  ) {
+    throw new BuildKeyError(meta);
+  }
   envRegistry.add(schema, meta);
   return schema.meta(meta);
+}
+
+export class BuildKeyError extends Error {
+  constructor(meta: EnvMeta) {
+    super(
+      `build: true needs secrecy "public" and scope "environment", got ` +
+        `secrecy "${meta.secrecy}" and scope "${meta.scope}" (${meta.doc.slice(0, 60)}). ` +
+        "The build environments hold GitHub variables, readable by anyone who " +
+        "can see the repository's Actions config, so a secret cannot go there, " +
+        "and only a per-environment value has anything to push.",
+    );
+    this.name = "BuildKeyError";
+  }
 }
 
 /** Reads back what a schema was declared as, if it went through `define()`. */
@@ -292,6 +319,19 @@ export function applyOnlyKeys(): string[] {
  */
 export function planOnlyKeys(): string[] {
   return keysWhere((e) => e.meta.tier === "plan");
+}
+
+/**
+ * Public per-environment values a build workflow reads, which `env push` also
+ * writes to the credential-free `<target>-build` GitHub environment as
+ * VARIABLES. See `EnvMeta.build`.
+ *
+ * `keysWhere()`'s `some`, like the other routing selectors; `define()`
+ * guarantees every one of these is a `variableKeys()` member, and the
+ * `*-build` routing re-checks that rather than trusting it.
+ */
+export function buildKeys(): string[] {
+  return keysWhere((e) => e.meta.build === true);
 }
 
 /** Variables supplied by a running local Supabase stack. */

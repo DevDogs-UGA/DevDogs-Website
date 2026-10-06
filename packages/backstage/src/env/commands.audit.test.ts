@@ -272,15 +272,21 @@ describe("env audit, the accepted wiring", () => {
       stored("s-1", "DEMO_TOKEN"),
       stored("s-2", "SUPABASE_ACCESS_TOKEN"),
     ]);
-    vi.mocked(listGhSecrets).mockResolvedValue([
-      { name: "DEMO_TOKEN", updatedAt: AT },
-      { name: "SUPABASE_ACCESS_TOKEN", updatedAt: AT },
-    ]);
+    // Per environment: `production-build` is now read as well, and it holds
+    // variables only, so the same two secrets there WOULD be a stray.
+    vi.mocked(listGhSecrets).mockImplementation(async (environment: string) =>
+      environment === "production"
+        ? [
+            { name: "DEMO_TOKEN", updatedAt: AT },
+            { name: "SUPABASE_ACCESS_TOKEN", updatedAt: AT },
+          ]
+        : [],
+    );
   });
 
   afterEach(() => {
     vi.mocked(listBwsSecrets).mockResolvedValue([]);
-    vi.mocked(listGhSecrets).mockResolvedValue([]);
+    vi.mocked(listGhSecrets).mockImplementation(async () => []);
   });
 
   it("does not report a correctly-pushed copy in production as a stray", async () => {
