@@ -1,0 +1,39 @@
+name: Check out DevDogsUGA
+description: >-
+  Checks DevDogsUGA out at devdogsuga/, at the commit pinned in
+  devdogsuga.lock. Reused by every workflow that installs this workspace (the
+  root preinstall needs the directory) and by the deploy workflows.
+
+# DevDogsUGA is public, so no token is needed, and none is passed: nothing in
+# the checkout can authenticate as this workflow afterwards either
+# (persist-credentials is off).
+#
+# The lock is read from this repository's checkout, so the job's own
+# `actions/checkout` has to have run first.
+#
+# Installing the sibling's dependencies is a separate step, because it needs
+# Node and pnpm: setup-workspace does it.
+outputs:
+  sha:
+    description: The DevDogsUGA commit that was checked out.
+    value: ${{ steps.lock.outputs.sha }}
+
+runs:
+  using: composite
+  steps:
+    - name: Read devdogsuga.lock
+      id: lock
+      shell: bash
+      run: |
+        sha=$(tr -d '[:space:]' < devdogsuga.lock)
+        if ! printf '%s' "$sha" | grep -Eq '^[0-9a-f]{40}$'; then
+          echo "::error file=devdogsuga.lock::devdogsuga.lock must hold one full 40-character commit SHA."
+          exit 1
+        fi
+        echo "sha=$sha" >> "$GITHUB_OUTPUT"
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      with:
+        repository: DevDogsUGA/DevDogsUGA
+        ref: ${{ steps.lock.outputs.sha }}
+        path: devdogsuga
+        persist-credentials: false

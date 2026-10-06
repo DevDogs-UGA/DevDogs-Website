@@ -1,16 +1,24 @@
 name: Set up the workspace
 description: >-
-  The post-checkout bootstrap every job shares: enable corepack (pnpm), set up
-  Node from .nvmrc with a pnpm cache, and install with a frozen lockfile.
+  The post-checkout bootstrap every job shares: check DevDogsUGA out at the SHA
+  in devdogsuga.lock and install it, enable corepack (pnpm), set up Node from
+  .nvmrc with a pnpm cache, and install this workspace with a frozen lockfile.
 
 # Mirrors DevDogsUGA's .github/actions/setup-workspace. Checkout is not here,
 # and cannot be: a local composite action (`uses: ./.github/actions/…`) only
 # resolves after the repository is on disk, because the action's own files
 # live in it. So `actions/checkout` stays in each job, with `fetch-depth`
 # chosen per job.
+#
+# DevDogsUGA comes first because the root `preinstall` (scripts/devdogsuga.mjs)
+# requires `devdogsuga/` to exist with its node_modules, and the platform's
+# `link:` dependencies resolve their own dependencies from that tree. It is a
+# separate pnpm workspace, so it gets its own frozen install. Both installs
+# share one pnpm store, cached on both lockfiles.
 runs:
   using: composite
   steps:
+    - uses: ./.github/actions/checkout-devdogsuga
     - name: Enable corepack (pnpm)
       run: corepack enable
       shell: bash
@@ -18,6 +26,13 @@ runs:
       with:
         node-version-file: .nvmrc
         cache: pnpm
+        cache-dependency-path: |
+          pnpm-lock.yaml
+          devdogsuga/pnpm-lock.yaml
+    - name: Install DevDogsUGA's dependencies
+      run: pnpm install --frozen-lockfile
+      shell: bash
+      working-directory: devdogsuga
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
       shell: bash
