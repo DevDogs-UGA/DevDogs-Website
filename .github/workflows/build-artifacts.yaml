@@ -1,0 +1,165 @@
+name: Build artifacts
+
+# The credential-free build of the two Workers (the platform here, and
+# schedule-builder in the DevDogsUGA checkout at the commit in
+# `devdogsuga.lock`), plus the compiled docs, once per tier.
+#
+# Called from two places, and the same artifact comes out of both:
+#
+#   * ci.yaml, on `merge_group`: the merge queue builds the exact commit that
+#     will land on `main`, so the artifacts exist before the merge.
+#   * deploy.yaml, on a push to `main` that has no such run (an admin bypass
+#     push, or expired artifacts): it builds for itself.
+#
+# Each tier runs in its own environment, `staging-build` / `production-build`:
+# public variables only, no secrets, deployable from `main` and from the merge
+# queue's `gh-readonly-queue/main/*` branches. Nothing in this workflow can
+# reach a credential, and none is passed in by the callers.
+#
+# What a tier needs from its `<tier>-build` environment (variables):
+#
+#   API_URL                      the Supabase API URL
+#   BASE_URL                     the platform's public origin
+#   PUBLISHABLE_KEY              the Supabase publishable (anon) key
+#   PLATFORM_SENTRY_DSN          optional: the platform's Sentry DSN
+#   SCHEDULE_BUILDER_SENTRY_DSN  optional: schedule-builder's Sentry DSN
+#   NEXT_PUBLIC_TURNSTILE_SITE_KEY  optional: the Turnstile site key (public by design)
+#
+# The same public composition DevDogsUGA's `production-artifacts` job used.
+on:
+  workflow_call:
+    inputs:
+      tiers:
+        description: JSON array of tiers to build, e.g. ["staging","production"].
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ matrix.tier }}-build
+    strategy:
+      # One tier failing says nothing about the other.
+      fail-fast: false
+      matrix:
+        tier: ${{ fromJSON(inputs.tiers) }}
+    env:
+      DEPLOY_ENV: ${{ matrix.tier }}
+      CLOUDFLARE_ENV: ${{ matrix.tier }}
+      SKIP_ENV_VALIDATION: "1"
+      API_URL: ${{ vars.API_URL }}
+      BASE_URL: ${{ vars.BASE_URL }}
+      PUBLISHABLE_KEY: ${{ vars.PUBLISHABLE_KEY }}
+      PLATFORM_SENTRY_DSN: ${{ vars.PLATFORM_SENTRY_DSN }}
+      SCHEDULE_BUILDER_SENTRY_DSN: ${{ vars.SCHEDULE_BUILDER_SENTRY_DSN }}
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: ./.github/actions/setup-workspace
+      # GitHub hands a missing variable to a workflow as an empty string. An
+      # empty API_URL would build a Worker that fails on its first request, not
+      # a build that fails, so refuse here and say which environment to fix.
+      - name: Require the public build variables
+        run: |
+          missing=0
+          for name in API_URL BASE_URL PUBLISHABLE_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::The $DEPLOY_ENV-build environment has no $name variable."
+              missing=1
+            fi
+          done
+          for name in PLATFORM_SENTRY_DSN SCHEDULE_BUILDER_SENTRY_DSN NEXT_PUBLIC_TURNSTILE_SITE_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::warning::The $DEPLOY_ENV-build environment has no $name variable; that feature is built disabled."
+            fi
+          done
+          exit $missing
+      # The platform consumes its workspace dependencies from `dist/`.
+      - name: Build the platform's workspace dependencies
+        run: pnpm --filter 'platform^...' --if-present run build
+      # One file per repo root: the platform and `with-env` read this
+      # checkout's, schedule-builder reads DevDogsUGA's. Only public values,
+      # and the NEXT_PUBLIC_* copies the browser bundles inline.
+      - name: Compose public build configuration
+        run: |
+          umask 077
+          {
+            printf 'API_URL="%s"\n' "$API_URL"
+            printf 'BASE_URL="%s"\n' "$BASE_URL"
+            printf 'PUBLISHABLE_KEY="%s"\n' "$PUBLISHABLE_KEY"
+            printf 'PLATFORM_SENTRY_DSN="%s"\n' "$PLATFORM_SENTRY_DSN"
+            printf 'SCHEDULE_BUILDER_SENTRY_DSN="%s"\n' "$SCHEDULE_BUILDER_SENTRY_DSN"
+            printf 'NEXT_PUBLIC_DEPLOY_ENV="%s"\n' "$DEPLOY_ENV"
+            printf 'NEXT_PUBLIC_SUPABASE_URL="%s"\n' "$API_URL"
+            printf 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="%s"\n' "$PUBLISHABLE_KEY"
+            printf 'NEXT_PUBLIC_PLATFORM_SENTRY_DSN="%s"\n' "$PLATFORM_SENTRY_DSN"
+            printf 'NEXT_PUBLIC_SCHEDULE_BUILDER_SENTRY_DSN="%s"\n' "$SCHEDULE_BUILDER_SENTRY_DSN"
+            printf 'NEXT_PUBLIC_TURNSTILE_SITE_KEY="%s"\n' "$NEXT_PUBLIC_TURNSTILE_SITE_KEY"
+            printf 'NEXT_PUBLIC_AVATARS_BUCKET="avatars"\n'
+            printf 'NEXT_PUBLIC_AUTH_MODE="google"\n'
+          } > ".env.$DEPLOY_ENV"
+          cp ".env.$DEPLOY_ENV" "devdogsuga/.env.$DEPLOY_ENV"
+      # The browser bundle's Sentry release is the commit its server half
+      # deploys with: this commit for the platform, the pinned DevDogsUGA
+      # commit for schedule-builder (the deploy releases it under that SHA).
+      - name: Build the platform without credentials
+        env:
+          NEXT_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
+        run: pnpm --filter platform run build
+      # schedule-builder's origin is not the platform's BASE_URL: it comes from
+      # the tier's smoke host in workers.json, the one place the hosts live.
+      - name: Build schedule-builder without credentials
+        run: |
+          set -euo pipefail
+          host=$(jq -r --arg tier "$DEPLOY_ENV" \
+            '.[] | select(.path == "apps/schedule-builder") | .smoke.hosts[$tier]' workers.json)
+          [ -n "$host" ] && [ "$host" != null ] || { echo "::error::workers.json has no $DEPLOY_ENV host for schedule-builder."; exit 1; }
+          export BASE_URL="https://$host"
+          export NEXT_PUBLIC_SENTRY_RELEASE=$(tr -d '[:space:]' < devdogsuga.lock)
+          pnpm --dir devdogsuga --filter schedule-builder run build
+      - name: Reject accidental placeholder or credential-shaped values
+        run: |
+          set -euo pipefail
+          if rg -uuu -l 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|SUPABASE_DB_PASSWORD|CLOUDFLARE_API_TOKEN' \
+            apps/platform/dist devdogsuga/apps/schedule-builder/dist; then
+            echo "A $DEPLOY_ENV artifact contains credential-shaped material." >&2
+            exit 1
+          fi
+      - name: Hash the exact candidate
+        run: |
+          find apps/platform/dist apps/platform/.wrangler/deploy \
+            devdogsuga/apps/schedule-builder/dist devdogsuga/apps/schedule-builder/.wrangler/deploy \
+            devdogsuga/docs/dist \
+            -type f -print0 | sort -z | xargs -0 sha256sum > RELEASE_SHA256SUMS
+          {
+            echo "### $DEPLOY_ENV artifacts"
+            echo
+            echo "Commit: \`$GITHUB_SHA\`"
+            echo "DevDogsUGA: \`$(tr -d '[:space:]' < devdogsuga.lock)\`"
+            echo
+            echo '```'
+            cat RELEASE_SHA256SUMS
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      # devdogsuga/docs/dist is what the platform's prebuild compiled; the
+      # deploy's `populate:search` indexes it, so the search index matches the
+      # docs that shipped. Paths keep their `devdogsuga/` prefix, which is where
+      # they sit in the deploy job's checkout too.
+      - name: Upload immutable candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.tier }}-${{ github.sha }}
+          path: |
+            apps/platform/dist
+            apps/platform/.wrangler/deploy
+            devdogsuga/apps/schedule-builder/dist
+            devdogsuga/apps/schedule-builder/.wrangler/deploy
+            devdogsuga/docs/dist
+            RELEASE_SHA256SUMS
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30

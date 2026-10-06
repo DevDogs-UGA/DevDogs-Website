@@ -1,0 +1,31 @@
+name: Build the Backstage CLI
+description: >-
+  Builds @devdogsuga/backstage and its workspace dependencies from this
+  checkout and puts a `backstage` command on PATH for the rest of the job.
+  Needs setup-workspace to have run.
+
+# DevDogsUGA's deploy ran `pnpm backstage` (a `pnpm dlx` of the latest publish).
+# Here the deploy runs the CLI from the commit being deployed, so a change to a
+# deploy command ships and deploys in the same merge, and nothing is fetched
+# from npm. The workspace root has no `backstage` script and a workspace bin
+# stays dormant until something depends on it, so the command is a shim around
+# the package's own entry point.
+#
+# `...` selects the package and everything it depends on, built in dependency
+# order. `@devdogsuga/cli-core` is bundled into the CLI by tsdown, not built on
+# its own.
+runs:
+  using: composite
+  steps:
+    - name: Build the Backstage CLI
+      run: pnpm --filter '@devdogsuga/backstage...' --if-present run build
+      shell: bash
+    - name: Put `backstage` on PATH
+      run: |
+        set -euo pipefail
+        bin="$RUNNER_TEMP/backstage-bin"
+        mkdir -p "$bin"
+        printf '#!/bin/sh\nexec node "%s/packages/backstage/bin/backstage.mjs" "$@"\n' "$GITHUB_WORKSPACE" > "$bin/backstage"
+        chmod +x "$bin/backstage"
+        echo "$bin" >> "$GITHUB_PATH"
+      shell: bash
