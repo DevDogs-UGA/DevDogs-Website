@@ -74,6 +74,7 @@ const server = {
         "own localhost port in development.",
       scope: "environment",
       secrecy: "public",
+      build: true,
       example: "http://localhost:3000",
     },
   ),
@@ -113,6 +114,7 @@ const server = {
       "environment variable.",
     scope: "environment",
     secrecy: "public",
+    build: true,
   }),
   ATTENDANCE_TOKEN_SECRET: define(
     switchEnvironment({
@@ -352,6 +354,7 @@ const server = {
       "for the browser.",
     scope: "environment",
     secrecy: "public",
+    build: true,
     localStack: true,
     example: "https://$PROJECT_REF.supabase.co",
   }),
@@ -389,6 +392,7 @@ const server = {
       "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. Dashboard: Settings > API.",
     scope: "environment",
     secrecy: "public",
+    build: true,
     localStack: true,
   }),
   REST_URL: define(z.string(), {
@@ -529,6 +533,7 @@ const client = {
         "design; it only identifies the widget.",
       scope: "environment",
       secrecy: "public",
+      build: true,
     },
   ),
 };

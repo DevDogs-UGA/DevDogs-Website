@@ -157,6 +157,36 @@ export async function checkEnv(root: string): Promise<string[]> {
     }
   }
 
+  // `build: true` is read by the credential-free build workflows
+  // (`build-artifacts.yaml`), so the set is pinned the same way, and each key
+  // must be one `env push` writes as a variable. Skipped against a published
+  // `@devdogsuga/env` that predates the field (a DevDogsUGA checkout, until
+  // it bumps), which has no `buildKeys()` to ask.
+  if (typeof env.buildKeys === "function") {
+    const build = env.buildKeys();
+    const expectedBuild = [
+      "API_URL",
+      "BASE_URL",
+      "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+      "PLATFORM_SENTRY_DSN",
+      "PUBLISHABLE_KEY",
+      "SCHEDULE_BUILDER_SENTRY_DSN",
+    ];
+    if (JSON.stringify(build) !== JSON.stringify(expectedBuild)) {
+      problems.push(
+        `The build set is [${build.join(", ")}]; expected exactly [${expectedBuild.join(", ")}]. ` +
+          "A change here changes what the build workflows read from `<tier>-build`: update both deliberately.",
+      );
+    }
+    for (const key of build) {
+      if (!variableSet.has(key)) {
+        problems.push(
+          `${key} is build: true but is not in variableKeys(), so push cannot write it to the build environment.`,
+        );
+      }
+    }
+  }
+
   // `narrowed` on a key that cannot route anywhere is a marker that grants
   // nothing and documents a lie.
   for (const key of narrowed) {
