@@ -162,6 +162,7 @@ describe("buildDesiredRulesets for Backstage", () => {
       "main-merge-queue",
       "~ALL",
       "tag-protection",
+      "release-tags",
     ]);
     for (const r of withApp) {
       expect(r.bypass_actors.map((a) => a.actor_id)).not.toContain(2740);
@@ -237,9 +238,9 @@ describe("buildDesiredRulesets for Backstage", () => {
     ]);
   });
 
-  it("matches DevDogsUGA's main-integrity, main-updates, main-reviews and tag-protection", () => {
+  it("matches DevDogsUGA's main-integrity, main-updates and main-reviews", () => {
     const dd = buildDesiredRulesets(actors);
-    for (const name of ["main-integrity", "main-updates", "tag-protection"]) {
+    for (const name of ["main-integrity", "main-updates"]) {
       expect(without.find((r) => r.name === name)).toEqual(
         dd.find((r) => r.name === name),
       );
@@ -247,6 +248,15 @@ describe("buildDesiredRulesets for Backstage", () => {
     expect(without.find((r) => r.name === "main-reviews")).toEqual(
       dd.find((r) => r.name === "main-reviews"),
     );
+  });
+
+  it("lets release tags be created but never moved or deleted", () => {
+    const tags = without.find((r) => r.name === "tag-protection")!;
+    const release = without.find((r) => r.name === "release-tags")!;
+    expect(tags.conditions.ref_name.exclude).toEqual(
+      release.conditions.ref_name.include,
+    );
+    expect(release.rules.map((r) => r.type)).toEqual(["update", "deletion"]);
   });
 });
 

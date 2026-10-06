@@ -96,6 +96,8 @@ export function hasMergeQueueRule(ruleset: DesiredRuleset): boolean {
  * - no Renovate bypass: its install on Backstage is not readable from here.
  * - no `team/**` rulesets (a DevDogsUGA concern).
  */
+const RELEASE_TAGS = "refs/tags/@devdogsuga/**";
+
 function buildBackstageRulesets(actors: RulesetActors): DesiredRuleset[] {
   const deployBranch = "refs/heads/deploy/devdogsuga";
   const deployRuleset: DesiredRuleset[] =
@@ -257,10 +259,22 @@ function buildBackstageRulesets(actors: RulesetActors): DesiredRuleset[] {
       target: "tag",
       enforcement: "active",
       conditions: {
-        ref_name: { include: ["refs/tags/**"], exclude: [] },
+        ref_name: { include: ["refs/tags/**"], exclude: [RELEASE_TAGS] },
       },
       bypass_actors: [always(actors.adminsTeamId), always(actors.devopsTeamId)],
       rules: [{ type: "creation" }, { type: "update" }, { type: "deletion" }],
+    },
+    // The publish job tags every release it creates (`<name>@<version>`) with
+    // `GITHUB_TOKEN`, and GitHub refuses GitHub Actions as a bypass actor
+    // (422). So release tags may be created by anyone who can push, but once
+    // created never moved or deleted.
+    {
+      name: "release-tags",
+      target: "tag",
+      enforcement: "active",
+      conditions: { ref_name: { include: [RELEASE_TAGS], exclude: [] } },
+      bypass_actors: [always(actors.adminsTeamId)],
+      rules: [{ type: "update" }, { type: "deletion" }],
     },
   ];
 }
