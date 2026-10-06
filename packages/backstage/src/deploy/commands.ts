@@ -30,6 +30,7 @@ import { spawn } from "node:child_process";
 import { rmSync } from "node:fs";
 import { flagValue, positionals } from "@devdogsuga/cli-core/args";
 import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
+import { appDirFor } from "@devdogsuga/cli-core/repo/layout";
 import { loadEnvLoad } from "@devdogsuga/cli-core/repo/peers";
 import {
   reportDevtoolsError,
@@ -77,10 +78,15 @@ async function hyperdriveLocalAliasEnv(): Promise<Record<string, string>> {
  * All orchestrator steps are external processes rather than imported
  * functions: `wrangler` owns its stdout and must not be wrapped.
  */
-function pnpm(args: string[], env?: Record<string, string>): Promise<number> {
+function pnpm(
+  args: string[],
+  env?: Record<string, string>,
+  cwd?: string,
+): Promise<number> {
   return new Promise((resolve) => {
     const child = spawn("pnpm", args, {
       stdio: "inherit",
+      ...(cwd === undefined ? {} : { cwd }),
       env: { ...process.env, ...env },
     });
     child.on("exit", (code) => resolve(code ?? 1));
@@ -131,22 +137,17 @@ export async function runAppDeploy(
   const tier = requireTier(rest);
   const dryRun = rest.includes("--dry-run");
 
-  // Both apps share one deploy shape: a bare `wrangler deploy -e <tier>` from
-  // the app directory. The target environment is baked in at BUILD time (the
+  // Every app shares one deploy shape: a bare `wrangler deploy -e <tier>` from
+  // the app directory. That directory is wherever the repo layout finds the app
+  // (`apps/platform` here; schedule-builder under `devdogsuga/apps` from a
+  // Backstage checkout), so pnpm runs IN it rather than filtering by name from
+  // a workspace root that may not contain the app. The target environment is baked in at BUILD time (the
   // workflow's "Build" step ran `vinext build` with `CLOUDFLARE_ENV=$tier`),
   // which leaves a Wrangler "config redirect". `-e` is passed regardless:
   // Wrangler cross-checks it against the environment the build was tagged
   // with and errors loudly on a mismatch, rather than silently deploying the
   // wrong tier.
-  const deployArgs = [
-    "--filter",
-    app,
-    "exec",
-    "wrangler",
-    "deploy",
-    "-e",
-    tier,
-  ];
+  const deployArgs = ["exec", "wrangler", "deploy", "-e", tier];
   // See apps/*/cloudflare/worker.ts's `WorkerEnv` doc: `SENTRY_RELEASE` is the
   // deploy's git SHA, minted fresh by CI every run rather than a value the
   // vault holds, so it reaches the Worker as a `--var` here rather than
@@ -188,6 +189,7 @@ export async function runAppDeploy(
     const code = await pnpm(
       [...deployArgs, "--secrets-file", secretsFile, ...release],
       await hyperdriveLocalAliasEnv(),
+      appDirFor(app),
     );
     if (code !== 0) {
       // A subprocess (`pnpm … wrangler deploy`) whose output already explains

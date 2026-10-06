@@ -8,8 +8,7 @@
  */
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { join } from "node:path";
-import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { appDirFor } from "@devdogsuga/cli-core/repo/layout";
 import { workerApps } from "@devdogsuga/cli-core/workers";
 
 const run = promisify(execFile);
@@ -58,7 +57,7 @@ export async function listWorkerSecrets(
           "--format",
           "json",
         ],
-        { cwd: join(findRepoRoot(), "apps", app), shell: false },
+        { cwd: appDirFor(app), shell: false },
       );
 
       // wrangler prints its banner on stdout too, so take the JSON array only.

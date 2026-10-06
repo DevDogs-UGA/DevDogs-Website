@@ -20,7 +20,13 @@
  * `process.env`, so a test that got the DEPLOY_ENV wrong fails instead of
  * leaking a deploy environment into whatever vitest runs next in the worker.
  */
-import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -431,6 +437,32 @@ describe("refusals", () => {
     // The point of the refusal: the existing file is untouched.
     expect(readFileSync(join(dir, ".env.staging"), "utf8")).toBe(
       "SOMEBODY_ELSES='real-value'\n",
+    );
+  });
+
+  it("writes the same file into each mirror root (the DevDogsUGA checkout)", async () => {
+    const dir = root();
+    const mirror = root();
+
+    await runDeployWriteEnv({ root: dir, mirrorRoots: [mirror], env: HAPPY });
+
+    expect(readFileSync(join(mirror, ".env.staging"), "utf8")).toBe(
+      readFileSync(join(dir, ".env.staging"), "utf8"),
+    );
+  });
+
+  it("writes nothing anywhere when a mirror already holds a real file", async () => {
+    const dir = root();
+    const mirror = root();
+    writeFileSync(join(mirror, ".env.staging"), "MINE='1'\n");
+
+    await expect(
+      runDeployWriteEnv({ root: dir, mirrorRoots: [mirror], env: HAPPY }),
+    ).rejects.toThrow(/never overwrites/);
+
+    expect(existsSync(join(dir, ".env.staging"))).toBe(false);
+    expect(readFileSync(join(mirror, ".env.staging"), "utf8")).toBe(
+      "MINE='1'\n",
     );
   });
 

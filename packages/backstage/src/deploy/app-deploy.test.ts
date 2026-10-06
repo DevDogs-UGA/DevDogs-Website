@@ -11,14 +11,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as ChildProcess from "node:child_process";
 
 const spawned = vi.hoisted(() => ({
-  calls: [] as { command: string; args: string[] }[],
+  calls: [] as { command: string; args: string[]; cwd?: string }[],
   exitCode: 0,
 }));
 
 vi.mock("node:child_process", async (importOriginal) => ({
   ...(await importOriginal<typeof ChildProcess>()),
-  spawn: (command: string, args: string[]) => {
-    spawned.calls.push({ command, args });
+  spawn: (command: string, args: string[], options?: { cwd?: string }) => {
+    spawned.calls.push({ command, args, cwd: options?.cwd });
     return {
       on: (event: string, listener: (code: number) => void) => {
         if (event === "exit") queueMicrotask(() => listener(spawned.exitCode));
@@ -88,11 +88,13 @@ describe("deploy <app>", () => {
       githubOutput: false,
     });
     expect(spawned.calls).toHaveLength(1);
-    const { command, args } = spawned.calls[0]!;
+    const { command, args, cwd } = spawned.calls[0]!;
     expect(command).toBe("pnpm");
+    // Runs in the app's own directory, wherever the layout puts it.
+    expect(cwd).toBe(
+      join(process.env.DEVTOOLS_TEST_REPO_ROOT!, "apps", "platform"),
+    );
     expect(args).toEqual([
-      "--filter",
-      "platform",
       "exec",
       "wrangler",
       "deploy",

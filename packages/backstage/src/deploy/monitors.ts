@@ -35,7 +35,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
-import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { appDirFor } from "@devdogsuga/cli-core/repo/layout";
 import { DeployError, say } from "./report.js";
 import type { Tier } from "./smoke-config.js";
 
@@ -65,9 +65,9 @@ const MonitorList = z.array(z.object({ slug: z.string() }));
  */
 export async function declaredMonitorSlugs(
   app: string,
-  root: string = findRepoRoot(),
+  root?: string,
 ): Promise<Set<string> | undefined> {
-  const path = join(root, "apps", app, "cloudflare", "scheduled.ts");
+  const path = join(appDirFor(app, root), "cloudflare", "scheduled.ts");
   if (!existsSync(path)) return undefined;
 
   const mod = (await import(pathToFileURL(path).href)) as Record<

@@ -40,6 +40,24 @@ pnpm backstage export stars --from 2026-08-17   # audited under your gh login
 pnpm backstage export attendance --meeting 2026-09-09 --format bevy,involvement
 ```
 
+## Which repo it runs in
+
+Both CLIs run from a DevDogsUGA checkout or from Backstage's (`package.json`
+name `devdogs-monorepo` or `backstage`; the layout code is
+`packages/cli-core/src/repo/layout.ts`). From Backstage, DevDogsUGA is
+`<root>/devdogsuga`: a gitignored symlink to the sibling clone locally
+(`pnpm devdogsuga`), a real checkout at the pinned SHA in CI.
+
+| What                                                                                                  | Where                                                                                                                                                                                                                              |
+| ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `supabase/` (CLI cwd, config, migrations, seeds, avatars, env manifest), `database.types.ts`, `docs/` | DevDogsUGA's root (`devdogsuga/` from Backstage)                                                                                                                                                                                   |
+| `workers.json`, `.github/`                                                                            | the repo you are in; DevDogsUGA without one manages no Workers                                                                                                                                                                     |
+| apps (`cron`, `run`, `deploy <app>`, env manifests)                                                   | the repo you are in plus DevDogsUGA's `apps/`; on a name clash the repo you are in wins                                                                                                                                            |
+| `.env`, `.env.<tier>`, `.env.generated`                                                               | the root of the repo you are in; `deploy write-env` and the local stack's `.env.generated` also write DevDogsUGA's root, because schedule-builder reads its own repo root. `env pull\|push\|reset` touch only the root you are in. |
+
+`pnpm exec supabase` and `wrangler` run inside DevDogsUGA's workspace, so
+`devdogsuga/` needs its own `pnpm install` before the commands that use them.
+
 ## Commands
 
 | Command                                            | What it does                                                                           |

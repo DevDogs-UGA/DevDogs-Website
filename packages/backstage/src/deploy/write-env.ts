@@ -90,12 +90,12 @@
  * so schema-required alone would let the push through with a provider
  * half-configured.
  */
-import { writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { EnvEntry } from "@devdogsuga/env";
 import { assertRegistryLoaded } from "@devdogsuga/cli-core/env/discovery";
 import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
-import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { resolveLayout } from "@devdogsuga/cli-core/repo/layout";
 import { DeployError, summary } from "./report.js";
 
 /** Where a value came from, for the provenance table. */
@@ -118,6 +118,13 @@ export interface WriteEnvOptions {
    * maintainer's laptop are the files being filled in with live credentials.
    */
   root?: string;
+  /**
+   * Further directories that get the same file. Defaults, when `root` is not
+   * given, to the layout's `envMirrors`: from a Backstage checkout, the
+   * DevDogsUGA checkout, whose apps (schedule-builder) read their env file at
+   * THEIR repo root. Tests that pass `root` get no mirrors unless they ask.
+   */
+  mirrorRoots?: string[];
   /** Defaults to the ambient environment; a parameter so tests need not mutate it. */
   env?: NodeJS.ProcessEnv;
 }
@@ -291,7 +298,9 @@ function compose(
 ): WriteEnvResult {
   assertRegistryLoaded();
 
-  const root = options.root ?? findRepoRoot();
+  const layout = options.root === undefined ? resolveLayout() : undefined;
+  const root = options.root ?? layout!.root;
+  const mirrorRoots = options.mirrorRoots ?? layout?.envMirrors ?? [];
   const source = options.source ?? null;
 
   const environment = getEnvSync().resolveEnvironment(env.DEPLOY_ENV);
@@ -442,31 +451,43 @@ function compose(
     provenance.set(key, entry.from);
   }
 
+  const destinations = [root, ...mirrorRoots].map((dir) => join(dir, file));
+  const taken = destinations.find((path) => existsSync(path));
+  if (taken !== undefined) throw existingFile(file, taken);
+
   try {
-    writeFileSync(join(root, file), `${lines.join("\n")}\n`, {
-      flag: "wx",
-      mode: 0o600,
-    });
+    for (const path of destinations) {
+      writeFileSync(path, `${lines.join("\n")}\n`, {
+        flag: "wx",
+        mode: 0o600,
+      });
+    }
   } catch (cause) {
     // `wx` is the refusal, so EEXIST is the expected shape of "you ran this on
     // a machine that already has the file" rather than an unexplained crash.
     // On a runner it cannot happen; on a laptop the file it declined to touch
     // holds the live credentials for that environment.
     if ((cause as NodeJS.ErrnoException).code === "EEXIST") {
-      throw new DeployError(
-        `${file} already exists, and this never overwrites one.`,
-        [
-          "It composes a throwaway file for a runner from the GitHub",
-          "environment's secrets and variables. An existing copy is somebody's",
-          "real one — `pnpm devtools env pull --target <target>` updates that",
-          "in place instead.",
-        ],
-      );
+      throw existingFile(file, join(root, file));
     }
     throw cause;
   }
 
   return { file, provenance };
+}
+
+/** The refusal for a destination that already holds a real env file. */
+function existingFile(file: string, path: string): DeployError {
+  return new DeployError(
+    `${file} already exists, and this never overwrites one.`,
+    [
+      `Found ${path}.`,
+      "It composes a throwaway file for a runner from the GitHub",
+      "environment's secrets and variables. An existing copy is somebody's",
+      "real one — `pnpm devtools env pull --target <target>` updates that",
+      "in place instead.",
+    ],
+  );
 }
 
 /**

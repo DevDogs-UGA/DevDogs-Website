@@ -57,12 +57,11 @@
  * names.
  */
 import { execFileSync } from "node:child_process";
-import { join } from "node:path";
 import type { EnvEntry } from "@devdogsuga/env";
 import { assertRegistryLoaded } from "@devdogsuga/cli-core/env/discovery";
 import { listWorkerSecrets, workerApps } from "./cloudflare.js";
 import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
-import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { appDirFor } from "@devdogsuga/cli-core/repo/layout";
 import { DeployError, say, summary } from "../deploy/report.js";
 import { requireCloudflareToken } from "../deploy/token.js";
 
@@ -94,7 +93,7 @@ export interface OrphansResult {
  * the job log where a reviewer approving this can read it.
  */
 function deleteViaWrangler(
-  root: string,
+  root: string | undefined,
   app: string,
   key: string,
   environment: string,
@@ -104,7 +103,7 @@ function deleteViaWrangler(
     // WRANGLER's `--env` is a wrangler.jsonc environment block. Unrelated to
     // devtools' `--target`, and not renamed with it.
     ["exec", "wrangler", "secret", "delete", key, "--env", environment],
-    { cwd: join(root, "apps", app), stdio: "inherit", shell: false },
+    { cwd: appDirFor(app, root), stdio: "inherit", shell: false },
   );
 }
 
@@ -185,7 +184,7 @@ export function deleteOrphanViaWrangler(
   app: string,
   key: string,
   environment: string,
-  root: string = findRepoRoot(),
+  root?: string,
 ): void {
   requireCloudflareToken("delete a Worker secret");
   deleteViaWrangler(root, app, key, environment);
@@ -197,7 +196,7 @@ export async function runDeployOrphans(
   assertRegistryLoaded();
 
   const env = options.env ?? process.env;
-  const root = options.root ?? findRepoRoot();
+  const root = options.root;
   const listSecrets = options.listSecrets ?? listWorkerSecrets;
   const deleteSecret =
     options.deleteSecret ??

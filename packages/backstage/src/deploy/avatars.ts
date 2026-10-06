@@ -19,7 +19,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { nonEmpty } from "@devdogsuga/cli-core/db/connection";
-import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { resolveLayout } from "@devdogsuga/cli-core/repo/layout";
 import { DeployError, say } from "./report.js";
 
 export interface SeededBucket {
@@ -124,7 +124,10 @@ export async function runDeployAvatars(
     );
   }
 
-  const supabaseDir = join(deps.root ?? findRepoRoot(), "supabase");
+  const supabaseDir = join(
+    deps.root ?? resolveLayout().devdogsugaRoot,
+    "supabase",
+  );
   const config = await readFile(join(supabaseDir, "config.toml"), "utf8");
   let uploaded = 0;
   let existing = 0;
