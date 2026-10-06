@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "preinstall": "node scripts/devdogsuga.mjs",
+    "devdogsuga": "node scripts/devdogsuga.mjs --status",
     "dev": "pnpm --filter slides dev",
     "build": "pnpm -r --if-present run build",
     "typecheck": "pnpm -r --if-present run typecheck",

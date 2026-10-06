@@ -28,7 +28,9 @@ const FAMILIES = /^(test|check|types|fetch|populate):[\w-]+(:[\w-]+)*$/;
 const ALLOWED = {
   // Backstage-specific commands with no vocabulary equivalent.
   "build:slides": "root: builds the slides app only (CI builds it separately)",
-  newsletter: "root: shortcut to the newsletter CLI",
+  // The link to the DevDogsUGA checkout (scripts/devdogsuga.mjs).
+  devdogsuga: "root: report where the devdogsuga/ link points",
+  preinstall: "root: create and validate the devdogsuga/ link before install",
   "slides#follow": "run a deck on a demo laptop",
   "slides#export:md": "export a deck to docs pages",
   "slides#tag-steps": "tag workshop repo steps from a deck",
