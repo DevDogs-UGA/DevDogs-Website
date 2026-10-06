@@ -194,8 +194,14 @@ function buildBackstageRulesets(actors: RulesetActors): DesiredRuleset[] {
           parameters: {
             do_not_enforce_on_create: false,
             strict_required_status_checks_policy: false,
+            // `database` and `toolchain` joined `validate` when the platform
+            // moved in (TASK-478): the DB-backed platform tests and the
+            // catalog/patch drift check against DevDogsUGA. `patch-issues`
+            // runs on the schedule only and must never be required.
             required_status_checks: [
               { context: "validate", integration_id: 15368 },
+              { context: "database", integration_id: 15368 },
+              { context: "toolchain", integration_id: 15368 },
             ],
           },
         },

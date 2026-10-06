@@ -168,7 +168,7 @@ describe("buildDesiredRulesets for Backstage", () => {
     }
   });
 
-  it("requires only validate in main-ci", () => {
+  it("requires validate, database and toolchain in main-ci", () => {
     expect(without.find((r) => r.name === "main-ci")!.rules).toEqual([
       {
         type: "required_status_checks",
@@ -177,6 +177,8 @@ describe("buildDesiredRulesets for Backstage", () => {
           strict_required_status_checks_policy: false,
           required_status_checks: [
             { context: "validate", integration_id: 15368 },
+            { context: "database", integration_id: 15368 },
+            { context: "toolchain", integration_id: 15368 },
           ],
         },
       },
