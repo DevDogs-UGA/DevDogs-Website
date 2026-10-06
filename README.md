@@ -10,7 +10,7 @@ secrets, or user-facing content.
 > `packages/email`, now lives here, with its history. The "never deployed" and
 > "DevDogsUGA owns runtimes" lines below describe the layout before that move
 > and are rewritten when the deploys follow. See [Platform
-> development](#platform-development).
+> development](#platform-development) and [Deploys](#deploys).
 
 ## What lives here vs. there
 
@@ -92,6 +92,88 @@ DevDogsUGA: `supabase/` (migrations, seeds, `config.toml`), `packages/supabase`
   `.github/actions/setup-workspace`, which uses
   `.github/actions/checkout-devdogsuga` to fetch DevDogsUGA at the locked SHA
   into `devdogsuga/` and installs it before this workspace.
+
+## Deploys
+
+A push to `main` (a merged deploy PR that moves `devdogsuga.lock`, or an admin
+bypass push) runs `.github/workflows/ci.yaml`; once `validate`, `database` and
+`toolchain` pass, its `deploy` job calls `.github/workflows/deploy.yaml`. That is
+DevDogsUGA's deploy flow, with the platform built from this repo and
+everything database-shaped (migrations, seeds, avatars, `supabase config push`,
+docs, schedule-builder) taken from DevDogsUGA at the commit in `devdogsuga.lock`.
+The CLI that runs it is built from the commit being deployed
+(`.github/actions/backstage-cli`), not fetched with `pnpm dlx`.
+
+```
+merge_group CI run:  validate -> build (staging, production)  ->  artifacts <tier>-<sha>
+push to main:        supersede
+                     resolve (lock compare, finds the merge_group run) -> build (only if none)
+                     staging-preflight -> staging-migrate -> staging-deploy (platform | schedule-builder)
+                     production-plan ----------------------------------------------+
+                     production (approval gate, then the sequence below) <----------+
+```
+
+- **Artifacts come from the merge queue.** `ci.yaml` builds both tiers on
+  `merge_group` (`build-artifacts.yaml`); the queue fast-forwards `main` to that
+  exact commit, so `resolve` finds the run by SHA and the deploy downloads its
+  artifacts (`staging-<sha>`, `production-<sha>`) and verifies `RELEASE_SHA256SUMS`.
+  A push the queue never built builds in its own run. Builds run in the
+  credential-free `staging-build` / `production-build` environments.
+- **Staging** runs on every deploy: preflight, migrations and new seeds, avatars,
+  then both Workers (write-env, Sentry release, deploy, docs index and config
+  reconcile for the platform, smoke test).
+- **Production** is the `production` environment (devops reviewers, 45 minutes,
+  one at a time). Its first step refuses an approver who authored the PR that
+  produced the commit or put it in the merge queue
+  (`.github/scripts/approval-gate.mjs`; a push with no PR is covered by the
+  environment's own prevent-self-review). Then: refuse a commit that is no longer
+  `main`, verify the artifacts, write-env, re-plan and migrate with seeds,
+  avatars, `supabase config push`, the platform (Sentry release, deploy, docs
+  index, reconcile, smoke, monitor prune), schedule-builder (the same), and an env
+  audit.
+- **Sentry releases.** The platform's release is the Backstage SHA;
+  schedule-builder's is the DevDogsUGA SHA from `devdogsuga.lock`.
+- **Caches.** The pnpm store (setup-workspace) and the Supabase images (the
+  `database` job). The compiled docs are not cached: docs-kit's build cache
+  fingerprints file mtimes, which a fresh checkout never reproduces, so a
+  restored `docs/dist` could not hit.
+- **Manual run.** `Deploy` has a `workflow_dispatch` input, `prune_orphans`, that
+  deletes undeclared production Worker secrets.
+
+### Production is off until TASK-491
+
+During Phase 2 only staging deploys from here; production still deploys from
+DevDogsUGA's frozen copy of this flow. Every production job, and the production
+build, runs only when the repository variable `BACKSTAGE_DEPLOYS_PRODUCTION` is
+exactly `true`. It is unset today. Flipping it is the production cutover, together
+with DevDogsUGA's own cleanup (below).
+
+### Secrets and variables
+
+Nothing in a workflow reads a credential except through an environment. Populate
+these in Backstage (`env push` fills `preflight`, `staging` and `production`; see
+below). Only what a workflow names directly is listed; `write-env` composes the
+rest of a tier's `.env` from the env manifests and refuses to write a file missing
+a schema-required key, naming each one.
+
+| Where                               | Variables                                                                                                                                                                       | Secrets                                                                                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Repository                          | `BACKSTAGE_DEPLOYS_PRODUCTION` (unset = off), `DEVTOOLS_SENTRY_DSN`, `WORKSHOPS_VSCODE_SENTRY_DSN` (publish)                                                                    | none                                                                                                                                 |
+| `staging-build`, `production-build` | `API_URL`, `BASE_URL`, `PUBLISHABLE_KEY` (required); `PLATFORM_SENTRY_DSN`, `SCHEDULE_BUILDER_SENTRY_DSN`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (optional). Set by hand, no secrets | none                                                                                                                                 |
+| `staging`                           | `PROJECT_REF`, `PUBLISHABLE_KEY`, `API_URL`, plus every non-secret key the server schema declares for the tier                                                                  | `DB_URL`, `SECRET_KEY`, `SENTRY_AUTH_TOKEN` (optional), `CRON_SECRET`, `CLOUDFLARE_API_TOKEN`, plus every other secret in the schema |
+| `preflight` (production plan)       | none read directly                                                                                                                                                              | `DB_URL` (the read-only planner credential)                                                                                          |
+| `production`                        | `PROJECT_REF`, `API_URL`, plus the schema's non-secret keys for the tier                                                                                                        | everything `staging` has, and `SUPABASE_ACCESS_TOKEN`, `SENTRY_MONITORS_TOKEN` (optional)                                            |
+| `publishing` (existing)             | none                                                                                                                                                                            | `VSCE_PAT`                                                                                                                           |
+
+The schema-required keys per tier come from `apps/platform/src/env.ts`,
+`devdogsuga/apps/schedule-builder/src/env.ts`, `devdogsuga/supabase/env.ts` and
+`packages/backstage/env.ts`; `pnpm dlx @devdogsuga/devtools env example` lists them.
+
+`backstage env push` addresses the repository `gh` resolves from the current
+directory (it passes no `--repo`) and only knows `preflight`, `staging` and
+`production`. Run from a Backstage checkout, or with `GH_REPO=DevDogsUGA/Backstage`,
+it writes Backstage's environments. `staging-build` and `production-build` are not
+routed: set their variables by hand.
 
 ## Releases
 
