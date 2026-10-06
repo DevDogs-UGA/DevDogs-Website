@@ -62,4 +62,17 @@ describe("ensureGeneratedEnv", () => {
     });
     expect(r.action).toBe("failed");
   });
+
+  it("from a Backstage root, runs supabase in devdogsuga/ and writes both roots", async () => {
+    mkdirSync(join(root, "devdogsuga", "supabase"), { recursive: true });
+    writeFileSync(join(root, "devdogsuga", "supabase", "config.toml"), "");
+    const r = await ensureGeneratedEnv({ root, probe: up, status });
+    expect(r).toEqual({ action: "written", file: ".env.generated" });
+    expect(status).toHaveBeenCalledWith(join(root, "devdogsuga"));
+    for (const dir of [root, join(root, "devdogsuga")]) {
+      expect(readFileSync(join(dir, ".env.generated"), "utf8")).toContain(
+        "API_URL",
+      );
+    }
+  });
 });

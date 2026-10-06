@@ -1,22 +1,31 @@
 /**
- * Shared helpers for running supabase CLI and pnpm commands from the repo root.
+ * Shared helpers for running supabase CLI and pnpm commands.
  *
  * The supabase CLI is a workspace devDependency (not a global install), so
- * every invocation goes through `pnpm exec supabase`. The cwd is always
- * findRepoRoot(), where `supabase/config.toml` lives.
+ * every invocation goes through `pnpm exec supabase`. Plain pnpm commands run
+ * in `findRepoRoot()`; the supabase ones run in DevDogsUGA's root
+ * (`supabaseRoot()`), where `supabase/config.toml` lives and where the CLI is
+ * installed. From a Backstage checkout that is `<root>/devdogsuga`, so it needs
+ * its own `pnpm install` there before any of these work.
  */
 import { execFile, spawn as nodeSpawn } from "node:child_process";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { reportRan, runInGroup } from "../process-group.js";
+import { resolveLayout } from "../repo/layout.js";
 import { findRepoRoot } from "../repo/root.js";
 import { loadDbTypegen } from "../repo/peers.js";
 
 const runFile = promisify(execFile);
 
+/** Where `supabase/` lives, and so the cwd of every supabase CLI call. */
+export function supabaseRoot(): string {
+  return resolveLayout().devdogsugaRoot;
+}
+
 export function typesFile(): string {
   return join(
-    findRepoRoot(),
+    supabaseRoot(),
     "packages",
     "supabase",
     "src",
@@ -31,9 +40,10 @@ export function typesFile(): string {
 export async function run(
   args: string[],
   env?: NodeJS.ProcessEnv,
+  cwd: string = findRepoRoot(),
 ): Promise<number> {
   const result = await runInGroup("pnpm", args, {
-    cwd: findRepoRoot(),
+    cwd,
     ...(env ? { env } : {}),
   });
   if (reporting) reportRan("pnpm", args, result);
@@ -62,11 +72,12 @@ export interface RunWithStderrResult {
 export function runWithStderr(
   args: string[],
   env?: NodeJS.ProcessEnv,
+  cwd: string = findRepoRoot(),
 ): Promise<RunWithStderrResult> {
   return new Promise((resolve) => {
     const child = nodeSpawn("pnpm", args, {
       stdio: ["inherit", "inherit", "pipe"],
-      cwd: findRepoRoot(),
+      cwd,
       ...(env ? { env } : {}),
     });
     let stderr = "";
@@ -86,9 +97,12 @@ export function runWithStderr(
 }
 
 /** Spawn a pnpm command, capture stdout, throw on non-zero exit. */
-export async function capture(args: string[]): Promise<string> {
+export async function capture(
+  args: string[],
+  cwd: string = findRepoRoot(),
+): Promise<string> {
   const { stdout } = await runFile("pnpm", args, {
-    cwd: findRepoRoot(),
+    cwd,
     encoding: "utf8",
   });
   return stdout;
@@ -96,11 +110,11 @@ export async function capture(args: string[]): Promise<string> {
 
 /** `pnpm exec supabase …` with inherited stdio. */
 export const supabase = (...args: string[]) =>
-  run(["exec", "supabase", ...args]);
+  run(["exec", "supabase", ...args], undefined, supabaseRoot());
 
 /** `pnpm exec supabase …` with captured stdout. */
 export const supabaseCapture = (...args: string[]) =>
-  capture(["exec", "supabase", ...args]);
+  capture(["exec", "supabase", ...args], supabaseRoot());
 
 /**
  * Generate and write Database types from the session's database.
@@ -110,7 +124,7 @@ export const supabaseCapture = (...args: string[]) =>
  * session's own connection string, never the supabase CLI's
  * `--local`/`--linked` modes, whose defaults can disagree with what this
  * process entered; see `db/connection.ts`'s header) and formats the result
- * with `pnpm exec prettier --write`, both run against `findRepoRoot()` so the
+ * with `pnpm exec prettier --write`, both run against `supabaseRoot()` so the
  * workspace-pinned CLI versions are what actually run.
  */
 export async function generateTypes(dbUrl: string): Promise<number> {
@@ -119,7 +133,7 @@ export async function generateTypes(dbUrl: string): Promise<number> {
     await generateDatabaseTypes({
       dbUrl,
       outFile: typesFile(),
-      cwd: findRepoRoot(),
+      cwd: supabaseRoot(),
     });
   } catch {
     return 1;
@@ -169,7 +183,7 @@ export async function dbPushDryRun(
   args.push("--dry-run");
   try {
     const { stdout, stderr } = await runFile("pnpm", args, {
-      cwd: findRepoRoot(),
+      cwd: supabaseRoot(),
       encoding: "utf8",
       maxBuffer: 32 * 1024 * 1024,
     });

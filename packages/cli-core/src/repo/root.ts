@@ -13,16 +13,20 @@
  * marker validated in the `devtools-dlx` prototype
  * (`/home/sloan/scratchpad/devdogs/prototypes/devtools-dlx/FINDINGS.md`,
  * experiment 1): a directory containing `pnpm-workspace.yaml` AND whose
- * `package.json` has `"name": "devdogs-monorepo"`. The name check is not
- * redundant — a bare `pnpm-workspace.yaml` also matches a Backstage
- * checkout (a separate pnpm workspace), which devtools should refuse
- * rather than silently "find".
+ * `package.json` has `"name": "devdogs-monorepo"` (DevDogsUGA) or
+ * `"backstage"` (Backstage, which the CLIs also run from; `layout.ts` says
+ * what differs). The name check is not redundant — a bare
+ * `pnpm-workspace.yaml` matches any pnpm workspace, which devtools should
+ * refuse rather than silently "find".
  */
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-/** The `package.json` name every real DevDogsUGA checkout carries at its root. */
-const REPO_MARKER_NAME = "devdogs-monorepo";
+/**
+ * The `package.json` names a repo root may carry: DevDogsUGA's, and Backstage's
+ * (the CLIs run from both; see `layout.ts`).
+ */
+const REPO_MARKER_NAMES: readonly unknown[] = ["devdogs-monorepo", "backstage"];
 
 export class RepoNotFoundError extends Error {
   constructor() {
@@ -37,7 +41,7 @@ function looksLikeRepoRoot(dir: string): boolean {
     const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as {
       name?: unknown;
     };
-    return pkg.name === REPO_MARKER_NAME;
+    return REPO_MARKER_NAMES.includes(pkg.name);
   } catch {
     return false;
   }

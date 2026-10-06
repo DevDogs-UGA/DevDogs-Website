@@ -35,7 +35,7 @@ import { join } from "node:path";
 import type { DeployEnvironment } from "@devdogsuga/env";
 import type { DevDatabase } from "@devdogsuga/env/load";
 import { supabaseCapture } from "./run.js";
-import { findRepoRoot } from "../repo/root.js";
+import { devdogsugaRootOrNull, resolveLayout } from "../repo/layout.js";
 import {
   foreignStackMessage,
   foreignStackProjectId,
@@ -72,6 +72,9 @@ export interface EnsureGeneratedEnvDeps {
   projectId: () => string | null;
   /** Used only to build the path `write` receives. */
   repoRoot: string;
+  /** Directories that get the same file besides `repoRoot` (a Backstage
+   *  checkout's DevDogsUGA, whose apps read their own root). Optional. */
+  mirrorRoots?: readonly string[];
 }
 
 export type EnsureGeneratedEnvResult =
@@ -115,7 +118,9 @@ export async function ensureGeneratedEnvFile(
 
   try {
     const env = await deps.captureStatus();
-    await deps.write(join(deps.repoRoot, GENERATED_FILE), env);
+    for (const dir of [deps.repoRoot, ...(deps.mirrorRoots ?? [])]) {
+      await deps.write(join(dir, GENERATED_FILE), env);
+    }
     return {
       outcome: "wrote",
       line: "devtools: wrote .env.generated from the running local stack",
@@ -146,14 +151,23 @@ export async function ensureGeneratedEnvFile(
 export function realEnsureGeneratedEnvDeps(
   probeLocalStack: () => boolean | Promise<boolean>,
 ): EnsureGeneratedEnvDeps {
-  const repoRoot = findRepoRoot();
+  const layout = resolveLayout();
+  const repoRoot = layout.root;
+  const supabaseRoot = devdogsugaRootOrNull(layout);
   return {
     probeLocalStack,
-    exists: (file) => existsSync(join(repoRoot, file)),
+    // Missing from any root counts as missing, so a stack started before
+    // the sibling existed still gets its copy there.
+    exists: (file) =>
+      [repoRoot, ...layout.envMirrors].every((dir) =>
+        existsSync(join(dir, file)),
+      ),
     captureStatus: () => supabaseCapture("status", "-o", "env"),
     write: (path, contents) => writeFile(path, contents),
     listContainerNames: () => listContainerNames(STACK_API_PORT),
-    projectId: () => readProjectId(repoRoot),
+    projectId: () =>
+      supabaseRoot === null ? null : readProjectId(supabaseRoot),
     repoRoot,
+    mirrorRoots: layout.envMirrors,
   };
 }

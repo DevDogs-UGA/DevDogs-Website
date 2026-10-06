@@ -1,0 +1,7 @@
+{
+  "name": "platform",
+  "private": true,
+  "scripts": {
+    "dev": "vinext dev"
+  }
+}

@@ -183,4 +183,13 @@ describe("ensureGeneratedEnvFile", () => {
 
     expect(result).toEqual({ outcome: "unreachable" });
   });
+
+  it("writes the same file into every mirror root, and wants it in all of them", async () => {
+    const { deps, spies } = fakeDeps({ mirrorRoots: ["/repo/devdogsuga"] });
+    await ensureGeneratedEnvFile("development", undefined, deps);
+    expect(spies.write.mock.calls.map((call: unknown[]) => call[0])).toEqual([
+      "/repo/.env.generated",
+      "/repo/devdogsuga/.env.generated",
+    ]);
+  });
 });

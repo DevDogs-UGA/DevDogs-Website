@@ -46,8 +46,7 @@ describe("discoverRepoRoot", () => {
     expect(discoverRepoRoot(join(dir, "nested"))).toBeNull();
   });
 
-  it("does not match a pnpm-workspace.yaml whose package.json has the wrong name", () => {
-    // e.g. a Backstage checkout — also a pnpm workspace, but not this one.
+  it("matches a Backstage checkout too", () => {
     writeFileSync(
       join(dir, "pnpm-workspace.yaml"),
       "packages:\n  - packages/*\n",
@@ -55,6 +54,19 @@ describe("discoverRepoRoot", () => {
     writeFileSync(
       join(dir, "package.json"),
       JSON.stringify({ name: "backstage" }),
+    );
+
+    expect(discoverRepoRoot(dir)).toBe(dir);
+  });
+
+  it("does not match a pnpm-workspace.yaml whose package.json has some other name", () => {
+    writeFileSync(
+      join(dir, "pnpm-workspace.yaml"),
+      "packages:\n  - packages/*\n",
+    );
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ name: "something-else" }),
     );
 
     expect(discoverRepoRoot(dir)).toBeNull();

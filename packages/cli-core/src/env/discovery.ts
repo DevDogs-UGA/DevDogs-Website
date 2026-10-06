@@ -15,7 +15,11 @@
  * filename (`tsconfig.json`, `wrangler.jsonc`, `supadart.yaml`), and a pointer
  * would be the only one of its kind.
  *
- * One special case: `supabase/env.ts` sits at the repo root, OUTSIDE the
+ * From a Backstage checkout the scan covers BOTH repos (`repo/layout.ts`):
+ * Backstage's `apps/*` and `packages/*`, then DevDogsUGA's through
+ * `devdogsuga/`, de-duplicated by directory name with Backstage first.
+ *
+ * One special case: `supabase/env.ts` sits at DevDogsUGA's root, OUTSIDE the
  * workspace globs. Its variables belong to `config.toml` and the Supabase
  * CLI, not to any package, so it lives next to the config that reads them.
  *
@@ -53,12 +57,18 @@
  * minted secret (in no Bitwarden project by design) is reported as an orphan,
  * i.e. as safe for the §3.6 prune path to delete.
  */
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { redirectPeer } from "../repo/peer-redirect.js";
-import { getEnvSync, loadEnv, repoPeerUrl } from "../repo/peers.js";
-import { findRepoRoot } from "../repo/root.js";
+import { redirectPeers } from "../repo/peer-redirect.js";
+import type { PeerRedirect } from "../repo/peer-redirect-hooks.js";
+import {
+  getEnvSync,
+  loadEnv,
+  repoPeerUrl,
+  resolveRepoPeerUrl,
+} from "../repo/peers.js";
+import { resolveLayout } from "../repo/layout.js";
 import { importRepoTs } from "../repo/tsx-loader.js";
 import { ownPackageDir } from "../version.js";
 
@@ -114,14 +124,17 @@ async function importManifests(): Promise<void> {
   // devtools' own manifest imports `@devdogsuga/env` by bare specifier, which
   // does not resolve at all from a `pnpm dlx` copy. Point it at the copy
   // `loadEnv()` just resolved through the repo. See `repo/peer-redirect.ts`.
+  const redirects: PeerRedirect[] = [];
   const envUrl = repoPeerUrl("@devdogsuga/env");
   if (envUrl) {
-    redirectPeer({
+    redirects.push({
       parentURL: pathToFileURL(ownManifestPath()).href,
       specifier: "@devdogsuga/env",
       url: envUrl,
     });
+    redirects.push(...siblingRedirects(envUrl));
   }
+  if (redirects.length > 0) redirectPeers(redirects);
 
   // The Next apps' manifests run `createEnv` at import time. Without this flag
   // they would validate the AMBIENT environment, a devtools process rather than
@@ -149,6 +162,35 @@ async function importManifests(): Promise<void> {
 }
 
 /**
+ * From a Backstage checkout, the manifests under `devdogsuga/` import
+ * `@devdogsuga/env` through THAT checkout's `node_modules` (or not at all, when
+ * it has none): a second copy of the package, and so a second registry that
+ * every `declare()` there would populate instead of the one this process
+ * reads. Point their imports at the copy `loadEnv()` resolved. Resolved
+ * through `realpath`, because the loader sees the module's real location, not
+ * the `devdogsuga` symlink.
+ */
+function siblingRedirects(envUrl: string): PeerRedirect[] {
+  const layout = resolveLayout();
+  if (layout.kind !== "backstage" || !layout.hasDevdogsuga) return [];
+  const nextjs = resolveRepoPeerUrl("@devdogsuga/env/nextjs");
+  const redirects: PeerRedirect[] = [];
+  for (const path of manifestPaths()) {
+    if (!path.startsWith(layout.devdogsugaRoot)) continue;
+    const parentURL = pathToFileURL(realpathSync(path)).href;
+    redirects.push({ parentURL, specifier: "@devdogsuga/env", url: envUrl });
+    if (nextjs) {
+      redirects.push({
+        parentURL,
+        specifier: "@devdogsuga/env/nextjs",
+        url: nextjs,
+      });
+    }
+  }
+  return redirects;
+}
+
+/**
  * Every manifest file, in a stable order.
  *
  * The workspace members are enumerated by scanning `apps/*` and `packages/*`
@@ -158,7 +200,7 @@ async function importManifests(): Promise<void> {
  * top-level glob would already mean editing more interesting files than this
  * one.
  */
-function manifestPaths(): string[] {
+export function manifestPaths(): string[] {
   const paths: string[] = [];
 
   for (const dir of workspaceDirs()) {
@@ -167,7 +209,11 @@ function manifestPaths(): string[] {
   }
 
   // The repo-root special case: not a workspace package, see the header.
-  const supabase = manifestIn(join(findRepoRoot(), "supabase"));
+  // `supabase/` belongs to DevDogsUGA, wherever the CLI is run from.
+  const layout = resolveLayout();
+  const supabase = layout.hasDevdogsuga
+    ? manifestIn(join(layout.devdogsugaRoot, "supabase"))
+    : null;
   if (supabase) paths.push(supabase);
 
   // devtools' own operator manifest — always included, regardless of the
@@ -199,28 +245,60 @@ function ownManifestPath(): string {
   return join(ownPackageDir(), "env.ts");
 }
 
+/**
+ * The CLIs' own packages: each loads its own operator manifest through
+ * `ownManifestPath()`, so scanning them from a Backstage checkout would
+ * declare the same keys twice.
+ */
+const CLI_PACKAGES = new Set(["devtools", "backstage"]);
+
+/**
+ * `apps/*` and `packages/*` of every repo in the layout (the repo you are in
+ * first, so it wins a name clash: before the cutover both repos carry
+ * `apps/platform` and `packages/email`), then DevDogsUGA's `docs`.
+ */
 function workspaceDirs(): string[] {
+  const layout = resolveLayout();
+  const roots = [layout.root];
+  if (layout.kind === "backstage" && layout.hasDevdogsuga) {
+    roots.push(layout.devdogsugaRoot);
+  }
   const dirs: string[] = [];
-  const repoRoot = findRepoRoot();
   for (const parent of ["apps", "packages"]) {
-    const names: string[] = [];
-    for (const entry of readdirSync(join(repoRoot, parent), {
-      withFileTypes: true,
-    })) {
-      // node_modules and dotfiles are not packages.
-      if (!entry.isDirectory()) continue;
-      if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
-      names.push(entry.name);
+    const found = new Map<string, string>();
+    for (const root of roots) {
+      let entries;
+      try {
+        entries = readdirSync(join(root, parent), { withFileTypes: true });
+      } catch {
+        continue;
+      }
+      for (const entry of entries) {
+        // node_modules and dotfiles are not packages.
+        if (!entry.isDirectory()) continue;
+        if (entry.name === "node_modules" || entry.name.startsWith(".")) {
+          continue;
+        }
+        if (
+          layout.kind === "backstage" &&
+          parent === "packages" &&
+          CLI_PACKAGES.has(entry.name)
+        ) {
+          continue;
+        }
+        if (!found.has(entry.name)) {
+          found.set(entry.name, join(root, parent, entry.name));
+        }
+      }
     }
     // Sorted, because readdir order is whatever the filesystem feels like and
     // registry insertion order is now OBSERVABLE: `env example` renders
     // keys in declaration order and CI byte-compares the result, so two
     // machines walking the same tree must import the same manifests in the
     // same sequence.
-    names.sort();
-    for (const name of names) dirs.push(join(repoRoot, parent, name));
+    for (const name of [...found.keys()].sort()) dirs.push(found.get(name)!);
   }
-  dirs.push(join(repoRoot, "docs"));
+  if (layout.hasDevdogsuga) dirs.push(join(layout.devdogsugaRoot, "docs"));
   return dirs;
 }
 

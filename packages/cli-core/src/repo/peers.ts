@@ -102,6 +102,26 @@ export function repoPeerUrl(specifier: string): string | undefined {
   return resolvedUrls.get(specifier);
 }
 
+/**
+ * Like `repoPeerUrl`, but for any specifier a package of the repo you are in
+ * can resolve, subpaths included (`@devdogsuga/env/nextjs`), without having
+ * loaded it. Undefined outside a real repo or when nothing depends on it.
+ */
+export function resolveRepoPeerUrl(specifier: string): string | undefined {
+  const known = resolvedUrls.get(specifier);
+  if (known) return known;
+  if (process.env.DEVTOOLS_TEST_REPO_ROOT) return undefined;
+  try {
+    const repoRoot = findRepoRoot();
+    const base = findDependent(repoRoot, specifier);
+    if (!base) return undefined;
+    const { resolvedPath } = resolveFromRepo(repoRoot, base, specifier);
+    return pathToFileURL(resolvedPath).href;
+  } catch {
+    return undefined;
+  }
+}
+
 // ── @devdogsuga/env ─────────────────────────────────────────────────────────
 // Import types only from the bare specifier (erased at build; @devdogsuga/env
 // is a Backstage devDependency purely for these types). Runtime values always

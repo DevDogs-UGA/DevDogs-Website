@@ -1,5 +1,5 @@
 /**
- * The one list of Worker apps, read from root `workers.json`.
+ * The one list of Worker apps, read from `workers.json` at the root of the repo you are in.
  *
  * Six call sites across `devtools` and `env` used to carry their own copy of
  * `["platform", "sandbox", "schedule-builder"]` — a CLI's app-choice list, a
@@ -7,9 +7,9 @@
  * nothing to say when one of them drifted from the rest. `workers.test.ts`
  * covers the drift; this module is the one place to fix it.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { findRepoRoot } from "./repo/root.js";
+import { resolveAppPath, resolveLayout } from "./repo/layout.js";
 
 // Both lists used to be top-level `const`s, evaluated the instant this
 // module was imported — which meant `findRepoRoot()` ran (and threw
@@ -59,12 +59,30 @@ export function parseWorkerEntries(json: unknown): WorkerEntry[] {
   });
 }
 
-/** Every entry in root `workers.json`. */
+/**
+ * Every entry in `workers.json` at the root of the repo you are in. DevDogsUGA
+ * after the platform moved to Backstage has no such file: no Worker apps are
+ * managed there, so the list is empty rather than an error. A Backstage
+ * checkout always has one, so a missing file there is still an error.
+ */
 export function workerEntries(): readonly WorkerEntry[] {
-  cachedWorkerEntries ??= parseWorkerEntries(
-    JSON.parse(readFileSync(join(findRepoRoot(), "workers.json"), "utf8")),
-  );
+  if (cachedWorkerEntries === undefined) {
+    const layout = resolveLayout();
+    const file = join(layout.root, "workers.json");
+    cachedWorkerEntries =
+      layout.kind === "devdogsuga" && !existsSync(file)
+        ? []
+        : parseWorkerEntries(JSON.parse(readFileSync(file, "utf8")));
+  }
   return cachedWorkerEntries;
+}
+
+/**
+ * The directory of a Worker app by its `workers.json` path: under the repo
+ * you are in, else under DevDogsUGA's (schedule-builder, from Backstage).
+ */
+export function workerAppDir(entryPath: string): string {
+  return resolveAppPath(entryPath);
 }
 
 /** Workspace-relative paths, exactly as listed in root `workers.json`. */

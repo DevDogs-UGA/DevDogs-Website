@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { fileURLToPath } from "node:url";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { resetLayoutCacheForTests } from "./repo/layout.js";
+import { resetRepoRootCacheForTests } from "./repo/root.js";
+import type * as WorkersModule from "./workers.js";
 import { parseWorkerEntries } from "./workers.js";
 
 describe("parseWorkerEntries", () => {
@@ -29,5 +33,40 @@ describe("parseWorkerEntries", () => {
     expect(() => parseWorkerEntries(["apps/platform", 3])).toThrow(/entry 1/);
     expect(() => parseWorkerEntries([{ smoke: {} }])).toThrow(/entry 0/);
     expect(() => parseWorkerEntries({})).toThrow(/array/);
+  });
+});
+
+describe("workerEntries by layout", () => {
+  const fixture = (name: string): string =>
+    fileURLToPath(new URL(`../test-fixtures/${name}`, import.meta.url));
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+    resetRepoRootCacheForTests();
+    resetLayoutCacheForTests();
+  });
+
+  async function inside(name: string): Promise<typeof WorkersModule> {
+    vi.resetModules();
+    vi.stubEnv("DEVTOOLS_TEST_REPO_ROOT", fixture(name));
+    const root = await import("./repo/root.js");
+    root.resetRepoRootCacheForTests();
+    (await import("./repo/layout.js")).resetLayoutCacheForTests();
+    return import("./workers.js");
+  }
+
+  it("reads Backstage's workers.json, schedule-builder included", async () => {
+    const workers = await inside("backstage-repo");
+    expect(workers.workerApps()).toEqual(["platform", "schedule-builder"]);
+    expect(workers.workerAppDir("apps/schedule-builder")).toContain(
+      "backstage-repo/devdogsuga/apps/schedule-builder",
+    );
+  });
+
+  it("treats a DevDogsUGA without workers.json as managing no Workers", async () => {
+    const workers = await inside("devdogsuga-repo");
+    expect(workers.workerApps()).toEqual([]);
+    expect(workers.isWorkerApp("platform")).toBe(false);
   });
 });

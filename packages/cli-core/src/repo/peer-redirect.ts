@@ -22,7 +22,13 @@ import type { PeerRedirect } from "./peer-redirect-hooks.js";
 /** Registers `redirect`. Hooks cannot be unregistered, so each call adds a
  *  loader for the rest of the process; call it once per redirect. */
 export function redirectPeer(redirect: PeerRedirect): void {
+  redirectPeers([redirect]);
+}
+
+/** `redirectPeer` for several at once: the hooks keep one table per
+ *  registration, so everything that needs redirecting goes in one call. */
+export function redirectPeers(redirects: PeerRedirect[]): void {
   register("./peer-redirect-hooks.js", import.meta.url, {
-    data: [redirect],
+    data: redirects,
   });
 }

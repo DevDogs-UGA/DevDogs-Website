@@ -1,0 +1,7 @@
+{
+  "name": "schedule-builder",
+  "private": true,
+  "scripts": {
+    "dev": "next dev"
+  }
+}

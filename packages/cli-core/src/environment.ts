@@ -23,6 +23,10 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Condition } from "./catalog.js";
+import {
+  devdogsugaRootOrNull,
+  resolveLayout,
+} from "@devdogsuga/cli-core/repo/layout";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import {
   containerPrefix,
@@ -124,7 +128,12 @@ export function probeEnvironment(
   const names = execute("docker", ["ps", "--format", "{{.Names}}"]);
   if (names === null) return { docker, stack: "unknown", envFile };
 
-  const prefix = containerPrefix(readProjectId(findRepoRoot()));
+  // The project id lives in DevDogsUGA's supabase/config.toml, which a
+  // Backstage checkout without `devdogsuga/` simply does not have.
+  const supabaseRoot = devdogsugaRootOrNull(resolveLayout());
+  const prefix = containerPrefix(
+    supabaseRoot === null ? null : readProjectId(supabaseRoot),
+  );
   const running = names
     .split("\n")
     .some((name) => name.trim().startsWith(prefix));
