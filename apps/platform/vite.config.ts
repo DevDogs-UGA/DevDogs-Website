@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin } from "vite";
 import { run } from "vite-plugin-run";
@@ -26,15 +26,19 @@ const https =
     ? { cert: readFileSync(certPath), key: readFileSync(keyPath) }
     : undefined;
 
-// Generated inputs live outside this app: the docs are markdown under
-// `docs/`, the email templates are a package. `codegen` already builds both
+// Generated inputs live outside this app: the docs are markdown in the
+// DevDogsUGA checkout (`devdogsuga/docs/`), the email templates are a package. `codegen` already builds both
 // before `vinext build`/`vinext dev`, so these only keep the dev server's copy
 // current while it runs. The plugin holds no logic of its own; each runner
 // calls package scripts. Rebuilding everything on a change is fast enough (docs
 // 0.5s, email 1.6s) because both generators write only what changed, which is
 // also what stops their own output from retriggering the runner.
 const repoRoot = path.resolve(import.meta.dirname, "../..");
-const docsDir = `${repoRoot}/docs/`;
+// The link and what it points at: the watcher may report either spelling.
+const docsDirs = [
+  `${repoRoot}/devdogsuga/docs/`,
+  `${realpathSync(`${repoRoot}/devdogsuga/docs`)}/`,
+];
 const emailSrcDir = `${repoRoot}/packages/email/src/`;
 
 // Never a source: a temp file mid-rename, or the generators' own output.
@@ -46,7 +50,7 @@ const isGeneratedOutput = (file: string) =>
 const watchGeneratorInputs: Plugin = {
   name: "platform:watch-generator-inputs",
   configureServer(server) {
-    server.watcher.add([docsDir, emailSrcDir]);
+    server.watcher.add([...docsDirs, emailSrcDir]);
   },
 };
 
@@ -67,10 +71,11 @@ export default defineConfig({
           run: [
             "sh",
             "-c",
-            "pnpm -F @devdogsuga/docs codegen && pnpm -F @devdogsuga/docs populate:search",
+            "pnpm --dir ../../devdogsuga/docs run codegen && pnpm --dir ../../devdogsuga/docs run populate:search",
           ],
           condition: (file) =>
-            file.startsWith(docsDir) && !isGeneratedOutput(file),
+            docsDirs.some((dir) => file.startsWith(dir)) &&
+            !isGeneratedOutput(file),
           debounce: 300,
           build: false,
         },

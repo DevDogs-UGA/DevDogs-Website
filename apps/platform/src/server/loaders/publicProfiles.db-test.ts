@@ -626,7 +626,7 @@ async function runBackfill() {
   const migration = readFileSync(
     resolve(
       __dirname,
-      "../../../../../supabase/migrations/20261003000000_49_platform_public_profiles.sql",
+      "../../../../../devdogsuga/supabase/migrations/20261003000000_49_platform_public_profiles.sql",
     ),
     "utf8",
   );

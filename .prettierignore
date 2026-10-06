@@ -29,3 +29,11 @@ apps/slides/decks/
 
 # Closed cutover log; prettier is not idempotent on its wrapped list items.
 CUTOVER.md
+
+# apps/platform, moved from the product repo: generated but tracked.
+apps/platform/src/supabase/drizzle/
+# Rewritten unformatted by every `db:pull`, so formatting it never sticks.
+apps/platform/src/server/db/schema/generated/
+apps/platform/cloudflare-env.d.ts
+# Covered by packages/email/.gitignore, which --ignore-path does not read.
+packages/email/src/generated/

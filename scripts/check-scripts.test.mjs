@@ -31,6 +31,8 @@ const ALLOWED = {
   // The link to the DevDogsUGA checkout (scripts/devdogsuga.mjs).
   devdogsuga: "root: report where the devdogsuga/ link points",
   preinstall: "root: create and validate the devdogsuga/ link before install",
+  "platform#preview": "build, then run the production Worker locally",
+  "@devdogsuga/email#preview": "render the email templates to HTML files",
   "slides#follow": "run a deck on a demo laptop",
   "slides#export:md": "export a deck to docs pages",
   "slides#tag-steps": "tag workshop repo steps from a deck",
