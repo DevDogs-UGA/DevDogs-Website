@@ -54,6 +54,7 @@ vi.mock("@devdogsuga/cli-core/telemetry", () => ({
 const {
   extractFilters,
   parseTierArg,
+  groupFiltersByRoot,
   planDev,
   RUN_ALIAS_FINGERPRINT,
   runAliasMessage,
@@ -635,5 +636,37 @@ describe("runTask as a deprecated alias", () => {
     await expect(runTask(["test", "--all"])).rejects.toThrow("exit:0");
 
     expect(captureDeprecation.mock.calls[0]?.[1]).toBe(RUN_ALIAS_FINGERPRINT);
+  });
+});
+
+describe("groupFiltersByRoot", () => {
+  const apps = [
+    { name: "platform", script: "x", root: "/backstage" },
+    { name: "schedule-builder", script: "x", root: "/backstage/devdogsuga" },
+  ];
+
+  it("runs the whole workspace of the repo you are in when nothing is filtered", () => {
+    expect([...groupFiltersByRoot([], apps, "/backstage")]).toEqual([
+      ["/backstage", []],
+    ]);
+  });
+
+  it("sends a filter to the workspace that holds its app", () => {
+    expect([
+      ...groupFiltersByRoot(["schedule-builder"], apps, "/backstage"),
+    ]).toEqual([["/backstage/devdogsuga", ["schedule-builder"]]]);
+  });
+
+  it("splits a selection across both workspaces, unknown filters staying home", () => {
+    expect([
+      ...groupFiltersByRoot(
+        ["schedule-builder", "platform", "./packages/*"],
+        apps,
+        "/backstage",
+      ),
+    ]).toEqual([
+      ["/backstage", ["platform", "./packages/*"]],
+      ["/backstage/devdogsuga", ["schedule-builder"]],
+    ]);
   });
 });

@@ -13,10 +13,10 @@ import {
   sessionIsLocal,
   sessionLabel,
 } from "@devdogsuga/cli-core/db/connection";
+import { supabaseRoot } from "@devdogsuga/cli-core/db/run";
 import { isDryRun } from "@devdogsuga/cli-core/dry-run";
 import { isNonInteractive } from "@devdogsuga/cli-core/mode";
 import { reportRan, runInGroup } from "@devdogsuga/cli-core/process-group";
-import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import {
   classifySupabase,
   isConfigPush,
@@ -61,7 +61,7 @@ export async function planSupabase(
 /** Runs `pnpm exec supabase <args>` as given, then prints the command. */
 export async function runSupabaseRaw(args: readonly string[]): Promise<number> {
   const full = ["exec", "supabase", ...args];
-  const result = await runInGroup("pnpm", full, { cwd: findRepoRoot() });
+  const result = await runInGroup("pnpm", full, { cwd: supabaseRoot() });
   reportRan("pnpm", full, result);
   return result.code;
 }

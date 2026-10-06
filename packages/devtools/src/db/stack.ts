@@ -10,7 +10,7 @@
 import { writeFile } from "node:fs/promises";
 import { isDryRun } from "@devdogsuga/cli-core/dry-run";
 import { join } from "node:path";
-import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { resolveLayout } from "@devdogsuga/cli-core/repo/layout";
 import {
   foreignStackMessage,
   foreignStackProjectId,
@@ -42,7 +42,10 @@ export type StackCommand = (typeof STACK_COMMANDS)[number];
 function foreignStackHint(): string | undefined {
   const names = listContainerNames(STACK_API_PORT);
   if (names === null) return undefined;
-  const foreign = foreignStackProjectId(names, readProjectId(findRepoRoot()));
+  const foreign = foreignStackProjectId(
+    names,
+    readProjectId(resolveLayout().devdogsugaRoot),
+  );
   return foreign === null ? undefined : foreignStackMessage(foreign);
 }
 
@@ -88,7 +91,13 @@ async function startLocalStack(): Promise<{
   } catch {
     return { code: 1, wroteEnvFile: false };
   }
-  await writeFile(join(findRepoRoot(), ".env.generated"), env);
+  // The local stack serves both repos' apps, and each reads `.env.generated`
+  // at its own root: from a Backstage checkout that is Backstage's root and
+  // the DevDogsUGA checkout's (`layout.envMirrors`).
+  const layout = resolveLayout();
+  for (const dir of [layout.root, ...layout.envMirrors]) {
+    await writeFile(join(dir, ".env.generated"), env);
+  }
   const bucketsCode = await seedBuckets({ kind: "local" });
   return { code: bucketsCode, wroteEnvFile: true };
 }

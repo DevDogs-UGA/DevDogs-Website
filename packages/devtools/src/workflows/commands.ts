@@ -14,8 +14,8 @@ import { loadEnvLoad } from "@devdogsuga/cli-core/repo/peers";
 import { scopedProcessEnv } from "../cf/local-env.js";
 import { buildWorkspaceDeps } from "../cf/build.js";
 import { runWithStderr } from "@devdogsuga/cli-core/db/run";
-import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
-import { workerPaths } from "@devdogsuga/cli-core/workers";
+import { appWorkspaceRoot } from "@devdogsuga/cli-core/repo/layout";
+import { workerAppDir, workerPaths } from "@devdogsuga/cli-core/workers";
 import { recordResolved } from "@devdogsuga/cli-core/invocation";
 import { resolveTier } from "@devdogsuga/cli-core/tier";
 import { unwrap } from "@devdogsuga/cli-core/ui";
@@ -291,7 +291,7 @@ function pidIsAlive(pid: number): boolean {
 
 function appDir(app: string): string | undefined {
   const path = workerPaths().find((candidate) => basename(candidate) === app);
-  return path === undefined ? undefined : join(findRepoRoot(), path);
+  return path === undefined ? undefined : workerAppDir(path);
 }
 
 /** Probe Wrangler's Workflow explorer API, rather than merely checking a port. */
@@ -433,7 +433,7 @@ async function startTemporaryWrangler(
   // cannot bundle it at all (see `cf/build.ts`). The plugin takes no env file,
   // so the scoped env rides the child's own environment instead.
   const child = spawn("pnpm", vinextDevArgs(app, port), {
-    cwd: findRepoRoot(),
+    cwd: appWorkspaceRoot(app),
     stdio: "inherit",
     detached: process.platform !== "win32",
     env: await scopedProcessEnv(app, loaded.env, "development"),
@@ -769,6 +769,7 @@ export async function runWorkflowsRun(
     const result = await runWithStderr(
       workflowTriggerArgs(choice, options),
       triggerEnv,
+      appWorkspaceRoot(choice.app),
     );
     if (
       result.code !== 0 &&

@@ -5,13 +5,14 @@
  * app without the file has no crons and is skipped; an app whose export fails
  * validation throws with the path.
  */
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   flattenDiagnosticMessageText,
   parseConfigFileTextToJson,
 } from "typescript";
+import { findApp, listApps } from "@devdogsuga/cli-core/repo/layout";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import {
   CronRoutes,
@@ -87,11 +88,9 @@ export function workflowsForTier(
 
 /** Every app that actually carries a Wrangler configuration. */
 export function discoverWranglerConfigs(): AppWranglerConfig[] {
-  const appsRoot = join(findRepoRoot(), "apps");
-  return readdirSync(appsRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
+  return listApps()
     .flatMap((entry): AppWranglerConfig[] => {
-      const path = join(appsRoot, entry.name, "wrangler.jsonc");
+      const path = join(entry.dir, "wrangler.jsonc");
       return existsSync(path)
         ? [{ app: entry.name, path, config: parseWrangler(path) }]
         : [];
@@ -122,9 +121,7 @@ export async function discoverCronMaps(): Promise<AppCronMap[]> {
 
   for (const { app } of discoverWranglerConfigs()) {
     const scheduledPath = join(
-      findRepoRoot(),
-      "apps",
-      app,
+      findApp(app) ?? join(findRepoRoot(), "apps", app),
       "cloudflare",
       "scheduled.ts",
     );

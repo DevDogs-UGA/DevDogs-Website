@@ -24,6 +24,7 @@
  * `next.config.ts` without them.
  */
 import { run } from "@devdogsuga/cli-core/db/run";
+import { appWorkspaceRoot } from "@devdogsuga/cli-core/repo/layout";
 
 function workspaceDepsBuildCommand(app: string): string[] {
   return ["-r", "--if-present", "--filter", `${app}^...`, "run", "build"];
@@ -32,7 +33,7 @@ function workspaceDepsBuildCommand(app: string): string[] {
 /** Build only `app`'s workspace dependencies — all `vinext dev` needs, since
  * it compiles the app itself on demand. */
 export function buildWorkspaceDeps(app: string): Promise<number> {
-  return run(workspaceDepsBuildCommand(app));
+  return run(workspaceDepsBuildCommand(app), undefined, appWorkspaceRoot(app));
 }
 
 /** The pnpm invocations `buildWorkerApp` runs, in order. */
@@ -57,7 +58,7 @@ export async function buildWorkerApp(
   const depsCode = await buildWorkspaceDeps(app);
   if (depsCode !== 0) return depsCode;
   for (const command of framework) {
-    const code = await run(command, env);
+    const code = await run(command, env, appWorkspaceRoot(app));
     if (code !== 0) return code;
   }
   return 0;

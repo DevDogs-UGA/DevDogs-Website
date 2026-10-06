@@ -14,6 +14,7 @@
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { layoutAt, type RepoLayout } from "@devdogsuga/cli-core/repo/layout";
 import { parseWorkerEntries } from "@devdogsuga/cli-core/workers";
 
 /** The `packages:` glob list from `pnpm-workspace.yaml`, e.g. `["apps/*",
@@ -91,22 +92,56 @@ function sameSet(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((item) => b.includes(item));
 }
 
-/** Every drift between `workers.json`, the workspace and the deploy matrix,
- * as one readable line each. Empty means in step. */
-export function checkWorkers(root: string): string[] {
+/**
+ * Every drift between `workers.json`, the workspace and the deploy matrix,
+ * as one readable line each. Empty means in step.
+ *
+ * `workers.json` lives at the root of the repo being checked. DevDogsUGA
+ * without one manages no Worker apps (the platform moved to Backstage), so
+ * there is nothing to check. From a Backstage checkout the apps are looked up
+ * in both repos, since schedule-builder is deployed from Backstage but stays in
+ * DevDogsUGA's `apps/`.
+ */
+export function checkWorkers(
+  root: string,
+  layout: RepoLayout = layoutAt(root),
+): string[] {
   const problems: string[] = [];
 
+  const workersFile = join(root, "workers.json");
+  if (!existsSync(workersFile)) {
+    if (layout.kind === "devdogsuga") return [];
+    return ["workers.json does not exist."];
+  }
   const paths = parseWorkerEntries(
-    JSON.parse(readFileSync(join(root, "workers.json"), "utf8")),
+    JSON.parse(readFileSync(workersFile, "utf8")),
   ).map((entry) => entry.path);
   const apps = paths.map((path) => basename(path));
 
-  const scanned = expandWorkspacePackages(
-    root,
-    workspaceGlobs(readFileSync(join(root, "pnpm-workspace.yaml"), "utf8")),
-  );
+  const roots = [root];
+  if (layout.kind === "backstage" && layout.hasDevdogsuga) {
+    roots.push(layout.devdogsugaRoot);
+  }
+  const scanned = [
+    ...new Set(
+      roots.flatMap((dir) => {
+        const workspace = join(dir, "pnpm-workspace.yaml");
+        return existsSync(workspace)
+          ? expandWorkspacePackages(
+              dir,
+              workspaceGlobs(readFileSync(workspace, "utf8")),
+            )
+          : [];
+      }),
+    ),
+  ];
+  const dirOf = (relative: string): string =>
+    join(
+      roots.find((dir) => existsSync(join(dir, relative))) ?? root,
+      relative,
+    );
   const withWrangler = scanned.filter((relative) =>
-    existsSync(join(root, relative, "wrangler.jsonc")),
+    existsSync(join(dirOf(relative), "wrangler.jsonc")),
   );
   for (const path of withWrangler.filter((p) => !paths.includes(p))) {
     problems.push(`${path} has a wrangler.jsonc but is not in workers.json.`);
@@ -116,7 +151,7 @@ export function checkWorkers(root: string): string[] {
   }
 
   for (const path of paths) {
-    const manifest = join(root, path, "package.json");
+    const manifest = join(dirOf(path), "package.json");
     if (!existsSync(manifest)) continue;
     const name = (
       JSON.parse(readFileSync(manifest, "utf8")) as { name?: string }
@@ -131,6 +166,9 @@ export function checkWorkers(root: string): string[] {
 
   const deployApp = join(root, ".github", "workflows", "deploy-app.yaml");
   if (!existsSync(deployApp)) {
+    // Backstage's deploy workflow is its own; only a repo that carries the
+    // reusable matrix has one to drift.
+    if (layout.kind === "backstage") return problems;
     problems.push(".github/workflows/deploy-app.yaml does not exist.");
     return problems;
   }

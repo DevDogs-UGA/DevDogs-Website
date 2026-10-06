@@ -57,17 +57,12 @@
  * typecheck/lint/test/dev run has no business doing (see `passthroughApps`'s
  * doc comment for why that is more than just wasted work).
  */
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { cancel, confirm, isCancel, multiselect } from "@clack/prompts";
 import { isDryRun } from "@devdogsuga/cli-core/dry-run";
 import { reportRan, runInGroup } from "@devdogsuga/cli-core/process-group";
+import { listApps, resolveLayout } from "@devdogsuga/cli-core/repo/layout";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { loadEnvLoad } from "@devdogsuga/cli-core/repo/peers";
 import {
@@ -121,6 +116,44 @@ const NEEDS_DEPS_BUILT = new Set([
 export interface App {
   name: string;
   script: string;
+  /** The pnpm workspace the app belongs to; absent means the repo you are in. */
+  root?: string;
+}
+
+/** One `pnpm` invocation and the workspace it runs in. */
+interface Command {
+  args: string[];
+  cwd: string;
+}
+
+/** The workspace root an app lives in: `<root>/apps/<name>` gives `<root>`. */
+function workspaceRootOfApp(dir: string): string {
+  return dirname(dirname(dir));
+}
+
+/**
+ * Splits `filters` by the workspace that holds the app each one names. From a
+ * Backstage checkout `schedule-builder` belongs to DevDogsUGA's workspace, and
+ * a `pnpm --filter` run from Backstage's root would match nothing. A filter
+ * naming no known app (a glob, a path) stays with the repo you are in. No
+ * filters means the whole workspace of the repo you are in.
+ */
+export function groupFiltersByRoot(
+  filters: readonly string[],
+  apps: readonly App[] = appsWith(),
+  repoRoot: string = findRepoRoot(),
+): Map<string, string[]> {
+  const groups = new Map<string, string[]>([[repoRoot, []]]);
+  for (const filter of filters) {
+    const root = apps.find((app) => app.name === filter)?.root ?? repoRoot;
+    const group = groups.get(root) ?? [];
+    group.push(filter);
+    groups.set(root, group);
+  }
+  if (filters.length > 0 && groups.get(repoRoot)?.length === 0) {
+    groups.delete(repoRoot);
+  }
+  return groups;
 }
 
 // ── Passthrough ──────────────────────────────────────────────────────────────
@@ -143,12 +176,12 @@ export interface App {
  * itself relative to that one package rather than the workspace root.
  */
 async function runOne(
-  args: string[],
+  { args, cwd }: Command,
   extraEnv: NodeJS.ProcessEnv | undefined,
   { final }: { final: boolean },
 ): Promise<void> {
   const result = await runInGroup("pnpm", args, {
-    cwd: findRepoRoot(),
+    cwd,
     // Guards the one recursion that would matter: a bare, filter-less `pnpm
     // -r` never re-enters the root package's own scripts (pnpm excludes the
     // workspace root from an unfiltered recursive run by default), but an
@@ -174,11 +207,11 @@ async function runOne(
  * Never returns: `runOne` exits on a failure and on the final command.
  */
 async function passthrough(
-  commands: string[][],
+  commands: Command[],
   extraEnv?: NodeJS.ProcessEnv,
 ): Promise<never> {
-  for (const [index, args] of commands.entries()) {
-    await runOne(args, extraEnv, { final: index === commands.length - 1 });
+  for (const [index, command] of commands.entries()) {
+    await runOne(command, extraEnv, { final: index === commands.length - 1 });
   }
   // Unreachable: `runOne` above always exits on the final command (`final:
   // true` forces it even on success), and exits early on any earlier
@@ -259,24 +292,41 @@ export function extractFilters(args: readonly string[]): {
  * `packages/*`/`docs` package is reachable from at least one app's
  * dependency graph, and no app depends on another app).
  */
-function allAppNames(): string[] {
-  const dir = join(findRepoRoot(), "apps");
-  if (!existsSync(dir)) return [];
-
+function allAppNames(root: string = findRepoRoot()): string[] {
   const names: string[] = [];
-  for (const entry of readdirSync(dir)) {
-    const manifest = join(dir, entry, "package.json");
+  for (const app of appManifests(root)) {
+    if (app.pkg.name) names.push(app.pkg.name);
+  }
+  return names;
+}
+
+interface AppManifest {
+  root: string;
+  pkg: { name?: string; scripts?: Record<string, string | undefined> };
+}
+
+/**
+ * The parsed `package.json` of every app in the repo you are in, plus DevDogsUGA's
+ * from a Backstage checkout (`repo/layout.ts`). With `root`, only that
+ * workspace's. An unparsable manifest is one we cannot use, so it is skipped.
+ */
+function appManifests(root?: string): AppManifest[] {
+  const found: AppManifest[] = [];
+  for (const app of listApps(resolveLayout())) {
+    const appRoot = workspaceRootOfApp(app.dir);
+    if (root !== undefined && appRoot !== root) continue;
+    const manifest = join(app.dir, "package.json");
     if (!existsSync(manifest)) continue;
     try {
-      const pkg = JSON.parse(readFileSync(manifest, "utf8")) as {
-        name?: string;
-      };
-      if (pkg.name) names.push(pkg.name);
+      found.push({
+        root: appRoot,
+        pkg: JSON.parse(readFileSync(manifest, "utf8")) as AppManifest["pkg"],
+      });
     } catch {
       // Same as `appsWith`: an unparsable manifest is one we cannot use.
     }
   }
-  return names;
+  return found;
 }
 
 /**
@@ -334,27 +384,41 @@ async function passthroughApps(
   rest: string[],
   extraEnv?: NodeJS.ProcessEnv,
 ): Promise<never> {
-  const commands: string[][] = [];
+  const commands: Command[] = [];
 
-  const needsDepsPreStep =
-    NEEDS_DEPS_BUILT.has(task) && (task !== "build" || filters.length > 0);
-  if (needsDepsPreStep) {
-    const depsOfTargets = filters.length > 0 ? filters : allAppNames();
-    const depsFilters = depsOfTargets.flatMap((f) => ["--filter", `${f}^...`]);
-    commands.push(["-r", "--if-present", ...depsFilters, "run", "build"]);
+  // One workspace per group: the repo you are in, and DevDogsUGA's when a
+  // filter names one of its apps (from a Backstage checkout).
+  for (const [cwd, groupFilters] of groupFiltersByRoot(filters)) {
+    const needsDepsPreStep =
+      NEEDS_DEPS_BUILT.has(task) && (task !== "build" || filters.length > 0);
+    if (needsDepsPreStep) {
+      const depsOfTargets =
+        groupFilters.length > 0 ? groupFilters : allAppNames(cwd);
+      const depsFilters = depsOfTargets.flatMap((f) => [
+        "--filter",
+        `${f}^...`,
+      ]);
+      commands.push({
+        args: ["-r", "--if-present", ...depsFilters, "run", "build"],
+        cwd,
+      });
+    }
+
+    const ownFilters = groupFilters.flatMap((f) => ["--filter", f]);
+    const parallel = task === "dev" ? ["--parallel"] : [];
+    commands.push({
+      args: [
+        "-r",
+        "--if-present",
+        ...parallel,
+        ...ownFilters,
+        "run",
+        task,
+        ...rest,
+      ],
+      cwd,
+    });
   }
-
-  const ownFilters = filters.flatMap((f) => ["--filter", f]);
-  const parallel = task === "dev" ? ["--parallel"] : [];
-  commands.push([
-    "-r",
-    "--if-present",
-    ...parallel,
-    ...ownFilters,
-    "run",
-    task,
-    ...rest,
-  ]);
 
   return passthrough(commands, extraEnv);
 }
@@ -435,16 +499,20 @@ async function runDev(
   filters: string[],
   rest: string[],
   tierEnv: NodeJS.ProcessEnv | undefined,
+  root: string,
 ): Promise<never> {
-  const depsOfTargets = filters.length > 0 ? filters : allAppNames();
+  const depsOfTargets = filters.length > 0 ? filters : allAppNames(root);
   await runOne(
-    [
-      "-r",
-      "--if-present",
-      ...depsOfTargets.flatMap((f) => ["--filter", `${f}^...`]),
-      "run",
-      "build",
-    ],
+    {
+      args: [
+        "-r",
+        "--if-present",
+        ...depsOfTargets.flatMap((f) => ["--filter", `${f}^...`]),
+        "run",
+        "build",
+      ],
+      cwd: root,
+    },
     tierEnv,
     { final: false },
   );
@@ -475,7 +543,7 @@ async function runDev(
   let first: number | undefined;
   const runs = children.map(async ({ args, env }) => {
     const result = await runInGroup("pnpm", args, {
-      cwd: findRepoRoot(),
+      cwd: root,
       env: { ...env, DEVDOGS_PICK: "0" },
       abort: stop.signal,
     });
@@ -496,8 +564,19 @@ async function dispatch(
   tierEnv: NodeJS.ProcessEnv | undefined,
 ): Promise<never> {
   if (task === "dev") {
-    const plan = planDev(appsWith("dev"), filters, rest);
-    if (plan.vinext.length > 0) return runDev(plan, filters, rest, tierEnv);
+    const groups = groupFiltersByRoot(filters);
+    if (groups.size > 1) {
+      process.stderr.write(
+        "devtools run: dev servers from DevDogsUGA and Backstage cannot be started together; " +
+          "start them from their own checkouts.\n",
+      );
+      process.exit(1);
+    }
+    const root = [...groups.keys()][0]!;
+    const plan = planDev(appsWith("dev", root), filters, rest);
+    if (plan.vinext.length > 0) {
+      return runDev(plan, filters, rest, tierEnv, root);
+    }
   }
   return passthroughApps(task, filters, rest, tierEnv);
 }
@@ -562,24 +641,12 @@ export function parseTierArg(args: readonly string[]): TierArgResult {
  * out to a dry-run equivalent, which costs about a second before the first
  * question.
  */
-function appsWith(task: string): App[] {
-  const dir = join(findRepoRoot(), "apps");
-  if (!existsSync(dir)) return [];
-
+function appsWith(task?: string, root?: string): App[] {
   const found: App[] = [];
-  for (const entry of readdirSync(dir)) {
-    const manifest = join(dir, entry, "package.json");
-    if (!existsSync(manifest)) continue;
-    try {
-      const pkg = JSON.parse(readFileSync(manifest, "utf8")) as {
-        name?: string;
-        scripts?: Record<string, string | undefined>;
-      };
-      const script = pkg.scripts?.[task];
-      if (pkg.name && script) found.push({ name: pkg.name, script });
-    } catch {
-      // A manifest we cannot parse is one we cannot offer. pnpm will report
-      // it far better than a picker could.
+  for (const app of appManifests(root)) {
+    const script = task === undefined ? "" : app.pkg.scripts?.[task];
+    if (app.pkg.name && (task === undefined || script)) {
+      found.push({ name: app.pkg.name, script: script ?? "", root: app.root });
     }
   }
   return found;

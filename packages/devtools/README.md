@@ -76,6 +76,24 @@ rather than a table here. Its first screen lists every interactive command
 under a plain-English title ("Restart local Supabase") with the command to
 type beside it (`restart-stack`).
 
+## Which repo it runs in
+
+Both CLIs run from a DevDogsUGA checkout or from Backstage's (`package.json`
+name `devdogs-monorepo` or `backstage`; the layout code is
+`packages/cli-core/src/repo/layout.ts`). From Backstage, DevDogsUGA is
+`<root>/devdogsuga`: a gitignored symlink to the sibling clone locally
+(`pnpm devdogsuga`), a real checkout at the pinned SHA in CI.
+
+| What                                                                                                  | Where                                                                                                                                                                                                                              |
+| ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `supabase/` (CLI cwd, config, migrations, seeds, avatars, env manifest), `database.types.ts`, `docs/` | DevDogsUGA's root (`devdogsuga/` from Backstage)                                                                                                                                                                                   |
+| `workers.json`, `.github/`                                                                            | the repo you are in; DevDogsUGA without one manages no Workers                                                                                                                                                                     |
+| apps (`cron`, `run`, `deploy <app>`, env manifests)                                                   | the repo you are in plus DevDogsUGA's `apps/`; on a name clash the repo you are in wins                                                                                                                                            |
+| `.env`, `.env.<tier>`, `.env.generated`                                                               | the root of the repo you are in; `deploy write-env` and the local stack's `.env.generated` also write DevDogsUGA's root, because schedule-builder reads its own repo root. `env pull\|push\|reset` touch only the root you are in. |
+
+`pnpm exec supabase` and `wrangler` run inside DevDogsUGA's workspace, so
+`devdogsuga/` needs its own `pnpm install` before the commands that use them.
+
 ## Telemetry disclosure
 
 This CLI reports its own crashes to Sentry (see `src/telemetry.ts`), on by

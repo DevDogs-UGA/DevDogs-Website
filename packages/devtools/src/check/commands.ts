@@ -7,6 +7,7 @@
  */
 import { flagValue } from "@devdogsuga/cli-core/args";
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
+import { resolveLayout } from "@devdogsuga/cli-core/repo/layout";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { catalog } from "../catalog.js";
 import { checkEnv } from "./env.js";
@@ -30,7 +31,11 @@ function report(name: string, problems: readonly string[], ok: string): number {
 
 function migrations(rest: string[]): number {
   const base = flagValue(rest, "--base") ?? DEFAULT_BASE;
-  const { baseLatest, violations } = checkMigrationOrder(findRepoRoot(), base);
+  // `supabase/migrations` is DevDogsUGA's, wherever the CLI runs from.
+  const { baseLatest, violations } = checkMigrationOrder(
+    resolveLayout().devdogsugaRoot,
+    base,
+  );
   return report(
     "migrations",
     violations.map(

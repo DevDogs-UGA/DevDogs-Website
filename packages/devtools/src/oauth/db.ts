@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { execFileSync } from "node:child_process";
 import { parse } from "dotenv";
+import { layoutAt } from "@devdogsuga/cli-core/repo/layout";
+import { discoverRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { PROVIDER_SCOPES } from "./config.js";
 
 export type LocalSupabaseConfig = {
@@ -28,6 +30,14 @@ function runStatus(argv: string[], cwd: string): string {
  * reasons that have nothing to do with Supabase.
  */
 export function detectLocalSupabase(cwd: string): LocalSupabaseConfig {
+  // In a Backstage checkout the stack's `supabase/` project is DevDogsUGA's.
+  const repoRoot = discoverRepoRoot(cwd);
+  if (repoRoot !== null) {
+    const layout = layoutAt(repoRoot);
+    if (layout.kind === "backstage" && layout.hasDevdogsuga) {
+      cwd = layout.devdogsugaRoot;
+    }
+  }
   let output: string;
   try {
     output = runStatus(["supabase", "status", "-o", "env"], cwd);

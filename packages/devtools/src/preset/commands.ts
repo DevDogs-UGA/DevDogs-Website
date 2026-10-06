@@ -9,12 +9,11 @@
  */
 import { confirm, log } from "@clack/prompts";
 import { flagValue } from "@devdogsuga/cli-core/args";
-import { reportRuns } from "@devdogsuga/cli-core/db/run";
+import { reportRuns, supabaseRoot } from "@devdogsuga/cli-core/db/run";
 import { isDryRun } from "@devdogsuga/cli-core/dry-run";
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { hasYes, isNonInteractive } from "@devdogsuga/cli-core/mode";
 import { reportRan, runInGroup } from "@devdogsuga/cli-core/process-group";
-import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import {
   sessionIsLocal,
   sessionLabel,
@@ -62,7 +61,7 @@ async function newMigration(args: string[]): Promise<number> {
 /** `pnpm -F @devdogsuga/supabase run types:db`, run with the session's env. */
 async function regenerateTypes(): Promise<number> {
   const args = ["-F", "@devdogsuga/supabase", "run", "types:db"];
-  const result = await runInGroup("pnpm", args, { cwd: findRepoRoot() });
+  const result = await runInGroup("pnpm", args, { cwd: supabaseRoot() });
   reportRan("pnpm", args, result);
   return result.code;
 }

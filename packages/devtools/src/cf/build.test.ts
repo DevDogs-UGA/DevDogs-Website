@@ -41,8 +41,14 @@ describe("buildWorkerApp", () => {
           "run",
           "build",
         ],
+        undefined,
+        expect.any(String),
       ],
-      [["--filter", "schedule-builder", "exec", "vinext", "build"], env],
+      [
+        ["--filter", "schedule-builder", "exec", "vinext", "build"],
+        env,
+        expect.any(String),
+      ],
     ]);
   });
 

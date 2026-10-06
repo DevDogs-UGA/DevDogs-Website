@@ -22,6 +22,7 @@ import { join } from "node:path";
 import { confirm } from "@clack/prompts";
 import { parse as parseEnv } from "dotenv";
 import { loadEnvLoad } from "@devdogsuga/cli-core/repo/peers";
+import { findApp } from "@devdogsuga/cli-core/repo/layout";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { positionals } from "@devdogsuga/cli-core/args";
 import { recordResolved } from "@devdogsuga/cli-core/invocation";
@@ -349,7 +350,7 @@ export function resolveBaseUrl(
   tierEnv: Record<string, string>,
 ): string {
   if (tier === "development" && app) {
-    const appRoot = join(findRepoRoot(), "apps", app);
+    const appRoot = findApp(app) ?? join(findRepoRoot(), "apps", app);
     const local = {
       ...readEnvFile(join(appRoot, ".dev.vars.example")),
       ...readEnvFile(join(appRoot, ".dev.vars")),

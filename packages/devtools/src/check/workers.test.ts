@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { checkWorkers, deployMatrixApps, workspaceGlobs } from "./workers.js";
 
@@ -83,5 +84,22 @@ describe("checkWorkers", () => {
   it("flags a deploy matrix that drifted", () => {
     repo(["platform", "ghost"]);
     expect(checkWorkers(root).join("\n")).toContain("deploy-app.yaml's matrix");
+  });
+});
+
+describe("checkWorkers by layout", () => {
+  const fixture = (name: string): string =>
+    fileURLToPath(
+      new URL(`../../../cli-core/test-fixtures/${name}`, import.meta.url),
+    );
+
+  it("has nothing to check in a DevDogsUGA without workers.json", () => {
+    expect(checkWorkers(fixture("devdogsuga-repo"))).toEqual([]);
+  });
+
+  it("finds schedule-builder in devdogsuga/ from a Backstage checkout", () => {
+    // No deploy-app.yaml in the fixture: Backstage's deploy workflow is its
+    // own, so that alone is not drift there.
+    expect(checkWorkers(fixture("backstage-repo"))).toEqual([]);
   });
 });

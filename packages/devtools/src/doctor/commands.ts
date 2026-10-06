@@ -30,6 +30,10 @@ import {
   describeEnvironment,
   probeEnvironment,
 } from "@devdogsuga/cli-core/environment";
+import {
+  devdogsugaRootOrNull,
+  layoutAt,
+} from "@devdogsuga/cli-core/repo/layout";
 import { discoverRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { validateSessionPoolerUrl } from "../db/pooler.js";
 import {
@@ -526,14 +530,19 @@ export async function runEnvironmentDoctor(
           : undefined,
     });
   }
-  if (repoRoot) checks.push(typesFreshness(repoRoot));
+  // `supabase/` and the generated types are DevDogsUGA's, so from a Backstage
+  // checkout they are read through `devdogsuga/` (and skipped without it).
+  const supabaseRoot = repoRoot
+    ? devdogsugaRootOrNull(layoutAt(repoRoot))
+    : null;
+  if (supabaseRoot) checks.push(typesFreshness(supabaseRoot));
   const sessionDbUrl = process.env.DB_URL;
-  if (repoRoot && sessionDbUrl) {
+  if (supabaseRoot && sessionDbUrl) {
     try {
       checks.push(
         ...databaseChecks(
           await probeDatabase(sessionDbUrl),
-          readDeclaredBuckets(repoRoot),
+          readDeclaredBuckets(supabaseRoot),
         ),
       );
     } catch (err) {
