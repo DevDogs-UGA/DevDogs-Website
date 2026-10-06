@@ -139,6 +139,79 @@ describe("checkReconcile", () => {
   });
 });
 
+describe("checkReconcile: waiting for the deployed release", () => {
+  const noSleep = async () => undefined;
+  const url = "https://devdogsuga.org/cron/config-reconcile";
+
+  function answeredBy(releases: (string | null)[]) {
+    const calls: string[] = [];
+    const fetchImpl = stubFetch((u) => {
+      calls.push(u);
+      const release = releases[Math.min(calls.length, releases.length) - 1];
+      return { status: 200, body: { success: true, release } };
+    });
+    return { calls, fetchImpl };
+  }
+
+  it("retries while the previous release answers, then passes on the new one", async () => {
+    const { calls, fetchImpl } = answeredBy(["old", null, "new"]);
+    const result = await checkReconcile(url, "secret", fetchImpl, {
+      release: "new",
+      sleep: noSleep,
+    });
+    expect(result.status).toBe("pass");
+    expect(calls).toHaveLength(3);
+  });
+
+  it("fails, naming both releases, when the new one never answers", async () => {
+    const { calls, fetchImpl } = answeredBy(["old"]);
+    const result = await checkReconcile(url, "secret", fetchImpl, {
+      release: "new",
+      attempts: 3,
+      sleep: noSleep,
+    });
+    expect(result.status).toBe("fail");
+    expect(result.detail).toContain("old");
+    expect(result.detail).toContain("new");
+    expect(calls).toHaveLength(3);
+  });
+
+  it("judges the new release's own answer, failure included", async () => {
+    const result = await checkReconcile(
+      url,
+      "secret",
+      stubFetch(() => ({
+        status: 200,
+        body: { success: false, reason: "zero meetings", release: "new" },
+      })),
+      { release: "new", sleep: noSleep },
+    );
+    expect(result.status).toBe("fail");
+    expect(result.detail).toContain("zero meetings");
+  });
+
+  it("passes when a newer Worker already applied its config", async () => {
+    const result = await checkReconcile(
+      url,
+      "secret",
+      stubFetch(() => ({
+        status: 200,
+        body: { success: true, skipped: "superseded", release: "new" },
+      })),
+      { release: "new", sleep: noSleep },
+    );
+    expect(result.status).toBe("pass");
+    expect(result.detail).toContain("newer Worker");
+  });
+
+  it("accepts any release when none is expected", async () => {
+    const { calls, fetchImpl } = answeredBy(["old"]);
+    const result = await checkReconcile(url, "secret", fetchImpl);
+    expect(result.status).toBe("pass");
+    expect(calls).toHaveLength(1);
+  });
+});
+
 describe("retryWhilePropagating", () => {
   const noSleep = async () => undefined;
 

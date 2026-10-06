@@ -162,6 +162,26 @@ describe("runReconcile", () => {
     expect(process.exitCode).toBeUndefined();
   });
 
+  it("in CI, waits until the Worker for GITHUB_SHA answers", async () => {
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    let calls = 0;
+    const { fetchImpl } = respond(() => ({
+      status: 200,
+      body: { success: true, release: ++calls < 3 ? "previous" : "abc123" },
+    }));
+
+    const result = await runReconcile({
+      tier: "production",
+      config,
+      fetchImpl,
+      env: { CRON_SECRET: "s", GITHUB_SHA: "abc123" },
+      expect: { sleep: async () => undefined },
+    });
+
+    expect(calls).toBe(3);
+    expect(result.status).toBe("pass");
+  });
+
   it("fails when the route answers 200 but the reconcile did not succeed", async () => {
     vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const { fetchImpl } = respond(() => ({

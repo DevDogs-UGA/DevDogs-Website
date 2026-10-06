@@ -123,6 +123,18 @@ function toPath(location: string): string {
   }
 }
 
+export interface ReconcileExpectation {
+  /**
+   * The git SHA just deployed. The route names the release that answered
+   * it, and an answer from any other release is retried until this one
+   * takes over. Omitted, whichever Worker answers is accepted.
+   */
+  release?: string;
+  attempts?: number;
+  delayMs?: number;
+  sleep?: (ms: number) => Promise<void>;
+}
+
 /**
  * `GET /cron/config-reconcile`, authenticated. Unlike `devtools jobs run`
  * (which only checks the HTTP status), this reads the JSON body: the route
@@ -130,46 +142,101 @@ function toPath(location: string): string {
  * (`{ success: false, reason: … }`, see
  * apps/platform/src/app/(api)/cron/config-reconcile/route.ts), so an
  * HTTP-status-only check would never catch that failure.
+ *
+ * With `expect.release`, it also checks WHICH Worker answered. Right after
+ * `wrangler deploy`, the previous version can still serve the request, and
+ * its reconcile applies the config it was built with, not the one just
+ * deployed. On 2026-10-05 that made the deploy's reconcile a silent no-op.
+ * Repeating the call is safe: the route upserts, and it refuses to let an
+ * older Worker overwrite what a newer one applied.
  */
 export async function checkReconcile(
   url: string,
   cronSecret: string,
   fetchImpl: FetchLike = fetch,
+  {
+    release,
+    attempts = 18,
+    delayMs = 10_000,
+    sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms)),
+  }: ReconcileExpectation = {},
 ): Promise<CheckResult> {
   const name = `config-reconcile ${url}`;
+  for (let attempt = 1; ; attempt++) {
+    const answer = await callReconcile(url, cronSecret, fetchImpl);
+    if ("status" in answer) return { name, ...answer };
+    const answeredBy = releaseOf(answer.body);
+    if (release === undefined || answeredBy === release) {
+      return { name, ...judgeReconcile(answer.body) };
+    }
+    if (attempt >= attempts) {
+      return {
+        name,
+        status: "fail",
+        detail:
+          `answered by release ${answeredBy ?? "(none)"} after ${attempts} ` +
+          `attempts, expected ${release}: the new Worker never took over`,
+      };
+    }
+    await sleep(delayMs);
+  }
+}
+
+async function callReconcile(
+  url: string,
+  cronSecret: string,
+  fetchImpl: FetchLike,
+): Promise<{ body: unknown } | { status: "fail"; detail: string }> {
   let response;
   try {
     response = await fetchImpl(url, {
       headers: { authorization: `Bearer ${cronSecret}` },
     });
   } catch (error) {
-    return { name, status: "fail", detail: describeError(error) };
+    return { status: "fail", detail: describeError(error) };
   }
   if (!response.ok) {
-    return { name, status: "fail", detail: `HTTP ${response.status}` };
+    return { status: "fail", detail: `HTTP ${response.status}` };
   }
-  let body: unknown;
   try {
-    body = await response.json();
+    return { body: await response.json() };
   } catch (error) {
     return {
-      name,
       status: "fail",
       detail: `non-JSON response: ${describeError(error)}`,
     };
   }
+}
+
+function releaseOf(body: unknown): string | null {
+  return typeof body === "object" &&
+    body !== null &&
+    "release" in body &&
+    typeof body.release === "string"
+    ? body.release
+    : null;
+}
+
+function judgeReconcile(body: unknown): Omit<CheckResult, "name"> {
   if (
     typeof body === "object" &&
     body !== null &&
     "success" in body &&
     body.success === true
   ) {
+    // A newer Worker than this one already applied its config: nothing to
+    // do, and not a failure.
+    if ("skipped" in body && body.skipped === "superseded") {
+      return {
+        status: "pass",
+        detail: "skipped: a newer Worker version already applied its config",
+      };
+    }
     const counts =
       "counts" in body
         ? JSON.stringify((body as { counts: unknown }).counts)
         : "";
     return {
-      name,
       status: "pass",
       detail: `succeeded${counts ? ` (${counts})` : ""}`,
     };
@@ -179,7 +246,6 @@ export async function checkReconcile(
       ? String(body.reason)
       : JSON.stringify(body);
   return {
-    name,
     status: "fail",
     detail: `reconcile did not succeed: ${reason}`,
   };

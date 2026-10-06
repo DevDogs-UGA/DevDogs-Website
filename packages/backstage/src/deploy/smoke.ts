@@ -32,6 +32,7 @@ import {
   retryWhilePropagating,
   type CheckResult,
   type FetchLike,
+  type ReconcileExpectation,
 } from "./checks.js";
 import { DeployError, say } from "./report.js";
 import {
@@ -126,6 +127,8 @@ export interface ReconcileOptions {
   env?: NodeJS.ProcessEnv;
   config?: AppSmokeConfig;
   fetchImpl?: FetchLike;
+  /** Overrides for the release wait, for the tests. */
+  expect?: ReconcileExpectation;
 }
 
 export async function runReconcile(
@@ -144,10 +147,14 @@ export async function runReconcile(
   const app = options.app ?? "platform";
   const config = configOrRefuse(app, options.config);
   const url = `https://${config.hosts[options.tier]}/cron/config-reconcile`;
+  // In CI, wait for the Worker this run deployed; see `checkReconcile`.
+  // GITHUB_SHA is the same commit `backstage deploy` passed to the Worker as
+  // SENTRY_RELEASE. A run by hand has neither, and takes any Worker.
   const result = await checkReconcile(
     url,
     cronSecret,
     options.fetchImpl ?? retryWhilePropagating(),
+    { release: env.GITHUB_SHA, ...options.expect },
   );
   say(formatResults([result]).split("\n"));
   if (result.status === "fail") process.exitCode = 1;

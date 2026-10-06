@@ -102,7 +102,7 @@ export const deployCommand: CommandNode = {
       name: "reconcile",
       dryRun: "read-only",
       summary: "Run the platform's config reconcile after a deploy.",
-      hint: "needs CRON_SECRET",
+      hint: "needs CRON_SECRET; in CI, waits for that commit's Worker",
       options: [DEPLOY_TIER, SMOKE_APP],
     },
     {
