@@ -13,7 +13,7 @@
  *
  * Each deletion PUBLISHES A NEW VERSION of the code already deployed, so a
  * report path that deleted would be a report path that deployed, bypassing
- * both the promotion PR and the `production-apply` reviewers.
+ * both the promotion PR and the `production` reviewers.
  */
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -292,7 +292,7 @@ describe("the job summary", () => {
     expect(written).toContain("Worker secret audit");
     expect(written).toContain("**1 orphaned**: `RENAMED_LAST_MONTH`");
     expect(written).toContain("Nothing was deleted");
-    expect(written).toContain("production-apply");
+    expect(written).toContain("`production` reviewers");
   });
 
   it("says so when there is nothing unaccounted for", async () => {

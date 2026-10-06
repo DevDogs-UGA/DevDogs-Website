@@ -1,32 +1,35 @@
 /**
- * The GitHub environments, and which BWS project (if any) backs each.
+ * The GitHub environments `env push|pull|audit` route to, and which BWS project
+ * (if any) backs each.
  *
  * GitHub environments and BWS projects are NOT the same set, and conflating
- * them is the mistake this file exists to prevent. There are FOUR GitHub
- * environments and THREE BWS projects:
+ * them is the mistake this file exists to prevent. There are THREE routed
+ * GitHub environments and THREE BWS projects, one to one:
  *
- *   | GitHub environment | BWS project  | Receives                     |
- *   |--------------------|--------------|------------------------------|
- *   | `preflight`        | `preflight`  | everything in the project    |
- *   | `staging`          | `staging`    | everything in the project    |
- *   | `production`       | `production` | everything EXCEPT apply-only |
- *   | `production-apply` | `production` | everything, apply-only too   |
+ *   | GitHub environment | BWS project  | Receives                        |
+ *   |--------------------|--------------|---------------------------------|
+ *   | `preflight`        | `preflight`  | everything EXCEPT apply-tier    |
+ *   | `staging`          | `staging`    | everything EXCEPT apply/plan    |
+ *   | `production`       | `production` | everything, apply-tier included |
  *
- * The last two split one project between two GitHub environments, and that
- * split IS the reviewer gate. `production` deploys on a push with nothing in
- * front of it; `production-apply` has required reviewers. A write-capable
- * credential reaching the first makes the second decorative, so the routing is
- * enforced here rather than left to whoever last edited a file.
+ * ⚠️ THE REVIEWER GATE is `production`'s required reviewers (team `devops`,
+ * self-review prevented; see `github/settings/desired.ts`). The invariant is:
+ * an environment that receives an apply-tier credential (`tier: "apply"`, today
+ * `SUPABASE_ACCESS_TOKEN`, which the deploy's `supabase config push` uses) must
+ * be one whose desired settings REQUIRE reviewers. There is no unreviewed
+ * production environment any more, so `production` takes the whole project,
+ * and `excludeKeys` on `preflight` and `staging` is what keeps a write-capable
+ * credential out of environments a push to `main` can reach with nobody in
+ * front of it. `environments.test.ts` asserts the invariant against the desired
+ * settings rather than restating it.
  *
- * ⚠️ THE GATE IS ONE-DIRECTIONAL, and reading it as symmetric is the mistake
- * this file made until 2026-08-17. What the gate asserts, through
- * `production.excludeKeys`, is that apply-tier credentials never reach the
- * UNREVIEWED environment, and nothing more. What the reviewed environment also
- * holds buys no privilege: it is the same Bitwarden project, and
- * `production-apply` is the strictly MORE trusted of the two. Withholding
- * ordinary keys from it broke every job that runs there: the config push wanted
- * deploy-tier OAuth secrets, and the orphan prune wanted a deploy-tier API
- * token. So `production-apply` now receives a SUPERSET of `production`.
+ * ⚠️ `production-build` is NOT routed here. It is the fourth GitHub
+ * environment (branch `main`, no reviewers, VARIABLES only, no secrets) used to
+ * build production artifacts without credentials. Its variables are a
+ * hand-picked subset of the production project's public values (the build-time
+ * ones), and no env manifest declares that subset, so routing it would need a
+ * new per-key "build-time" declaration for one environment. Its variables are
+ * set by hand in GitHub; `github settings` still checks its branch policy.
  */
 import { assertRegistryLoaded } from "@devdogsuga/cli-core/env/discovery";
 import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
@@ -35,7 +38,6 @@ export const GITHUB_ENVIRONMENTS = [
   "preflight",
   "staging",
   "production",
-  "production-apply",
 ] as const;
 
 export type GithubEnvironment = (typeof GITHUB_ENVIRONMENTS)[number];
@@ -52,28 +54,18 @@ export interface GithubEnvironmentSpec {
   /**
    * Keys allowed here, or null for "whatever the file defines".
    *
-   * ⚠️ NULL ON EVERY ROW TODAY, and that is the deliberate state rather than a
-   * field nobody got round to filling in. `production-apply` used to carry the
-   * apply-tier pair here, on the reasoning that "holding a third credential
-   * makes the reviewer gate stop meaning anything", which conflated two
-   * constraints and kept only the one that was not the gate. An allowlist here
-   * restricts what the REVIEWED environment may hold; the gate is
-   * `production.excludeKeys`, which restricts what the UNREVIEWED one may hold.
-   * Only the second is a security property, and it is enforced below.
-   *
-   * Kept as a field because the mechanism is worth having and costs one branch
-   * in `accepts()`: a future environment that genuinely holds a fixed short
-   * list, a third-party integration's two keys and nothing else, states it here
-   * rather than as an `excludeKeys` of everything else.
+   * NULL ON EVERY ROW TODAY, deliberately. Kept as a field because the
+   * mechanism costs one branch in `accepts()`: an environment that genuinely
+   * holds a fixed short list states it here rather than as an `excludeKeys` of
+   * everything else.
    */
   onlyKeys: readonly string[] | null;
   /**
    * Keys that must never reach this environment.
    *
-   * The whole reviewer gate now lives in this field: `production` (and
-   * `staging`) exclude the apply-tier set, and nothing else stops a
-   * write-capable credential from landing in an environment that deploys with
-   * nobody in front of it.
+   * The reviewer gate's enforcement: `preflight` and `staging` exclude the
+   * apply-tier set, so a write-capable credential only lands in the
+   * environment that has required reviewers.
    */
   excludeKeys: readonly string[];
   /** Extra confirmation before writing. */
@@ -97,8 +89,8 @@ function applyOnly(): readonly string[] {
 
 /**
  * The plan-tier set, same shape and same load-time caveat as `applyOnly()`.
- * Read by `main-plan` (preflight) and `production-plan` (production); a copy
- * anywhere else is a credential nothing reads, so `staging` excludes it.
+ * Read by the plan jobs in `preflight` and `production`; a copy anywhere else
+ * is a credential nothing reads, so `staging` excludes it.
  */
 function planOnly(): readonly string[] {
   assertRegistryLoaded();
@@ -113,7 +105,10 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
     bwsProject: "preflight",
     branch: "main",
     onlyKeys: null,
-    excludeKeys: [],
+    // Reads plan-tier keys (DB_URL, AIRTABLE_PLAN_PAT) but never applies.
+    get excludeKeys() {
+      return applyOnly();
+    },
     guarded: false,
   },
   staging: {
@@ -126,34 +121,17 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
     },
     guarded: false,
   },
-  // ⚠️ THE REVIEWER GATE, in one property. `excludeKeys` here is the only
-  // thing keeping the apply-tier credentials out of an environment that
-  // deploys on a push to `production` with nobody in front of it. Widening it
-  // to `[]` hands a write-capable token to an unreviewed deploy, and so does
-  // letting `applyOnly()` answer empty, which is what `assertRegistryLoaded()`
-  // exists to prevent. `environments.test.ts` asserts both apply keys by name
-  // against exactly this.
+  // ⚠️ THE REVIEWED ENVIRONMENT: required reviewers gate every job that runs
+  // here, so it takes the whole `production` project, apply-tier credential
+  // included. Plan-tier keys land here too: the deploy workflow reads DB_URL
+  // and AIRTABLE_PLAN_PAT in `production` as well as `preflight`. Loosening
+  // `preflight`/`staging` `excludeKeys` is what would break the gate, not
+  // anything on this row. `environments.test.ts` asserts that `production` is
+  // the only environment accepting an apply-tier key and that the desired
+  // settings require reviewers on it.
   production: {
     bwsProject: "production",
-    branch: "production",
-    onlyKeys: null,
-    get excludeKeys() {
-      return applyOnly();
-    },
-    guarded: true,
-  },
-  // A SUPERSET of `production`, deliberately: everything that environment
-  // receives, plus the apply-tier credential it may not have.
-  //
-  // Not a relaxation of the gate. This is the same Bitwarden project behind
-  // required reviewers, the more trusted half of the split, so withholding a
-  // key from it protects nothing and only starves the jobs that run here
-  // (`production-config`, `prune-orphans`, both of which needed a deploy-tier
-  // secret and got none). The gate is what `production` may NOT have, one row
-  // above.
-  "production-apply": {
-    bwsProject: "production",
-    branch: "production",
+    branch: "main",
     onlyKeys: null,
     excludeKeys: [],
     guarded: true,
@@ -162,10 +140,10 @@ export const GITHUB_ENVIRONMENT_SPECS: Record<
 
 // ── Routing ──────────────────────────────────────────────────────────────────
 //
-// One Bitwarden project can feed more than one GitHub environment; production
-// feeds two. So a push has to know which key goes where. Derived from the table
-// above rather than written out a second time: the split IS the reviewer gate,
-// and a hardcoded copy of it is a copy that can disagree.
+// One Bitwarden project can in principle feed more than one GitHub environment
+// (production fed two until `production-apply` was removed), so a push still
+// asks which key goes where. Derived from the table above rather than written
+// out a second time: a hardcoded copy is a copy that can disagree.
 
 /** The GitHub environments fed by one Bitwarden project, in precedence order. */
 export function githubTargets(bwsProject: string): GithubEnvironment[] {
@@ -189,12 +167,9 @@ export function accepts(environment: GithubEnvironment, key: string): boolean {
  * the file is the ordinary case: that key belongs to production and has no home
  * in the staging environment.
  *
- * ⚠️ "Primary", not "only". Since `production-apply` became a superset, an
- * ordinary production key legitimately lives in TWO environments and this
- * returns the first, the unreviewed one, where the deploy reads it. A caller
- * asking "is this copy misplaced?" wants `acceptedBy()` instead; answering that
- * question with this function reports every correctly-pushed copy in
- * `production-apply` as a stray that somebody should delete.
+ * "Primary", not "only": a project may feed several environments, and this
+ * returns the first that takes the key. A caller asking "is this copy
+ * misplaced?" wants `acceptedBy()` instead.
  */
 export function routeTo(
   bwsProject: string,
@@ -208,8 +183,8 @@ export function routeTo(
  *
  * The set-shaped question, for callers that compare against what a push
  * actually wrote rather than against one destination. `routeTo()` is this with
- * `[0]` taken, and the difference is only ever visible for `production`, the
- * one project that fans out to two environments.
+ * `[0]` taken; the two only differ for a project feeding several environments,
+ * which none does today.
  */
 export function acceptedBy(
   bwsProject: string,

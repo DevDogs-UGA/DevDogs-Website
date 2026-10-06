@@ -116,7 +116,6 @@ describe("the top level", () => {
     for (const leak of [
       "DEPLOY_ENV",
       "BWS_ACCESS_TOKEN",
-      "production-apply",
       "GITHUB_STEP_SUMMARY",
       "--access-token",
       "with-env",

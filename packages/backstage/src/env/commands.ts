@@ -496,12 +496,11 @@ const MANAGED = "Managed by `backstage env push`.";
 /**
  * The second half of every push.
  *
- * One Bitwarden project can feed more than one GitHub environment: `production`
- * feeds both `production` and `production-apply`, and which key goes where IS
- * the reviewer gate. So this loops over the routed targets rather than assuming
- * one, and confirms each separately. Agreeing to update production's ordinary
- * secrets is not agreeing to touch the two write-capable credentials sitting
- * behind the reviewers.
+ * One Bitwarden project can feed more than one GitHub environment, and which
+ * key goes where is the reviewer gate (apply-tier keys only reach an
+ * environment with required reviewers). Today each project feeds exactly one
+ * environment, but this loops over the routed targets rather than assuming
+ * one, and confirms each separately.
  *
  * The two maps stay two maps all the way down to the two `gh` calls. Merging
  * them and branching at the bottom would put "which store does this go to?" one
@@ -522,21 +521,15 @@ export async function pushToGithub(
   const project = environmentSpecs()[target].project;
 
   // `ghEnvironment`, not `target`: a GitHub environment is a THIRD vocabulary
-  // (there are four of them, and `production-apply` is not an env target at
-  // all), so it keeps a name of its own. Reusing `target` here is how the two
+  // (`production-build` is one and is not an env target at all), so it keeps a
+  // name of its own. Reusing `target` here is how the two
   // vocabularies got confused in the first place.
   for (const ghEnvironment of githubTargets(project)) {
     // Routing applies to both stores, and the two loops below are the same
     // filter twice rather than one filter and a branch. See the header.
     //
-    // `production-apply` accepts everything `production` does plus the
-    // apply-tier credential, so a production push writes MOST keys twice: once
-    // to the unreviewed environment the deploy reads, once to the reviewed one
-    // whose jobs (`production-config`, `prune-orphans`) were previously
-    // starved of them. That is not the gate leaking. The gate is
-    // `production.excludeKeys`, which keeps the apply-tier credential out of
-    // the FIRST environment; it has never had anything to say about the
-    // second.
+    // The gate is `preflight`/`staging` `excludeKeys`: the apply-tier
+    // credential reaches only `production`, behind required reviewers.
     const chosenSecrets = new Map(
       [...secrets].filter(([key]) => accepts(ghEnvironment, key)),
     );
@@ -711,13 +704,11 @@ export async function runEnvAudit(options: EnvOptions): Promise<void> {
       const routed = routeTo(spec.project, key);
       return routed && unreachable.includes(routed) ? null : routed;
     },
-    // Whether a SECOND copy is legitimate, which stopped being "the one place
-    // `route` names" when `production-apply` became a superset of `production`.
-    // A push now writes most production keys to both, and comparing against
-    // `route` alone would report every one as a stray to delete, burying the one
-    // stray that matters: an apply-tier key in the unreviewed environment.
-    // `acceptsKey()` still says no to that one, and is a name rather than a
-    // lambda so it has tests of its own.
+    // Whether a copy outside `route`'s environment is legitimate. Comparing
+    // against `route` alone would report every second copy as a stray,
+    // burying the one that matters: an apply-tier key in an environment
+    // without required reviewers. `acceptsKey()` says no to that one, and is a
+    // name rather than a lambda so it has tests of its own.
     accepted: acceptsKey,
     cloudflare,
     ignore: ignoredFor(target),
@@ -779,7 +770,7 @@ export async function runEnvAudit(options: EnvOptions): Promise<void> {
  * Reported always. Deleted only on request: `--prune`, or the offer made at a
  * terminal right after the report. Either way it asks first unless `--yes`
  * answers, because each deletion publishes a new version of the code already
- * deployed, and nothing but a person (or the `production-apply` environment
+ * deployed, and nothing but a person (or the reviewed `production` environment
  * approving a CI run that passed `--yes`) should trigger that. Without a
  * terminal and without `--prune` it only reports.
  */

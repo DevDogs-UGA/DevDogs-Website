@@ -89,75 +89,15 @@ describe("pushToGithub", () => {
   });
 
   /**
-   * The split between `production` and `production-apply` at the level a push
-   * actually performs it.
+   * The reviewer gate at the level a push actually performs it.
    *
-   * ⚠️ This describe replaced a test called "keeps variables out of the
-   * reviewer-gated production-apply environment", which asserted the OLD rule:
-   * the gated environment took the apply-tier pair and nothing else. That rule
-   * conflated two constraints and kept the wrong one. Withholding a key from
-   * `production-apply` protects nothing: same Bitwarden project, strictly more
-   * trusted half, behind required reviewers. The gate is entirely about what
-   * the UNREVIEWED `production` may hold. The old test could pass with
-   * `production.excludeKeys` emptied, which is the failure that matters; the
-   * first test below cannot.
+   * `production` is the one routed production environment and sits behind
+   * required reviewers, so it takes the whole project, apply-tier credential
+   * included. The gate is what `staging` and `preflight` may NOT hold; the
+   * last test asserts that by name.
    */
-  describe("the production split", () => {
-    // A literal. The point is this key by name, not "whatever the tier says
-    // today". A test that reads the same derived set as the code under test
-    // passes when both are wrong together.
-    const APPLY_KEYS = ["SUPABASE_ACCESS_TOKEN"] as const;
-
-    it("NEVER offers an apply-tier key to the unreviewed production environment", async () => {
-      // ⚠️ THE INVARIANT, and now the only thing enforcing the reviewer gate:
-      // `production` deploys on a push to the production branch with nobody in
-      // front of it. A write-capable credential landing there makes
-      // `production-apply`'s required reviewers decorative: the token is
-      // already usable without them.
-      //
-      // Asserted BY NAME and per key, rather than by counting calls: a
-      // regression that emptied `applyOnly()` (an unloaded registry, a renamed
-      // `tier` value) would leave `excludeKeys` an empty array, and a
-      // count-based test would happily agree that everything went where it
-      // was sent.
-      await pushToGithub(
-        "production",
-        new Map([
-          ["SUPABASE_ACCESS_TOKEN", "sbp"],
-          ["DISCORD_TOKEN", "tok"],
-        ]),
-        new Map(),
-        true,
-      );
-
-      const secretsTo = (environment: string) =>
-        vi
-          .mocked(setSecret)
-          .mock.calls.filter(([env]) => env === environment)
-          .map(([, key]) => key);
-
-      for (const key of APPLY_KEYS) {
-        expect(
-          secretsTo("production"),
-          `${key} reached the UNREVIEWED production environment`,
-        ).not.toContain(key);
-        // POSITIVE CONTROL, in the same assertion pair: each really was in the
-        // push and really did go somewhere. Without it, "absent from
-        // production" would also pass for a key that was silently dropped, or
-        // for a typo that names no key at all.
-        expect(secretsTo("production-apply")).toContain(key);
-      }
-      // And the ordinary secret did reach the unreviewed environment, so
-      // "nothing apply-tier here" is a routing decision rather than an empty
-      // environment.
-      expect(secretsTo("production")).toEqual(["DISCORD_TOKEN"]);
-    });
-
-    it("gives production-apply a SUPERSET: ordinary secrets, public variables, and the apply credential", async () => {
-      // Two of the jobs that run in `production-apply` and were starved by the
-      // old rule, one key each: `production-config` wanted a deploy-tier OAuth
-      // secret, `prune-orphans` wanted a deploy-tier API token. Both out of
-      // both is a broken rule rather than two misconfigured jobs.
+  describe("the reviewer gate", () => {
+    it("sends the whole production project, apply-tier credential included, to production", async () => {
       await pushToGithub(
         "production",
         new Map([
@@ -172,23 +112,31 @@ describe("pushToGithub", () => {
       expect(vi.mocked(setSecret).mock.calls).toEqual([
         ["production", "CLOUDFLARE_API_TOKEN", "cf"],
         ["production", "SUPABASE_OAUTH_CLIENT_SECRET", "oauth"],
-        ["production-apply", "CLOUDFLARE_API_TOKEN", "cf"],
-        ["production-apply", "SUPABASE_OAUTH_CLIENT_SECRET", "oauth"],
-        ["production-apply", "SUPABASE_ACCESS_TOKEN", "sbp"],
+        ["production", "SUPABASE_ACCESS_TOKEN", "sbp"],
       ]);
-      // The public one goes to the VARIABLE store in BOTH. That is the half
-      // the old rule made impossible.
       expect(vi.mocked(setVariable).mock.calls).toEqual([
         ["production", "PROJECT_REF", "abcdefghijklmnop"],
-        ["production-apply", "PROJECT_REF", "abcdefghijklmnop"],
       ]);
     });
 
-    it("leaves staging and preflight taking one environment each", async () => {
+    it("never writes anything to production-apply or production-build", async () => {
+      await pushToGithub(
+        "production",
+        new Map([["DISCORD_TOKEN", "tok"]]),
+        new Map([["BASE_URL", "https://example.org"]]),
+        true,
+      );
+      const written = [
+        ...vi.mocked(setSecret).mock.calls,
+        ...vi.mocked(setVariable).mock.calls,
+      ].map(([env]) => env);
+      expect(new Set(written)).toEqual(new Set(["production"]));
+    });
+
+    it("keeps the apply-tier credential out of staging and preflight", async () => {
       // The regression that would make this change a widening rather than a
-      // fix: `excludeKeys: []` written on the wrong row, or a fan-out that
-      // stopped being specific to the production project. An apply-tier key in
-      // a staging file still has nowhere to go.
+      // fix: `excludeKeys: []` written on the wrong row. An apply-tier key in
+      // a staging or preflight file still has nowhere to go.
       await pushToGithub(
         "staging",
         new Map([
@@ -210,7 +158,10 @@ describe("pushToGithub", () => {
 
       await pushToGithub(
         "preflight",
-        new Map([["DB_URL", "postgresql://migrations-only"]]),
+        new Map([
+          ["DB_URL", "postgresql://migrations-only"],
+          ["SUPABASE_ACCESS_TOKEN", "sbp"],
+        ]),
         new Map([["PROJECT_REF", "abcdefghijklmnop"]]),
         true,
       );

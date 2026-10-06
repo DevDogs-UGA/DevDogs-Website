@@ -252,16 +252,14 @@ describe("env audit, the accepted wiring", () => {
    * The one line `audit.ts`'s own tests cannot cover: `runEnvAudit` passing
    * `accepted: acceptsKey`. The predicate has tests of its own; this is the
    * call site, where dropping the argument falls back to the strict default
-   * ("only where `route` says") and reports every correctly-fanned-out
-   * production key as a stray to delete, burying the one stray that matters.
+   * ("only where `route` says") and would report every legitimate second copy
+   * as a stray to delete, burying the one stray that matters.
    */
   const AT = "2026-01-01T00:00:00Z";
 
   beforeEach(() => {
-    // The production project fans out to two GitHub environments. Both hold
-    // both keys: the ordinary secret legitimately, because a push writes the
-    // superset, and the apply-tier one half-legitimately, because its
-    // `production` copy is the reviewer gate failing open.
+    // Production holds both keys, legitimately: it is behind required
+    // reviewers, apply-tier credential included.
     const stored = (id: string, key: string) => ({
       id,
       key,
@@ -285,24 +283,18 @@ describe("env audit, the accepted wiring", () => {
     vi.mocked(listGhSecrets).mockResolvedValue([]);
   });
 
-  it("does not report production-apply's superset copy as a stray", async () => {
+  it("does not report a correctly-pushed copy in production as a stray", async () => {
     await runEnvAudit({ accessToken: "t", target: "production", yes: true });
 
-    // The default predicate would flag DEMO_TOKEN's `production-apply` copy
-    // ("also set … not where it belongs"). `acceptsKey` knows the superset.
-    expect(printed()).not.toMatch(/DEMO_TOKEN[^\n]*not where it belongs/);
+    // Both keys belong in `production`, apply-tier credential included.
+    expect(printed()).not.toMatch(/not where it belongs/);
   });
 
-  it("still names the apply-tier key sitting in the unreviewed environment", async () => {
-    // The positive control for the test above. An `accepted` of "everything is
-    // fine" would also produce no stray findings. This copy is the reviewer
-    // gate failing open, and it must survive the superset logic.
-    await runEnvAudit({ accessToken: "t", target: "production", yes: true });
-
-    expect(printed()).toMatch(
-      /SUPABASE_ACCESS_TOKEN[^\n]*`production`[^\n]*not where it belongs/,
-    );
-  });
+  // No positive control through `runEnvAudit` any more: `ignoredFor()` drops
+  // the apply-tier key from a staging audit entirely, so a stray copy there is
+  // not reported at this level. The "still flagged" case lives where it can be
+  // reached: `audit.test.ts` (the predicate honoured) and
+  // `gh/environments.test.ts` (`acceptsKey` refuses it outside `production`).
 });
 
 describe("env audit, the Worker secrets no app declares", () => {

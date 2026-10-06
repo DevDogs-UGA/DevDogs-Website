@@ -194,6 +194,12 @@ STRING and target name, never by a registry lookup, except
 `applyOnlyKeys()` itself, which now comes from devtools' own always-loaded
 operator manifest (`SUPABASE_ACCESS_TOKEN`, matching the original's literal).
 
+Since restoration the suite was rewritten for the removal of the
+`production-apply` environment: it now asserts the reviewer-gate invariant
+against `github/settings/desired.ts` (an environment accepting an apply-tier
+key must require reviewers) instead of the old production/production-apply
+split.
+
 ## `src/env/selection.test.ts` — RESTORED, `src/env/selection.test.ts`
 
 **Asserted:** `selectForPush`/`keysRoutedTo` correctly classify declared

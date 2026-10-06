@@ -91,7 +91,9 @@ export type EnvSecrecy =
  *
  * `apply` is for credentials that can reshape production and have no dry run.
  * A Supabase access token carries full account privileges; it belongs behind
- * required reviewers, not in the environment an ordinary deploy reads.
+ * required reviewers. It reaches only the GitHub environment whose desired
+ * settings require reviewers (`production`) and never staging or preflight;
+ * `backstage`'s `gh/environments.test.ts` asserts that pairing.
  *
  * ⚠️ A GitHub routing rule, not a Bitwarden one. The `production` Bitwarden
  * project does hold the apply-tier credential: only a person can read it, one

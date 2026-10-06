@@ -375,7 +375,7 @@ function targetHeader(target: VaultTarget, count: number): string[] {
     ...comment(
       target === "production"
         ? "The apply-tier credential IS here — SUPABASE_ACCESS_TOKEN reaches " +
-            "the production-apply GitHub environment, and no other target " +
+            "the production GitHub environment, and no other target " +
             "carries it."
         : "The apply-tier credential is NOT here. It exists to reshape " +
             `production, so a copy in ${target} would be a second ` +

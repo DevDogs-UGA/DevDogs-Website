@@ -92,10 +92,10 @@ declare({
     }),
     // An ordinary secret alongside `tier: "apply"` devtools own manifest
     // key (SUPABASE_ACCESS_TOKEN), standing in for
-    // SUPABASE_OAUTH_CLIENT_SECRET — an ordinary production-apply-superset
+    // SUPABASE_OAUTH_CLIENT_SECRET — an ordinary production
     // secret that is NOT itself apply-tier.
     DEMO_APPLY_ADJACENT: define(z.string(), {
-      doc: "An ordinary secret that legitimately reaches production-apply too.",
+      doc: "An ordinary secret that is not apply-tier, so it also reaches staging.",
       scope: "environment",
       secrecy: "secret",
     }),

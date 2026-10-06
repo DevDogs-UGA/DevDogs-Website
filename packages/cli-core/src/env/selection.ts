@@ -121,6 +121,7 @@ export function ignoredFor(target: VaultTarget): Set<string> {
       .filter((key) => !pushable.has(key)),
   );
   for (const key of getEnvSync().mintedKeys()) skip.add(key);
+  // Only the reviewed environment (`production`) may hold the apply tier.
   if (target !== "production") {
     for (const key of getEnvSync().applyOnlyKeys()) skip.add(key);
   }

@@ -395,7 +395,7 @@ describe("resolveEnvironment", () => {
     // The old `switchEnvironment()` read anything that was not "development" as
     // deployed, so this applied the strict schemas while every
     // `=== "production"` gate stayed shut: configured and wrong at once.
-    expect(() => resolveEnvironment("production-apply")).toThrow(
+    expect(() => resolveEnvironment("production-build")).toThrow(
       UnknownEnvironmentError,
     );
     expect(() => resolveEnvironment("prod")).toThrow(UnknownEnvironmentError);

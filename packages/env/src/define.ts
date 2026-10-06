@@ -7,8 +7,8 @@
  * whether it is a secret, because the app will not compile otherwise.
  *
  * Everything downstream is derived from what accumulates here: `.env.example`,
- * which keys `env push` sends to Bitwarden, which reach the `production`
- * GitHub environment versus `production-apply`, and the drift check that says
+ * which keys `env push` sends to Bitwarden, which reach the reviewed
+ * `production` GitHub environment only (apply-tier) versus every environment, and the drift check that says
  * a declared variable is missing from a deployed environment. None of those
  * are lists anybody maintains by hand any more, which is the reason this
  * package exists.
@@ -275,7 +275,7 @@ export function narrowedKeys(): string[] {
     .sort();
 }
 
-/** Deployed secrets restricted to the `production-apply` GitHub environment. */
+/** Deployed secrets restricted to the reviewed `production` GitHub environment. */
 export function applyOnlyKeys(): string[] {
   return keysWhere((e) => e.meta.tier === "apply");
 }

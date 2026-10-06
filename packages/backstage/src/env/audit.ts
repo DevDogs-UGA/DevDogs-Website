@@ -118,13 +118,12 @@ export interface AuditInput {
   /**
    * Whether a copy found in some OTHER environment is legitimate.
    *
-   * Separate from `route` because the two questions stopped having the same
-   * answer when `production-apply` became a superset of `production`: an
-   * ordinary production key is now pushed to both, so "not where `route` says"
-   * no longer means "misplaced". Folding them back together reports every
-   * correctly-pushed copy as a stray to delete, and a reviewer who deletes 46
-   * of those learns to skim the stray finding, which is the one finding that
-   * catches an apply-tier credential sitting in the unreviewed environment.
+   * Separate from `route` because a project can feed more than one
+   * environment, and then "not where `route` says" does not mean "misplaced".
+   * Folding the two together would report every correctly-pushed second copy
+   * as a stray to delete, and a reviewer who learns to skim the stray finding
+   * misses the one that catches an apply-tier credential sitting in an
+   * environment without required reviewers.
    *
    * Defaults to the old behaviour (`only where route says`), so a caller that
    * has not thought about fan-out gets the strict answer rather than a
@@ -479,11 +478,12 @@ export function audit(input: AuditInput): Finding[] {
 
     // A copy somewhere it does not belong. Listed FIRST because for the
     // apply-only credentials this is the reviewer gate failing open: the token
-    // is sitting in an environment that deploys with nobody in front of it.
+    // is sitting in an environment without required reviewers.
     //
-    // `accepted`, not `!== expected`: `production-apply` legitimately holds a
-    // second copy of most production keys. An apply-tier key in `production`
-    // still lands here, which is the case this finding exists for.
+    // `accepted`, not `!== expected`: a project feeding several environments
+    // may legitimately hold a second copy of a key. An apply-tier key in
+    // `preflight` or `staging` still lands here, which is the case this
+    // finding exists for.
     for (const stray of copies.filter((g) => !accepted(key, g.environment))) {
       findings.push({
         key,

@@ -24,7 +24,7 @@
  * ## Report always, prune almost never (security plan §3.6)
  *
  *   report   every production deploy      environment: production
- *   prune    `workflow_dispatch` only     environment: production-apply
+ *   prune    `workflow_dispatch` only     environment: production
  *
  * **Orphans never fail the deploy.** A stale secret name is not a defect in the
  * change being deployed, and failing on it would make an unrelated commit
@@ -36,7 +36,7 @@
  * version of the currently deployed code with the secret gone. There is no way
  * to change a secret without publishing. Auto-pruning would turn every deploy
  * carrying an orphan into TWO version publishes, and the second one bypasses
- * both the promotion PR and the `production-apply` approval that the first went
+ * both the promotion PR and the `production` reviewer approval that the first went
  * through. That is why this is a separate, human-triggered run, and why
  * `--prune` is the only thing that can reach `deleteSecret`: a default that
  * deleted would be a default that deployed.
@@ -275,7 +275,7 @@ export async function runDeployOrphans(
       "Nothing was deleted, and this does not fail the deploy — a stale name is",
       "not a defect in the change that was just shipped. To remove them, run",
       "this workflow by hand with **Prune orphaned Worker secrets** ticked; it",
-      "goes through the `production-apply` reviewers, because each deletion",
+      "goes through the `production` reviewers, because each deletion",
       "publishes a new version of the deployed code.",
       "",
     );

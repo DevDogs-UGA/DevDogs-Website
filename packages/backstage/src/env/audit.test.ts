@@ -240,21 +240,21 @@ describe("staleness", () => {
   });
 });
 
-describe("routing between the two production environments", () => {
-  const route = (key: string) =>
-    key === "SUPABASE_ACCESS_TOKEN" ? "production-apply" : "production";
+describe("routing of the apply-tier credential", () => {
+  // Every key routes to `production`, the environment behind required
+  // reviewers; `staging` here stands for any environment without them.
+  const route = () => "production";
 
-  it("flags an apply-only credential sitting in the unreviewed environment", () => {
-    // The reviewer gate failing open. `production` deploys on a push with
-    // nobody in front of it, so a write-capable token there makes
-    // `production-apply` decorative -- and presence alone would call this fine,
+  it("flags an apply-only credential sitting in an unreviewed environment", () => {
+    // The reviewer gate failing open: a write-capable token in an environment
+    // without required reviewers -- and presence alone would call this fine,
     // because the name IS in GitHub.
     const findings = run({
       local: new Map([["SUPABASE_ACCESS_TOKEN", "x"]]),
       bws: bws({ SUPABASE_ACCESS_TOKEN: "x" }),
       github: [
+        gh("SUPABASE_ACCESS_TOKEN", undefined, "staging"),
         gh("SUPABASE_ACCESS_TOKEN", undefined, "production"),
-        gh("SUPABASE_ACCESS_TOKEN", undefined, "production-apply"),
       ],
       route,
     });
@@ -262,7 +262,7 @@ describe("routing between the two production environments", () => {
     expect(findings).toHaveLength(1);
     expect(findings[0]!.severity).toBe("error");
     expect(findings[0]!.summary).toMatch(/not where it belongs/);
-    expect(findings[0]!.summary).toContain("production");
+    expect(findings[0]!.summary).toContain("staging");
   });
 
   it("is happy when each key is in its own environment", () => {
@@ -274,25 +274,12 @@ describe("routing between the two production environments", () => {
         ]),
         bws: bws({ SUPABASE_ACCESS_TOKEN: "x", DISCORD_TOKEN: "y" }),
         github: [
-          gh("SUPABASE_ACCESS_TOKEN", undefined, "production-apply"),
+          gh("SUPABASE_ACCESS_TOKEN", undefined, "production"),
           gh("DISCORD_TOKEN", undefined, "production"),
         ],
         route,
       }),
     ).toEqual([]);
-  });
-
-  it("does not mistake the right environment for a missing one", () => {
-    // Two environments are queried at once for production. A key present only
-    // in `production-apply` is CORRECT, and reporting it as absent from
-    // `production` would make a healthy setup look broken.
-    const findings = run({
-      local: new Map([["SUPABASE_ACCESS_TOKEN", "x"]]),
-      bws: bws({ SUPABASE_ACCESS_TOKEN: "x" }),
-      github: [gh("SUPABASE_ACCESS_TOKEN", undefined, "production-apply")],
-      route,
-    });
-    expect(findings).toEqual([]);
   });
 
   it("skips the GitHub axis for a key that belongs nowhere here", () => {
@@ -307,28 +294,26 @@ describe("routing between the two production environments", () => {
     expect(findings).toEqual([]);
   });
 
-  // ── the fan-out, since production-apply became a superset ──────────────────
+  // ── a project that feeds more than one environment ─────────────────────────
   //
-  // `env push --target production` now writes most keys to BOTH environments,
-  // so `route` alone stopped being able to answer "is this copy misplaced?".
-  // `accepted` answers it, and getting this wrong is not a cosmetic problem:
-  // 46 spurious "delete it there" errors on every audit is how a reviewer
-  // learns to skim the one finding that catches the reviewer gate failing open.
-  describe("a second copy in the reviewed environment", () => {
-    // What `runEnvAudit` passes: the routing's own `accepts()`, which takes
-    // everything in `production-apply` and refuses the apply-tier key in
-    // `production`.
+  // `route` alone cannot answer "is this copy misplaced?" once a key may live
+  // in two environments. `accepted` answers it, and getting it wrong is not
+  // cosmetic: spurious "delete it there" errors teach a reviewer to skim the
+  // one finding that catches the reviewer gate failing open.
+  describe("a second, accepted copy", () => {
+    // What `runEnvAudit` passes: the routing's own `accepts()`.
     const accepted = (key: string, environment: string) =>
-      environment === "production-apply" || key !== "SUPABASE_ACCESS_TOKEN";
+      environment === "production" ||
+      (environment === "preflight" && key !== "SUPABASE_ACCESS_TOKEN");
 
     it("is not a stray, because the push put it there", () => {
       expect(
         run({
-          local: new Map([["DISCORD_TOKEN", "y"]]),
-          bws: bws({ DISCORD_TOKEN: "y" }),
+          local: new Map([["DB_URL", "y"]]),
+          bws: bws({ DB_URL: "y" }),
           github: [
-            gh("DISCORD_TOKEN", undefined, "production"),
-            gh("DISCORD_TOKEN", undefined, "production-apply"),
+            gh("DB_URL", undefined, "production"),
+            gh("DB_URL", undefined, "preflight"),
           ],
           route,
           accepted,
@@ -336,7 +321,7 @@ describe("routing between the two production environments", () => {
       ).toEqual([]);
     });
 
-    it("⚠️ STILL flags the apply key in the unreviewed environment", () => {
+    it("⚠️ STILL flags the apply key in an environment that refuses it", () => {
       // The finding the loosening must not swallow, and the reason `accepted`
       // is a predicate rather than "anything in this project is fine". Same
       // inputs as the test above but for the key, so a pass here is about the
@@ -345,8 +330,8 @@ describe("routing between the two production environments", () => {
         local: new Map([["SUPABASE_ACCESS_TOKEN", "x"]]),
         bws: bws({ SUPABASE_ACCESS_TOKEN: "x" }),
         github: [
+          gh("SUPABASE_ACCESS_TOKEN", undefined, "preflight"),
           gh("SUPABASE_ACCESS_TOKEN", undefined, "production"),
-          gh("SUPABASE_ACCESS_TOKEN", undefined, "production-apply"),
         ],
         route,
         accepted,
@@ -357,15 +342,14 @@ describe("routing between the two production environments", () => {
     });
 
     it("keeps the strict answer for a caller that passes no predicate", () => {
-      // The default. A caller that has not thought about fan-out gets the old
-      // behaviour rather than silence, which is why the first test in this
-      // block passes `accepted` explicitly and this one does not.
+      // The default: a caller that has not thought about fan-out gets the
+      // strict behaviour rather than silence.
       const findings = run({
         local: new Map([["DISCORD_TOKEN", "y"]]),
         bws: bws({ DISCORD_TOKEN: "y" }),
         github: [
           gh("DISCORD_TOKEN", undefined, "production"),
-          gh("DISCORD_TOKEN", undefined, "production-apply"),
+          gh("DISCORD_TOKEN", undefined, "preflight"),
         ],
         route,
       });

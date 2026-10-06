@@ -81,8 +81,8 @@ const SUMMARIES: Record<VaultTarget, string> = {
     "migrations table and nothing else.",
   staging: "Everything the two Next apps consume, pointed at staging.",
   production:
-    "The live values. Shared with the production-apply environment, which " +
-    "is the same project behind required reviewers.",
+    "The live values, apply-tier credentials included: the `production` GitHub " +
+    "environment that receives them is behind required reviewers.",
 };
 
 /**

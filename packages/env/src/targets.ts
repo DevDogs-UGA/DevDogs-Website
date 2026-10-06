@@ -228,7 +228,7 @@ export class UnknownEnvironmentError extends Error {
  *
  * The failure mode of an unrecognised value is worse than "not found" in the
  * other direction too: the old `switchEnvironment()` treated anything that was
- * not `"development"` as deployed, so a stray `DEPLOY_ENV=production-apply`
+ * not `"development"` as deployed, so a stray `DEPLOY_ENV=production-build`
  * applied the strict schemas while every `=== "production"` gate stayed shut.
  * Configured and wrong, in both directions at once.
  *

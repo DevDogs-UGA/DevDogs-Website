@@ -50,7 +50,7 @@ declare({
         "A Supabase personal access token, carrying full account privileges " +
         "across both Supabase organizations. Only `supabase config push` " +
         "needs it -- the one mutation with no dry run -- so in GitHub it " +
-        "reaches the production-apply environment only, behind required " +
+        "reaches the production environment only, behind required " +
         "reviewers.",
       scope: "environment",
       secrecy: "secret",
