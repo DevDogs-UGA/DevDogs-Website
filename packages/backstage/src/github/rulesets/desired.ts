@@ -80,7 +80,20 @@ export function buildDesiredRulesets(actors: RulesetActors): DesiredRuleset[] {
       target: "branch",
       enforcement: "active",
       conditions: main,
-      bypass_actors: [always(actors.adminsTeamId)],
+      // Renovate (App) may bypass the review requirement only by opening a
+      // pull request (`pull_request`), never by pushing; admins bypass always.
+      bypass_actors: [
+        ...(actors.renovateAppId === undefined
+          ? []
+          : [
+              {
+                actor_id: actors.renovateAppId,
+                actor_type: "Integration" as const,
+                bypass_mode: "pull_request" as const,
+              },
+            ]),
+        always(actors.adminsTeamId),
+      ],
       rules: [
         {
           type: "pull_request",

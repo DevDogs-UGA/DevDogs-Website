@@ -85,6 +85,8 @@ export interface LiveEnvironmentReviewer {
 
 export interface LiveProtectionRule {
   type: string;
+  /** Only on `required_reviewers` rules. */
+  prevent_self_review?: boolean;
   reviewers?: LiveEnvironmentReviewer[];
 }
 

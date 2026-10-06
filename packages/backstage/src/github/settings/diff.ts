@@ -4,7 +4,7 @@
  *
  * Unlike `../rulesets/diff.ts` (one shape, N instances), TASK-342's settings
  * are N unrelated resources on one repository — security-and-analysis,
- * Dependabot, three Actions endpoints, and three environments' branch
+ * Dependabot, three Actions endpoints, and four environments' branch
  * policies. So the plan here is a flat list of named checks, each its own
  * `ok` / `drift` / `unsupported` verdict, rather than create/update/delete
  * buckets. `fixable` marks which drifted checks `commands.ts`'s `--apply`
@@ -269,6 +269,23 @@ export function planSettings(
         live: hasReviewers ? "configured" : "none configured",
         status: hasReviewers ? "ok" : "drift",
         // Never auto-fixable — this reconciler does not invent reviewers.
+        fixable: false,
+      });
+    }
+
+    if (env.preventSelfReview) {
+      const prevented = (snapshot.environment.protection_rules ?? []).some(
+        (rule) =>
+          rule.type === "required_reviewers" &&
+          rule.prevent_self_review === true,
+      );
+      checks.push({
+        key: `environments.${env.name}.prevent_self_review`,
+        description: `Environment "${env.name}" prevent self-review`,
+        desired: "enabled",
+        live: prevented ? "enabled" : "disabled",
+        status: prevented ? "ok" : "drift",
+        // Reported only, like the reviewers it modifies.
         fixable: false,
       });
     }

@@ -3,7 +3,7 @@
  *
  * Prints the diff between the repository settings DevDogsUGA/DevDogsUGA
  * must carry (secret scanning, Dependabot, Actions permissions and SHA
- * pinning, and the three deploy environments' branch policies) and what
+ * pinning, and the four deploy environments' branch policies) and what
  * `gh api` actually reports. Defaults to a dry-run plan; `--apply` writes
  * FIXABLE drift, gated behind a confirmation unless `--yes`. Sibling of
  * `../rulesets/commands.ts`, same flag shape (`--org`, `--repo`, `--apply`,
@@ -88,9 +88,10 @@ async function fetchSnapshot(r: Repo): Promise<LiveSettingsSnapshot> {
     actionsPermissions,
     selectedActions,
     workflowPermissions,
+    preflight,
     staging,
+    productionBuild,
     production,
-    productionApply,
   ] = await Promise.all([
     getRepo(r),
     getVulnerabilityAlertsEnabled(r),
@@ -98,9 +99,10 @@ async function fetchSnapshot(r: Repo): Promise<LiveSettingsSnapshot> {
     getActionsPermissions(r),
     getSelectedActions(r),
     getWorkflowPermissions(r),
+    fetchEnvironmentSnapshot(r, "preflight"),
     fetchEnvironmentSnapshot(r, "staging"),
+    fetchEnvironmentSnapshot(r, "production-build"),
     fetchEnvironmentSnapshot(r, "production"),
-    fetchEnvironmentSnapshot(r, "production-apply"),
   ]);
 
   return {
@@ -110,7 +112,12 @@ async function fetchSnapshot(r: Repo): Promise<LiveSettingsSnapshot> {
     actionsPermissions,
     selectedActions,
     workflowPermissions,
-    environments: { staging, production, "production-apply": productionApply },
+    environments: {
+      preflight,
+      staging,
+      "production-build": productionBuild,
+      production,
+    },
   };
 }
 

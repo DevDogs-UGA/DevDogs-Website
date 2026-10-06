@@ -34,6 +34,24 @@ describe("buildDesiredRulesets", () => {
     });
   });
 
+  it("lets Renovate bypass main-reviews only via pull request, when resolved", () => {
+    const withRenovate = buildDesiredRulesets({
+      ...actors,
+      renovateAppId: 2740,
+    });
+    expect(
+      withRenovate.find((r) => r.name === "main-reviews")!.bypass_actors,
+    ).toContainEqual({
+      actor_id: 2740,
+      actor_type: "Integration",
+      bypass_mode: "pull_request",
+    });
+    const without = desired.find((r) => r.name === "main-reviews")!;
+    expect(
+      without.bypass_actors.some((a) => a.actor_type === "Integration"),
+    ).toBe(false);
+  });
+
   it("lets reviewers merge PRs while only admins direct-push", () => {
     const updates = desired.find((rule) => rule.name === "main-updates")!;
     expect(updates.bypass_actors).toEqual([

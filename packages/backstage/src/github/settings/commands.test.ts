@@ -24,16 +24,20 @@ function baseEnvironment(name: string, requireReviewers: boolean) {
     environment: {
       name,
       protection_rules: requireReviewers
-        ? [{ type: "required_reviewers", reviewers: [{ type: "Team" }] }]
+        ? [
+            {
+              type: "required_reviewers",
+              prevent_self_review: true,
+              reviewers: [{ type: "Team" }],
+            },
+          ]
         : [],
       deployment_branch_policy: {
         protected_branches: false,
         custom_branch_policies: true,
       },
     },
-    branchPolicies: [
-      { id: 1, name: name === "staging" ? "main" : "production" },
-    ],
+    branchPolicies: [{ id: 1, name: "main" }],
   };
 }
 
@@ -57,7 +61,7 @@ const api = vi.hoisted(() => ({
   })),
   getEnvironment: vi.fn(
     async (_r: unknown, name: string) =>
-      baseEnvironment(name, name === "production-apply").environment,
+      baseEnvironment(name, name === "production").environment,
   ),
   getDeploymentBranchPolicies: vi.fn(
     async (_r: unknown, name: string) =>
@@ -216,7 +220,7 @@ describe("--apply", () => {
     restore();
   });
 
-  it("never auto-fixes a missing required reviewer on production-apply", async () => {
+  it("never auto-fixes a missing required reviewer on production", async () => {
     api.getEnvironment.mockImplementation(
       async (_r: unknown, name: string) =>
         baseEnvironment(name, false).environment,

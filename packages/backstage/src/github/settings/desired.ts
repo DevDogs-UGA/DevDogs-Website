@@ -5,12 +5,13 @@
  * Sibling of `../rulesets/desired.ts` — same shape of module (a pure
  * builder, no network, so `desired.test.ts` can assert it directly) covering
  * a different slice of repository configuration: security-and-analysis,
- * Dependabot, Actions permissions, and the three deploy environments'
+ * Dependabot, Actions permissions, and the four deploy environments'
  * branch policies. `diff.ts` compares this against what `api.ts`'s reads
  * report; `commands.ts` is the `backstage github settings` command that
  * prints or applies the difference.
  */
-export type SettingsEnvironment = "staging" | "production" | "production-apply";
+export type SettingsEnvironment =
+  "preflight" | "staging" | "production-build" | "production";
 
 export interface DesiredEnvironmentPolicy {
   name: SettingsEnvironment;
@@ -18,6 +19,11 @@ export interface DesiredEnvironmentPolicy {
   allowedBranches: readonly string[];
   /** Whether this environment must carry at least one required reviewer (never auto-added — see `diff.ts`). */
   requireReviewers: boolean;
+  /**
+   * Whether the reviewer rule must also set `prevent_self_review`, so the
+   * person who triggered a deploy cannot approve it. Never auto-added.
+   */
+  preventSelfReview: boolean;
 }
 
 export interface DesiredSettings {
@@ -76,17 +82,35 @@ export function buildDesiredSettings(
       defaultWorkflowPermissions: "read",
       canApprovePullRequestReviews: false,
     },
+    // `production` is THE reviewer gate: it holds every production secret,
+    // including the apply-tier credential (`gh/environments.ts`). No other
+    // environment may receive an apply-tier key, so none needs reviewers.
+    // `production-build` holds public variables only and builds production
+    // artifacts without credentials.
     environments: [
-      { name: "staging", allowedBranches: ["main"], requireReviewers: false },
       {
-        name: "production",
-        allowedBranches: ["production"],
+        name: "preflight",
+        allowedBranches: ["main"],
         requireReviewers: false,
+        preventSelfReview: false,
       },
       {
-        name: "production-apply",
-        allowedBranches: ["production"],
+        name: "staging",
+        allowedBranches: ["main"],
+        requireReviewers: false,
+        preventSelfReview: false,
+      },
+      {
+        name: "production-build",
+        allowedBranches: ["main"],
+        requireReviewers: false,
+        preventSelfReview: false,
+      },
+      {
+        name: "production",
+        allowedBranches: ["main"],
         requireReviewers: true,
+        preventSelfReview: true,
       },
     ],
   };

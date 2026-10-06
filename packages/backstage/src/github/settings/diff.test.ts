@@ -39,6 +39,17 @@ function matchingSnapshot(): LiveSettingsSnapshot {
       can_approve_pull_request_reviews: false,
     },
     environments: {
+      preflight: {
+        environment: {
+          name: "preflight",
+          protection_rules: [],
+          deployment_branch_policy: {
+            protected_branches: false,
+            custom_branch_policies: true,
+          },
+        },
+        branchPolicies: [{ id: 1, name: "main" }],
+      },
       staging: {
         environment: {
           name: "staging",
@@ -50,23 +61,24 @@ function matchingSnapshot(): LiveSettingsSnapshot {
         },
         branchPolicies: [{ id: 1, name: "main" }],
       },
-      production: {
+      "production-build": {
         environment: {
-          name: "production",
+          name: "production-build",
           protection_rules: [],
           deployment_branch_policy: {
             protected_branches: false,
             custom_branch_policies: true,
           },
         },
-        branchPolicies: [{ id: 2, name: "production" }],
+        branchPolicies: [{ id: 1, name: "main" }],
       },
-      "production-apply": {
+      production: {
         environment: {
-          name: "production-apply",
+          name: "production",
           protection_rules: [
             {
               type: "required_reviewers",
+              prevent_self_review: true,
               reviewers: [
                 { type: "Team", reviewer: { id: 9002, type: "Team" } },
               ],
@@ -77,7 +89,7 @@ function matchingSnapshot(): LiveSettingsSnapshot {
             custom_branch_policies: true,
           },
         },
-        branchPolicies: [{ id: 3, name: "production" }],
+        branchPolicies: [{ id: 1, name: "main" }],
       },
     },
   };
@@ -216,29 +228,43 @@ describe("planSettings — drift", () => {
     });
   });
 
-  it("flags production-apply with no required reviewers as drift, NEVER fixable", () => {
+  it("flags production with no required reviewers as drift, NEVER fixable", () => {
     const live = matchingSnapshot();
-    live.environments["production-apply"].environment!.protection_rules = [];
+    live.environments.production.environment!.protection_rules = [];
     const plan = planSettings(desiredFixture(), live, []);
     const check = plan.checks.find(
-      (c) => c.key === "environments.production-apply.required_reviewers",
+      (c) => c.key === "environments.production.required_reviewers",
     )!;
     expect(check.status).toBe("drift");
     expect(check.fixable).toBe(false);
   });
 
-  it("does not check required reviewers on staging/production, which don't require them", () => {
+  it("flags production without prevent_self_review as drift, NEVER fixable", () => {
+    const live = matchingSnapshot();
+    live.environments.production.environment!.protection_rules![0]!.prevent_self_review = false;
+    const plan = planSettings(desiredFixture(), live, []);
+    const check = plan.checks.find(
+      (c) => c.key === "environments.production.prevent_self_review",
+    )!;
+    expect(check.status).toBe("drift");
+    expect(check.fixable).toBe(false);
+  });
+
+  it("checks required reviewers on production only", () => {
     const plan = planSettings(desiredFixture(), matchingSnapshot(), []);
-    expect(
-      plan.checks.find(
-        (c) => c.key === "environments.staging.required_reviewers",
-      ),
-    ).toBeUndefined();
+    for (const name of ["preflight", "staging", "production-build"]) {
+      expect(
+        plan.checks.find(
+          (c) => c.key === `environments.${name}.required_reviewers`,
+        ),
+        name,
+      ).toBeUndefined();
+    }
     expect(
       plan.checks.find(
         (c) => c.key === "environments.production.required_reviewers",
-      ),
-    ).toBeUndefined();
+      )?.status,
+    ).toBe("ok");
   });
 });
 

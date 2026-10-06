@@ -40,34 +40,28 @@ describe("buildDesiredSettings", () => {
     });
   });
 
-  it("names exactly staging, production and production-apply, in that order", () => {
+  it("names exactly preflight, staging, production-build and production, in that order", () => {
     const desired = buildDesiredSettings([]);
     expect(desired.environments.map((e) => e.name)).toEqual([
+      "preflight",
       "staging",
+      "production-build",
       "production",
-      "production-apply",
     ]);
   });
 
-  it("restricts staging to main and production/production-apply to production", () => {
-    const desired = buildDesiredSettings([]);
-    expect(
-      desired.environments.find((e) => e.name === "staging")!.allowedBranches,
-    ).toEqual(["main"]);
-    expect(
-      desired.environments.find((e) => e.name === "production")!
-        .allowedBranches,
-    ).toEqual(["production"]);
-    expect(
-      desired.environments.find((e) => e.name === "production-apply")!
-        .allowedBranches,
-    ).toEqual(["production"]);
-  });
-
-  it("requires reviewers on production-apply only", () => {
+  it("restricts every environment to main", () => {
     const desired = buildDesiredSettings([]);
     for (const env of desired.environments) {
-      expect(env.requireReviewers).toBe(env.name === "production-apply");
+      expect(env.allowedBranches, env.name).toEqual(["main"]);
+    }
+  });
+
+  it("requires reviewers, with self-review prevented, on production only", () => {
+    const desired = buildDesiredSettings([]);
+    for (const env of desired.environments) {
+      expect(env.requireReviewers, env.name).toBe(env.name === "production");
+      expect(env.preventSelfReview, env.name).toBe(env.name === "production");
     }
   });
 });
