@@ -31,17 +31,48 @@
 //      does the workspace-aware packing here; npm does the actual registry
 //      write. No npm token of any kind is read or expected to exist.
 //
+// ORDER AND CONCURRENCY. Packages are grouped into topological LAYERS (see
+// publishLayers): a package's layer is one past the deepest in-repo public
+// package it needs installed, where "needs" means `dependencies`,
+// `optionalDependencies` and `peerDependencies` declared as `workspace:*`
+// (what a consumer's install resolves). `devDependencies` are NOT edges:
+// consumers never install them, so waiting on one only slows the run. The
+// `*`-ranged optional peers (db/env on the CLIs) are not workspace ranges and
+// are not edges either; the consumer's own repo supplies those.
+//
+// Layer by layer: pack and version every package of the layer (serially, see
+// the PACKING note), then publish them all concurrently, then wait for every
+// one of them to be installable (waitUntilInstallable, concurrently), then
+// start the next layer. So a package is only ever published once everything
+// it depends on is installable, which is the guarantee the 2026-10-04 CDN
+// race (see waitUntilInstallable) needs, without serialising unrelated
+// packages. If any publish or wait in a layer fails, siblings already in
+// flight finish (npm publishes can't be cancelled), the next layer never
+// starts, and the error lists what did publish.
+//
+// PACKING stays serial on purpose. `pnpm pack` runs through execFileSync, so
+// it blocks the event loop and never overlaps with itself or with the
+// package.json writes around it; that is the whole synchronisation story, and
+// it keeps every write to an on-disk package.json strictly before any pack
+// that reads it. Packing is seconds per package; the minutes live in the
+// network publish and the CDN wait, which are the parts that run concurrently.
+//
+// One consequence of dropping devDependency edges: `pnpm pack` still writes a
+// package's workspace devDependencies into the tarball's manifest at their
+// on-disk versions. If a package's devDependency bumps in the same run, the
+// tarball carries the previous version of it, and the next run (which syncs
+// the new version first) sees a different tarball and republishes that
+// package once more. That is one extra patch release, never a broken one.
+//
 // KNOWN v1 LIMITATION (acceptable per the build sheet's "favor obvious over
-// clever", flag for Wave-3/cutover follow-up if it bites): packages are
-// processed in dependency order (topological, by workspace:* edges) so a
-// package publishing in the SAME run as one of its dependencies picks up
-// that dependency's brand-new version. But if a package's own file contents
-// are unchanged while only one of its workspace:* dependencies bumped, this
-// script does NOT transitively republish it — it will keep depending on the
-// dependency's previous version until something else in it changes. A
-// content-only diff can't see that; catching it needs walking the
-// dependency graph forward from every version bump, which is more machinery
-// than a repo this size has earned yet.
+// clever", flag for Wave-3/cutover follow-up if it bites): if a package's own
+// file contents are unchanged while only one of its workspace:* dependencies
+// bumped, this script does NOT transitively republish it, except through the
+// pack-comparison above for packages that happen to be packed after the bump.
+// It will keep depending on the dependency's previous version until something
+// else in it changes. Catching it needs walking the dependency graph forward
+// from every version bump, which is more machinery than a repo this size has
+// earned yet.
 //
 // Requires network access to registry.npmjs.org (read, unauthenticated) and
 // an npm CLI new enough to speak OIDC trusted publishing (the workflow pins
@@ -57,7 +88,7 @@
 // stamping tarballs with the pack time, this comparison always "changes"
 // and every package republishes on every merge — noisy but not unsafe.
 
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import {
   readFileSync,
   writeFileSync,
@@ -72,7 +103,10 @@ import {
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const packagesDir = join(repoRoot, "packages");
@@ -168,9 +202,10 @@ async function fetchRegistryState(name) {
 // minutes after a publish. That window broke a DevDogsUGA production deploy
 // (2026-10-04): it installed @devdogsuga/backstage@0.1.12, published 6s after
 // @devdogsuga/newsletter@0.1.14, while the CDN still said newsletter's latest
-// was 0.1.13. Waiting here after every publish means a dependency is
-// installable before anything depending on it is published, and a finished
-// publish job means everything it published is installable.
+// was 0.1.13. Waiting here for every package of a layer before the next
+// layer starts means a dependency is installable before anything depending on
+// it is published, and a finished publish job means everything it published is
+// installable.
 async function waitUntilInstallable(
   name,
   version,
@@ -217,18 +252,15 @@ function highestVersion(versions) {
 // npm answers 403 "cannot publish over the previously published versions"
 // when the version already exists, which happens when the registry read in
 // pass 1 was stale. Bump past it and re-pack rather than failing the run.
-function publishWithRetry(repoRoot, pkg, tarball, destDir, attempts = 5) {
+async function publishWithRetry(repoRoot, pkg, tarball, destDir, attempts = 5) {
   for (let i = 1; ; i++) {
     try {
-      execFileSync(
+      const { stdout } = await execFileAsync(
         "npm",
         ["publish", tarball, "--access", "public", "--provenance"],
-        {
-          cwd: repoRoot,
-          stdio: ["ignore", "inherit", "pipe"],
-          encoding: "utf8",
-        },
+        { cwd: repoRoot, encoding: "utf8" },
       );
+      process.stdout.write(stdout);
       return pkg.json.version;
     } catch (err) {
       const stderr = String(err.stderr ?? "");
@@ -242,6 +274,7 @@ function publishWithRetry(repoRoot, pkg, tarball, destDir, attempts = 5) {
       const taken = pkg.json.version;
       pkg.json.version = patchBump(taken);
       writePackageJson(pkg.path, pkg.json);
+      // Synchronous, so it cannot overlap another package's pack or write.
       tarball = pnpmPack(repoRoot, pkg.json.name, destDir).tarballPath;
       console.log(
         `${pkg.json.name}: ${taken} is already published; retrying as ${pkg.json.version}`,
@@ -264,38 +297,119 @@ function discoverPackages() {
     });
 }
 
-// Order packages so a dependency is processed (and, if it changed, already
-// re-versioned on disk) before anything that depends on it via workspace:*.
-function topoSort(pkgs) {
-  const byName = new Map(pkgs.map((p) => [p.json.name, p]));
-  const visited = new Set();
-  const order = [];
+const EDGE_FIELDS = [
+  "dependencies",
+  "optionalDependencies",
+  "peerDependencies",
+];
 
-  function visit(pkg, stack) {
-    if (visited.has(pkg.json.name)) return;
-    if (stack.has(pkg.json.name)) {
-      throw new Error(
-        `Circular workspace:* dependency involving ${pkg.json.name}`,
-      );
-    }
-    stack.add(pkg.json.name);
-    const deps = {
-      ...pkg.json.dependencies,
-      ...pkg.json.devDependencies,
-      ...pkg.json.peerDependencies,
-    };
-    for (const [depName, range] of Object.entries(deps)) {
-      if (range === "workspace:*" && byName.has(depName)) {
-        visit(byName.get(depName), stack);
+/**
+ * Names of the in-repo public packages `pkg` needs installed: its workspace
+ * ranges in dependencies, optionalDependencies and peerDependencies. Not
+ * devDependencies (consumers never install them), and not `*`-ranged peers
+ * (those are supplied by the consumer's repo, not this one's publish).
+ */
+export function publishEdges(pkg, byName) {
+  const edges = new Set();
+  for (const field of EDGE_FIELDS) {
+    for (const [depName, range] of Object.entries(pkg.json[field] ?? {})) {
+      if (
+        typeof range === "string" &&
+        range.startsWith("workspace:") &&
+        byName.has(depName)
+      ) {
+        edges.add(depName);
       }
     }
-    stack.delete(pkg.json.name);
-    visited.add(pkg.json.name);
-    order.push(pkg);
+  }
+  return [...edges].sort();
+}
+
+/**
+ * Group packages into publish layers: layer N holds every package whose
+ * deepest dependency chain is N long, so everything in a layer can publish at
+ * once and a layer only needs the layers before it. Sorted by name inside a
+ * layer so the order (and the release plan) is deterministic.
+ */
+export function publishLayers(pkgs) {
+  const byName = new Map(pkgs.map((p) => [p.json.name, p]));
+  const depth = new Map();
+
+  function visit(pkg, stack) {
+    const name = pkg.json.name;
+    if (depth.has(name)) return depth.get(name);
+    if (stack.includes(name)) {
+      throw new Error(
+        `Circular workspace dependency: ${[...stack, name].join(" -> ")}`,
+      );
+    }
+    stack.push(name);
+    let layer = 0;
+    for (const dep of publishEdges(pkg, byName)) {
+      layer = Math.max(layer, visit(byName.get(dep), stack) + 1);
+    }
+    stack.pop();
+    depth.set(name, layer);
+    return layer;
   }
 
-  for (const pkg of pkgs) visit(pkg, new Set());
-  return order;
+  for (const pkg of pkgs) visit(pkg, []);
+  const layers = [];
+  for (const pkg of pkgs) {
+    (layers[depth.get(pkg.json.name)] ??= []).push(pkg);
+  }
+  return layers.map((layer) =>
+    layer.sort((a, b) => a.json.name.localeCompare(b.json.name)),
+  );
+}
+
+/**
+ * Walk the layers in order. For each: `prepare(layer, index)` (optional; sync
+ * or async, run alone) turns the layer's packages into jobs, then `run(job)`
+ * executes every job concurrently. The layer is done only when all its jobs
+ * have settled; if any failed, later layers never start and the thrown error
+ * says which jobs completed, which failed and which never started. `label`
+ * names a job in that message. Resolves to every job's result, in layer order.
+ */
+export async function runLayers(
+  layers,
+  { prepare = (layer) => layer, run, label = String },
+) {
+  const completed = [];
+  const results = [];
+  for (const [index, layer] of layers.entries()) {
+    const jobs = await prepare(layer, index);
+    const settled = await Promise.allSettled(jobs.map((job) => run(job)));
+    const failures = [];
+    settled.forEach((outcome, i) => {
+      if (outcome.status === "fulfilled") {
+        completed.push(label(jobs[i]));
+        results.push(outcome.value);
+      } else {
+        failures.push({ job: label(jobs[i]), reason: outcome.reason });
+      }
+    });
+    if (failures.length > 0) {
+      const skipped = layers
+        .slice(index + 1)
+        .flat()
+        .map((pkg) => pkg.json?.name ?? String(pkg));
+      throw new AggregateError(
+        failures.map((f) => f.reason),
+        [
+          `Layer ${index} failed: ${failures
+            .map(
+              (f) =>
+                `${f.job} (${f.reason instanceof Error ? f.reason.message : f.reason})`,
+            )
+            .join("; ")}.`,
+          `Completed before stopping (${completed.length}): ${completed.join(", ") || "(none)"}.`,
+          `Not started (${skipped.length}): ${skipped.join(", ") || "(none)"}.`,
+        ].join("\n"),
+      );
+    }
+  }
+  return results;
 }
 
 // ---------------------------------------------------------------------------
@@ -413,49 +527,63 @@ async function main() {
   // Pass 1: sync every publishable package's on-disk version to its
   // latest-known-published version, so workspace:* rewrites during packing
   // (in pass 2) are never based on the stale 0.1.0 placeholder committed to
-  // git.
+  // git. Registry reads are independent, so they run together; the writes
+  // happen after, one at a time.
   const registryState = new Map();
-  for (const pkg of pkgs) {
-    const state = await fetchRegistryState(pkg.json.name);
+  const states = await Promise.all(
+    pkgs.map((pkg) => fetchRegistryState(pkg.json.name)),
+  );
+  pkgs.forEach((pkg, i) => {
+    const state = states[i];
     registryState.set(pkg.json.name, state);
     if (state) {
       pkg.json.version = state.latest;
       writePackageJson(pkg.path, pkg.json);
     }
     // else: never published — leave the committed version (0.1.0) as-is.
-  }
+  });
 
-  // Pass 2: pack, diff against the registry shasum, bump + publish anything
-  // that changed. Topological so a same-run dependency bump is visible to
-  // its dependents' pack step (see the file header's known limitation for
-  // what this does NOT catch).
-  const ordered = topoSort(pkgs);
+  // Pass 2, layer by layer (see the file header): pack, diff against the
+  // registry shasum and bump every package of the layer; then publish the
+  // changed ones concurrently and wait for all of them to be installable
+  // before the next layer packs, so a dependent's pack step sees its
+  // dependencies' final versions.
+  const layers = publishLayers(pkgs);
   const published = [];
   const unchanged = [];
   const plan = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     commit: git(["rev-parse", "HEAD"]),
     packages: [],
   };
+  const tmpDirs = [];
 
   if (prepareDir) mkdirSync(prepareDir, { recursive: true });
 
-  for (const pkg of ordered) {
-    const name = pkg.json.name;
-    const state = registryState.get(name);
-    const tmp = mkdtempSync(join(tmpdir(), "devdogsuga-publish-"));
-    try {
+  function prepareLayer(layer, layerIndex) {
+    console.log(
+      `Layer ${layerIndex}: ${layer.map((p) => p.json.name).join(", ")}`,
+    );
+    const jobs = [];
+    for (const pkg of layer) {
+      const name = pkg.json.name;
+      const state = registryState.get(name);
+      const tmp = mkdtempSync(join(tmpdir(), "devdogsuga-publish-"));
+      tmpDirs.push(tmp);
       const { shasum } = pnpmPack(repoRoot, name, tmp);
 
       if (state && state.shasum && state.shasum === shasum) {
         unchanged.push(name);
-        if (!prepareDir) ensureRelease(pkg, state.latest);
         plan.packages.push({
           name,
+          layer: layerIndex,
           action: "unchanged",
           version: state.latest,
           registryShasum: state.shasum,
         });
+        if (!prepareDir) {
+          jobs.push({ pkg, version: state.latest, tarball: null, tmp });
+        }
         continue;
       }
 
@@ -471,13 +599,13 @@ async function main() {
         `${name}: ${state ? state.latest : "(unpublished)"} -> ${nextVersion}`,
       );
 
-      let publishedVersion = nextVersion;
       if (prepareDir) {
         const filename = `${name.replaceAll("/", "-").replaceAll("@", "")}-${nextVersion}.tgz`;
         const destination = join(prepareDir, filename);
         copyFileSync(finalTarball, destination);
         plan.packages.push({
           name,
+          layer: layerIndex,
           action: "publish",
           version: nextVersion,
           file: filename,
@@ -485,17 +613,46 @@ async function main() {
           sha256: sha256OfFile(destination),
         });
         console.log(`  prepared ${destination}`);
-      } else if (dryRun) {
-        console.log(`  [dry run] would publish ${finalTarball}`);
+        published.push(`${name}@${nextVersion}`);
       } else {
-        publishedVersion = publishWithRetry(repoRoot, pkg, finalTarball, tmp);
-        await waitUntilInstallable(name, publishedVersion);
+        jobs.push({ pkg, version: nextVersion, tarball: finalTarball, tmp });
       }
-      published.push(`${name}@${publishedVersion}`);
-      if (!prepareDir) ensureRelease(pkg, publishedVersion);
-    } finally {
-      rmSync(tmp, { recursive: true, force: true });
     }
+    return jobs;
+  }
+
+  async function runJob(job) {
+    const { pkg, tarball, tmp } = job;
+    const name = pkg.json.name;
+    if (tarball === null) {
+      ensureRelease(pkg, job.version);
+      return;
+    }
+    let version = job.version;
+    if (dryRun) {
+      console.log(`  [dry run] would publish ${tarball}`);
+    } else {
+      version = await publishWithRetry(repoRoot, pkg, tarball, tmp);
+      await waitUntilInstallable(name, version);
+    }
+    published.push(`${name}@${version}`);
+    ensureRelease(pkg, version);
+  }
+
+  try {
+    await runLayers(layers, {
+      prepare: prepareLayer,
+      run: runJob,
+      label: (job) => job.pkg?.json.name ?? String(job),
+    });
+  } catch (err) {
+    console.error("");
+    console.error(
+      `Published before the failure (${published.length}): ${published.join(", ") || "(none)"}`,
+    );
+    throw err;
+  } finally {
+    for (const tmp of tmpDirs) rmSync(tmp, { recursive: true, force: true });
   }
 
   console.log("");
@@ -538,7 +695,7 @@ async function main() {
 async function publishPreparedPlan(path) {
   const plan = JSON.parse(readFileSync(path, "utf8"));
   const actualCommit = git(["rev-parse", "HEAD"]);
-  if (plan.schemaVersion !== 1 || plan.commit !== actualCommit) {
+  if (plan.schemaVersion !== 2 || plan.commit !== actualCommit) {
     throw new Error(
       `Release plan commit ${plan.commit ?? "(missing)"} does not match checkout ${actualCommit}.`,
     );
@@ -549,14 +706,33 @@ async function publishPreparedPlan(path) {
       .filter(({ json }) => typeof json.name === "string")
       .map((pkg) => [pkg.json.name, pkg]),
   );
-  for (const entry of plan.packages) {
-    const pkg = packages.get(entry.name);
-    if (!pkg)
-      throw new Error(`Release plan names unknown package ${entry.name}.`);
-    if (entry.action === "unchanged") {
-      ensureRelease(pkg, entry.version);
-      continue;
+
+  // The plan was made from this same commit, so the layers it recorded must be
+  // the ones this checkout computes. Checked before anything is published.
+  const layers = publishLayers(
+    plan.packages.map((entry) => {
+      const pkg = packages.get(entry.name);
+      if (!pkg)
+        throw new Error(`Release plan names unknown package ${entry.name}.`);
+      return pkg;
+    }),
+  );
+  for (const [index, layer] of layers.entries()) {
+    for (const pkg of layer) {
+      const entry = plan.packages.find((e) => e.name === pkg.json.name);
+      if (entry.layer !== index) {
+        throw new Error(
+          `Release plan puts ${entry.name} in layer ${entry.layer}, but this checkout computes layer ${index}.`,
+        );
+      }
     }
+  }
+
+  // Every artifact is verified before the first publish, so a corrupted or
+  // swapped tarball fails the run with nothing published.
+  const entries = new Map(plan.packages.map((entry) => [entry.name, entry]));
+  for (const entry of plan.packages) {
+    if (entry.action === "unchanged") continue;
     const tarball = join(dirname(path), entry.file);
     if (
       sha1OfFile(tarball) !== entry.sha1 ||
@@ -566,6 +742,15 @@ async function publishPreparedPlan(path) {
         `Artifact hash mismatch for ${entry.name}@${entry.version}.`,
       );
     }
+  }
+
+  async function publishEntry(pkg) {
+    const entry = entries.get(pkg.json.name);
+    if (entry.action === "unchanged") {
+      ensureRelease(pkg, entry.version);
+      return;
+    }
+    const tarball = join(dirname(path), entry.file);
     const live = await fetchRegistryState(entry.name);
     if (live?.latest === entry.version) {
       if (live.shasum !== entry.sha1) {
@@ -585,11 +770,16 @@ async function publishPreparedPlan(path) {
           `${entry.name}: registry advanced to ${live.latest}; prepare a new candidate instead of recalculating after approval.`,
         );
       }
-      execFileSync(
+      const { stdout } = await execFileAsync(
         "npm",
         ["publish", tarball, "--access", "public", "--provenance"],
-        { cwd: repoRoot, stdio: "inherit" },
-      );
+        { cwd: repoRoot, encoding: "utf8" },
+      ).catch((err) => {
+        process.stdout.write(String(err.stdout ?? ""));
+        process.stderr.write(String(err.stderr ?? ""));
+        throw err;
+      });
+      process.stdout.write(stdout);
       console.log(`Published ${entry.name}@${entry.version}`);
     }
     // Also on the "already published" path: a re-run after a failure must not
@@ -597,12 +787,25 @@ async function publishPreparedPlan(path) {
     await waitUntilInstallable(entry.name, entry.version);
     ensureRelease(pkg, entry.version);
   }
+
+  await runLayers(layers, {
+    prepare: (layer, index) => {
+      console.log(
+        `Layer ${index}: ${layer.map((p) => p.json.name).join(", ")}`,
+      );
+      return layer;
+    },
+    run: publishEntry,
+    label: (pkg) => pkg.json.name,
+  });
 }
 
-const operation = publishPlanPath
-  ? publishPreparedPlan(publishPlanPath)
-  : main();
-operation.catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  const operation = publishPlanPath
+    ? publishPreparedPlan(publishPlanPath)
+    : main();
+  operation.catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

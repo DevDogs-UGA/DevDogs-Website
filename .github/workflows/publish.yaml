@@ -56,8 +56,9 @@ jobs:
   publish:
     needs: prepare
     runs-on: ubuntu-latest
-    # Room for the script to wait out npm's CDN after each publish (up to 15
-    # minutes per package, usually seconds; see waitUntilInstallable).
+    # Room for the script to wait out npm's CDN after each publish layer (up to
+    # 15 minutes per layer, usually seconds; packages in a layer publish and
+    # wait concurrently, and layers run in order; see publishLayers).
     timeout-minutes: 45
     environment: publishing
     permissions:

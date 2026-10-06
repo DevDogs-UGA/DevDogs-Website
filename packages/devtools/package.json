@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "@clack/prompts": "catalog:",
-    "@devdogsuga/telemetry": "workspace:*",
+    "@sentry/core": "catalog:",
     "@sentry/node": "catalog:",
     "@supabase/supabase-js": "catalog:",
     "dotenv": "^17.4.2",
@@ -63,6 +63,7 @@
     "@devdogsuga/config": "workspace:*",
     "@devdogsuga/db": "workspace:*",
     "@devdogsuga/env": "workspace:*",
+    "@devdogsuga/telemetry": "workspace:*",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",
