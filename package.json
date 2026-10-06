@@ -16,7 +16,12 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,mjs,jsx,md,mdx,json,css}\" --cache --ignore-path .gitignore --ignore-path .prettierignore",
     "check:scripts": "node --test scripts/check-scripts.test.mjs",
-    "check:publish": "node --test scripts/publish-changed-packages.test.mjs"
+    "check:publish": "node --test scripts/publish-changed-packages.test.mjs",
+    "check:patches": "node scripts/patch-audit.ts",
+    "check:toolchain": "node scripts/toolchain-drift.ts",
+    "populate:patch-issues": "node scripts/patch-issues.ts",
+    "test:patches": "node --test scripts/patch-audit.test.ts scripts/patch-issues.test.ts",
+    "test:toolchain": "node --test scripts/toolchain-drift.test.ts"
   },
   "engines": {
     "node": ">=22.12"

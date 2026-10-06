@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import {
   auditPatch,
   checkConsistency,
@@ -11,7 +12,7 @@ import {
   type FetchLike,
   type ManifestEntry,
   type UpstreamStatus,
-} from "./patch-audit";
+} from "./patch-audit.ts";
 
 const yaml = `
 catalog:
@@ -35,7 +36,7 @@ const entry = (overrides: Partial<ManifestEntry> = {}): ManifestEntry => ({
 
 describe("parsePatchedDependencies", () => {
   it("reads quoted and bare keys and stops at the next top-level key", () => {
-    expect(parsePatchedDependencies(yaml)).toEqual({
+    assert.deepEqual(parsePatchedDependencies(yaml), {
       "@vinext/cloudflare@1.0.1": "patches/@vinext__cloudflare@1.0.1.patch",
       "react-dom@19.2.8": "patches/react-dom@19.2.8.patch",
     });
@@ -47,13 +48,14 @@ describe("checkConsistency", () => {
   const patchFiles = new Set(["a@1.0.0.patch", "patches.json"]);
 
   it("passes a matching manifest", () => {
-    expect(
+    assert.deepEqual(
       checkConsistency({
         patched,
         manifest: { "a@1.0.0": entry() },
         patchFiles,
       }),
-    ).toEqual([]);
+      [],
+    );
   });
 
   it("flags keys missing on either side", () => {
@@ -62,11 +64,13 @@ describe("checkConsistency", () => {
       manifest: { "b@2.0.0": entry({ file: "a@1.0.0.patch" }) },
       patchFiles,
     });
-    expect(errors.join("\n")).toContain(
-      "a@1.0.0: in patchedDependencies but missing",
+    assert.match(
+      errors.join("\n"),
+      /a@1\.0\.0: in patchedDependencies but missing/,
     );
-    expect(errors.join("\n")).toContain(
-      "b@2.0.0: in patches/patches.json but not in patchedDependencies",
+    assert.match(
+      errors.join("\n"),
+      /b@2\.0\.0: in patches\/patches\.json but not in patchedDependencies/,
     );
   });
 
@@ -76,10 +80,8 @@ describe("checkConsistency", () => {
       manifest: { "a@1.0.0": entry({ file: "gone.patch" }) },
       patchFiles,
     });
-    expect(missing.join("\n")).toContain("patches/gone.patch does not exist");
-    expect(missing.join("\n")).toContain(
-      "does not match patchedDependencies path",
-    );
+    assert.match(missing.join("\n"), /patches\/gone\.patch does not exist/);
+    assert.match(missing.join("\n"), /does not match patchedDependencies path/);
   });
 
   it("flags empty why, upstream, releasedIn and bad URLs", () => {
@@ -90,19 +92,22 @@ describe("checkConsistency", () => {
       },
       patchFiles,
     });
-    expect(errors).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining('"why" is empty'),
-        expect.stringContaining('"releasedIn" is empty'),
-        expect.stringContaining('"upstream" must list'),
-      ]),
-    );
+    for (const fragment of [
+      '"why" is empty',
+      '"releasedIn" is empty',
+      '"upstream" must list',
+    ]) {
+      assert.ok(
+        errors.some((error) => error.includes(fragment)),
+        `expected an error containing ${fragment}`,
+      );
+    }
     const bad = checkConsistency({
       patched,
       manifest: { "a@1.0.0": entry({ upstream: ["https://example.com/x"] }) },
       patchFiles,
     });
-    expect(bad.join("\n")).toContain("not a GitHub PR or issue URL");
+    assert.match(bad.join("\n"), /not a GitHub PR or issue URL/);
   });
 });
 
@@ -115,43 +120,38 @@ describe("resolveUpstream", () => {
   });
 
   it("needs every URL by default and dates by the last one", () => {
-    expect(
+    assert.deepEqual(
       resolveUpstream([s(true, "2026-01-01T00:00:00Z"), s(false, null)], false),
-    ).toEqual({
-      resolved: false,
-      resolvedAt: null,
-    });
-    expect(
+      { resolved: false, resolvedAt: null },
+    );
+    assert.deepEqual(
       resolveUpstream(
         [s(true, "2026-01-01T00:00:00Z"), s(true, "2026-02-01T00:00:00Z")],
         false,
       ),
-    ).toEqual({
-      resolved: true,
-      resolvedAt: "2026-02-01T00:00:00Z",
-    });
+      { resolved: true, resolvedAt: "2026-02-01T00:00:00Z" },
+    );
   });
 
   it("needs one URL with anyOf and dates by the earliest", () => {
-    expect(
+    assert.deepEqual(
       resolveUpstream(
         [s(true, "2026-03-01T00:00:00Z"), s(true, "2026-02-01T00:00:00Z")],
         true,
       ),
-    ).toEqual({
-      resolved: true,
-      resolvedAt: "2026-02-01T00:00:00Z",
-    });
-    expect(
+      { resolved: true, resolvedAt: "2026-02-01T00:00:00Z" },
+    );
+    assert.equal(
       resolveUpstream([s(false, null), s(false, null)], true).resolved,
-    ).toBe(false);
+      false,
+    );
   });
 });
 
 describe("versions", () => {
   it("compares stable versions numerically", () => {
-    expect(compareVersions("1.10.0", "1.9.0")).toBeGreaterThan(0);
-    expect(compareVersions("1.0.1", "1.0.1")).toBe(0);
+    assert.ok(compareVersions("1.10.0", "1.9.0") > 0);
+    assert.equal(compareVersions("1.0.1", "1.0.1"), 0);
   });
 
   it("picks the earliest stable release after resolution that is newer than installed", () => {
@@ -162,13 +162,14 @@ describe("versions", () => {
       "1.1.0-beta.1": "2026-03-02T00:00:00Z",
       "1.1.0": "2026-04-01T00:00:00Z",
     };
-    expect(findFixRelease(times, "1.0.1", "2026-02-15T00:00:00Z")).toBe(
+    assert.equal(
+      findFixRelease(times, "1.0.1", "2026-02-15T00:00:00Z"),
       "1.0.2",
     );
     // Published after resolution but not newer than what we run.
-    expect(findFixRelease(times, "1.1.0", "2026-02-15T00:00:00Z")).toBeNull();
+    assert.equal(findFixRelease(times, "1.1.0", "2026-02-15T00:00:00Z"), null);
     // Newer than installed but published before the fix landed.
-    expect(findFixRelease(times, "1.0.0", "2026-05-01T00:00:00Z")).toBeNull();
+    assert.equal(findFixRelease(times, "1.0.0", "2026-05-01T00:00:00Z"), null);
   });
 
   it("reads the highest installed version from the lockfile, patch hashes included", () => {
@@ -179,23 +180,28 @@ describe("versions", () => {
       "  '@vinext/cloudflare@1.0.1(patch_hash=abc)(vinext@1.0.1)':",
       "  vinext-other@9.9.9:",
     ].join("\n");
-    expect(installedVersion(lock, "vinext")).toBe("1.0.1");
-    expect(installedVersion(lock, "@vinext/cloudflare")).toBe("1.0.1");
-    expect(installedVersion(lock, "missing")).toBeNull();
+    assert.equal(installedVersion(lock, "vinext"), "1.0.1");
+    assert.equal(installedVersion(lock, "@vinext/cloudflare"), "1.0.1");
+    assert.equal(installedVersion(lock, "missing"), null);
   });
 });
 
 describe("parseUpstreamUrl", () => {
   it("tells PRs from issues", () => {
-    expect(
-      parseUpstreamUrl("https://github.com/cloudflare/vinext/pull/3242"),
-    ).toMatchObject({ kind: "pr", number: 3242 });
-    expect(
-      parseUpstreamUrl("https://github.com/cloudflare/workerd/issues/6408"),
-    ).toMatchObject({ kind: "issue" });
-    expect(
+    const pr = parseUpstreamUrl(
+      "https://github.com/cloudflare/vinext/pull/3242",
+    );
+    assert.equal(pr?.kind, "pr");
+    assert.equal(pr?.number, 3242);
+    assert.equal(
+      parseUpstreamUrl("https://github.com/cloudflare/workerd/issues/6408")
+        ?.kind,
+      "issue",
+    );
+    assert.equal(
       parseUpstreamUrl("https://github.com/cloudflare/workerd"),
-    ).toBeNull();
+      null,
+    );
   });
 });
 
@@ -229,8 +235,11 @@ describe("auditPatch", () => {
       "/pulls/1": { state: "open", merged_at: null },
     });
     const report = await auditPatch("k", entry(), { fetch, lockfile });
-    expect(report.state).toBe("pending");
-    expect(calls.some((c) => c.includes("npmjs"))).toBe(false);
+    assert.equal(report.state, "pending");
+    assert.equal(
+      calls.some((c) => c.includes("npmjs")),
+      false,
+    );
   });
 
   it("is awaiting-release when merged but nothing newer is published", async () => {
@@ -240,7 +249,8 @@ describe("auditPatch", () => {
         time: { created: "x", modified: "y", "1.0.0": "2026-01-01T00:00:00Z" },
       },
     });
-    expect((await auditPatch("k", entry(), { fetch, lockfile })).state).toBe(
+    assert.equal(
+      (await auditPatch("k", entry(), { fetch, lockfile })).state,
       "awaiting-release",
     );
   });
@@ -256,9 +266,9 @@ describe("auditPatch", () => {
       },
     });
     const report = await auditPatch("k", entry(), { fetch, lockfile });
-    expect(report.state).toBe("removable");
-    expect(report.fixVersion).toBe("1.0.1");
-    expect(report.action).toContain("bump pkg to 1.0.1");
+    assert.equal(report.state, "removable");
+    assert.equal(report.fixVersion, "1.0.1");
+    assert.ok(report.action?.includes("bump pkg to 1.0.1"));
   });
 
   it("honours anyOf across a PR and an issue", async () => {
@@ -280,19 +290,20 @@ describe("auditPatch", () => {
       fetch: mockFetch(routes).fetch,
       lockfile,
     });
-    expect(all.state).toBe("pending");
+    assert.equal(all.state, "pending");
     const any = await auditPatch("k", entry({ upstream, anyOf: true }), {
       fetch: mockFetch(routes).fetch,
       lockfile,
     });
-    expect(any.state).toBe("removable");
+    assert.equal(any.state, "removable");
   });
 
   it("treats a closed-unmerged PR as unresolved", async () => {
     const { fetch } = mockFetch({
       "/pulls/1": { state: "closed", merged_at: null },
     });
-    expect((await auditPatch("k", entry(), { fetch, lockfile })).state).toBe(
+    assert.equal(
+      (await auditPatch("k", entry(), { fetch, lockfile })).state,
       "pending",
     );
   });
@@ -303,8 +314,8 @@ describe("auditPatch", () => {
       fetch: down.fetch,
       lockfile,
     });
-    expect(report.state).toBe("unknown");
-    expect(report.warnings.join()).toContain("offline");
+    assert.equal(report.state, "unknown");
+    assert.match(report.warnings.join(), /offline/);
 
     const npmDown = mockFetch({
       "/pulls/1": { state: "closed", merged_at: "2026-06-01T00:00:00Z" },
@@ -313,8 +324,8 @@ describe("auditPatch", () => {
       fetch: npmDown.fetch,
       lockfile,
     });
-    expect(second.state).toBe("unknown");
-    expect(second.warnings.join()).toContain("npm");
+    assert.equal(second.state, "unknown");
+    assert.match(second.warnings.join(), /npm/);
   });
 
   it("sends the token as a bearer header when given", async () => {
@@ -324,6 +335,6 @@ describe("auditPatch", () => {
       return reply({ state: "open", merged_at: null });
     };
     await auditPatch("k", entry(), { fetch, lockfile, token: "t0ken" });
-    expect(seen).toBe("Bearer t0ken");
+    assert.equal(seen, "Bearer t0ken");
   });
 });

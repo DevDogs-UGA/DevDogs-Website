@@ -1,7 +1,7 @@
 /**
  * `check:patches`: audit the repo's pnpm patches against their upstream fixes.
  *
- *   tsx scripts/patch-audit.ts [--json]
+ *   node scripts/patch-audit.ts [--json]
  *
  * `patches/patches.json` records, for every `patchedDependencies` entry in
  * pnpm-workspace.yaml, why it exists, the upstream PRs/issues that make it
