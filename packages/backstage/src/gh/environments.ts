@@ -114,6 +114,9 @@ function applyOnly(): readonly string[] {
 function buildOnly(): readonly string[] {
   assertRegistryLoaded();
   const env = getEnvSync();
+  // A checkout still on an `@devdogsuga/env` from before `build: true` (0.1.8)
+  // has no `buildKeys()`, and marks nothing, so it routes nothing.
+  if (typeof env.buildKeys !== "function") return [];
   const variables = new Set<string>(env.variableKeys());
   return env.buildKeys().filter((key) => variables.has(key));
 }
