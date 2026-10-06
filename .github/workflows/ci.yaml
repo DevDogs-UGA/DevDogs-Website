@@ -1,11 +1,17 @@
 name: CI
 
-# Validation only. No deploys, and — deliberately — no secrets: this repo
-# never runs a service (see README, "What this repo is"), so nothing here
-# needs a credential to prove it works. Every package's `test` script is
-# expected to be credential-free by construction; a script that genuinely
-# needs a live service is named something other than `test` for exactly
-# that reason and is NOT run here.
+# Pull requests and merge-queue runs validate and build, and hold no secret:
+# nothing there needs a credential to prove it works. Every package's `test`
+# script is expected to be credential-free by construction; a script that
+# genuinely needs a live service is named something other than `test` for
+# exactly that reason and is NOT run here.
+#
+# A push to `main` additionally hands the commit to the deploy workflow once
+# validation has passed (`deploy` below, TASK-489). That is the one place
+# credentials are in scope, behind the deploy workflow's protected
+# environments, and the reason a pull request's own copy of this file can
+# never reach one: on `pull_request`, GitHub runs the workflow definition FROM
+# THE PULL REQUEST, so nothing it can run holds a secret.
 #
 # INERT UNTIL A REMOTE EXISTS. This workflow is authored ahead of the GitHub
 # remote and the `@devdogsuga` npm org being claimed (see the parent plan,
@@ -45,9 +51,11 @@ on:
 
 concurrency:
   # A scheduled run must not share a group with the push to main it fires
-  # beside, or one cancels the other.
-  group: ci-${{ github.event_name == 'schedule' && 'schedule' || github.ref }}
-  cancel-in-progress: true
+  # beside, or one cancels the other. Main pushes cannot share a group at all:
+  # once validation hands a commit to the deploy workflow, a later push must
+  # not cancel a deployment that is already running.
+  group: ci-${{ github.event_name == 'schedule' && 'schedule' || github.event_name == 'push' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 permissions:
   contents: read
@@ -229,6 +237,10 @@ jobs:
         run: node scripts/toolchain-drift.ts
       - name: Toolchain script tests
         run: node --test scripts/toolchain-drift.test.ts scripts/patch-audit.test.ts scripts/patch-issues.test.ts
+      # The deploy workflow's two scripts (the production self-approval gate
+      # and the merge-queue run lookup); no dependencies either.
+      - name: Deploy script tests
+        run: node --test .github/scripts/deploy-scripts.test.mjs
       # patches/patches.json against pnpm-workspace.yaml's patchedDependencies
       # and the files in patches/ (a mismatch fails here), then each patch's
       # upstream PRs/issues and the npm release that carries the fix. The
@@ -271,3 +283,34 @@ jobs:
       contents: write
       id-token: write
     uses: ./.github/workflows/publish.yaml
+
+  # The merge queue's candidate commit is built here, once per tier, and the
+  # push to `main` that follows deploys these exact artifacts instead of
+  # building again (deploy.yaml's `resolve` finds this run). Only after
+  # `validate`: a commit that does not pass is not worth building. Not part of
+  # the push run, where deploy.yaml builds only when the queue did not.
+  build:
+    needs: validate
+    if: github.event_name == 'merge_group'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/build-artifacts.yaml
+    with:
+      # Production is built only once it deploys from here (see deploy.yaml).
+      tiers: ${{ vars.BACKSTAGE_DEPLOYS_PRODUCTION == 'true' && '["staging","production"]' || '["staging"]' }}
+
+  # A main commit becomes a staging (and, once Backstage deploys production, a
+  # production) candidate only after the required jobs pass. A reusable
+  # workflow keeps the credential boundary: pull requests never call it, and
+  # only this job receives the Actions write permission needed to supersede
+  # older waiting candidates and the read of pull requests the production
+  # approval gate needs.
+  deploy:
+    needs: [validate, database, toolchain]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      actions: write
+      pull-requests: read
+    uses: ./.github/workflows/deploy.yaml
+    secrets: inherit
