@@ -291,7 +291,9 @@ jobs:
   # the push run, where deploy.yaml builds only when the queue did not.
   build:
     needs: validate
-    if: github.event_name == 'merge_group'
+    # Same staging gate as `deploy` below: nothing reads these artifacts
+    # before the cutover, and `staging-build` has no variables until then.
+    if: github.event_name == 'merge_group' && vars.BACKSTAGE_DEPLOYS_STAGING == 'true'
     permissions:
       contents: read
     uses: ./.github/workflows/build-artifacts.yaml
@@ -305,9 +307,16 @@ jobs:
   # only this job receives the Actions write permission needed to supersede
   # older waiting candidates and the read of pull requests the production
   # approval gate needs.
+  #
+  # Off until the staging cutover (TASK-489): DevDogsUGA still deploys staging
+  # from its frozen copy, and both deploying would race on the same Workers and
+  # database. Set the repository variable BACKSTAGE_DEPLOYS_STAGING=true at the
+  # moment DevDogsUGA's staging jobs are removed.
   deploy:
     needs: [validate, database, toolchain]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main'
+      && vars.BACKSTAGE_DEPLOYS_STAGING == 'true'
     permissions:
       contents: read
       actions: write

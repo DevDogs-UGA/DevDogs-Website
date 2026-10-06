@@ -140,7 +140,12 @@ push to main:        supersede
 - **Manual run.** `Deploy` has a `workflow_dispatch` input, `prune_orphans`, that
   deletes undeclared production Worker secrets.
 
-### Production is off until TASK-491
+### Staging is off until its cutover, production until TASK-491
+
+Nothing deploys from here until the repository variable
+`BACKSTAGE_DEPLOYS_STAGING` is exactly `true`; set it at the same moment
+DevDogsUGA's own staging jobs are removed, or both repos deploy staging and race
+on the same Workers and database.
 
 During Phase 2 only staging deploys from here; production still deploys from
 DevDogsUGA's frozen copy of this flow. Every production job, and the production
@@ -158,7 +163,7 @@ a schema-required key, naming each one.
 
 | Where                               | Variables                                                                                                                                                                       | Secrets                                                                                                                              |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Repository                          | `BACKSTAGE_DEPLOYS_PRODUCTION` (unset = off), `DEVTOOLS_SENTRY_DSN`, `WORKSHOPS_VSCODE_SENTRY_DSN` (publish)                                                                    | none                                                                                                                                 |
+| Repository                          | `BACKSTAGE_DEPLOYS_STAGING`, `BACKSTAGE_DEPLOYS_PRODUCTION` (unset = off), `DEVTOOLS_SENTRY_DSN`, `WORKSHOPS_VSCODE_SENTRY_DSN` (publish)                                       | none                                                                                                                                 |
 | `staging-build`, `production-build` | `API_URL`, `BASE_URL`, `PUBLISHABLE_KEY` (required); `PLATFORM_SENTRY_DSN`, `SCHEDULE_BUILDER_SENTRY_DSN`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (optional). Set by hand, no secrets | none                                                                                                                                 |
 | `staging`                           | `PROJECT_REF`, `PUBLISHABLE_KEY`, `API_URL`, plus every non-secret key the server schema declares for the tier                                                                  | `DB_URL`, `SECRET_KEY`, `SENTRY_AUTH_TOKEN` (optional), `CRON_SECRET`, `CLOUDFLARE_API_TOKEN`, plus every other secret in the schema |
 | `preflight` (production plan)       | none read directly                                                                                                                                                              | `DB_URL` (the read-only planner credential)                                                                                          |
