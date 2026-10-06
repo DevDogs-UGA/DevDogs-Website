@@ -65,6 +65,33 @@ DevDogsUGA: `supabase/` (migrations, seeds, `config.toml`), `packages/supabase`
 - **Patches.** `patches/` and `patchedDependencies` are copies of DevDogsUGA's
   (it still builds schedule-builder with them). Because they are keyed to exact
   versions, `apps/platform` pins `react` and `react-dom` to 19.2.8.
+- **Drift.** The `catalog`, `overrides`, `patchedDependencies` and `patches/` are
+  copies of DevDogsUGA's, so `pnpm check:toolchain` compares them with the
+  `devdogsuga/` checkout and fails on any shared entry that differs (entries only
+  one side has are listed, not failed). `pnpm check:patches` audits each patch
+  against its upstream fix and says which ones can be removed;
+  `pnpm test:patches` and `pnpm test:toolchain` run those scripts' tests. All
+  three scripts run on Node's built-in TypeScript support, with no install.
+
+### CI for the platform
+
+- **`validate`** runs lint, typecheck and tests for the whole workspace
+  (platform and `packages/email` included) and `pnpm -F platform types:cf:check`.
+  The platform's own build is left to `database`.
+- **`database`** starts the local Supabase stack from `devdogsuga/supabase`
+  (the commit in `devdogsuga.lock`), runs `pnpm -F platform test:db`, then builds
+  the platform with the env schema enforced against `.github/ci.env` (placeholders
+  only) plus the stack's generated values. The stack's Docker images are cached by
+  Supabase CLI version and `config.toml`. The RLS suite, the generated Database
+  types check and the migration-order check stay in DevDogsUGA's CI.
+- **`toolchain`** fails on drift from DevDogsUGA (above) and warns, through
+  `::warning::` annotations, when a patch's upstream fix has shipped. Daily, the
+  `patch-issues` job opens or refreshes one issue titled `Remove patch <name>`
+  per removable patch; only that job holds `issues: write`.
+- Every job that installs the workspace goes through
+  `.github/actions/setup-workspace`, which uses
+  `.github/actions/checkout-devdogsuga` to fetch DevDogsUGA at the locked SHA
+  into `devdogsuga/` and installs it before this workspace.
 
 ## Releases
 
@@ -84,6 +111,8 @@ pnpm typecheck   # pnpm -r typecheck
 pnpm test        # pnpm -r test
 pnpm dev         # slides dev server, on the newest deck (or: pnpm dev <deck>)
 pnpm check:scripts  # every script name is in the club's script vocabulary
+pnpm check:toolchain  # catalog, overrides and patches/ agree with DevDogsUGA's
+pnpm check:patches    # patches against their upstream fixes (--json for a report)
 ```
 
 ## Quickstart

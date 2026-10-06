@@ -24,14 +24,29 @@ name: CI
 # (TASK-478). It has to be here before the queue is turned on, or every
 # queued PR waits forever for a check that never starts. `publish` below
 # stays push-only.
+#
+# The platform (apps/platform, packages/email) is built here but runs against
+# DevDogsUGA: its database, docs and generated Supabase types stay there, at
+# the commit pinned in devdogsuga.lock. Every job that installs the workspace
+# therefore checks DevDogsUGA out at `devdogsuga/` first (setup-workspace does
+# it). `validate` covers the platform's lint/typecheck/test and its Cloudflare
+# types, `database` its build and database-backed tests, and `toolchain` keeps
+# the dependency pins and patches in step with DevDogsUGA's copies.
+#
+# The `schedule` trigger exists only for `toolchain`'s upstream-patch audit
+# (daily); every other job skips it.
 on:
   pull_request:
   merge_group:
   push:
     branches: [main]
+  schedule:
+    - cron: "17 6 * * *"
 
 concurrency:
-  group: ci-${{ github.ref }}
+  # A scheduled run must not share a group with the push to main it fires
+  # beside, or one cancels the other.
+  group: ci-${{ github.event_name == 'schedule' && 'schedule' || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -40,6 +55,7 @@ permissions:
 jobs:
   # Build + typecheck + test every package in the workspace.
   validate:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -51,8 +67,11 @@ jobs:
       # Everything but apps/slides, whose build reads the private workshop
       # submodules; it builds in slides.yaml instead, so a slides problem
       # never blocks a publish (publish.yaml waits on this workflow).
+      #
+      # And apps/platform, whose build reads its whole environment (the
+      # `database` job builds it, with a real stack and the schema enforced).
       - name: Build (workspace)
-        run: pnpm -r --filter '!slides' --if-present run build
+        run: pnpm -r --filter '!slides' --filter '!platform' --if-present run build
       - name: Lint (workspace)
         run: pnpm lint
       - name: Format check
@@ -84,6 +103,166 @@ jobs:
       # here, matching how it gates merges in the product repo's ci.yaml.
       - name: Events config passes its publishability checks
         run: pnpm --filter @devdogsuga/events check:events
+      # The platform's lint, typecheck and tests (and packages/email's) ran
+      # above with the rest of the workspace. Their `pre*` hooks run the
+      # platform's `codegen` (email templates, the docs module compiled from
+      # devdogsuga/docs, the generated route types), so nothing is built
+      # first. This one compares cloudflare-env.d.ts to what `wrangler types`
+      # would write for the platform's wrangler.jsonc: a binding added to the
+      # config and not the types typechecks everywhere until a Worker reads it.
+      - name: Cloudflare binding types match the Worker configuration
+        run: pnpm --filter platform run types:cf:check
+
+  # The platform against a real Postgres: its query tests and its production
+  # build with the env schema enforced.
+  #
+  # Credential-free like the rest of this file: the local stack's keys are the
+  # well-known constants Supabase publishes in its own documentation, and
+  # .github/ci.env holds only invented placeholders. Nothing here can reach a
+  # real project.
+  #
+  # The stack starts from DevDogsUGA's `supabase/` at the pinned commit, so
+  # this is also the check that the platform still works with the migrations it
+  # is pinned to. Starting it applies every migration to a fresh database,
+  # which fails if one does not apply. The migrations' own checks (RLS tests,
+  # the generated Database types, timestamp order) stay in DevDogsUGA's CI.
+  #
+  # Unconditional rather than path-filtered, for the reason DevDogsUGA's was:
+  # a security-relevant check that skips itself on a heuristic is how a job
+  # ends up green without ever having run.
+  database:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: ./.github/actions/setup-workspace
+      # The platform consumes its workspace dependencies (env, db, events,
+      # newsletter, ...) from `dist/`, and `with-env` is one of them. Only the
+      # platform itself is left out: it builds below, with its environment.
+      - name: Build the platform's workspace dependencies
+        run: pnpm --filter 'platform^...' --if-present run build
+      # The `with-env` wrapper REFUSES a missing .env by design; the step after
+      # the stack starts replaces this one and appends the generated values.
+      - name: Seed the env file for wrapped checks
+        run: cp .github/ci.env .env
+      # `supabase start` pulls about a dozen images, all chosen by the CLI
+      # version (and which services the config enables), so they are cached
+      # as one `docker save` archive under exactly that key. A hit is a
+      # `docker load` and the CLI finds every image already present.
+      - name: Supabase CLI version
+        id: cli
+        run: |
+          version=$(pnpm --dir devdogsuga exec supabase --version | tail -n 1)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Restore the Supabase images
+        id: images
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/supabase-images
+          key: supabase-images-${{ runner.os }}-${{ steps.cli.outputs.version }}-${{ hashFiles('devdogsuga/supabase/config.toml') }}
+      - name: Load the cached images
+        if: steps.images.outputs.cache-hit == 'true'
+        run: docker load --input ~/.cache/supabase-images/images.tar
+      # config.toml enables OAuth providers with `env()` credentials that CI
+      # does not have; an unset one is a WARN, not an error. Run from
+      # devdogsuga/ because that is where `supabase/` lives, and the Supabase
+      # CLI is one of its dependencies.
+      - name: Start the local Supabase stack
+        run: pnpm --dir devdogsuga exec supabase start
+      - name: Save the Supabase images
+        if: steps.images.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.cache/supabase-images
+          docker save --output ~/.cache/supabase-images/images.tar \
+            $(docker ps --format '{{.Image}}' | sort -u)
+      - name: Cache the Supabase images
+        if: steps.images.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/supabase-images
+          key: ${{ steps.images.outputs.cache-primary-key }}
+      # `with-env` reads .env.generated from this repo's root; the CLI writes
+      # it from the stack that is running.
+      - name: Write .env.generated from the running stack
+        run: pnpm --dir devdogsuga exec supabase status -o env > .env.generated
+      # The NEXT_PUBLIC pair is derived rather than hardcoded: it has to match
+      # the running stack, and the CLI's local keys are not guaranteed stable
+      # across versions.
+      - name: Synthetic environment for the tests and the build
+        run: |
+          cp .github/ci.env .env
+          set -a; . ./.env.generated; set +a
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+          } >> .env
+      # Including the privilege-surface guards in resolveCredential.db-test.ts,
+      # which assert the shape of the GRANTS: a function reachable by every
+      # role in the cluster typechecks perfectly. `test:db` runs the platform's
+      # `codegen` first (`pretest:db`).
+      - name: Query validity + privilege surface
+        run: pnpm --filter platform run test:db
+      # Validation ENFORCED, unlike the validate job: a newly added required
+      # variable with no default fails here rather than at deploy time.
+      - name: Build the platform, with the env schema enforced
+        run: pnpm --filter platform run build
+
+  # The toolchain is shared with DevDogsUGA, which still builds
+  # schedule-builder and runs the database tooling with the same dependency
+  # ranges and the same patches. Drift between the two is a hard failure; the
+  # upstream-patch audit only warns.
+  #
+  # Needs no install: the scripts have no dependencies and Node (from .nvmrc)
+  # strips their types itself, so they run with `node` directly (a `pnpm run`
+  # here would first try to install the workspace). Only DevDogsUGA's checkout.
+  toolchain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: ./.github/actions/checkout-devdogsuga
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - name: Catalog, overrides, patchedDependencies and patches/ match DevDogsUGA's
+        run: node scripts/toolchain-drift.ts
+      - name: Toolchain script tests
+        run: node --test scripts/toolchain-drift.test.ts scripts/patch-audit.test.ts scripts/patch-issues.test.ts
+      # patches/patches.json against pnpm-workspace.yaml's patchedDependencies
+      # and the files in patches/ (a mismatch fails here), then each patch's
+      # upstream PRs/issues and the npm release that carries the fix. The
+      # upstream half only warns (`::warning::` annotations when a patch can
+      # be dropped, or when the API or npm can't be reached); it never fails
+      # the job. The token only lifts the API's rate limit.
+      - name: Patches are documented, and flagged when upstream fixes them
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/patch-audit.ts
+
+  # Daily: one issue per patch that can now be removed. A job of its own so
+  # that `issues: write` exists only on the scheduled run, which no pull
+  # request can edit the definition of: the token above is read-only.
+  patch-issues:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - name: Audit the patches
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/patch-audit.ts --json > patch-report.json
+      - name: Open or update an issue for each removable patch
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/patch-issues.ts patch-report.json
 
   publish:
     needs: validate
