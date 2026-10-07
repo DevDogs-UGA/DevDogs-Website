@@ -142,6 +142,78 @@ function sha256OfFile(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
+/** A deep copy with every object's keys sorted, so key order hashes alike. */
+export function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, canonical(value[key])]),
+  );
+}
+
+/**
+ * What a package ships, as one hash: every file's path and bytes, except that
+ * the top-level package.json is compared without its `version` and with its
+ * keys sorted.
+ *
+ * ⚠️ Why not the tarball's shasum alone: `pnpm pack` does not write the
+ * rewritten `workspace:`/`catalog:` dependencies in a stable order, so two
+ * packs of the same source can differ by nothing but key order. Comparing
+ * shasums republished devtools 0.1.47 through 0.1.50 with identical contents,
+ * each asking for a publish approval.
+ */
+export function contentHashOfPackageDir(dir) {
+  const files = [];
+  const walk = (current) => {
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const path = join(current, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else files.push(relative(dir, path).split("\\").join("/"));
+    }
+  };
+  walk(dir);
+  const hash = createHash("sha256");
+  for (const file of files.sort()) {
+    let bytes = readFileSync(join(dir, file));
+    if (file === "package.json") {
+      const { version: _version, ...json } = JSON.parse(bytes.toString("utf8"));
+      bytes = Buffer.from(JSON.stringify(canonical(json)));
+    }
+    hash.update(`${file}\0`).update(bytes).update("\0");
+  }
+  return hash.digest("hex");
+}
+
+/** `contentHashOfPackageDir` for a packed `.tgz`. */
+function contentHashOfTarball(tarball) {
+  const dir = mkdtempSync(join(tmpdir(), "devdogsuga-unpack-"));
+  try {
+    execFileSync("tar", ["-xzf", tarball, "-C", dir]);
+    return contentHashOfPackageDir(join(dir, "package"));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** The content hash of a published tarball, or undefined if it cannot be read. */
+async function registryContentHash(url) {
+  if (!url) return undefined;
+  const dir = mkdtempSync(join(tmpdir(), "devdogsuga-registry-"));
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return undefined;
+    const tarball = join(dir, "registry.tgz");
+    writeFileSync(tarball, Buffer.from(await res.arrayBuffer()));
+    return contentHashOfTarball(tarball);
+  } catch {
+    return undefined;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 // pnpm --filter <name> pack --json prints one array entry per selected
 // package (exactly one, given an exact --filter match); `filename` is
 // already an absolute path when --pack-destination is absolute.
@@ -192,7 +264,8 @@ async function fetchRegistryState(name) {
   const latest = highestVersion(Object.keys(body.versions ?? {}));
   if (!latest) return null;
   const shasum = body.versions[latest].dist?.shasum;
-  return { latest, shasum };
+  const tarball = body.versions[latest].dist?.tarball;
+  return { latest, shasum, tarball };
 }
 
 // Block until installers can resolve name@version. fetchRegistryState asks
@@ -533,6 +606,13 @@ async function main() {
   const states = await Promise.all(
     pkgs.map((pkg) => fetchRegistryState(pkg.json.name)),
   );
+  // Each latest tarball's content hash, for the comparison in pass 2. A
+  // download that fails leaves it undefined, and only the shasum is compared.
+  await Promise.all(
+    states.map(async (state) => {
+      if (state) state.contentHash = await registryContentHash(state.tarball);
+    }),
+  );
   pkgs.forEach((pkg, i) => {
     const state = states[i];
     registryState.set(pkg.json.name, state);
@@ -570,9 +650,14 @@ async function main() {
       const state = registryState.get(name);
       const tmp = mkdtempSync(join(tmpdir(), "devdogsuga-publish-"));
       tmpDirs.push(tmp);
-      const { shasum } = pnpmPack(repoRoot, name, tmp);
+      const { shasum, tarballPath } = pnpmPack(repoRoot, name, tmp);
 
-      if (state && state.shasum && state.shasum === shasum) {
+      if (
+        state &&
+        ((state.shasum && state.shasum === shasum) ||
+          (state.contentHash &&
+            state.contentHash === contentHashOfTarball(tarballPath)))
+      ) {
         unchanged.push(name);
         plan.packages.push({
           name,

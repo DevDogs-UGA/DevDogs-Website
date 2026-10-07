@@ -48,8 +48,16 @@ jobs:
       # Whether `publish` has anything to do: a package or the extension to
       # publish, or an unchanged package whose GitHub release is missing. When
       # not, `publish` is skipped, and nobody is asked to approve a no-op.
+      #
+      # The extension only counts once the Marketplace is set up: its publish
+      # step skips without `VSCE_PAT`, a `publishing` secret this job cannot
+      # see, so the repository variable WORKSHOPS_MARKETPLACE=true says so.
+      # Without it, a never-released extension asked for approval on every
+      # push and then published nothing.
       - name: Anything to publish?
         id: plan
+        env:
+          MARKETPLACE: ${{ vars.WORKSHOPS_MARKETPLACE }}
         run: |
           node -e '
             const fs = require("node:fs");
@@ -60,7 +68,7 @@ jobs:
               : { action: "unchanged" };
             const needed =
               npm.packages.some((p) => p.action !== "unchanged" || p.releaseMissing) ||
-              ext.action !== "unchanged";
+              (process.env.MARKETPLACE === "true" && ext.action !== "unchanged");
             console.log(needed ? "Something to publish." : "Nothing to publish; skipping the publish job.");
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `needed=${needed}\n`);
           ' "$RUNNER_TEMP/release"

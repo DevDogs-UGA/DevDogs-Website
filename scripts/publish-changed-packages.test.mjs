@@ -2,10 +2,20 @@
 // `pnpm check:publish`. No network, no npm: the graph and the layer runner
 // are pure, and the runner is driven with fake jobs.
 import assert from "node:assert/strict";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import {
+  canonical,
+  contentHashOfPackageDir,
   publishEdges,
   publishLayers,
   runLayers,
@@ -150,4 +160,57 @@ test("prepare runs alone before each layer's jobs", async () => {
     },
   });
   assert.deepEqual(events, ["prepare 0", "run a", "prepare 1", "run b"]);
+});
+
+// --- content comparison ----------------------------------------------------
+
+/** A package directory with this package.json and one dist file. */
+function packageDir(json, dist = "export {};\n") {
+  const dir = mkdtempSync(join(tmpdir(), "publish-test-"));
+  writeFileSync(join(dir, "package.json"), JSON.stringify(json, null, 2));
+  mkdirSync(join(dir, "dist"));
+  writeFileSync(join(dir, "dist", "index.js"), dist);
+  return dir;
+}
+
+test("canonical sorts keys at every depth and keeps array order", () => {
+  assert.deepEqual(
+    JSON.stringify(canonical({ b: 1, a: { d: [2, 1], c: 0 } })),
+    JSON.stringify({ a: { c: 0, d: [2, 1] }, b: 1 }),
+  );
+});
+
+test("contentHashOfPackageDir ignores the version and dependency order", () => {
+  const a = packageDir({
+    name: "x",
+    version: "0.1.49",
+    devDependencies: {
+      "@devdogsuga/config": "0.1.3",
+      "@devdogsuga/cli-core": "0.0.0",
+    },
+  });
+  const b = packageDir({
+    name: "x",
+    version: "0.1.50",
+    devDependencies: {
+      "@devdogsuga/cli-core": "0.0.0",
+      "@devdogsuga/config": "0.1.3",
+    },
+  });
+  assert.equal(contentHashOfPackageDir(a), contentHashOfPackageDir(b));
+});
+
+test("contentHashOfPackageDir sees a changed file or dependency", () => {
+  const base = { name: "x", version: "1.0.0", dependencies: { y: "1.0.0" } };
+  const hash = contentHashOfPackageDir(packageDir(base));
+  assert.notEqual(
+    hash,
+    contentHashOfPackageDir(packageDir(base, "export const changed = 1;\n")),
+  );
+  assert.notEqual(
+    hash,
+    contentHashOfPackageDir(
+      packageDir({ ...base, dependencies: { y: "1.0.1" } }),
+    ),
+  );
 });
