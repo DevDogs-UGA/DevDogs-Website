@@ -580,6 +580,12 @@ async function main() {
           action: "unchanged",
           version: state.latest,
           registryShasum: state.shasum,
+          // Read now so the workflow can skip the approval-gated publish job
+          // when nothing would change: an unchanged package still costs that
+          // job a GitHub release backfill when its release is missing.
+          ...(prepareDir
+            ? { releaseMissing: !releaseExists(`${name}@${state.latest}`) }
+            : {}),
         });
         if (!prepareDir) {
           jobs.push({ pkg, version: state.latest, tarball: null, tmp });

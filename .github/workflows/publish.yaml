@@ -17,6 +17,8 @@ permissions:
 jobs:
   prepare:
     runs-on: ubuntu-latest
+    outputs:
+      needed: ${{ steps.plan.outputs.needed }}
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -35,11 +37,33 @@ jobs:
           pnpm --filter @devdogsuga/devtools run test:contract
           pnpm --filter @devdogsuga/backstage run test:contract
       - name: Prepare immutable npm artifacts and release plan
+        env:
+          # Read-only: whether an unchanged package's GitHub release exists.
+          GH_TOKEN: ${{ github.token }}
         run: node scripts/publish-changed-packages.mjs --prepare "$RUNNER_TEMP/release"
       - name: Prepare immutable VS Code artifact and release plan
         env:
           WORKSHOPS_VSCODE_SENTRY_DSN: ${{ vars.WORKSHOPS_VSCODE_SENTRY_DSN }}
         run: node scripts/publish-workshops-vscode.mjs --prepare "$RUNNER_TEMP/release"
+      # Whether `publish` has anything to do: a package or the extension to
+      # publish, or an unchanged package whose GitHub release is missing. When
+      # not, `publish` is skipped, and nobody is asked to approve a no-op.
+      - name: Anything to publish?
+        id: plan
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const dir = process.argv[1];
+            const npm = JSON.parse(fs.readFileSync(`${dir}/npm-plan.json`, "utf8"));
+            const ext = fs.existsSync(`${dir}/extension-plan.json`)
+              ? JSON.parse(fs.readFileSync(`${dir}/extension-plan.json`, "utf8"))
+              : { action: "unchanged" };
+            const needed =
+              npm.packages.some((p) => p.action !== "unchanged" || p.releaseMissing) ||
+              ext.action !== "unchanged";
+            console.log(needed ? "Something to publish." : "Nothing to publish; skipping the publish job.");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `needed=${needed}\n`);
+          ' "$RUNNER_TEMP/release"
       - name: Record candidate hashes
         run: |
           cd "$RUNNER_TEMP/release"
@@ -55,6 +79,7 @@ jobs:
 
   publish:
     needs: prepare
+    if: needs.prepare.outputs.needed == 'true'
     runs-on: ubuntu-latest
     # Room for the script to wait out npm's CDN after each publish layer (up to
     # 15 minutes per layer, usually seconds; packages in a layer publish and
