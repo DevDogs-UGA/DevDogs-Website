@@ -75,6 +75,13 @@ describe("checkWorkers", () => {
     ]);
   });
 
+  it("leaves a hand-deployed app out of workers.json without complaint", () => {
+    repo(["platform", "schedule-builder"]);
+    write("apps/slides/package.json", '{"name":"slides"}');
+    write("apps/slides/wrangler.jsonc", "{}");
+    expect(checkWorkers(root)).toEqual([]);
+  });
+
   it("flags a package name that disagrees with its directory", () => {
     repo(["platform", "schedule-builder"]);
     write("apps/platform/package.json", '{"name":"web"}');

@@ -88,6 +88,15 @@ export function deployMatrixApps(yamlText: string): string[][] {
   return blocks;
 }
 
+/**
+ * Apps with a `wrangler.jsonc` that are deliberately NOT in `workers.json`:
+ * `workers.json` is the managed set (deploy matrix, smoke tests, env registry,
+ * secret orphan sweep), and these are deployed by hand and have none of that.
+ * `apps/slides` is the hosted workshop deck, shipped with `pnpm run deploy`
+ * from its own directory (its `wrangler.jsonc` says so).
+ */
+export const HAND_DEPLOYED_APPS: readonly string[] = ["apps/slides"];
+
 function sameSet(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((item) => b.includes(item));
 }
@@ -143,7 +152,9 @@ export function checkWorkers(
   const withWrangler = scanned.filter((relative) =>
     existsSync(join(dirOf(relative), "wrangler.jsonc")),
   );
-  for (const path of withWrangler.filter((p) => !paths.includes(p))) {
+  for (const path of withWrangler.filter(
+    (p) => !paths.includes(p) && !HAND_DEPLOYED_APPS.includes(p),
+  )) {
     problems.push(`${path} has a wrangler.jsonc but is not in workers.json.`);
   }
   for (const path of paths.filter((p) => !withWrangler.includes(p))) {

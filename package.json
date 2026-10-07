@@ -30,5 +30,21 @@
   "devDependencies": {
     "prettier": "3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1"
+  },
+  "devdogs": {
+    "scriptExceptions": {
+      "root#build:slides": "builds the slides app only (CI builds it separately)",
+      "root#devdogsuga": "report where the devdogsuga/ link points",
+      "root#preinstall": "create and validate the devdogsuga/ link before install",
+      "slides#follow": "run a deck on a demo laptop",
+      "slides#export:md": "export a deck to docs pages",
+      "slides#tag-steps": "tag workshop repo steps from a deck",
+      "slides#dev:worker": "run the slides Worker locally",
+      "slides#deploy": "deploy the slides Worker",
+      "workshops#watch": "rebuild the VS Code extension on change",
+      "workshops#package": "package the VS Code extension (.vsix)",
+      "@devdogsuga/devtools#cli": "run the built devtools CLI from the source tree",
+      "@devdogsuga/backstage#cli": "run the built backstage CLI from the source tree"
+    }
   }
 }

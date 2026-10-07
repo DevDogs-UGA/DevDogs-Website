@@ -11,6 +11,7 @@ const VOCABULARY = new Set([
   "dev",
   "build",
   "start",
+  "preview",
   "typecheck",
   "lint",
   "lint:fix",
@@ -24,29 +25,11 @@ const VOCABULARY = new Set([
 // and `types:<source>:check`, `fetch:<what>`, `populate:<what>`.
 const FAMILIES = /^(test|check|types|fetch|populate):[\w-]+(:[\w-]+)*$/;
 
-/** Names outside the vocabulary, each with the package that owns it. */
-const ALLOWED = {
-  // Backstage-specific commands with no vocabulary equivalent.
-  "build:slides": "root: builds the slides app only (CI builds it separately)",
-  // The link to the DevDogsUGA checkout (scripts/devdogsuga.mjs).
-  devdogsuga: "root: report where the devdogsuga/ link points",
-  preinstall: "root: create and validate the devdogsuga/ link before install",
-  "platform#preview": "build, then run the production Worker locally",
-  "@devdogsuga/email#preview": "render the email templates to HTML files",
-  "slides#follow": "run a deck on a demo laptop",
-  "slides#export:md": "export a deck to docs pages",
-  "slides#tag-steps": "tag workshop repo steps from a deck",
-  "slides#dev:worker": "run the slides Worker locally",
-  "slides#deploy": "deploy the slides Worker",
-  "workshops#watch": "rebuild the VS Code extension on change",
-  "workshops#package": "package the VS Code extension (.vsix)",
-  // packages/devtools and packages/newsletter-cli are being restructured by
-  // TASK-398, which owns their script names; drop these when it lands.
-  "@devdogsuga/devtools#cli": "TASK-398",
-  "@devdogsuga/devtools#ci": "TASK-398",
-  "@devdogsuga/devtools#ci:env": "TASK-398",
-  "@devdogsuga/newsletter-cli#cli": "TASK-398",
-};
+// Names outside the vocabulary, each with the package that owns it and why:
+// `devdogs.scriptExceptions` in the root package.json, shared with
+// `devtools check scripts`.
+const ALLOWED = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
+  .devdogs.scriptExceptions;
 
 function manifests() {
   const found = [join(root, "package.json")];
@@ -75,8 +58,7 @@ test("every script name is in the vocabulary or explicitly allowed", () => {
         // A hook is named after the script it wraps.
         (base !== script &&
           (inVocabulary(base) || `${name}#${base}` in ALLOWED)) ||
-        `${name}#${script}` in ALLOWED ||
-        (name === "root" && script in ALLOWED);
+        `${name}#${script}` in ALLOWED;
       if (!ok) unknown.push(`${name}: ${script}`);
     }
   }
@@ -92,7 +74,6 @@ test("ALLOWED has no stale entries", () => {
   for (const { name, scripts } of manifests()) {
     for (const script of Object.keys(scripts)) {
       present.add(`${name}#${script}`);
-      if (name === "root") present.add(script);
     }
   }
   const stale = Object.keys(ALLOWED).filter((key) => !present.has(key));

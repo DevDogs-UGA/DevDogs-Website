@@ -87,4 +87,27 @@ describe("checkScriptVocabulary", () => {
       'packages/a: runs Vitest in "test" but has no "test:watch".',
     ]);
   });
+
+  it("lets a root exception allow a script and its hooks, with a reason", () => {
+    const packages = [
+      { dir: ".", scripts: { preinstall: "x", devdogsuga: "x" } },
+      { dir: "apps/slides", name: "slides", scripts: { deploy: "x" } },
+    ];
+    expect(checkScriptVocabulary(packages)).toHaveLength(3);
+    expect(
+      checkScriptVocabulary(packages, {
+        "root#install": "why",
+        "root#devdogsuga": "why",
+        "slides#deploy": "why",
+      }),
+    ).toEqual([]);
+  });
+
+  it("flags an exception that matches no script", () => {
+    expect(
+      checkScriptVocabulary([{ dir: ".", scripts: { build: "x" } }], {
+        "root#gone": "why",
+      }),
+    ).toEqual(['scriptExceptions: "root#gone" matches no script.']);
+  });
 });
