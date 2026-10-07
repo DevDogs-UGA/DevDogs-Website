@@ -104,8 +104,8 @@ file; the platform archive and the exported email can never disagree.
 
 ```bash
 # from a Backstage clone (see packages/backstage/README.md)
-pnpm backstage newsletter render                     # pick issues interactively
-pnpm backstage newsletter render '*' --out ~/changelog
+pnpm backstage newsletter render changelog           # pick issues interactively
+pnpm backstage newsletter render changelog '*' --out ~/changelog
 ```
 
 The `.eml` carries `X-Unsent: 1` and no `Message-ID`, so **classic Outlook
@@ -118,7 +118,7 @@ happens with `newsletter send` (below), because every Outlook composer rewrites 
 ## Pushing a draft
 
 ```bash
-pnpm backstage newsletter draft 3.0.1
+pnpm backstage newsletter draft changelog 3.0.1
 ```
 
 appends the issue — same MIME as the `.eml`, minus `X-Unsent` — straight into
@@ -137,7 +137,7 @@ differently, into Word HTML, with the same result.)
 ## Sending
 
 ```bash
-pnpm backstage newsletter send 3.0.1 --to listserv@listserv.uga.edu
+pnpm backstage newsletter send changelog 3.0.1 --to listserv@listserv.uga.edu
 ```
 
 submits the issue over SMTP as the club mailbox, byte-for-byte as authored —
@@ -173,3 +173,38 @@ The masthead's mascot + wordmark lockup is `LOCKUP_ON_DARK` from
 the artwork in brand, not here.
 
 [API reference](https://devdogsuga.org/docs/toolkit/reference/api/newsletter)
+
+## GDG campaign newsletters
+
+The separate GDGC newsletter starts at issue 1 and introduces the reusable `CampaignContent` layout alongside the
+existing Changelog layout. It uses the approved GDG light palette and graphics,
+Google Sans with inbox fallbacks, a prominent interest-meeting panel, application
+CTA, DevDogs promo and linked club contacts. Both archive and MIME export render
+the same component; campaign graphics join the existing rasterized CID manifest.
+
+Georgia 311 copy lives in `src/georgia-311-content.ts`; meeting times and rooms
+come directly from the events config. Render it with the existing newsletter CLI.
+`send` refuses pending application/event links before mailbox authentication.
+The form generator, working notes and marketing exports live outside the repo in
+`~/scratchpad/devdogs/georgia-311/`. Only runtime newsletter code, graphics and
+fonts are kept in Backstage.
+
+Use the same entry point for the GDGC issue as for DevDogs Changelog:
+
+```bash
+pnpm backstage newsletter render gdgc 1 --out ~/scratchpad/devdogs/georgia-311/newsletter-exports
+pnpm backstage newsletter draft gdgc 1
+pnpm backstage newsletter send gdgc 1 --to listserv@listserv.uga.edu
+```
+
+These commands require a release containing this issue. For local review before
+release, run the checkout's CLI. Replace the pending Google Form URL in
+`src/georgia-311-content.ts` before sending, and publish the Bevy drafts yourself
+before distributing their reserved URLs. Rendering and drafting remain available
+for review while the application link is pending.
+
+GDGC issues live in `src/gdgc-issues.ts`, independently of Changelog issues.
+Their archive is `/newsletters/gdgc` and exports use `gdgc-<issue>` filenames.
+Name the series before the issue: `newsletter render gdgc 1` or
+`newsletter render changelog 3.0.3`. GDGC uses sequential issue numbers (1, 2, 3),
+while Changelog keeps semver. `*` selects only the named series. Both series use the club mailbox and the same rendering/mail commands.

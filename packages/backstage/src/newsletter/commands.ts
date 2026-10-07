@@ -1,7 +1,7 @@
 /**
- * `pnpm backstage newsletter render|draft|send <issue…>`
+ * `pnpm backstage newsletter render|draft|send <changelog|gdgc> <issue…>`
  *
- * The DevDogs Changelog, from the issues published in `@devdogsuga/newsletter`:
+ * DevDogs Changelog and GDGC Newsletter, from the issues published in `@devdogsuga/newsletter`:
  *
  *   * `render`: writes `.eml` and `.html` files and touches nothing else.
  *   * `draft`: appends each issue to the Drafts folder of the club mailbox
@@ -33,6 +33,9 @@ import {
 } from "@clack/prompts";
 import {
   ISSUES,
+  GDGC_ISSUES,
+  gdgcIssueByVersion,
+  assertIssueReadyToSend,
   issueByVersion,
   type ChangelogIssue,
 } from "@devdogsuga/newsletter";
@@ -78,6 +81,7 @@ export type Subcommand = (typeof SUBCOMMANDS)[number];
 
 export interface NewsletterOptions {
   subcommand: Subcommand;
+  series: "changelog" | "gdgc";
   /** Issue versions as typed; `*` stands for all of them. Empty means ask. */
   versions: string[];
   /** `render` only. */
@@ -137,6 +141,21 @@ export function parseNewsletterArgs(
     );
   }
   const { values } = parsed;
+  const [series, ...issues] = parsed.positionals;
+  if (series !== "changelog" && series !== "gdgc") {
+    throw new UsageError(
+      "Name the newsletter before its issues: changelog or gdgc. Example: newsletter render gdgc 1.",
+    );
+  }
+
+  if (
+    series === "gdgc" &&
+    issues.some((issue) => issue !== "*" && !/^[1-9]\d*$/.test(issue))
+  ) {
+    throw new UsageError(
+      "GDGC issues use sequential positive numbers: 1, 2, 3 (or * for all).",
+    );
+  }
 
   const wrongSubcommand = (flag: string, belongsTo: Subcommand): void => {
     if (
@@ -179,11 +198,12 @@ export function parseNewsletterArgs(
 
   return {
     subcommand: subcommand as Subcommand,
+    series,
     // Versions can only be checked against the published issues, which the run
     // does; they pass through here unchecked.
-    versions: parsed.positionals,
+    versions: issues,
     formats: [...new Set(formats)] as NewsletterFormat[],
-    out: resolve(cwd, expandHome(values.out ?? "changelog-exports")),
+    out: resolve(cwd, expandHome(values.out ?? `${series}-exports`)),
     to,
     yes: values.yes === true,
   };
@@ -193,8 +213,12 @@ export function destination(
   out: string,
   version: string,
   format: NewsletterFormat,
+  series: "changelog" | "gdgc" = "changelog",
 ): string {
-  return resolve(out, `changelog-v${version}.${format}`);
+  return resolve(
+    out,
+    `${series}-${series === "changelog" ? "v" : ""}${version}.${format}`,
+  );
 }
 
 /** The confirmation text for a send: the issues and every recipient. */
@@ -202,7 +226,15 @@ export function sendSummary(
   versions: readonly string[],
   to: readonly string[],
 ): string {
-  const issues = versions.map((version) => `v${version}`).join(", ");
+  const issues = versions
+    .map((version) =>
+      /^\d+$/.test(version)
+        ? `Issue ${version}`
+        : /^\d+\./.test(version)
+          ? `v${version}`
+          : version,
+    )
+    .join(", ");
   return `Send ${issues} from ${CLUB_MAILBOX} to ${to.length} recipient${to.length === 1 ? "" : "s"}: ${to.join(", ")}?`;
 }
 
@@ -228,7 +260,9 @@ async function confirmSend(
   );
 }
 
-async function pickIssues(): Promise<string[]> {
+async function pickIssues(
+  issues: readonly ChangelogIssue[],
+): Promise<string[]> {
   if (isNonInteractive()) {
     throw new UsageError(
       "No terminal to choose issues. Name one, or pass * for all.",
@@ -237,12 +271,12 @@ async function pickIssues(): Promise<string[]> {
   return unwrap(
     await multiselect({
       message: "Which issues?",
-      options: ISSUES.map((issue) => ({
+      options: issues.map((issue) => ({
         value: issue.version,
-        label: `v${issue.version}`,
+        label: `${issue.campaign ? "Issue " : "v"}${issue.version}`,
         hint: issue.tagline,
       })),
-      initialValues: [ISSUES[ISSUES.length - 1]?.version ?? ""].filter(Boolean),
+      initialValues: [issues[issues.length - 1]?.version ?? ""].filter(Boolean),
       required: true,
     }),
   );
@@ -328,7 +362,7 @@ async function mailboxAccessToken(): Promise<string> {
   }
   if (isNonInteractive()) {
     throw new UsageError(
-      `No terminal to sign in as ${CLUB_MAILBOX}. Run \`pnpm backstage newsletter draft <issue>\` interactively once; after that this works anywhere.`,
+      `No terminal to sign in as ${CLUB_MAILBOX}. Run \`pnpm backstage newsletter draft <changelog|gdgc> <issue>\` interactively once; after that this works anywhere.`,
     );
   }
   const state = randomBytes(16).toString("hex");
@@ -384,36 +418,40 @@ export async function runNewsletter(argv: string[]): Promise<void> {
     await newsletter(parseNewsletterArgs(argv, process.cwd()));
   } catch (err) {
     explainError("Could not do that.", err, [
-      "pnpm backstage newsletter render '*' --out ~/changelog",
-      "pnpm backstage newsletter draft 3.0.1",
-      "pnpm backstage newsletter send 3.0.1 --to a@uga.edu,b@uga.edu",
+      "pnpm backstage newsletter render changelog '*' --out ~/changelog",
+      "pnpm backstage newsletter draft changelog 3.0.1",
+      "pnpm backstage newsletter send changelog 3.0.1 --to a@uga.edu,b@uga.edu",
     ]);
     process.exitCode = 1;
   }
 }
 
 async function newsletter(parsed: NewsletterOptions): Promise<void> {
+  const issues = parsed.series === "gdgc" ? GDGC_ISSUES : ISSUES;
+  const lookup = parsed.series === "gdgc" ? gdgcIssueByVersion : issueByVersion;
   const unknown = parsed.versions.filter(
-    (version) => version !== "*" && !issueByVersion(version),
+    (version) => version !== "*" && !lookup(version),
   );
   if (unknown.length) {
     throw new UsageError(
-      `No issue called ${unknown.join(", ")}. Try ${ISSUES.map((issue) => issue.version).join(", ")}, or *.`,
+      `No issue called ${unknown.join(", ")}. Try ${issues.map((issue) => issue.version).join(", ")}, or *.`,
     );
   }
 
-  const chosen = parsed.versions.length ? parsed.versions : await pickIssues();
+  const chosen = parsed.versions.length
+    ? parsed.versions
+    : await pickIssues(issues);
   const versions = chosen.includes("*")
-    ? ISSUES.map((issue) => issue.version)
+    ? issues.map((issue) => issue.version)
     : [...new Set(chosen)];
 
   if (parsed.subcommand === "render") {
     const images = parsed.formats.includes("eml") ? await attachments() : [];
     const written: string[] = [];
     for (const version of versions) {
-      const issue = issueByVersion(version)!;
+      const issue = lookup(version)!;
       for (const format of parsed.formats) {
-        const file = destination(parsed.out, version, format);
+        const file = destination(parsed.out, version, format, parsed.series);
         await mkdir(dirname(file), { recursive: true });
         await writeFile(
           file,
@@ -431,15 +469,28 @@ async function newsletter(parsed: NewsletterOptions): Promise<void> {
     return;
   }
 
+  if (parsed.subcommand === "send") {
+    for (const version of versions) assertIssueReadyToSend(lookup(version)!);
+  }
+
   // Asked before anything is rasterised or signed in, so a "no" costs nothing.
-  if (parsed.subcommand === "send" && !(await confirmSend(parsed, versions))) {
+  if (
+    parsed.subcommand === "send" &&
+    !(await confirmSend(
+      parsed,
+      versions.map(
+        (version) =>
+          `${parsed.series} ${parsed.series === "gdgc" ? "issue " : "v"}${version}`,
+      ),
+    ))
+  ) {
     log.info("Nothing sent.");
     return;
   }
 
   const images = await attachments();
   const message = (version: string): string => {
-    return emlFor(issueByVersion(version)!, images, { unsent: false });
+    return emlFor(lookup(version)!, images, { unsent: false });
   };
   const accessToken = await mailboxAccessToken();
 
@@ -450,7 +501,7 @@ async function newsletter(parsed: NewsletterOptions): Promise<void> {
         accessToken,
         message: message(version),
       });
-      log.success(`v${version} → Drafts of ${CLUB_MAILBOX}`);
+      log.success(`${parsed.series} ${version} → Drafts of ${CLUB_MAILBOX}`);
     }
     log.info(
       "Open any Outlook as the club account to review, but send with " +
@@ -467,7 +518,9 @@ async function newsletter(parsed: NewsletterOptions): Promise<void> {
       recipients: parsed.to,
       message: originationHeaders(CLUB_MAILBOX, parsed.to) + message(version),
     });
-    log.success(`v${version} → sent to ${parsed.to.join(", ")}`);
+    log.success(
+      `${parsed.series} ${version} → sent to ${parsed.to.join(", ")}`,
+    );
   }
 }
 

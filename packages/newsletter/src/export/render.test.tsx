@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { darkModeCss, paintCss } from "../darkmode.js";
 import { ISSUES } from "../issues.js";
+import { GDGC_ISSUES } from "../gdgc-issues.js";
 import {
   emailImages,
   emailRenderContext,
@@ -24,21 +25,23 @@ function escaped(text: string): string {
 
 describe("renderIssueDocument", () => {
   it("renders every issue as a full document carrying its own copy", () => {
-    for (const issue of ISSUES) {
+    for (const issue of [...ISSUES, ...GDGC_ISSUES]) {
       const html = renderIssueDocument(issue);
       expect(html.startsWith("<!doctype html>")).toBe(true);
       expect(html).toContain(escaped(issue.tagline));
       for (const { meeting } of issue.featured) {
         expect(html).toContain(escaped(meeting.title));
       }
-      expect(html).toContain(escaped(issue.signoff));
-      expect(html).toContain(`v${issue.version}`);
+      expect(html.replace(/<[^>]+>/g, "")).toContain(escaped(issue.signoff));
+      expect(html).toContain(
+        `${issue.campaign ? "Issue " : "v"}${issue.version}`,
+      );
     }
   });
 
   it("references only images the manifest embeds, as cid: URLs", () => {
     const cids = new Set(emailImages().map((image) => `cid:${image.cid}`));
-    for (const issue of ISSUES) {
+    for (const issue of [...ISSUES, ...GDGC_ISSUES]) {
       const sources = imageSources(renderIssueDocument(issue));
       expect(sources.length).toBeGreaterThan(0);
       for (const src of sources) {
@@ -87,7 +90,7 @@ describe("renderIssueDocument", () => {
         prefix: "brc",
       },
     ];
-    for (const issue of ISSUES) {
+    for (const issue of [...ISSUES, ...GDGC_ISSUES]) {
       for (const element of renderIssueDocument(issue).split("<")) {
         const style = /style="([^"]*)"/.exec(element)?.[1];
         if (!style) continue;
@@ -120,7 +123,7 @@ describe("renderIssueDocument", () => {
     // what activates every scoped pin below it.
     const paint = paintCss();
     const pins = darkModeCss();
-    for (const issue of ISSUES) {
+    for (const issue of [...ISSUES, ...GDGC_ISSUES]) {
       const html = renderIssueDocument(issue);
       expect(html).toContain(`.bc-13121b{background-color:#13121b`);
       expect(html).toContain(".bg-slants{");

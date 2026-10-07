@@ -32,7 +32,7 @@ pnpm backstage --no-env deploy write-env         # the CI steps that supply thei
 pnpm backstage --no-env planner status           # the preflight credential, from DB_URL
 pnpm backstage graphics 'event/*' --out ~/images # club images, no checkout
 pnpm backstage qr https://devdogsuga.org --format svg,png,webp --logo acm
-pnpm backstage newsletter send 3.0.1 --to a@uga.edu   # asks first; --yes with no terminal
+pnpm backstage newsletter send changelog 3.0.1 --to a@uga.edu   # asks first; --yes with no terminal
 pnpm backstage creds                             # share a club login with officers, as a Bitwarden Send
 pnpm backstage creds renew                       # extend every Send 30 days
 pnpm backstage import involvement --file OrganizationRoster.csv  # verify members; previews, then asks
@@ -76,7 +76,7 @@ name `devdogs-monorepo` or `backstage`; the layout code is
 | `graphics [graphic…]`                              | Club images from `@devdogsuga/brand`: `brand/*`, `app/*`, `event/*`.                   |
 | `qr <text>`                                        | QR codes with every option of `/console/qr`.                                           |
 | `github rulesets\|settings`                        | Diff (and with `--apply` write) GitHub config, through `gh`.                           |
-| `newsletter render\|draft\|send <issue…>`          | Changelog issues as files, mailbox drafts, or a send.                                  |
+| `newsletter render\|draft\|send <series> <issue…>` | Changelog or GDGC issues as files, mailbox drafts, or a send.                          |
 | `creds send\|add\|renew\|list\|report`             | Club logins from Bitwarden as email-verified Sends, and the Linear report.             |
 | `import involvement --file <csv>`                  | Verifies the members on the Involvement Network roster, unverifies everyone else.      |
 | `import attendance --meeting <day> --file <csv>`   | Records a meeting's attendance from a sign-in sheet (method `import`).                 |

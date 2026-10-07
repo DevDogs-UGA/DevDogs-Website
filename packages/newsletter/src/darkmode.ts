@@ -71,7 +71,18 @@ const CHIPS = KINDS.flatMap((kind) =>
 );
 
 /** Every background the components paint — the classes `paintCss` must feed. */
+const CAMPAIGN_COLORS = [
+  "#f0f0f0",
+  "#ffffff",
+  "#ffe7a5",
+  "#ccf6c5",
+  "#c3ecf6",
+  "#1e1e1e",
+  "#185abc",
+];
+
 const BACKGROUNDS = [
+  ...CAMPAIGN_COLORS,
   PALETTE.bg,
   PALETTE.bar,
   PALETTE.card,
@@ -94,6 +105,7 @@ const PINS: {
     classFor: tc,
     property: "color",
     colors: [
+      ...CAMPAIGN_COLORS,
       PALETTE.ink,
       PALETTE.mute,
       PALETTE.dim,

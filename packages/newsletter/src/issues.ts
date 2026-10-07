@@ -1,3 +1,4 @@
+import type { CampaignContent } from "./campaign.js";
 /**
  * The Changelog's content: the dated sends themselves, listing events read
  * from the club config in `@devdogsuga/events`.
@@ -16,7 +17,9 @@ export type FeaturedEvent =
   | { meeting: Meeting; partner: PartnerName };
 
 export interface ChangelogIssue {
-  /** Semver, doubling as the URL segment and the export filename. */
+  /** Optional reusable GDG campaign layout; other issues retain the Changelog design. */
+  campaign?: CampaignContent;
+  /** Issue identifier: Changelog semver or GDGC sequential number; also the URL segment. */
   version: string;
   term: string;
   /** The title-bar date, `"Wed · Sep 9"`. */
@@ -41,7 +44,7 @@ const MEETINGS = new Map(getClubConfig().meetings.map((m) => [m.slug, m]));
 
 /** A meeting from the club config, by slug. Throws on a typo rather than
  * rendering an issue with a hole in it. */
-function meeting(slug: string): Meeting {
+export function meeting(slug: string): Meeting {
   const found = MEETINGS.get(slug);
   if (found === undefined) {
     throw new Error(`No meeting "${slug}" in the club config.`);

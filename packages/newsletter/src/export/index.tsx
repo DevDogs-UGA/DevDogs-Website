@@ -1,3 +1,4 @@
+import { CAMPAIGN_SVGS } from "../campaign-assets.js";
 /**
  * The Node-side export surface: render an issue to a complete HTML document,
  * describe the images that need rasterising, and assemble the .eml.
@@ -61,6 +62,12 @@ function svgFromDataUri(src: string): string {
 /** Every image an exported issue references, exactly once each. */
 export function emailImages(): EmailImage[] {
   return [
+    ...Object.entries(CAMPAIGN_SVGS).map(([name, svg]) => ({
+      cid: cidFor(`campaign-${name}`),
+      filename: `campaign-${name}.png`,
+      svg,
+      rasterWidth: name === "header" ? 1200 : 600,
+    })),
     {
       cid: cidFor("devdogs-lockup"),
       filename: "devdogs-lockup@2x.png",
@@ -97,6 +104,7 @@ export function emailRenderContext(): RenderContext {
   return {
     fonts: EMAIL_FONTS,
     assets: {
+      campaignImage: (name) => `cid:${cidFor(`campaign-${name}`)}`,
       devdogsLockup: `cid:${cidFor("devdogs-lockup")}`,
       gdgcLockup: `cid:${cidFor("gdgc-lockup")}`,
       socialIcon,

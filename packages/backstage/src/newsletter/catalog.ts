@@ -9,13 +9,13 @@ import { YES, type CommandNode } from "@devdogsuga/cli-core/catalog";
 
 export const newsletterCommand: CommandNode = {
   name: "newsletter",
-  summary: "Render, draft or send a DevDogs Changelog issue.",
+  summary: "Render, draft or send a DevDogs or GDGC newsletter issue.",
   hint: "needs the club mailbox sign-in for draft and send",
   subcommands: [
     {
       name: "render",
       envFree: true,
-      summary: "Write an issue as .eml and .html files.",
+      summary: "Write <changelog|gdgc> <issue> as .eml and .html files.",
       hint: "writes files only",
       options: [
         {
@@ -35,7 +35,7 @@ export const newsletterCommand: CommandNode = {
         {
           flag: "--out",
           value: "<dir>",
-          summary: "Directory for the files. Defaults to ./changelog-exports.",
+          summary: "Directory for the files. Defaults to ./<series>-exports.",
           prompt: {
             kind: "text",
             message: "Where should the files go?",
@@ -48,13 +48,13 @@ export const newsletterCommand: CommandNode = {
     {
       name: "draft",
       envFree: true,
-      summary: "Append an issue to the club mailbox's Drafts.",
+      summary: "Draft <changelog|gdgc> <issue> in the club mailbox.",
       hint: "review it in any Outlook",
     },
     {
       name: "send",
       envFree: true,
-      summary: "Send an issue from the club mailbox, as authored.",
+      summary: "Send <changelog|gdgc> <issue> from the club mailbox.",
       hint: "asks first, naming the issue and every recipient",
       options: [
         {

@@ -60,3 +60,7 @@ import { CSS_VARIABLE_FONTS } from "./theme.js";
 export function webRenderContext(): RenderContext {
   return { fonts: CSS_VARIABLE_FONTS, assets: DATA_URI_ASSETS };
 }
+
+export { assertIssueReadyToSend, type CampaignContent } from "./campaign.js";
+
+export { GDGC_ISSUES, gdgcIssueByVersion } from "./gdgc-issues.js";

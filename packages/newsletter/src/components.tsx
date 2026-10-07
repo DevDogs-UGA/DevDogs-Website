@@ -1,3 +1,4 @@
+import { CampaignEmail } from "./campaign.js";
 /**
  * The Changelog, as one component tree with two render targets.
  *
@@ -608,6 +609,7 @@ export function ChangelogEmail({
   issue: ChangelogIssue;
   ctx: RenderContext;
 }) {
+  if (issue.campaign) return <CampaignEmail issue={issue} ctx={ctx} />;
   const { fonts, assets } = ctx;
   const headingColor = eventCard(issue.featured[0].meeting).color;
   const arrowLinkStyle: CSSProperties = {

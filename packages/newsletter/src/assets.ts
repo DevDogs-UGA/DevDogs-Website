@@ -1,3 +1,4 @@
+import { campaignDataUri, type CampaignImage } from "./campaign-assets.js";
 /**
  * The two brand marks the newsletter draws: the DevDogs mascot+wordmark
  * lockup and the GDG-on-Campus · UGA cobrand, both taken from brand so each
@@ -47,6 +48,7 @@ export function partnerLogoSize(name: PartnerName): {
 
 /** Where the components find their three `<img>` sources. */
 export interface NewsletterAssets {
+  campaignImage: (name: CampaignImage) => string;
   /** `<img>` src for the DevDogs mascot+wordmark lockup (dark ground). */
   devdogsLockup: string;
   /** `<img>` src for the GDG On Campus · UGA cobrand lockup (dark ground). */
@@ -73,6 +75,7 @@ export interface RenderContext {
  * exactly wrong for a send: Gmail and Outlook strip SVG in any form.
  */
 export const DATA_URI_ASSETS: NewsletterAssets = {
+  campaignImage: campaignDataUri,
   devdogsLockup: DEVDOGS_LOCKUP.src,
   gdgcLockup: GDGC_UGA.src,
   socialIcon: socialIconDataUri,
