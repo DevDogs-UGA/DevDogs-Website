@@ -115,7 +115,7 @@ describe("cancellation pairing", () => {
   });
 });
 
-describe("RSVP host allowlist", () => {
+describe("RSVP HTTPS URL guards", () => {
   it("allows the club's own host", () => {
     const result = validateClubConfig(
       config([
@@ -125,11 +125,15 @@ describe("RSVP host allowlist", () => {
     expect(result).toEqual([]);
   });
 
-  it("refuses an off-allowlist host", () => {
+  it("allows Bevy event URLs", () => {
     const result = validateClubConfig(
-      config([meeting({ rsvpUrl: "https://evil.example.com/x" })]),
+      config([
+        meeting({
+          rsvpUrl: "https://gdg.community.dev/events/details/georgia-311/",
+        }),
+      ]),
     );
-    expect(result.map((i) => i.code)).toEqual(["meeting_rsvp_host"]);
+    expect(result).toEqual([]);
   });
 
   // `new URL(url).hostname` parses both of these as the allowed host --

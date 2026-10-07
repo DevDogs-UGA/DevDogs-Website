@@ -52,14 +52,14 @@ rather than deleting it.
   actually reads today, minus everything that exists only for a synced wire
   format (foreign record ids, sync-status bookkeeping, attendance counts) —
   config has no such plumbing. Its length/host constants (e.g.
-  `MEETING_SUMMARY_MAX_LENGTH`, `RSVP_URL_ALLOWED_HOSTS`) are duplicated
+  `MEETING_SUMMARY_MAX_LENGTH`, `RSVP_URL_PATTERN`) are duplicated
   from, and must never be looser than, the check constraints in the
   product's own `supabase/migrations/*_platform_events_core.sql` — config is
   upstream of Postgres, so a file this schema accepts must always be a row
   Postgres accepts too.
 - **`validator.ts`** is the PUBLISHABILITY half: whether a structurally
   valid file's _content_ can go on a public page — a summary that fits its
-  card, an RSVP link on an allowlisted host. Run separately from the schema
+  card, an HTTPS RSVP link without userinfo. Run separately from the schema
   so a shape error and a publishability error are never confused for each
   other in CI output.
 

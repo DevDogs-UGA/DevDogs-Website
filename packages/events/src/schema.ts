@@ -41,30 +41,12 @@ export const WORKSHOP_TITLE_MAX_LENGTH = 80;
 export const WORKSHOP_DESCRIPTION_MAX_LENGTH = 280;
 
 /**
- * Rendered as an href on a public page under the club's name, so the host is
- * allowlisted rather than just the scheme. Mirrors the DB's
- * `meetings_rsvpUrl_host` check constraint. Adding a host here means
- * widening that check constraint in the same change.
+ * Mirrors the database's meetings_rsvpUrl_host constraint. RSVP destinations
+ * may use any HTTPS host (including Bevy), while retaining the existing
+ * no-userinfo and conservative path-character guards.
  */
-export const RSVP_URL_ALLOWED_HOSTS: readonly string[] = ["uga.campuslabs.com"];
-
-/**
- * Exact mirror of the DB's `meetings_rsvpUrl_host` check constraint --
- * literally, not just semantically. `new URL(url).hostname` falls into
- * precisely the trap that check constraint's comment warns about: it parses
- * `http://uga.campuslabs.com/x` (wrong scheme) and
- * `https://someone@uga.campuslabs.com/x` (userinfo) happily, and both
- * hostnames land on the allowlist even though Postgres's regex rejects both
- * strings outright. Testing this pattern directly against the whole URL,
- * the same way the check constraint does, means there is nothing left for
- * `new URL()` to get cleverer about behind this validator's back -- and it
- * stays true even if `RSVP_URL_ALLOWED_HOSTS` grows a second host.
- */
-export const RSVP_URL_PATTERN = new RegExp(
-  `^https://(${RSVP_URL_ALLOWED_HOSTS.map((host) =>
-    host.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-  ).join("|")})(/[A-Za-z0-9/_?=&.%#:~-]*)?$`,
-);
+export const RSVP_URL_PATTERN =
+  /^https:\/\/[A-Za-z0-9][A-Za-z0-9.-]*(\/[A-Za-z0-9/_?=&.%#:~-]*)?$/;
 
 /** Mirrors `meetings_kind_choices`. */
 export const MEETING_KIND_CHOICES = [
@@ -189,7 +171,8 @@ export const meetingSchema = z
       description: "ISO 8601 instant, after startsAt.",
     }),
     rsvpUrl: z.url().nullable().meta({
-      description: "The Involvement Network event page (uga.campuslabs.com).",
+      description:
+        "An HTTPS RSVP event page, such as Bevy or the Involvement Network.",
     }),
     cancelledAt: isoInstant
       .nullable()

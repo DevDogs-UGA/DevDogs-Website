@@ -91,7 +91,7 @@
                 "type": "null"
               }
             ],
-            "description": "The Involvement Network event page (uga.campuslabs.com)."
+            "description": "An HTTPS RSVP event page, such as Bevy or the Involvement Network."
           },
           "cancelledAt": {
             "anyOf": [

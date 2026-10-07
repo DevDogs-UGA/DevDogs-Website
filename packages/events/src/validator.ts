@@ -3,7 +3,6 @@ import {
   MEETING_SLUG_PATTERN,
   MEETING_SUMMARY_MAX_LENGTH,
   MEETING_TITLE_MAX_LENGTH,
-  RSVP_URL_ALLOWED_HOSTS,
   RSVP_URL_PATTERN,
   WORKSHOP_DESCRIPTION_MAX_LENGTH,
   WORKSHOP_TITLE_MAX_LENGTH,
@@ -227,9 +226,7 @@ function checkMeeting(meeting: Meeting, issues: ValidationIssue[]): void {
     issues.push({
       id: meeting.slug,
       code: "meeting_rsvp_host",
-      message:
-        `rsvpUrl "${meeting.rsvpUrl}" is not on an allowed host. It has to ` +
-        `be an https:// address on ${RSVP_URL_ALLOWED_HOSTS.join(" or ")}.`,
+      message: `rsvpUrl "${meeting.rsvpUrl}" must be an HTTPS address without userinfo or unsupported URL characters.`,
     });
   }
 }
