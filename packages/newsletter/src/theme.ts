@@ -81,9 +81,9 @@ export interface FontStacks {
 /** Literal family stacks for the email body, web font first. */
 export const EMAIL_FONTS: FontStacks = {
   display:
-    "'Alan Sans', 'Hanken Grotesk', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-  sans: "'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-  mono: "'Cascadia Code', 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace",
+    "'Alan Sans', 'Hanken Grotesk', 'Avenir Next', 'Century Gothic', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+  sans: "'Hanken Grotesk', 'Segoe UI', Roboto, 'Avenir Next', -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif",
+  mono: "'Cascadia Code', 'Cascadia Mono', 'SFMono-Regular', Consolas, Menlo, 'Courier New', monospace",
 };
 
 /**
@@ -199,3 +199,7 @@ export function blockShadow(color: string, size = 6): CSSProperties {
     boxShadow: `${size + 1}px ${size + 1}px 0 0 #000, ${size}px ${size}px 0 0 ${color}`,
   };
 }
+
+/** GDGC prioritizes Google's familiar UI face, then available system fonts. */
+export const GDGC_FONT_STACK =
+  "'Google Sans', Roboto, 'Segoe UI', 'Avenir Next', Helvetica, Arial, sans-serif";

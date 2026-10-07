@@ -208,3 +208,26 @@ Their archive is `/newsletters/gdgc` and exports use `gdgc-<issue>` filenames.
 Name the series before the issue: `newsletter render gdgc 1` or
 `newsletter render changelog 3.0.3`. GDGC uses sequential issue numbers (1, 2, 3),
 while Changelog keeps semver. `*` selects only the named series. Both series use the club mailbox and the same rendering/mail commands.
+
+### Email fonts and fallbacks
+
+Both newsletter series carry compact WOFF2 font subsets in their HTML alongside
+hosted sources. GDGC uses Google Sans; Changelog retains Alan Sans (headings),
+Hanken Grotesk (body) and Cascadia Code (code/metadata). The hosted Changelog
+subsets live in `apps/platform/public/brand/newsletter/`; their SIL Open Font
+License notices are in this package's `licenses/` directory. Redeploy the
+platform when changing these hosted files.
+
+Clients that strip custom font rules still use installed fallback fonts:
+
+- GDGC: Roboto → Segoe UI → Avenir Next → Helvetica → Arial.
+- Changelog headings: Hanken Grotesk → Avenir Next → Century Gothic → Segoe UI → Roboto → Helvetica → Arial.
+- Changelog body: Segoe UI → Roboto → Avenir Next → system sans → Helvetica → Arial.
+- Changelog monospace: Cascadia Mono → SFMono-Regular → Consolas → Menlo → Courier New.
+
+The visual preference is a design judgment: Century Gothic's circular forms
+suit headlines but its wide spacing is less suitable for paragraphs; Segoe UI
+and Roboto are more practical body fallbacks. Font availability varies by
+recipient. Embedding does not bypass a client's prohibition on web fonts.
+Keep exported HTML compact: embedded fonts count toward email body size, so
+render tests check current issues against a 100 KB HTML budget.

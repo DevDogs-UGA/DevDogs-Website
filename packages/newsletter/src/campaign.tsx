@@ -1,8 +1,10 @@
+import { timeRange } from "./date-format.js";
+import { CAMPAIGN_FONT_CSS } from "./campaign-fonts.js";
 import type { CSSProperties, ReactNode } from "react";
 import type { RenderContext } from "./assets.js";
 import { bc, tc } from "./darkmode.js";
 import type { ChangelogIssue } from "./issues.js";
-import { SITE } from "./theme.js";
+import { GDGC_FONT_STACK, SITE } from "./theme.js";
 
 export interface CampaignContent {
   subject: string;
@@ -46,7 +48,7 @@ const TABLE = {
   border: 0,
 } as const;
 const font: CSSProperties = {
-  fontFamily: "'Google Sans', Arial, Helvetica, sans-serif",
+  fontFamily: GDGC_FONT_STACK,
   fontSize: 16,
   lineHeight: 1.65,
   color: INK,
@@ -81,7 +83,27 @@ function Panel({
   );
 }
 function Card({ children, color }: { children: ReactNode; color: string }) {
-  return <table {...TABLE} width="100%" style={{ marginBottom: 16 }}><tbody><tr><td {...{ bgcolor: color }} className={`${bc(color)} ${tc(INK)}`} style={{ ...font, padding: "20px 24px", border: `2px solid ${INK}`, borderRadius: 10, verticalAlign: "middle" }}>{children}</td></tr></tbody></table>;
+  return (
+    <table {...TABLE} width="100%" style={{ marginBottom: 16 }}>
+      <tbody>
+        <tr>
+          <td
+            {...{ bgcolor: color }}
+            className={`${bc(color)} ${tc(INK)}`}
+            style={{
+              ...font,
+              padding: "20px 24px",
+              border: `2px solid ${INK}`,
+              borderRadius: 10,
+              verticalAlign: "middle",
+            }}
+          >
+            {children}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
 }
 function Heading({ children }: { children: ReactNode }) {
   return (
@@ -120,11 +142,31 @@ export function CampaignEmail({
     month: "long",
     day: "numeric",
   });
-  const time = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  const sectionPanels = d.sections.map((section, sectionIndex) => (
+    <Panel
+      key={section.heading}
+      color={sectionIndex === 2 ? "#ffe7a5" : "#f0f0f0"}
+    >
+      <Heading>{section.heading}</Heading>
+      {section.paragraphs?.map((p) => (
+        <Paragraph key={p}>{p}</Paragraph>
+      ))}
+      {section.items?.map((item, index) => (
+        <Card
+          key={item.title}
+          color={
+            sectionIndex === 0
+              ? ["#c3ecf6", "#ccf6c5", "#f8d8d8"][index % 3]!
+              : "#f0f0f0"
+          }
+        >
+          <strong>{item.title}</strong>
+          <br />
+          {item.text}
+        </Card>
+      ))}
+    </Panel>
+  ));
   return (
     <table
       {...TABLE}
@@ -134,7 +176,7 @@ export function CampaignEmail({
       <tbody>
         <tr>
           <td>
-            <style>{`@font-face{font-family:'Google Sans';src:url('${SITE}/brand/newsletter/GoogleSans-Regular.ttf')}@font-face{font-family:'Google Sans';font-weight:700;src:url('${SITE}/brand/newsletter/GoogleSans-Bold.ttf')}`}</style>
+            <style>{CAMPAIGN_FONT_CSS}</style>
           </td>
         </tr>
         <Panel color="#c3ecf6">
@@ -170,12 +212,30 @@ export function CampaignEmail({
           >
             {issue.tagline}
           </h1>
-          <img src={ctx.assets.campaignImage("civic")} width={536} alt="South Cobb Regional Library and Nickajack Park in Mableton" style={{ display: "block", width: "100%", height: "auto", marginBottom: 16 }} />
-          <p className={tc(INK)} style={{ ...font, fontSize: 11, margin: "0 0 24px" }}>South Cobb Regional Library · Nickajack Park, Mableton<br />Photos: John Phelan / Wikimedia Commons · CC BY 4.0</p>
+          <img
+            src={ctx.assets.campaignImage("civic")}
+            width={536}
+            alt="South Cobb Regional Library and Nickajack Park in Mableton"
+            style={{
+              display: "block",
+              width: "100%",
+              height: "auto",
+              marginBottom: 16,
+            }}
+          />
+          <p
+            className={tc(INK)}
+            style={{ ...font, fontSize: 11, margin: "0 0 24px" }}
+          >
+            South Cobb Regional Library · Nickajack Park, Mableton
+            <br />
+            Photos: John Phelan / Wikimedia Commons · CC BY 4.0
+          </p>
           {d.intro.map((p) => (
             <Paragraph key={p}>{p}</Paragraph>
           ))}
         </Panel>
+        {sectionPanels[0]}
         {/* Meeting data is the same config consumed by the events pages. */}
         <Panel color="#ccf6c5">
           <Heading>{issue.featuredLabel}</Heading>
@@ -189,8 +249,10 @@ export function CampaignEmail({
               <Card key={meeting.slug} color="#f0f0f0">
                 <strong>
                   {date.format(new Date(meeting.startsAt))} ·{" "}
-                  {time.format(new Date(meeting.startsAt))}–
-                  {time.format(new Date(meeting.endsAt))}
+                  {timeRange(
+                    new Date(meeting.startsAt),
+                    new Date(meeting.endsAt),
+                  )}
                 </strong>
                 <br />
                 <Link
@@ -205,21 +267,7 @@ export function CampaignEmail({
             );
           })}
         </Panel>
-        {d.sections.map((section, sectionIndex) => (
-          <Panel key={section.heading} color={sectionIndex === 2 ? "#ffe7a5" : "#f0f0f0"}>
-            <Heading>{section.heading}</Heading>
-            {section.paragraphs?.map((p) => (
-              <Paragraph key={p}>{p}</Paragraph>
-            ))}
-            {section.items?.map((item, index) => (
-              <Card key={item.title} color={sectionIndex === 0 ? ["#c3ecf6", "#ccf6c5", "#f8d8d8"][index % 3]! : "#f0f0f0"}>
-                <strong>{item.title}</strong>
-                <br />
-                {item.text}
-              </Card>
-            ))}
-          </Panel>
-        ))}
+        {sectionPanels.slice(1)}
         <Panel color="#ccf6c5">
           <Heading>{d.cta.heading}</Heading>
           <table {...TABLE}>
@@ -228,7 +276,11 @@ export function CampaignEmail({
                 <td
                   {...{ bgcolor: BLUE }}
                   className={bc(BLUE)}
-                  style={{ padding: "22px 32px", borderRadius: 10, border: `2px solid ${INK}` }}
+                  style={{
+                    padding: "22px 32px",
+                    borderRadius: 10,
+                    border: `2px solid ${INK}`,
+                  }}
                 >
                   <a
                     href={
@@ -247,6 +299,15 @@ export function CampaignEmail({
                   >
                     {d.cta.label}
                   </a>
+                </td>
+              </tr>
+              <tr>
+                <td
+                  height={24}
+                  aria-hidden="true"
+                  style={{ height: 24, fontSize: 0, lineHeight: "24px" }}
+                >
+                  &nbsp;
                 </td>
               </tr>
             </tbody>

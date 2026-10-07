@@ -1,15 +1,8 @@
 /**
- * The email's marks as PNG attachments.
- *
- * `@devdogsuga/newsletter` hands over each image as an SVG; a mail client
- * wants a raster. They go through `@devdogsuga/brand/render`, the same Satori
- * and resvg the rest of the club's images use, as an `<img>` of the SVG laid
- * out at the target width. That keeps one rasteriser in the toolchain and
- * keeps the marks vector until the last step: resvg draws the nested SVG at
- * the final size rather than scaling a bitmap.
+ * Rasterize newsletter SVGs directly with resvg. Passing them through a nested
+ * Satori <img> drops embedded raster photographs inside the SVG.
  */
-import { render } from "@devdogsuga/brand/render";
-import { createElement } from "react";
+import { Resvg } from "@resvg/resvg-js";
 
 /** The SVG's aspect ratio, from its `viewBox` or else its `width` and `height`. */
 export function svgAspect(svg: string): number {
@@ -30,11 +23,8 @@ export function svgAspect(svg: string): number {
 
 /** An SVG as PNG bytes, `width` pixels wide. */
 export async function rasterize(svg: string, width: number): Promise<Buffer> {
-  const height = Math.max(1, Math.round(width / svgAspect(svg)));
-  const src = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
-  const { png } = await render(
-    createElement("img", { src, width, height, style: { width, height } }),
-    { width, height },
+  svgAspect(svg); // Reject invalid sources before handing them to the renderer.
+  return Buffer.from(
+    new Resvg(svg, { fitTo: { mode: "width", value: width } }).render().asPng(),
   );
-  return png;
 }

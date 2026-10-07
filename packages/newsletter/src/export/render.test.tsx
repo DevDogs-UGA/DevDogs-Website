@@ -24,6 +24,23 @@ function escaped(text: string): string {
 }
 
 describe("renderIssueDocument", () => {
+  it("includes hosted and embedded fonts for the Changelog without bloating GDGC", () => {
+    for (const issue of [...ISSUES, ...GDGC_ISSUES]) {
+      expect(Buffer.byteLength(renderIssueDocument(issue))).toBeLessThan(
+        100_000,
+      );
+    }
+    const html = renderIssueDocument(ISSUES[0]!);
+    expect(html.match(/data:font\/woff2;base64,/g)).toHaveLength(3);
+    for (const family of ["alansans", "hankengrotesk", "cascadiacode"]) {
+      expect(html).toContain(
+        `https://devdogsuga.org/brand/newsletter/${family}-email.woff2`,
+      );
+    }
+    expect(
+      renderIssueDocument(GDGC_ISSUES[0]!).match(/data:font\/woff2;base64,/g),
+    ).toHaveLength(2);
+  });
   it("renders every issue as a full document carrying its own copy", () => {
     for (const issue of [...ISSUES, ...GDGC_ISSUES]) {
       const html = renderIssueDocument(issue);

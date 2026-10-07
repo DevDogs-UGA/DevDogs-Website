@@ -1,3 +1,5 @@
+import { timeRange } from "./date-format.js";
+import { CHANGELOG_FONT_CSS } from "./changelog-fonts.js";
 import { CampaignEmail } from "./campaign.js";
 /**
  * The Changelog, as one component tree with two render targets.
@@ -242,17 +244,6 @@ const KIND_COLOR: Record<string, string> = {
 
 function inEventZone(at: Date, options: Intl.DateTimeFormatOptions): string {
   return at.toLocaleString("en-US", { timeZone: EVENT_TZ, ...options });
-}
-
-/** `"6:00 – 7:30 PM"`, or `"11:00 AM – 1:00 PM"` across noon. */
-function timeRange(startsAt: Date, endsAt: Date): string {
-  const clock = (at: Date) =>
-    inEventZone(at, { hour: "numeric", minute: "2-digit" }).split(" ");
-  const [start, startMeridiem] = clock(startsAt);
-  const [end, endMeridiem] = clock(endsAt);
-  return startMeridiem === endMeridiem
-    ? `${start} – ${end} ${endMeridiem}`
-    : `${start} ${startMeridiem} – ${end} ${endMeridiem}`;
 }
 
 /**
@@ -1148,7 +1139,11 @@ export function ChangelogDocument({
         />
         <link href={FONTS_HREF} rel="stylesheet" />
         <style
-          dangerouslySetInnerHTML={{ __html: `@import url('${FONTS_HREF}');` }}
+          dangerouslySetInnerHTML={{
+            __html: issue.campaign
+              ? ""
+              : `@import url('${FONTS_HREF}');${CHANGELOG_FONT_CSS}`,
+          }}
         />
         <style
           dangerouslySetInnerHTML={{

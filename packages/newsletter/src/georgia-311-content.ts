@@ -2,16 +2,16 @@ import type { CampaignContent } from "./campaign.js";
 
 /** Approved campaign copy; fill the Google Form URL before sending. */
 export const GEORGIA_311_CONTENT: CampaignContent = {
-  subject: "UGA students: build for Mableton in the Georgia 311 Challenge",
+  subject: "Build for Mableton: Georgia 311 Challenge · All majors welcome",
   preheader:
-    "All majors welcome. Join a 30-minute interest meeting and apply by October 15.",
+    "A civic hackathon for all majors. Top teams present their projects to Mableton city officials. Apply by October 15.",
   chapter: "GDG on Campus University of Georgia",
   series: "GDGC Newsletter",
-  eyebrow: "GEORGIA 311 CHALLENGE 2026",
+  eyebrow: "GEORGIA 311 CHALLENGE · CIVIC HACKATHON",
   title: "Bring your ideas to Mableton.",
   intro: [
     "How could a city make its services easier to find, its decisions easier to understand, or its staff more effective?",
-    "GDG on Campus UGA (DevDogs) is forming student teams for the Georgia 311 Challenge, a prototype challenge focused on Mableton. All majors are welcome. Bring a civic idea, coding skills, or both. Apply individually or with a group.",
+    "Compete in the Georgia 311 Challenge, a three-week civic hackathon to build solutions for the City of Mableton. GDG on Campus UGA (DevDogs) is forming teams of builders, designers, and people with solution proposals. All majors are welcome; apply individually or with a group. Top teams get to present their projects directly to Mableton city officials at DevFest Atlanta, with travel expenses covered.",
   ],
   sections: [
     {

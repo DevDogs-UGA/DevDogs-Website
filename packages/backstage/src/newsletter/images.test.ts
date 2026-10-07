@@ -1,4 +1,5 @@
 import { emailImages } from "@devdogsuga/newsletter/export";
+import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import { rasterize, svgAspect } from "./images.js";
 
@@ -23,6 +24,21 @@ describe("svgAspect", () => {
 });
 
 describe("rasterize", () => {
+  it("preserves raster photographs embedded inside an SVG", async () => {
+    const photo = await sharp({
+      create: { width: 2, height: 2, channels: 3, background: "#ff0000" },
+    })
+      .png()
+      .toBuffer();
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><image width="20" height="20" href="data:image/png;base64,${photo.toString("base64")}"/></svg>`;
+    const pixels = await sharp(await rasterize(svg, 20))
+      .ensureAlpha()
+      .raw()
+      .toBuffer();
+    expect([
+      ...pixels.subarray((10 * 20 + 10) * 4, (10 * 20 + 10) * 4 + 4),
+    ]).toEqual([255, 0, 0, 255]);
+  });
   it("draws an SVG at the width asked for, in its own aspect", async () => {
     const svg =
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 20"><rect width="40" height="20" fill="#f00"/></svg>';
