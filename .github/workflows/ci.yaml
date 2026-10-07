@@ -146,6 +146,24 @@ jobs:
         run: pnpm format:check
       - name: Script names follow the vocabulary
         run: pnpm check:scripts
+      # The structural checks are `devtools check`, run from the build above
+      # (this workspace does not depend on its own CLI, so there is no root
+      # script for it). They read the checkout and nothing else: no env, no
+      # credential.
+      #
+      # workers.json against the wrangler.jsonc files in both repos.
+      - name: workers.json agrees with the Workers
+        run: node packages/devtools/bin/devtools.mjs check workers
+      # The same vocabulary as `check:scripts` above, plus its exceptions
+      # being live (devdogs.scriptExceptions in the root package.json).
+      - name: Package scripts use the shared vocabulary
+        run: node packages/devtools/bin/devtools.mjs check scripts
+      # .env.example is GENERATED from the env manifests (the platform's here,
+      # the other apps' in the pinned devdogsuga/): regenerated in memory and
+      # byte-compared, as DevDogsUGA's CI does. Registry-only, so it needs no
+      # credential; `--no-env` keeps it off any env file the machine has.
+      - name: .env.example agrees with the env manifests
+        run: node packages/devtools/bin/devtools.mjs env example --check --no-env
       - name: Typecheck (workspace)
         run: pnpm -r --if-present run typecheck
       - name: Test (workspace)
@@ -194,6 +212,10 @@ jobs:
   # is pinned to. Starting it applies every migration to a fresh database,
   # which fails if one does not apply. The migrations' own checks (RLS tests,
   # the generated Database types, timestamp order) stay in DevDogsUGA's CI.
+  # So `devtools check migrations` is not a step here: it diffs a ref of the
+  # sibling checkout, which in CI holds only the pinned commit (there is no
+  # origin/main to compare against), and DevDogsUGA's own CI already runs it
+  # against its main before the pin can point at the commit.
   #
   # Unconditional rather than path-filtered, for the reason DevDogsUGA's was:
   # a security-relevant check that skips itself on a heuristic is how a job

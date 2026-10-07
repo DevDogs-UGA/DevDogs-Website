@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   checkMigrationOrder,
+  MigrationBaseError,
   findOutOfOrderMigrations,
   latestMigrationTimestamp,
   migrationTimestamp,
@@ -90,5 +91,13 @@ describe("checkMigrationOrder against a real git history", () => {
     expect(report.violations.map((v) => v.filename)).toEqual([
       "20260101000000_platform_late.sql",
     ]);
+  });
+
+  it("says so when the base is not a ref of the checkout", () => {
+    root = mkdtempSync(join(tmpdir(), "check-migrations-"));
+    git("init", "-b", "main");
+    expect(() => checkMigrationOrder(root, "origin/main")).toThrow(
+      MigrationBaseError,
+    );
   });
 });

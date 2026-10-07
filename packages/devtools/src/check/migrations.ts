@@ -83,6 +83,9 @@ function basenames(output: string): string[] {
     .map((path) => path.split("/").at(-1)!);
 }
 
+/** `baseRef` names nothing in the repo being checked. */
+export class MigrationBaseError extends Error {}
+
 export interface MigrationOrderReport {
   baseLatest: string | null;
   violations: MigrationOrderViolation[];
@@ -101,6 +104,16 @@ export function checkMigrationOrder(
   root: string,
   baseRef: string,
 ): MigrationOrderReport {
+  try {
+    git(root, ["rev-parse", "--verify", "--quiet", `${baseRef}^{commit}`]);
+  } catch {
+    throw new MigrationBaseError(
+      `${baseRef} is not a commit in ${root}. Migrations live in DevDogsUGA, ` +
+        "so the base is a ref of that checkout (a Backstage CI checkout has " +
+        "only the pinned commit): pass --base <ref>, e.g. the previous " +
+        "devdogsuga.lock SHA.",
+    );
+  }
   const baseFiles = basenames(
     git(root, ["ls-tree", "-r", "--name-only", baseRef, "--", MIGRATIONS_DIR]),
   );

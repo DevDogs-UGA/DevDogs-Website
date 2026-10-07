@@ -11,7 +11,7 @@ import { resolveLayout } from "@devdogsuga/cli-core/repo/layout";
 import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import { catalog } from "../catalog.js";
 import { checkEnv } from "./env.js";
-import { checkMigrationOrder } from "./migrations.js";
+import { checkMigrationOrder, MigrationBaseError } from "./migrations.js";
 import { checkScripts } from "./scripts.js";
 import { checkWorkers } from "./workers.js";
 
@@ -32,10 +32,14 @@ function report(name: string, problems: readonly string[], ok: string): number {
 function migrations(rest: string[]): number {
   const base = flagValue(rest, "--base") ?? DEFAULT_BASE;
   // `supabase/migrations` is DevDogsUGA's, wherever the CLI runs from.
-  const { baseLatest, violations } = checkMigrationOrder(
-    resolveLayout().devdogsugaRoot,
-    base,
-  );
+  let result: ReturnType<typeof checkMigrationOrder>;
+  try {
+    result = checkMigrationOrder(resolveLayout().devdogsugaRoot, base);
+  } catch (error) {
+    if (!(error instanceof MigrationBaseError)) throw error;
+    return report("migrations", [error.message], "");
+  }
+  const { baseLatest, violations } = result;
   return report(
     "migrations",
     violations.map(
