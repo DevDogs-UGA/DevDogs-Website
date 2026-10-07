@@ -58,7 +58,7 @@ import {
   computeActionPatterns,
   unpinnedActionUses,
 } from "./workflows.js";
-import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { resolveLayout } from "@devdogsuga/cli-core/repo/layout";
 import { unwrap } from "@devdogsuga/cli-core/ui";
 
 const DEFAULT_ORG = "DevDogsUGA";
@@ -326,6 +326,19 @@ async function applyPlan(
   }
 }
 
+/**
+ * Whose workflows to scan for the action allow-list: the repo being
+ * configured, not the one the command runs from. Run from Backstage,
+ * `--repo DevDogsUGA` reads the `devdogsuga/` sibling; scanning Backstage's
+ * own workflows instead would allow its actions there and block DevDogsUGA's
+ * (`subosito/flutter-action`). In DevDogsUGA itself both are its root.
+ * `--root` overrides.
+ */
+function workflowRoot(repo: string): string {
+  const layout = resolveLayout();
+  return repo === "DevDogsUGA" ? layout.devdogsugaRoot : layout.root;
+}
+
 export async function runGithubSettings(
   argv: readonly string[],
 ): Promise<number> {
@@ -341,7 +354,7 @@ export async function runGithubSettings(
 
   let uses;
   try {
-    uses = collectActionUses(opts.root ?? findRepoRoot());
+    uses = collectActionUses(opts.root ?? workflowRoot(opts.repo));
   } catch (err) {
     process.stderr.write(
       `backstage github settings: ${err instanceof Error ? err.message : String(err)}\n`,
