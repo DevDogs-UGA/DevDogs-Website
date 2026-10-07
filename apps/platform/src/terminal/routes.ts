@@ -1,6 +1,7 @@
 import { browserOnly, type TerminalRoute } from "./define";
 import type { TerminalPattern } from "./paths";
 import { changelogArchive, changelogIssue } from "./routes/changelog";
+import { gdgcArchive, gdgcIssue } from "./routes/gdgc";
 import {
   communityDirectory,
   communityProfile,
@@ -23,6 +24,8 @@ export const TERMINAL_ROUTES = {
   "/": home,
   "/changelog": changelogArchive,
   "/changelog/:version": changelogIssue,
+  "/newsletters/gdgc": gdgcArchive,
+  "/newsletters/gdgc/:version": gdgcIssue,
   "/events": eventsSchedule,
   "/events/directions": directions,
   "/events/:slug": eventDetail,

@@ -24,7 +24,7 @@ import { locationLine } from "~/components/EventsSection/FindUs/buildings";
  * package: older releases key meetings by Airtable id with no slug, newer ones
  * by slug. A row links to its event page only when it has a slug.
  */
-interface IssueMeeting {
+export interface IssueMeeting {
   slug?: string;
   title: string;
   summary: string | null;
@@ -38,7 +38,7 @@ interface IssueMeeting {
   cancellationReason: string | null;
 }
 
-interface IssueFeature {
+export interface IssueFeature {
   meeting: IssueMeeting;
   cta?: string;
   partner?: string;
@@ -51,7 +51,7 @@ interface IssueFeature {
  * per issue"). Reading both means the platform's next newsletter bump needs
  * nothing here.
  */
-function features(issue: ChangelogIssue): IssueFeature[] {
+export function features(issue: ChangelogIssue): IssueFeature[] {
   const raw = issue as unknown as { featured: unknown; cta?: string };
   if (Array.isArray(raw.featured)) return raw.featured as IssueFeature[];
   return [{ meeting: raw.featured as IssueMeeting, cta: raw.cta }];
@@ -70,7 +70,7 @@ function eventPath(meeting: IssueMeeting): string | undefined {
     : undefined;
 }
 
-function issueEventItem(meeting: IssueMeeting): EventItem {
+export function issueEventItem(meeting: IssueMeeting): EventItem {
   const startsAt = new Date(meeting.startsAt);
   const cancelled = meeting.cancelledAt !== null;
   return {
@@ -88,7 +88,7 @@ function issueEventItem(meeting: IssueMeeting): EventItem {
   };
 }
 
-function featureCard(feature: IssueFeature): Card {
+export function featureCard(feature: IssueFeature): Card {
   const { meeting } = feature;
   const item = issueEventItem(meeting);
   const partner = feature.partner ? PARTNERS?.[feature.partner] : undefined;

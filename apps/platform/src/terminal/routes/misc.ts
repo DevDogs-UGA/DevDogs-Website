@@ -70,6 +70,11 @@ const HELP = [
     path: "/changelog/<version>",
     description: "One issue, e.g. /changelog/3.0.2.",
   },
+  { path: "/newsletters/gdgc", description: "Every GDGC newsletter issue." },
+  {
+    path: "/newsletters/gdgc/<issue>",
+    description: "One GDGC issue, e.g. /newsletters/gdgc/1.",
+  },
   { path: "/competitions/<slug>", description: "A competition's brief." },
   {
     path: "/competitions/<slug>/results",

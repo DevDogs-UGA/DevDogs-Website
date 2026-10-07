@@ -105,6 +105,12 @@ export const SEARCH_ONLY_PAGES: NavItem[] = [
     description:
       "The weekly DevDogs newsletter: what the club is building and where to show up.",
   },
+  {
+    label: "GDGC Newsletter",
+    href: "/newsletters/gdgc",
+    icon: "EnvelopeSimpleIcon",
+    description: "GDG on Campus UGA opportunities, civic projects and events.",
+  },
 ];
 
 /**

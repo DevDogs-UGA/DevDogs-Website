@@ -31,6 +31,7 @@ import { ACCENT, TONE, type Accent } from "./theme";
 export const BANNERS = [
   "DEVDOGS",
   "CHANGELOG",
+  "GDGC",
   "EVENTS",
   "DIRECTIONS",
   "COMPETITIONS",

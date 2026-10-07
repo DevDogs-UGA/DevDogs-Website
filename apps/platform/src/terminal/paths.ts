@@ -41,6 +41,18 @@ export const TERMINAL_PATHS = [
     regex: /^\/changelog\/v?(?<version>\d+\.\d+\.\d+)\/?$/,
     page: "(site)/changelog/[version]/page.tsx",
   },
+  {
+    pattern: "/newsletters/gdgc",
+    regex: /^\/newsletters\/gdgc\/?$/,
+    page: "(site)/newsletters/gdgc/page.tsx",
+  },
+  {
+    pattern: "/newsletters/gdgc/:version",
+    // GDGC issues are numbered (`1`), but any dotted number matches and an
+    // unknown one is the route's own 404, as on /changelog.
+    regex: /^\/newsletters\/gdgc\/(?<version>\d+(?:\.\d+)*)\/?$/,
+    page: "(site)/newsletters/gdgc/[version]/page.tsx",
+  },
 
   {
     pattern: "/events",

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { GDGC_ISSUES, ISSUES } from "@devdogsuga/newsletter";
 import { env } from "~/env";
 import { docsHref } from "~/lib/docsSlug";
 import { getDocsPagePaths, getDocsProjects } from "~/server/docs/queries";
@@ -10,10 +11,11 @@ import { getMeetingSlugs } from "~/server/loaders/meetings";
  *
  * Two halves, and the split is the whole design of this file:
  *
- *   - Everything derivable WITHOUT a database: the six authored routes, plus
+ *   - Everything derivable WITHOUT a database: the authored routes, both
+ *     newsletter archives and their issues (`@devdogsuga/newsletter`), plus
  *     every LIVE docs page (scheduled ones are left out until their time), which `@devdogsuga/docs` compiles into the bundle at
- *     build time (see `server/docs/queries.ts`). An in-memory walk over a
- *     constant that cannot throw and cannot be slow.
+ *     build time (see `server/docs/queries.ts`). In-memory walks over
+ *     constants that cannot throw and cannot be slow.
  *   - Everything that needs a query: meetings and competitions.
  *
  * The second half is wrapped so a database that is down, unreachable, or not
@@ -67,6 +69,27 @@ const STATIC_ROUTES: MetadataRoute.Sitemap = [
   { url: url("/legal/privacy"), changeFrequency: "yearly", priority: 0.3 },
   { url: url("/legal/terms"), changeFrequency: "yearly", priority: 0.3 },
 ];
+
+/**
+ * Both newsletters: the Changelog and the GDGC newsletter, each archive and
+ * every issue, from the same issue lists their pages prerender. An issue is
+ * written once and then only corrected, so `yearly`; an archive gains an issue
+ * with each send.
+ */
+function newsletterRoutes(): MetadataRoute.Sitemap {
+  const series = [
+    { base: "/changelog", issues: ISSUES },
+    { base: "/newsletters/gdgc", issues: GDGC_ISSUES },
+  ];
+  return series.flatMap(({ base, issues }) => [
+    { url: url(base), changeFrequency: "weekly" as const, priority: 0.5 },
+    ...issues.map((issue) => ({
+      url: url(`${base}/${issue.version}`),
+      changeFrequency: "yearly" as const,
+      priority: 0.4,
+    })),
+  ]);
+}
 
 /**
  * Every docs page, from the same bundled artifact the pages read.
@@ -180,6 +203,7 @@ export const revalidate = 3600;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...STATIC_ROUTES,
+    ...newsletterRoutes(),
     ...(await docsRoutes()),
     ...(await databaseRoutes()),
   ];
