@@ -150,8 +150,21 @@ on the same Workers and database.
 During Phase 2 only staging deploys from here; production still deploys from
 DevDogsUGA's frozen copy of this flow. Every production job, and the production
 build, runs only when the repository variable `BACKSTAGE_DEPLOYS_PRODUCTION` is
-exactly `true`. It is unset today. Flipping it is the production cutover, together
-with DevDogsUGA's own cleanup (below).
+exactly `true`. It is unset until the production cutover (TASK-491). The flip,
+in order:
+
+1. From a Backstage clone, `backstage env push --target production` (and
+   `env audit --target production`): fills `production`, `preflight` and
+   `production-build` here. Needs the secrets, including `SUPABASE_ACCESS_TOKEN`
+   and `SENTRY_AUTH_TOKEN`, and a non-empty `SENTRY_ORG`.
+2. Merge DevDogsUGA's Phase 3 change (its production jobs, `deploy.yaml` and the
+   platform removed, a `merge_group` trigger added to its `ci.yaml`). Until that
+   lands, both repos would deploy production to the same Workers and database.
+3. Set the repository variable `BACKSTAGE_DEPLOYS_PRODUCTION=true` here.
+4. `backstage github rulesets --repo DevDogsUGA` (and `settings`), then `--apply`
+   once the `merge_group` trigger is on DevDogsUGA's default branch; the merge
+   queue ruleset is withheld until then.
+5. Approve the first production run in the `production` environment.
 
 ### Secrets and variables
 
