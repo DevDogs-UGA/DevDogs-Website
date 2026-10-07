@@ -37,8 +37,8 @@ allowBuilds:
 # DevDogsUGA@e5f8737a — see CUTOVER.md for what that marker means.
 catalog:
   # --- Framework / runtime ---
-  react: ^19.2.8
-  react-dom: ^19.2.8
+  react: ^19.3.0
+  react-dom: ^19.3.0
 
   # --- CLI ---
   # Exact, not a range: 1.8.x changed @clack/core's inferred return types
@@ -236,14 +236,14 @@ shellEmulator: true
 # apps/platform's patches to vinext and React, carried over from the product
 # repo (which keeps its own copies for schedule-builder). Why each exists and
 # when to drop it: patches/patches.json. The patches are keyed to exact
-# versions, so apps/platform pins react and react-dom to 19.2.8 (the rest of
-# the workspace follows the catalog's ^19.2.8, which resolves to 19.3.x); drop
+# versions, so apps/platform pins react and react-dom to 19.3.0 (the rest of
+# the workspace follows the catalog's ^19.3.0); drop
 # the pins together with the react patches.
 patchedDependencies:
   '@vinext/cloudflare@1.0.1': patches/@vinext__cloudflare@1.0.1.patch
-  react-dom@19.2.8: patches/react-dom@19.2.8.patch
+  react-dom@19.3.0: patches/react-dom@19.3.0.patch
   react-server-dom-webpack@19.3.0: patches/react-server-dom-webpack@19.3.0.patch
-  react@19.2.8: patches/react@19.2.8.patch
+  react@19.3.0: patches/react@19.3.0.patch
 
 # undici 6 (via @discordjs/rest) starts compiling its llhttp Wasm AT MODULE
 # SCOPE -- `llhttpPromise = lazyllhttp()` guarded by an argument-LESS

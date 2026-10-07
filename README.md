@@ -64,7 +64,7 @@ DevDogsUGA: `supabase/` (migrations, seeds, `config.toml`), `packages/supabase`
   sibling's local stack; `pnpm -F platform test:db` needs that stack running.
 - **Patches.** `patches/` and `patchedDependencies` are copies of DevDogsUGA's
   (it still builds schedule-builder with them). Because they are keyed to exact
-  versions, `apps/platform` pins `react` and `react-dom` to 19.2.8.
+  versions, `apps/platform` pins `react` and `react-dom` to 19.3.0.
 - **Drift.** The `catalog`, `overrides`, `patchedDependencies` and `patches/` are
   copies of DevDogsUGA's, so `pnpm check:toolchain` compares them with the
   `devdogsuga/` checkout and fails on any shared entry that differs (entries only
