@@ -60,7 +60,7 @@ function Paragraph({ children }: { children: ReactNode }) {
 }
 function Panel({
   children,
-  color = "#ffffff",
+  color = "#f0f0f0",
   id,
 }: {
   children: ReactNode;
@@ -73,12 +73,15 @@ function Panel({
         id={id}
         {...{ bgcolor: color }}
         className={bc(color)}
-        style={{ padding: "28px 32px" }}
+        style={{ padding: "24px 32px" }}
       >
         {children}
       </td>
     </tr>
   );
+}
+function Card({ children, color }: { children: ReactNode; color: string }) {
+  return <table {...TABLE} width="100%" style={{ marginBottom: 16 }}><tbody><tr><td {...{ bgcolor: color }} className={`${bc(color)} ${tc(INK)}`} style={{ ...font, padding: "20px 24px", border: `2px solid ${INK}`, borderRadius: 10, verticalAlign: "middle" }}>{children}</td></tr></tbody></table>;
 }
 function Heading({ children }: { children: ReactNode }) {
   return (
@@ -134,17 +137,7 @@ export function CampaignEmail({
             <style>{`@font-face{font-family:'Google Sans';src:url('${SITE}/brand/newsletter/GoogleSans-Regular.ttf')}@font-face{font-family:'Google Sans';font-weight:700;src:url('${SITE}/brand/newsletter/GoogleSans-Bold.ttf')}`}</style>
           </td>
         </tr>
-        <tr>
-          <td {...{ bgcolor: "#ffe7a5" }} className={bc("#ffe7a5")}>
-            <img
-              src={ctx.assets.campaignImage("header")}
-              width={600}
-              alt="Colorful developer graphics: circles, braces, globe and slashes"
-              style={{ display: "block", width: "100%", height: "auto" }}
-            />
-          </td>
-        </tr>
-        <Panel color="#ffe7a5">
+        <Panel color="#c3ecf6">
           <img
             src={ctx.assets.campaignImage("chapter")}
             width={260}
@@ -162,7 +155,7 @@ export function CampaignEmail({
             {d.series}
           </Paragraph>
         </Panel>
-        <Panel color="#f0f0f0">
+        <Panel color="#c3ecf6">
           <Paragraph>
             <strong>{d.eyebrow}</strong>
           </Paragraph>
@@ -177,12 +170,14 @@ export function CampaignEmail({
           >
             {issue.tagline}
           </h1>
+          <img src={ctx.assets.campaignImage("civic")} width={536} alt="South Cobb Regional Library and Nickajack Park in Mableton" style={{ display: "block", width: "100%", height: "auto", marginBottom: 16 }} />
+          <p className={tc(INK)} style={{ ...font, fontSize: 11, margin: "0 0 24px" }}>South Cobb Regional Library · Nickajack Park, Mableton<br />Photos: John Phelan / Wikimedia Commons · CC BY 4.0</p>
           {d.intro.map((p) => (
             <Paragraph key={p}>{p}</Paragraph>
           ))}
         </Panel>
         {/* Meeting data is the same config consumed by the events pages. */}
-        <Panel color="#c3ecf6">
+        <Panel color="#ccf6c5">
           <Heading>{issue.featuredLabel}</Heading>
           <Paragraph>All three sessions cover the same material.</Paragraph>
           {issue.featured.map(({ meeting }) => {
@@ -191,7 +186,7 @@ export function CampaignEmail({
               ? "Virtual and recorded"
               : `In-person · ${meeting.building === "Other" ? meeting.location : `${meeting.building} ${meeting.location}`}`;
             return (
-              <Paragraph key={meeting.slug}>
+              <Card key={meeting.slug} color="#f0f0f0">
                 <strong>
                   {date.format(new Date(meeting.startsAt))} ·{" "}
                   {time.format(new Date(meeting.startsAt))}–
@@ -206,22 +201,22 @@ export function CampaignEmail({
                 <br />
                 {location}
                 {virtual && !meeting.rsvpUrl ? " · Bevy link pending" : ""}
-              </Paragraph>
+              </Card>
             );
           })}
         </Panel>
-        {d.sections.map((section) => (
-          <Panel key={section.heading}>
+        {d.sections.map((section, sectionIndex) => (
+          <Panel key={section.heading} color={sectionIndex === 2 ? "#ffe7a5" : "#f0f0f0"}>
             <Heading>{section.heading}</Heading>
             {section.paragraphs?.map((p) => (
               <Paragraph key={p}>{p}</Paragraph>
             ))}
-            {section.items?.map((item) => (
-              <Paragraph key={item.title}>
+            {section.items?.map((item, index) => (
+              <Card key={item.title} color={sectionIndex === 0 ? ["#c3ecf6", "#ccf6c5", "#f8d8d8"][index % 3]! : "#f0f0f0"}>
                 <strong>{item.title}</strong>
                 <br />
                 {item.text}
-              </Paragraph>
+              </Card>
             ))}
           </Panel>
         ))}
@@ -233,7 +228,7 @@ export function CampaignEmail({
                 <td
                   {...{ bgcolor: BLUE }}
                   className={bc(BLUE)}
-                  style={{ padding: "18px 32px", borderRadius: 24 }}
+                  style={{ padding: "22px 32px", borderRadius: 10, border: `2px solid ${INK}` }}
                 >
                   <a
                     href={
@@ -245,7 +240,7 @@ export function CampaignEmail({
                     style={{
                       ...font,
                       color: "#ffffff",
-                      fontSize: 18,
+                      fontSize: 20,
                       fontWeight: 700,
                       textDecoration: "none",
                     }}

@@ -64,7 +64,6 @@ export const GEORGIA_311_CONTENT: CampaignContent = {
     label: "Apply with the Google Form",
     url: "https://devdogsuga.org/georgia311",
     paragraphs: [
-      "Apply by October 15 to join the sprint.",
       "Top teams present to Mableton city officials at DevFest Atlanta, with travel expenses covered.",
     ],
   },

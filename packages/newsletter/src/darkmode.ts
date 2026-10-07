@@ -77,6 +77,7 @@ const CAMPAIGN_COLORS = [
   "#ffe7a5",
   "#ccf6c5",
   "#c3ecf6",
+  "#f8d8d8",
   "#1e1e1e",
   "#185abc",
 ];
