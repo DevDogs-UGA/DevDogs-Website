@@ -152,28 +152,30 @@ const RETIRED: Record<
 > = {
   secrets: {
     message: "`secrets` is now `backstage env`.",
-    hints: ["pnpm dlx @devdogsuga/backstage env <pull|push|audit>"],
+    hints: ["In a Backstage clone: pnpm backstage env <pull|push|audit>"],
   },
   // Commands that always need production secrets live in the officer CLI.
   bw: {
     message: "`bw` is gone: `backstage env` signs in to Bitwarden itself.",
-    hints: ["pnpm dlx @devdogsuga/backstage env <pull|push|audit>"],
+    hints: ["In a Backstage clone: pnpm backstage env <pull|push|audit>"],
   },
   planner: {
     message: "`planner` moved to backstage.",
     hints: [
-      "pnpm dlx @devdogsuga/backstage planner <status|create|reset-password|drop>",
+      "In a Backstage clone: pnpm backstage planner <status|create|reset-password|drop>",
     ],
   },
   // Tools that need no checkout and no tier are the officer CLI's too.
   images: {
     message:
       "`images` is now `backstage graphics` (no `page/*` group, no `--default-out`).",
-    hints: ["pnpm dlx @devdogsuga/backstage graphics 'event/*' --out ~/images"],
+    hints: [
+      "In a Backstage clone: pnpm backstage graphics 'event/*' --out ~/images",
+    ],
   },
   github: {
     message: "`github` moved to backstage.",
-    hints: ["pnpm dlx @devdogsuga/backstage github <rulesets|settings>"],
+    hints: ["In a Backstage clone: pnpm backstage github <rulesets|settings>"],
   },
   // Gone since the restructure; each names what replaced it.
   db: {
@@ -340,7 +342,7 @@ export async function main(typed: string[]): Promise<void> {
   if (argv[0] === "deploy") {
     process.stderr.write(
       "deploy has moved to backstage.\n" +
-        "  Use: pnpm dlx @devdogsuga/backstage deploy <step|app> [flags]\n",
+        "  Use, from a Backstage clone: pnpm backstage deploy <step|app> [flags]\n",
     );
     process.exitCode = 1;
     return;

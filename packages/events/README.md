@@ -81,6 +81,6 @@ gates merges in the product repo.
 
 ## Consumers
 
-`DevDogsUGA`'s platform app (`server/config/reconcile.ts`) and its
-`packages/devtools` both import `@devdogsuga/events` for the published
-config; `packages/events` no longer exists in that repo.
+Backstage's own platform app, slides and CLIs import `@devdogsuga/events` as a
+workspace package. It is private and no longer published to npm; DevDogsUGA
+does not depend on it.

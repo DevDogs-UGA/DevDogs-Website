@@ -103,9 +103,9 @@ file; the platform archive and the exported email can never disagree.
 ## Exporting
 
 ```bash
-# the issues published in this package; no checkout needed
-pnpm dlx @devdogsuga/backstage newsletter render                     # pick issues interactively
-pnpm dlx @devdogsuga/backstage newsletter render '*' --out ~/changelog
+# from a Backstage clone (see packages/backstage/README.md)
+pnpm backstage newsletter render                     # pick issues interactively
+pnpm backstage newsletter render '*' --out ~/changelog
 ```
 
 The `.eml` carries `X-Unsent: 1` and no `Message-ID`, so **classic Outlook
@@ -118,7 +118,7 @@ happens with `newsletter send` (below), because every Outlook composer rewrites 
 ## Pushing a draft
 
 ```bash
-pnpm dlx @devdogsuga/backstage newsletter draft 3.0.1
+pnpm backstage newsletter draft 3.0.1
 ```
 
 appends the issue — same MIME as the `.eml`, minus `X-Unsent` — straight into
@@ -137,7 +137,7 @@ differently, into Word HTML, with the same result.)
 ## Sending
 
 ```bash
-pnpm dlx @devdogsuga/backstage newsletter send 3.0.1 --to listserv@listserv.uga.edu
+pnpm backstage newsletter send 3.0.1 --to listserv@listserv.uga.edu
 ```
 
 submits the issue over SMTP as the club mailbox, byte-for-byte as authored —

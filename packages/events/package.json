@@ -1,7 +1,7 @@
 {
   "name": "@devdogsuga/events",
   "version": "0.1.0",
-  "private": false,
+  "private": true,
   "type": "module",
   "description": "Config-as-code for the club's meetings and workshops: the Zod schema, the publishability validator, and the authored data itself",
   "license": "BSD-3-Clause",

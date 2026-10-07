@@ -64,7 +64,7 @@ now `apply-migrations`, and so on).
 
 What always needs production secrets is not here. `deploy`, `env
 pull|push|audit` and `planner` are in `@devdogsuga/backstage`
-(`pnpm dlx @devdogsuga/backstage …`, no checkout needed to start); `devtools
+(`pnpm backstage …` from a Backstage clone; it is no longer published); `devtools
 env` keeps `init`, `example` and `reset`, and `bw` is gone (backstage's `env`
 signs in to Bitwarden itself). `devtools-ci` and `devtools-ci-bare` are
 deprecated aliases that run backstage's code, bundled in, so DevDogsUGA's

@@ -21,8 +21,9 @@ export default async function QrPage() {
       description="Create branded, print-ready QR codes without installing the contributor CLI."
     >
       <Callout tone="warning" title="This page is deprecated">
-        Use <code>pnpm dlx @devdogsuga/backstage qr</code> instead. It takes the
-        same options and needs no sign-in. New QR features land there only.
+        Use <code>pnpm backstage qr</code> from a Backstage clone instead. It
+        takes the same options and needs no sign-in. New QR features land there
+        only.
       </Callout>
       <QrGenerator />
     </PageShell>

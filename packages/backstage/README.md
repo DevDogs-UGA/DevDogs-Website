@@ -2,16 +2,17 @@
 
 The officer and production CLI: everything that needs production secrets and is
 used only by the two people who hold them (and CI), plus the tools that need
-only the user's own login. Run it anywhere:
+only the user's own login. It is **not published to npm**: run it from a
+Backstage clone, where `pnpm install` links the bin to the root script.
 
 ```bash
-pnpm dlx --config.minimum-release-age=0 --config.dlx-cache-max-age=0 @devdogsuga/backstage
+git clone https://github.com/DevDogsUGA/Backstage && cd Backstage
+pnpm install && pnpm -r --filter './packages/**' --if-present run build
+pnpm backstage                                  # same as: node packages/backstage/bin/backstage.mjs
 ```
 
-It always runs the latest publish, CI included, so local runs and CI runs
-match. The two flags matter outside a DevDogsUGA checkout, where the workspace's
-`minimumReleaseAgeExclude` and `dlxCacheMaxAge: 0` do not apply (inside one,
-`pnpm backstage` is the script).
+Rebuild (`pnpm -C packages/backstage build`) after pulling, since the bin runs
+`dist/`. CI runs the same checkout's build, so local and CI runs match.
 
 It **starts without a checkout**. Help, `version`, `completions`, the tools
 below that need no secrets (`graphics`, `qr`, `github`, `newsletter`, `creds`),

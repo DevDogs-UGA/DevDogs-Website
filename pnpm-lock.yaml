@@ -150,6 +150,12 @@ importers:
 
   .:
     devDependencies:
+      '@devdogsuga/backstage':
+        specifier: workspace:*
+        version: link:packages/backstage
+      '@devdogsuga/devtools':
+        specifier: workspace:*
+        version: link:packages/devtools
       prettier:
         specifier: 3.9.6
         version: 3.9.6

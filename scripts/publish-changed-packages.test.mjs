@@ -60,21 +60,31 @@ test("cycles are rejected with the path", () => {
   );
 });
 
-test("the repo's own packages layer with newsletter before backstage", () => {
+test("the repo's own public packages layer cleanly, and the officer CLIs stay unpublished", () => {
   const dir = join(import.meta.dirname, "..", "packages");
-  const pkgs = readdirSync(dir)
+  const all = readdirSync(dir)
     .filter((name) => existsSync(join(dir, name, "package.json")))
     .map((name) =>
       JSON.parse(readFileSync(join(dir, name, "package.json"), "utf8")),
-    )
+    );
+  // TASK-478 Phase 3: officers run these from a Backstage clone and DevDogsUGA
+  // no longer depends on them, so they must not reach npm.
+  for (const name of [
+    "@devdogsuga/backstage",
+    "@devdogsuga/events",
+    "@devdogsuga/newsletter",
+  ]) {
+    assert.equal(
+      all.find((json) => json.name === name)?.private,
+      true,
+      `${name} must stay private`,
+    );
+  }
+  const pkgs = all
     .filter((json) => json.private !== true)
     .map((json) => ({ json }));
   const layers = names(publishLayers(pkgs));
   const layerOf = (name) => layers.findIndex((l) => l.includes(name));
-  assert.ok(
-    layerOf("@devdogsuga/newsletter") < layerOf("@devdogsuga/backstage"),
-  );
-  assert.ok(layerOf("@devdogsuga/events") < layerOf("@devdogsuga/newsletter"));
   assert.equal(
     layerOf("@devdogsuga/devtools"),
     0,

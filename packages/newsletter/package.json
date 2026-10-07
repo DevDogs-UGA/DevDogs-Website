@@ -1,7 +1,7 @@
 {
   "name": "@devdogsuga/newsletter",
   "version": "0.1.0",
-  "private": false,
+  "private": true,
   "type": "module",
   "description": "The DevDogs Changelog: email-safe React components rendered as platform pages and exported as Outlook-importable .eml files",
   "license": "BSD-3-Clause",
