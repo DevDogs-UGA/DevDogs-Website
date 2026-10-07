@@ -162,6 +162,10 @@ export async function checkEnv(root: string): Promise<string[]> {
   // must be one `env push` writes as a variable. Skipped against a published
   // `@devdogsuga/env` that predates the field (a DevDogsUGA checkout, until
   // it bumps), which has no `buildKeys()` to ask.
+  //
+  // The pin is narrowed to the keys this checkout declares: DevDogsUGA has no
+  // platform manifest, so it declares neither NEXT_PUBLIC_TURNSTILE_SITE_KEY
+  // nor PLATFORM_SENTRY_DSN. A declared key that loses its mark still fails.
   if (typeof env.buildKeys === "function") {
     const build = env.buildKeys();
     const expectedBuild = [
@@ -171,7 +175,7 @@ export async function checkEnv(root: string): Promise<string[]> {
       "PLATFORM_SENTRY_DSN",
       "PUBLISHABLE_KEY",
       "SCHEDULE_BUILDER_SENTRY_DSN",
-    ];
+    ].filter((key) => registry.has(key));
     if (JSON.stringify(build) !== JSON.stringify(expectedBuild)) {
       problems.push(
         `The build set is [${build.join(", ")}]; expected exactly [${expectedBuild.join(", ")}]. ` +
