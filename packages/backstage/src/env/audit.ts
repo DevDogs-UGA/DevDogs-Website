@@ -142,6 +142,19 @@ export interface AuditInput {
    * permissive one.
    */
   accepted?: (key: string, environment: string) => boolean;
+  /**
+   * Derived build keys (`derived-build.ts`): the key, its EXPANDED value, and
+   * the variables-only environments that must hold it.
+   *
+   * Their own input rather than part of `bws`, because the value is computed
+   * and never stored in Bitwarden. Without it the variable on `<target>-build`
+   * is reported as an orphan, and its absence is not reported at all, so the
+   * build fails on an empty `API_URL` with an audit that says "no drift".
+   */
+  derivedBuild?: ReadonlyMap<
+    string,
+    { value: string; environments: readonly string[] }
+  >;
   /** Worker name → secret names on it. Values are unreadable. */
   cloudflare?: Map<string, Set<string>>;
   /** Keys that legitimately live outside Bitwarden: the non-secrets. */
@@ -572,8 +585,47 @@ export function audit(input: AuditInput): Finding[] {
     }
   }
 
+  // ── derived build values ───────────────────────────────────────────────────
+  // Compared by VALUE against what the file expands to, like any variable.
+  for (const [key, expected] of input.derivedBuild ?? []) {
+    if (!relevant(key)) continue;
+    for (const environment of expected.environments) {
+      const here = githubVariables.find(
+        (g) => g.name === key && g.environment === environment,
+      );
+      if (here === undefined) {
+        findings.push({
+          key,
+          severity: "error",
+          store: "github",
+          summary:
+            `derived build value, NOT a variable on the \`${environment}\` ` +
+            "GitHub environment — the build workflow reads it there; push to " +
+            "write it",
+        });
+      } else if (here.value !== expected.value) {
+        findings.push({
+          key,
+          severity: "error",
+          store: "github",
+          summary:
+            `the \`${environment}\` GitHub variable's VALUE disagrees with ` +
+            "what your env file derives — push to overwrite it",
+        });
+      }
+    }
+  }
+
   for (const copy of githubVariables) {
     if (!relevant(copy.name)) continue;
+    // A derived build value is never in Bitwarden, by design.
+    if (
+      input.derivedBuild
+        ?.get(copy.name)
+        ?.environments.includes(copy.environment)
+    ) {
+      continue;
+    }
     if (!input.bws.has(copy.name)) {
       findings.push({
         key: copy.name,

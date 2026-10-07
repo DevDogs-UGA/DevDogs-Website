@@ -34,6 +34,14 @@
  * what makes that a whitelist, `variablesOnly` keeps a secret out of a store
  * anyone who can read the Actions config can read, and `environments.test.ts`
  * asserts that no `secret` or `never-store` key can route to either.
+ *
+ * ⚠️ A build key the file holds as its DERIVATION (`API_URL` is
+ * `https://$PROJECT_REF.supabase.co`) is not pushed anywhere else, because a
+ * stored value beats the registry at deploy time. The build workflow has no
+ * registry to expand it, though, so the build environments alone receive the
+ * EXPANDED value (`env/derived-build.ts`). That is the one place a computed
+ * value is stored, and `audit` expects it there rather than calling it an
+ * orphan.
  */
 import { assertRegistryLoaded } from "@devdogsuga/cli-core/env/discovery";
 import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
@@ -111,7 +119,7 @@ function applyOnly(): readonly string[] {
  * (a stale published `@devdogsuga/env`, a test fixture) still cannot route a
  * secret into a variables-only environment.
  */
-function buildOnly(): readonly string[] {
+export function buildOnly(): readonly string[] {
   assertRegistryLoaded();
   const env = getEnvSync();
   // A checkout still on an `@devdogsuga/env` from before `build: true` (0.1.8)

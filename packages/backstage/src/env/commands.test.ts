@@ -175,6 +175,45 @@ describe("pushToGithub", () => {
       }
     });
 
+    it("writes an expanded derived build key to <target>-build only", async () => {
+      for (const [target, build] of [
+        ["staging", "staging-build"],
+        ["production", "production-build"],
+      ] as const) {
+        vi.mocked(setSecret).mockClear();
+        vi.mocked(setVariable).mockClear();
+        await pushToGithub(
+          target,
+          new Map(),
+          new Map([["PROJECT_REF", "abcdefghijklmnop"]]),
+          true,
+          new Map([["TEST_BUILD_URL", "https://abcdefghijklmnop.example.org"]]),
+        );
+        // The deployed environment expands its own derivations, so the
+        // computed copy must not reach it: a stored value beats the registry.
+        expect(vi.mocked(setSecret).mock.calls).toEqual([]);
+        expect(vi.mocked(setVariable).mock.calls).toEqual([
+          [target, "PROJECT_REF", "abcdefghijklmnop"],
+          [build, "TEST_BUILD_URL", "https://abcdefghijklmnop.example.org"],
+        ]);
+      }
+    });
+
+    it("drops a derived value that is not build: true or is a secret from the build environment", async () => {
+      await pushToGithub(
+        "staging",
+        new Map(),
+        new Map(),
+        true,
+        new Map([
+          ["PROJECT_REF", "x"],
+          ["DISCORD_TOKEN", "tok"],
+        ]),
+      );
+      expect(vi.mocked(setVariable).mock.calls).toEqual([]);
+      expect(vi.mocked(setSecret).mock.calls).toEqual([]);
+    });
+
     it("never hands a secret to a build environment, even one the key set would take", async () => {
       // A build key that somehow arrived as a SECRET (it cannot through
       // `selectForPush`, which sends public keys to the variable map) is still

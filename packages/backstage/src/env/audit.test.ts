@@ -1115,3 +1115,60 @@ describe("build environments", () => {
     );
   });
 });
+
+describe("derived build values", () => {
+  // `API_URL` is a derivation: the file holds the formula, Bitwarden holds
+  // nothing, and `staging-build` holds the EXPANDED value.
+  const derived = {
+    derivedBuild: new Map([
+      [
+        "API_URL",
+        { value: "https://abc.supabase.co", environments: ["staging-build"] },
+      ],
+    ]),
+    variables: new Set(["API_URL"]),
+    declared: new Set(["API_URL"]),
+  } satisfies Partial<AuditInput>;
+
+  it("is clean when the build variable holds the expanded value", () => {
+    expect(
+      run({
+        ...derived,
+        githubVariables: [
+          ghVar("API_URL", "https://abc.supabase.co", "staging-build"),
+        ],
+      }),
+    ).toEqual([]);
+  });
+
+  it("flags the build variable missing, since the build reads it there", () => {
+    const findings = run({ ...derived });
+    expect(hasErrors(findings)).toBe(true);
+    expect(findings.map((f) => f.summary).join("\n")).toMatch(
+      /derived build value, NOT a variable on the `staging-build`/,
+    );
+  });
+
+  it("flags a stale value, and a copy outside the build environment", () => {
+    const stale = run({
+      ...derived,
+      githubVariables: [
+        ghVar("API_URL", "https://old.supabase.co", "staging-build"),
+      ],
+    });
+    expect(stale.map((f) => f.summary).join("\n")).toMatch(
+      /`staging-build` GitHub variable's VALUE/,
+    );
+
+    const stray = run({
+      ...derived,
+      githubVariables: [
+        ghVar("API_URL", "https://abc.supabase.co", "staging-build"),
+        ghVar("API_URL", "https://abc.supabase.co", "staging"),
+      ],
+    });
+    expect(stray.map((f) => f.summary).join("\n")).toMatch(
+      /variable on the `staging` GitHub environment, not in Bitwarden/,
+    );
+  });
+});

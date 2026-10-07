@@ -38,6 +38,7 @@ import { pathFor, readDocument, save } from "@devdogsuga/cli-core/env/files";
 import { fingerprint } from "@devdogsuga/cli-core/env/fingerprint";
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { recordResolved } from "@devdogsuga/cli-core/invocation";
+import { derivedBuildValues } from "./derived-build.js";
 import { catalog } from "../catalog.js";
 import { resolveVaultTarget } from "../bws/pick.js";
 import { confirm, log, note } from "@clack/prompts";
@@ -371,6 +372,17 @@ export async function runEnvPush(options: EnvOptions): Promise<void> {
   warnRefused(refused);
   warnUnknown(unknown);
   noteDerived(derived);
+  const { values: derivedBuild, unresolved } = derivedBuildValues(
+    doc.entries(),
+    derived,
+  );
+  if (unresolved.length > 0) {
+    log.warn(
+      `${unresolved.join(", ")} ${unresolved.length === 1 ? "is" : "are"} ` +
+        "build: true and derived, but a value they derive from is missing " +
+        "from the file, so the build environment was NOT given a computed copy.",
+    );
+  }
 
   // What Bitwarden holds: both halves, keyed together. The two are disjoint by
   // construction (see `selection.ts`), so this loses nothing.
@@ -482,7 +494,7 @@ export async function runEnvPush(options: EnvOptions): Promise<void> {
     );
   }
 
-  await pushToGithub(target, secrets, publicValues, options.yes);
+  await pushToGithub(target, secrets, publicValues, options.yes, derivedBuild);
 
   // Record what went where, in the file itself. Values are untouched, since
   // this rewrites the trailing comment only, so it needs no confirmation. It is
@@ -518,6 +530,9 @@ export async function pushToGithub(
   secrets: Map<string, string>,
   publicValues: Map<string, string>,
   yes?: boolean,
+  // Expanded derived build keys (`derived-build.ts`). Variables-only
+  // environments ONLY: the deployed ones expand a derivation themselves.
+  derivedBuild: ReadonlyMap<string, string> = new Map(),
 ): Promise<void> {
   const project = environmentSpecs()[target].project;
 
@@ -543,7 +558,9 @@ export async function pushToGithub(
         : [...secrets].filter(([key]) => accepts(ghEnvironment, key)),
     );
     const chosenVariables = new Map(
-      [...publicValues].filter(([key]) => accepts(ghEnvironment, key)),
+      [...publicValues, ...(variablesOnly ? derivedBuild : [])].filter(
+        ([key]) => accepts(ghEnvironment, key),
+      ),
     );
     const total = chosenSecrets.size + chosenVariables.size;
     if (total === 0) continue;
@@ -749,6 +766,25 @@ export async function runEnvAudit(options: EnvOptions): Promise<void> {
     // without required reviewers. `acceptsKey()` says no to that one, and is a
     // name rather than a lambda so it has tests of its own.
     accepted: acceptsKey,
+    derivedBuild: new Map(
+      [
+        ...derivedBuildValues(
+          doc.entries(),
+          selectForPush(doc.entries(), target).derived,
+        ).values,
+      ].map(([key, value]) => [
+        key,
+        {
+          value,
+          environments: githubTargets(spec.project).filter(
+            (e) =>
+              GITHUB_ENVIRONMENT_SPECS[e].variablesOnly &&
+              accepts(e, key) &&
+              !unreachable.includes(e),
+          ),
+        },
+      ]),
+    ),
     cloudflare,
     ignore: ignoredFor(target),
     neverStore: neverStore(),
