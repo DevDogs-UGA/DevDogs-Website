@@ -263,23 +263,23 @@ export async function runGithubRulesets(
     backstage ? "Backstage" : "DevDogsUGA",
   );
 
-  let gate: MergeQueueGate | null = null;
-  if (backstage) {
-    try {
-      const ci = await getFileContent(r, CI_WORKFLOW_PATH);
-      gate =
-        ci !== null && hasMergeGroupTrigger(ci)
-          ? { ready: true, reason: "" }
-          : {
-              ready: false,
-              reason: `merge queue not enabled: ${opts.org}/${opts.repo}'s default-branch ${CI_WORKFLOW_PATH} ${ci === null ? "was not found" : "has no merge_group trigger"} (push the commit adding it first)`,
-            };
-    } catch (err) {
-      gate = {
-        ready: false,
-        reason: `merge queue not enabled: could not read ${CI_WORKFLOW_PATH} (${err instanceof Error ? err.message : String(err)})`,
-      };
-    }
+  // Both repos carry a merge queue now (DevDogsUGA joined in TASK-478 Phase 3),
+  // so both are gated on their own CI having a `merge_group` trigger.
+  let gate: MergeQueueGate;
+  try {
+    const ci = await getFileContent(r, CI_WORKFLOW_PATH);
+    gate =
+      ci !== null && hasMergeGroupTrigger(ci)
+        ? { ready: true, reason: "" }
+        : {
+            ready: false,
+            reason: `merge queue not enabled: ${opts.org}/${opts.repo}'s default-branch ${CI_WORKFLOW_PATH} ${ci === null ? "was not found" : "has no merge_group trigger"} (push the commit adding it first)`,
+          };
+  } catch (err) {
+    gate = {
+      ready: false,
+      reason: `merge queue not enabled: could not read ${CI_WORKFLOW_PATH} (${err instanceof Error ? err.message : String(err)})`,
+    };
   }
 
   let summaries;
@@ -294,9 +294,11 @@ export async function runGithubRulesets(
     return 1;
   }
 
-  const plan = backstage
-    ? applyGates(planRulesets(summaries, details, actors, desired), gate, notes)
-    : planRulesets(summaries, details, actors, desired);
+  const plan = applyGates(
+    planRulesets(summaries, details, actors, desired),
+    gate,
+    notes,
+  );
 
   if (opts.json) {
     console.log(JSON.stringify(plan, null, 2));

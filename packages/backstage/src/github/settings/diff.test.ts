@@ -6,8 +6,32 @@ import type { LiveSettingsSnapshot } from "./diff.js";
 
 const PATTERNS = ["actions/checkout@*"];
 
+/**
+ * The diff logic's fixture: four environments with a reviewer-gated
+ * `production`, the shape DevDogsUGA had before TASK-478 Phase 3. The diff
+ * code is repo-agnostic; this keeps its tests independent of either repo's
+ * real desired environments.
+ */
 function desiredFixture(): DesiredSettings {
-  return buildDesiredSettings(PATTERNS);
+  const plain = (name: string) => ({
+    name,
+    allowedBranches: ["main"],
+    requireReviewers: false,
+    preventSelfReview: false,
+  });
+  return {
+    ...buildDesiredSettings(PATTERNS),
+    environments: [
+      plain("preflight"),
+      plain("staging"),
+      plain("production-build"),
+      {
+        ...plain("production"),
+        requireReviewers: true,
+        preventSelfReview: true,
+      },
+    ],
+  };
 }
 
 /** A live snapshot that matches `desiredFixture()` exactly — the idempotence fixture. */

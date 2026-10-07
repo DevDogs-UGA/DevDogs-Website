@@ -25,6 +25,7 @@ describe("buildDesiredRulesets", () => {
       "main-updates",
       "main-reviews",
       "main-ci",
+      "main-merge-queue",
       "~ALL",
       "team/**",
       "tag-protection",
@@ -236,6 +237,16 @@ describe("buildDesiredRulesets for Backstage", () => {
     expect(all.bypass_actors.map((a) => a.actor_id).sort()).toEqual([
       9001, 9002, 9004,
     ]);
+  });
+
+  it("gives DevDogsUGA the same queue-only main-merge-queue ruleset", () => {
+    const dd = buildDesiredRulesets(actors);
+    expect(dd.find((r) => r.name === "main-merge-queue")).toEqual(
+      without.find((r) => r.name === "main-merge-queue"),
+    );
+    expect(
+      dd.find((r) => r.name === "main-merge-queue")!.bypass_actors,
+    ).toEqual([{ actor_id: 9001, actor_type: "Team", bypass_mode: "always" }]);
   });
 
   it("matches DevDogsUGA's main-integrity, main-updates and main-reviews", () => {

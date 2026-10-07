@@ -40,14 +40,9 @@ describe("buildDesiredSettings", () => {
     });
   });
 
-  it("names exactly preflight, staging, production-build and production, in that order", () => {
+  it("names only deploy-pr: Backstage owns deployment after TASK-478 Phase 3", () => {
     const desired = buildDesiredSettings([]);
-    expect(desired.environments.map((e) => e.name)).toEqual([
-      "preflight",
-      "staging",
-      "production-build",
-      "production",
-    ]);
+    expect(desired.environments.map((e) => e.name)).toEqual(["deploy-pr"]);
   });
 
   it("restricts every environment to main", () => {
@@ -57,11 +52,11 @@ describe("buildDesiredSettings", () => {
     }
   });
 
-  it("requires reviewers, with self-review prevented, on production only", () => {
+  it("requires no reviewers on deploy-pr (the job is automated)", () => {
     const desired = buildDesiredSettings([]);
     for (const env of desired.environments) {
-      expect(env.requireReviewers, env.name).toBe(env.name === "production");
-      expect(env.preventSelfReview, env.name).toBe(env.name === "production");
+      expect(env.requireReviewers, env.name).toBe(false);
+      expect(env.preventSelfReview, env.name).toBe(false);
     }
   });
 

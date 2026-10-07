@@ -59,7 +59,7 @@ export function buildDesiredRulesets(
 }
 
 /**
- * Merge queue parameters for Backstage `main`: squash (matching
+ * Merge queue parameters for `main` (Backstage and DevDogsUGA share them): squash (matching
  * `main-reviews`' squash-only), ALLGREEN grouping (every entry in a group
  * must pass), up to 5 entries built and merged together, merge as soon as 1
  * entry is ready after waiting 5 minutes for more, 60 minute check timeout.
@@ -209,19 +209,7 @@ function buildBackstageRulesets(actors: RulesetActors): DesiredRuleset[] {
         },
       ],
     },
-    {
-      name: "main-merge-queue",
-      target: "branch",
-      enforcement: "active",
-      conditions: main,
-      bypass_actors: [always(actors.adminsTeamId)],
-      rules: [
-        {
-          ...BACKSTAGE_MERGE_QUEUE,
-          parameters: { ...BACKSTAGE_MERGE_QUEUE.parameters },
-        },
-      ],
-    },
+    mainMergeQueueRuleset(actors),
     {
       name: "~ALL",
       target: "branch",
@@ -277,6 +265,23 @@ function buildBackstageRulesets(actors: RulesetActors): DesiredRuleset[] {
       rules: [{ type: "update" }, { type: "deletion" }],
     },
   ];
+}
+
+/** `main-merge-queue`: queue-only so admins can still push directly past it (TASK-478). */
+function mainMergeQueueRuleset(actors: RulesetActors): DesiredRuleset {
+  return {
+    name: "main-merge-queue",
+    target: "branch",
+    enforcement: "active",
+    conditions: main,
+    bypass_actors: [always(actors.adminsTeamId)],
+    rules: [
+      {
+        ...BACKSTAGE_MERGE_QUEUE,
+        parameters: { ...BACKSTAGE_MERGE_QUEUE.parameters },
+      },
+    ],
+  };
 }
 
 function buildDevDogsUgaRulesets(actors: RulesetActors): DesiredRuleset[] {
@@ -372,6 +377,7 @@ function buildDevDogsUgaRulesets(actors: RulesetActors): DesiredRuleset[] {
         },
       ],
     },
+    mainMergeQueueRuleset(actors),
     {
       name: "~ALL",
       target: "branch",

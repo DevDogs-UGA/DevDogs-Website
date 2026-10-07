@@ -115,7 +115,7 @@ describe("the reviewer gate", () => {
     // THE INVARIANT, stated against the desired GitHub settings rather than
     // restated here: any routed environment that accepts an apply-tier key
     // must be one whose desired settings require reviewers.
-    const desired = buildDesiredSettings([]);
+    const desired = buildDesiredSettings([], "Backstage");
     for (const key of APPLY_KEYS) {
       for (const environment of GITHUB_ENVIRONMENTS) {
         if (!accepts(environment, key)) continue;
@@ -131,7 +131,7 @@ describe("the reviewer gate", () => {
   it("asserts production requires reviewers and takes the apply-tier key", () => {
     // POSITIVE CONTROL for the loop above: it is not vacuous because
     // `production` really does accept the key, and really is gated.
-    const production = buildDesiredSettings([]).environments.find(
+    const production = buildDesiredSettings([], "Backstage").environments.find(
       (e) => e.name === "production",
     )!;
     expect(production.requireReviewers).toBe(true);
@@ -153,9 +153,8 @@ describe("the reviewer gate", () => {
   });
 
   it("describes the same environments `github settings` checks", () => {
-    // Backstage's repo carries all five; DevDogsUGA's has no `staging-build`
-    // (its staging deploy moved here), and a push from there reports that
-    // environment as unreadable rather than inventing one.
+    // Backstage's repo carries all five. DevDogsUGA keeps only `deploy-pr`
+    // (TASK-478 Phase 3), so none of the routed ones are desired there.
     const names = buildDesiredSettings([], "Backstage").environments.map(
       (e) => e.name,
     );
@@ -164,7 +163,7 @@ describe("the reviewer gate", () => {
     }
     expect(names).not.toContain("production-apply");
     const legacy = buildDesiredSettings([]).environments.map((e) => e.name);
-    expect(legacy).toContain("production-build");
+    expect(legacy).toEqual(["deploy-pr"]);
   });
 });
 

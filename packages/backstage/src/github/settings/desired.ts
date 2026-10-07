@@ -31,7 +31,7 @@ export interface DesiredEnvironmentPolicy {
   allowedBranches: readonly string[];
   /**
    * Whether `--apply` may CREATE this environment when it does not exist.
-   * Off for DevDogsUGA (its four environments are reported only, as always).
+   * Off for DevDogsUGA (its environment is reported only, as always).
    * When on, the environment is created with its branch policies AND — the
    * one place reviewers are ever written — `reviewerTeams` plus
    * `preventSelfReview`. An environment that already exists never has its
@@ -135,16 +135,16 @@ const BACKSTAGE_ENVIRONMENTS: readonly DesiredEnvironmentPolicy[] = [
   },
 ];
 
+/**
+ * DevDogsUGA after Phase 3 of TASK-478: Backstage owns deployment, so the
+ * only environment left is `deploy-pr`, which holds the deploy-PR App's
+ * credential for the `open-deploy-pr` job and is restricted to `main`. The old
+ * `preflight`, `staging`, `production-build` and `production` environments
+ * are no longer managed (and may be deleted by hand once the flip is done).
+ * Report-only: `--apply` never creates it, since it carries secrets.
+ */
 const DEVDOGSUGA_ENVIRONMENTS: readonly DesiredEnvironmentPolicy[] = [
-  plain("preflight"),
-  plain("staging"),
-  plain("production-build"),
-  {
-    name: "production",
-    allowedBranches: ["main"],
-    requireReviewers: true,
-    preventSelfReview: true,
-  },
+  plain("deploy-pr"),
 ];
 
 function baseSettings(
