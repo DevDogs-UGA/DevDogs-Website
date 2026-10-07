@@ -304,6 +304,9 @@ test("isInert: docs, tests, slides and the CLIs ship nothing", () => {
     "apps/platform/src/lib/docsTree.test.ts",
     "scripts/publish-changed-packages.mjs",
     ".github/workflows/publish.yaml",
+    ".github/workflows/deploy.yaml",
+    ".github/workflows/ci.yaml",
+    ".github/scripts/deploy-needed.mjs",
   ]) {
     assert.equal(isInert(path), true, path);
   }
@@ -318,7 +321,8 @@ test("isInert: the platform, its packages, the pin and the deploy ship", () => {
     "devdogsuga.lock",
     "workers.json",
     "pnpm-lock.yaml",
-    ".github/workflows/deploy.yaml",
+    ".github/workflows/build-artifacts.yaml",
+    ".github/actions/setup-workspace/action.yml",
     "something-new/file.ts",
   ]) {
     assert.equal(isInert(path), false, path);

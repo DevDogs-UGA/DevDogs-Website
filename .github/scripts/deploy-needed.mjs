@@ -42,6 +42,9 @@ const INERT_PREFIXES = [
   "packages/cli-core/",
   "packages/devtools/",
   "packages/newsletter-cli/",
+  // The deploy's own scripts. Like the CLIs, they change how the next deploy
+  // runs, not what it ships.
+  ".github/scripts/",
 ];
 const INERT_FILES = new Set([
   "CUTOVER.md",
@@ -49,6 +52,11 @@ const INERT_FILES = new Set([
   "renovate.json",
   "patches/patches.json",
   ".github/workflows/publish.yaml",
+  // Orchestration only: the artifacts come from build-artifacts.yaml and the
+  // composite actions, which stay shipped because they shape the build.
+  ".github/workflows/ci.yaml",
+  ".github/workflows/deploy.yaml",
+  ".github/CODEOWNERS",
   ".github/workflows/slides.yaml",
   ".github/workflows/workshops-vscode.yaml",
 ]);
