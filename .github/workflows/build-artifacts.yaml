@@ -55,6 +55,12 @@ jobs:
       DEPLOY_ENV: ${{ matrix.tier }}
       CLOUDFLARE_ENV: ${{ matrix.tier }}
       SKIP_ENV_VALIDATION: "1"
+      # The build has no database to generate DevDogsUGA's Supabase types
+      # from, and no use for them: every import of the `Database` type is
+      # `import type`, erased before bundling. Typechecking (ci.yaml's
+      # `validate`) is what reads them. See apps/platform/scripts/
+      # supabase-types.mjs.
+      BACKSTAGE_SUPABASE_TYPES: skip
       API_URL: ${{ vars.API_URL }}
       BASE_URL: ${{ vars.BASE_URL }}
       PUBLISHABLE_KEY: ${{ vars.PUBLISHABLE_KEY }}

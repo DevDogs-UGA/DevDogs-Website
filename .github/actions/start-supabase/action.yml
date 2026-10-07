@@ -1,0 +1,52 @@
+name: Start the local Supabase stack
+description: >-
+  Starts the stack from DevDogsUGA's supabase/ (applying every migration to a
+  fresh database), with the Docker images restored from and saved to the
+  Actions cache. Shared by the `database` and `types` jobs.
+
+# Needs setup-workspace to have run (the CLI is one of devdogsuga's
+# dependencies, and `devdogsuga/` has to be on disk).
+#
+# `supabase start` pulls about a dozen images, all chosen by the CLI version
+# (and which services the config enables), so they are cached as one
+# `docker save` archive under exactly that key. A hit is a `docker load` and
+# the CLI finds every image already present.
+runs:
+  using: composite
+  steps:
+    - name: Supabase CLI version
+      id: cli
+      shell: bash
+      run: |
+        version=$(pnpm --dir devdogsuga exec supabase --version | tail -n 1)
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+    - name: Restore the Supabase images
+      id: images
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: ~/.cache/supabase-images
+        key: supabase-images-${{ runner.os }}-${{ steps.cli.outputs.version }}-${{ hashFiles('devdogsuga/supabase/config.toml') }}
+    - name: Load the cached images
+      if: steps.images.outputs.cache-hit == 'true'
+      shell: bash
+      run: docker load --input ~/.cache/supabase-images/images.tar
+    # config.toml enables OAuth providers with `env()` credentials that CI
+    # does not have; an unset one is a WARN, not an error. Run from
+    # devdogsuga/ because that is where `supabase/` lives, and the Supabase
+    # CLI is one of its dependencies.
+    - name: Start the local Supabase stack
+      shell: bash
+      run: pnpm --dir devdogsuga exec supabase start
+    - name: Save the Supabase images
+      if: steps.images.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        mkdir -p ~/.cache/supabase-images
+        docker save --output ~/.cache/supabase-images/images.tar \
+          $(docker ps --format '{{.Image}}' | sort -u)
+    - name: Cache the Supabase images
+      if: steps.images.outputs.cache-hit != 'true'
+      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: ~/.cache/supabase-images
+        key: ${{ steps.images.outputs.cache-primary-key }}

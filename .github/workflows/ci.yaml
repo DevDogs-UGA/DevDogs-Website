@@ -61,14 +61,74 @@ permissions:
   contents: read
 
 jobs:
+  # DevDogsUGA's generated Supabase `Database` type, for the jobs that
+  # typecheck against it (`validate`, `database`).
+  #
+  # Newer DevDogsUGA commits stop committing `database.types.ts` and generate
+  # it from the migrations instead (`pnpm --filter @devdogsuga/supabase run
+  # codegen`, which needs a database). This job is the one place that does,
+  # and only when the migrations it is keyed on changed: a hit is a checkout
+  # and a cache restore, with no install and no stack. The other jobs restore
+  # the result; `validate` in particular has no database and must not wait for
+  # `database`, which is the slowest job here.
+  #
+  # A no-op while devdogsuga.lock points at a commit that still commits the
+  # file (the package has no `codegen` script): nothing is generated or saved.
+  types:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: ./.github/actions/checkout-devdogsuga
+      - name: Does the pinned DevDogsUGA generate its types?
+        id: pin
+        run: |
+          if node -e 'process.exit(require("./devdogsuga/packages/supabase/package.json").scripts?.codegen ? 0 : 1)'; then
+            echo "generated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "The pinned DevDogsUGA commits database.types.ts; nothing to generate."
+          fi
+      - id: types
+        if: steps.pin.outputs.generated == 'true'
+        uses: ./.github/actions/restore-supabase-types
+      # Everything below is the miss path: the migrations changed, so the
+      # types are regenerated from a stack built from them.
+      - if: steps.types.outputs.cache-hit != 'true' && steps.pin.outputs.generated == 'true'
+        uses: ./.github/actions/setup-workspace
+      - name: Seed the env file for wrapped checks
+        if: steps.types.outputs.cache-hit != 'true' && steps.pin.outputs.generated == 'true'
+        run: cp .github/ci.env .env
+      - if: steps.types.outputs.cache-hit != 'true' && steps.pin.outputs.generated == 'true'
+        uses: ./.github/actions/start-supabase
+      # DB_URL is handed over explicitly rather than left for `with-env` to
+      # find from the sibling's directory, which has no .env of its own.
+      - name: Generate the Supabase types
+        if: steps.types.outputs.cache-hit != 'true' && steps.pin.outputs.generated == 'true'
+        run: |
+          eval "$(pnpm --dir devdogsuga exec supabase status -o env | grep '^DB_URL=')"
+          export DB_URL
+          BACKSTAGE_SUPABASE_TYPES= node apps/platform/scripts/supabase-types.mjs
+          test -s devdogsuga/packages/supabase/src/database.types.ts
+      - name: Cache the Supabase types
+        if: steps.types.outputs.cache-hit != 'true' && steps.pin.outputs.generated == 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: devdogsuga/packages/supabase/src/database.types.ts
+          key: ${{ steps.types.outputs.cache-primary-key }}
+
   # Build + typecheck + test every package in the workspace.
   validate:
+    needs: types
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-workspace
+      # The platform's typecheck and typed lint need DevDogsUGA's generated
+      # Supabase types; this job has no database to generate them from.
+      - uses: ./.github/actions/restore-supabase-types
       # Build before typecheck/test: packages import each other's `dist/`
       # (workspace:* deps), so an unbuilt sibling makes a downstream
       # typecheck or test fail on a missing module, not a real error.
@@ -139,12 +199,17 @@ jobs:
   # a security-relevant check that skips itself on a heuristic is how a job
   # ends up green without ever having run.
   database:
+    needs: types
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-workspace
+      # `test:db` and `build` run the platform's `codegen`, which would
+      # otherwise regenerate the types against this job's own stack: the
+      # `types` job already did, once, for every job.
+      - uses: ./.github/actions/restore-supabase-types
       # The platform consumes its workspace dependencies (env, db, events,
       # newsletter, ...) from `dist/`, and `with-env` is one of them. Only the
       # platform itself is left out: it builds below, with its environment.
@@ -154,42 +219,9 @@ jobs:
       # the stack starts replaces this one and appends the generated values.
       - name: Seed the env file for wrapped checks
         run: cp .github/ci.env .env
-      # `supabase start` pulls about a dozen images, all chosen by the CLI
-      # version (and which services the config enables), so they are cached
-      # as one `docker save` archive under exactly that key. A hit is a
-      # `docker load` and the CLI finds every image already present.
-      - name: Supabase CLI version
-        id: cli
-        run: |
-          version=$(pnpm --dir devdogsuga exec supabase --version | tail -n 1)
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-      - name: Restore the Supabase images
-        id: images
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: ~/.cache/supabase-images
-          key: supabase-images-${{ runner.os }}-${{ steps.cli.outputs.version }}-${{ hashFiles('devdogsuga/supabase/config.toml') }}
-      - name: Load the cached images
-        if: steps.images.outputs.cache-hit == 'true'
-        run: docker load --input ~/.cache/supabase-images/images.tar
-      # config.toml enables OAuth providers with `env()` credentials that CI
-      # does not have; an unset one is a WARN, not an error. Run from
-      # devdogsuga/ because that is where `supabase/` lives, and the Supabase
-      # CLI is one of its dependencies.
-      - name: Start the local Supabase stack
-        run: pnpm --dir devdogsuga exec supabase start
-      - name: Save the Supabase images
-        if: steps.images.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/.cache/supabase-images
-          docker save --output ~/.cache/supabase-images/images.tar \
-            $(docker ps --format '{{.Image}}' | sort -u)
-      - name: Cache the Supabase images
-        if: steps.images.outputs.cache-hit != 'true'
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: ~/.cache/supabase-images
-          key: ${{ steps.images.outputs.cache-primary-key }}
+      # Images cached and the stack started by the shared action; it applies
+      # every migration to a fresh database, which fails if one does not apply.
+      - uses: ./.github/actions/start-supabase
       # `with-env` reads .env.generated from this repo's root; the CLI writes
       # it from the stack that is running.
       - name: Write .env.generated from the running stack

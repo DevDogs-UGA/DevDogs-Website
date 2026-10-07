@@ -1,0 +1,38 @@
+name: Restore the generated Supabase types
+description: >-
+  Restores DevDogsUGA's generated `database.types.ts` from the Actions cache,
+  keyed on the migrations it was generated from, and tells the platform's
+  `codegen` to use it as it is.
+outputs:
+  cache-hit:
+    description: "'true' when the file came from the cache."
+    value: ${{ steps.restore.outputs.cache-hit }}
+  cache-primary-key:
+    description: The key to save the file under after generating it.
+    value: ${{ steps.restore.outputs.cache-primary-key }}
+
+# Needs `devdogsuga/` on disk (the key hashes its migrations), so after
+# checkout-devdogsuga or setup-workspace.
+#
+# The types are a function of the migrations (plus config.toml, which picks
+# the exposed schemas), so that is the whole key. Only the `types` job
+# generates and saves; every other job restores, because only that job is
+# guaranteed a database.
+#
+# Harmless while the pinned DevDogsUGA commits the file: nothing is ever saved
+# under the key then, so this is a miss, and a miss changes nothing.
+#
+# `BACKSTAGE_SUPABASE_TYPES=provided` is read by apps/platform/scripts/
+# supabase-types.mjs: use the file as it is, do not try to regenerate it (a
+# job without a database could not). If the restore missed and the file is not
+# there, the script falls through to its normal checks and fails loudly.
+runs:
+  using: composite
+  steps:
+    - id: restore
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: devdogsuga/packages/supabase/src/database.types.ts
+        key: supabase-types-${{ hashFiles('devdogsuga/supabase/migrations/**', 'devdogsuga/supabase/config.toml') }}
+    - shell: bash
+      run: echo "BACKSTAGE_SUPABASE_TYPES=provided" >> "$GITHUB_ENV"

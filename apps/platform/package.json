@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "codegen": "pnpm --filter @devdogsuga/email run codegen && pnpm --dir ../../devdogsuga/docs run codegen && SKIP_ENV_VALIDATION=1 vinext typegen && tsx scripts/brand-images.ts",
+    "codegen": "node scripts/supabase-types.mjs && pnpm --filter @devdogsuga/email run codegen && pnpm --dir ../../devdogsuga/docs run codegen && SKIP_ENV_VALIDATION=1 vinext typegen && tsx scripts/brand-images.ts",
     "prebuild": "pnpm run codegen",
     "build": "with-env vinext build",
     "predev": "pnpm run codegen",
