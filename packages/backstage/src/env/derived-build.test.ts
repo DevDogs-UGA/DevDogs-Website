@@ -65,8 +65,8 @@ describe("derivedBuildValues", () => {
       ],
       ["DB_TEST_RUNTIME_URL"],
     );
-    expect(values.size).toBe(0);
-    expect(unresolved).toEqual([]);
+    expect(values.has("DB_TEST_RUNTIME_URL")).toBe(false);
+    expect(unresolved).not.toContain("DB_TEST_RUNTIME_URL");
   });
 
   it("refuses to publish a half-expanded URL when a reference is missing or empty", () => {
@@ -94,5 +94,21 @@ describe("derivedBuildValues", () => {
       [],
     );
     expect(values.size).toBe(0);
+  });
+
+  it("expands the manifest's formula for a build key the file leaves out", () => {
+    const { values, unresolved } = derivedBuildValues(
+      [["DB_TEST_REF", "abc"]],
+      [],
+    );
+    expect(values.get("DB_TEST_URL")).toBe("https://abc.example.org");
+    expect(values.has("DB_TEST_RUNTIME_URL")).toBe(false);
+    expect(unresolved).not.toContain("DB_TEST_URL");
+  });
+
+  it("skips a left-out build key whose reference the file lacks", () => {
+    const { values, unresolved } = derivedBuildValues([], []);
+    expect(values.has("DB_TEST_URL")).toBe(false);
+    expect(unresolved).toContain("DB_TEST_URL");
   });
 });

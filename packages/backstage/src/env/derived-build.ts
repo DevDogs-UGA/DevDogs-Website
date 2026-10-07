@@ -11,6 +11,11 @@
  * file AND `build: true`, the build environment alone gets the computed value.
  *
  * Rule: derived, build-marked, every reference resolvable from the same file.
+ * "Derived" covers both shapes a file can take: the line is still the
+ * declared formula, or the line is ABSENT and the manifest declares one (the
+ * usual case: `.env.staging` has no `API_URL` line at all, only
+ * `PROJECT_REF`). A build key the file holds a literal value for is not
+ * derived; the ordinary variable push already writes it.
  * `buildOnly()` already intersects `build: true` with the public,
  * environment-scoped variable set, so no secret and no never-store key can be
  * named here, and `pushToGithub` only ever hands these to a `variablesOnly`
@@ -63,9 +68,24 @@ export function derivedBuildValues(
       );
     });
 
-  for (const key of derived) {
+  // The manifest's formula for a key the file leaves out. `derivationOf` is
+  // as new as `build: true`, so an older `@devdogsuga/env` has none.
+  const declared = (key: string): string | undefined => {
+    if (typeof env.derivationOf !== "function") return undefined;
+    for (const entry of env.variables().get(key) ?? []) {
+      const formula = env.derivationOf(entry.meta);
+      if (formula !== null) return formula;
+    }
+    return undefined;
+  };
+
+  const candidates = [
+    ...derived,
+    ...[...build].filter((key) => !raw.has(key) && declared(key) !== undefined),
+  ];
+  for (const key of candidates) {
     if (!build.has(key)) continue;
-    const formula = raw.get(key);
+    const formula = raw.get(key) ?? declared(key);
     if (formula === undefined || !resolvable(formula, [key])) {
       unresolved.push(key);
       continue;
