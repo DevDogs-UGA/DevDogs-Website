@@ -7,6 +7,12 @@ import {
   producingPulls,
 } from "./approval-gate.mjs";
 import { apiAll, createApi } from "./github-api.mjs";
+import {
+  deployable,
+  isInert,
+  lastDeployed,
+  runDeployed,
+} from "./deploy-needed.mjs";
 import { findMergeGroupRun } from "./merge-group-run.mjs";
 
 const REPO = "DevDogsUGA/Backstage";
@@ -281,5 +287,109 @@ test("a ref suffix on the workflow path still matches", async () => {
   assert.equal(
     await findMergeGroupRun({ api, repo: REPO, sha: SHA, tiers: ["staging"] }),
     "6",
+  );
+});
+
+// --- deploy-needed ---------------------------------------------------------
+
+test("isInert: docs, tests, slides and the CLIs ship nothing", () => {
+  for (const path of [
+    "README.md",
+    "packages/events/README.md",
+    "CUTOVER.md",
+    "apps/slides/workshops/web/slides.md",
+    "competitions/fall-2026/brief.md",
+    "packages/backstage/src/env/commands.ts",
+    "packages/devtools/src/check/env.ts",
+    "apps/platform/src/lib/docsTree.test.ts",
+    "scripts/publish-changed-packages.mjs",
+    ".github/workflows/publish.yaml",
+  ]) {
+    assert.equal(isInert(path), true, path);
+  }
+});
+
+test("isInert: the platform, its packages, the pin and the deploy ship", () => {
+  for (const path of [
+    "apps/platform/next.config.ts",
+    "apps/platform/src/env.ts",
+    "packages/events/src/data/meetings.json",
+    "packages/email/src/TeamInvite.tsx",
+    "devdogsuga.lock",
+    "workers.json",
+    "pnpm-lock.yaml",
+    ".github/workflows/deploy.yaml",
+    "something-new/file.ts",
+  ]) {
+    assert.equal(isInert(path), false, path);
+  }
+});
+
+test("deployable keeps only shipped paths", () => {
+  assert.deepEqual(deployable(["README.md", "apps/platform/x.ts"]), [
+    "apps/platform/x.ts",
+  ]);
+  assert.deepEqual(deployable(["README.md"]), []);
+});
+
+const job = (name, conclusion, steps) => ({ name, conclusion, steps });
+const ok = (name) => ({ name, conclusion: "success" });
+
+test("runDeployed: staging needs every staging-deploy job to succeed", () => {
+  const both = [
+    job("deploy / staging-deploy (platform, apps/platform, x)", "success"),
+    job("deploy / staging-deploy (schedule-builder, d, y)", "success"),
+  ];
+  assert.equal(runDeployed(both, "staging"), true);
+  both[1].conclusion = "failure";
+  assert.equal(runDeployed(both, "staging"), false);
+  assert.equal(runDeployed([job("validate", "success")], "staging"), false);
+});
+
+test("runDeployed: a superseded production job deployed nothing", () => {
+  const deployed = job("deploy / production", "success", [
+    ok("Deploy and verify platform"),
+    ok("Deploy and verify schedule-builder"),
+  ]);
+  assert.equal(runDeployed([deployed], "production"), true);
+  const superseded = job("deploy / production", "success", [
+    { name: "Deploy and verify platform", conclusion: "skipped" },
+    { name: "Deploy and verify schedule-builder", conclusion: "skipped" },
+  ]);
+  assert.equal(runDeployed([superseded], "production"), false);
+});
+
+test("lastDeployed skips this run's own SHA and failed deploys", async () => {
+  const B = "b".repeat(40);
+  const C = "c".repeat(40);
+  const api = fakeApi({
+    [`/repos/${REPO}/actions/workflows/ci.yaml/runs`]: {
+      workflow_runs: [
+        { id: 1, head_sha: SHA },
+        { id: 2, head_sha: B },
+        { id: 3, head_sha: C },
+      ],
+    },
+    [`/repos/${REPO}/actions/runs/2/jobs`]: {
+      jobs: [job("deploy / staging-deploy (platform)", "failure")],
+    },
+    [`/repos/${REPO}/actions/runs/3/jobs`]: {
+      jobs: [job("deploy / staging-deploy (platform)", "success")],
+    },
+  });
+  assert.equal(
+    await lastDeployed({ api, repo: REPO, tier: "staging", before: SHA }),
+    C,
+  );
+  assert.ok(!api.seen.some((p) => p.includes("/runs/1/")));
+});
+
+test("lastDeployed is empty when no recent run deployed", async () => {
+  const api = fakeApi({
+    [`/repos/${REPO}/actions/workflows/ci.yaml/runs`]: { workflow_runs: [] },
+  });
+  assert.equal(
+    await lastDeployed({ api, repo: REPO, tier: "production", before: SHA }),
+    "",
   );
 });

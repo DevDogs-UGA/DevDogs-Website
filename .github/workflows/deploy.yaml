@@ -84,8 +84,15 @@ jobs:
       lock_sha: ${{ steps.lock.outputs.sha }}
       tiers: ${{ steps.tiers.outputs.tiers }}
       merge_group_run: ${{ steps.queue.outputs.run }}
+      # `true` when the tier has something to ship (deploy-needed.mjs); a tier
+      # that would redeploy what is live is skipped, approval and all.
+      staging: ${{ steps.needed.outputs.staging }}
+      production: ${{ steps.needed.outputs.production }}
     steps:
+      # Full history: deploy-needed diffs against each tier's last deploy.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
       - name: Read devdogsuga.lock and its previous value
         id: lock
         env:
@@ -131,6 +138,19 @@ jobs:
             echo 'tiers=["staging"]' >> "$GITHUB_OUTPUT"
             echo 'csv=staging' >> "$GITHUB_OUTPUT"
           fi
+      # Compared with the commit each tier last deployed, not the previous
+      # commit, and failing open: see the header of deploy-needed.mjs.
+      - name: Anything to deploy?
+        id: needed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TIERS: ${{ steps.tiers.outputs.csv }}
+        run: |
+          set -euo pipefail
+          node .github/scripts/deploy-needed.mjs --repo "$GITHUB_REPOSITORY" \
+            --sha "$GITHUB_SHA" --tiers "$TIERS" 2> needed.log | tee -a "$GITHUB_OUTPUT"
+          cat needed.log
+          { echo; echo '### Tiers'; echo; sed 's/^/- /' needed.log; } >> "$GITHUB_STEP_SUMMARY"
       - name: Find the merge queue run that built this commit
         id: queue
         env:
@@ -153,13 +173,19 @@ jobs:
   # Only when the merge queue did not build this commit.
   build:
     needs: resolve
-    if: needs.resolve.outputs.merge_group_run == ''
+    if: >-
+      needs.resolve.outputs.merge_group_run == ''
+      && (needs.resolve.outputs.staging == 'true' || needs.resolve.outputs.production == 'true')
     uses: ./.github/workflows/build-artifacts.yaml
     with:
       tiers: ${{ needs.resolve.outputs.tiers }}
 
   staging-preflight:
-    if: github.event_name == 'push' && !inputs.prune_orphans
+    needs: resolve
+    if: >-
+      github.event_name == 'push'
+      && !inputs.prune_orphans
+      && needs.resolve.outputs.staging == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: staging
@@ -332,10 +358,12 @@ jobs:
           --app ${{ matrix.app }} --no-env
 
   production-plan:
+    needs: resolve
     if: >-
       github.event_name == 'push'
       && !inputs.prune_orphans
       && vars.BACKSTAGE_DEPLOYS_PRODUCTION == 'true'
+      && needs.resolve.outputs.production == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: preflight
@@ -363,8 +391,9 @@ jobs:
       && !cancelled()
       && vars.BACKSTAGE_DEPLOYS_PRODUCTION == 'true'
       && needs.resolve.result == 'success'
+      && needs.resolve.outputs.production == 'true'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
-      && needs.staging-deploy.result == 'success'
+      && (needs.staging-deploy.result == 'success' || needs.resolve.outputs.staging == 'false')
       && needs.production-plan.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 45
