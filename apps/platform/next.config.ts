@@ -36,6 +36,11 @@ const config = {
         destination: "https://discord.gg/BdDdkNQhqp",
         permanent: false,
       },
+      {
+        source: "/georgia311",
+        destination: "https://forms.gle/ErNLxLep3MwMUe6t7",
+        permanent: false,
+      },
     ];
   },
   // `.gql`/`.graphql` sources no longer need a Turbopack loader rule --
