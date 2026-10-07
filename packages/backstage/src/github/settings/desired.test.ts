@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import { buildDesiredSettings } from "./desired.js";
 
 describe("buildDesiredSettings", () => {
-  it("enables secret scanning and its push protection, plus the two public-repo extras", () => {
+  it("enables secret scanning and its push protection, but not the two paid Secret Protection extras", () => {
     const desired = buildDesiredSettings([]);
     expect(desired.securityAndAnalysis).toEqual({
       secretScanning: true,
       secretScanningPushProtection: true,
-      secretScanningNonProviderPatterns: true,
-      secretScanningValidityChecks: true,
+      secretScanningNonProviderPatterns: false,
+      secretScanningValidityChecks: false,
     });
   });
 

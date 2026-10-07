@@ -154,8 +154,11 @@ function baseSettings(
     securityAndAnalysis: {
       secretScanning: true,
       secretScanningPushProtection: true,
-      secretScanningNonProviderPatterns: true,
-      secretScanningValidityChecks: true,
+      // Both need GitHub Secret Protection, a paid add-on even for public
+      // repositories; on the org's Free plan the API accepts `enabled` and
+      // leaves them disabled, which read as permanent drift.
+      secretScanningNonProviderPatterns: false,
+      secretScanningValidityChecks: false,
     },
     vulnerabilityAlerts: true,
     dependabotSecurityUpdates: true,

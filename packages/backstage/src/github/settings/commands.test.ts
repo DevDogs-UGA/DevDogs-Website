@@ -13,8 +13,8 @@ function baseRepoFixture() {
     security_and_analysis: {
       secret_scanning: { status: "enabled" as const },
       secret_scanning_push_protection: { status: "enabled" as const },
-      secret_scanning_non_provider_patterns: { status: "enabled" as const },
-      secret_scanning_validity_checks: { status: "enabled" as const },
+      secret_scanning_non_provider_patterns: { status: "disabled" as const },
+      secret_scanning_validity_checks: { status: "disabled" as const },
     },
   };
 }
