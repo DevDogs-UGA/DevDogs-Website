@@ -410,6 +410,7 @@ describe("backstage contract tests", () => {
     const { status, stderr } = await outside([
       "newsletter",
       "render",
+      "changelog",
       "*",
       "--out",
       out,
@@ -425,6 +426,7 @@ describe("backstage contract tests", () => {
     const { status, stderr } = await outside([
       "newsletter",
       "send",
+      "changelog",
       "*",
       "--to",
       "a@uga.edu",
