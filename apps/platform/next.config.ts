@@ -6,6 +6,7 @@ import type { NextConfig } from "next";
 import { buildSecurityHeaders } from "@devdogsuga/headers";
 import { env } from "~/env";
 import { platformSecurityHeaders } from "~/lib/securityHeaders";
+import { SOCIALS } from "~/config/socials";
 
 const config = {
   async headers() {
@@ -31,11 +32,12 @@ const config = {
         destination: "https://forms.gle/WS4NNd72zMAy6VXn6",
         permanent: false,
       },
-      {
-        source: "/discord",
-        destination: "https://discord.gg/BdDdkNQhqp",
+      // devdogsuga.org/discord, /instagram, /linkedin, /github.
+      ...SOCIALS.map(({ path, url }) => ({
+        source: path,
+        destination: url,
         permanent: false,
-      },
+      })),
       {
         source: "/georgia311",
         destination: "https://forms.gle/ErNLxLep3MwMUe6t7",

@@ -82,10 +82,12 @@ export default function AppSwitcher() {
         </div>
       </div>
 
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-10 px-4 py-8">
-        <div className="mx-auto flex w-full max-w-md flex-col items-center gap-6">
-          <p className="animate-wave cursor-default text-5xl">👋</p>
-          <p className="text-center text-white">
+      {/* Sized to fit one screen: the gaps tighten, and from lg the links and
+          apps share a row instead of stacking. */}
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-6 px-4 py-3 sm:gap-10 lg:max-w-5xl lg:gap-12">
+        <div className="mx-auto flex w-full max-w-md flex-col items-center gap-4">
+          <p className="animate-wave cursor-default text-4xl">👋</p>
+          <p className="text-center text-sm text-white sm:text-base">
             <span className="inline-block">
               Hey, we&rsquo;re DevDogs, a club at UGA building
             </span>{" "}
@@ -107,31 +109,39 @@ export default function AppSwitcher() {
           </LinkButton>
         </div>
 
-        <div className="flex w-full flex-col gap-3">
-          <p className="text-center text-xs font-semibold tracking-wide text-mauve-500 uppercase">
-            Projects
-          </p>
-          {/* No recessed treatment here, unlike the homepage grid: every tile
-              is the same size, and the ones with nowhere to send you render
-              disabled, which says more than a size difference would. */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            {SWITCHER_PROJECTS.map((project) => (
-              <ProjectTile
-                key={project.title}
-                project={project}
-                onNavigate={close}
-              />
+        <div className="grid w-full gap-6 lg:grid-cols-2 lg:items-start lg:gap-10">
+          {/* Links lead because their featured rows are time-sensitive. Move
+            them back below Apps once no row is featured. */}
+          <div className="mx-auto flex w-full max-w-md flex-col gap-3 lg:max-w-none">
+            <p className="text-center text-xs font-semibold tracking-wide text-mauve-500 uppercase">
+              Links
+            </p>
+            {SWITCHER_LINKS.map((entry) => (
+              <EntryButton key={entry.href} entry={entry} />
             ))}
           </div>
-        </div>
 
-        <div className="mx-auto flex w-full max-w-md flex-col gap-3">
-          <p className="text-center text-xs font-semibold tracking-wide text-mauve-500 uppercase">
-            Links
-          </p>
-          {SWITCHER_LINKS.map((entry) => (
-            <EntryButton key={entry.href} entry={entry} />
-          ))}
+          {/* Apps take the left column on desktop; on phones the links
+              still lead, for their time-sensitive rows. */}
+          <div className="flex w-full flex-col gap-3 lg:order-first">
+            <p className="text-center text-xs font-semibold tracking-wide text-mauve-500 uppercase">
+              Apps
+            </p>
+            {/* No recessed treatment here, unlike the homepage grid: every tile
+              is the same size, and the ones with nowhere to send you render
+              disabled, which says more than a size difference would. */}
+            {/* Always two up. The row gap and top margin clear the badges
+                riding each tile's top edge. */}
+            <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-5">
+              {SWITCHER_PROJECTS.map((project) => (
+                <ProjectTile
+                  key={project.title}
+                  project={project}
+                  onNavigate={close}
+                />
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-center gap-8 text-2xl text-mauve-500">

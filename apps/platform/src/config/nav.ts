@@ -1,8 +1,10 @@
 import type { StaticImageData } from "next/image";
 import gdgFavicon from "~/assets/favicons/gdg.png";
+import googleFormsFavicon from "~/assets/favicons/google-forms.png";
 import involvementFavicon from "~/assets/favicons/involvement-network.png";
 import type { ResolvedPermissions } from "~/server/actions/permissions";
 import type * as icons from "./icons";
+import { SOCIALS } from "./socials";
 
 export type NavIcon = keyof typeof icons;
 
@@ -47,6 +49,12 @@ export interface SwitcherEntry {
   favicon?: StaticImageData;
   description?: string;
   external?: true;
+  /**
+   * A time-sensitive switcher row: filled amber instead of white, with its
+   * `description` as a second line. Drop the flag (or the entry) once the
+   * date passes.
+   */
+  featured?: true;
 }
 
 /** Left-aligned navbar links. Every entry is publicly accessible. */
@@ -274,20 +282,20 @@ export const SWITCHER_PRIMARY: SwitcherEntry = {
  */
 export const SWITCHER_LINKS: SwitcherEntry[] = [
   {
-    label: "Georgia 311 Challenge Application",
+    label: "Georgia 311 Application",
     href: "/georgia311",
+    favicon: googleFormsFavicon,
+    description: "Civic hackathon · apply by Thu, Oct 15",
     external: true,
+    featured: true,
   },
   {
-    label: "Georgia 311 Virtual Interest Meeting",
+    label: "Georgia 311 Virtual Meeting",
     href: "https://gdg.community.dev/events/details/google-gdg-on-campus-university-of-georgia-athens-united-states-presents-georgia-311-challenge-interest-meeting-virtual-oct-11/",
     favicon: gdgFavicon,
+    description: "Interest meeting · Sun, Oct 11, 5 PM",
     external: true,
-  },
-  {
-    label: "Leadership Team Application",
-    href: "/leadership",
-    external: true,
+    featured: true,
   },
   {
     label: "UGA Involvement Network Listing",
@@ -296,33 +304,24 @@ export const SWITCHER_LINKS: SwitcherEntry[] = [
     external: true,
   },
   {
-    label: "Google GDG on Campus: UGA Listing",
+    label: "GDG on Campus: UGA Listing",
     href: "https://gdg.community.dev/gdg-on-campus-university-of-georgia-athens-united-states/",
     favicon: gdgFavicon,
     external: true,
   },
 ];
 
-/** Social channels, shown in the app switcher, mobile sheet, and footer. */
+/**
+ * Social channels, shown in the app switcher, mobile sheet, and footer: each
+ * through its short redirect (see `~/config/socials`), then email.
+ */
 export const SOCIAL_LINKS: SwitcherEntry[] = [
-  {
-    label: "Instagram",
-    href: "https://instagram.com/DevDogsUGA",
-    icon: "InstagramLogoIcon",
-    external: true,
-  },
-  {
-    label: "LinkedIn",
-    href: "https://linkedin.com/company/DevDogsUGA",
-    icon: "LinkedinLogoIcon",
-    external: true,
-  },
-  {
-    label: "GitHub",
-    href: "https://github.com/DevDogsUGA",
-    icon: "GithubLogoIcon",
-    external: true,
-  },
+  ...SOCIALS.map(({ label, path, icon }) => ({
+    label,
+    href: path,
+    icon,
+    external: true as const,
+  })),
   {
     label: "Email",
     href: "mailto:devdogs@uga.edu",

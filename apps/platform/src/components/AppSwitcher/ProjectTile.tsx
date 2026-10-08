@@ -6,6 +6,7 @@ import devdog from "~/assets/devdog.svg";
 import * as icons from "~/config/icons";
 import type { SwitcherProject } from "~/config/projects";
 import OpenOrShareDialog from "./OpenOrShareDialog";
+import { LIFT, PLAIN, PLAIN_HOVER, ROW } from "./rowStyles";
 
 interface Props {
   project: SwitcherProject;
@@ -14,9 +15,15 @@ interface Props {
 }
 
 /**
- * One project, as an app icon rather than a card: the mark, its name and
- * status, and a one-line blurb. A project with nothing shipped yet has
- * nowhere to send you, so it renders disabled instead.
+ * Tighter than a listing row on phones, where the tiles sit two up, and
+ * deeper at the top, where the badge overlaps the rim.
+ */
+const TILE_SPACING = "gap-2 px-2 pt-4 pb-3.5 sm:gap-3 sm:px-4 sm:pt-5 sm:pb-4";
+
+/**
+ * One project, as the switcher's button rather than a card: the mark, its
+ * status, name and what it is in a couple of words. A project with nothing
+ * shipped yet has nowhere to send you, so it renders disabled instead.
  *
  * Pressing a live tile asks whether to open or share rather than deciding for
  * you, so the tile itself carries no arrow or share control at all.
@@ -25,44 +32,41 @@ interface Props {
  * stack, repo links, the year it ran. This is for opening one.
  */
 export default function ProjectTile({ project, onNavigate }: Props) {
-  const { icon, iconBg, logo, blurb, url, badge } = project.switcher;
+  const { icon, color, logo, blurb, url, badge } = project.switcher;
   const Icon = icons[icon];
   const [open, setOpen] = useState(false);
 
-  const shell = "relative flex items-center gap-4 rounded-md border px-4 py-3";
-
   const body = (
     <>
-      {/* The icon carries the block shadow the cards used to, so the tile
-          itself can stay flat and let the mark be the thing you look at. Rim
-          and shadow stay black, as everywhere else on the site. The tile
-          beneath is what lifts, to give them something to read against. */}
+      {/* The mark as the homepage and the docs draw it: the mascot, or a
+          bare filled glyph in the app's color, with no tile of its own. The
+          row around it is the button. */}
       {logo ? (
-        <div className="flex size-12 shrink-0 items-center justify-center transition-transform group-hover:-translate-y-0.5">
-          <Image alt="" src={devdog} sizes="48px" />
+        <div className="flex size-8 shrink-0 items-center justify-center sm:size-10">
+          <Image alt="" src={devdog} sizes="(min-width: 40rem) 40px, 32px" />
         </div>
       ) : (
         <div
-          className={`shadow-block-sm flex size-12 shrink-0 items-center justify-center rounded-xl border-2 border-black text-2xl text-black shadow-black transition-transform group-hover:-translate-y-0.5 ${iconBg}`}
+          aria-hidden
+          className={`flex size-8 shrink-0 items-center justify-center text-3xl sm:size-10 sm:text-4xl ${color}`}
         >
-          <Icon weight="bold" />
+          <Icon weight="fill" />
         </div>
       )}
 
-      {/* The gap is the tight one, between the name and the line describing
-          it. The badge buys its own room back with a margin, so it sits apart
-          from the pair rather than evenly among them. */}
+      {/* The status rides the tile's top edge, centered on the rim like a
+          tab, so the name and its label have the inside to themselves. The
+          switcher's grid leaves the extra row gap this needs. */}
+      {badge && (
+        <span
+          className={`absolute -top-px left-2 -translate-y-1/2 rounded-sm ${badge.bg} ${badge.text} px-1.5 py-0.5 text-[0.625rem] leading-none font-bold tracking-wide whitespace-nowrap uppercase sm:left-4`}
+        >
+          {badge.label}
+        </span>
+      )}
+
       <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
-        {/* On its own line above the name rather than beside it: the longer
-            labels were wrapping the pill onto a second row anyway. */}
-        {badge && (
-          <span
-            className={`mb-1 rounded-sm ${badge.bg} ${badge.text} px-1.5 py-0.5 text-[0.625rem] leading-none font-bold tracking-wide uppercase`}
-          >
-            {badge.label}
-          </span>
-        )}
-        <h3 className="font-display leading-none font-bold text-white">
+        <h3 className="font-display text-[0.8125rem] leading-none font-bold text-white sm:text-base">
           {/* The button wraps the name and stretches over the whole tile with
               its own ::after, so the tile acts as one control without nesting
               block content inside a button element. */}
@@ -70,7 +74,7 @@ export default function ProjectTile({ project, onNavigate }: Props) {
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="rounded-sm outline-none after:absolute after:inset-0 focus-visible:ring-2 focus-visible:ring-white"
+              className="rounded-sm text-left outline-none after:absolute after:inset-0 focus-visible:ring-2 focus-visible:ring-white"
             >
               {project.title}
             </button>
@@ -78,7 +82,9 @@ export default function ProjectTile({ project, onNavigate }: Props) {
             project.title
           )}
         </h3>
-        <p className="text-xs/relaxed text-balance text-mauve-400">{blurb}</p>
+        <p className="text-[0.6875rem] leading-tight text-mauve-400 sm:text-xs">
+          {blurb}
+        </p>
       </div>
     </>
   );
@@ -87,7 +93,7 @@ export default function ProjectTile({ project, onNavigate }: Props) {
     return (
       <div
         aria-disabled="true"
-        className={`${shell} cursor-not-allowed border-mauve-700 bg-mauve-800 opacity-60`}
+        className={`${ROW} ${PLAIN} ${TILE_SPACING} cursor-not-allowed opacity-60`}
       >
         {body}
       </div>
@@ -96,9 +102,7 @@ export default function ProjectTile({ project, onNavigate }: Props) {
 
   return (
     <>
-      <div
-        className={`${shell} group cursor-pointer border-mauve-700 bg-mauve-800 transition-colors hover:border-mauve-500 hover:bg-mauve-700`}
-      >
+      <div className={`${ROW} ${PLAIN} ${PLAIN_HOVER} ${LIFT} ${TILE_SPACING}`}>
         {body}
       </div>
       <OpenOrShareDialog

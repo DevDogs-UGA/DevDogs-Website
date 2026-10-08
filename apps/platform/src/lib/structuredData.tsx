@@ -1,4 +1,5 @@
 import { SOCIAL_LINKS, SWITCHER_LINKS } from "~/config/nav";
+import { SOCIALS } from "~/config/socials";
 import { env } from "~/env";
 
 /**
@@ -43,7 +44,7 @@ const WEBSITE_ID = `${BASE}/#website`;
 
 /**
  * `sameAs` wants pages that unambiguously identify the same organization, which
- * is what `config/nav.ts` already curates: the club's social profiles and its
+ * is what `config/socials.ts` and `config/nav.ts` already curate: the club's social profiles and its
  * two official campus listings. Deriving them rather than retyping them means a
  * channel the club adds to the navbar reaches its structured data too.
  *
@@ -52,9 +53,12 @@ const WEBSITE_ID = `${BASE}/#website`;
  */
 const MAILTO = "mailto:";
 
-const sameAs = [...SOCIAL_LINKS, ...SWITCHER_LINKS]
-  .map((link) => link.href)
-  .filter((href) => !href.startsWith(MAILTO));
+const sameAs = [
+  // The profiles themselves: SOCIAL_LINKS carries our redirects to them.
+  ...SOCIALS.map((social) => social.url),
+  // Featured rows are time-limited campaigns, not pages that identify us.
+  ...SWITCHER_LINKS.filter((link) => !link.featured).map((link) => link.href),
+];
 
 const email = SOCIAL_LINKS.find((link) =>
   link.href.startsWith(MAILTO),

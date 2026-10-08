@@ -25,21 +25,23 @@ export interface Badge {
  * have nothing to visit yet.
  */
 export interface ProjectSwitcher {
-  /** The app icon, drawn on {@link ProjectSwitcher.iconBg}. */
+  /** The app icon, drawn bare in {@link ProjectSwitcher.color}. */
   icon: keyof typeof icons;
   /**
-   * Draw the DevDogs mascot, bare, in place of the icon tile. For the
-   * platform, whose icon is the club's logo (its favicon is the same).
+   * Draw the DevDogs mascot in place of the icon. For the platform, whose
+   * icon is the club's logo (its favicon is the same).
    */
   logo?: true;
   /**
-   * Fill behind the icon: a solid, saturated background, since the tiles sit
-   * on black and the mark is drawn in black on top.
+   * The icon's color, a Tailwind text class: the same bare filled glyph the
+   * docs draw for a project (`DOCS_PROJECT_MARKS` in `~/config/docs`), so
+   * keep the two in step.
    */
-  iconBg: string;
+  color: string;
   /**
-   * One sentence. The switcher is for picking a project, not reading about
-   * one. The full pitch lives in `description`.
+   * What it is, in two or three words ("Schedule Builder"). The switcher is
+   * for picking a project, not reading about one. The full pitch lives in
+   * `description`.
    */
   blurb: string;
   /**
@@ -134,10 +136,9 @@ export const PROJECTS: Project[] = [
       "The site you're on. A member portal and developer platform for the club: community profiles, documentation, and all the tooling that runs DevDogs.",
     switcher: {
       icon: "HouseIcon",
-      iconBg: "bg-cyan-400",
+      color: "text-cyan-400",
       logo: true,
-      blurb:
-        "The site you're on — member portal, OAuth server, and club tooling.",
+      blurb: "Member Portal",
       url: "/",
       // Where you are standing, rather than how far along it is. The one tile
       // in the switcher whose badge answers a different question.
@@ -164,9 +165,8 @@ export const PROJECTS: Project[] = [
       "Plan your semester against live UGA registrar data. Answer a short questionnaire, and DogDays generates conflict-free schedules, considering walking distance between buildings and the credits you already have.",
     switcher: {
       icon: "DogDaysIcon",
-      iconBg: "bg-red-400",
-      blurb:
-        "Conflict-free semester schedules, built from live registrar data.",
+      color: "text-red-600",
+      blurb: "Schedule Builder",
       url: "https://dogdays.dev",
       badge: {
         label: "Public Alpha",
@@ -198,9 +198,8 @@ export const PROJECTS: Project[] = [
       "Our first mobile app: find the people already studying what you're studying. Match with classmates by course, form a group, and pick a time and place that works for everyone!",
     switcher: {
       icon: "DogPackIcon",
-      iconBg: "bg-purple-400",
-      blurb:
-        "Find classmates already studying what you're studying, on iOS and Android.",
+      color: "text-purple-500",
+      blurb: "Study Group Finder",
       // No `url`: there is nothing shipped to open yet.
       badge: { label: "In Development", bg: "bg-cyan-400", text: "text-black" },
     },
@@ -219,8 +218,8 @@ export const PROJECTS: Project[] = [
       "A searchable hub connecting UGA students to resources for academic support, campus involvement, and career development. Contributions were paused to due greater interest in other projects.",
     switcher: {
       icon: "MagnifyingGlassIcon",
-      iconBg: "bg-emerald-400",
-      blurb: "A searchable directory of Athens community services and orgs.",
+      color: "text-emerald-400",
+      blurb: "Community Directory",
       // No `url`: paused before it ever launched.
       badge: { label: "Paused", bg: "bg-mauve-300", text: "text-mauve-800" },
     },
