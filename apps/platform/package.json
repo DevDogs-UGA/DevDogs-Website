@@ -8,7 +8,7 @@
     "prebuild": "pnpm run codegen",
     "build": "with-env vinext build",
     "predev": "pnpm run codegen",
-    "dev": "with-env vinext dev",
+    "dev": "CLOUDFLARE_INCLUDE_PROCESS_ENV=true with-env vinext dev",
     "start": "with-env --worker platform -- wrangler dev --config dist/server/wrangler.json --env-file \"{env-file}\"",
     "preview": "pnpm run build && pnpm run start",
     "prelint": "pnpm run codegen",
