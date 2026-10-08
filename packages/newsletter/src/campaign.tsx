@@ -61,7 +61,7 @@ const font: CSSProperties = {
 };
 function Paragraph({ children }: { children: ReactNode }) {
   return (
-    <p className={tc(INK)} style={{ ...font, margin: "0 0 16px" }}>
+    <p className={tc(INK)} style={{ ...font, color: INK, margin: "0 0 16px" }}>
       {children}
     </p>
   );
@@ -81,7 +81,7 @@ function Panel({
         id={id}
         {...{ bgcolor: color }}
         className={`${bc(color)} ${tc(INK)}`}
-        style={{ padding: "24px 32px" }}
+        style={{ color: INK, padding: "24px 32px" }}
       >
         {children}
       </td>
@@ -98,6 +98,7 @@ function Card({ children, color }: { children: ReactNode; color: string }) {
             className={`${bc(color)} ${tc(INK)} ${brc(INK)}`}
             style={{
               ...font,
+              color: INK,
               padding: "20px 24px",
               border: `2px solid ${INK}`,
               borderRadius: 10,
@@ -115,7 +116,13 @@ function Heading({ children }: { children: ReactNode }) {
   return (
     <h2
       className={tc(INK)}
-      style={{ ...font, fontSize: 24, lineHeight: 1.3, margin: "0 0 18px" }}
+      style={{
+        ...font,
+        color: INK,
+        fontSize: 24,
+        lineHeight: 1.3,
+        margin: "0 0 18px",
+      }}
     >
       {children}
     </h2>
@@ -126,7 +133,7 @@ function Link({ href, children }: { href: string; children: ReactNode }) {
     <a
       href={href}
       className={tc(BLUE)}
-      style={{ fontFamily: GDGC_FONT_STACK, fontWeight: 700 }}
+      style={{ fontFamily: GDGC_FONT_STACK, color: BLUE, fontWeight: 700 }}
     >
       {children}
     </a>
@@ -217,18 +224,12 @@ export function CampaignEmail({
       {...TABLE}
       width="600"
       className={`gdgc-email ${tc(INK)}`}
-      style={{ width: "100%", maxWidth: 600, margin: "0 auto" }}
+      style={{ color: INK, width: "100%", maxWidth: 600, margin: "0 auto" }}
     >
       <tbody>
         <tr>
           <td>
-            <style>
-              {CAMPAIGN_FONT_CSS +
-                "\n" +
-                [INK, BLUE, "#ffffff"]
-                  .map((color) => `.${tc(color)}{color:${color}}`)
-                  .join("\n")}
-            </style>
+            <style>{CAMPAIGN_FONT_CSS}</style>
           </td>
         </tr>
         <tr>
@@ -269,6 +270,7 @@ export function CampaignEmail({
             className={tc(INK)}
             style={{
               ...font,
+              color: INK,
               fontSize: 42,
               lineHeight: 1.12,
               margin: "0 0 24px",
@@ -289,7 +291,7 @@ export function CampaignEmail({
           />
           <p
             className={tc(INK)}
-            style={{ ...font, fontSize: 11, margin: "0 0 24px" }}
+            style={{ ...font, color: INK, fontSize: 11, margin: "0 0 24px" }}
           >
             South Cobb Regional Library · Nickajack Park, Mableton
             <br />
@@ -352,9 +354,10 @@ export function CampaignEmail({
                         ? d.cta.url
                         : "#application-link-pending"
                     }
-                    className={tc("#ffffff")}
+                    className={tc(GDGC.white)}
                     style={{
                       ...font,
+                      color: GDGC.white,
                       fontSize: 20,
                       fontWeight: 700,
                       textDecoration: "none",

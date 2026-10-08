@@ -247,18 +247,28 @@ function rules(
  * to keep. Both attributes scope every rule because which one Outlook stamps
  * depends on whether it rewrote a color or a background up the tree.
  *
- * The GDGC campaign (`campaign`) is light-native, so these same layers swap
+ * The GDGC campaign (`campaign`) is light-native, so the scoped layers swap
  * in its dark version instead of pinning it light. Pinning light cannot work
  * in the web Outlooks: they force light text onto any surface whose original
  * background they repaint, and no stylesheet outranks that (see the README).
- * Dark surfaces under that forced light text read as intended.
+ * Dark surfaces under that forced light text read as intended. Only Outlook's
+ * own `data-og*` stamps trigger the swap; every other client shows the light
+ * version (the Gmail apps recolor it themselves).
  */
 export function darkModeCss({
   campaign = false,
 }: { campaign?: boolean } = {}): string {
   return [
     ":root{color-scheme:light dark;supported-color-schemes:light dark}",
-    `@media (prefers-color-scheme: dark){\n${rules((selector) => selector, false, campaign)}\n}`,
+    // The campaign skips the media layer: the web Outlooks evaluate it
+    // against the OS theme, not the reading pane's, so a light-themed
+    // Outlook on a dark-themed Windows would match it and show the dark
+    // version. The Changelog's pins are its own colors, so it never shows.
+    ...(campaign
+      ? []
+      : [
+          `@media (prefers-color-scheme: dark){\n${rules((selector) => selector)}\n}`,
+        ]),
     rules((selector) => `[data-ogsc] ${selector}`, true, campaign),
     rules((selector) => `[data-ogsb] ${selector}`, true, campaign),
   ].join("\n");

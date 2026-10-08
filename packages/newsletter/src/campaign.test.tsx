@@ -13,7 +13,8 @@ describe("Georgia 311 campaign", () => {
   it("leaves light surfaces free for Gmail to recolor", () => {
     const html = renderIssueDocument(gdgcIssueByVersion("1")!);
     const table = html.slice(html.indexOf('class="gdgc-email'));
-    expect(table).not.toMatch(/style="[^"]*(?<![-\w])color:/);
+    // Gmail drops the body <style>, so text colors must also ride inline.
+    expect(table).toMatch(/class="tc-ffffff" style="[^"]*color:#ffffff/);
     expect(table).not.toContain("-webkit-text-fill-color");
     for (const color of [
       "#c3ecf6",
@@ -30,11 +31,11 @@ describe("Georgia 311 campaign", () => {
     }
   });
 
-  it("swaps in the dark version wherever a client exposes dark mode", () => {
+  it("swaps in the dark version under Outlook's dark-mode stamps", () => {
     const html = renderIssueDocument(gdgcIssueByVersion("1")!);
-    const media = html.slice(
-      html.indexOf("@media (prefers-color-scheme: dark)"),
-    );
+    // Outlook web matches prefers-color-scheme against the OS theme, so the
+    // swap rides only Outlook's own dark-mode stamps.
+    expect(html).not.toContain("prefers-color-scheme");
     for (const [property, swaps] of Object.entries({
       color: GDGC_DARK.color,
       "background-color": GDGC_DARK.background,
@@ -47,7 +48,6 @@ describe("Georgia 311 campaign", () => {
       }[property];
       for (const [light, dark] of Object.entries(swaps)) {
         const rule = `.${prefix}-${light.slice(1)}{${property}:${dark} !important`;
-        expect(media).toContain(rule);
         expect(html).toContain(`[data-ogsc] ${rule}`);
         expect(html).toContain(`[data-ogsb] ${rule}`);
       }
@@ -57,7 +57,7 @@ describe("Georgia 311 campaign", () => {
     );
     // Light colors never pin to themselves: that fight is lost in Outlook.
     expect(html).not.toContain(".tc-1e1e1e{color:#1e1e1e !important");
-    for (const scope of ["", "[data-ogsc] ", "[data-ogsb] "]) {
+    for (const scope of ["[data-ogsc] ", "[data-ogsb] "]) {
       expect(html).toContain(`${scope}.gdgc-light{display:none !important}`);
       expect(html).toContain(`${scope}.gdgc-dark{display:block !important}`);
     }

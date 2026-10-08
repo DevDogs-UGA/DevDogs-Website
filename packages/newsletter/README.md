@@ -232,16 +232,21 @@ recipient. Embedding does not bypass a client's prohibition on web fonts.
 Keep exported HTML compact: embedded fonts count toward email body size, so
 render tests check current issues against a 100 KB HTML budget.
 
-GDGC's email is light-native and ships a dark version for dark-mode clients
+GDGC's email is light-native and ships a dark version for Outlook's dark mode
 instead of pinning its light palette. Outlook web testing found every
 diagnostic readable except gradient-clipped text; only rasterized text kept
 dark glyphs on the light-blue surface, because the web Outlooks force light
 text onto any surface they repaint. `GDGC_DARK` in `theme.ts` maps each light
 color to its dark twin, and `darkModeCss({ campaign: true })` applies it under
-`prefers-color-scheme` (Apple Mail, iOS Mail, Outlook for Mac) and the
-`data-ogsc`/`data-ogsb` hooks (Outlook.com, new Outlook, Outlook mobile), with
-the same box-shadow armor the Changelog uses. The header, chapter and DevDogs
-graphics ship as light/dark pairs that the same rules swap. The Gmail apps
-expose no dark-mode hook, so the light surfaces skip the gradient underlay and
-let Gmail recolor them together with the text; classic Outlook inverts as it
-does the Changelog.
+the `data-ogsc`/`data-ogsb` hooks (Outlook.com, new Outlook, Outlook mobile)
+with the same box-shadow armor the Changelog uses. The header, chapter and
+DevDogs graphics ship as light/dark pairs that the same rules swap.
+
+The swap deliberately has no `prefers-color-scheme` layer: the web Outlooks
+evaluate that query against the OS theme, so a light-themed Outlook on a
+dark-themed Windows showed the dark version. Apple Mail and Outlook for Mac
+therefore show the light version in dark mode. Text colors are inline as
+well as classed, because Gmail drops the body `<style>` that would otherwise
+color them. The Gmail apps expose no dark-mode hook, so the light surfaces
+skip the gradient underlay and let Gmail recolor them together with the
+text; classic Outlook inverts as it does the Changelog.
