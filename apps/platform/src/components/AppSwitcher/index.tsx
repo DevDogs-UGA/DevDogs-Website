@@ -113,7 +113,7 @@ export default function AppSwitcher() {
           {/* Links lead because their featured rows are time-sensitive. Move
             them back below Apps once no row is featured. */}
           <div className="mx-auto flex w-full max-w-md flex-col gap-3 lg:max-w-none">
-            <p className="text-center text-xs font-semibold tracking-wide text-mauve-500 uppercase">
+            <p className="mb-2 text-center text-xs font-semibold tracking-wide text-mauve-500 uppercase">
               Links
             </p>
             {SWITCHER_LINKS.map((entry) => (
@@ -124,15 +124,17 @@ export default function AppSwitcher() {
           {/* Apps take the left column on desktop; on phones the links
               still lead, for their time-sensitive rows. */}
           <div className="flex w-full flex-col gap-3 lg:order-first">
-            <p className="text-center text-xs font-semibold tracking-wide text-mauve-500 uppercase">
+            <p className="mb-2 text-center text-xs font-semibold tracking-wide text-mauve-500 uppercase">
               Apps
             </p>
             {/* No recessed treatment here, unlike the homepage grid: every tile
               is the same size, and the ones with nowhere to send you render
               disabled, which says more than a size difference would. */}
-            {/* Always two up. The row gap and top margin clear the badges
-                riding each tile's top edge. */}
-            <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-5">
+            {/* Always two up. The row gap clears the badges riding each
+                tile's top edge; both section labels carry the same bottom
+                margin, so the first badge clears its label and, side by
+                side, the tiles' top rims line up with the first link's. */}
+            <div className="grid grid-cols-2 gap-x-3 gap-y-5">
               {SWITCHER_PROJECTS.map((project) => (
                 <ProjectTile
                   key={project.title}
