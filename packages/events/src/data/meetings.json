@@ -326,8 +326,8 @@
     },
     {
       "slug": "2026-10-26",
-      "title": "Workshop: Topic TBA",
-      "summary": "Topic to be announced. Check back here or on Discord for what we are building this week.",
+      "title": "Workshop: APIs",
+      "summary": "Learn how apps talk to other services: make requests, read the responses, and keep your keys safe. Then put it to work in this week's competitions, Distance Between Classes for DogDays and the Home Page for DogPack.",
       "kind": null,
       "building": "DLW",
       "location": "124",
@@ -337,7 +337,13 @@
       "cancelledAt": null,
       "cancellationReason": null,
       "surveyUrl": null,
-      "agenda": [],
+      "agenda": [
+        {
+          "title": "APIs",
+          "description": null,
+          "project": null
+        }
+      ],
       "countsForCredit": true
     },
     {
