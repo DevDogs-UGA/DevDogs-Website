@@ -66,7 +66,7 @@ export function emailImages(): EmailImage[] {
       cid: cidFor(`campaign-${name}`),
       filename: `campaign-${name}.png`,
       svg,
-      rasterWidth: name === "header" ? 1200 : 600,
+      rasterWidth: name.startsWith("header") ? 1200 : 600,
     })),
     {
       cid: cidFor("devdogs-lockup"),

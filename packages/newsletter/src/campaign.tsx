@@ -2,9 +2,16 @@ import { timeRange } from "./date-format.js";
 import { CAMPAIGN_FONT_CSS } from "./campaign-fonts.js";
 import type { CSSProperties, ReactNode } from "react";
 import type { RenderContext } from "./assets.js";
-import { bc, tc } from "./darkmode.js";
+import type { PairedCampaignImage } from "./campaign-assets.js";
+import {
+  bc,
+  brc,
+  DARK_IMAGE_CLASS,
+  LIGHT_IMAGE_CLASS,
+  tc,
+} from "./darkmode.js";
 import type { ChangelogIssue } from "./issues.js";
-import { GDGC_FONT_STACK, SITE } from "./theme.js";
+import { GDGC, GDGC_FONT_STACK, SITE } from "./theme.js";
 
 export interface CampaignContent {
   subject: string;
@@ -39,8 +46,8 @@ export function assertIssueReadyToSend(issue: ChangelogIssue): void {
     );
 }
 
-const INK = "#1e1e1e",
-  BLUE = "#185abc";
+const INK = GDGC.ink,
+  BLUE = GDGC.blue;
 const TABLE = {
   role: "presentation",
   cellPadding: 0,
@@ -51,7 +58,6 @@ const font: CSSProperties = {
   fontFamily: GDGC_FONT_STACK,
   fontSize: 16,
   lineHeight: 1.65,
-  color: INK,
 };
 function Paragraph({ children }: { children: ReactNode }) {
   return (
@@ -74,7 +80,7 @@ function Panel({
       <td
         id={id}
         {...{ bgcolor: color }}
-        className={bc(color)}
+        className={`${bc(color)} ${tc(INK)}`}
         style={{ padding: "24px 32px" }}
       >
         {children}
@@ -89,7 +95,7 @@ function Card({ children, color }: { children: ReactNode; color: string }) {
         <tr>
           <td
             {...{ bgcolor: color }}
-            className={`${bc(color)} ${tc(INK)}`}
+            className={`${bc(color)} ${tc(INK)} ${brc(INK)}`}
             style={{
               ...font,
               padding: "20px 24px",
@@ -120,10 +126,49 @@ function Link({ href, children }: { href: string; children: ReactNode }) {
     <a
       href={href}
       className={tc(BLUE)}
-      style={{ color: BLUE, fontWeight: 700 }}
+      style={{ fontFamily: GDGC_FONT_STACK, fontWeight: 700 }}
     >
       {children}
     </a>
+  );
+}
+
+/**
+ * A graphic and its dark twin. The twin hides inline (and from classic
+ * Outlook via `mso-hide`), so every client without a dark-mode hook — Gmail
+ * included — shows the light one; `darkModeCss({ campaign })` swaps them.
+ */
+function PairedImage({
+  ctx,
+  name,
+  style,
+  ...img
+}: {
+  ctx: RenderContext;
+  name: PairedCampaignImage;
+  width: number;
+  alt: string;
+  style: CSSProperties;
+}) {
+  return (
+    <>
+      <img
+        {...img}
+        src={ctx.assets.campaignImage(name)}
+        className={LIGHT_IMAGE_CLASS}
+        style={style}
+      />
+      <div
+        className={DARK_IMAGE_CLASS}
+        style={{ display: "none", msoHide: "all" } as CSSProperties}
+      >
+        <img
+          {...img}
+          src={ctx.assets.campaignImage(`${name}-dark`)}
+          style={style}
+        />
+      </div>
+    </>
   );
 }
 
@@ -171,17 +216,36 @@ export function CampaignEmail({
     <table
       {...TABLE}
       width="600"
+      className={`gdgc-email ${tc(INK)}`}
       style={{ width: "100%", maxWidth: 600, margin: "0 auto" }}
     >
       <tbody>
         <tr>
           <td>
-            <style>{CAMPAIGN_FONT_CSS}</style>
+            <style>
+              {CAMPAIGN_FONT_CSS +
+                "\n" +
+                [INK, BLUE, "#ffffff"]
+                  .map((color) => `.${tc(color)}{color:${color}}`)
+                  .join("\n")}
+            </style>
+          </td>
+        </tr>
+        <tr>
+          <td {...{ bgcolor: "#ffe7a5" }} className={bc("#ffe7a5")}>
+            <PairedImage
+              ctx={ctx}
+              name="header"
+              width={600}
+              alt="Colorful developer graphics: circles, braces, globe and slashes"
+              style={{ display: "block", width: "100%", height: "auto" }}
+            />
           </td>
         </tr>
         <Panel color="#c3ecf6">
-          <img
-            src={ctx.assets.campaignImage("chapter")}
+          <PairedImage
+            ctx={ctx}
+            name="chapter"
             width={260}
             alt="GDG on Campus UGA"
             style={{
@@ -275,7 +339,7 @@ export function CampaignEmail({
               <tr>
                 <td
                   {...{ bgcolor: BLUE }}
-                  className={bc(BLUE)}
+                  className={`${bc(BLUE)} ${brc(INK)}`}
                   style={{
                     padding: "22px 32px",
                     borderRadius: 10,
@@ -291,7 +355,6 @@ export function CampaignEmail({
                     className={tc("#ffffff")}
                     style={{
                       ...font,
-                      color: "#ffffff",
                       fontSize: 20,
                       fontWeight: 700,
                       textDecoration: "none",
@@ -324,8 +387,9 @@ export function CampaignEmail({
           ))}
         </Panel>
         <Panel color="#ffe7a5">
-          <img
-            src={ctx.assets.campaignImage("devdogs")}
+          <PairedImage
+            ctx={ctx}
+            name="devdogs"
             width={180}
             alt="DevDogs"
             style={{ display: "block", height: "auto", marginBottom: 20 }}

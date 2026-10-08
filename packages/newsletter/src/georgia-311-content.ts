@@ -11,7 +11,7 @@ export const GEORGIA_311_CONTENT: CampaignContent = {
   title: "Bring your ideas to Mableton.",
   intro: [
     "How could a city make its services easier to find, its decisions easier to understand, or its staff more effective?",
-    "Compete in the Georgia 311 Challenge, a three-week civic hackathon to build solutions for the City of Mableton. GDG on Campus UGA (DevDogs) is forming teams of builders, designers, and people with solution proposals. All majors are welcome; apply individually or with a group. Top teams get to present their projects directly to Mableton city officials at DevFest Atlanta, with travel expenses covered.",
+    "Compete in the Georgia 311 Challenge, a two-week civic hackathon to build solutions for the City of Mableton. GDG on Campus UGA (DevDogs) is forming teams of builders, designers, and people with solution proposals. All majors are welcome; apply individually or with a group. Top teams get to present their projects directly to Mableton city officials at DevFest Atlanta, with travel expenses covered.",
   ],
   sections: [
     {
@@ -39,9 +39,9 @@ export const GEORGIA_311_CONTENT: CampaignContent = {
       ],
     },
     {
-      heading: "A three-week sprint \u00b7 October 16\u201330",
+      heading: "A two-week sprint \u00b7 October 16\u201330",
       paragraphs: [
-        "From team and stack placements on Friday, October 16 to the presentation on Friday, October 30, build across three calendar weeks with team mentors and Wednesday build sessions.",
+        "From team and stack placements on Friday, October 16 to the presentation on Friday, October 30, build across two weeks with team mentors and Wednesday build sessions.",
       ],
       items: [
         {
@@ -53,7 +53,7 @@ export const GEORGIA_311_CONTENT: CampaignContent = {
           text: "Oct 25: brief draft. Oct 28: scored dry run and recorded backup demo.",
         },
         {
-          title: "Week 3 \u00b7 Present",
+          title: "Final day \u00b7 Present",
           text: "Oct 30: presentation; final event logistics pending.",
         },
       ],

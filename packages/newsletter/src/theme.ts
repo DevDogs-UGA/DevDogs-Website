@@ -203,3 +203,41 @@ export function blockShadow(color: string, size = 6): CSSProperties {
 /** GDGC prioritizes Google's familiar UI face, then available system fonts. */
 export const GDGC_FONT_STACK =
   "'Google Sans', Roboto, 'Segoe UI', 'Avenir Next', Helvetica, Arial, sans-serif";
+
+/** The GDGC email's light palette: Google's pastel surfaces, ink and link blue. */
+export const GDGC = {
+  ink: "#1e1e1e",
+  blue: "#185abc",
+  white: "#ffffff",
+  grey: "#f0f0f0",
+  sky: "#c3ecf6",
+  mint: "#ccf6c5",
+  butter: "#ffe7a5",
+  blush: "#f8d8d8",
+} as const;
+
+/**
+ * The GDGC email's dark version, per property, keyed by the light color an
+ * element's class names. Surfaces stay dark enough for the light text the
+ * web Outlooks force onto everything they repaint, so the button keeps a
+ * saturated blue under its white label rather than Google's pale dark-mode
+ * blue.
+ */
+export const GDGC_DARK = {
+  color: {
+    [GDGC.ink]: "#e8eaed",
+    [GDGC.blue]: "#8ab4f8",
+    [GDGC.white]: "#ffffff",
+  },
+  background: {
+    [GDGC.grey]: "#202124",
+    [GDGC.sky]: "#12333d",
+    [GDGC.mint]: "#173a1c",
+    [GDGC.butter]: "#3a3014",
+    [GDGC.blush]: "#42211f",
+    [GDGC.blue]: "#1a73e8",
+  },
+  border: {
+    [GDGC.ink]: "#bdc1c6",
+  },
+} as const satisfies Record<string, Record<string, string>>;

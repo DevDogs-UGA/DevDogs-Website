@@ -1147,7 +1147,7 @@ export function ChangelogDocument({
         />
         <style
           dangerouslySetInnerHTML={{
-            __html: `${paintCss()}\n${darkModeCss()}`,
+            __html: `${paintCss({ campaign: !!issue.campaign })}\n${darkModeCss({ campaign: !!issue.campaign })}`,
           }}
         />
       </head>

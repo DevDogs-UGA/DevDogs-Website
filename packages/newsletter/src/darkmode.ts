@@ -42,6 +42,8 @@ import type { CSSProperties } from "react";
 import {
   chipColors,
   dotGrid,
+  GDGC,
+  GDGC_DARK,
   HEADING_TINTS,
   KIND,
   PALETTE,
@@ -70,18 +72,10 @@ const CHIPS = KINDS.flatMap((kind) =>
   [PALETTE.card, PALETTE.card2].map((ground) => chipColors(kind, ground)),
 );
 
-/** Every background the components paint — the classes `paintCss` must feed. */
-const CAMPAIGN_COLORS = [
-  "#f0f0f0",
-  "#ffffff",
-  "#ffe7a5",
-  "#ccf6c5",
-  "#c3ecf6",
-  "#f8d8d8",
-  "#1e1e1e",
-  "#185abc",
-];
+/** The GDGC email's light colors, which its dark version replaces. */
+const CAMPAIGN_COLORS: string[] = [...new Set(Object.values(GDGC))];
 
+/** Every background the components paint — the classes `paintCss` must feed. */
 const BACKGROUNDS = [
   ...CAMPAIGN_COLORS,
   PALETTE.bg,
@@ -100,11 +94,14 @@ const BACKGROUNDS = [
 const PINS: {
   classFor: (color: string) => string;
   property: string;
+  /** The campaign's dark replacements for this property. */
+  campaignDark: Record<string, string>;
   colors: string[];
 }[] = [
   {
     classFor: tc,
     property: "color",
+    campaignDark: GDGC_DARK.color,
     colors: [
       ...CAMPAIGN_COLORS,
       PALETTE.ink,
@@ -119,12 +116,15 @@ const PINS: {
   {
     classFor: bc,
     property: "background-color",
+    campaignDark: GDGC_DARK.background,
     colors: BACKGROUNDS,
   },
   {
     classFor: brc,
     property: "border-color",
+    campaignDark: GDGC_DARK.border,
     colors: [
+      GDGC.ink,
       PALETTE.border,
       UGA,
       ...KINDS,
@@ -149,6 +149,10 @@ function declarations(style: CSSProperties): string {
     .join(";");
 }
 
+/** The GDGC email's image pair: each graphic ships light and dark, one shown. */
+export const LIGHT_IMAGE_CLASS = "gdgc-light";
+export const DARK_IMAGE_CLASS = "gdgc-dark";
+
 /**
  * The base paint layer: what actually colors every `bc-` background, since no
  * background is ever inline (see the module comment). Deliberately without
@@ -156,11 +160,18 @@ function declarations(style: CSSProperties): string {
  * texture rules last so their `background-image` wins the tie against the
  * flat `bc-` rule on the same element. The platform's /changelog pages embed
  * this too — the classes paint there exactly as they do in an inbox.
+ *
+ * The campaign's light surfaces skip the gradient underlay: the Gmail apps
+ * offer no dark-mode hook to swap in the dark version, so they must stay
+ * free to recolor surfaces together with the text they invert.
  */
-export function paintCss(): string {
+export function paintCss({
+  campaign = false,
+}: { campaign?: boolean } = {}): string {
   return [
     ...[...new Set(BACKGROUNDS)].map(
-      (color) => `.${bc(color)}{${declarations(solidBg(color))}}`,
+      (color) =>
+        `.${bc(color)}{${campaign && CAMPAIGN_COLORS.includes(color) ? `background-color:${color}` : declarations(solidBg(color))}}`,
     ),
     `.${SLANTS_CLASS}{${declarations(slants(UGA))}}`,
     `.${DOT_GRID_CLASS}{${declarations(dotGrid(PALETTE.bar, "rgba(255,255,255,.05)"))}}`,
@@ -178,23 +189,39 @@ export function paintCss(): string {
  * client ever renders the shadow (an inset shadow paints over
  * `background-image`, and would otherwise erase the dot-grid and slant
  * textures everywhere they work).
+ *
+ * With `campaign`, each GDGC light color is pinned to its `GDGC_DARK`
+ * replacement instead of itself (and dropped where it has none), and the
+ * image pairs swap — the dark version of the email in every client with a
+ * dark-mode hook.
  */
 function rules(
   scope: (selector: string) => string,
   shadowArmor = false,
+  campaign = false,
 ): string {
-  return PINS.flatMap(({ classFor, property, colors }) =>
-    [...new Set(colors)].map((color) => {
+  const pins = PINS.flatMap(({ classFor, property, campaignDark, colors }) =>
+    [...new Set(colors)].flatMap((color) => {
+      const value =
+        campaign && CAMPAIGN_COLORS.includes(color)
+          ? campaignDark[color]
+          : color;
+      if (!value) return [];
       const selector = `.${classFor(color)}`;
       const armor =
         shadowArmor && property === "background-color"
-          ? `;box-shadow:inset 0 0 0 3000px ${color} !important`
+          ? `;box-shadow:inset 0 0 0 3000px ${value} !important`
           : "";
-      return `${scope(selector)}{${property}:${color} !important${armor}}`;
+      return [`${scope(selector)}{${property}:${value} !important${armor}}`];
     }),
-  ).join("\n");
+  );
+  if (campaign)
+    pins.push(
+      `${scope(`.${LIGHT_IMAGE_CLASS}`)}{display:none !important}`,
+      `${scope(`.${DARK_IMAGE_CLASS}`)}{display:block !important}`,
+    );
+  return pins.join("\n");
 }
-
 /**
  * The pinning stylesheet `ChangelogDocument` embeds. Three layers, weakest
  * first: a `color-scheme` declaration telling well-behaved clients the email
@@ -219,12 +246,20 @@ function rules(
  * its own single-selector rule, in the one shape the client is documented
  * to keep. Both attributes scope every rule because which one Outlook stamps
  * depends on whether it rewrote a color or a background up the tree.
+ *
+ * The GDGC campaign (`campaign`) is light-native, so these same layers swap
+ * in its dark version instead of pinning it light. Pinning light cannot work
+ * in the web Outlooks: they force light text onto any surface whose original
+ * background they repaint, and no stylesheet outranks that (see the README).
+ * Dark surfaces under that forced light text read as intended.
  */
-export function darkModeCss(): string {
+export function darkModeCss({
+  campaign = false,
+}: { campaign?: boolean } = {}): string {
   return [
     ":root{color-scheme:light dark;supported-color-schemes:light dark}",
-    `@media (prefers-color-scheme: dark){\n${rules((selector) => selector)}\n}`,
-    rules((selector) => `[data-ogsc] ${selector}`, true),
-    rules((selector) => `[data-ogsb] ${selector}`, true),
+    `@media (prefers-color-scheme: dark){\n${rules((selector) => selector, false, campaign)}\n}`,
+    rules((selector) => `[data-ogsc] ${selector}`, true, campaign),
+    rules((selector) => `[data-ogsb] ${selector}`, true, campaign),
   ].join("\n");
 }
