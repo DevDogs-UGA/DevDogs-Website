@@ -11,6 +11,7 @@
  */
 import * as Sentry from "@sentry/cloudflare";
 import type { env } from "~/env";
+import type { HeartbeatJob } from "~/server/heartbeats/jobs";
 
 /**
  * The bindings this handler reads, derived from the env schema rather than
@@ -51,23 +52,27 @@ export type CronEnv = Pick<typeof env, "CRON_SECRET" | "BASE_URL">;
  * the Sentry monitor's schedule/margins on every check-in (see `scheduled()`
  * below) so the config lives next to the table instead of only in the Sentry
  * dashboard.
+ *
+ * Only one group has a monitor: Sentry bills a seat per monitor, and the plan
+ * covers one. A group without one declares a `heartbeat` instead, recorded
+ * when every route in it succeeds, and the monitored group's
+ * `/cron/heartbeats` route fails while that record is overdue (see
+ * `~/server/heartbeats/jobs`). Dropping a `monitorSlug` is enough to retire its
+ * monitor: `backstage deploy prune-monitors` deletes undeclared ones.
  */
 export const CRON_ROUTES: Record<
   string,
   {
     routes: string[];
     label: string;
-    monitorSlug: string;
-    monitor: { checkinMargin: number; maxRuntime: number };
+    monitorSlug?: string;
+    monitor?: { checkinMargin: number; maxRuntime: number };
+    heartbeat?: HeartbeatJob;
   }
 > = {
   "0 0 * * *": {
     label: "Nightly repair: GitHub reconcile, catalog",
-    monitorSlug: "platform-cron-nightly-repair",
-    // Two sequential upstream passes, the second of which (academic-programs)
-    // deliberately spaces ~42 requests -- generous margins rather than the
-    // five/ten-minute crons' tight ones.
-    monitor: { checkinMargin: 15, maxRuntime: 30 },
+    heartbeat: "platform-nightly-repair",
     routes: [
       // Repairs team membership a failed API call left wrong. Nightly rather
       // than more often on purpose: every membership change already fires on
@@ -91,7 +96,7 @@ export const CRON_ROUTES: Record<
   // deploy-time call itself fails partway.
   "*/15 * * * *": {
     label:
-      "Config reconcile (meetings, workshops), support forum index, Discord role sync",
+      "Config reconcile (meetings, workshops), support forum index, Discord role sync, daily job heartbeats",
     monitorSlug: "platform-cron-config-reconcile",
     // Role sync pages through every guild member, so the runtime ceiling is
     // looser than the config pass alone needs.
@@ -103,8 +108,12 @@ export const CRON_ROUTES: Record<
       // guests. Second, so a slow Discord never delays a config promotion.
       "/cron/support",
       // Three-way merge of synced role membership between the platform and
-      // Discord. Last, so a slow guild member listing delays nothing above.
+      // Discord. After the passes above, so a slow guild member listing
+      // delays none of them.
       "/cron/sync-discord-roles",
+      // Fails while a daily job is overdue, which errors this slot's
+      // monitor: the daily jobs have none of their own. Last, and cheap.
+      "/cron/heartbeats",
     ],
   },
 };
@@ -116,26 +125,28 @@ export async function scheduled(
   const entry = CRON_ROUTES[event.cron];
   if (!entry) return;
 
+  const run = () => dispatch(event.cron, entry, env);
+  if (!entry.monitorSlug || !entry.monitor) {
+    await run();
+    return;
+  }
+
   // `Sentry.withMonitor` no-ops (no init, no network call, no console spam)
   // when the outer `withSentry` wrapper in ./worker.ts skipped `Sentry.init`
   // for lack of a DSN -- `captureCheckIn` checks `getClient()` first and
   // returns quietly if there is none. The `monitor` config upserts the
   // schedule/margins on every check-in, so Sentry's copy of "when should
   // this have run" never drifts from the table above without a code change.
-  await Sentry.withMonitor(
-    entry.monitorSlug,
-    () => dispatch(event.cron, entry.routes, env),
-    {
-      schedule: { type: "crontab", value: event.cron },
-      checkinMargin: entry.monitor.checkinMargin,
-      maxRuntime: entry.monitor.maxRuntime,
-    },
-  );
+  await Sentry.withMonitor(entry.monitorSlug, run, {
+    schedule: { type: "crontab", value: event.cron },
+    checkinMargin: entry.monitor.checkinMargin,
+    maxRuntime: entry.monitor.maxRuntime,
+  });
 }
 
 async function dispatch(
   cron: string,
-  paths: string[],
+  entry: (typeof CRON_ROUTES)[string],
   env: CronEnv,
 ): Promise<void> {
   // Sequential rather than concurrent: these passes share a connection pool,
@@ -146,17 +157,37 @@ async function dispatch(
   // success. Throwing here is also what tells `withMonitor` above to report
   // this check-in as "error" rather than "ok".
   const failures: string[] = [];
-  for (const path of paths) {
+  async function call(
+    label: string,
+    path: string,
+    init?: { method: string; headers: Record<string, string>; body: string },
+  ) {
     try {
       const response = await fetch(`${env.BASE_URL}${path}`, {
-        headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
+        ...init,
+        headers: {
+          Authorization: `Bearer ${env.CRON_SECRET}`,
+          ...init?.headers,
+        },
       });
-      if (!response.ok) failures.push(`${path}: HTTP ${response.status}`);
+      if (!response.ok) failures.push(`${label}: HTTP ${response.status}`);
     } catch (error) {
       failures.push(
-        `${path}: ${error instanceof Error ? error.message : String(error)}`,
+        `${label}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
+  }
+
+  for (const path of entry.routes) await call(path, path);
+
+  // Only a group that fully succeeded counts as a run. A failed one is
+  // reported below; one that keeps failing goes overdue as well.
+  if (failures.length === 0 && entry.heartbeat) {
+    await call(`heartbeat ${entry.heartbeat}`, "/cron/heartbeats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ job: entry.heartbeat }),
+    });
   }
 
   if (failures.length > 0) {

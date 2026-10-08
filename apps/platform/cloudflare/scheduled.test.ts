@@ -98,6 +98,39 @@ describe("cron dispatcher", () => {
       expect.objectContaining({ cron: "0 0 * * *" }),
     );
   });
+
+  it("records the group's heartbeat once every route succeeded", async () => {
+    const paths = CRON_ROUTES["0 0 * * *"]?.routes ?? [];
+    const fetchMock = vi.fn(
+      async (_input: string | URL | Request, _init?: RequestInit) =>
+        Promise.resolve(new Response(null, { status: 200 })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await scheduled(
+      { cron: "0 0 * * *" },
+      { BASE_URL: "https://example.test", CRON_SECRET: "secret" },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(paths.length + 1);
+    const [input, init] = fetchMock.mock.calls.at(-1) ?? [];
+    expect(readRequestUrl(input ?? "")).toBe(
+      "https://example.test/cron/heartbeats",
+    );
+    expect(init?.method).toBe("POST");
+    expect(init?.headers).toMatchObject({ Authorization: "Bearer secret" });
+    expect(JSON.parse(String(init?.body))).toEqual({
+      job: "platform-nightly-repair",
+    });
+  });
+
+  it("checks the daily jobs' heartbeats from the monitored group", () => {
+    const monitored = Object.values(CRON_ROUTES).filter(
+      (entry) => entry.monitorSlug,
+    );
+    expect(monitored).toHaveLength(1);
+    expect(monitored[0]?.routes).toContain("/cron/heartbeats");
+  });
 });
 
 function readRequestUrl(input: string | URL | Request): string {

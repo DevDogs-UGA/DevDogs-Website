@@ -259,6 +259,20 @@ export const exportAuditInPlatform = platform.table.withRLS("exportAudit", {
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 ]);
 
+export const jobHeartbeatsInPlatform = platform.table.withRLS("jobHeartbeats", {
+	job: text().primaryKey(),
+	succeededAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+
+	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
+
+	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
+]);
+
 export const leaderboardProfilesInPlatform = platform.table.withRLS("leaderboardProfiles", {
 	githubId: varchar({ length: 255 }).primaryKey(),
 	githubLogin: varchar({ length: 255 }).notNull(),
@@ -1048,6 +1062,7 @@ export { docsPagesInPlatform as docsPages };
 export { exportAuditInPlatform as exportAudit };
 export { filerActionInPlatform as filerAction };
 export { graduationSemesterInPlatform as graduationSemester };
+export { jobHeartbeatsInPlatform as jobHeartbeats };
 export { leaderboardProfilesInPlatform as leaderboardProfiles };
 export { meetingsInPlatform as meetings };
 export { memberStarsInPlatform as memberStars };
