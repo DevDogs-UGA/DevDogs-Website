@@ -69,6 +69,7 @@ import { askSavePath } from "../production/save-path.js";
 import { parseBound } from "../production/time.js";
 import {
   bevyFormat,
+  bevyRequiredColumns,
   bevySurvey,
   formatFor,
   FORMATS_BY_KIND,
@@ -447,7 +448,7 @@ export async function runExport(
       })) {
         answers.push(...page);
       }
-      const survey = bevySurvey(answers);
+      const survey = bevySurvey(answers, bevyRequiredColumns());
       formats = formats.map((f) =>
         f.name === "bevy" ? bevyFormat(survey) : f,
       );

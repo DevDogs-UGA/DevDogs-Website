@@ -6,6 +6,7 @@ import {
   splitName,
   ugaEmail,
   bevyFormat,
+  bevyRequiredColumns,
   bevySurvey,
   WIDE,
 } from "./formats.js";
@@ -80,6 +81,36 @@ describe("formats", () => {
       .writer()
       .page([{ user_id: "u-1", email: "a@uga.edu", preferred_name: "Ada" }]);
     expect(out.text).toBe("Ada,,a@uga.edu,TRUE,,,,,Advanced\r\n");
+  });
+
+  it("leaves out the survey answers of anyone missing a column Bevy requires", () => {
+    const learn = "survey:how_did_you_learn_about_this_event_1";
+    const level = "survey:how_familiar_are_you_with_google_developer_tools";
+    const survey = bevySurvey(
+      [
+        { user_id: "u-1", definition: { bevy: learn }, answer: "Social media" },
+        { user_id: "u-1", definition: { bevy: level }, answer: "1 - Novice" },
+        { user_id: "u-2", definition: { bevy: level }, answer: "4 - Advanced" },
+      ],
+      [learn, level],
+    );
+    const out = bevyFormat(survey)
+      .writer()
+      .page([
+        { user_id: "u-1", email: "a@uga.edu", preferred_name: "Ada" },
+        { user_id: "u-2", email: "b@uga.edu", preferred_name: "Bo" },
+      ]);
+    expect(out.text).toBe(
+      "Ada,,a@uga.edu,TRUE,,,,,Social media,1 - Novice\r\n" +
+        "Bo,,b@uga.edu,TRUE,,,,,,\r\n",
+    );
+  });
+
+  it("names the columns Bevy requires from questions.json", () => {
+    expect(bevyRequiredColumns()).toEqual([
+      "survey:how_did_you_learn_about_this_event_1",
+      "survey:how_familiar_are_you_with_google_developer_tools",
+    ]);
   });
 
   it("writes responses wide, one row per person, once every row is in", () => {

@@ -220,7 +220,8 @@
       "cancellationReason": null,
       "surveyUrl": null,
       "agenda": [],
-      "countsForCredit": false
+      "countsForCredit": false,
+      "questions": ["how_did_you_learn"]
     },
     {
       "slug": "2026-10-12",
@@ -247,7 +248,8 @@
           "project": "DogPack"
         }
       ],
-      "countsForCredit": true
+      "countsForCredit": true,
+      "questions": ["how_did_you_learn"]
     },
     {
       "slug": "2026-10-14",
@@ -263,7 +265,8 @@
       "cancellationReason": null,
       "surveyUrl": null,
       "agenda": [],
-      "countsForCredit": false
+      "countsForCredit": false,
+      "questions": ["how_did_you_learn"]
     },
     {
       "slug": "2026-10-14-georgia-311",
@@ -279,7 +282,8 @@
       "cancellationReason": null,
       "surveyUrl": null,
       "agenda": [],
-      "countsForCredit": false
+      "countsForCredit": false,
+      "questions": ["how_did_you_learn"]
     },
     {
       "slug": "2026-10-19",
@@ -306,7 +310,8 @@
           "project": "DogPack"
         }
       ],
-      "countsForCredit": true
+      "countsForCredit": true,
+      "questions": ["how_did_you_learn"]
     },
     {
       "slug": "2026-10-21",
@@ -322,7 +327,8 @@
       "cancellationReason": null,
       "surveyUrl": null,
       "agenda": [],
-      "countsForCredit": false
+      "countsForCredit": false,
+      "questions": ["how_did_you_learn"]
     },
     {
       "slug": "2026-10-26",
@@ -344,7 +350,8 @@
           "project": null
         }
       ],
-      "countsForCredit": true
+      "countsForCredit": true,
+      "questions": ["how_did_you_learn"]
     },
     {
       "slug": "2026-10-28",
@@ -360,7 +367,8 @@
       "cancellationReason": null,
       "surveyUrl": null,
       "agenda": [],
-      "countsForCredit": false
+      "countsForCredit": false,
+      "questions": ["how_did_you_learn"]
     },
     {
       "slug": "2026-11-02",
@@ -376,7 +384,8 @@
       "cancellationReason": null,
       "surveyUrl": null,
       "agenda": [],
-      "countsForCredit": true
+      "countsForCredit": true,
+      "questions": ["how_did_you_learn"]
     },
     {
       "slug": "2026-11-04",
@@ -392,7 +401,8 @@
       "cancellationReason": null,
       "surveyUrl": null,
       "agenda": [],
-      "countsForCredit": false
+      "countsForCredit": false,
+      "questions": ["how_did_you_learn"]
     },
     {
       "slug": "2026-11-09",
@@ -408,7 +418,8 @@
       "cancellationReason": null,
       "surveyUrl": null,
       "agenda": [],
-      "countsForCredit": true
+      "countsForCredit": true,
+      "questions": ["how_did_you_learn"]
     },
     {
       "slug": "2026-11-11",
@@ -424,7 +435,8 @@
       "cancellationReason": null,
       "surveyUrl": null,
       "agenda": [],
-      "countsForCredit": false
+      "countsForCredit": false,
+      "questions": ["how_did_you_learn"]
     },
     {
       "slug": "2026-11-16",
@@ -440,7 +452,8 @@
       "cancellationReason": null,
       "surveyUrl": null,
       "agenda": [],
-      "countsForCredit": true
+      "countsForCredit": true,
+      "questions": ["how_did_you_learn"]
     },
     {
       "slug": "2026-11-18",
@@ -456,7 +469,8 @@
       "cancellationReason": null,
       "surveyUrl": null,
       "agenda": [],
-      "countsForCredit": false
+      "countsForCredit": false,
+      "questions": ["how_did_you_learn"]
     },
     {
       "slug": "2026-11-30",
@@ -472,7 +486,8 @@
       "cancellationReason": null,
       "surveyUrl": null,
       "agenda": [],
-      "countsForCredit": true
+      "countsForCredit": true,
+      "questions": ["how_did_you_learn"]
     }
   ]
 }

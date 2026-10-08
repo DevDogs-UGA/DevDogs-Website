@@ -7,16 +7,52 @@
       "prompt": "How did you learn about this event?",
       "type": "choice",
       "options": [
-        { "id": "discord", "label": "Discord" },
-        { "id": "instagram", "label": "Instagram" },
-        { "id": "involvement_network", "label": "Involvement Network" },
-        { "id": "gdg_community", "label": "GDG community page" },
-        { "id": "newsletter", "label": "Newsletter or email" },
-        { "id": "friend", "label": "A friend or classmate" },
-        { "id": "flyer", "label": "Flyer or poster" }
+        { "id": "meetup", "label": "Meetup.com" },
+        { "id": "community", "label": "Notified by this community" },
+        { "id": "friend", "label": "Recommended by a friend or peer" },
+        { "id": "social_media", "label": "Social media" },
+        { "id": "other", "label": "Other" }
       ],
-      "other": true,
+      "required": true,
       "bevy": "survey:how_did_you_learn_about_this_event_1"
+    },
+    {
+      "id": "professional_experience",
+      "scope": "member",
+      "prompt": "How many years of professional software experience do you have?",
+      "type": "choice",
+      "options": [
+        { "id": "not_a_developer", "label": "Not a developer" },
+        { "id": "up_to_1_year", "label": "Up to 1 year" },
+        { "id": "years_1_2", "label": "1-2 years" },
+        { "id": "years_3_5", "label": "3-5 years" },
+        { "id": "years_6_10", "label": "6-10 years" },
+        { "id": "years_10_plus", "label": "10+ years" }
+      ],
+      "bevy": "survey:level_of_developer_experience_1"
+    },
+    {
+      "id": "google_tools_level",
+      "scope": "member",
+      "prompt": "How familiar are you with Google developer tools?",
+      "type": "choice",
+      "options": [
+        { "id": "novice", "label": "1 - Novice" },
+        { "id": "fundamental", "label": "2 - Fundamental" },
+        { "id": "intermediate", "label": "3 - Intermediate" },
+        { "id": "advanced", "label": "4 - Advanced" },
+        { "id": "expert", "label": "5 - Expert" }
+      ],
+      "required": true,
+      "bevy": "survey:how_familiar_are_you_with_google_developer_tools"
+    },
+    {
+      "id": "organization",
+      "scope": "member",
+      "prompt": "What company or organization are you a part of, if any?",
+      "type": "text",
+      "maxLength": 120,
+      "bevy": "survey:what_company_or_organization_are_you_a_part_of_if_any"
     },
     {
       "id": "developer_experience",
@@ -28,7 +64,7 @@
         { "id": "intermediate", "label": "Intermediate" },
         { "id": "advanced", "label": "Advanced" }
       ],
-      "bevy": "survey:level_of_developer_experience_1"
+      "retired": true
     },
     {
       "id": "google_tools_familiarity",
@@ -40,15 +76,7 @@
         { "id": "somewhat_familiar", "label": "Somewhat familiar" },
         { "id": "very_familiar", "label": "Very familiar" }
       ],
-      "bevy": "survey:how_familiar_are_you_with_google_developer_tools"
-    },
-    {
-      "id": "organization",
-      "scope": "member",
-      "prompt": "What company or organization are you a part of, if any?",
-      "type": "text",
-      "maxLength": 120,
-      "bevy": "survey:what_company_or_organization_are_you_a_part_of_if_any"
+      "retired": true
     }
   ]
 }

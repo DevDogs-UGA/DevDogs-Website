@@ -51,9 +51,19 @@ const SURVEY_ROWS = [
     user_id: "u-1",
     preferred_name: "Ada",
     email: "ada@uga.edu",
-    question_id: "developer_experience",
-    definition: { bevy: "survey:level_of_developer_experience_1" },
-    answer: "Advanced",
+    question_id: "how_did_you_learn",
+    definition: { bevy: "survey:how_did_you_learn_about_this_event_1" },
+    answer: "Social media",
+  },
+  {
+    user_id: "u-1",
+    preferred_name: "Ada",
+    email: "ada@uga.edu",
+    question_id: "google_tools_level",
+    definition: {
+      bevy: "survey:how_familiar_are_you_with_google_developer_tools",
+    },
+    answer: "4 - Advanced",
   },
 ];
 
@@ -238,8 +248,8 @@ describe("export", () => {
     expect(events.filter((e) => e === "rows")).toHaveLength(1);
     expect(events.filter((e) => e === "survey")).toHaveLength(1);
     expect(files[1]!.text).toBe(
-      "first_name,last_name,email,checked_in,job_title,company,ticket_title,ticket_venue,survey:level_of_developer_experience_1\r\n" +
-        "Ada,Lovelace,ada@uga.edu,TRUE,,,,,Advanced\r\n",
+      "first_name,last_name,email,checked_in,job_title,company,ticket_title,ticket_venue,survey:how_did_you_learn_about_this_event_1,survey:how_familiar_are_you_with_google_developer_tools\r\n" +
+        "Ada,Lovelace,ada@uga.edu,TRUE,,,,,Social media,4 - Advanced\r\n",
     );
     expect(files[2]!.text).toBe("ada@uga.edu\r\n");
     expect(events).toContain("finish:audit-1:2");
@@ -263,8 +273,8 @@ describe("export", () => {
       "responses-2026-09-09-wide.csv",
     ]);
     expect(files[1]!.text).toBe(
-      "user_id,preferred_name,email,developer_experience\r\n" +
-        "u-1,Ada,ada@uga.edu,Advanced\r\n",
+      "user_id,preferred_name,email,how_did_you_learn,google_tools_level\r\n" +
+        "u-1,Ada,ada@uga.edu,Social media,4 - Advanced\r\n",
     );
     expect(stderr).toContain("Wrote 1 person as Wide table");
   });

@@ -17,6 +17,7 @@
  * Survey responses can also be written `wide`: one row per person, one
  * column per question, for one meeting.
  */
+import { getQuestions } from "@devdogsuga/events";
 import type { ExportKind } from "./queries.js";
 import { csvRow, LINE_ENDING } from "../csv/write.js";
 
@@ -305,11 +306,26 @@ export function parseFormats(
   return [...new Set(names)] as FormatName[];
 }
 
+/** The `survey:` columns Bevy's registration form requires, which are the
+ * questions.json questions marked `required` that are still asked. */
+export function bevyRequiredColumns(): string[] {
+  return getQuestions().questions.flatMap((q) =>
+    q.required && !q.retired && q.bevy ? [q.bevy] : [],
+  );
+}
+
 /**
  * The Bevy file's survey columns from a meeting's `responses` rows: each
  * mapped question anyone answered, and each person's answer in words.
+ *
+ * Bevy rejects a row that answers some survey questions but leaves out one
+ * its form requires, while a row with no answers at all imports. So someone
+ * missing any of the `required` columns gets none of their answers written.
  */
-export function bevySurvey(rows: readonly Row[]): BevySurvey {
+export function bevySurvey(
+  rows: readonly Row[],
+  required: readonly string[] = [],
+): BevySurvey {
   const columns: string[] = [];
   const byUser = new Map<string, Map<string, string>>();
   for (const row of rows) {
@@ -320,6 +336,9 @@ export function bevySurvey(rows: readonly Row[]): BevySurvey {
     const answers = byUser.get(id) ?? new Map<string, string>();
     answers.set(column, text(row.answer));
     byUser.set(id, answers);
+  }
+  for (const [id, answers] of byUser) {
+    if (required.some((column) => !answers.get(column))) byUser.delete(id);
   }
   return { columns: columns.sort(), byUser };
 }
