@@ -274,6 +274,17 @@ export const SWITCHER_PRIMARY: SwitcherEntry = {
  */
 export const SWITCHER_LINKS: SwitcherEntry[] = [
   {
+    label: "Georgia 311 Challenge Application",
+    href: "/georgia311",
+    external: true,
+  },
+  {
+    label: "Georgia 311 Virtual Interest Meeting",
+    href: "https://gdg.community.dev/events/details/google-gdg-on-campus-university-of-georgia-athens-united-states-presents-georgia-311-challenge-interest-meeting-virtual-oct-11/",
+    favicon: gdgFavicon,
+    external: true,
+  },
+  {
     label: "Leadership Team Application",
     href: "/leadership",
     external: true,
