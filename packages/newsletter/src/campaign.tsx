@@ -305,7 +305,16 @@ export function CampaignEmail({
         {/* Meeting data is the same config consumed by the events pages. */}
         <Panel color="#ccf6c5">
           <Heading>{issue.featuredLabel}</Heading>
-          <Paragraph>All three sessions cover the same material.</Paragraph>
+          {issue.featured.length > 1 && (
+            <Paragraph>
+              {issue.featured.length === 2
+                ? "Both sessions"
+                : issue.featured.length === 3
+                  ? "All three sessions"
+                  : `All ${issue.featured.length} sessions`}{" "}
+              cover the same material.
+            </Paragraph>
+          )}
           {issue.featured.map(({ meeting }) => {
             const virtual = meeting.location.startsWith("Virtual");
             const location = virtual

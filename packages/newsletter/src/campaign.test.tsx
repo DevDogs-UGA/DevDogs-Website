@@ -134,6 +134,16 @@ describe("Georgia 311 campaign", () => {
       html.indexOf("Keep building with DevDogs"),
     );
   });
+  it("drops the past Oct 8 meeting from issue 2", () => {
+    const html = renderIssueDocument(
+      gdgcIssueByVersion("2")!,
+      previewRenderContext(),
+    );
+    expect(html).not.toContain("Dawson 110");
+    expect(html).toContain("DLW 124");
+    expect(html).toContain("Both sessions cover");
+    expect(html).toContain("Issue 2");
+  });
   it("blocks sends with pending application or event links", () => {
     expect(() =>
       assertIssueReadyToSend({
