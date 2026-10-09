@@ -89,8 +89,13 @@ function Panel({
   );
 }
 function Card({ children, color }: { children: ReactNode; color: string }) {
+  // `separate`, or the site's Tailwind preflight (`border-collapse: collapse`) squares the rounded border.
   return (
-    <table {...TABLE} width="100%" style={{ marginBottom: 16 }}>
+    <table
+      {...TABLE}
+      width="100%"
+      style={{ marginBottom: 16, borderCollapse: "separate" }}
+    >
       <tbody>
         <tr>
           <td
@@ -345,7 +350,7 @@ export function CampaignEmail({
         {sectionPanels.slice(1)}
         <Panel color="#ccf6c5">
           <Heading>{d.cta.heading}</Heading>
-          <table {...TABLE}>
+          <table {...TABLE} style={{ borderCollapse: "separate" }}>
             <tbody>
               <tr>
                 <td
