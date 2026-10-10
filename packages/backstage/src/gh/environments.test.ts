@@ -153,17 +153,20 @@ describe("the reviewer gate", () => {
   });
 
   it("describes the same environments `github settings` checks", () => {
-    // Backstage's repo carries all five. DevDogsUGA keeps only `deploy-pr`
-    // (TASK-478 Phase 3), so none of the routed ones are desired there.
-    const names = buildDesiredSettings([], "Backstage").environments.map(
-      (e) => e.name,
-    );
-    for (const environment of GITHUB_ENVIRONMENTS) {
-      expect(names).toContain(environment);
+    // Both repos carry all of them: after the fold-back DevDogsUGA is the
+    // deploy repo, and adds `publishing-next` (which holds no secrets).
+    for (const repo of ["Backstage", "DevDogsUGA"] as const) {
+      const names = buildDesiredSettings([], repo).environments.map(
+        (e) => e.name,
+      );
+      for (const environment of GITHUB_ENVIRONMENTS) {
+        expect(names, repo).toContain(environment);
+      }
+      expect(names, repo).not.toContain("production-apply");
     }
-    expect(names).not.toContain("production-apply");
-    const legacy = buildDesiredSettings([]).environments.map((e) => e.name);
-    expect(legacy).toEqual(["deploy-pr"]);
+    const current = buildDesiredSettings([]).environments.map((e) => e.name);
+    expect(current).toContain("publishing-next");
+    expect(current).not.toContain("deploy-pr");
   });
 });
 

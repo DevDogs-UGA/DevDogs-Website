@@ -37,7 +37,13 @@ function baseEnvironment(name: string, requireReviewers: boolean) {
         custom_branch_policies: true,
       },
     },
-    branchPolicies: [{ id: 1, name: "main" }],
+    // The build environments also run for the merge queue's branches.
+    branchPolicies: name.endsWith("-build")
+      ? [
+          { id: 1, name: "main" },
+          { id: 2, name: "gh-readonly-queue/main/*" },
+        ]
+      : [{ id: 1, name: "main" }],
   };
 }
 
@@ -61,7 +67,8 @@ const api = vi.hoisted(() => ({
   })),
   getEnvironment: vi.fn(
     async (_r: unknown, name: string) =>
-      baseEnvironment(name, name === "production").environment,
+      baseEnvironment(name, name === "production" || name === "publishing")
+        .environment,
   ),
   getDeploymentBranchPolicies: vi.fn(
     async (_r: unknown, name: string) =>
@@ -368,11 +375,15 @@ describe("--repo Backstage", () => {
     restore();
   });
 
-  it("never creates a missing environment for DevDogsUGA", async () => {
+  it("creates a missing environment for DevDogsUGA too, publishing-next included", async () => {
     api.getEnvironment.mockImplementation(async () => null);
     const { restore } = captureConsole();
     await runGithubSettings(["--apply", "--yes", "--json"]);
-    expect(api.createEnvironment).not.toHaveBeenCalled();
+    expect(api.createEnvironment).toHaveBeenCalledWith(
+      expect.anything(),
+      "publishing-next",
+      expect.anything(),
+    );
     restore();
   });
 });

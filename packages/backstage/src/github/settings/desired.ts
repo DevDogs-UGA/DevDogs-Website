@@ -136,15 +136,15 @@ const BACKSTAGE_ENVIRONMENTS: readonly DesiredEnvironmentPolicy[] = [
 ];
 
 /**
- * DevDogsUGA after Phase 3 of TASK-478: Backstage owns deployment, so the
- * only environment left is `deploy-pr`, which holds the deploy-PR App's
- * credential for the `open-deploy-pr` job and is restricted to `main`. The old
- * `preflight`, `staging`, `production-build` and `production` environments
- * are no longer managed (and may be deleted by hand once the flip is done).
- * Report-only: `--apply` never creates it, since it carries secrets.
+ * DevDogsUGA after the fold-back: it carries what Backstage carried (the
+ * deploy, build and publishing environments) plus `publishing-next`, the
+ * reviewer-less environment prereleases publish from (`main` only). The
+ * `deploy-pr` environment went with the deploy-PR App. Created on `--apply`
+ * when missing, like Backstage's.
  */
 const DEVDOGSUGA_ENVIRONMENTS: readonly DesiredEnvironmentPolicy[] = [
-  plain("deploy-pr"),
+  ...BACKSTAGE_ENVIRONMENTS,
+  { ...plain("publishing-next"), createIfMissing: true },
 ];
 
 function baseSettings(

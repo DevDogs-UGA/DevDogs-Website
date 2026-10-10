@@ -40,24 +40,30 @@ describe("buildDesiredSettings", () => {
     });
   });
 
-  it("names only deploy-pr: Backstage owns deployment after TASK-478 Phase 3", () => {
+  it("names the six deploy environments and publishing-next", () => {
     const desired = buildDesiredSettings([]);
-    expect(desired.environments.map((e) => e.name)).toEqual(["deploy-pr"]);
+    expect(desired.environments.map((e) => e.name)).toEqual([
+      "publishing",
+      "staging",
+      "preflight",
+      "staging-build",
+      "production-build",
+      "production",
+      "publishing-next",
+    ]);
   });
 
-  it("restricts every environment to main", () => {
-    const desired = buildDesiredSettings([]);
-    for (const env of desired.environments) {
-      expect(env.allowedBranches, env.name).toEqual(["main"]);
-    }
-  });
-
-  it("requires no reviewers on deploy-pr (the job is automated)", () => {
-    const desired = buildDesiredSettings([]);
-    for (const env of desired.environments) {
-      expect(env.requireReviewers, env.name).toBe(false);
-      expect(env.preventSelfReview, env.name).toBe(false);
-    }
+  it("publishing-next has no reviewers and runs from main only", () => {
+    const next = buildDesiredSettings([]).environments.find(
+      (e) => e.name === "publishing-next",
+    );
+    expect(next).toMatchObject({
+      allowedBranches: ["main"],
+      requireReviewers: false,
+      preventSelfReview: false,
+      createIfMissing: true,
+    });
+    expect(next?.reviewerTeams).toBeUndefined();
   });
 
   describe("Backstage", () => {
@@ -99,11 +105,11 @@ describe("buildDesiredSettings", () => {
       }
     });
 
-    it("creates every environment when missing, unlike DevDogsUGA", () => {
+    it("creates every environment when missing, as DevDogsUGA does", () => {
       expect(desired.environments.every((e) => e.createIfMissing)).toBe(true);
       expect(
-        buildDesiredSettings([]).environments.some((e) => e.createIfMissing),
-      ).toBe(false);
+        buildDesiredSettings([]).environments.every((e) => e.createIfMissing),
+      ).toBe(true);
     });
 
     it("shares DevDogsUGA's security, Dependabot and Actions settings", () => {
