@@ -29,12 +29,12 @@
     "populate:courses": "pnpm --workspace-root devtools jobs run --app schedule-builder --workflow SCRAPE_WORKFLOW --tier development"
   },
   "dependencies": {
-    "@devdogsuga/brand": "^0.1.9",
-    "@devdogsuga/db": "^0.1.1",
-    "@devdogsuga/env": "^0.1.8",
-    "@devdogsuga/headers": "0.1.1",
+    "@devdogsuga/brand": "workspace:*",
+    "@devdogsuga/db": "workspace:*",
+    "@devdogsuga/env": "workspace:*",
+    "@devdogsuga/headers": "workspace:*",
     "@devdogsuga/supabase": "workspace:*",
-    "@devdogsuga/telemetry": "^0.1.1",
+    "@devdogsuga/telemetry": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-accordion": "catalog:",
     "@radix-ui/react-avatar": "catalog:",
@@ -69,8 +69,8 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.57.1",
     "@cloudflare/workers-types": "^5.20260820.1",
-    "@devdogsuga/config": "^0.1.1",
-    "@devdogsuga/env": "^0.1.8",
+    "@devdogsuga/config": "workspace:*",
+    "@devdogsuga/env": "workspace:*",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@testing-library/user-event": "catalog:",

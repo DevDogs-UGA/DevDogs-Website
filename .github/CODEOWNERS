@@ -1,5 +1,16 @@
-* @DevDogsUGA/devops
+# One approval from the reviewers hierarchy is the ordinary merge gate.
+* @DevDogsUGA/reviewers
 
-# Only admins own the ownership policy itself. This must remain last because
-# the last matching CODEOWNERS pattern wins.
+# Workflow and repository-policy changes, the platform, the shared packages and
+# CLIs, and the database require DevOps review.
+/.github/** @DevDogsUGA/devops
+/apps/platform/** @DevDogsUGA/devops
+/packages/** @DevDogsUGA/devops
+/supabase/** @DevDogsUGA/devops
+/scripts/** @DevDogsUGA/devops
+/workers.json @DevDogsUGA/devops
+/patches/** @DevDogsUGA/devops
+
+# Only admins own the ownership policy itself. This must stay after the rules
+# above because the last matching CODEOWNERS pattern wins.
 /.github/CODEOWNERS @DevDogsUGA/admins

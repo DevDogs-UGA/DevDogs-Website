@@ -32,9 +32,9 @@
     "test:rls": "with-env vitest run --config vitest.rls.config.ts"
   },
   "devDependencies": {
-    "@devdogsuga/config": "^0.1.1",
-    "@devdogsuga/db": "^0.1.1",
-    "@devdogsuga/env": "^0.1.8",
+    "@devdogsuga/config": "workspace:*",
+    "@devdogsuga/db": "workspace:*",
+    "@devdogsuga/env": "workspace:*",
     "@supabase/supabase-js": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",

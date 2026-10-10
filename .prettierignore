@@ -37,3 +37,10 @@ apps/platform/src/server/db/schema/generated/
 apps/platform/cloudflare-env.d.ts
 # Covered by packages/email/.gitignore, which --ignore-path does not read.
 packages/email/src/generated/
+
+# --- From the former DevDogsUGA repo -----------------------------------------
+# Generated but tracked.
+**/src/supabase/drizzle/
+apps/schedule-builder/cloudflare-env.d.ts
+# apps/study-group-finder/.gitignore
+**/.dart_tool/

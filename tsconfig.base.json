@@ -1,8 +1,9 @@
 {
-  // Repo-wide base for Backstage-internal packages that extend it directly
-  // (packages/db, packages/env, packages/events, packages/telemetry). The
-  // actual compiler options live in packages/config/tsconfig/base.json —
-  // that file ships with the published @devdogsuga/config package and can't
+  // Repo-wide base for the packages and apps that extend it directly
+  // (packages/db, packages/env, packages/events, packages/telemetry,
+  // packages/supabase, supabase/, and the apps' cloudflare/ programs). The
+  // actual compiler options live in packages/config/tsconfig/base.json,
+  // which ships with the published @devdogsuga/config package and can't
   // reach back out to this one, so this repo treats it as the single source
   // of truth and just forwards to it, rather than keeping two copies in
   // sync by hand.

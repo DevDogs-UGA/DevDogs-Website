@@ -6,25 +6,24 @@
   // just its dependencies (https://docs.renovatebot.com/key-concepts/scoping/).
   // Managing anything else is a deliberate second change.
   extends: ["config:recommended"],
-  labels: ["dependencies", "backstage"],
+  labels: ["dependencies"],
   packageRules: [
     {
       matchPackageNames: ["*"],
       enabled: false,
     },
     {
-      description: "Every `@devdogsuga/*` package this repo consumes is published from the sibling Backstage repo (see pnpm-workspace.yaml's header comment and CUTOVER.md there). One publish there can touch several of these at once, so they land here as one PR, not one each — including the root `@devdogsuga/devtools` devDependency CI pins exactly, since a devtools release is exactly the kind of publish this exists to catch quickly.",
+      description: "Any `@devdogsuga/*` dependency still consumed from npm rather than the workspace (the club's own packages live in packages/ now and link with `workspace:*`). One publish can touch several of these at once, so they land as one PR, not one each.",
       matchPackageNames: ["/^@devdogsuga\\//"],
       enabled: true,
       groupName: "Backstage @devdogsuga packages",
       groupSlug: "devdogsuga-backstage",
       // No release-age gate: these are this org's own packages, built and
-      // tested in Backstage's CI before publish, so a delay only slows the fix.
+      // tested in this repo's CI before publish, so a delay only slows the fix.
       minimumReleaseAge: null,
-      // `bump` rewrites an exact pin to the new exact version (CI's
-      // `@devdogsuga/devtools` stays exact) and raises a `^` floor even for an
-      // in-range release, so every publish reaches this repo as a PR.
-      // `replace` would skip in-range releases entirely.
+      // `bump` rewrites an exact pin to the new exact version and raises a `^`
+      // floor even for an in-range release, so every publish reaches the
+      // consumer as a PR. `replace` would skip in-range releases entirely.
       rangeStrategy: "bump",
       // Merged by GitHub auto-merge once CI is green. The Renovate app is a
       // `pull_request` bypass actor on the `main` ruleset, which also skips
