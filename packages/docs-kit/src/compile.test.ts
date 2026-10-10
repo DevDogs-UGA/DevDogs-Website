@@ -12,7 +12,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { compileDocs } from "./compile.js";
+import { compileDocs, moduleExpression } from "./compile.js";
 import { DocsBuildError } from "./errors.js";
 
 let root: string;
@@ -410,5 +410,20 @@ describe("scheduled pages", () => {
     write("w/a/index.md", "---\nscheduled: 2026-10-05T18:00:00Z\n---\n");
     write("w/a/b/index.md", "---\nscheduled: 2026-10-01T00:00:00Z\n---\n");
     expect(() => compileDocs(root)).toThrow(/earlier than its folder w\/a/);
+  });
+});
+
+describe("moduleExpression", () => {
+  it("never emits the characters /* and evaluates back to the value", () => {
+    const value = {
+      text: "see packages/* and apps/*/src, not /* a comment */",
+      html: '<code>@devdogsuga/*</code> and "quotes" \\ back\nslash',
+    };
+    const source = moduleExpression(value);
+    expect(source).not.toContain("/*");
+    // `JSON.parse("<literal>")`: the literal is itself JSON, so two parses
+    // are the evaluation.
+    const literal = /^JSON\.parse\((.*)\)$/s.exec(source)![1]!;
+    expect(JSON.parse(JSON.parse(literal) as string)).toEqual(value);
   });
 });

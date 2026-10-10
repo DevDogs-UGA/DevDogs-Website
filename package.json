@@ -40,6 +40,8 @@
   },
   "devdogs": {
     "scriptExceptions": {
+      "root#devtools": "run the published contributor CLI (pnpm dlx, always the latest publish)",
+      "root#backstage": "run the published officer CLI (pnpm dlx, always the latest publish)",
       "root#build:slides": "builds the slides app only (CI builds it separately)",
       "slides#follow": "run a deck on a demo laptop",
       "slides#export:md": "export a deck to docs pages",
