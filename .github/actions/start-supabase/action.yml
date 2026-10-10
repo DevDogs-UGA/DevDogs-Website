@@ -1,11 +1,11 @@
 name: Start the local Supabase stack
 description: >-
-  Starts the stack from DevDogsUGA's supabase/ (applying every migration to a
+  Starts the stack from the repo's supabase/ (applying every migration to a
   fresh database), with the Docker images restored from and saved to the
-  Actions cache. Shared by the `database` and `types` jobs.
+  Actions cache. Shared by the `types` and `database` jobs.
 
-# Needs setup-workspace to have run (the CLI is one of devdogsuga's
-# dependencies, and `devdogsuga/` has to be on disk).
+# Needs setup-workspace to have run (the CLI is one of the root's
+# dependencies).
 #
 # `supabase start` pulls about a dozen images, all chosen by the CLI version
 # (and which services the config enables), so they are cached as one
@@ -18,25 +18,23 @@ runs:
       id: cli
       shell: bash
       run: |
-        version=$(pnpm --dir devdogsuga exec supabase --version | tail -n 1)
+        version=$(pnpm exec supabase --version | tail -n 1)
         echo "version=$version" >> "$GITHUB_OUTPUT"
     - name: Restore the Supabase images
       id: images
       uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: ~/.cache/supabase-images
-        key: supabase-images-${{ runner.os }}-${{ steps.cli.outputs.version }}-${{ hashFiles('devdogsuga/supabase/config.toml') }}
+        key: supabase-images-${{ runner.os }}-${{ steps.cli.outputs.version }}-${{ hashFiles('supabase/config.toml') }}
     - name: Load the cached images
       if: steps.images.outputs.cache-hit == 'true'
       shell: bash
       run: docker load --input ~/.cache/supabase-images/images.tar
     # config.toml enables OAuth providers with `env()` credentials that CI
-    # does not have; an unset one is a WARN, not an error. Run from
-    # devdogsuga/ because that is where `supabase/` lives, and the Supabase
-    # CLI is one of its dependencies.
+    # does not have; an unset one is a WARN, not an error.
     - name: Start the local Supabase stack
       shell: bash
-      run: pnpm --dir devdogsuga exec supabase start
+      run: pnpm exec supabase start
     - name: Save the Supabase images
       if: steps.images.outputs.cache-hit != 'true'
       shell: bash

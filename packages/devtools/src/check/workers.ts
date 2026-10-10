@@ -177,10 +177,8 @@ export function checkWorkers(
 
   const deployApp = join(root, ".github", "workflows", "deploy-app.yaml");
   if (!existsSync(deployApp)) {
-    // Backstage's deploy workflow is its own; only a repo that carries the
-    // reusable matrix has one to drift.
-    if (layout.kind === "backstage") return problems;
-    problems.push(".github/workflows/deploy-app.yaml does not exist.");
+    // `deploy.yaml` carries its own matrix; only a repo that still has the
+    // reusable `deploy-app.yaml` has one to drift.
     return problems;
   }
   const blocks = deployMatrixApps(readFileSync(deployApp, "utf8"));

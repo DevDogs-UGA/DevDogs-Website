@@ -46,8 +46,6 @@ export function issueBody(report: PatchReport): string {
     "",
     `Installed: \`${report.releasedIn}@${report.installed ?? "unknown"}\`. Patch file: \`patches/${report.file}\`.`,
     "",
-    "DevDogsUGA keeps the same patches until it stops building with them; remove them there too, or `check:toolchain` fails.",
-    "",
     "_Opened by the scheduled toolchain job (`scripts/patch-issues.ts`); it refreshes this text but never closes the issue._",
   ].join("\n");
 }

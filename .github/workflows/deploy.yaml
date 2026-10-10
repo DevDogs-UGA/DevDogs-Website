@@ -4,29 +4,26 @@ name: Deploy
 # production candidate. Production mutation is gated by the protected
 # `production` environment and deploys this commit's prebuilt artifacts.
 #
-# This is DevDogsUGA's deploy flow, moved here with the platform (TASK-478,
-# TASK-489). What is different from there:
+# One repository. This commit is the whole deploy: the platform, schedule-builder,
+# the migrations, seeds, avatars and docs all come from this checkout, and
+# `workers.json` lists the Workers. (Until the fold-back this flow lived in
+# Backstage and pinned DevDogsUGA by `devdogsuga.lock`.) What is particular here:
 #
-#   * Two repositories. This commit is deployed together with the DevDogsUGA
-#     commit in `devdogsuga.lock`: migrations, seeds, avatars, docs and
-#     schedule-builder come from that checkout (`devdogsuga/`), the platform
-#     and `workers.json` from this one. Every job that installs the workspace
-#     checks it out (setup-workspace does).
 #   * The CLI is built from this commit (`.github/actions/backstage-cli`), not
 #     fetched with `pnpm dlx`.
 #   * The artifacts come from the merge queue. ci.yaml's `merge_group` run
 #     builds both tiers (build-artifacts.yaml); `resolve` finds that run for
 #     this exact SHA and the deploy jobs download its artifacts. A push the
 #     queue never built (an admin bypass) is built here instead.
-#   * Release names. The platform's Sentry release is this commit's SHA;
-#     schedule-builder's is the DevDogsUGA commit it was built from.
+#   * Release names. Both Workers' Sentry release is this commit's SHA.
 #   * `production` opens with a self-approval gate (see approval-gate.mjs).
 #
-# ⚠️ PHASE GATE (TASK-489). Until TASK-491, production still deploys from
-# DevDogsUGA's frozen copy of this flow, and this one deploys STAGING only. Every
-# production job (and the production build) is off unless the repository
-# variable BACKSTAGE_DEPLOYS_PRODUCTION is exactly `true`. Flipping it is the
-# production cutover; see README, "Deploys".
+# PHASE GATE. Until the production cutover to this repository, production
+# still deploys from Backstage's copy of this flow and this one deploys STAGING
+# only. Every production job (and the production build) is off unless the
+# repository variable BACKSTAGE_DEPLOYS_PRODUCTION is exactly `true`; the
+# variable does not exist yet. Setting it is the production cutover (README,
+# "Deploys"), and is done at the Gate, not before.
 on:
   workflow_call:
   workflow_dispatch:
@@ -81,7 +78,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      lock_sha: ${{ steps.lock.outputs.sha }}
       tiers: ${{ steps.tiers.outputs.tiers }}
       merge_group_run: ${{ steps.queue.outputs.run }}
       # `true` when the tier has something to ship (deploy-needed.mjs); a tier
@@ -93,35 +89,16 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - name: Read devdogsuga.lock and its previous value
-        id: lock
+      - name: Summarize the deploy source
         env:
-          GH_TOKEN: ${{ github.token }}
           BEFORE: ${{ github.event.before }}
         run: |
-          set -euo pipefail
-          new=$(tr -d '[:space:]' < devdogsuga.lock)
-          old=
-          if [[ "$BEFORE" =~ ^[0-9a-f]{40}$ && ! "$BEFORE" =~ ^0+$ ]]; then
-            old=$(gh api -H 'Accept: application/vnd.github.raw' \
-              "repos/$GITHUB_REPOSITORY/contents/devdogsuga.lock?ref=$BEFORE" | tr -d '[:space:]' || true)
-          fi
-          echo "sha=$new" >> "$GITHUB_OUTPUT"
           {
             echo '### Deploy source'
             echo
-            echo "Backstage: \`$GITHUB_SHA\`"
+            echo "Commit: \`$GITHUB_SHA\`"
             if [ -n "$BEFORE" ] && [[ ! "$BEFORE" =~ ^0+$ ]]; then
               echo "Compare: https://github.com/$GITHUB_REPOSITORY/compare/$BEFORE...$GITHUB_SHA"
-            fi
-            echo
-            echo "DevDogsUGA: \`$new\`"
-            if [ -z "$old" ]; then
-              echo "Compare: unavailable (no previous \`devdogsuga.lock\`)"
-            elif [ "$old" = "$new" ]; then
-              echo "Compare: unchanged since the previous commit"
-            else
-              echo "Compare: https://github.com/DevDogsUGA/DevDogsUGA/compare/$old...$new"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
       # Production's artifacts are only built, and only required, once
@@ -212,8 +189,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-workspace
       - uses: ./.github/actions/backstage-cli
-      # Migrations, seeds and avatars are DevDogsUGA's, at the pinned commit
-      # (devdogsuga/supabase). --include-seed runs the seed files staging has
+      # Migrations, seeds and avatars come from supabase/. --include-seed runs the seed files staging has
       # not recorded yet; they are insert-only, so a rerun or an edited file
       # changes nothing there.
       - name: Apply staging migrations and new seeds
@@ -259,11 +235,9 @@ jobs:
           - app: platform
             dir: apps/platform
             release: ${{ github.sha }}
-          # schedule-builder's code is DevDogsUGA's, so its Sentry release is
-          # the DevDogsUGA commit it was built from (Q68).
           - app: schedule-builder
-            dir: devdogsuga/apps/schedule-builder
-            release: ${{ needs.resolve.outputs.lock_sha }}
+            dir: apps/schedule-builder
+            release: ${{ github.sha }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-workspace
@@ -287,7 +261,7 @@ jobs:
       # The ONLY step in this job that reads the `secrets` and `vars` contexts.
       # After it, the checkout looks like a devops laptop and every later step
       # is the command a person would run by hand. Writes .env.staging here
-      # and into devdogsuga/, where schedule-builder reads its own.
+      # at the repo root, where both apps read it.
       #
       # ⚠️ --no-env: this step CREATES the file tier resolution would insist
       # on reading, so routing it through tier resolution would fail on a
@@ -329,13 +303,13 @@ jobs:
           SENTRY_RELEASE: ${{ matrix.release }}
         run: backstage deploy ${{ matrix.app }} --tier staging --yes
       # The docs search index lives in the platform's database, written from
-      # the docs the artifact carries (devdogsuga/docs/dist). After the deploy
+      # the docs the artifact carries (docs/dist). After the deploy
       # rather than before: the index should not describe pages the previous
       # Worker cannot render yet. `populate:search` runs through `with-env`, so
-      # it reads devdogsuga/.env.staging for the database URL.
+      # it reads .env.staging for the database URL.
       - name: Index the docs for search
         if: matrix.app == 'platform'
-        run: pnpm --dir devdogsuga --filter @devdogsuga/docs run populate:search
+        run: pnpm --filter @devdogsuga/docs run populate:search
       # Reconciles meetings/workshops against @devdogsuga/events the moment
       # this deploy's code is live; it waits for the Worker that carries this
       # commit's SHA (the platform's SENTRY_RELEASE). Platform only: the
@@ -347,8 +321,8 @@ jobs:
         run: backstage deploy reconcile --tier staging --no-env --yes
       # Read-only smoke test of the Worker just deployed. The Sentry release it
       # looks for is read from GITHUB_SHA, which is this commit for the
-      # platform and the DevDogsUGA commit for schedule-builder, so it is set
-      # on the command rather than on the step (the runner owns GITHUB_*).
+      # platform and schedule-builder alike, so it is set on the command rather
+      # than on the step (the runner owns GITHUB_*).
       - name: Smoke test ${{ matrix.app }} (staging)
         env:
           SENTRY_PROJECT: ${{ matrix.app }}
@@ -404,10 +378,8 @@ jobs:
     env:
       DEPLOY_ENV: production
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      # The platform's release. schedule-builder's step overrides it with the
-      # DevDogsUGA commit.
+      # Both Workers' release.
       SENTRY_RELEASE: ${{ github.sha }}
-      LOCK_SHA: ${{ needs.resolve.outputs.lock_sha }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -481,11 +453,10 @@ jobs:
           PROJECT_REF: ${{ vars.PROJECT_REF }}
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run: backstage deploy avatars --no-env --yes
-      # `supabase/` and the CLI are DevDogsUGA's, and so is the env file this
-      # reads (write-env mirrored it into devdogsuga/).
+      # `supabase/` and the CLI are at the repo root, and so is the env file
+      # this reads (write-env wrote it there).
       - name: Apply Supabase configuration
         if: steps.freshness.outputs.fresh == 'true'
-        working-directory: devdogsuga
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: pnpm exec with-env -c 'supabase config push --project-ref $PROJECT_REF'
@@ -503,7 +474,7 @@ jobs:
         if: steps.freshness.outputs.fresh == 'true'
         run: |
           backstage deploy platform --tier production --yes
-          pnpm --dir devdogsuga --filter @devdogsuga/docs run populate:search
+          pnpm --filter @devdogsuga/docs run populate:search
       - name: Reconcile production configuration
         if: steps.freshness.outputs.fresh == 'true'
         env:
@@ -535,23 +506,17 @@ jobs:
           SENTRY_PROJECT: schedule-builder
         with:
           environment: production
-          release: ${{ needs.resolve.outputs.lock_sha }}
+          release: ${{ github.sha }}
           set_commits: skip
-          sourcemaps: devdogsuga/apps/schedule-builder/dist
+          sourcemaps: apps/schedule-builder/dist
       - name: Deploy and verify schedule-builder
         if: steps.freshness.outputs.fresh == 'true'
-        env:
-          SENTRY_RELEASE: ${{ needs.resolve.outputs.lock_sha }}
         run: backstage deploy schedule-builder --tier production --yes
-      # GITHUB_SHA set on the command: the smoke test looks for the Sentry
-      # release under it, and schedule-builder's release is the DevDogsUGA commit.
       - name: Smoke test schedule-builder
         if: steps.freshness.outputs.fresh == 'true'
         env:
           SENTRY_PROJECT: schedule-builder
-        run: >-
-          GITHUB_SHA="$LOCK_SHA" backstage deploy smoke --tier production --yes
-          --app schedule-builder --no-env
+        run: backstage deploy smoke --tier production --yes --app schedule-builder --no-env
       - name: Prune Sentry monitors for schedule-builder
         if: steps.freshness.outputs.fresh == 'true'
         env:

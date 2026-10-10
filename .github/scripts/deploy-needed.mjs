@@ -19,8 +19,8 @@
  *
  * ⚠️ The inert list is an ALLOWLIST of paths known not to reach a deployed
  * artifact. Anything not on it deploys, so a new directory deploys until
- * someone decides otherwise. `devdogsuga.lock` is not on it: moving the pin
- * changes schedule-builder, migrations, seeds and the docs.
+ * someone decides otherwise. schedule-builder, supabase/ (migrations, seeds,
+ * config) and docs/ are not on it: they all reach a tier.
  *
  * Usage: GH_TOKEN=... node .github/scripts/deploy-needed.mjs \
  *   --repo OWNER/REPO --sha SHA --tiers staging,production
@@ -45,11 +45,18 @@ const INERT_PREFIXES = [
   // The deploy's own scripts. Like the CLIs, they change how the next deploy
   // runs, not what it ships.
   ".github/scripts/",
+  ".github/ISSUE_TEMPLATE/",
+  ".vscode/",
+  // Flutter, built and distributed on its own.
+  "apps/study-group-finder/",
 ];
 const INERT_FILES = new Set([
   "CUTOVER.md",
+  "CONTRIBUTING.md",
   "LICENSE",
   "renovate.json",
+  "renovate.json5",
+  ".github/PULL_REQUEST_TEMPLATE.md",
   "patches/patches.json",
   ".github/workflows/publish.yaml",
   // Orchestration only: the artifacts come from build-artifacts.yaml and the
@@ -64,9 +71,9 @@ const INERT_PATTERNS = [
   /(^|\/)README\.md$/,
   // Tests never ship.
   /\.(test|db-test)\.(ts|tsx|mjs|js)$/,
-  // Repo maintenance scripts: publishing, the patch audit, toolchain drift,
-  // the script-name check. The deploy's own scripts live in .github/scripts.
-  /^scripts\/(publish-|patch-|toolchain-drift|check-scripts)/,
+  // Repo maintenance scripts: publishing, the patch audit, the script-name
+  // check. The deploy's own scripts live in .github/scripts.
+  /^scripts\/(publish-|patch-|check-scripts)/,
 ];
 
 /** @param {string} path */

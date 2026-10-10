@@ -312,13 +312,14 @@ test("isInert: docs, tests, slides and the CLIs ship nothing", () => {
   }
 });
 
-test("isInert: the platform, its packages, the pin and the deploy ship", () => {
+test("isInert: the platform, its packages, schedule-builder, supabase and the deploy ship", () => {
   for (const path of [
     "apps/platform/next.config.ts",
     "apps/platform/src/env.ts",
     "packages/events/src/data/meetings.json",
     "packages/email/src/TeamInvite.tsx",
-    "devdogsuga.lock",
+    "apps/schedule-builder/src/env.ts",
+    "supabase/config.toml",
     "workers.json",
     "pnpm-lock.yaml",
     ".github/workflows/build-artifacts.yaml",

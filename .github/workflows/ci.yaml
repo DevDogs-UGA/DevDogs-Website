@@ -7,37 +7,22 @@ name: CI
 # exactly that reason and is NOT run here.
 #
 # A push to `main` additionally hands the commit to the deploy workflow once
-# validation has passed (`deploy` below, TASK-489). That is the one place
-# credentials are in scope, behind the deploy workflow's protected
-# environments, and the reason a pull request's own copy of this file can
-# never reach one: on `pull_request`, GitHub runs the workflow definition FROM
-# THE PULL REQUEST, so nothing it can run holds a secret.
-#
-# INERT UNTIL A REMOTE EXISTS. This workflow is authored ahead of the GitHub
-# remote and the `@devdogsuga` npm org being claimed (see the parent plan,
-# Phase 0) — `pull_request`/`push` simply never fire with no remote to host
-# them. Once the remote exists this needs no further edits to start running;
-# review it now on the assumption that it does.
-#
-# Same reasoning as DevDogsUGA's ci.yaml for what's absent: on `pull_request`,
-# GitHub runs the workflow definition FROM THE PULL REQUEST, not from the
-# protected branch, so any credential in scope here is readable by whoever
-# opened the PR. Actions are pinned to full commit SHAs rather than tags for
-# the same reason DevDogsUGA's are — a tag is mutable.
+# validation has passed (`deploy` below). That is the one place credentials are
+# in scope, behind the deploy workflow's protected environments, and the reason
+# a pull request's own copy of this file can never reach one: on
+# `pull_request`, GitHub runs the workflow definition FROM THE PULL REQUEST,
+# not from the protected branch, so any credential in scope here would be
+# readable by whoever opened the PR. The only safe amount is none.
 #
 # `merge_group` is what the merge queue on `main` waits for: a queued PR is
-# merged only once `validate` passes on the exact commit the queue built
-# (TASK-478). It has to be here before the queue is turned on, or every
-# queued PR waits forever for a check that never starts. `publish` below
-# stays push-only.
+# merged only once `validate` passes on the exact commit the queue built. It
+# has to be here before the queue is turned on, or every queued PR waits
+# forever for a check that never starts. `publish` and `deploy` stay push-only.
 #
-# The platform (apps/platform, packages/email) is built here but runs against
-# DevDogsUGA: its database, docs and generated Supabase types stay there, at
-# the commit pinned in devdogsuga.lock. Every job that installs the workspace
-# therefore checks DevDogsUGA out at `devdogsuga/` first (setup-workspace does
-# it). `validate` covers the platform's lint/typecheck/test and its Cloudflare
-# types, `database` its build and database-backed tests, and `toolchain` keeps
-# the dependency pins and patches in step with DevDogsUGA's copies.
+# This is one repository: the platform (apps/platform, packages/email),
+# schedule-builder, the Flutter app, the database (supabase/), the docs, the
+# club's packages and CLIs. (It used to be two, DevDogsUGA and Backstage; the
+# fold-back merged them.)
 #
 # The `schedule` trigger exists only for `toolchain`'s upstream-patch audit
 # (daily); every other job skips it.
@@ -60,120 +45,144 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # The apps validate their whole env schema on import (@t3-oss/env), and CI has
+  # no .env. Correct here; NEVER set on a real deploy build, where the schema is
+  # exactly what should be enforced.
+  SKIP_ENV_VALIDATION: "true"
+
+# Actions are pinned to full commit SHAs rather than tags: a tag is mutable, and
+# moving one is how a compromised action reaches every consumer at once. The
+# trailing comment is what lets Renovate and Dependabot keep them current.
 jobs:
-  # DevDogsUGA's generated Supabase `Database` type, for the jobs that
-  # typecheck against it (`validate`, `database`).
+  # packages/supabase/src/database.types.ts is not committed: it is generated
+  # from the migrations (`@devdogsuga/supabase`'s `codegen`), which needs a
+  # running database. Only this job starts one for that purpose; it saves the
+  # file and its stamp to the Actions cache under a key derived from the
+  # migrations and the generator, and `validate` restores it instead of
+  # starting Docker itself. Most pushes change no migration, so most runs hit
+  # the cache (the default branch's entries are readable from every PR) and
+  # finish in seconds.
   #
-  # Newer DevDogsUGA commits stop committing `database.types.ts` and generate
-  # it from the migrations instead (`pnpm --filter @devdogsuga/supabase run
-  # codegen`, which needs a database). This job is the one place that does,
-  # and only when the migrations it is keyed on changed: a hit is a checkout
-  # and a cache restore, with no install and no stack. The other jobs restore
-  # the result; `validate` in particular has no database and must not wait for
-  # `database`, which is the slowest job here.
-  #
-  # A no-op while devdogsuga.lock points at a commit that still commits the
-  # file (the package has no `codegen` script): nothing is generated or saved.
+  # Credential-free for the same reason as `database`: the local stack's keys
+  # are the constants Supabase publishes.
   types:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: ./.github/actions/checkout-devdogsuga
-      - name: Does the pinned DevDogsUGA generate its types?
-        id: pin
-        run: |
-          if node -e 'process.exit(require("./devdogsuga/packages/supabase/package.json").scripts?.codegen ? 0 : 1)'; then
-            echo "generated=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "The pinned DevDogsUGA commits database.types.ts; nothing to generate."
-          fi
-      - id: types
-        if: steps.pin.outputs.generated == 'true'
-        uses: ./.github/actions/restore-supabase-types
-      # Everything below is the miss path: the migrations changed, so the
-      # types are regenerated from a stack built from them.
-      - if: steps.types.outputs.cache-hit != 'true' && steps.pin.outputs.generated == 'true'
-        uses: ./.github/actions/setup-workspace
+      - id: cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            packages/supabase/src/database.types.ts
+            packages/supabase/src/.database.types.hash
+          key: db-types-v1-${{ hashFiles('supabase/migrations/**', 'packages/supabase/scripts/codegen.ts') }}
+      - uses: ./.github/actions/setup-workspace
+        if: steps.cache.outputs.cache-hit != 'true'
+      # `with-env` refuses a missing .env; the local tier's values come from the
+      # stack itself, so the invented ones in ci.env are enough.
       - name: Seed the env file for wrapped checks
-        if: steps.types.outputs.cache-hit != 'true' && steps.pin.outputs.generated == 'true'
+        if: steps.cache.outputs.cache-hit != 'true'
         run: cp .github/ci.env .env
-      - if: steps.types.outputs.cache-hit != 'true' && steps.pin.outputs.generated == 'true'
-        uses: ./.github/actions/start-supabase
-      # DB_URL is handed over explicitly rather than left for `with-env` to
-      # find from the sibling's directory, which has no .env of its own.
-      - name: Generate the Supabase types
-        if: steps.types.outputs.cache-hit != 'true' && steps.pin.outputs.generated == 'true'
-        run: |
-          eval "$(pnpm --dir devdogsuga exec supabase status -o env | grep '^DB_URL=')"
-          export DB_URL
-          BACKSTAGE_SUPABASE_TYPES= node apps/platform/scripts/supabase-types.mjs
-          test -s devdogsuga/packages/supabase/src/database.types.ts
-      - name: Cache the Supabase types
-        if: steps.types.outputs.cache-hit != 'true' && steps.pin.outputs.generated == 'true'
+      - uses: ./.github/actions/start-supabase
+        if: steps.cache.outputs.cache-hit != 'true'
+      - name: Generate the Database types from the migrations
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @devdogsuga/supabase run codegen
+      - name: Save the generated types
+        if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
-          path: devdogsuga/packages/supabase/src/database.types.ts
-          key: ${{ steps.types.outputs.cache-primary-key }}
+          path: |
+            packages/supabase/src/database.types.ts
+            packages/supabase/src/.database.types.hash
+          key: db-types-v1-${{ hashFiles('supabase/migrations/**', 'packages/supabase/scripts/codegen.ts') }}
 
-  # Build + typecheck + test every package in the workspace.
+  # Build + lint + typecheck + test every package in the workspace.
   validate:
     needs: types
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # Full history: `check migrations` compares against the base ref,
+          # whether that is a PR's base branch, the merge queue's base commit
+          # or the previous commit on a push.
+          fetch-depth: 0
       - uses: ./.github/actions/setup-workspace
-      # The platform's typecheck and typed lint need DevDogsUGA's generated
-      # Supabase types; this job has no database to generate them from.
-      - uses: ./.github/actions/restore-supabase-types
+      # Typecheck, lint and test run `@devdogsuga/supabase`'s `codegen` first
+      # (their pre-scripts). With the stamp restored it finds the types current
+      # and never needs a database.
+      - name: Restore the generated Database types
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            packages/supabase/src/database.types.ts
+            packages/supabase/src/.database.types.hash
+          key: db-types-v1-${{ hashFiles('supabase/migrations/**', 'packages/supabase/scripts/codegen.ts') }}
+          fail-on-cache-miss: true
+      - id: base
+        uses: ./.github/actions/base-ref
       # Build before typecheck/test: packages import each other's `dist/`
       # (workspace:* deps), so an unbuilt sibling makes a downstream
       # typecheck or test fail on a missing module, not a real error.
-      # Everything but apps/slides, whose build reads the private workshop
-      # submodules; it builds in slides.yaml instead, so a slides problem
-      # never blocks a publish (publish.yaml waits on this workflow).
       #
-      # And apps/platform, whose build reads its whole environment (the
-      # `database` job builds it, with a real stack and the schema enforced).
+      # Not built here: apps/slides (its build reads the private workshop
+      # submodules; it builds in slides.yaml, so a slides problem never blocks
+      # a publish), the Next apps (platform, schedule-builder), whose build
+      # reads their whole environment (the `database` job builds them, with a
+      # real stack and the schema enforced), and the Flutter app.
       - name: Build (workspace)
-        run: pnpm -r --filter '!slides' --filter '!platform' --if-present run build
+        run: pnpm -r --filter '!slides' --filter '!platform' --filter '!schedule-builder' --filter '!study-group-finder' --if-present run build
       - name: Lint (workspace)
         run: pnpm lint
       - name: Format check
         run: pnpm format:check
       - name: Script names follow the vocabulary
         run: pnpm check:scripts
+      # `supabase/migrations/` is one flat directory; a new file timestamped
+      # before the newest one already on the base branch would apply out of
+      # the order its author tested it in the next time someone runs
+      # migrations from scratch. Pure git, no database.
+      #
       # The structural checks are `devtools check`, run from the build above
       # (this workspace does not depend on its own CLI, so there is no root
       # script for it). They read the checkout and nothing else: no env, no
       # credential.
-      #
-      # workers.json against the wrangler.jsonc files in both repos.
+      - name: Migrations are added in timestamp order
+        run: node packages/devtools/bin/devtools.mjs check migrations --base "${{ steps.base.outputs.ref }}"
+      # workers.json against the wrangler.jsonc files and the deploy matrix.
       - name: workers.json agrees with the Workers
         run: node packages/devtools/bin/devtools.mjs check workers
       # The same vocabulary as `check:scripts` above, plus its exceptions
       # being live (devdogs.scriptExceptions in the root package.json).
       - name: Package scripts use the shared vocabulary
         run: node packages/devtools/bin/devtools.mjs check scripts
-      # .env.example is GENERATED from the env manifests (the platform's here,
-      # the other apps' in the pinned devdogsuga/): regenerated in memory and
-      # byte-compared, as DevDogsUGA's CI does. Registry-only, so it needs no
-      # credential; `--no-env` keeps it off any env file the machine has.
+      # Every env variable is declared in a manifest, and the registry agrees.
+      - name: Every env variable is declared
+        run: node packages/devtools/bin/devtools.mjs check env
+      # .env.example is GENERATED from the env manifests: regenerated in
+      # memory and byte-compared. Registry-only, so it needs no credential;
+      # `--no-env` keeps it off any env file the machine has.
       - name: .env.example agrees with the env manifests
         run: node packages/devtools/bin/devtools.mjs env example --check --no-env
+      # `pnpm -r` never selects the workspace root, so the root's own scripts
+      # are never run here. `--if-present` skips the packages with no such
+      # script. Each package's `pretypecheck`/`prelint`/`pretest` runs its own
+      # `codegen` (the Database types, the docs module, the generated route
+      # types), so nothing is built first for the apps.
       - name: Typecheck (workspace)
-        run: pnpm -r --if-present run typecheck
+        run: pnpm -r --if-present --filter '!study-group-finder' run typecheck
       - name: Test (workspace)
-        run: pnpm -r --if-present run test
-      # devtools' contract tests (packages/devtools/test/contract) — a real
+        run: pnpm -r --if-present --filter '!study-group-finder' run test
+      # devtools' contract tests (packages/devtools/test/contract): a real
       # `pnpm pack` + `pnpm install` + subprocess run against a committed
-      # fixture repo, per the carve-out plan's §8 risk mitigation. Separate
-      # from `pnpm -r test` above because it is slow (a real install) and
-      # was deliberately kept out of the default `test` script for that
-      # reason; needs the build step above to have already produced
+      # fixture repo. Separate from `pnpm -r test` above because it is slow (a
+      # real install); needs the build step above to have produced
       # devtools'/telemetry's/env's `dist/`.
       - name: devtools contract tests
         run: pnpm --filter @devdogsuga/devtools run test:contract
@@ -184,74 +193,74 @@ jobs:
       - name: backstage contract tests
         run: pnpm --filter @devdogsuga/backstage run test:contract
       # `check:events` is its own script, not `test`, because it exercises the CLI
-      # a config author actually runs (`pnpm --filter @devdogsuga/events
-      # check:events`), not just the package's own vitest suite. Merge-blocking
-      # here, matching how it gates merges in the product repo's ci.yaml.
+      # a config author actually runs, not just the package's own vitest suite.
       - name: Events config passes its publishability checks
-        run: pnpm --filter @devdogsuga/events check:events
-      # The platform's lint, typecheck and tests (and packages/email's) ran
-      # above with the rest of the workspace. Their `pre*` hooks run the
-      # platform's `codegen` (email templates, the docs module compiled from
-      # devdogsuga/docs, the generated route types), so nothing is built
-      # first. This one compares cloudflare-env.d.ts to what `wrangler types`
-      # would write for the platform's wrangler.jsonc: a binding added to the
-      # config and not the types typechecks everywhere until a Worker reads it.
+        run: pnpm --filter @devdogsuga/events run check:events
+      # Compares each Worker's cloudflare-env.d.ts to what `wrangler types`
+      # would write for its wrangler.jsonc: a binding added to the config and
+      # not the types typechecks everywhere until a Worker reads it.
       - name: Cloudflare binding types match the Worker configuration
-        run: pnpm --filter platform run types:cf:check
+        run: |
+          pnpm --filter platform run types:cf:check
+          pnpm --filter schedule-builder run types:cf:check
 
-  # The platform against a real Postgres: its query tests and its production
-  # build with the env schema enforced.
+  # Everything that needs a real Postgres: the RLS suite, both apps' query
+  # tests, and both production builds with the env schema enforced.
   #
-  # Credential-free like the rest of this file: the local stack's keys are the
-  # well-known constants Supabase publishes in its own documentation, and
-  # .github/ci.env holds only invented placeholders. Nothing here can reach a
-  # real project.
+  # Credential-free like the rest of this file, and not by exception: the local
+  # stack's keys ARE the well-known constants Supabase publishes in its own
+  # documentation, and .github/ci.env holds only invented placeholders. Nothing
+  # here can reach a real project.
   #
-  # The stack starts from DevDogsUGA's `supabase/` at the pinned commit, so
-  # this is also the check that the platform still works with the migrations it
-  # is pinned to. Starting it applies every migration to a fresh database,
-  # which fails if one does not apply. The migrations' own checks (RLS tests,
-  # the generated Database types, timestamp order) stay in DevDogsUGA's CI.
-  # So `devtools check migrations` is not a step here: it diffs a ref of the
-  # sibling checkout, which in CI holds only the pinned commit (there is no
-  # origin/main to compare against), and DevDogsUGA's own CI already runs it
-  # against its main before the pin can point at the commit.
-  #
-  # Unconditional rather than path-filtered, for the reason DevDogsUGA's was:
-  # a security-relevant check that skips itself on a heuristic is how a job
-  # ends up green without ever having run.
+  # Unconditional rather than path-filtered, deliberately. Migrations and RLS
+  # are the highest-consequence things in this repository, the whole job is a
+  # few minutes, and a security check that skips itself on a heuristic is
+  # exactly the failure mode this repository has already been bitten by: a job
+  # guarded on `secrets.X != ''` that passed green for months without ever
+  # running, because the secret it needed was never set.
   database:
     needs: types
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-workspace
-      # `test:db` and `build` run the platform's `codegen`, which would
-      # otherwise regenerate the types against this job's own stack: the
-      # `types` job already did, once, for every job.
-      - uses: ./.github/actions/restore-supabase-types
-      # The platform consumes its workspace dependencies (env, db, events,
-      # newsletter, ...) from `dist/`, and `with-env` is one of them. Only the
-      # platform itself is left out: it builds below, with its environment.
-      - name: Build the platform's workspace dependencies
-        run: pnpm --filter 'platform^...' --if-present run build
+      # `test:db` and `build` run each app's `codegen`, which would otherwise
+      # regenerate the types against this job's own stack: the `types` job
+      # already did, once, for every job.
+      - name: Restore the generated Database types
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            packages/supabase/src/database.types.ts
+            packages/supabase/src/.database.types.hash
+          key: db-types-v1-${{ hashFiles('supabase/migrations/**', 'packages/supabase/scripts/codegen.ts') }}
+          fail-on-cache-miss: true
+      # The apps consume their workspace dependencies (env, db, events,
+      # newsletter, ...) from `dist/`, and `with-env` is one of them. The apps
+      # themselves are left out: they build below, with their environment.
+      - name: Build the apps' workspace dependencies
+        run: pnpm --filter 'platform^...' --filter 'schedule-builder^...' --if-present run build
       # The `with-env` wrapper REFUSES a missing .env by design; the step after
       # the stack starts replaces this one and appends the generated values.
       - name: Seed the env file for wrapped checks
         run: cp .github/ci.env .env
-      # Images cached and the stack started by the shared action; it applies
-      # every migration to a fresh database, which fails if one does not apply.
+      # Images cached and the stack started by the shared action. The runner's
+      # volume is always empty, so this applies every migration to a fresh
+      # database and fails if any of them does not apply: the "migrations apply
+      # cleanly from scratch" check, with no separate reset needed.
       - uses: ./.github/actions/start-supabase
-      # `with-env` reads .env.generated from this repo's root; the CLI writes
-      # it from the stack that is running.
+      # `with-env` reads .env.generated from the repo root; the CLI writes it
+      # from the stack that is running.
       - name: Write .env.generated from the running stack
-        run: pnpm --dir devdogsuga exec supabase status -o env > .env.generated
+        run: pnpm exec supabase status -o env > .env.generated
       # The NEXT_PUBLIC pair is derived rather than hardcoded: it has to match
       # the running stack, and the CLI's local keys are not guaranteed stable
-      # across versions.
-      - name: Synthetic environment for the tests and the build
+      # across versions. Written before the test suites, not just before the
+      # builds: schedule-builder's query hooks create the browser Supabase
+      # client at import, so its db-tests need the pair too.
+      - name: Synthetic environment for the suites and the builds
         run: |
           cp .github/ci.env .env
           set -a; . ./.env.generated; set +a
@@ -259,40 +268,100 @@ jobs:
             echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
             echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
           } >> .env
-      # Including the privilege-surface guards in resolveCredential.db-test.ts,
-      # which assert the shape of the GRANTS: a function reachable by every
-      # role in the cluster typechecks perfectly. `test:db` runs the platform's
-      # `codegen` first (`pretest:db`).
-      - name: Query validity + privilege surface
+      # All app schemas share one PostgREST endpoint and one anon key, so RLS,
+      # not the schema boundary, is what isolates one app's data from
+      # another's. This is the only thing that checks it.
+      - name: Row-Level Security
+        run: pnpm --filter @devdogsuga/supabase run test:rls
+      # Including the privilege-surface guards (resolveCredential.db-test.ts and
+      # the platform's): they assert the shape of the GRANTS, which nothing
+      # else can see: a function reachable by every role in the cluster
+      # typechecks perfectly. `test:db` runs the app's `codegen` first.
+      - name: Query validity + privilege surface (platform)
         run: pnpm --filter platform run test:db
+      - name: Query validity + privilege surface (schedule-builder)
+        run: pnpm --filter schedule-builder run test:db
       # Validation ENFORCED, unlike the validate job: a newly added required
       # variable with no default fails here rather than at deploy time.
       - name: Build the platform, with the env schema enforced
+        env:
+          SKIP_ENV_VALIDATION: ""
         run: pnpm --filter platform run build
+      - name: Build schedule-builder, with the env schema enforced
+        env:
+          SKIP_ENV_VALIDATION: ""
+        run: pnpm --filter schedule-builder run build
 
-  # The toolchain is shared with DevDogsUGA, which still builds
-  # schedule-builder and runs the database tooling with the same dependency
-  # ranges and the same patches. Drift between the two is a hard failure; the
-  # upstream-patch audit only warns.
-  #
-  # Needs no install: the scripts have no dependencies and Node (from .nvmrc)
-  # strips their types itself, so they run with `node` directly (a `pnpm run`
-  # here would first try to install the workspace). Only DevDogsUGA's checkout.
+  # Flutter app: only when it (or a shared dependency) is affected.
+  flutter:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+      # Does study-group-finder, or anything it depends on, appear in the
+      # changed set since the merge base? `study-group-finder...` is pnpm's
+      # "package and its dependencies" selector, which lists exactly the
+      # directories whose content decides this; a plain `git diff --quiet`
+      # over them since the base ref is then the answer.
+      - id: base
+        uses: ./.github/actions/base-ref
+      - name: Is study-group-finder affected?
+        id: affected
+        run: |
+          BASE="${{ steps.base.outputs.ref }}"
+          PATHS=$(pnpm -r --filter 'study-group-finder...' list --depth -1 --json 2>/dev/null \
+            | node -e '
+                let d = "";
+                process.stdin.on("data", (c) => (d += c));
+                process.stdin.on("end", () => {
+                  for (const p of JSON.parse(d)) console.log(p.path);
+                });
+              ')
+          if git diff --quiet "$BASE"...HEAD -- $PATHS; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      # Not subosito/flutter-action: it calls `actions/cache@v5` internally,
+      # by tag, and the org's Actions policy requires every action pinned to
+      # a full commit SHA. GitHub resolves a composite action's inner `uses:`
+      # when the job is set up, whatever its `cache:` input, so the job
+      # failed before running a step. A shallow clone of the stable branch
+      # is the SDK the action installed, uncached.
+      - name: Install Flutter (stable)
+        if: steps.affected.outputs.run == 'true'
+        run: |
+          git clone --depth 1 --branch stable https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Analyze + test
+        if: steps.affected.outputs.run == 'true'
+        working-directory: apps/study-group-finder
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+
+  # The patches in patches/ and the scripts that audit them. No install: the
+  # scripts have no dependencies and Node (from .nvmrc) strips their types
+  # itself, so they run with `node` directly (a `pnpm run` here would first try
+  # to install the workspace).
   toolchain:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: ./.github/actions/checkout-devdogsuga
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: .nvmrc
-      - name: Catalog, overrides, patchedDependencies and patches/ match DevDogsUGA's
-        run: node scripts/toolchain-drift.ts
       - name: Toolchain script tests
-        run: node --test scripts/toolchain-drift.test.ts scripts/patch-audit.test.ts scripts/patch-issues.test.ts
-      # The deploy workflow's two scripts (the production self-approval gate
-      # and the merge-queue run lookup); no dependencies either.
+        run: node --test scripts/patch-audit.test.ts scripts/patch-issues.test.ts
+      # The deploy workflow's scripts (the production self-approval gate, the
+      # merge-queue run lookup, the deploy-needed classifier); no dependencies
+      # either.
       - name: Deploy script tests
         run: node --test .github/scripts/deploy-scripts.test.mjs
       # patches/patches.json against pnpm-workspace.yaml's patchedDependencies
@@ -346,7 +415,7 @@ jobs:
   build:
     needs: validate
     # Same staging gate as `deploy` below: nothing reads these artifacts
-    # before the cutover, and `staging-build` has no variables until then.
+    # until this repository deploys.
     if: github.event_name == 'merge_group' && vars.BACKSTAGE_DEPLOYS_STAGING == 'true'
     permissions:
       contents: read
@@ -355,22 +424,29 @@ jobs:
       # Production is built only once it deploys from here (see deploy.yaml).
       tiers: ${{ vars.BACKSTAGE_DEPLOYS_PRODUCTION == 'true' && '["staging","production"]' || '["staging"]' }}
 
-  # A main commit becomes a staging (and, once Backstage deploys production, a
-  # production) candidate only after the required jobs pass. A reusable
-  # workflow keeps the credential boundary: pull requests never call it, and
-  # only this job receives the Actions write permission needed to supersede
-  # older waiting candidates and the read of pull requests the production
-  # approval gate needs.
+  # A main commit becomes a staging (and, once this repository deploys
+  # production, a production) candidate only after the required jobs pass. A
+  # reusable workflow keeps the credential boundary: pull requests never call
+  # it, and only this job receives the Actions write permission needed to
+  # supersede older waiting candidates and the read of pull requests the
+  # production approval gate needs.
   #
-  # Off until the staging cutover (TASK-489): DevDogsUGA still deploys staging
-  # from its frozen copy, and both deploying would race on the same Workers and
-  # database. Set the repository variable BACKSTAGE_DEPLOYS_STAGING=true at the
-  # moment DevDogsUGA's staging jobs are removed.
+  # Staging deploys are off until the repository variable
+  # BACKSTAGE_DEPLOYS_STAGING is `true`; production deploys additionally need
+  # BACKSTAGE_DEPLOYS_PRODUCTION (deploy.yaml). Production still deploys from
+  # Backstage until the Gate, and both deploying would race on the same
+  # Workers and database, so neither variable is a default.
   deploy:
-    needs: [validate, database, toolchain]
+    needs: [validate, database, flutter, toolchain]
+    # `flutter` is skipped when nothing it depends on changed.
     if: >-
-      github.event_name == 'push' && github.ref == 'refs/heads/main'
+      !cancelled()
+      && github.event_name == 'push' && github.ref == 'refs/heads/main'
       && vars.BACKSTAGE_DEPLOYS_STAGING == 'true'
+      && needs.validate.result == 'success'
+      && needs.database.result == 'success'
+      && needs.toolchain.result == 'success'
+      && (needs.flutter.result == 'success' || needs.flutter.result == 'skipped')
     permissions:
       contents: read
       actions: write

@@ -108,10 +108,9 @@ export function checkMigrationOrder(
     git(root, ["rev-parse", "--verify", "--quiet", `${baseRef}^{commit}`]);
   } catch {
     throw new MigrationBaseError(
-      `${baseRef} is not a commit in ${root}. Migrations live in DevDogsUGA, ` +
-        "so the base is a ref of that checkout (a Backstage CI checkout has " +
-        "only the pinned commit): pass --base <ref>, e.g. the previous " +
-        "devdogsuga.lock SHA.",
+      `${baseRef} is not a commit in ${root}. The base is a ref of this ` +
+        "checkout (a shallow CI checkout may lack it): pass --base <ref>, " +
+        "e.g. the previous commit on main.",
     );
   }
   const baseFiles = basenames(
