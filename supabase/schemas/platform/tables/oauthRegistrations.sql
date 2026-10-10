@@ -1,0 +1,41 @@
+CREATE TABLE "platform"."oauthRegistrations" (
+  "clientId" uuid NOT NULL,
+  "userId"   uuid NOT NULL,
+  "label"    text NOT NULL DEFAULT 'Default Client'::text,
+  CONSTRAINT "oauthRegistrations_clientId_oauth_clients_id_fkey" FOREIGN KEY ("clientId") REFERENCES auth.oauth_clients(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT "oauthRegistrations_pkey" PRIMARY KEY ("clientId"),
+  CONSTRAINT "oauthRegistrations_userId_users_id_fkey" FOREIGN KEY ("userId") REFERENCES auth.users(id) ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+ALTER TABLE "platform"."oauthRegistrations"
+  ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "platform"."oauthRegistrations"
+  ADD COLUMN "type" platform."oauthRegistrationType" NOT NULL DEFAULT 'development'::platform."oauthRegistrationType";
+
+CREATE POLICY "crud_public_policy_delete" ON "platform"."oauthRegistrations"
+  AS RESTRICTIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (false);
+
+CREATE POLICY "crud_public_policy_insert" ON "platform"."oauthRegistrations"
+  AS RESTRICTIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (false);
+
+CREATE POLICY "crud_public_policy_select" ON "platform"."oauthRegistrations"
+  AS RESTRICTIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (false);
+
+CREATE POLICY "crud_public_policy_update" ON "platform"."oauthRegistrations"
+  AS RESTRICTIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (false)
+  WITH CHECK (false);
+
+GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON TABLE "platform"."oauthRegistrations" TO "anon", "authenticated", "postgres", "service_role";

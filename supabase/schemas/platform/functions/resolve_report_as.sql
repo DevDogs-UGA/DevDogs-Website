@@ -1,0 +1,91 @@
+CREATE OR REPLACE FUNCTION platform.resolve_report_as (
+  actor          uuid,
+  report_id      uuid,
+  subject_action platform."subjectAction",
+  filer_action   platform."filerAction",
+  content_action platform."contentAction",
+  moderator_note text                     DEFAULT NULL::text,
+  apply_globally boolean                  DEFAULT false
+)
+  RETURNS jsonb
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path TO ''
+  AS $function$
+declare
+  report     record;
+  app_slug   text;
+  resolution uuid;
+begin
+  if actor is null then
+    raise exception 'resolve_report() requires a moderator';
+  end if;
+  if not "platform".has_permission(actor, 'canModerate') then
+    raise exception 'resolve_report() requires the canModerate permission';
+  end if;
+
+  select r.*, a."slug" as slug into report
+  from "platform"."reports" r
+  join "platform"."apps" a on a."id" = r."appId"
+  where r."id" = report_id;
+
+  if not found then
+    raise exception 'Report % does not exist', report_id;
+  end if;
+  if report."status" <> 'open' then
+    raise exception 'Report % has already been decided', report_id;
+  end if;
+  app_slug := report.slug;
+
+  update "platform"."reports"
+  set "status" = 'resolved', "resolvedAt" = now()
+  where "id" = report_id;
+
+  insert into "platform"."reportResolutions" (
+    "reportId", "moderatorUserId", "subjectAction", "filerAction",
+    "contentAction", "appliedGlobally", "moderatorNote"
+  ) values (
+    report_id, actor, subject_action, filer_action,
+    content_action, coalesce(apply_globally, false), moderator_note
+  ) returning "id" into resolution;
+
+  -- Inside the same transaction as the decision, and raises rather than
+  -- no-oping, so a content action that cannot be applied aborts the whole
+  -- resolution instead of recording an outcome that silently never landed.
+  perform "platform".apply_content_action(
+    app_slug, report."contentType", report."contentRef", content_action, resolution
+  );
+
+  if coalesce(apply_globally, false) then
+    if subject_action in ('suspend', 'ban') then
+      insert into "platform"."userSuspensions" ("userId", "service", "suspendedBy")
+      values (report."reportedUserId", 'global', actor)
+      on conflict ("userId", "service") do update
+        set "suspendedBy" = actor, "suspendedAt" = now();
+    end if;
+
+    if filer_action = 'suspend' then
+      insert into "platform"."userSuspensions" ("userId", "service", "suspendedBy")
+      values (report."reporterUserId", 'global', actor)
+      on conflict ("userId", "service") do update
+        set "suspendedBy" = actor, "suspendedAt" = now();
+    end if;
+  end if;
+
+  return jsonb_build_object(
+    'resolutionId', resolution,
+    -- Non-null only when Supabase's native ban still has to be applied by a
+    -- caller with admin credentials.
+    'bannedUserId', case
+      when coalesce(apply_globally, false) and subject_action = 'ban'
+      then report."reportedUserId"
+    end
+  );
+end;
+$function$;
+
+GRANT EXECUTE
+  ON FUNCTION "platform"."resolve_report_as"(uuid, uuid, platform."subjectAction", platform."filerAction", platform."contentAction", text, boolean)
+  TO "postgres", "service_role";
+
+REVOKE ALL ON FUNCTION "platform"."resolve_report_as"(uuid, uuid, platform."subjectAction", platform."filerAction", platform."contentAction", text, boolean) FROM PUBLIC;

@@ -162,3 +162,9 @@ secret = "env(LINKEDIN_CLIENT_SECRET)"
 
 [analytics]
 enabled = false
+
+# The declarative schema tree (supabase/schemas/) is read and written by the
+# bundled pg-delta engine: `supabase db schema declarative generate|sync`.
+# supabase/migrations/ is the baseline it diffs against.
+[experimental.pgdelta]
+enabled = true
