@@ -49,11 +49,9 @@ import {
 import { errorMessage, explain } from "@devdogsuga/cli-core/ui";
 import { ownVersion } from "@devdogsuga/cli-core/version";
 import { catalog } from "./catalog.js";
-import { handleCf } from "./cf/commands.js";
 import { handleCheck } from "./check/commands.js";
 import { handleCompletions } from "./completions/commands.js";
 import { handleDoctor } from "./doctor/commands.js";
-import { handleEmails } from "./emails/commands.js";
 import { handleEnv } from "./env/commands.js";
 import { handleJobs } from "./jobs/commands.js";
 import { handleRoles } from "./roles/commands.js";
@@ -92,14 +90,12 @@ const CONTRIBUTOR_HANDLERS: Record<string, CommandHandler> = {
   script: handleScript,
   jobs: handleJobs,
   env: handleEnv,
-  db: handleDb,
   doctor: handleDoctor,
   "restart-stack": handleRestartStack,
   "new-migration": handleNewMigration,
   "apply-migrations": handleApplyMigrations,
   "push-config": handlePushConfig,
   roles: handleRoles,
-  "grant-root": handleGrantRoot,
 };
 
 /**

@@ -236,11 +236,6 @@ describe("launchWith", () => {
     expect(enterEnvironment).not.toHaveBeenCalled();
   });
 
-  it("lets an alias skip that refusal", async () => {
-    await launchWith(["deploy", "platform"], { dispatch, lenientTier: true });
-    expect(dispatch).toHaveBeenCalled();
-  });
-
   it("is fatal when a named hosted tier has no env file", async () => {
     enterEnvironment.mockRejectedValueOnce(
       new MissingEnvFileError("no .env.production"),

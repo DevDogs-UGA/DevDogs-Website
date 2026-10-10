@@ -34,6 +34,20 @@ app's `server/config/reconcile.ts` and, as of the vinext-era redesign,
 `packages/devtools` too — both import the published `@devdogsuga/events`
 package.
 
+Since then two CLIs and a headers package joined them: `devtools`,
+`backstage` (new, TASK-399) and `headers`. `cli-core` is the private shared core
+both CLIs inline with `tsdown`; `scripts/publish-changed-packages.mjs` skips it
+because it is `private`, and `scripts/check-bundle-imports.mjs` (run by both
+CLIs' `build`) fails the build if either bundle still imports it or any other
+undeclared package. `backstage` has never been on npm, so its first publish is
+done by hand (then configure its Trusted Publisher like the others); the
+script would pick it up on a run and publish it at `0.1.0`.
+
+The `devtools-ci` and `devtools-ci-bare` bins, the `db`/`cf`/`gen`/`emails`/
+`grant-root` aliases and the `./ci-alias` source entry are removed here: the
+DevDogsUGA cutover branch (TASK-403) stops calling all of them, so publish this
+only together with that push.
+
 ## The local-pack bridge (retired)
 
 `pnpm pack:local` and `scripts/pack-local.mjs`, which packed every package into
@@ -49,7 +63,7 @@ are done.
 
 - [ ] Claim the `@devdogsuga` org on npmjs.com.
 - [ ] Create the GitHub remote for `Backstage` and push `main`.
-- [ ] First publish of each of the 8 packages. Trusted Publishing is configured
+- [ ] First publish of each of the 8 packages, and of `backstage` (the others are already on npm). Trusted Publishing is configured
       _on an existing package_, so it cannot mint the first version — either do
       one manual `npm publish` per package from a maintainer's machine with a
       real token, or use npm's "pending trusted publisher" flow if it is

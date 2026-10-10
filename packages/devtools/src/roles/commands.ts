@@ -1,5 +1,5 @@
 /**
- * `roles list|grant|revoke`, and the deprecated `grant-root` alias.
+ * `roles list|grant|revoke`.
  *
  * Runs on whatever tier the session resolves to. The launcher's hosted-tier
  * gate has already asked about staging and production before a handler runs,
@@ -8,7 +8,7 @@
  * names the current holder and says it is being taken away.
  */
 import { confirm, log, select } from "@clack/prompts";
-import { flagValue, positionals } from "@devdogsuga/cli-core/args";
+import { positionals } from "@devdogsuga/cli-core/args";
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { resolveInstance, type Instance } from "@devdogsuga/cli-core/instance";
 import { hasYes, isNonInteractive } from "@devdogsuga/cli-core/mode";
@@ -16,7 +16,7 @@ import { bail, explain, explainError, unwrap } from "@devdogsuga/cli-core/ui";
 import {
   findAccount,
   findRole,
-  managedByDiscord,
+  syncedWithDiscord,
   planGrant,
   planRevoke,
   unassignable,
@@ -61,7 +61,7 @@ async function runList(instance: Instance, rest: string[]): Promise<void> {
     id: role.id,
     title: role.title,
     rank: role.rank,
-    managedByDiscord: managedByDiscord(role),
+    syncedWithDiscord: syncedWithDiscord(role),
     // Member is implicit: nothing is stored for it.
     everyone: role.roleType !== "custom",
     holders: holdersOf(state, role).map((holder) => holder.email),
@@ -72,7 +72,7 @@ async function runList(instance: Instance, rest: string[]): Promise<void> {
     return;
   }
   for (const row of rows) {
-    const note = row.managedByDiscord ? " (managed by Discord)" : "";
+    const note = row.syncedWithDiscord ? " (synced with Discord)" : "";
     const who = row.everyone ? "everyone" : row.holders.join(", ") || "nobody";
     process.stdout.write(`${row.title}${note}: ${who}\n`);
   }
@@ -284,18 +284,5 @@ export const handleRoles: CommandHandler = async (rest) => {
     );
     process.exitCode = 1;
   }
-  return process.exitCode ? null : DONE;
-};
-
-/** `grant-root [--user <email>]` is `roles grant <email> President`. */
-export const handleGrantRoot: CommandHandler = async (rest) => {
-  const email = flagValue(rest, "--user");
-  process.stderr.write(
-    "devtools: `grant-root` is now `roles grant <email> President`.\n",
-  );
-  const yes = hasYes(rest);
-  await withInstance(rest, (instance) =>
-    grant(instance, { email, role: "President", yes }),
-  );
   return process.exitCode ? null : DONE;
 };

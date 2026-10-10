@@ -9,11 +9,9 @@
  * entered.
  */
 import { createCatalog, type CommandGroup } from "@devdogsuga/cli-core/catalog";
-import { cfCommand } from "./cf/catalog.js";
 import { completionsCommand } from "./completions/catalog.js";
 import { checkCommand } from "./check/catalog.js";
 import { doctorCommand } from "./doctor/catalog.js";
-import { emailsCommand } from "./emails/catalog.js";
 import { envCommand } from "./env/catalog.js";
 import { jobsCommand } from "./jobs/catalog.js";
 import { rolesCommand } from "./roles/catalog.js";

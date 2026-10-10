@@ -8,8 +8,7 @@
  * runtime. That is what stops a new option reaching one front end and not the
  * other.
  *
- * The command tree is inert data that the launcher (and the deprecated
- * `devtools-ci` aliases bundled into devtools) read without running anything,
+ * The command tree is inert data that the launcher reads without running anything,
  * so this file imports the schema's TYPE only. The lists it prints (themes,
  * presets, formats) are spelled out here, and `options.test.ts` checks each
  * against the schema's own constants.

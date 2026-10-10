@@ -18,7 +18,6 @@
     "backstage": "./bin/backstage.mjs"
   },
   "exports": {
-    "./ci-alias": "./src/ci-alias.ts",
     "./package.json": "./package.json"
   },
   "files": [

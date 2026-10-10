@@ -113,7 +113,6 @@ describe("--dry-run", () => {
       ["apply-migrations"],
       ["restart-stack"],
       ["run", "build"],
-      ["emails"],
       ["roles", "list"],
     ]) {
       expect(dryRunKind(catalog, path), path.join(" ")).toBeDefined();
@@ -128,10 +127,6 @@ describe("--dry-run", () => {
       ["jobs", "serve"],
       ["env", "pull"],
       ["env", "example"],
-      ["db", "start"],
-      ["cf", "preview"],
-      ["gen", "campus-map"],
-      ["grant-root"],
       ["roles", "grant"],
       ["roles", "revoke"],
     ]) {

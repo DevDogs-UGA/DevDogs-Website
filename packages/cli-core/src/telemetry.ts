@@ -163,7 +163,7 @@ export async function captureDevtoolsError(err: unknown): Promise<void> {
 
 /**
  * Reports an error a command caught and explained to the reader itself
- * (`explainError` in `ui.ts`, `devtools-ci deploy`'s catch), then carried on
+ * (`explainError` in `ui.ts`, `backstage deploy`'s catch), then carried on
  * to a normal exit. Not flushed: the SDK's in-flight request keeps the event
  * loop alive until it lands, so a natural exit waits for it on its own. A
  * path that ends in `process.exit` instead must use `captureDevtoolsError`.

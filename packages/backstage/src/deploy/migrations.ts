@@ -1,5 +1,5 @@
 /**
- * `pnpm devtools-ci deploy plan` and `deploy migrate`.
+ * `backstage deploy plan` and `deploy migrate`.
  *
  * The two halves of a production schema change, behind the same tested seam as
  * the rest of the deploy group. They replace the raw `supabase db push` shell

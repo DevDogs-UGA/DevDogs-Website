@@ -574,7 +574,7 @@ function ensureRelease(pkg, version) {
       tag,
       "--notes",
       releaseNotes(pkg, version),
-      // Nine packages share one repo; "Latest" on whichever published last
+      // Several packages share one repo; "Latest" on whichever published last
       // would mean nothing.
       "--latest=false",
     ],
@@ -584,6 +584,11 @@ function ensureRelease(pkg, version) {
 }
 
 async function main() {
+  // `private: true` is what keeps `@devdogsuga/cli-core` off npm: the CLIs
+  // inline it with tsdown, so it is never published and never versioned here.
+  // `@devdogsuga/backstage` is public, so a first run finds it unpublished and
+  // publishes it at its committed 0.1.0 (the first publish is done by hand
+  // to set up Trusted Publishing; later runs patch-bump it like the rest).
   const pkgs = discoverPackages()
     .map((dir) => readPackageJson(dir))
     .filter(

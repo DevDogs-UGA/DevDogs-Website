@@ -109,15 +109,6 @@ export function requireTier(rest: readonly string[]): Tier {
   return tier;
 }
 
-export interface AppDeployOptions {
-  /**
-   * A secrets file somebody else already wrote (`DEPLOY_SECRETS_FILE`, set by
-   * the old workflow's `secrets-file` step), uploaded as it is instead of
-   * building one. Only the deprecated `devtools-ci` alias passes it.
-   */
-  secretsFile?: string;
-}
-
 /**
  * `deploy <app> --tier <staging|production>`
  *
@@ -129,11 +120,7 @@ export interface AppDeployOptions {
  *
  * `--dry-run` prints what would run and exits 0, with no token required.
  */
-export async function runAppDeploy(
-  app: string,
-  rest: string[],
-  options: AppDeployOptions = {},
-): Promise<void> {
+export async function runAppDeploy(app: string, rest: string[]): Promise<void> {
   const tier = requireTier(rest);
   const dryRun = rest.includes("--dry-run");
 
@@ -161,9 +148,7 @@ export async function runAppDeploy(
     say([
       `backstage deploy ${app} --tier ${tier} --dry-run`,
       "  Check CLOUDFLARE_API_TOKEN",
-      options.secretsFile
-        ? `  Upload ${options.secretsFile}`
-        : `  Write ${app}'s Worker secrets file from its manifest`,
+      `  Write ${app}'s Worker secrets file from its manifest`,
       `  Deploy ${app} (${tier})`,
     ]);
     return;
@@ -174,17 +159,14 @@ export async function runAppDeploy(
   requireCloudflareToken("deploy");
 
   let cleanup: string | undefined;
-  let secretsFile = options.secretsFile;
   try {
-    if (secretsFile === undefined) {
-      await loadRegistry();
-      const written = await runDeploySecretsFile({
-        app,
-        githubOutput: false,
-      });
-      cleanup = written.dir;
-      secretsFile = written.file;
-    }
+    await loadRegistry();
+    const written = await runDeploySecretsFile({
+      app,
+      githubOutput: false,
+    });
+    cleanup = written.dir;
+    const secretsFile = written.file;
 
     const code = await pnpm(
       [...deployArgs, "--secrets-file", secretsFile, ...release],
@@ -227,8 +209,7 @@ function writesWhenLive(sub: string): boolean {
 }
 
 /**
- * The steps, by name. A legacy step the deprecated `devtools-ci` bins still
- * accept is handled by `ci-alias.ts` before it gets here.
+ * The steps, by name.
  */
 async function runStep(sub: string, rest: string[]): Promise<boolean> {
   if (sub === "plan") {
@@ -289,10 +270,7 @@ async function runStep(sub: string, rest: string[]): Promise<boolean> {
   return false;
 }
 
-/**
- * Steps that went away, refused with where they went. (The deprecated
- * `devtools-ci` aliases keep running them; see `ci-alias.ts`.)
- */
+/** Steps that went away, refused with where they went. */
 const RETIRED_STEPS: Record<string, string> = {
   "require-token":
     "`deploy require-token` is gone: every command checks for the token it needs.",
@@ -303,15 +281,7 @@ const RETIRED_STEPS: Record<string, string> = {
 
 // ── Deploy dispatch ───────────────────────────────────────────────────────────
 
-/**
- * `legacy` runs a step the deprecated aliases still need and this tree no
- * longer declares; it returns whether it handled `sub`.
- */
-export async function runDeployCommand(
-  rest: string[],
-  legacy?: (sub: string, rest: string[]) => Promise<boolean>,
-  appOptions?: AppDeployOptions,
-): Promise<void> {
+export async function runDeployCommand(rest: string[]): Promise<void> {
   const [sub] = positionals(rest);
 
   if (!sub) {
@@ -338,11 +308,10 @@ export async function runDeployCommand(
 
     // Steps first: they run without a checkout, and `isWorkerApp` reads one.
     if (await runStep(sub, rest)) return;
-    if (legacy && (await legacy(sub, rest))) return;
 
     // App orchestrators
     if (isWorkerApp(sub)) {
-      await runAppDeploy(sub, rest.slice(1), appOptions);
+      await runAppDeploy(sub, rest.slice(1));
       return;
     }
 

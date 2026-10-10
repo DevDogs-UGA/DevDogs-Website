@@ -67,7 +67,7 @@ function requireBuilt(pkgDir: string, entry: string): void {
 /** `pnpm pack`s a workspace package into `destDir`, returning the tarball's
  * absolute path. Uses `pnpm pack` (not `npm pack`) so `workspace:`/`catalog:`
  * specifiers are rewritten to resolved versions, matching what a real
- * publish would produce — same mechanism `scripts/pack-local.mjs` uses. */
+ * publish would produce — the same mechanism the publish script uses. */
 function packPackage(pkgDir: string, destDir: string): string {
   const output = execFileSync("pnpm", ["pack", "--pack-destination", destDir], {
     cwd: pkgDir,
@@ -444,7 +444,7 @@ describe("devtools contract tests", () => {
       expect(byPath.has(path), path).toBe(true);
     }
     // The aliases kept for DevDogsUGA's main say what replaces them.
-    expect(byPath.get("db start")?.deprecated).toContain("supabase start");
+    expect(byPath.has("db start")).toBe(false);
     expect(byPath.get("run")?.deprecated).toContain("pnpm -r run");
     // Hidden from the wizard, but still a supported command.
     expect(byPath.get("completions")?.surface).toBe("cli-only");
@@ -586,70 +586,6 @@ describe("devtools contract tests", () => {
         expect(`${stdout}${stderr}`.length).toBeGreaterThan(0);
       },
     );
-  });
-
-  // ── devtools-ci stdout purity (was repo-checks' deploy-cli-dispatch test) ─
-
-  it("devtools-ci deploy prints nothing to stdout, even for its own usage output", async () => {
-    const { stdout, stderr } = await run(["deploy"], {
-      bin: join(fixtureDir, "node_modules", ".bin", "devtools-ci"),
-      env: { DEPLOY_ENV: "", DEV_DB: "", CI: "true" },
-    });
-    // A deploy job's stdout can be a credential channel; a banner landing on
-    // it would be an unmasked value in a public job log.
-    expect(stdout).toBe("");
-    expect(stderr.length).toBeGreaterThan(0);
-  });
-
-  it("devtools-ci-bare resolves no tier and loads no env file: --help works cold", async () => {
-    const { status, stdout } = await run(["--help"], {
-      bin: join(fixtureDir, "node_modules", ".bin", "devtools-ci-bare"),
-      cwd: tmpdir(),
-    });
-    expect(status).toBe(0);
-    expect(stdout).toContain("deploy");
-  });
-
-  // The `deploy` steps backstage folded away still run through the aliases, so
-  // the old workflows keep working until the cutover.
-  describe("the deploy steps the aliases keep", () => {
-    const bare = (): string =>
-      join(fixtureDir, "node_modules", ".bin", "devtools-ci-bare");
-
-    it("require-token refuses without CLOUDFLARE_API_TOKEN and is silent with it", async () => {
-      const refused = await run(["deploy", "require-token"], {
-        bin: bare(),
-        env: { CLOUDFLARE_API_TOKEN: "", CI: "true" },
-      });
-      expect(refused.status).toBe(1);
-      expect(refused.stderr).toContain("CLOUDFLARE_API_TOKEN is not set");
-
-      const passed = await run(["deploy", "require-token"], {
-        bin: bare(),
-        env: { CLOUDFLARE_API_TOKEN: "a-token", CI: "true" },
-      });
-      expect(passed.status).toBe(0);
-      expect(passed.stdout).toBe("");
-      expect(passed.stderr).toBe("");
-    });
-
-    it("require-planner refuses without a DB_URL", async () => {
-      const { status, stderr } = await run(["deploy", "require-planner"], {
-        bin: bare(),
-        env: { DB_URL: "", CI: "true" },
-      });
-      expect(status).toBe(1);
-      expect(stderr).toContain("DB_URL is not set");
-    });
-
-    it("secrets-file needs --app", async () => {
-      const { status, stderr } = await run(["deploy", "secrets-file"], {
-        bin: bare(),
-        env: { CI: "true" },
-      });
-      expect(status).toBe(1);
-      expect(stderr).toContain("--app <name> is required");
-    });
   });
 
   // ── the deprecated run alias ───────────────────────────────────────────────

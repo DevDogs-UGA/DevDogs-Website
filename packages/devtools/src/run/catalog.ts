@@ -53,7 +53,7 @@ export const runCommand: CommandNode = {
     "It still runs, and each use is reported so it can be removed (TASK-404).",
   // The six with a root alias, which are the six a contributor types.
   // NOT an exhaustive list of every package script: `run` forwards
-  // whatever name it is given, so `test:coverage` works without being
+  // whatever name it is given, so `test:watch` works without being
   // listed here, and this CLI's own unrelated `deploy` command group
   // stays out of a menu where a same-named package script would sit
   // one line away from it.

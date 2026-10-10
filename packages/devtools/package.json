@@ -15,9 +15,7 @@
     "provenance": true
   },
   "bin": {
-    "devtools": "./bin/devtools.mjs",
-    "devtools-ci": "./bin/devtools-ci.mjs",
-    "devtools-ci-bare": "./bin/devtools-ci-bare.mjs"
+    "devtools": "./bin/devtools.mjs"
   },
   "files": [
     "bin",
@@ -58,7 +56,6 @@
     }
   },
   "devDependencies": {
-    "@devdogsuga/backstage": "workspace:*",
     "@devdogsuga/cli-core": "workspace:*",
     "@devdogsuga/config": "workspace:*",
     "@devdogsuga/db": "workspace:*",

@@ -1,7 +1,6 @@
 /**
  * Worker secrets nothing declares: the check `env audit` runs for its target
- * (`--prune` deletes what it finds), and the deprecated
- * `devtools-ci deploy orphans [--prune]` step, which still runs it for CI.
+ * (`--prune` deletes what it finds).
  *
  * Reports, and only when asked deletes, Worker secrets nothing declares.
  *

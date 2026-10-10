@@ -1,9 +1,7 @@
 /**
  * The `--secrets-file` a `wrangler deploy` uploads with one Worker.
  *
- * `deploy <app>` writes it, uploads it and removes it; the deprecated
- * `devtools-ci deploy secrets-file --app <app>` still writes it for a workflow
- * that uploads it itself (see `ci-alias.ts`). Runs with `process.env` holding
+ * `deploy <app>` writes it, uploads it and removes it. Runs with `process.env` holding
  * the environment `deploy write-env` composed. It reads no GitHub context of
  * its own: one place in the pipeline touches `secrets` and `vars`, and this is
  * not it.

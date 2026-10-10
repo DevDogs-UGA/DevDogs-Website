@@ -146,13 +146,4 @@ describe("deploy <app>", () => {
     expect(runDeploySecretsFile).not.toHaveBeenCalled();
     expect(spawned.calls).toEqual([]);
   });
-
-  it("uploads a secrets file somebody else wrote as it is, and leaves it", async () => {
-    await runAppDeploy("platform", ["--tier", "staging"], {
-      secretsFile: built.file,
-    });
-    expect(runDeploySecretsFile).not.toHaveBeenCalled();
-    expect(spawned.calls[0]!.args).toContain(built.file);
-    expect(existsSync(built.dir)).toBe(true);
-  });
 });

@@ -281,17 +281,6 @@ which `env` signs in to and unlocks itself, then asking). The token is each
 person's own: the vault read skips organization items, and a save sets no
 organization, so one person's token can be revoked without the rest.
 
-## The deprecated `devtools-ci` bins
-
-DevDogsUGA's `main` still calls `devtools-ci deploy …` from the pinned
-`@devdogsuga/devtools`. Those bins live in devtools' package but run this
-package's code (`src/ci-alias.ts`, bundled into devtools by `tsdown`; the
-`./ci-alias` export is a source entry only that build resolves, and is not in
-the published files). They keep the steps this CLI folded away: `deploy
-require-token`, `require-planner` (now `planner status`), `secrets-file` (now
-part of `deploy <app>`) and `orphans` (now `env audit [--prune]`). The cutover
-(TASK-403) deletes them.
-
 ## Layout
 
 Like devtools: `src/<domain>/catalog.ts` (inert data) and `commands.ts`;

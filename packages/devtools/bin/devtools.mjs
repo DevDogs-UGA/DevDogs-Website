@@ -21,8 +21,7 @@ try {
   await launch(process.argv.slice(2));
 } catch (err) {
   // Whatever escapes before a command is dispatched (repo discovery, tier
-  // resolution, env entry) — the dispatch itself reports its own. See
-  // `bin/devtools-ci-bare.mjs` for the same shape.
+  // resolution, env entry) — the dispatch itself reports its own.
   process.stderr.write(
     `devtools: ${err instanceof Error ? err.message : String(err)}\n`,
   );

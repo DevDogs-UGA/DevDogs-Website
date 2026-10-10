@@ -11,10 +11,10 @@
  *   * `requireRankGuard` has nothing to compare. The CLI writes with the
  *     service key, so it acts above every rank, exactly like `grant-root` did.
  *
- * Discord-synced roles are refused for now: until the platform pushes a
- * platform-side grant to Discord (TASK-440), a grant made here would be undone
- * by the next `sync-discord-roles` run. `managedByDiscord` is the single place
- * to relax when that lands.
+ * Discord-synced roles are grantable like any other: membership syncs both
+ * ways (TASK-440), so the cron pushes a platform-side grant to Discord. President
+ * no longer syncs at all; it stays grantable here, moving from its current
+ * holder.
  */
 import { PRESIDENT_ROLE_ID } from "@devdogsuga/cli-core/instance";
 
@@ -38,12 +38,12 @@ export function unassignable(role: RoleRow): string | null {
   if (role.roleType !== "custom" || role.rank === null) {
     return "Not assignable";
   }
-  if (managedByDiscord(role)) return "Managed by Discord";
   return null;
 }
 
-export function managedByDiscord(role: RoleRow): boolean {
-  return role.discordRoleId !== null;
+/** Whether the cron keeps this role's membership in step with Discord. */
+export function syncedWithDiscord(role: RoleRow): boolean {
+  return role.discordRoleId !== null && role.id !== PRESIDENT_ROLE_ID;
 }
 
 /** A role by id, or by title ignoring case. */
@@ -86,10 +86,7 @@ export function planGrant(
   if (reason) {
     return {
       kind: "refused",
-      reason:
-        reason === "Managed by Discord"
-          ? `${role.title} is managed by Discord. Give it on Discord and the next sync copies it here.`
-          : `${role.title} cannot be granted: it is not an assignable role.`,
+      reason: `${role.title} cannot be granted: it is ${reason.toLowerCase()}.`,
     };
   }
   if (holders.some((holder) => holder.userId === target.userId)) {
@@ -116,10 +113,7 @@ export function planRevoke(
   if (reason) {
     return {
       kind: "refused",
-      reason:
-        reason === "Managed by Discord"
-          ? `${role.title} is managed by Discord. Remove it on Discord and the next sync copies that here.`
-          : `${role.title} cannot be revoked: it is not an assignable role.`,
+      reason: `${role.title} cannot be revoked: it is ${reason.toLowerCase()}.`,
     };
   }
   if (!holders.some((holder) => holder.userId === target.userId)) {

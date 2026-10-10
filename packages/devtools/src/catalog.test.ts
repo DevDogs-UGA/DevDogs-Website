@@ -127,7 +127,7 @@ describe("prompts", () => {
    * documented categories:
    *
    *   * **live-data**: the command asks itself from something live (`--app`,
-   *     `--user`, `--apps`, `--filter`).
+   *     `--apps`, `--filter`).
    *   * **suppressor**: exists only to suppress a prompt (`--yes`); asking in
    *     a wizard that IS the prompt makes no sense.
    *   * **scripting-only**: meaningful only outside a TTY (`--json`); asking
@@ -141,7 +141,6 @@ describe("prompts", () => {
     const allowed = new Set([
       // live-data: the command asks from something live
       "--app",
-      "--user",
       "--apps",
       // suppressor: exists to suppress a prompt, not to be one
       "--yes",
@@ -152,11 +151,6 @@ describe("prompts", () => {
       // filter?" first would ask it twice and let the answers disagree.
       "--filter",
       "--all",
-      "--dry-run",
-      // `emails` asks these after its template picker so the interactive and
-      // scripted paths share one flow.
-      "--format",
-      "--out",
       // scripting-only: machine-readable output; a wizard asking for JSON
       // mode produces nothing useful since the wizard itself is the UI.
       "--json",
@@ -219,12 +213,10 @@ describe("coverage of what the CLI dispatches", () => {
     "completions",
     "check",
     "doctor",
-    "grant-root",
     "roles",
     "setup",
     "oauth",
     "script",
-    "emails",
     "env",
     "jobs",
     // Both are dispatched twice: once in `main()` ahead of `intro()`, which is
@@ -241,9 +233,6 @@ describe("coverage of what the CLI dispatches", () => {
     "wrangler",
     "drizzle-kit",
     "psql",
-    // Deprecated aliases for what DevDogsUGA's main still calls, typed only.
-    "db",
-    "cf",
   ];
 
   it("declares exactly the top-level commands the CLI accepts", () => {
@@ -274,12 +263,6 @@ describe("coverage of what the CLI dispatches", () => {
       "--kind",
       "sync",
     ]);
-
-    // The `db` and `cf` namespaces are gone. What is left is the deprecated
-    // aliases DevDogsUGA's main still calls.
-    expect(subcommandNames(["db"])).toEqual(["start", "types", "introspect"]);
-    expect(subcommandNames(["cf"])).toEqual(["preview"]);
-    expect(subcommandNames(["gen"])).toEqual(["campus-map"]);
   });
 
   it("has no command for what was deleted", () => {

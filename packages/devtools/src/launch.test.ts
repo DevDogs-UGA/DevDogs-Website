@@ -345,7 +345,7 @@ describe("launch", () => {
       });
     });
 
-    it("a bare group resumed at a TTY (devtools db) also defers entry", async () => {
+    it("a bare group resumed at a TTY (devtools cron) also defers entry", async () => {
       Object.defineProperty(process.stdin, "isTTY", {
         value: true,
         configurable: true,
@@ -354,9 +354,9 @@ describe("launch", () => {
       const { takeMenuEnvHook } =
         await import("@devdogsuga/cli-core/env-entry");
 
-      await launch(["db"]);
+      await launch(["cron"]);
 
-      expect(main).toHaveBeenCalledWith(["db"]);
+      expect(main).toHaveBeenCalledWith(["cron"]);
       expect(enterEnvironment).not.toHaveBeenCalled();
       expect(takeMenuEnvHook()).toBeTypeOf("function");
     });
@@ -372,9 +372,9 @@ describe("launch", () => {
       const { takeMenuEnvHook } =
         await import("@devdogsuga/cli-core/env-entry");
 
-      await launch(["--tier", "development", "db"]);
+      await launch(["--tier", "development", "cron"]);
 
-      // Entered eagerly, exactly as a typed command does — `main(["db"])`
+      // Entered eagerly, exactly as a typed command does — `main(["cron"])`
       // hits the dispatcher's own "which of …?" refusal, not the wizard.
       expect(enterEnvironment).toHaveBeenCalledWith("development", {
         override: false,

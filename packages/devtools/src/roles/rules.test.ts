@@ -5,6 +5,7 @@ import {
   PRESIDENT_ROLE_ID,
   planGrant,
   planRevoke,
+  syncedWithDiscord,
   type Account,
   type RoleRow,
 } from "./rules.js";
@@ -65,11 +66,12 @@ describe("planGrant", () => {
     expect(planGrant(president, ada, [])).toEqual({ kind: "grant" });
   });
 
-  it("refuses Member and Discord-synced roles", () => {
+  it("refuses Member", () => {
     expect(planGrant(member, ada, [])).toMatchObject({ kind: "refused" });
-    const plan = planGrant(synced, ada, []);
-    expect(plan).toMatchObject({ kind: "refused" });
-    expect(JSON.stringify(plan)).toContain("managed by Discord");
+  });
+
+  it("grants a Discord-synced role, which the cron pushes to Discord", () => {
+    expect(planGrant(synced, ada, [])).toEqual({ kind: "grant" });
   });
 });
 
@@ -82,8 +84,19 @@ describe("planRevoke", () => {
     expect(planRevoke(lead, ada, [bob])).toEqual({ kind: "not-held" });
   });
 
-  it("refuses Member and Discord-synced roles", () => {
+  it("refuses Member", () => {
     expect(planRevoke(member, ada, [ada])).toMatchObject({ kind: "refused" });
-    expect(planRevoke(synced, ada, [ada])).toMatchObject({ kind: "refused" });
+  });
+
+  it("revokes a Discord-synced role", () => {
+    expect(planRevoke(synced, ada, [ada])).toEqual({ kind: "revoke" });
+  });
+});
+
+describe("syncedWithDiscord", () => {
+  it("is true for a role with a Discord id, except President", () => {
+    expect(syncedWithDiscord(synced)).toBe(true);
+    expect(syncedWithDiscord(lead)).toBe(false);
+    expect(syncedWithDiscord({ ...president, discordRoleId: "9" })).toBe(false);
   });
 });

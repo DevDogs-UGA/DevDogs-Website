@@ -310,11 +310,9 @@ export const YES: CommandOption = {
 /**
  * A composed command tree and the lookups over it.
  *
- * `groups` is what `--help` and the wizard show; `ciGroups` is the separate
- * non-interactive tree (the `devtools-ci` bin), never reached from the wizard
- * and never rendered in `--help`. It lives beside `groups` so the docs build
- * can render a CI reference page from the same declaration, and so the tests
- * that guard the style guide can cover both trees without duplicating the pins.
+ * `groups` is what `--help` and the wizard show; `ciGroups` is an optional
+ * second tree, never reached from the wizard and never rendered in `--help`.
+ * Neither CLI declares one now that `devtools-ci` is gone.
  */
 export interface Catalog {
   /** How the CLI is invoked, as `--help` prints it: `pnpm devtools`. */

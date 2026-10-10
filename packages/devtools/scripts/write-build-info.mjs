@@ -3,7 +3,7 @@
 // dist/build-info.json, which ships in the tarball and src/telemetry.ts reads
 // at run time. Today that is only the Sentry DSN: publish.yaml passes the
 // Backstage repo's DEVTOOLS_SENTRY_DSN Actions variable, so published builds
-// report and every other build (CI, `pnpm pack:local`, a fork) bakes "" and
+// report and every other build (CI, `pnpm pack`, a fork) bakes "" and
 // stays silent.
 import { writeFileSync } from "node:fs";
 

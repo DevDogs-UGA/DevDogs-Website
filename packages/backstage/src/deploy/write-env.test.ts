@@ -150,6 +150,61 @@ describe("composing the file", () => {
     expect(body).toContain("SUPABASE_PROVIDER_SECRET='provider-secret'");
   });
 
+  it("expands a GitHub variable stored as a $VAR formula, against DEPLOY_ENV and the resolved values", async () => {
+    // GitHub environments hold NEXT_PUBLIC_DEPLOY_ENV as the formula
+    // `$DEPLOY_ENV`; written verbatim, the build saw the literal string.
+    declare({
+      source: "platform",
+      server: {
+        PUBLIC_ENV: define(z.string(), {
+          doc: "Stored as a formula in the GitHub environment.",
+          scope: "environment",
+          secrecy: "public",
+        }),
+        PUBLIC_HOST: define(z.string(), {
+          doc: "Stored as a braced formula over another variable.",
+          scope: "environment",
+          secrecy: "public",
+        }),
+      },
+    });
+    const dir = root();
+    await runDeployWriteEnv({
+      root: dir,
+      env: {
+        ...HAPPY,
+        DEPLOY_GITHUB_VARS: JSON.stringify({
+          ANCHOR: "abcdefgh",
+          PUBLIC_ENV: "$DEPLOY_ENV",
+          PUBLIC_HOST: "https://${ANCHOR}.example.com/$DEPLOY_ENV",
+        }),
+      },
+    });
+
+    const body = readFileSync(join(dir, ".env.staging"), "utf8");
+    expect(body).toContain("PUBLIC_ENV='staging'");
+    expect(body).toContain(
+      "PUBLIC_HOST='https://abcdefgh.example.com/staging'",
+    );
+    expect(body).not.toContain("$DEPLOY_ENV");
+  });
+
+  it("leaves a secret's value literal even when it contains a $", async () => {
+    const dir = root();
+    await runDeployWriteEnv({
+      root: dir,
+      env: {
+        ...HAPPY,
+        DEPLOY_GITHUB_SECRETS: JSON.stringify({
+          REQUIRED_SECRET: "pa$$word$ANCHOR",
+        }),
+      },
+    });
+    expect(readFileSync(join(dir, ".env.staging"), "utf8")).toContain(
+      "REQUIRED_SECRET='pa$$word$ANCHOR'",
+    );
+  });
+
   it("names the command that composed it in the header", async () => {
     const dir = root();
     await runDeployWriteEnv({ root: dir, env: HAPPY });

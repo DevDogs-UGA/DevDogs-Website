@@ -1,8 +1,7 @@
 /**
  * What `backstage` does BEFORE `cli.ts` (and so every command it dispatches)
  * is imported: settle the session's tier, enter it, hand off. `launch.ts` is
- * the entry point the `bin/backstage.mjs` bootstrap runs; the deprecated
- * `devtools-ci` aliases call `launchWith` directly.
+ * the entry point the `bin/backstage.mjs` bootstrap runs.
  *
  * ## It starts anywhere
  *
@@ -34,8 +33,7 @@
  * environment. For `deploy write-env`, which CREATES the file tier resolution
  * would otherwise insist on reading, and for the CI steps that hold one narrow
  * credential in the job's own `env:` block (`preflight`, `plan`, `migrate`,
- * `smoke`, `reconcile`, `planner status`). It replaces the `devtools-ci-bare`
- * bin.
+ * `smoke`, `reconcile`, `planner status`).
  *
  * ## Staging and production ask first
  *
@@ -44,7 +42,7 @@
  * without `--yes` (`@devdogsuga/cli-core/safety-gate`).
  */
 import { helpPath } from "@devdogsuga/cli-core/help";
-import { setCliName, type CliName } from "@devdogsuga/cli-core/cli-name";
+import { setCliName } from "@devdogsuga/cli-core/cli-name";
 import { nonEmpty } from "@devdogsuga/cli-core/db/connection";
 import {
   isDryRun,
@@ -81,24 +79,12 @@ import { catalog } from "./catalog.js";
 
 export interface LaunchOptions {
   /**
-   * Runs the command: `cli.ts`'s `main` for the `backstage` bin, or the
-   * deprecated `devtools-ci` aliases' own, which keeps the steps this CLI
-   * dropped. Injected rather than imported here so the aliases (bundled into
-   * devtools) do not pull the whole command tree, Bitwarden included, in with
-   * the launcher.
+   * Runs the command: `cli.ts`'s `main` for the `backstage` bin. Injected
+   * rather than imported here so a test can drive the launcher with a stub.
    */
   dispatch: (argv: string[]) => Promise<void>;
-  /** Skip the hosted-tier question. The aliases did not have one. Default true. */
+  /** Skip the hosted-tier question. Default true (asked). */
   gate?: boolean;
-  /** Prefix for what this prints on stderr. Default `backstage`. */
-  label?: string;
-  /**
-   * Which package's version and name Sentry events and the gate's messages
-   * carry. The aliases run inside devtools' bundle, so they say `devtools`.
-   */
-  cli?: CliName;
-  /** Do not insist that a `deploy` command name its tier. The aliases never did. */
-  lenientTier?: boolean;
 }
 
 /** The tier words a `--tier` or `DEPLOY_ENV` may carry. */
@@ -289,8 +275,8 @@ export async function launchWith(
   argv: readonly string[],
   options: LaunchOptions,
 ): Promise<void> {
-  setCliName(options.cli ?? "backstage");
-  const label = options.label ?? "backstage";
+  setCliName("backstage");
+  const label = "backstage";
   const gate = options.gate ?? true;
 
   const { noEnv: typedNoEnv, rest: withoutNoEnv } = stripNoEnvFlag(argv);
@@ -366,9 +352,7 @@ export async function launchWith(
       // typed would; `noEnv` above only knows about the menu itself.
       const skipEnv = noEnv || isEnvFree(commandArgv);
       setNoEnv(skipEnv);
-      const refusal = options.lenientTier
-        ? null
-        : missingTier(commandArgv, chosen.session, skipEnv);
+      const refusal = missingTier(commandArgv, chosen.session, skipEnv);
       if (refusal) {
         process.stderr.write(`${label}: ${refusal}\n`);
         process.exitCode = 1;
@@ -381,9 +365,7 @@ export async function launchWith(
     return;
   }
 
-  const refusal = options.lenientTier
-    ? null
-    : missingTier(rest, session, noEnv);
+  const refusal = missingTier(rest, session, noEnv);
   if (refusal) fail(label, refusal);
 
   await enterSession(session, noEnv, label);

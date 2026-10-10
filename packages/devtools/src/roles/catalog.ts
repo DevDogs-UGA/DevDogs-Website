@@ -33,20 +33,3 @@ export const rolesCommand: CommandNode = {
     },
   ],
 };
-
-/** `grant-root`, kept until the docs and shell histories have moved. */
-export const grantRootCommand: CommandNode = {
-  name: "grant-root",
-  summary: "Give an account President.",
-  hint: "deprecated: roles grant <email> President",
-  surface: "cli-only",
-  deprecated: "Use `devtools roles grant <email> President`.",
-  options: [
-    {
-      flag: "--user",
-      value: "<email>",
-      summary: "Account to make President. Asked for when absent.",
-    },
-    YES,
-  ],
-};

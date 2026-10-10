@@ -1,6 +1,5 @@
 /**
- * `deploy`'s dispatch: the steps that are gone say where they went, the
- * aliases' legacy hook runs before the unknown-step refusal, and a deploy
+ * `deploy`'s dispatch: the steps that are gone say where they went, and a deploy
  * needs a tier. The steps themselves have their own tests; what is checked
  * here is the routing and the wording.
  */
@@ -36,14 +35,6 @@ describe("steps that went away", () => {
     await runDeployCommand([step]);
     expect(written).toContain(replacement);
     expect(process.exitCode).toBe(1);
-  });
-
-  it("still runs one for the aliases, ahead of the refusal", async () => {
-    const legacy = vi.fn(async () => true);
-    await runDeployCommand(["require-token"], legacy);
-    expect(legacy).toHaveBeenCalledWith("require-token", ["require-token"]);
-    expect(written).toBe("");
-    expect(process.exitCode).toBeUndefined();
   });
 });
 

@@ -34,6 +34,11 @@
  *              running `pnpm devtools env push`. CI never reads Bitwarden.
  *   variable   `${{ vars.* }}`, the per-environment values that are NOT
  *              secrets (`PROJECT_REF`, `BASE_URL`, `PUBLISHABLE_KEY`, …).
+ *   variable   ...which may itself be a `$VAR` / `${VAR}` formula. GitHub
+ *              environments store `NEXT_PUBLIC_DEPLOY_ENV` as `$DEPLOY_ENV`, so
+ *              a variable is expanded against the resolved values and
+ *              `DEPLOY_ENV` exactly as a derivation is. A secret never is: it
+ *              is the one thing that may legitimately contain a `$`.
  *   derived    an `example` metadata entry that is a `$VAR` formula rather than
  *              a placeholder: `API_URL` is `https://$PROJECT_REF.supabase.co`
  *              and always has been. Security plan §A.4: "derived at deploy
@@ -217,6 +222,7 @@ function expand(
   key: string,
   value: string,
   resolved: Map<string, Resolved>,
+  ambient: Readonly<Record<string, string>> = {},
   seen: string[] = [],
 ): string {
   return value.replace(
@@ -229,16 +235,27 @@ function expand(
           [`chain: ${[...seen, name].join(" -> ")}`],
         );
       }
-      const target = resolved.get(name);
+      const target = resolved.get(name) ?? ambientValue(ambient, name);
       if (!target) {
         throw new MissingSourceError(
           `${key} is derived from ${name}, which has no value.`,
           [`${name} is the value to fix; ${key} follows from it.`],
         );
       }
-      return expand(name, target.value, resolved, [...seen, name]);
+      return target.from === "secret"
+        ? target.value
+        : expand(name, target.value, resolved, ambient, [...seen, name]);
     },
   );
+}
+
+/** A value only the job supplies (`DEPLOY_ENV`), shaped like a resolved one. */
+function ambientValue(
+  ambient: Readonly<Record<string, string>>,
+  name: string,
+): Resolved | undefined {
+  const value = ambient[name];
+  return value === undefined ? undefined : { value, from: "committed" };
 }
 
 /**
@@ -431,9 +448,9 @@ function compose(
 
   for (const [key, entry] of resolved) {
     let value: string;
-    if (entry.from === "derived") {
+    if (entry.from === "derived" || entry.from === "variable") {
       try {
-        value = expand(key, entry.value, resolved);
+        value = expand(key, entry.value, resolved, { DEPLOY_ENV: environment });
       } catch (error) {
         // An optional derivation whose source has no value is a key the
         // registry declared ahead of its deployment, not a fault: omit it,

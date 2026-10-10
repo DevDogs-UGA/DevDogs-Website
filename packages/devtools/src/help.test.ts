@@ -53,9 +53,9 @@ describe("the top level", () => {
   });
 
   it("marks a deprecated command and says what replaces it", () => {
-    expect(renderHelp(catalog, ["db"])).toContain("(deprecated)");
-    expect(renderHelp(catalog, ["db", "types"])).toContain(
-      "Deprecated. Use `pnpm -F @devdogsuga/supabase types:db`.",
+    expect(renderHelp(catalog)).toMatch(/run .*\(deprecated\)/);
+    expect(renderHelp(catalog, ["run"])).toContain(
+      "Deprecated. Use `pnpm -r run <task>`",
     );
   });
 

@@ -263,8 +263,8 @@ export interface CommandListEntry {
  * (the docs build refuses a page that shows a command that no longer exists).
  *
  * A declared export rather than a scrape of `--help`: same tree, parsed once.
- * Only the contributor tree. The CI tree (`devtools-ci`) is a separate bin and
- * deliberately absent, so a doc cannot pass by showing `pnpm devtools deploy`.
+ * Only this CLI's own tree, so a doc cannot pass by showing a command that
+ * belongs to the other CLI (`pnpm devtools deploy`).
  */
 export function commandList(catalog: Catalog): CommandListEntry[] {
   const entries: CommandListEntry[] = [];

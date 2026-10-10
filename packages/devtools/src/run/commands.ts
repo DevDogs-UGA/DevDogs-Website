@@ -110,7 +110,6 @@ const NEEDS_DEPS_BUILT = new Set([
   "lint",
   "lint:fix",
   "test",
-  "test:coverage",
 ]);
 
 export interface App {
