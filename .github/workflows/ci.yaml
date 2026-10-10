@@ -399,9 +399,17 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/patch-issues.ts patch-report.json
 
+  # Stable npm publishing stays with Backstage's last commit until the Gate, so
+  # a push here asks nobody to approve a `publishing` deployment yet: both
+  # repositories publishing would race on the same npm packages, and this one
+  # has no GitHub releases for the versions already out. The Gate sets the
+  # repository variable BACKSTAGE_PUBLISHES_STABLE=true (after the trusted
+  # publishers on npmjs.com name this repository's publish workflow).
   publish:
     needs: validate
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main'
+      && vars.BACKSTAGE_PUBLISHES_STABLE == 'true'
     permissions:
       contents: write
       id-token: write

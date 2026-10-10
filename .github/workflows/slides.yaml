@@ -6,7 +6,7 @@ name: Slides
 # a publish (publish.yaml waits on CI only).
 #
 # Needs the WORKSHOPS_READ_TOKEN secret: a fine-grained PAT with Contents:
-# read on DevDogsUGA/Backstage, web-workshops-planning and
+# read on DevDogsUGA/DevDogsUGA (and DevDogsUGA/Backstage, until it is archived), web-workshops-planning and
 # mobile-workshops-planning. Not available to PRs from forks, so those skip.
 on:
   pull_request:
