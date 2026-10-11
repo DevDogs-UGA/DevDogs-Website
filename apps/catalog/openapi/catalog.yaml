@@ -49,7 +49,8 @@ paths:
       summary: Terms with sections on offer
       description: |
         Every term that has at least one section that is not cancelled, newest first, with its parts of term.
-        `dropAddEnds` is the last day to add or drop a class in the term's longest part of term.
+        `classesBegin`, `classesEnd` and `dropAddEnds` are the dates of the term's Full Term part (code `1`), or of its
+        longest part when it has none; the other parts carry their own dates.
       parameters:
         - $ref: "#/components/parameters/XClient"
       responses:
@@ -377,7 +378,7 @@ components:
         academicPeriod: { $ref: "#/components/schemas/TermCode" }
         description: { type: string, example: Spring 2027 }
         classesBegin:
-          description: First day of classes in the term's longest part of term, or null if it has none.
+          description: First day of classes in the term's Full Term part (code `1`, else its longest part), or null if it has none.
           oneOf:
             - { $ref: "#/components/schemas/Date" }
             - { type: "null" }
@@ -386,7 +387,7 @@ components:
             - { $ref: "#/components/schemas/Date" }
             - { type: "null" }
         dropAddEnds:
-          description: Last day to add or drop in the term's longest part of term, or null if it has none.
+          description: Last day to add or drop in the term's Full Term part (code `1`, else its longest part), or null if it has none.
           oneOf:
             - { $ref: "#/components/schemas/Date" }
             - { type: "null" }

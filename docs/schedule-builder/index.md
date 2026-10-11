@@ -24,9 +24,9 @@ UGA student's semester against real registrar data.
   `VINEXT_KV_CACHE` binding.
 - **`schedule_builder` Postgres schema.** Owned by this app on the shared
   DevDogs Supabase project; see [Schedule-builder schema](./guides/schema.md).
-- **Ingestion.** A Cloudflare Workflow (`cloudflare/ScrapeWorkflow.ts`) scrapes
-  the UGA registrar on a daily cron, parses it, and reconciles it into
-  Postgres. See [Ingestion](./guides/ingestion.md).
+- **Ingestion.** The catalog Worker (`apps/catalog`) scrapes the UGA registrar
+  every day and reconciles it into the Postgres tables this app reads; the same
+  data is served by the public catalog API. See [Ingestion](./guides/ingestion.md).
 - **Generation.** A rule-based engine searches conflict-free combinations of
   sections and ranks them. See
   [Schedule generation](./guides/generation.md).

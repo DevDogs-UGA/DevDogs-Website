@@ -181,7 +181,19 @@ beforeAll(async () => {
       {
         academicPeriod: period,
         description: period === SPRING ? "Spring 2027" : "Fall 2026",
-        partOfTermRows: [partOfTerm(period)],
+        partOfTermRows: [
+          partOfTerm(period),
+          // Longer than the Full Term and starting a week sooner, as the
+          // registrar's Vet Med part does: it must not date the term.
+          {
+            ...partOfTerm(period),
+            code: "VM",
+            description: "Vet Med",
+            classesBegin: "2027-01-04",
+            dropAddEnds: "2027-01-08",
+            classesEnd: "2027-05-07",
+          },
+        ],
         rows: SECTIONS.filter((s) => s.period === period).flatMap(rowsOf),
       },
       writer,
@@ -244,18 +256,20 @@ describe("GET /terms", () => {
       classesEnd: "2027-05-04",
       dropAddEnds: "2027-01-15",
     });
-    expect(body.terms[0].partsOfTerm).toEqual([
-      {
-        code: "1",
-        description: "Full Term",
-        classesBegin: "2027-01-11",
-        dropAddEnds: "2027-01-15",
-        censusDate: "2027-01-27",
-        withdrawalDeadline: "2027-03-12",
-        classesEnd: "2027-05-04",
-        finalsEnd: null,
-      },
+    expect(body.terms[0].partsOfTerm.map((p: any) => p.code)).toEqual([
+      "VM",
+      "1",
     ]);
+    expect(body.terms[0].partsOfTerm[1]).toEqual({
+      code: "1",
+      description: "Full Term",
+      classesBegin: "2027-01-11",
+      dropAddEnds: "2027-01-15",
+      censusDate: "2027-01-27",
+      withdrawalDeadline: "2027-03-12",
+      classesEnd: "2027-05-04",
+      finalsEnd: null,
+    });
   });
 
   it("leaves out a term with no section on offer", async () => {
@@ -333,6 +347,9 @@ describe("GET /search", () => {
   it("finds a course by title words, by code with or without the space, and by code prefix", async () => {
     for (const q of [
       "programming",
+      // Half-typed words: the stemmer alone would not find these.
+      "intro",
+      "intro prog",
       "csci1301",
       "csci 1301",
       "CSCI-1301",

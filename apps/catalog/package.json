@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "wrangler dev",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src test scripts",
-    "lint:fix": "eslint --fix src test scripts",
+    "lint": "eslint src test scripts cloudflare",
+    "lint:fix": "eslint --fix src test scripts cloudflare",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "vitest run --config vitest.db.config.ts",

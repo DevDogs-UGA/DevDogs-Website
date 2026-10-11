@@ -169,7 +169,7 @@ pnpm devtools jobs list
 pnpm devtools jobs run
 pnpm devtools jobs run --app platform --cron '*/15 * * * *' --tier staging
 pnpm devtools jobs run \
-  --app schedule-builder \
+  --app catalog \
   --workflow SCRAPE_WORKFLOW \
   --tier production --yes
 ```

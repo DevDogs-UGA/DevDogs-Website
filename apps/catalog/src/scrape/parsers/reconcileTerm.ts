@@ -64,6 +64,8 @@ export type ReconcileOptions = {
   skipInvariants?: readonly string[];
   /** When the run began; sections not seen since are the ones to flag cancelled. */
   startedAt?: Date;
+  /** Overrides {@link TERM_TRANSACTION_LIMITS}; for tests that cannot wait fifteen seconds. */
+  limits?: Partial<Record<keyof typeof TERM_TRANSACTION_LIMITS, string>>;
 };
 
 /**
@@ -156,10 +158,11 @@ export async function reconcileTerm(
   const c = await collect(term.rows);
 
   return database.transaction(async (tx) => {
+    const limits = { ...TERM_TRANSACTION_LIMITS, ...options.limits };
     await tx.execute(
-      sql`select set_config('lock_timeout', ${TERM_TRANSACTION_LIMITS.lockTimeout}, true),
-                 set_config('idle_in_transaction_session_timeout', ${TERM_TRANSACTION_LIMITS.idleInTransactionTimeout}, true),
-                 set_config('statement_timeout', ${TERM_TRANSACTION_LIMITS.statementTimeout}, true)`,
+      sql`select set_config('lock_timeout', ${limits.lockTimeout}, true),
+                 set_config('idle_in_transaction_session_timeout', ${limits.idleInTransactionTimeout}, true),
+                 set_config('statement_timeout', ${limits.statementTimeout}, true)`,
     );
 
     // What the term looked like before this run, for the section-count check.

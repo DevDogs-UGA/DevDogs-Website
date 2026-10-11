@@ -44,8 +44,21 @@ function daysBetween(from: string, to: string): number {
   );
 }
 
-/** The part of term that runs longest: the term's own dates. Ties go to the first code. */
-export function longestPart(parts: readonly TermPart[]): TermPart | null {
+/** The registrar's code for a term's Full Term part. */
+export const FULL_TERM_CODE = "1";
+
+/**
+ * The part of term whose dates stand for the term: its Full Term (code `1`),
+ * which is what a student means by "the semester". A term without one falls
+ * back to the part that runs longest, ties going to the first code. (Taking the
+ * longest alone picks a Vet Med or MBA part that starts a week or two before
+ * classes do, and dates the whole term by it.)
+ */
+export function representativePart(
+  parts: readonly TermPart[],
+): TermPart | null {
+  const full = parts.find((part) => part.code === FULL_TERM_CODE);
+  if (full) return full;
   let best: TermPart | null = null;
   let bestDays = -1;
   for (const part of [...parts].sort((a, b) => a.code.localeCompare(b.code))) {
@@ -105,7 +118,7 @@ export async function listTerms(sql: ReadSql): Promise<{ terms: TermJson[] }> {
     }
   }
   for (const term of terms.values()) {
-    const part = longestPart(term.partsOfTerm);
+    const part = representativePart(term.partsOfTerm);
     term.classesBegin = part?.classesBegin ?? null;
     term.classesEnd = part?.classesEnd ?? null;
     term.dropAddEnds = part?.dropAddEnds ?? null;
@@ -200,6 +213,23 @@ export function codePrefix(query: string): string | null {
     : null;
 }
 
+/**
+ * `intro prog` as the prefix query `intro:* & prog:*`, so a half-typed word
+ * finds "Introduction to Programming" (the stemmer would not: `intro` is not
+ * the stem of `introduction`). Null when the query is not plain words: quotes,
+ * `or` and `-exclusion` are the web-search query's, and a prefix match beside
+ * them would bring back what the user excluded.
+ */
+export function prefixTsQuery(query: string): string | null {
+  if (!/^[A-Za-z0-9 ]+$/.test(query)) return null;
+  const words = query
+    .toLowerCase()
+    .split(" ")
+    .filter((word) => word !== "" && word !== "or")
+    .slice(0, 8);
+  return words.length === 0 ? null : words.map((w) => `${w}:*`).join(" & ");
+}
+
 export async function searchCourses(
   sql: ReadSql,
   term: number,
@@ -214,6 +244,7 @@ export async function searchCourses(
   const prefix = codePrefix(query);
   // `like` metacharacters cannot occur: the prefix is letters and digits only.
   const prefixPattern = prefix === null ? null : `${prefix}%`;
+  const wordPrefixes = prefixTsQuery(query);
 
   const results = await sql<CourseSummaryJson[]>`
     select c.id as "courseId", c.abbr, c."courseNumber", c.title, s.abbr as subject,
@@ -222,7 +253,10 @@ export async function searchCourses(
              where o."courseId" = c.id and o."academicPeriod" = ${term} and not o.cancelled) as "sectionCount"
     from uga.courses c
     join uga.subjects s on s.id = c."subjectId"
-    cross join websearch_to_tsquery('english', ${query}::text) as tsq
+    cross join (
+      select websearch_to_tsquery('english', ${query}::text)
+             ${wordPrefixes === null ? sql`` : sql`|| to_tsquery('english', ${wordPrefixes}::text)`} as q
+    ) as search(tsq)
     where (c."searchDocument" @@ tsq
            ${prefixPattern === null ? sql`` : sql`or c.abbr like ${prefixPattern}::text`})
       and exists (select 1 from uga.offerings o

@@ -527,3 +527,46 @@ describe("building coverage in the report", () => {
     expect(placed?.latitude).toBe(33.95);
   });
 });
+
+describe("a retry after an attempt that died mid-transaction", () => {
+  const P = 900501;
+
+  it("gives up on the abandoned attempt's lock at the lock timeout instead of queueing for the statement timeout, and succeeds once it is released", async () => {
+    await reconcileTerm(term(P, sections(P, 9050001, 3)), db, {
+      invariants: "report",
+    });
+
+    // The Worker died holding the term's row: a transaction nobody will finish.
+    const abandoned = postgres(testDb.url, {
+      max: 1,
+      onnotice: () => undefined,
+    });
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const holding = abandoned.begin(async (tx) => {
+      await tx`select 1 from schedule_builder.terms where "academicPeriod" = ${P} for update`;
+      await held;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const started = Date.now();
+    const error = await reconcileTerm(term(P, sections(P, 9050001, 3)), db, {
+      invariants: "report",
+      limits: { lockTimeout: "1s" },
+    }).catch((e: unknown) => e);
+    const waited = Date.now() - started;
+
+    expect((error as { cause?: { code?: string } }).cause?.code).toBe("55P03");
+    // Nowhere near the 120 s statement timeout the old scrape sat behind.
+    expect(waited).toBeLessThan(10_000);
+
+    release();
+    await holding;
+    await abandoned.end({ timeout: 5 });
+
+    const retry = await reconcileTerm(term(P, sections(P, 9050001, 3)), db, {
+      invariants: "report",
+    });
+    expect(retry.offeringCount).toBe(3);
+  });
+});
