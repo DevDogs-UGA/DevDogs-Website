@@ -20,9 +20,9 @@
  * it is a thin, one-branch-free wrapper around `loadEnvironment`, which
  * already carries the coverage for selection and loading.
  *
- * ⚠️ This module is exported as the `@devdogsuga/env/session` subpath ON
- * PURPOSE, mirroring `load.ts`'s own subpath split, and MUST stay out of
- * `index.ts`. The root `"."` export is imported by `apps/platform`, which
+ * ⚠️ This module lives in cli-core, outside `@devdogsuga/sdk/env`, ON
+ * PURPOSE, like `load.ts`, and MUST stay out of
+ * the sdk env entry. The `@devdogsuga/sdk/env` export is imported by `apps/platform`, which
  * deploys to Cloudflare Workers; `enterEnvironment` calls `loadEnvironment`,
  * which dynamically imports `node:fs`/`node:path`/`node:url` and
  * `@dotenvx/dotenvx`, none of which exist at the edge. Re-exporting any of

@@ -7,7 +7,7 @@
  * it that way. The four-row probe table below is the kind of logic that rots
  * when it can only be exercised by spawning processes.
  *
- * ⚠️ This module is exported as the `@devdogsuga/env/load` subpath on purpose.
+ * ⚠️ This module lives in cli-core, outside `@devdogsuga/sdk/env`, on purpose.
  * The root `"."` export is imported by `apps/platform`, which deploys to
  * Cloudflare Workers; nothing here may ever be re-exported from `index.ts`, or
  * an `import { selectEnvFiles } from "@devdogsuga/sdk/env"` in server code fails at
