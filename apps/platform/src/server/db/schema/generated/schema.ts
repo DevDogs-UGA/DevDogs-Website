@@ -10,9 +10,6 @@ export const roleTypeInPlatform = platform.enum("roleType", ["default", "custom"
 export const oauthRegistrationTypeInPlatform = platform.enum("oauthRegistrationType", ["development", "production"])
 export const checkInMethodInPlatform = platform.enum("checkInMethod", ["qr", "manual_code", "import"])
 export const auditEventSourceInPlatform = platform.enum("auditEventSource", ["platform", "qr", "manual_code", "system"])
-export const teamRoleInPlatform = platform.enum("teamRole", ["lead", "member"])
-export const membershipDirectionInPlatform = platform.enum("membershipDirection", ["invite", "request"])
-export const membershipRequestStatusInPlatform = platform.enum("membershipRequestStatus", ["pending", "accepted", "declined", "withdrawn", "expired"])
 export const contentActionInPlatform = platform.enum("contentAction", ["quarantine", "no_action"])
 export const filerActionInPlatform = platform.enum("filerAction", ["warn", "suspend", "no_action"])
 export const subjectActionInPlatform = platform.enum("subjectAction", ["warn", "suspend", "ban", "no_action"])
@@ -110,54 +107,6 @@ export const auditEventsInPlatform = platform.table.withRLS("auditEvents", {
 
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 check("auditEvents_action_length", sql`(char_length(action) <= 120)`),check("auditEvents_actor_shape", sql`((("actorType" = 'user'::text) AND ("actorUserId" IS NOT NULL)) OR (("actorType" = 'system'::text) AND ("actorUserId" IS NULL)))`),check("auditEvents_actorType_choices", sql`("actorType" = ANY (ARRAY['user'::text, 'system'::text]))`),check("auditEvents_metadata_bounded", sql`(pg_column_size(metadata) <= 16384)`),check("auditEvents_targetId_length", sql`(char_length("targetId") <= 255)`),check("auditEvents_targetType_length", sql`(char_length("targetType") <= 80)`),]);
-
-export const competitionEntriesInPlatform = platform.table.withRLS("competitionEntries", {
-	id: uuid().defaultRandom().primaryKey(),
-	competitionId: uuid().notNull().references(() => competitionsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
-	teamId: uuid().notNull().references(() => teamsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
-	prNodeId: text().notNull(),
-	prNumber: integer().notNull(),
-	url: text().notNull(),
-	openedAt: timestamp({ withTimezone: true }).notNull(),
-	mergedAt: timestamp({ withTimezone: true }),
-	closedAt: timestamp({ withTimezone: true }),
-}, (table) => [
-	index("competitionEntries_competitionId_idx").using("btree", table.competitionId.asc().nullsLast()),
-	index("competitionEntries_teamId_idx").using("btree", table.teamId.asc().nullsLast()),
-	unique("competitionEntries_prNodeId_key").on(table.prNodeId),
-	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
-
-	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-
-	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
-]);
-
-export const competitionsInPlatform = platform.table.withRLS("competitions", {
-	id: uuid().defaultRandom().primaryKey(),
-	issueNodeId: text().notNull(),
-	issueNumber: integer().notNull(),
-	repo: text().notNull(),
-	url: text().notNull(),
-	slug: text().notNull(),
-	title: text().notNull(),
-	brief: text(),
-	plannedEndAt: timestamp({ withTimezone: true }),
-	kickedOffAt: timestamp({ withTimezone: true }).notNull(),
-	closedAt: timestamp({ withTimezone: true }),
-	githubSyncedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
-}, (table) => [
-	index("competitions_kickedOffAt_idx").using("btree", table.kickedOffAt.desc().nullsFirst()),
-	unique("competitions_issueNodeId_key").on(table.issueNodeId),	unique("competitions_slug_key").on(table.slug),
-	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
-
-	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-
-	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
-check("competitions_title_length", sql`(char_length(title) <= 160)`),]);
 
 export const configReconcileStateInPlatform = platform.table.withRLS("configReconcileState", {
 	id: boolean().default(true).primaryKey(),
@@ -466,8 +415,6 @@ export const profileInPlatform = platform.table.withRLS("profile", {
 	showAvatar: boolean().default(true).notNull(),
 	showBio: boolean().default(true).notNull(),
 	showLinks: boolean().default(true).notNull(),
-	showCompetitions: boolean().default(true).notNull(),
-	showContributions: boolean().default(true).notNull(),
 	showStars: boolean().default(true).notNull(),
 	handle: text(),
 }, (table) => [
@@ -537,8 +484,7 @@ export const reflectionRevisionsInPlatform = platform.table.withRLS("reflectionR
 	id: uuid().defaultRandom().primaryKey(),
 	reflectionId: uuid().notNull().references(() => reflectionsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
 	userId: uuid().notNull(),
-	meetingId: uuid(),
-	competitionId: uuid(),
+	meetingId: uuid().notNull(),
 	content: text().notNull(),
 	submittedAt: timestamp({ withTimezone: true }),
 	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
@@ -555,19 +501,17 @@ export const reflectionRevisionsInPlatform = platform.table.withRLS("reflectionR
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 
 	pgPolicy("own_or_auditor_select", { for: "select", to: ["authenticated"], using: sql`((( SELECT auth.uid() AS uid) = "userId") OR platform.has_permission(( SELECT auth.uid() AS uid), 'canViewAuditLog'::text))` }),
-check("reflectionRevisions_changeReason_length", sql`(("changeReason" IS NULL) OR (char_length("changeReason") <= 500))`),check("reflectionRevisions_exactly_one_activity", sql`(((("meetingId" IS NOT NULL))::integer + (("competitionId" IS NOT NULL))::integer) = 1)`),]);
+check("reflectionRevisions_changeReason_length", sql`(("changeReason" IS NULL) OR (char_length("changeReason") <= 500))`),]);
 
 export const reflectionsInPlatform = platform.table.withRLS("reflections", {
 	id: uuid().defaultRandom().primaryKey(),
 	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
-	meetingId: uuid().references(() => meetingsInPlatform.id, { onDelete: "restrict", onUpdate: "cascade" } ),
-	competitionId: uuid().references(() => competitionsInPlatform.id, { onDelete: "restrict", onUpdate: "cascade" } ),
+	meetingId: uuid().notNull().references(() => meetingsInPlatform.id, { onDelete: "restrict", onUpdate: "cascade" } ),
 	content: text().default("").notNull(),
 	submittedAt: timestamp({ withTimezone: true }),
 	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
 	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
 }, (table) => [
-	uniqueIndex("reflections_userId_competitionId_key").using("btree", table.userId.asc().nullsLast(), table.competitionId.asc().nullsLast()).where(sql`("competitionId" IS NOT NULL)`),
 	uniqueIndex("reflections_userId_meetingId_key").using("btree", table.userId.asc().nullsLast(), table.meetingId.asc().nullsLast()).where(sql`("meetingId" IS NOT NULL)`),
 	index("reflections_userId_updatedAt_idx").using("btree", table.userId.asc().nullsLast(), table.updatedAt.desc().nullsFirst()),
 
@@ -578,7 +522,7 @@ export const reflectionsInPlatform = platform.table.withRLS("reflections", {
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 
 	pgPolicy("own_select", { for: "select", to: ["authenticated"], using: sql`(( SELECT auth.uid() AS uid) = "userId")` }),
-check("reflections_exactly_one_activity", sql`(((("meetingId" IS NOT NULL))::integer + (("competitionId" IS NOT NULL))::integer) = 1)`),]);
+]);
 
 export const reflectionSettingsInPlatform = platform.table.withRLS("reflectionSettings", {
 	id: boolean().default(true).primaryKey(),
@@ -872,76 +816,6 @@ export const surveyQuestionsInPlatform = platform.table.withRLS("surveyQuestions
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
 check("surveyQuestions_definition_size", sql`(pg_column_size(definition) <= 16384)`),check("surveyQuestions_id_format", sql`(id ~ '^[a-z][a-z0-9]*(_[a-z0-9]+)*$'::text)`),check("surveyQuestions_scope_choices", sql`(scope = ANY (ARRAY['member'::text, 'meeting'::text]))`),check("surveyQuestions_type_choices", sql`(type = ANY (ARRAY['text'::text, 'longText'::text, 'choice'::text, 'multiChoice'::text, 'scale'::text]))`),]);
 
-export const teamMembersInPlatform = platform.table.withRLS("teamMembers", {
-	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid().notNull().references(() => teamsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
-	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
-	role: teamRoleInPlatform().default("member").notNull(),
-	joinedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
-	leftAt: timestamp({ withTimezone: true }),
-}, (table) => [
-	uniqueIndex("teamMembers_one_active_per_team_user").using("btree", table.teamId.asc().nullsLast(), table.userId.asc().nullsLast()).where(sql`("leftAt" IS NULL)`),
-	uniqueIndex("teamMembers_one_lead_per_team").using("btree", table.teamId.asc().nullsLast()).where(sql`((role = 'lead'::platform."teamRole") AND ("leftAt" IS NULL))`),
-	index("teamMembers_userId_active_idx").using("btree", table.userId.asc().nullsLast()).where(sql`("leftAt" IS NULL)`),
-
-	pgPolicy("authenticated_select", { for: "select", to: ["authenticated"], using: sql`("leftAt" IS NULL)` }),
-
-	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
-
-	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-
-	pgPolicy("team_member_select_history", { for: "select", to: ["authenticated"], using: sql`(("leftAt" IS NOT NULL) AND platform.is_active_team_member("teamId", ( SELECT auth.uid() AS uid)))` }),
-]);
-
-export const teamMembershipRequestsInPlatform = platform.table.withRLS("teamMembershipRequests", {
-	id: uuid().defaultRandom().primaryKey(),
-	teamId: uuid().notNull().references(() => teamsInPlatform.id, { onDelete: "cascade", onUpdate: "cascade" } ),
-	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
-	direction: membershipDirectionInPlatform().notNull(),
-	createdBy: uuid().notNull(),
-	message: text(),
-	status: membershipRequestStatusInPlatform().default("pending").notNull(),
-	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
-	notifiedAt: timestamp({ withTimezone: true }),
-	respondedAt: timestamp({ withTimezone: true }),
-	respondedBy: uuid(),
-	expiresAt: timestamp({ withTimezone: true }),
-}, (table) => [
-	uniqueIndex("teamMembershipRequests_one_pending_per_team_user").using("btree", table.teamId.asc().nullsLast(), table.userId.asc().nullsLast()).where(sql`(status = 'pending'::platform."membershipRequestStatus")`),
-	index("teamMembershipRequests_unnotified").using("btree", table.createdAt.asc().nullsLast()).where(sql`((status = 'pending'::platform."membershipRequestStatus") AND ("notifiedAt" IS NULL))`),
-
-	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
-
-	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-
-	pgPolicy("own_or_team_select", { for: "select", to: ["authenticated"], using: sql`((( SELECT auth.uid() AS uid) = "userId") OR (EXISTS ( SELECT 1
-   FROM platform."teamMembers" tm
-  WHERE ((tm."teamId" = "teamMembershipRequests"."teamId") AND (tm."userId" = ( SELECT auth.uid() AS uid)) AND (tm."leftAt" IS NULL)))))` }),
-check("teamMembershipRequests_pending_unresponded", sql`((status <> 'pending'::platform."membershipRequestStatus") OR ("respondedAt" IS NULL))`),check("teamMembershipRequests_responded_together", sql`(("respondedAt" IS NULL) = ("respondedBy" IS NULL))`),]);
-
-export const teamsInPlatform = platform.table.withRLS("teams", {
-	id: uuid().defaultRandom().primaryKey(),
-	slug: text().notNull(),
-	name: text().notNull(),
-	joinCode: text().notNull(),
-	createdBy: uuid().notNull(),
-	acceptingRequests: boolean().default(true).notNull(),
-	githubSyncedAt: timestamp({ withTimezone: true }),
-}, (table) => [
-	unique("teams_slug_key").on(table.slug),
-	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
-
-	pgPolicy("no_client_insert", { as: "restrictive", for: "insert", to: ["anon", "authenticated"], withCheck: sql`false` }),
-
-	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
-
-	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
-]);
-
 export const userRolesInPlatform = platform.table.withRLS("userRoles", {
 	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade" } ),
 	roleId: uuid().notNull().references(() => rolesInPlatform.id, { onDelete: "cascade" } ),
@@ -998,11 +872,9 @@ export const memberStarsInPlatform = platform.view("memberStars", {	userId: uuid
 	activityType: text(),
 	activityId: uuid(),
 	meetingId: uuid(),
-	competitionId: uuid(),
 	startsAt: timestamp({ withTimezone: true }),
 	earnedAt: timestamp({ withTimezone: true }),
-	won: boolean(),
-}).with({"securityInvoker":true}).as(sql`SELECT a."userId", 'meeting'::text AS "activityType", m.id AS "activityId", m.id AS "meetingId", NULL::uuid AS "competitionId", m."startsAt", a."recordedAt" AS "earnedAt", false AS won FROM platform.attendance a JOIN platform.meetings m ON m.id = a."meetingId" WHERE m."countsForCredit" AND m."cancelledAt" IS NULL AND m."deletedAt" IS NULL UNION ALL SELECT tm."userId", 'competition'::text AS "activityType", c.id AS "activityId", NULL::uuid AS "meetingId", c.id AS "competitionId", min(ce."openedAt") AS "startsAt", min(ce."openedAt") AS "earnedAt", bool_or(ce."mergedAt" IS NOT NULL) AS won FROM platform."competitionEntries" ce JOIN platform.competitions c ON c.id = ce."competitionId" JOIN platform."teamMembers" tm ON tm."teamId" = ce."teamId" AND tm."joinedAt" <= ce."openedAt" AND (tm."leftAt" IS NULL OR tm."leftAt" > ce."openedAt") WHERE c."closedAt" IS NULL OR ce."openedAt" < c."closedAt" GROUP BY tm."userId", c.id`);
+}).with({"securityInvoker":true}).as(sql`SELECT a."userId", 'meeting'::text AS "activityType", m.id AS "activityId", m.id AS "meetingId", m."startsAt", a."recordedAt" AS "earnedAt" FROM platform.attendance a JOIN platform.meetings m ON m.id = a."meetingId" WHERE m."countsForCredit" AND m."cancelledAt" IS NULL AND m."deletedAt" IS NULL`);
 
 export const profileWithVerificationInPlatform = platform.view("profileWithVerification", {	userId: uuid(),
 	hasPronouns: boolean(),
@@ -1026,10 +898,8 @@ export const publicProfilesInPlatform = platform.view("publicProfiles", {	userId
 	showAvatar: boolean(),
 	showBio: boolean(),
 	showLinks: boolean(),
-	showCompetitions: boolean(),
-	showContributions: boolean(),
 	showStars: boolean(),
-}).as(sql`SELECT p."userId", p.handle, CASE WHEN p."showName" THEN p."preferredName" ELSE NULL::character varying END AS "displayName", p."showAvatar" AND (EXISTS ( SELECT 1 FROM storage.objects o WHERE o.bucket_id = 'avatars'::text AND o.name = p."userId"::text)) AS "hasAvatar", CASE WHEN p."showBio" THEN p.bio ELSE NULL::character varying END AS bio, CASE WHEN p."showBio" THEN p."roleDescription" ELSE NULL::character varying END AS "roleDescription", CASE WHEN p."showGithub" THEN ( SELECT lower(i.identity_data ->> 'user_name'::text) AS lower FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'github'::text) ELSE NULL::text END AS "githubHandle", CASE WHEN p."showDiscord" THEN ( SELECT i.identity_data ->> 'full_name'::text FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'discord'::text) ELSE NULL::text END AS "discordHandle", CASE WHEN p."showLinkedin" THEN ( SELECT i.identity_data ->> 'name'::text FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'linkedin_oidc'::text) ELSE NULL::text END AS "linkedinName", p."showName", p."showAvatar", p."showBio", p."showLinks", p."showCompetitions", p."showContributions", p."showStars" FROM platform.profile p JOIN platform."profileWithVerification" v ON v."userId" = p."userId" WHERE v.verified AND p."publicProfile" AND p.handle IS NOT NULL AND p."quarantinedBy" IS NULL AND NOT platform.is_suspended(p."userId")`);
+}).as(sql`SELECT p."userId", p.handle, CASE WHEN p."showName" THEN p."preferredName" ELSE NULL::character varying END AS "displayName", p."showAvatar" AND (EXISTS ( SELECT 1 FROM storage.objects o WHERE o.bucket_id = 'avatars'::text AND o.name = p."userId"::text)) AS "hasAvatar", CASE WHEN p."showBio" THEN p.bio ELSE NULL::character varying END AS bio, CASE WHEN p."showBio" THEN p."roleDescription" ELSE NULL::character varying END AS "roleDescription", CASE WHEN p."showGithub" THEN ( SELECT lower(i.identity_data ->> 'user_name'::text) AS lower FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'github'::text) ELSE NULL::text END AS "githubHandle", CASE WHEN p."showDiscord" THEN ( SELECT i.identity_data ->> 'full_name'::text FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'discord'::text) ELSE NULL::text END AS "discordHandle", CASE WHEN p."showLinkedin" THEN ( SELECT i.identity_data ->> 'name'::text FROM auth.identities i WHERE i.user_id = p."userId" AND i.provider = 'linkedin_oidc'::text) ELSE NULL::text END AS "linkedinName", p."showName", p."showAvatar", p."showBio", p."showLinks", p."showStars" FROM platform.profile p JOIN platform."profileWithVerification" v ON v."userId" = p."userId" WHERE v.verified AND p."publicProfile" AND p.handle IS NOT NULL AND p."quarantinedBy" IS NULL AND NOT platform.is_suspended(p."userId")`);
 
 export const resolvedUserPermissionsInPlatform = platform.materializedView("resolvedUserPermissions", {	userId: uuid(),
 	canModerate: boolean(),
@@ -1050,8 +920,6 @@ export { attendanceInPlatform as attendance };
 export { auditEventSourceInPlatform as auditEventSource };
 export { auditEventsInPlatform as auditEvents };
 export { checkInMethodInPlatform as checkInMethod };
-export { competitionEntriesInPlatform as competitionEntries };
-export { competitionsInPlatform as competitions };
 export { configReconcileStateInPlatform as configReconcileState };
 export { contentActionInPlatform as contentAction };
 export { contentTypesInPlatform as contentTypes };
@@ -1066,8 +934,6 @@ export { jobHeartbeatsInPlatform as jobHeartbeats };
 export { leaderboardProfilesInPlatform as leaderboardProfiles };
 export { meetingsInPlatform as meetings };
 export { memberStarsInPlatform as memberStars };
-export { membershipDirectionInPlatform as membershipDirection };
-export { membershipRequestStatusInPlatform as membershipRequestStatus };
 export { oauthConnectCodesInPlatform as oauthConnectCodes };
 export { oauthDeviceCodeStatusInPlatform as oauthDeviceCodeStatus };
 export { oauthDeviceCodesInPlatform as oauthDeviceCodes };
@@ -1104,10 +970,6 @@ export { supportMessagesInPlatform as supportMessages };
 export { surveyAnswerRevisionsInPlatform as surveyAnswerRevisions };
 export { surveyAnswersInPlatform as surveyAnswers };
 export { surveyQuestionsInPlatform as surveyQuestions };
-export { teamMembersInPlatform as teamMembers };
-export { teamMembershipRequestsInPlatform as teamMembershipRequests };
-export { teamRoleInPlatform as teamRole };
-export { teamsInPlatform as teams };
 export { userRolesInPlatform as userRoles };
 export { userSuspensionsInPlatform as userSuspensions };
 export { workshopsInPlatform as workshops };

@@ -234,7 +234,7 @@ const WRITE_CHUNK = 500;
  * Writes what `reconcileMembership` decided: a few statements per kind of
  * change rather than one per (user, role) pair.
  */
-async function writeBatches(batches: RecordBatches): Promise<void> {
+export async function writeBatches(batches: RecordBatches): Promise<void> {
   for (const rows of chunk(batches.platformAdds, WRITE_CHUNK)) {
     await db.insert(userRoles).values(rows).onConflictDoNothing();
   }

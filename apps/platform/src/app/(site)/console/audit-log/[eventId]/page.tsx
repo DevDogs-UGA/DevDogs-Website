@@ -20,9 +20,7 @@ function Revision({
         <div>
           <dt className="inline font-medium text-white/80">Activity: </dt>
           <dd className="inline font-mono">
-            {revision.meetingId
-              ? `meeting:${revision.meetingId}`
-              : `competition:${revision.competitionId}`}
+            {`meeting:${revision.meetingId}`}
           </dd>
         </div>
         <div>

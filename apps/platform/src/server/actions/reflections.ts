@@ -97,7 +97,7 @@ async function writeReflection(
     const existingRows = await tx.execute<{
       id: string;
       userId: string;
-      meetingId: string | null;
+      meetingId: string;
       content: string;
       submittedAt: Date | null;
     }>(sql`
