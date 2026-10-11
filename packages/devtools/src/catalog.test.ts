@@ -146,11 +146,6 @@ describe("prompts", () => {
       "--yes",
       // file path: a text box is a worse version of the default
       "--file",
-      // `run`'s two. The multiselect it opens IS this question, asked against
-      // the apps that actually define the task, so a screen asking "which
-      // filter?" first would ask it twice and let the answers disagree.
-      "--filter",
-      "--all",
       // scripting-only: machine-readable output; a wizard asking for JSON
       // mode produces nothing useful since the wizard itself is the UI.
       "--json",
@@ -222,7 +217,6 @@ describe("coverage of what the CLI dispatches", () => {
     // Both are dispatched twice: once in `main()` ahead of `intro()`, which is
     // what a typed command line reaches, and once in `dispatch` for the walk
     // the wizard hands back. They belong here for the second of those.
-    "run",
     // The Supabase jobs, and the real tools (passthroughs, typed only:
     // `main()` routes them ahead of `intro()`).
     "restart-stack",

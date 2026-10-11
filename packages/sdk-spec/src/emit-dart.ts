@@ -166,9 +166,7 @@ function emitObject(
   const lines: string[] = [];
   const objectDoc = dartDoc(decl.doc).trimEnd();
   if (objectDoc) lines.push(objectDoc);
-  lines.push(
-    `class ${decl.name}${parent ? ` extends ${parent}` : ""} {`,
-  );
+  lines.push(`class ${decl.name}${parent ? ` extends ${parent}` : ""} {`);
   const params = decl.props.map((p) => ({
     p,
     field: dartIdentifier(p.name),
@@ -258,9 +256,7 @@ function emitUnion(
   lines.push(`sealed class ${decl.name} {`);
   lines.push(`  const ${decl.name}();`);
   lines.push("");
-  lines.push(
-    `  factory ${decl.name}.fromJson(Map<String, dynamic> json) {`,
-  );
+  lines.push(`  factory ${decl.name}.fromJson(Map<String, dynamic> json) {`);
   if (decl.discriminator) {
     const prop = decl.discriminator;
     lines.push(`    final tag = json[${dartString(prop)}];`);

@@ -71,7 +71,9 @@ function emitOperation(op: Operation): { signature: string; impl: string } {
   const argName = "params";
   const paramsType = hasParams
     ? `{ ${params
-        .map((p) => `${propKey(p.name)}${p.required ? "" : "?"}: ${paramType(p)}`)
+        .map(
+          (p) => `${propKey(p.name)}${p.required ? "" : "?"}: ${paramType(p)}`,
+        )
         .join("; ")} }`
     : "";
   const args = hasParams

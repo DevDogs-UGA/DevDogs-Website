@@ -30,7 +30,7 @@ import {
 } from "@clack/prompts";
 import type { DeployEnvironment } from "@devdogsuga/sdk/env/targets";
 import {
-  DEFAULT_API_URL,
+  DEFAULT_API_URLS,
   ENV_KEYS,
   PROVIDER_IDENTIFIER,
   PROVIDER_NAME,
@@ -38,7 +38,7 @@ import {
 } from "./config.js";
 import { upsertEnvLocal } from "./env-file.js";
 import { checkProvider, upsertDevDogsProvider } from "./db.js";
-import { DiscoveryError, fetchIssuer } from "./discovery.js";
+import { DiscoveryError, fetchIssuerFromAny } from "./discovery.js";
 import { openBrowser } from "./browser.js";
 import {
   codeChallengeFor,
@@ -457,11 +457,10 @@ async function connectByPasting(
 ): Promise<ExchangeResult> {
   // Not prompted: contributors always want the canonical API. `--base-url` /
   // `OAUTH_BASE_URL` stay as overrides for testing against another project.
-  const baseUrl = (
-    baseUrlOverride ??
-    process.env[ENV_KEYS.baseUrl] ??
-    DEFAULT_API_URL
-  ).replace(/\/+$/, "");
+  const explicitBase = baseUrlOverride ?? process.env[ENV_KEYS.baseUrl];
+  const candidates = explicitBase
+    ? [explicitBase.replace(/\/+$/, "")]
+    : DEFAULT_API_URLS;
 
   let clientId = nonEmptyEnv(ENV_KEYS.clientId);
   let clientSecret = nonEmptyEnv(ENV_KEYS.clientSecret);
@@ -515,7 +514,7 @@ async function connectByPasting(
   discoverySpinner.start("Discovering issuer");
   let issuer: string;
   try {
-    issuer = await fetchIssuer(baseUrl);
+    ({ issuer } = await fetchIssuerFromAny(candidates));
     discoverySpinner.stop(`Discovered issuer: ${issuer}`);
   } catch (err) {
     discoverySpinner.stop("Could not discover the issuer");
@@ -673,9 +672,11 @@ export async function runOAuthSetup(
     // nothing new to that boundary.
     [ENV_KEYS.clientSecret]: clientSecret,
   };
-  if (!usedOneClick) {
-    envValues[ENV_KEYS.baseUrl] =
-      baseUrlOverride ?? process.env[ENV_KEYS.baseUrl] ?? DEFAULT_API_URL;
+  // Only an explicit override is remembered: the default is a list of hosts
+  // tried in turn, and pinning whichever answered today would outlive it.
+  const explicitBase = baseUrlOverride ?? process.env[ENV_KEYS.baseUrl];
+  if (!usedOneClick && explicitBase) {
+    envValues[ENV_KEYS.baseUrl] = explicitBase;
   }
   upsertEnvLocal(cwd, envValues);
   log.success("Credentials saved to .env.local");

@@ -75,8 +75,7 @@ export function moderationSchema(): Json {
 /** `brand/tokens.json`: the palette, theme, app identities and mark geometry. */
 export function brandTokens(): Json {
   return {
-    $comment:
-      "Generated from @devdogsuga/sdk/brand. Do not edit by hand.",
+    $comment: "Generated from @devdogsuga/sdk/brand. Do not edit by hand.",
     palette: PALETTE,
     mauve: MAUVE,
     accent: ACCENT,

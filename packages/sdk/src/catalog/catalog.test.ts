@@ -48,7 +48,12 @@ describe("createCatalogClient", () => {
     const seen: Seen[] = [];
     const client = createCatalogClient({
       baseUrl: BASE,
-      fetch: fakeFetch(seen, { term: 202702, query: "x", limit: 20, results: [] }),
+      fetch: fakeFetch(seen, {
+        term: 202702,
+        query: "x",
+        limit: 20,
+        results: [],
+      }),
     });
     await client.searchCourses({ term: 202702, q: "intro to programming" });
     expect(new URL(seen[0]!.url).searchParams.toString()).toBe(

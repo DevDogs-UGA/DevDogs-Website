@@ -179,7 +179,9 @@ components:
     Same: { type: object, properties: { a: { type: string } } }
 `;
     const other = JSON.stringify({
-      $defs: { Same: { type: "object", properties: { b: { type: "string" } } } },
+      $defs: {
+        Same: { type: "object", properties: { b: { type: "string" } } },
+      },
     });
     expect(() =>
       loadSpec(VIRTUAL, { [VIRTUAL]: yaml, "/virtual/other.json": other }),
@@ -188,12 +190,14 @@ components:
 
   it("refuses a feature it does not understand", () => {
     expect(() =>
-      load(WRAP(`
+      load(
+        WRAP(`
     Bad:
       type: object
       properties:
         n: { type: [string, integer] }
-`)),
+`),
+      ),
     ).toThrow(/multiple types/);
   });
 });

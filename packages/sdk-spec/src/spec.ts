@@ -155,7 +155,8 @@ class Loader {
     let current = node;
     let currentFile = file;
     for (let hops = 0; hops < 10; hops++) {
-      if (!isObject(current)) throw new Error(`${currentFile}: expected object`);
+      if (!isObject(current))
+        throw new Error(`${currentFile}: expected object`);
       const ref = str(current["$ref"]);
       if (!ref) return { node: current, file: currentFile };
       const split = this.splitRef(ref, currentFile);
@@ -223,7 +224,9 @@ class Loader {
       const props: Prop[] = [];
       set({ kind: "object", name, ...(doc ? { doc } : {}), props });
       for (const [propName, propNode] of Object.entries(node["properties"])) {
-        const propDoc = isObject(propNode) ? str(propNode["description"]) : undefined;
+        const propDoc = isObject(propNode)
+          ? str(propNode["description"])
+          : undefined;
         props.push({
           name: propName,
           type: this.type(propNode, `${name}${pascalCase(propName)}`, file),
@@ -274,7 +277,9 @@ class Loader {
         if (member?.kind !== "object") return null;
         const prop = member.props.find((p) => p.name === candidate.name);
         const target =
-          prop?.type.kind === "ref" ? this.decls.get(prop.type.name)?.decl : null;
+          prop?.type.kind === "ref"
+            ? this.decls.get(prop.type.name)?.decl
+            : null;
         if (target?.kind !== "enum") {
           ok = false;
           break;
@@ -394,7 +399,8 @@ export function loadSpec(file: string, overrides?: Overrides): Spec {
       const op = rawItem[method];
       if (!isObject(op)) continue;
       const id = str(op["operationId"]);
-      if (!id) throw new Error(`${method.toUpperCase()} ${path}: no operationId`);
+      if (!id)
+        throw new Error(`${method.toUpperCase()} ${path}: no operationId`);
 
       const params: Param[] = [];
       const own = Array.isArray(op["parameters"])
@@ -404,7 +410,9 @@ export function loadSpec(file: string, overrides?: Overrides): Spec {
         const { node, file: paramFile } = loader.deref(rawParam, file);
         const where = str(node["in"]);
         if (where !== "path" && where !== "query" && where !== "header") {
-          throw new Error(`${id}: unsupported parameter location ${String(where)}`);
+          throw new Error(
+            `${id}: unsupported parameter location ${String(where)}`,
+          );
         }
         const name = str(node["name"]) ?? "";
         const doc = str(node["description"]);
@@ -412,7 +420,11 @@ export function loadSpec(file: string, overrides?: Overrides): Spec {
           name,
           in: where,
           required: where === "path" || node["required"] === true,
-          type: loader.type(node["schema"], `${pascalCase(id)}${pascalCase(name)}`, paramFile),
+          type: loader.type(
+            node["schema"],
+            `${pascalCase(id)}${pascalCase(name)}`,
+            paramFile,
+          ),
           ...(doc ? { doc } : {}),
         });
       }
@@ -423,7 +435,11 @@ export function loadSpec(file: string, overrides?: Overrides): Spec {
         const content = isObject(node["content"]) ? node["content"] : {};
         const json = content["application/json"];
         if (isObject(json)) {
-          body = loader.type(json["schema"], `${pascalCase(id)}Request`, bodyFile);
+          body = loader.type(
+            json["schema"],
+            `${pascalCase(id)}Request`,
+            bodyFile,
+          );
         }
       }
 
@@ -438,7 +454,11 @@ export function loadSpec(file: string, overrides?: Overrides): Spec {
         if (isObject(json)) {
           success = {
             status: code,
-            type: loader.type(json["schema"], `${pascalCase(id)}Response`, responseFile),
+            type: loader.type(
+              json["schema"],
+              `${pascalCase(id)}Response`,
+              responseFile,
+            ),
           };
         }
       }

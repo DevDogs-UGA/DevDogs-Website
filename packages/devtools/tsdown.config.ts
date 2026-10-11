@@ -47,7 +47,7 @@ export default defineConfig({
   deps: {
     alwaysBundle: [
       /^@devdogsuga\/cli-core(\/|$)/,
-      /^@devdogsuga\/sdk\/(telemetry|env\/targets|env\/derivation)$/,
+      /^@devdogsuga\/sdk\/(telemetry|constants|env\/targets|env\/derivation)$/,
     ],
     onlyBundle: [],
     onlyImport: [

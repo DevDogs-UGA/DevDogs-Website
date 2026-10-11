@@ -46,7 +46,11 @@ describe("createPlatformClient", () => {
       fetch: () =>
         Promise.resolve(
           Response.json(
-            { reportId: "00000000-0000-4000-8000-0000000000c1", corroborated: false, sandbox: true },
+            {
+              reportId: "00000000-0000-4000-8000-0000000000c1",
+              corroborated: false,
+              sandbox: true,
+            },
             { status: 201 },
           ),
         ),

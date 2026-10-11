@@ -103,7 +103,10 @@ export function brandTokensDart(tokens: Json): string {
     `/// The club palette, flat sRGB. Names follow \`--brand-*\` in palette.css.\nabstract final class BrandPalette {\n${Object.entries(
       palette,
     )
-      .map(([name, hex]) => `  static const Color ${camelCase(name)} = ${dartColor(hex)};`)
+      .map(
+        ([name, hex]) =>
+          `  static const Color ${camelCase(name)} = ${dartColor(hex)};`,
+      )
       .join("\n")}\n}\n`,
   );
 
@@ -111,7 +114,10 @@ export function brandTokensDart(tokens: Json): string {
     `/// The roles the palette plays in the dark theme the club's images use.\nabstract final class BrandTheme {\n${Object.entries(
       theme,
     )
-      .map(([name, hex]) => `  static const Color ${camelCase(name)} = ${dartColor(hex)};`)
+      .map(
+        ([name, hex]) =>
+          `  static const Color ${camelCase(name)} = ${dartColor(hex)};`,
+      )
       .join("\n")}\n}\n`,
   );
 
@@ -119,7 +125,10 @@ export function brandTokensDart(tokens: Json): string {
     `/// How far a block shadow is thrown, in logical pixels.\nabstract final class BrandBlockShadow {\n${Object.entries(
       shadow,
     )
-      .map(([name, n]) => `  static const double ${camelCase(name)} = ${String(n)};`)
+      .map(
+        ([name, n]) =>
+          `  static const double ${camelCase(name)} = ${String(n)};`,
+      )
       .join("\n")}\n}\n`,
   );
 
@@ -127,7 +136,10 @@ export function brandTokensDart(tokens: Json): string {
     `/// Where the club is.\nabstract final class BrandContact {\n${Object.entries(
       contact,
     )
-      .map(([name, v]) => `  static const String ${camelCase(name)} = ${dartString(String(v))};`)
+      .map(
+        ([name, v]) =>
+          `  static const String ${camelCase(name)} = ${dartString(String(v))};`,
+      )
       .join("\n")}\n}\n`,
   );
 
@@ -135,7 +147,10 @@ export function brandTokensDart(tokens: Json): string {
     `/// The wordmark's cap height and baseline as fractions of its height.\nabstract final class BrandWordmarkMetrics {\n${Object.entries(
       metrics,
     )
-      .map(([name, n]) => `  static const double ${camelCase(name)} = ${String(n)};`)
+      .map(
+        ([name, n]) =>
+          `  static const double ${camelCase(name)} = ${String(n)};`,
+      )
       .join("\n")}\n}\n`,
   );
 
@@ -157,7 +172,10 @@ export function brandTokensDart(tokens: Json): string {
     `/// The DogDays and DogPack marks as SVG. Paint is \`currentColor\`: render\n/// with a colour filter or replace it before handing the string to an SVG\n/// widget.\nabstract final class BrandMarks {\n${Object.entries(
       marks,
     )
-      .map(([name, svg]) => `  static const String ${camelCase(name)} = ${dartString(String(svg))};`)
+      .map(
+        ([name, svg]) =>
+          `  static const String ${camelCase(name)} = ${dartString(String(svg))};`,
+      )
       .join("\n")}\n}\n`,
   );
 

@@ -55,6 +55,8 @@ import type * as EnvSessionModule from "@devdogsuga/cli-core/env-runtime/session
 import type { SessionTierResolution } from "@devdogsuga/cli-core/env-runtime/session";
 import { helpPath } from "@devdogsuga/cli-core/help";
 import { catalog } from "./catalog.js";
+import { setProductMode } from "./active.js";
+import { findProductRoot } from "./product/config.js";
 import {
   enterSessionEnvironment,
   realEnvEntryDeps,
@@ -241,6 +243,16 @@ export async function launch(argv: readonly string[]): Promise<void> {
   // tag, computed from the same argv `main()` receives, stands.
   ignoreClosedPipes();
   initDevtoolsTelemetry(rest[0] ?? "menu");
+
+  // A repository with a `devtools.config.json` is a product (DogDays,
+  // DogPack): its commands need no tier, no env registry and no workspace, so
+  // none of the resolution below applies. See `product/config.ts`.
+  if (findProductRoot() !== null) {
+    setProductMode(true);
+    process.env.DEPLOY_ENV = "development";
+    await dispatch(rest);
+    return;
+  }
 
   // Same test `cli.ts`'s own `main()` uses to decide whether a bare command
   // group resumes the wizard instead of dispatching — computed here too so

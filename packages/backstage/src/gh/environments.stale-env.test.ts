@@ -21,7 +21,8 @@ vi.mock("@devdogsuga/cli-core/repo/peers", () => ({
 
 describe("a registry without buildKeys()", () => {
   it("routes no build keys instead of throwing", async () => {
-    const { accepts, acceptedBy, buildOnly } = await import("./environments.js");
+    const { accepts, acceptedBy, buildOnly } =
+      await import("./environments.js");
     expect(buildOnly()).toEqual([]);
     for (const environment of ["staging-build", "production-build"]) {
       expect(() => accepts(environment, "SOME_VARIABLE")).not.toThrow();

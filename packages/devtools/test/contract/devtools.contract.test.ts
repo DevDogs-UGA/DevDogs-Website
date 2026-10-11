@@ -434,7 +434,7 @@ describe("devtools contract tests", () => {
     }
     // The aliases kept for DevDogsUGA's main say what replaces them.
     expect(byPath.has("db start")).toBe(false);
-    expect(byPath.get("run")?.deprecated).toContain("pnpm -r run");
+    expect(byPath.has("run")).toBe(false);
     // Hidden from the wizard, but still a supported command.
     expect(byPath.get("completions")?.surface).toBe("cli-only");
     // Gone.
@@ -577,15 +577,16 @@ describe("devtools contract tests", () => {
     );
   });
 
-  // ── the deprecated run alias ───────────────────────────────────────────────
+  // ── the removed run alias (TASK-404) ───────────────────────────────────────
 
-  it("run names its replacement before it runs", async () => {
-    const { stderr } = await run(
+  it("run names its replacement and fails", async () => {
+    const { status, stderr } = await run(
       ["run", "no-such-task", "--all", "--tier", "development"],
       { env: { CI: "true", DEVTOOLS_TELEMETRY: "0" } },
     );
-    expect(stderr).toContain("devtools run is deprecated.");
-    expect(stderr).toContain("pnpm -r run no-such-task");
+    expect(status).toBe(1);
+    expect(stderr).toContain("`run` is gone");
+    expect(stderr).toContain("pnpm -r run <task>");
   });
 
   // ── --dry-run, the failure log and the script picker ───────────────────────

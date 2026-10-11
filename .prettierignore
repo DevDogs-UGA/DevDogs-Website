@@ -9,6 +9,14 @@ pnpm-lock.yaml
 apps/slides/workshops/
 
 # Generated and committed. Reformatting is a change the generator undoes.
+# `pnpm -F @devdogsuga/sdk-spec generate` writes these; the drift check compares bytes.
+packages/sdk/src/catalog/generated.ts
+packages/sdk/src/platform/generated.ts
+packages/sdk/src/constants/generated.ts
+packages/sdk-spec/moderation/schema.json
+packages/sdk-spec/brand/tokens.json
+packages/sdk-spec/telemetry/scrub.json
+packages/sdk_dart/lib/src/generated/
 packages/sdk/src/brand/generated/
 packages/newsletter/src/generated/
 apps/slides/worker/worker-configuration.d.ts

@@ -106,8 +106,7 @@ export async function request<T>(
 
   if (!response.ok) {
     const body = (parsed ?? {}) as ErrorBody;
-    const code =
-      typeof body.error?.code === "string" ? body.error.code : null;
+    const code = typeof body.error?.code === "string" ? body.error.code : null;
     const message =
       typeof body.error?.message === "string"
         ? body.error.message

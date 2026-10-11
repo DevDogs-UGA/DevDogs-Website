@@ -52,11 +52,8 @@ describe("the top level", () => {
     expect(root).not.toMatch(/^ {2}(cron|workflows) /m);
   });
 
-  it("marks a deprecated command and says what replaces it", () => {
-    expect(renderHelp(catalog)).toMatch(/run .*\(deprecated\)/);
-    expect(renderHelp(catalog, ["run"])).toContain(
-      "Deprecated. Use `pnpm -r run <task>`",
-    );
+  it("no longer lists the removed `run` alias", () => {
+    expect(renderHelp(catalog)).not.toMatch(/^ {2}run /m);
   });
 
   it("leaves a single-scope group unheaded", () => {

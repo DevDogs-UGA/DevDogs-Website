@@ -28,7 +28,6 @@ import {
   pushConfigCommand,
   restartStackCommand,
 } from "./preset/catalog.js";
-import { runCommand } from "./run/catalog.js";
 import { scriptCommand } from "./script/catalog.js";
 import { setupCommand } from "./setup/catalog.js";
 
@@ -47,7 +46,6 @@ export const GROUPS: readonly CommandGroup[] = [
       scriptCommand,
       oauthCommand,
       doctorCommand,
-      runCommand,
     ],
   },
   {

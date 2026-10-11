@@ -25,7 +25,9 @@ describe("the drift check", () => {
     const second = buildOutputs();
     expect(second.map((o) => o.path)).toEqual(first.map((o) => o.path));
     for (const [i, output] of first.entries()) {
-      expect(Buffer.from(second[i]!.content).equals(Buffer.from(output.content))).toBe(true);
+      expect(
+        Buffer.from(second[i]!.content).equals(Buffer.from(output.content)),
+      ).toBe(true);
     }
   });
 

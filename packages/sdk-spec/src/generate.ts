@@ -56,7 +56,13 @@ const OWNED_DIRS = [
 ];
 
 /** Where lane 3b keeps its copy of the catalog spec; it must equal ours. */
-const CATALOG_APP_COPY = join(ROOT, "apps", "catalog", "openapi", "catalog.yaml");
+const CATALOG_APP_COPY = join(
+  ROOT,
+  "apps",
+  "catalog",
+  "openapi",
+  "catalog.yaml",
+);
 
 export function buildOutputs(): Output[] {
   const outputs: Output[] = [];
