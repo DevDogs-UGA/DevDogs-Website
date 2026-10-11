@@ -1,4 +1,5 @@
 // @vitest-environment node
+/* eslint-disable @typescript-eslint/unbound-method -- asserting on vi.fn() members of a dependency object */
 import {
   CLIENT_ID_HEADER,
   signMessage,
@@ -31,7 +32,7 @@ function deps(overrides: Partial<ReportApiDeps> = {}): ReportApiDeps {
     ),
     fileSandbox: vi.fn(() => Promise.resolve(REPORT_ID)),
     ...overrides,
-  } as ReportApiDeps;
+  };
 }
 
 const production = (overrides: Partial<ReportApiDeps> = {}) =>

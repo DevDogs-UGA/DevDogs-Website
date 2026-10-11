@@ -8,7 +8,15 @@ import {
   type ReportRequest,
 } from "@devdogsuga/sdk/moderation";
 import { sql } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 // The Worker bindings the code under test reads: a queue that records what is
 // sent to it. Everything else (the database, the SQL, the signing) is real.
@@ -73,23 +81,33 @@ const MODERATOR_ROLE = id("c000", 1);
 const SLUGS = ["e3-dogpack", "e3-second"];
 const ENDPOINT = "https://dogpack.example.com/functions/v1/platform-moderation";
 const KEY = env.MODERATION_SIGNING_KEY!;
-const slugList = sql.join(SLUGS.map((slug) => sql`${slug}`), sql`, `);
+const slugList = sql.join(
+  SLUGS.map((slug) => sql`${slug}`),
+  sql`, `,
+);
 
 async function cleanup() {
   await db.execute(sql`
     delete from platform."moderationDeliveries"
-    where "clientId" in (${sql.join(CLIENTS.map((c) => sql`${c}::uuid`), sql`, `)})
+    where "clientId" in (${sql.join(
+      CLIENTS.map((c) => sql`${c}::uuid`),
+      sql`, `,
+    )})
        or "appId" in (select id from platform.apps where slug in (${slugList}))
   `);
   await db.execute(
-    sql`delete from platform."oauthRegistrations" where "clientId" in (${sql.join(CLIENTS.map((c) => sql`${c}::uuid`), sql`, `)})`,
+    sql`delete from platform."oauthRegistrations" where "clientId" in (${sql.join(
+      CLIENTS.map((c) => sql`${c}::uuid`),
+      sql`, `,
+    )})`,
   );
   await deleteMembers(MEMBERS);
+  await db.execute(sql`delete from platform.apps where slug in (${slugList})`);
   await db.execute(
-    sql`delete from platform.apps where slug in (${slugList})`,
-  );
-  await db.execute(
-    sql`delete from auth.oauth_clients where id in (${sql.join(CLIENTS.map((c) => sql`${c}::uuid`), sql`, `)})`,
+    sql`delete from auth.oauth_clients where id in (${sql.join(
+      CLIENTS.map((c) => sql`${c}::uuid`),
+      sql`, `,
+    )})`,
   );
   await db.execute(
     sql`delete from platform.roles where id = ${MODERATOR_ROLE}::uuid`,
@@ -99,7 +117,13 @@ async function cleanup() {
 async function registerApp(
   slug: string,
   client: string,
-  types = [{ contentType: "session", label: "Study session", urlTemplate: "https://dogpack.example.com/s/{ref}" }],
+  types = [
+    {
+      contentType: "session",
+      label: "Study session",
+      urlTemplate: "https://dogpack.example.com/s/{ref}",
+    },
+  ],
 ) {
   const [row] = await db.execute<{ id: string }>(sql`
     select "platform".register_external_app(
@@ -147,17 +171,29 @@ beforeEach(async () => {
   signedInAs = MODERATOR;
   await db.execute(sql`delete from platform."rateLimitHits"`);
   await db.execute(
-    sql`delete from platform.reports where "reporterUserId" in (${sql.join(MEMBERS.map((m) => sql`${m}::uuid`), sql`, `)})`,
+    sql`delete from platform.reports where "reporterUserId" in (${sql.join(
+      MEMBERS.map((m) => sql`${m}::uuid`),
+      sql`, `,
+    )})`,
   );
   await db.execute(
-    sql`delete from platform."moderationDeliveries" where "clientId" in (${sql.join(CLIENTS.map((c) => sql`${c}::uuid`), sql`, `)})`,
+    sql`delete from platform."moderationDeliveries" where "clientId" in (${sql.join(
+      CLIENTS.map((c) => sql`${c}::uuid`),
+      sql`, `,
+    )})`,
   );
   await db.execute(
-    sql`delete from platform."moderationClients" where "clientId" in (${sql.join(CLIENTS.map((c) => sql`${c}::uuid`), sql`, `)})`,
+    sql`delete from platform."moderationClients" where "clientId" in (${sql.join(
+      CLIENTS.map((c) => sql`${c}::uuid`),
+      sql`, `,
+    )})`,
   );
   await db.execute(sql`delete from platform.apps where slug in (${slugList})`);
   await db.execute(
-    sql`delete from platform."sandboxReports" where "clientId" in (${sql.join(CLIENTS.map((c) => sql`${c}::uuid`), sql`, `)})`,
+    sql`delete from platform."sandboxReports" where "clientId" in (${sql.join(
+      CLIENTS.map((c) => sql`${c}::uuid`),
+      sql`, `,
+    )})`,
   );
 });
 
@@ -179,7 +215,7 @@ async function appClient(clientId: string, version = 1) {
     clientId,
     secret,
     fetch: (input, init) => {
-      const request = new Request(input as string, init);
+      const request = new Request(input, init);
       expect(request.headers.get(CLIENT_ID_HEADER)).toBe(clientId);
       return handleFileReport(request, databaseReportApi());
     },
@@ -277,11 +313,9 @@ describe("a report round trip through the console", () => {
       });
     }
     expect(received.map((r) => r.outcome)).toEqual(["applied", "applied"]);
-    expect(
-      store.content.get(
-        `session:${SAMPLE_CONTENT.contentRef}`,
-      ),
-    ).toBe("hidden");
+    expect(store.content.get(`session:${SAMPLE_CONTENT.contentRef}`)).toBe(
+      "hidden",
+    );
     expect(store.users.get(AUTHOR)).toBe("suspended");
 
     // A replay of an already-delivered message is skipped by the platform, and
@@ -335,7 +369,8 @@ describe("a report round trip through the console", () => {
     await resolveReport(filed.reportId, "no_action", "no_action", "quarantine");
     const [delivery] = await deliveriesOf(filed.reportId);
 
-    const down = () => Promise.resolve(new Response("bad gateway", { status: 502 }));
+    const down = () =>
+      Promise.resolve(new Response("bad gateway", { status: 502 }));
     expect(await deliver(delivery!.id, down)).toMatchObject({
       ack: false,
       retryAfterSeconds: 30,
@@ -407,25 +442,50 @@ describe("a report round trip through the console", () => {
     await registerApp("e3-dogpack", PROD_CLIENT);
     await registerApp("e3-second", OTHER_CLIENT);
     const filed = await (await appClient(PROD_CLIENT)).fileReport(report());
-    await resolveReport(filed.reportId, "ban", "suspend", "no_action", undefined, true);
-    const rows = await db.execute<{ slug: string; type: string; user: string }>(sql`
+    await resolveReport(
+      filed.reportId,
+      "ban",
+      "suspend",
+      "no_action",
+      undefined,
+      true,
+    );
+    const rows = await db.execute<{
+      slug: string;
+      type: string;
+      user: string;
+    }>(sql`
       select a.slug, d.type, d.payload #>> '{data,userId}' as "user"
       from platform."moderationDeliveries" d join platform.apps a on a.id = d."appId"
       where d."reportId" = ${filed.reportId}::uuid
       order by a.slug, d.type, "user"
     `);
-    expect(rows.map((r) => `${r.slug} ${r.type} ${r.user === AUTHOR ? "author" : "reporter"}`)).toEqual([
+    expect(
+      rows.map(
+        (r) =>
+          `${r.slug} ${r.type} ${r.user === AUTHOR ? "author" : "reporter"}`,
+      ),
+    ).toEqual([
       "e3-dogpack user.ban author",
       "e3-dogpack user.suspend reporter",
       "e3-second user.ban author",
       "e3-second user.suspend reporter",
     ]);
 
-    await db.execute(sql`delete from platform."userSuspensions" where "userId" in (${AUTHOR}::uuid, ${REPORTER}::uuid)`);
-    const scoped = await (await appClient(PROD_CLIENT)).fileReport(
-      report({ contentRef: "another" }),
+    await db.execute(
+      sql`delete from platform."userSuspensions" where "userId" in (${AUTHOR}::uuid, ${REPORTER}::uuid)`,
     );
-    await resolveReport(scoped.reportId, "suspend", "no_action", "no_action", undefined, false);
+    const scoped = await (
+      await appClient(PROD_CLIENT)
+    ).fileReport(report({ contentRef: "another" }));
+    await resolveReport(
+      scoped.reportId,
+      "suspend",
+      "no_action",
+      "no_action",
+      undefined,
+      false,
+    );
     const scopedRows = await db.execute<{ slug: string }>(sql`
       select a.slug from platform."moderationDeliveries" d join platform.apps a on a.id = d."appId"
       where d."reportId" = ${scoped.reportId}::uuid
@@ -442,7 +502,10 @@ describe("the report API's database rules", () => {
     const second = await app.fileReport(
       report({ reporterUserId: OTHER_REPORTER, reason: "harassment" }),
     );
-    expect(second).toMatchObject({ reportId: first.reportId, corroborated: true });
+    expect(second).toMatchObject({
+      reportId: first.reportId,
+      corroborated: true,
+    });
     const [count] = await db.execute<{ n: number }>(
       sql`select count(*)::int as n from platform."reportCorroborations" where "reportId" = ${first.reportId}::uuid`,
     );
@@ -453,7 +516,9 @@ describe("the report API's database rules", () => {
     await registerApp("e3-dogpack", PROD_CLIENT);
     const app = await appClient(PROD_CLIENT);
 
-    await expect(app.fileReport(report({ contentType: "comment" }))).rejects.toMatchObject({
+    await expect(
+      app.fileReport(report({ contentType: "comment" })),
+    ).rejects.toMatchObject({
       status: 422,
       code: "unknown_content_type",
     });
@@ -507,7 +572,9 @@ describe("the report API's database rules", () => {
     await db.execute(
       sql`update platform."moderationClients" set "secretVersion" = 2 where "clientId" = ${PROD_CLIENT}::uuid`,
     );
-    await expect((await appClient(PROD_CLIENT, 1)).fileReport(report())).rejects.toMatchObject({
+    await expect(
+      (await appClient(PROD_CLIENT, 1)).fileReport(report()),
+    ).rejects.toMatchObject({
       status: 401,
       code: "bad_signature",
     });
@@ -534,7 +601,9 @@ describe("the report API's database rules", () => {
   });
 
   it("refuses a client that never turned moderation on", async () => {
-    await expect((await appClient(OTHER_CLIENT)).fileReport(report())).rejects.toMatchObject({
+    await expect(
+      (await appClient(OTHER_CLIENT)).fileReport(report()),
+    ).rejects.toMatchObject({
       status: 401,
       code: "unknown_client",
     });
@@ -552,11 +621,18 @@ describe("registering an external app", () => {
     );
     expect(
       await registerApp("e3-dogpack", OTHER_CLIENT, [
-        { contentType: "session", label: "Session", urlTemplate: null as never },
+        {
+          contentType: "session",
+          label: "Session",
+          urlTemplate: null as never,
+        },
       ]),
     ).toBe(appId);
 
-    const clients = await db.execute<{ clientId: string; appId: string | null }>(
+    const clients = await db.execute<{
+      clientId: string;
+      appId: string | null;
+    }>(
       sql`select "clientId", "appId" from platform."moderationClients" where "clientId" in (${PROD_CLIENT}::uuid, ${OTHER_CLIENT}::uuid) order by "clientId"`,
     );
     expect(clients).toEqual([

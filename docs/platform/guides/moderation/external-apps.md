@@ -28,11 +28,11 @@ Each OAuth client has one signing secret (`whsec_...`, [Standard Webhooks](https
 
 Every message carries three headers:
 
-| Header              | Meaning                                                                |
-| ------------------- | ---------------------------------------------------------------------- |
-| `webhook-id`        | unique per message; the platform sends `msg_<delivery id>`             |
-| `webhook-timestamp` | unix seconds; a message more than **5 minutes** from your clock fails  |
-| `webhook-signature` | `v1,<base64 HMAC-SHA256 of "<id>.<timestamp>.<raw body>">`             |
+| Header              | Meaning                                                               |
+| ------------------- | --------------------------------------------------------------------- |
+| `webhook-id`        | unique per message; the platform sends `msg_<delivery id>`            |
+| `webhook-timestamp` | unix seconds; a message more than **5 minutes** from your clock fails |
+| `webhook-signature` | `v1,<base64 HMAC-SHA256 of "<id>.<timestamp>.<raw body>">`            |
 
 `@devdogsuga/sdk/moderation` does all of it (`signMessage`, `verifyMessage`) with Web Crypto only, so it runs in a Worker, a Deno Edge Function or Node.
 
@@ -57,15 +57,15 @@ Headers: the three above, `moderation-client-id: <your OAuth client id>`, `conte
 
 The platform user id is the DevDogs identity's subject: `auth.identities.provider_id` where `provider = 'custom:devdogsuga'`. `GET /moderation/v1/reasons` returns the reasons to offer.
 
-| Status | `error.code`                                  | Meaning                                                        |
-| ------ | --------------------------------------------- | -------------------------------------------------------------- |
-| 201    | none                                          | `{ reportId, corroborated, sandbox }`                          |
-| 400    | `invalid_json`, `invalid_request`             | the body, or a missing description for `other`                 |
-| 401    | `missing_client`, `unknown_client`, `bad_signature` | the client is not registered for moderation, or the signature is wrong |
-| 403    | `reporter_not_allowed`                        | the reporter is suspended or an OAuth test account             |
-| 422    | `unknown_content_type`, `unknown_user`        | the type was not declared at registration; a user id is not a platform user |
-| 429    | `rate_limited`                                | ten reports an hour per reporter                               |
-| 503    | `not_configured`                              | the platform has no signing key yet                            |
+| Status | `error.code`                                        | Meaning                                                                     |
+| ------ | --------------------------------------------------- | --------------------------------------------------------------------------- |
+| 201    | none                                                | `{ reportId, corroborated, sandbox }`                                       |
+| 400    | `invalid_json`, `invalid_request`                   | the body, or a missing description for `other`                              |
+| 401    | `missing_client`, `unknown_client`, `bad_signature` | the client is not registered for moderation, or the signature is wrong      |
+| 403    | `reporter_not_allowed`                              | the reporter is suspended or an OAuth test account                          |
+| 422    | `unknown_content_type`, `unknown_user`              | the type was not declared at registration; a user id is not a platform user |
+| 429    | `rate_limited`                                      | ten reports an hour per reporter                                            |
+| 503    | `not_configured`                                    | the platform has no signing key yet                                         |
 
 A second report of content that already has an open report becomes a corroboration (`corroborated: true`). The SDK's `createModerationClient` does the signing and maps these errors.
 
@@ -73,12 +73,12 @@ A second report of content that already has an open report becomes a corroborati
 
 The platform POSTs to the endpoint URL you registered. Six message types:
 
-| `type`                                     | Means                                                  |
-| ------------------------------------------ | ------------------------------------------------------ |
-| `content.hide` / `content.remove`          | set `quarantinedBy`; RLS hides the row from everyone but its author |
-| `content.restore`                          | clear it                                               |
-| `user.suspend` / `user.ban`                | a Supabase `ban_duration` on the user with that DevDogs identity |
-| `user.restore`                             | lift it                                                |
+| `type`                            | Means                                                               |
+| --------------------------------- | ------------------------------------------------------------------- |
+| `content.hide` / `content.remove` | set `quarantinedBy`; RLS hides the row from everyone but its author |
+| `content.restore`                 | clear it                                                            |
+| `user.suspend` / `user.ban`       | a Supabase `ban_duration` on the user with that DevDogs identity    |
+| `user.restore`                    | lift it                                                             |
 
 ```json
 { "type": "content.hide", "timestamp": "2027-01-01T00:00:00.000Z",
