@@ -131,6 +131,25 @@ describe("the DogDays section", () => {
   });
 });
 
+describe("what the apps receive at sign-in", () => {
+  // The OAuth server's ID token carries the sign-in provider's name and
+  // picture, not the platform's preferred name, so the copy must not say it.
+  it("names the provider name and picture, and never the preferred name", () => {
+    const flow = section(
+      privacyText,
+      "DevDogs apps and developer testing",
+      "5. Support conversations",
+    );
+    const dogdays = section(privacyText, "13. DogDays", "14. DogPack");
+    const dogpack = section(privacyText, "14. DogPack");
+    for (const text of [flow, dogdays, dogpack]) {
+      expect(text).toMatch(/name and profile picture/);
+      expect(text).not.toMatch(/ID, (a )?UGA email and preferred name/);
+    }
+    expect(dogdays).not.toMatch(/can't see anything else/);
+  });
+});
+
 describe("the deleted features are gone from the legal copy", () => {
   it.each([
     ["privacy", privacyText],

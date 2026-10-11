@@ -360,8 +360,11 @@ export default async function Privacy() {
       <p>
         DogDays and DogPack sign you in with your DevDogs account, but they are
         separate systems with their own databases. They receive only your
-        account&apos;s ID, UGA email and preferred name from devdogsuga.org, and
-        what each stores beyond that is described in §13 and §14.
+        account&apos;s ID, your UGA email, and the name and profile picture from
+        the Google account you signed in with. Your other devdogsuga.org profile
+        details, such as your preferred name, pronouns, bio, graduation year and
+        links, are not shared with them. What each app stores beyond that is
+        described in §13 and §14.
       </p>
       <p>
         Members who contribute to DevDogs apps can use{" "}
@@ -549,9 +552,10 @@ export default async function Privacy() {
       <ul>
         <li>
           <strong>Your account:</strong> when you sign in, DogDays receives your
-          DevDogs account&apos;s ID, UGA email and preferred name, and keeps
-          them in its own database. It can&apos;t see anything else in your
-          devdogsuga.org profile.
+          DevDogs account&apos;s ID, your UGA email, and the name and profile
+          picture from the Google account you signed in with, and keeps them in
+          its own database. It doesn&apos;t receive your other devdogsuga.org
+          profile details, such as your preferred name, pronouns, bio or links.
         </li>
         <li>
           <strong>Your plans:</strong> the schedule plans, drafts and
@@ -615,8 +619,10 @@ export default async function Privacy() {
       <ul>
         <li>
           <strong>Your account:</strong> from your DevDogs account, DogPack
-          receives your ID, UGA email and preferred name. Only UGA students can
-          sign in, because DevDogs sign-in only accepts <code>@uga.edu</code>{" "}
+          receives your ID, your UGA email, and the name and profile picture
+          from the Google account you signed in with. It doesn&apos;t receive
+          your other devdogsuga.org profile details. Only UGA students can sign
+          in, because DevDogs sign-in only accepts <code>@uga.edu</code>{" "}
           accounts (§3).
         </li>
         <li>
