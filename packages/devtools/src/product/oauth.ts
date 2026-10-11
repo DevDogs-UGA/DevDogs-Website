@@ -9,9 +9,9 @@
  *     secret (`DEVDOGS_OAUTH_CLIENT_ID` / `DEVDOGS_OAUTH_CLIENT_SECRET`);
  *   * `db sync --rebuild`, which resets the local database and with it
  *     `auth.custom_oauth_providers`, so the provider is registered again from
- *     the credentials the wizard saved to `.env.local`.
+ *     the credentials the wizard saved to the product's `.env.tooling`.
  */
-import { join } from "node:path";
+import { basename } from "node:path";
 import { OAUTH } from "@devdogsuga/sdk/constants";
 import {
   DEFAULT_API_URLS,
@@ -47,7 +47,7 @@ export function credentialsFromEnv(env: NodeJS.ProcessEnv): Credentials | null {
 
 /** Registers `custom:devdogsuga` on the target with these credentials. */
 export async function registerProvider(
-  root: string,
+  credentialsFile: string,
   target: DbTarget,
   credentials: Credentials,
 ): Promise<{ identifier: string; issuer: string }> {
@@ -64,27 +64,27 @@ export async function registerProvider(
     },
   );
   // The same file the wizard writes, so a later rebuild finds them.
-  upsertEnvFile(join(root, ".env.local"), {
+  upsertEnvFile(credentialsFile, {
     [ENV_KEYS.clientId]: credentials.clientId,
     [ENV_KEYS.clientSecret]: credentials.clientSecret,
   });
   return row;
 }
 
-/** Registers the provider again from what the wizard saved to `.env.local`. */
+/** Registers the provider again from what the wizard saved to `.env.tooling`. */
 export async function reRegisterSavedProvider(
-  root: string,
+  credentialsFile: string,
   target: DbTarget,
 ): Promise<{ identifier: string; issuer: string }> {
-  const saved = readEnvFile(join(root, ".env.local"));
+  const saved = readEnvFile(credentialsFile);
   const clientId = saved[ENV_KEYS.clientId];
   const clientSecret = saved[ENV_KEYS.clientSecret];
   if (!clientId || !clientSecret) {
     throw new OAuthRegistrationError(
-      'No saved OAuth client in .env.local, so "Sign in with DevDogs" cannot be registered again automatically. Run `devtools oauth`.',
+      `No saved OAuth client in ${basename(credentialsFile)}, so "Sign in with DevDogs" cannot be registered again automatically. Run \`devtools oauth\`.`,
     );
   }
-  return registerProvider(root, target, {
+  return registerProvider(credentialsFile, target, {
     clientId,
     clientSecret,
     baseUrl: saved[ENV_KEYS.baseUrl],

@@ -122,12 +122,19 @@ How it works, in short:
   records what this database has had applied, writes the difference as a new migration, and applies it
   (`migration up --local`, or `db push --db-url` for a hosted project). A change that drops a table or column
   needs `--yes`. It then regenerates the types (and leaves them alone when nothing changed and they are current).
+  On a hosted project, a machine with no record (a second laptop, a deleted `supabase/migrations/`) first
+  restores it from the project's own history table (`migration fetch --db-url`), so the diff is not taken
+  against an empty database.
 - **Types are never committed.** `db types` writes them to the path in the config, which is git-ignored.
   The schema hash covers the sorted schema paths, their LF-normalised contents and the generator version (the
   pinned CLI, or supadart); CI uploads a `<product>-types-<hash>.tgz` asset to a rolling `generated-types`
   release, and `db types --download` fetches the one for your hash. No match: it says so and points at `setup`.
 - **Two env files.** `.env` is public and read by the app (`flutter run --dart-define-from-file=.env`);
-  `.env.tooling` is git-ignored and holds `DB_URL`, `SECRET_KEY` and the target (`local` or `hosted`).
+  `.env.tooling` is git-ignored and holds `DB_URL`, `SECRET_KEY`, the target (`local` or `hosted`) and the
+  "Sign in with DevDogs" client id and secret (`OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET`, which
+  `db sync --rebuild` registers again). Nothing is written to `.env.local` in a product repo. `setup` (both files) and
+  `oauth` (the tooling file) check that they are git-ignored and add them to the repo's `.gitignore`
+  when they are not (Flutter's default ignore file leaves them out).
 - **The pinned CLI.** devtools finds `supabase` in `node_modules/.bin` or on PATH when its version is the
   pin, and otherwise runs `npx --yes supabase@<pin>`.
 - **A hosted project** needs custom OAuth providers turned on and the app's return addresses allowed.

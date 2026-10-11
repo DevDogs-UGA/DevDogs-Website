@@ -81,13 +81,78 @@ describe("dbSync", () => {
     const product = makeProduct();
     const { run, calls } = runnerThatGenerates(product.root, CREATE);
     await dbSync(product, CLI, HOSTED, run, { yes: false });
-    expect(calls[1]?.args).toEqual([
+    // Calls: fetch the record (this machine has none), diff, push.
+    expect(calls[2]?.args).toEqual([
       "db",
       "push",
       "--db-url",
       HOSTED.dbUrl,
       "--yes",
     ]);
+  });
+
+  it("restores the record from a hosted project's history on a machine that has none", async () => {
+    const product = makeProduct();
+    const { run, calls } = recordingRunner(({ args }) => {
+      if (args[0] === "migration" && args[1] === "fetch") {
+        writeFiles(product.root, {
+          "supabase/migrations/20261001000000_first.sql": CREATE,
+        });
+        return { stdout: "Migration history fetched" };
+      }
+      if (args.includes("declarative")) {
+        return { stdout: "No schema changes found" };
+      }
+      return undefined;
+    });
+    const logs: string[] = [];
+    const result = await dbSync(product, CLI, HOSTED, run, {
+      yes: false,
+      log: (line) => logs.push(line),
+    });
+    expect(calls[0]?.args).toEqual([
+      "migration",
+      "fetch",
+      "--db-url",
+      HOSTED.dbUrl,
+    ]);
+    expect(calls[1]?.args).toContain("declarative");
+    expect(logs).toContain(
+      "Restored 1 applied migration from the project's history.",
+    );
+    expect(result.migration).toBeNull();
+  });
+
+  it("carries on when a new hosted project has no history to restore", async () => {
+    const product = makeProduct();
+    const { run } = recordingRunner(({ args }) => {
+      if (args[0] === "migration" && args[1] === "fetch") {
+        return { code: 1, stderr: "schema_migrations does not exist" };
+      }
+      if (args.includes("declarative")) {
+        writeFiles(product.root, {
+          "supabase/migrations/20261011120000_devtools_sync.sql": CREATE,
+        });
+        return { stdout: "" };
+      }
+      return { code: 0 };
+    });
+    const result = await dbSync(product, CLI, HOSTED, run, { yes: false });
+    expect(result.applied).toBe(true);
+  });
+
+  it("does not fetch when this machine already has a record, nor for the local stack", async () => {
+    const hosted = makeProduct({
+      files: { "supabase/migrations/20261001000000_first.sql": CREATE },
+    });
+    const first = runnerThatGenerates(hosted.root, null);
+    await dbSync(hosted, CLI, HOSTED, first.run, { yes: false });
+    expect(first.calls.map((c) => c.args[0])).toEqual(["db"]);
+
+    const local = makeProduct();
+    const second = runnerThatGenerates(local.root, null);
+    await dbSync(local, CLI, LOCAL, second.run, { yes: false });
+    expect(second.calls.map((c) => c.args[0])).toEqual(["db"]);
   });
 
   it("prefixes the npx form of the CLI to every call", async () => {

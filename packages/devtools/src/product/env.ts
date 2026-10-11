@@ -11,8 +11,15 @@
  * Values are written unquoted: Flutter's `--dart-define-from-file` reads
  * `KEY=value` lines and keeps quotes as part of the value.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { spawnSync } from "node:child_process";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, join } from "node:path";
 import { parse } from "dotenv";
 
 export function readEnvFile(path: string): Record<string, string> {
@@ -42,6 +49,31 @@ export function upsertEnvFile(
   for (const [key, value] of remaining) updated.push(`${key}=${value}`);
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${updated.join("\n")}\n`, { mode: 0o600 });
+}
+
+/**
+ * Makes sure `relPath` (relative to `root`) is ignored by git, adding it to
+ * the root `.gitignore` when it is not. Returns true when it had to add it.
+ *
+ * Flutter's default `.gitignore` ignores none of `.env`, `.env.tooling` or
+ * `.env.local`, and `.env.tooling` holds the database URL, the secret key and
+ * the OAuth client secret, so devtools does not leave that to chance. Outside a
+ * git work tree (or with no git) there is nothing to commit to, and it does
+ * nothing.
+ */
+export function ensureGitignored(root: string, relPath: string): boolean {
+  const check = spawnSync("git", ["check-ignore", "-q", "--", relPath], {
+    cwd: root,
+    stdio: "ignore",
+  });
+  // 0: ignored. 1: inside a work tree and not ignored. Anything else: not a
+  // repository, or no git.
+  if (check.error || check.status !== 1) return false;
+  const file = join(root, ".gitignore");
+  const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
+  const lead = existing.length === 0 || existing.endsWith("\n") ? "" : "\n";
+  appendFileSync(file, `${lead}/${relPath}\n`);
+  return true;
 }
 
 /** The keys of a manifest, in order. */

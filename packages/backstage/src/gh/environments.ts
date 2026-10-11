@@ -116,13 +116,13 @@ function applyOnly(): readonly string[] {
  * Intersected with the variable set. `define()` already refuses `build: true`
  * on anything but a public, environment-scoped key, which is exactly
  * `variableKeys()`; re-checking here means a registry built some other way
- * (a stale published `@devdogsuga/sdk/env`, a test fixture) still cannot route a
+ * (a registry built before `build: true`, a test fixture) still cannot route a
  * secret into a variables-only environment.
  */
 export function buildOnly(): readonly string[] {
   assertRegistryLoaded();
   const env = getEnvSync();
-  // A checkout still on an `@devdogsuga/sdk/env` from before `build: true` (0.1.8)
+  // A registry from before `build: true` (the retired `@devdogsuga/env`, before 0.1.8)
   // has no `buildKeys()`, and marks nothing, so it routes nothing.
   if (typeof env.buildKeys !== "function") return [];
   const variables = new Set<string>(env.variableKeys());

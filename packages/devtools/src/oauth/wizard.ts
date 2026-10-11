@@ -547,6 +547,11 @@ export async function runOAuthSetup(
    * second time. Skips Step 1 entirely when given.
    */
   presetTarget?: ConnectTarget,
+  /**
+   * Where the credentials are saved, relative to the working directory. A
+   * product repo passes its `.env.tooling`; the default is `.env.local`.
+   */
+  credentialsFile = ".env.local",
 ): Promise<void> {
   const cwd = process.cwd();
 
@@ -678,8 +683,8 @@ export async function runOAuthSetup(
   if (!usedOneClick && explicitBase) {
     envValues[ENV_KEYS.baseUrl] = explicitBase;
   }
-  upsertEnvLocal(cwd, envValues);
-  log.success("Credentials saved to .env.local");
+  upsertEnvLocal(cwd, envValues, credentialsFile);
+  log.success(`Credentials saved to ${credentialsFile}`);
 
   const callbackUri = `${target.apiUrl}/auth/v1/callback`;
 

@@ -1,7 +1,9 @@
-import { readFileSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  ensureGitignored,
   findSecrets,
   manifestKeys,
   readEnvFile,
@@ -111,5 +113,48 @@ describe("findSecrets", () => {
     expect(findSecrets("SOME_URL=postgresql://localhost:5432/app\n")).toEqual(
       [],
     );
+  });
+});
+
+describe("ensureGitignored", () => {
+  const initRepo = (root: string) =>
+    execFileSync("git", ["init", "-q"], { cwd: root, stdio: "ignore" });
+  const ignoreFile = (root: string) =>
+    readFileSync(join(root, ".gitignore"), "utf8");
+
+  it("adds a file that a Flutter-style ignore file leaves out", () => {
+    const product = makeProduct({
+      files: { ".gitignore": "build/\n.dart_tool/" },
+    });
+    initRepo(product.root);
+    expect(ensureGitignored(product.root, ".env.tooling")).toBe(true);
+    expect(ignoreFile(product.root)).toBe(
+      "build/\n.dart_tool/\n/.env.tooling\n",
+    );
+    // Now ignored: asking again changes nothing.
+    expect(ensureGitignored(product.root, ".env.tooling")).toBe(false);
+    expect(ignoreFile(product.root)).toBe(
+      "build/\n.dart_tool/\n/.env.tooling\n",
+    );
+  });
+
+  it("creates the ignore file when there is none", () => {
+    const product = makeProduct();
+    initRepo(product.root);
+    expect(ensureGitignored(product.root, ".env")).toBe(true);
+    expect(ignoreFile(product.root)).toBe("/.env\n");
+  });
+
+  it("leaves a file alone that is already ignored", () => {
+    const product = makeProduct();
+    initRepo(product.root);
+    writeFileSync(join(product.root, ".gitignore"), ".env*\n");
+    expect(ensureGitignored(product.root, ".env.tooling")).toBe(false);
+    expect(ignoreFile(product.root)).toBe(".env*\n");
+  });
+
+  it("does nothing outside a work tree", () => {
+    const product = makeProduct();
+    expect(ensureGitignored(product.root, ".env.tooling")).toBe(false);
   });
 });

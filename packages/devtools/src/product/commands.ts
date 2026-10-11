@@ -26,6 +26,7 @@ import {
   type SqlSession,
 } from "./dev-data.js";
 import {
+  ensureGitignored,
   findSecrets,
   readEnvFile,
   renderEnvFromManifest,
@@ -249,7 +250,10 @@ async function runSync(
 
   if (rest.includes("--rebuild") && !dryRun) {
     try {
-      const row = await reRegisterSavedProvider(product.root, target);
+      const row = await reRegisterSavedProvider(
+        product.paths.toolingFile,
+        target,
+      );
       log.success(`Registered ${row.identifier} again.`);
     } catch (err) {
       if (!(err instanceof OAuthRegistrationError)) throw err;
@@ -686,6 +690,16 @@ async function runSetup(
     log.success(`Created ${config.env.file} from ${config.env.example}.`);
   }
 
+  // Both files hold values that must stay out of version control: `.env` is
+  // per-machine, `.env.tooling` carries the database URL and the secret keys.
+  for (const file of [config.env.file, config.env.tooling]) {
+    if (ensureGitignored(product.root, file)) {
+      log.warn(
+        `${file} was not ignored by version control; added /${file} to the ignore file.`,
+      );
+    }
+  }
+
   // 2. The database.
   const cli = await cliFor(product, deps);
   const kind = await chooseSetupKind(deps, preferenceOf(rest));
@@ -865,7 +879,11 @@ async function setUpSignIn(
   process.chdir(product.root);
   const credentials = credentialsFromEnv(deps.env);
   if (credentials) {
-    const row = await registerProvider(product.root, target, credentials);
+    const row = await registerProvider(
+      product.paths.toolingFile,
+      target,
+      credentials,
+    );
     log.success(`Registered ${row.identifier} from DEVDOGS_OAUTH_CLIENT_ID.`);
     return;
   }
@@ -875,9 +893,15 @@ async function setUpSignIn(
     );
     return;
   }
-  await runOAuthSetup(undefined, undefined, undefined, {
-    kind: target.kind,
-    apiUrl: target.apiUrl,
-    serviceRoleKey: target.secretKey,
-  });
+  await runOAuthSetup(
+    undefined,
+    undefined,
+    undefined,
+    {
+      kind: target.kind,
+      apiUrl: target.apiUrl,
+      serviceRoleKey: target.secretKey,
+    },
+    product.config.env.tooling,
+  );
 }

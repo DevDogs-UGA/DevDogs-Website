@@ -14,10 +14,25 @@ import { spawnSync } from "node:child_process";
 
 export const OLD_PACKAGES = ["brand", "env", "db", "headers", "telemetry"];
 
+/** Where each old package lives in the sdk: the subpaths its exports map has. */
+export const SDK_SUBPATHS = {
+  brand: ["brand"],
+  env: ["env"],
+  // The old db package is three subpaths in the sdk; there is no "sdk/db".
+  db: ["db/client", "db/server", "db/typegen"],
+  headers: ["headers"],
+  telemetry: ["telemetry"],
+};
+
 export function deprecationFor(name) {
+  const paths = SDK_SUBPATHS[name].map((path) => `"@devdogsuga/sdk/${path}"`);
+  const where =
+    paths.length === 1
+      ? `import it from ${paths[0]}`
+      : `import it from ${paths.slice(0, -1).join(", ")} or ${paths.at(-1)}`;
   return {
     spec: `@devdogsuga/${name}@*`,
-    message: `Merged into @devdogsuga/sdk; import it from "@devdogsuga/sdk/${name}" (the subpaths are listed in its README).`,
+    message: `Merged into @devdogsuga/sdk; ${where} (the subpaths are listed in its README).`,
   };
 }
 

@@ -57,7 +57,7 @@ The tier comes from `--tier`, then `DEPLOY_ENV`, then the only tier file
 present. `--tier` also works at the end of the command, which is where
 `pnpm -F platform dev --tier staging` puts it. On a terminal, `with-env` and the
 devtools launcher ask the same questions (`askSession` in
-`@devdogsuga/env/session`): which tier, when several tier files are present and
+`packages/cli-core/src/env-runtime/ask.ts`): which tier, when several tier files are present and
 none is named; and, when `.env` names a remote `DB_URL`, whether development
 means the local stack or that database. The second answer can be remembered as
 `DEV_DB` in `.env` ("Remember my decision") or used once ("Just this once"),

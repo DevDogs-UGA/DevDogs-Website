@@ -14,6 +14,12 @@
  *   2. The new migration is applied: `supabase migration up --local` for the
  *      Docker stack, `supabase db push --db-url …` for a hosted project.
  *
+ * A hosted project's applied migrations are also in its own history table, so a
+ * machine with no local record (a second laptop, a deleted `supabase/migrations/`)
+ * restores the record from there first (`supabase migration fetch --db-url`).
+ * Without that, the diff would start from an empty database and write the whole
+ * schema as one migration, which `db push` rejects as already applied.
+ *
  * It never resets the database. A reset wipes `auth.custom_oauth_providers`,
  * which is where "Sign in with DevDogs" is registered (Q83); `--rebuild` is
  * the explicit escape hatch for a database that has drifted from its record,
@@ -105,7 +111,21 @@ export async function dbSync(
     "--name",
     "devtools_sync",
   ];
+  const fetchArgs = [
+    ...cli.prefix,
+    "migration",
+    "fetch",
+    "--db-url",
+    target.dbUrl,
+  ];
+  const needsRecord =
+    target.kind === "hosted" && migrationFiles(migrationsDir).length === 0;
   if (options.dryRun) {
+    if (needsRecord) {
+      log(
+        `Would run: ${cliLine(cli, ["migration", "fetch", "--db-url", "<DB_URL>"])} (this machine has no record of what the project has had applied)`,
+      );
+    }
     log(`Would run: ${cliLine(cli, generateArgs.slice(cli.prefix.length))}`);
     log(
       target.kind === "local"
@@ -113,6 +133,18 @@ export async function dbSync(
         : `Would run: ${cliLine(cli, ["db", "push", "--db-url", "<DB_URL>", "--yes"])}`,
     );
     return { migration: null, applied: false, destructive: [] };
+  }
+
+  if (needsRecord) {
+    // A brand-new project has no history table yet, and fetch fails: nothing
+    // to restore, so the full schema is the right first migration.
+    const fetched = await run(cli.command, fetchArgs, { cwd: product.root });
+    const restored = migrationFiles(migrationsDir).length;
+    if (fetched.code === 0 && restored > 0) {
+      log(
+        `Restored ${restored} applied migration${restored === 1 ? "" : "s"} from the project's history.`,
+      );
+    }
   }
 
   const before = new Set(migrationFiles(migrationsDir));

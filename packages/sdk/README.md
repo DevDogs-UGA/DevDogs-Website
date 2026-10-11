@@ -58,6 +58,11 @@ How that is wired, and what a maintainer must set up once:
   tag push, through the reviewer-less `publishing-next` environment (`ci.yaml` job `publish-next`, which calls
   `publish.yaml` with `channel: next`). Only the Dart SDK publishes by **tag push**
   (`devdogsuga_sdk-vX.Y.Z-next.N`, see `.github/workflows/publish-dart.yaml`), because pub.dev authenticates a tag.
+- **The two SDKs version independently.** The npm package takes one patch past the highest version on npm (the
+  `0.0.0` placeholder), so its first prerelease is `0.0.1-next.N`. The Dart package takes the `0.1.0` in
+  `packages/sdk_dart/pubspec.yaml`, so its first is `0.1.0-next.N`. Nothing pairs them: a product pins each from its
+  own registry, and the committed `0.1.0` in `packages/sdk/package.json` is never published as such. What ties
+  them is the spec: `check:drift` fails when either generated client differs from `packages/sdk-spec`.
 - npm Trusted Publishing for `@devdogsuga/sdk`, `devtools`, `config` and `backstage` must name this repository and
   the workflow file `publish.yaml`, with the **environment field left blank**. An environment of `publishing`
   would refuse the `publishing-next` job, and one of `publishing-next` would refuse the stable job.
