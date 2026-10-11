@@ -304,6 +304,9 @@ async function applyPlan(
       for (const branch of env.allowedBranches) {
         await addDeploymentBranchPolicy(r, env.name, branch);
       }
+      for (const tag of env.allowedTags ?? []) {
+        await addDeploymentBranchPolicy(r, env.name, tag, "tag");
+      }
       continue;
     }
     if (!drift.has(`environments.${env.name}.branch_policy`)) continue;
@@ -313,15 +316,27 @@ async function applyPlan(
       custom_branch_policies: true,
     });
     const existing = await getDeploymentBranchPolicies(r, env.name);
-    const wanted = new Set(env.allowedBranches);
+    // A policy is its type plus its pattern: a tag named like a branch is a
+    // different rule.
+    const key = (type: "branch" | "tag", name: string) => `${type}:${name}`;
+    const wanted = new Set([
+      ...env.allowedBranches.map((b) => key("branch", b)),
+      ...(env.allowedTags ?? []).map((t) => key("tag", t)),
+    ]);
     for (const policy of existing) {
-      if (!wanted.has(policy.name))
+      if (!wanted.has(key(policy.type ?? "branch", policy.name)))
         await deleteDeploymentBranchPolicy(r, env.name, policy.id);
     }
-    const already = new Set(existing.map((p) => p.name));
+    const already = new Set(
+      existing.map((p) => key(p.type ?? "branch", p.name)),
+    );
     for (const branch of env.allowedBranches) {
-      if (!already.has(branch))
+      if (!already.has(key("branch", branch)))
         await addDeploymentBranchPolicy(r, env.name, branch);
+    }
+    for (const tag of env.allowedTags ?? []) {
+      if (!already.has(key("tag", tag)))
+        await addDeploymentBranchPolicy(r, env.name, tag, "tag");
     }
   }
 }

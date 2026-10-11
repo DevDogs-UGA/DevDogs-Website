@@ -56,11 +56,12 @@ command path (deprecated ones marked), for tools that check what a page shows.
 
 The `db` and `cf` namespaces are gone: `supabase`, `wrangler`, `drizzle-kit`
 and `psql` plus package scripts (`types:db`, `types:drizzle`, `types:cf`,
-`preview`) replace them. `run` stays as a deprecated alias, hidden from the
-menu, for callers that have not moved yet (TASK-404 removes it); `--help` names
-its replacement. The retired `db`, `cf`, `gen`, `emails`, `grant-root` and
-`preset` names are refused with where they went (`preset apply-migrations` is
-now `apply-migrations`, and so on).
+`preview`) replace them. The deprecated `run` alias is gone too (TASK-404):
+`pnpm -r run <task>` runs a task in every package and `pnpm -F <app> <task>`
+in one. The retired `db`, `cf`, `gen`, `emails`, `grant-root`, `preset` and
+`run` names are refused with where they went (`preset apply-migrations` is now
+`apply-migrations`, and so on). Inside a product repository (below) `db` is
+the product's own command.
 
 What always needs production secrets is not here. `deploy`, `env
 pull|push|audit` and `planner` are in `@devdogsuga/backstage`
@@ -91,6 +92,72 @@ name `devdogs-monorepo` or `backstage`; the layout code is
 
 `pnpm exec supabase` and `wrangler` run inside DevDogsUGA's workspace, so
 `devdogsuga/` needs its own `pnpm install` before the commands that use them.
+
+## Product repositories
+
+A repository with a `devtools.config.json` at its root is a **product** (DogDays, DogPack): devtools
+reads the file and serves a smaller command set that needs no tiers, no env registry and no workspace.
+DogPack has no `package.json`, so it runs the published CLI directly:
+
+```sh
+npx @devdogsuga/devtools@next setup
+```
+
+| Command                                 | What it does                                                                                                                                                               |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `setup [--local \| --hosted]`           | Writes `.env` from `.env.example`; starts the Docker stack (or takes your own hosted project's URL, keys and session-pooler `DB_URL`); `db sync`; the types; then `oauth`. |
+| `db sync [--rebuild] [--yes]`           | Makes your development database match `supabase/schemas/`. Never resets it; `--rebuild` is the explicit reset (local only) and registers sign in again afterwards.         |
+| `db types [--download] [--pack <file>]` | Generates the TypeScript types or Dart models from your database, or downloads the ones CI built for your exact schema hash. `--pack` writes the release asset (CI).       |
+| `db hash`                               | Prints the schema hash that names the generated types.                                                                                                                     |
+| `dev-data [--member <email\|id>]`       | Runs the product's `devData.file` SQL, in one transaction, as the member who last signed in with DevDogs. Refuses the product's production project.                        |
+| `oauth`                                 | "Sign in with DevDogs" on your database (the same wizard as the platform's).                                                                                               |
+| `doctor`                                | Docker, the pinned Supabase CLI, `.env`, the database, whether the types match the schema.                                                                                 |
+| `supabase <args>`                       | The Supabase CLI at the version the product pins.                                                                                                                          |
+| `check env-example`                     | CI: `.env.example` holds public values only (it ships in the app).                                                                                                         |
+
+How it works, in short:
+
+- **Schemas, not migrations.** Contributors edit `supabase/schemas/*.sql`. `db sync` asks the Supabase CLI
+  (`db schema declarative sync --no-apply`) to diff them against a git-ignored `supabase/migrations/` that
+  records what this database has had applied, writes the difference as a new migration, and applies it
+  (`migration up --local`, or `db push --db-url` for a hosted project). A change that drops a table or column
+  needs `--yes`.
+- **Types are never committed.** `db types` writes them to the path in the config, which is git-ignored.
+  The schema hash covers the sorted schema paths, their LF-normalised contents and the generator version (the
+  pinned CLI, or supadart); CI uploads a `<product>-types-<hash>.tgz` asset to a rolling `generated-types`
+  release, and `db types --download` fetches the one for your hash. No match: it says so and points at `setup`.
+- **Two env files.** `.env` is public and read by the app (`flutter run --dart-define-from-file=.env`);
+  `.env.tooling` is git-ignored and holds `DB_URL`, `SECRET_KEY` and the target (`local` or `hosted`).
+- **The pinned CLI.** devtools finds `supabase` in `node_modules/.bin` or on PATH when its version is the
+  pin, and otherwise runs `npx --yes supabase@<pin>`.
+- **A hosted project** needs custom OAuth providers turned on and the app's return addresses allowed.
+  `setup` does both through the Management API when `SUPABASE_ACCESS_TOKEN` is set, and prints the two
+  dashboard steps when it is not.
+- **No terminal.** `setup` takes `DEVTOOLS_SUPABASE_URL`, `DEVTOOLS_SUPABASE_PUBLISHABLE_KEY`,
+  `DEVTOOLS_SUPABASE_SECRET_KEY` and `DEVTOOLS_DB_URL` for a hosted project, and registers sign in from
+  `DEVDOGS_OAUTH_CLIENT_ID` / `DEVDOGS_OAUTH_CLIENT_SECRET` instead of opening a browser.
+
+```jsonc
+// devtools.config.json
+{
+  "product": "dogpack", // lowercase id; names the generated-types assets
+  "name": "DogPack",
+  "supabase": {
+    "version": "2.117.0", // the CLI pin; part of the types hash
+    "schemas": ["dogpack"], // schemas the generated types cover
+    // "dir": "supabase"
+  },
+  "types": { "kind": "supadart", "out": "lib/generated" }, // or { "kind": "typescript", "out": "src/database.types.ts" }
+  "generatedTypes": { "repo": "DevDogsUGA/DogPack" }, // where `db types --download` looks
+  "oauth": { "redirectUris": ["dev.dogpack://login-callback"] },
+  "devData": { "file": "supabase/dev-data.sql" }, // reads current_setting('devtools.member_id')
+  "production": { "projects": ["dogpack"] }, // refs and vanity names devtools must never touch
+  "runHint": "flutter run --dart-define-from-file=.env",
+}
+```
+
+The code is in `src/product/`; `src/active.ts` picks the tree, and `src/launch.ts` switches to it before any
+tier is resolved.
 
 ## Telemetry disclosure
 

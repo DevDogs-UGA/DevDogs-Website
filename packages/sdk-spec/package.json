@@ -11,8 +11,8 @@
     "directory": "packages/sdk-spec"
   },
   "scripts": {
-    "generate": "tsx src/generate.ts",
-    "check": "tsx src/generate.ts --check",
+    "codegen": "tsx src/generate.ts",
+    "check:drift": "tsx src/generate.ts --check",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

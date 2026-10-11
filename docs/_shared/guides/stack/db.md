@@ -20,7 +20,7 @@ import { relations } from "./relations";
 export const db = createDb(env.DB_URL, relations);
 ```
 
-Each app passes **its own** generated `relations`, because the two apps introspect different Postgres schemas and their generated modules are not interchangeable. `drizzle-orm` and `postgres` are peer dependencies — `@devdogsuga/sdk/db` brings neither version with it, so an app pins them. The full surface is documented in [`@devdogsuga/sdk/db`](https://github.com/DevDogsUGA/Backstage/tree/main/packages/db) — it ships from Backstage now, so there is no local `reference/api` page for it (the same as `config`, `env`, and the rest of the Backstage-sourced packages).
+Each app passes **its own** generated `relations`, because the two apps introspect different Postgres schemas and their generated modules are not interchangeable. `drizzle-orm` and `postgres` are peer dependencies — `@devdogsuga/sdk/db` brings neither version with it, so an app pins them. The full surface is documented in [`@devdogsuga/sdk/db`](https://github.com/DevDogsUGA/DevDogsUGA/tree/main/packages/sdk/DB.md), with no `reference/api` page of its own (the same as `config`, `env`, and the rest of the SDK's subpaths).
 
 Both packages are pinned to an exact version rather than a range, because the `latest` dist-tag still points at 0.45.x and a range would silently downgrade them.
 

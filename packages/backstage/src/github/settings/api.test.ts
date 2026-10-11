@@ -273,7 +273,17 @@ describe("writes", () => {
     });
   });
 
-  it("adds a deployment branch policy by POSTing {name: pattern}", async () => {
+  it("adds a deployment tag policy by POSTing {name, type: tag}", async () => {
+    fake.state.spawnExit = { code: 0, stdout: "{}", stderr: "" };
+    await addDeploymentBranchPolicy(repo, "publishing-next", "v*", "tag");
+    const call = fake.state.spawnCalls.at(-1)!;
+    expect(JSON.parse(call.written as string)).toEqual({
+      name: "v*",
+      type: "tag",
+    });
+  });
+
+  it("adds a deployment branch policy by POSTing {name, type: branch}", async () => {
     fake.state.spawnExit = { code: 0, stdout: "{}", stderr: "" };
     await addDeploymentBranchPolicy(repo, "staging", "main");
     const call = fake.state.spawnCalls.at(-1)!;
@@ -285,7 +295,10 @@ describe("writes", () => {
       "--input",
       "-",
     ]);
-    expect(JSON.parse(call.written as string)).toEqual({ name: "main" });
+    expect(JSON.parse(call.written as string)).toEqual({
+      name: "main",
+      type: "branch",
+    });
   });
 
   it("deletes a deployment branch policy by id", async () => {

@@ -9,7 +9,7 @@ pnpm-lock.yaml
 apps/slides/workshops/
 
 # Generated and committed. Reformatting is a change the generator undoes.
-# `pnpm -F @devdogsuga/sdk-spec generate` writes these; the drift check compares bytes.
+# `pnpm -F @devdogsuga/sdk-spec codegen` writes these; the drift check compares bytes.
 packages/sdk/src/catalog/generated.ts
 packages/sdk/src/platform/generated.ts
 packages/sdk/src/constants/generated.ts

@@ -1,0 +1,3 @@
+# The tests read the shared fixtures and exported specs under ../sdk-spec, which
+# are not part of the package.
+test/

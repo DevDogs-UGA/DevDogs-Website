@@ -1,5 +1,5 @@
 {
-  "$comment": "Authored. Shared constants for both SDKs: `pnpm -F @devdogsuga/sdk-spec generate` writes them to packages/sdk/src/constants/generated.ts and packages/sdk_dart/lib/src/generated/constants.dart. The telemetry block is also pinned to @devdogsuga/sdk/telemetry by a test, so the two cannot disagree.",
+  "$comment": "Authored. Shared constants for both SDKs: `pnpm -F @devdogsuga/sdk-spec codegen` writes them to packages/sdk/src/constants/generated.ts and packages/sdk_dart/lib/src/generated/constants.dart. The telemetry block is also pinned to @devdogsuga/sdk/telemetry by a test, so the two cannot disagree.",
   "hosts": {
     "api": {
       "production": "https://api.devdogsuga.org",

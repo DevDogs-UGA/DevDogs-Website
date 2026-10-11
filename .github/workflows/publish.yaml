@@ -4,11 +4,22 @@ name: Prepare and publish
 # preparation and publication in the push-initiated run preserves GitHub's
 # self-review attribution: the person who pushed the candidate cannot approve
 # its publishing environment deployment.
+#
+# Two channels share this file, because npm Trusted Publishing is configured
+# against it:
+#   * stable (the default): `latest`, after a manual `publishing` approval;
+#   * next: prereleases on the `next` dist-tag, through the reviewer-less
+#     `publishing-next` environment (scripts/publish-next.mjs).
 on:
   workflow_call:
+    inputs:
+      channel:
+        description: "stable (default) or next"
+        type: string
+        default: stable
 
 concurrency:
-  group: publish-main
+  group: publish-${{ inputs.channel || 'stable' }}
   cancel-in-progress: false
 
 permissions:
@@ -16,6 +27,7 @@ permissions:
 
 jobs:
   prepare:
+    if: inputs.channel != 'next'
     runs-on: ubuntu-latest
     outputs:
       needed: ${{ steps.plan.outputs.needed }}
@@ -87,7 +99,7 @@ jobs:
 
   publish:
     needs: prepare
-    if: needs.prepare.outputs.needed == 'true'
+    if: inputs.channel != 'next' && needs.prepare.outputs.needed == 'true'
     runs-on: ubuntu-latest
     # Room for the script to wait out npm's CDN after each publish layer (up to
     # 15 minutes per layer, usually seconds; packages in a layer publish and
@@ -124,6 +136,84 @@ jobs:
         run: >-
           node scripts/publish-workshops-vscode.mjs
           --publish-plan "$RUNNER_TEMP/release/extension-plan.json"
+      - name: Show npm OIDC diagnostics
+        if: failure()
+        run: grep -iE 'oidc|trusted|provenance' ~/.npm/_logs/*-debug-0.log || true
+
+  # ── the next channel ───────────────────────────────────────────────────────
+  # Same shape as above, with no approval: the candidate is built and planned
+  # in `prepare-next` (no credentials), then `publish-next` verifies the plan
+  # against this checkout and the artifact hashes and publishes with
+  # `npm publish --tag next`. Called only for a push to `main`.
+  prepare-next:
+    if: inputs.channel == 'next'
+    runs-on: ubuntu-latest
+    outputs:
+      needed: ${{ steps.plan.outputs.needed }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+      - name: Build publishable packages
+        env:
+          DEVTOOLS_SENTRY_DSN: ${{ vars.DEVTOOLS_SENTRY_DSN }}
+        run: pnpm -r --filter './packages/**' --if-present run build
+      - name: Prepare the prerelease candidate
+        env:
+          NEXT_BUILD_NUMBER: ${{ github.run_number }}
+        run: node scripts/publish-next.mjs --prepare "$RUNNER_TEMP/release-next"
+      - name: Anything to publish?
+        id: plan
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const plan = JSON.parse(fs.readFileSync(`${process.argv[1]}/next-plan.json`, "utf8"));
+            const needed = plan.packages.some((p) => p.action === "publish");
+            console.log(needed ? "Something to publish." : "Nothing changed; skipping the publish job.");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `needed=${needed}\n`);
+          ' "$RUNNER_TEMP/release-next"
+      - name: Record candidate hashes
+        run: |
+          cd "$RUNNER_TEMP/release-next"
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload release candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-next-${{ github.sha }}
+          path: ${{ runner.temp }}/release-next
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-next:
+    needs: prepare-next
+    if: inputs.channel == 'next' && needs.prepare-next.outputs.needed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # No reviewers, and deployable from `main` only (plus the Dart SDK's tags,
+    # which this job never runs for): see packages/backstage github settings.
+    environment: publishing-next
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+      - name: Download the release candidate
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-next-${{ github.sha }}
+          path: ${{ runner.temp }}/release-next
+      - name: Verify candidate hashes
+        run: cd "$RUNNER_TEMP/release-next" && sha256sum --check SHA256SUMS
+      - name: Ensure npm supports Trusted Publishing
+        run: npm install -g npm@^11.5.1
+      - name: Publish the prereleases
+        run: node scripts/publish-next.mjs --publish-plan "$RUNNER_TEMP/release-next/next-plan.json"
       - name: Show npm OIDC diagnostics
         if: failure()
         run: grep -iE 'oidc|trusted|provenance' ~/.npm/_logs/*-debug-0.log || true

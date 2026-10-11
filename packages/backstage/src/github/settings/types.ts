@@ -101,4 +101,6 @@ export interface LiveEnvironment {
 export interface LiveBranchPolicy {
   id: number;
   name: string;
+  /** Absent on older payloads, which only ever listed branches. */
+  type?: "branch" | "tag";
 }

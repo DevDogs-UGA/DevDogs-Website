@@ -41,12 +41,7 @@ import { setupCommand } from "./setup/catalog.js";
 export const GROUPS: readonly CommandGroup[] = [
   {
     title: "Workspace",
-    commands: [
-      setupCommand,
-      scriptCommand,
-      oauthCommand,
-      doctorCommand,
-    ],
+    commands: [setupCommand, scriptCommand, oauthCommand, doctorCommand],
   },
   {
     title: "Supabase",

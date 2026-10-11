@@ -382,3 +382,64 @@ describe("planSettings — unpinned-action refusal", () => {
     });
   });
 });
+
+describe("planSettings — deployment tag policies", () => {
+  const withTags = (): DesiredSettings => {
+    const desired = desiredFixture();
+    return {
+      ...desired,
+      environments: desired.environments.map((env) =>
+        env.name === "staging" ? { ...env, allowedTags: ["sdk-v*"] } : env,
+      ),
+    };
+  };
+  const branchCheck = (live: LiveSettingsSnapshot, desired = withTags()) =>
+    planSettings(desired, live, []).checks.find(
+      (c) => c.key === "environments.staging.branch_policy",
+    )!;
+
+  it("is satisfied by a live tag policy of the same pattern", () => {
+    const live = matchingSnapshot();
+    live.environments.staging!.branchPolicies = [
+      { id: 1, name: "main", type: "branch" },
+      { id: 2, name: "sdk-v*", type: "tag" },
+    ];
+    expect(branchCheck(live).status).toBe("ok");
+  });
+
+  it("is drift when the tag policy is missing, and says so", () => {
+    const check = branchCheck(matchingSnapshot());
+    expect(check.status).toBe("drift");
+    expect(check.desired).toBe("main, tag:sdk-v*");
+    expect(check.fixable).toBe(true);
+  });
+
+  it("does not take a branch of the same name for the tag", () => {
+    const live = matchingSnapshot();
+    live.environments.staging!.branchPolicies = [
+      { id: 1, name: "main", type: "branch" },
+      { id: 2, name: "sdk-v*", type: "branch" },
+    ];
+    expect(branchCheck(live).status).toBe("drift");
+  });
+
+  it("is drift when an environment that wants no tags has one", () => {
+    const live = matchingSnapshot();
+    live.environments.staging!.branchPolicies = [
+      { id: 1, name: "main", type: "branch" },
+      { id: 2, name: "sdk-v*", type: "tag" },
+    ];
+    expect(branchCheck(live, desiredFixture()).status).toBe("drift");
+  });
+});
+
+describe("DevDogsUGA's publishing-next", () => {
+  it("allows main and the Dart SDK's release tags", () => {
+    const env = buildDesiredSettings(PATTERNS, "DevDogsUGA").environments.find(
+      (e) => e.name === "publishing-next",
+    );
+    expect(env?.allowedBranches).toEqual(["main"]);
+    expect(env?.allowedTags).toEqual(["devdogsuga_sdk-v*"]);
+    expect(env?.requireReviewers).toBe(false);
+  });
+});

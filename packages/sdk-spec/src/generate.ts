@@ -1,5 +1,5 @@
 /**
- * The one generator. `pnpm -F @devdogsuga/sdk-spec generate` writes
+ * The one generator. `pnpm -F @devdogsuga/sdk-spec codegen` writes
  * `packages/sdk` (TypeScript) and `packages/sdk_dart` (Dart) from this
  * package's spec files; with `--check` it writes nothing and fails when any
  * file on disk differs from what it would write (the drift check CI runs).
@@ -237,7 +237,7 @@ function main(): void {
   ];
   if (problems.length > 0) {
     console.error(
-      `sdk-spec: generated files have drifted from the spec.\n${problems.join("\n")}\nRun \`pnpm -F @devdogsuga/sdk-spec generate\` and commit the result.`,
+      `sdk-spec: generated files have drifted from the spec.\n${problems.join("\n")}\nRun \`pnpm -F @devdogsuga/sdk-spec codegen\` and commit the result.`,
     );
     process.exit(1);
   }

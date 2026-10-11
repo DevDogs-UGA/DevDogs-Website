@@ -8,6 +8,7 @@
  * give them fakes.
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { confirm, log, note, password, select, text } from "@clack/prompts";
 import { flagValue, positionals } from "@devdogsuga/cli-core/args";
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
@@ -78,6 +79,7 @@ export interface ProductDeps {
   fetch: typeof fetch;
   openSql: (dbUrl: string) => SqlSession;
   env: NodeJS.ProcessEnv;
+  sleep: (ms: number) => Promise<void>;
   /** Whether a person can answer a prompt. */
   interactive: () => boolean;
 }
@@ -87,6 +89,7 @@ export const defaultDeps: ProductDeps = {
   fetch: (input, init) => fetch(input, init),
   openSql: (url) => postgresSession(url),
   env: process.env,
+  sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   interactive: () => !isNonInteractive(),
 };
 
@@ -190,12 +193,15 @@ async function runSync(
     }
     const tracked = await deps.run(
       "git",
-      ["ls-files", "--", product.config.supabase.dir + "/migrations"],
+      ["ls-files", "--", `${product.config.supabase.dir}/migrations`],
       { cwd: product.root },
     );
-    if (tracked.code === 0 && tracked.stdout.trim().length > 0) {
+    const committed = tracked.stdout
+      .split("\n")
+      .filter((file) => file.endsWith(".sql"));
+    if (tracked.code === 0 && committed.length > 0) {
       throw new SyncError(
-        `${product.config.supabase.dir}/migrations has committed files; a product keeps its migrations out of git, so --rebuild will not delete them.`,
+        `${product.config.supabase.dir}/migrations has committed migrations (${committed[0]}, ...); a product keeps its migrations out of git, so --rebuild will not delete them.`,
       );
     }
     if (!hasYes(rest) && deps.interactive()) {
@@ -299,8 +305,10 @@ async function runTypes(
 }
 
 function runHash(product: Product): string {
+  // Only the hash on stdout, so CI can capture it; the generator it covers is
+  // on stderr for a person.
   process.stdout.write(`${schemaHashFor(product)}\n`);
-  log.info(`generator ${generatorFor(product)}`);
+  process.stderr.write(`generator ${generatorFor(product)}\n`);
   return DONE;
 }
 
@@ -655,10 +663,15 @@ async function runSetup(
     log.info(
       "Starting the local Supabase stack (the first start downloads its images).",
     );
-    const started = await deps.run(cli.command, [...cli.prefix, "start"], {
-      cwd: product.root,
-      inherit: true,
-    });
+    // `--ignore-health-check`: the API exposes the product's own schema, which
+    // does not exist until the first `db sync`, so PostgREST is unhealthy on a
+    // fresh database. It reconnects by itself once the schema is there, and
+    // `waitForRest` below checks that it did.
+    const started = await deps.run(
+      cli.command,
+      [...cli.prefix, "start", "--ignore-health-check"],
+      { cwd: product.root, inherit: true },
+    );
     if (started.code !== 0) {
       throw new TargetError("`supabase start` failed. Is Docker running?");
     }
@@ -698,6 +711,8 @@ async function runSetup(
       : "Your database already matched supabase/schemas.",
   );
 
+  if (target.kind === "local") await waitForRest(target, deps, product);
+
   // 4. The types.
   if (rest.includes("--download-types")) {
     try {
@@ -729,6 +744,34 @@ async function runSetup(
     "Next",
   );
   return DONE;
+}
+
+/**
+ * Waits for the API to serve the product's schema: PostgREST starts unhealthy
+ * on an empty database and loads its schema cache on its next reconnect.
+ */
+async function waitForRest(
+  target: DbTarget,
+  deps: ProductDeps,
+  product: Product,
+): Promise<void> {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    try {
+      const response = await deps.fetch(`${target.apiUrl}/rest/v1/`, {
+        headers: {
+          apikey: target.publishableKey,
+          "accept-profile": product.config.supabase.schemas[0] ?? "public",
+        },
+      });
+      if (response.ok) return;
+    } catch {
+      // Not up yet.
+    }
+    await deps.sleep(2000);
+  }
+  log.warn(
+    "The local API is not serving your schema yet. `devtools doctor` and `supabase status` will say more.",
+  );
 }
 
 async function setUpSignIn(
@@ -775,10 +818,17 @@ async function setUpSignIn(
         "Before sign in will work",
       );
     }
-  } else if (product.config.oauth.redirectUris.length > 0) {
-    log.info(
-      `Local stack: allow ${product.config.oauth.redirectUris.join(", ")} under [auth] additional_redirect_urls in ${product.config.supabase.dir}/config.toml.`,
+  } else {
+    const configToml = join(product.paths.supabaseDir, "config.toml");
+    const text = existsSync(configToml) ? readFileSync(configToml, "utf8") : "";
+    const missing = product.config.oauth.redirectUris.filter(
+      (uri) => !text.includes(uri),
     );
+    if (missing.length > 0) {
+      log.warn(
+        `Allow ${missing.join(", ")} under [auth] additional_redirect_urls in ${product.config.supabase.dir}/config.toml, or sign in will be refused on this stack.`,
+      );
+    }
   }
 
   process.chdir(product.root);

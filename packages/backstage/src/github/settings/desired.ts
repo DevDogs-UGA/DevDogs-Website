@@ -30,6 +30,13 @@ export interface DesiredEnvironmentPolicy {
    */
   allowedBranches: readonly string[];
   /**
+   * Deployment-tag-policy patterns (GitHub stores them as `type: tag`
+   * policies). A job triggered by a tag push has a tag ref, and a branch
+   * policy never admits one: pub.dev's automated publishing only accepts a
+   * tag-push run, so `publishing-next` allows the Dart package's tags.
+   */
+  allowedTags?: readonly string[];
+  /**
    * Whether `--apply` may CREATE this environment when it does not exist.
    * Off for DevDogsUGA (its environment is reported only, as always).
    * When on, the environment is created with its branch policies AND — the
@@ -138,13 +145,20 @@ const BACKSTAGE_ENVIRONMENTS: readonly DesiredEnvironmentPolicy[] = [
 /**
  * DevDogsUGA after the fold-back: it carries what Backstage carried (the
  * deploy, build and publishing environments) plus `publishing-next`, the
- * reviewer-less environment prereleases publish from (`main` only). The
+ * reviewer-less environment prereleases publish from (`main` only, plus the
+ * Dart SDK's release tags, which the workflow checks are on `main`). The
  * `deploy-pr` environment went with the deploy-PR App. Created on `--apply`
  * when missing, like Backstage's.
  */
 const DEVDOGSUGA_ENVIRONMENTS: readonly DesiredEnvironmentPolicy[] = [
   ...BACKSTAGE_ENVIRONMENTS,
-  { ...plain("publishing-next"), createIfMissing: true },
+  {
+    ...plain("publishing-next"),
+    // `devdogsuga_sdk-v<version>` tag pushes publish the Dart SDK to pub.dev
+    // (`publish-dart.yaml`), which only runs for a tag ref.
+    allowedTags: ["devdogsuga_sdk-v*"],
+    createIfMissing: true,
+  },
 ];
 
 function baseSettings(

@@ -43,7 +43,12 @@ function baseEnvironment(name: string, requireReviewers: boolean) {
           { id: 1, name: "main" },
           { id: 2, name: "gh-readonly-queue/main/*" },
         ]
-      : [{ id: 1, name: "main" }],
+      : name === "publishing-next"
+        ? [
+            { id: 1, name: "main", type: "branch" as const },
+            { id: 3, name: "devdogsuga_sdk-v*", type: "tag" as const },
+          ]
+        : [{ id: 1, name: "main" }],
   };
 }
 
