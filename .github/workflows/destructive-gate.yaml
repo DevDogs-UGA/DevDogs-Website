@@ -15,9 +15,23 @@ name: Destructive gate
 #
 # The merge queue has no `pull_request_target`, so database-pr.yaml runs the
 # same check there under the same name, `destructive-gate`.
+#
+# Shared like database-pr.yaml: a product repository calls it from a
+# `pull_request_target` workflow of its own, pinned by commit SHA, with
+# `shared_ref` set to that SHA. A called workflow runs in the caller's context,
+# so it still never touches the pull request's code.
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, labeled, unlabeled]
+  workflow_call:
+    inputs:
+      shared_ref:
+        description: >-
+          A commit of DevDogsUGA/DevDogsUGA to take the script from. Leave empty
+          when DevDogsUGA runs this.
+        required: false
+        type: string
+        default: ""
 
 concurrency:
   group: destructive-gate-${{ github.event.pull_request.number }}
@@ -38,6 +52,13 @@ jobs:
       # The base branch's copy of the script. No `ref:`: this event checks out
       # the base, not the pull request.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
       - name: A new push clears the label
         if: github.event.action == 'synchronize'
         env:
@@ -51,4 +72,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
-        run: node .github/scripts/destructive-label.mjs gate --repo "$GITHUB_REPOSITORY" --pr "$PR" --remove-rejected | tee -a "$GITHUB_STEP_SUMMARY"
+          SCRIPTS: ${{ github.workspace }}/${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}
+        # `shell: bash` is `bash -eo pipefail`: without it the pipe to tee
+        # would hide a failing check.
+        shell: bash
+        run: node "$SCRIPTS/destructive-label.mjs" gate --repo "$GITHUB_REPOSITORY" --pr "$PR" --remove-rejected | tee -a "$GITHUB_STEP_SUMMARY"

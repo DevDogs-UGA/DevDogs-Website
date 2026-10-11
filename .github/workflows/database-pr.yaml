@@ -29,12 +29,34 @@ name: Database change
 #
 # No secrets are involved: the scratch database is local, and the label is read
 # with the job's own read-only token.
+#
+# Shared (Q15, Q11): DogDays and DogPack call this file too, from a workflow of
+# their own that runs on `pull_request` and `merge_group`, pinned by commit SHA
+# with `shared_ref` set to the same SHA so the scripts come from there. It needs
+# nothing from the caller's checkout but `supabase/`: the CLI is installed from
+# npm, not from the caller's lockfile.
 on:
   # `labeled` and `unlabeled` re-run the check when a devops member applies the
   # label: the SQL is classified again and the verdict follows the label.
   pull_request:
     types: [opened, reopened, synchronize, labeled, unlabeled]
   merge_group:
+  workflow_call:
+    inputs:
+      shared_ref:
+        description: >-
+          A commit of DevDogsUGA/DevDogsUGA to take the scripts from. Leave empty
+          when DevDogsUGA runs this; product repositories pass the SHA they
+          pinned this workflow at.
+        required: false
+        type: string
+        default: ""
+      supabase_version:
+        description: The Supabase CLI to install. Keep equal to the repository's own pin.
+        required: false
+        type: string
+        # renovate: datasource=npm depName=supabase
+        default: 2.117.0
 
 concurrency:
   group: database-pr-${{ github.event_name == 'merge_group' && github.run_id || github.ref }}
@@ -53,10 +75,20 @@ jobs:
       issues: read
     env:
       BASE_SHA: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || github.event.pull_request.base.sha }}
+      SUPABASE_VERSION: ${{ inputs.supabase_version || '2.117.0' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: Locate the shared scripts
+        run: echo "SCRIPTS=$GITHUB_WORKSPACE/${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
       - name: Did the database change?
         id: changed
         run: |
@@ -67,15 +99,15 @@ jobs:
           else
             echo 'changed=true' >> "$GITHUB_OUTPUT"
           fi
-      - uses: ./.github/actions/setup-workspace
+      - name: Install the Supabase CLI
         if: steps.changed.outputs.changed == 'true'
+        run: npm install --global "supabase@$SUPABASE_VERSION" && supabase --version
       - name: Classify the SQL this change adds
         id: plan
         if: steps.changed.outputs.changed == 'true'
         env:
-          SUPABASE_BIN: ${{ github.workspace }}/node_modules/.bin/supabase
           PLAN_DIR: ${{ runner.temp }}/db-check
-        run: node .github/scripts/db-plan.mjs check --base "$BASE_SHA"
+        run: node "$SCRIPTS/db-plan.mjs" check --base "$BASE_SHA"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: steps.changed.outputs.changed == 'true'
         with:
@@ -91,7 +123,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -n "$PR" ]; then target=(--pr "$PR"); else target=(--ref "$QUEUE_REF"); fi
-          node .github/scripts/destructive-label.mjs need --repo "$GITHUB_REPOSITORY" "${target[@]}" --destructive "$DESTRUCTIVE" | tee -a "$GITHUB_STEP_SUMMARY"
+          node "$SCRIPTS/destructive-label.mjs" need --repo "$GITHUB_REPOSITORY" "${target[@]}" --destructive "$DESTRUCTIVE" | tee -a "$GITHUB_STEP_SUMMARY"
 
   # On the merge queue only: pull_request_target does not fire for it, but the
   # required check must report there too (destructive-gate.yaml has the other
@@ -106,8 +138,19 @@ jobs:
       issues: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
       - name: Who applied the allow-destructive label
         env:
           GH_TOKEN: ${{ github.token }}
           QUEUE_REF: ${{ github.event.merge_group.head_ref }}
-        run: node .github/scripts/destructive-label.mjs gate --repo "$GITHUB_REPOSITORY" --ref "$QUEUE_REF" | tee -a "$GITHUB_STEP_SUMMARY"
+          SCRIPTS: ${{ github.workspace }}/${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}
+        # `shell: bash` is `bash -eo pipefail`: without it the pipe to tee
+        # would hide a failing check.
+        shell: bash
+        run: node "$SCRIPTS/destructive-label.mjs" gate --repo "$GITHUB_REPOSITORY" --ref "$QUEUE_REF" | tee -a "$GITHUB_STEP_SUMMARY"
