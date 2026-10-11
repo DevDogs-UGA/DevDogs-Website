@@ -244,6 +244,13 @@
           "pattern": "staging.devdogsuga.org",
           "custom_domain": true,
         },
+        // The moderation API for apps outside this database (DogPack). The
+        // record is a proxied placeholder in the zone, so a zone route is how
+        // /moderation/v1/* reaches this Worker; nothing else on the host does.
+        {
+          "pattern": "api-staging.devdogsuga.org/moderation/v1/*",
+          "zone_name": "devdogsuga.org",
+        },
       ],
       // Empty ON PURPOSE, and not merely omitted. Staging shares the club's
       // real Discord guild, so a staging cron is not a rehearsal --
@@ -360,6 +367,14 @@
         {
           "pattern": "devdogsuga.org",
           "custom_domain": true,
+        },
+        // The moderation API for apps outside this database (DogPack).
+        // api.devdogsuga.org is the Supabase custom domain until the Gate
+        // switches the platform to its vanity subdomain and makes the record
+        // proxied (Q90); until then this route matches nothing.
+        {
+          "pattern": "api.devdogsuga.org/moderation/v1/*",
+          "zone_name": "devdogsuga.org",
         },
       ],
       // Cron triggers replace the old vercel.json crons. cloudflare/scheduled.ts
