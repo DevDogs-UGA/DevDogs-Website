@@ -6,17 +6,23 @@
 -- Everything happens in one transaction that is rolled back at the end, so the
 -- database is left exactly as it was whether the check passes or fails. It
 -- calls `platform.restrict_oauth_tokens` directly with the event shape GoTrue
--- sends (`user_id` plus the draft `claims`), once for a development client and
--- once for a production one:
+-- sends (`user_id` plus the draft `claims`):
 --
---   * the client's owner gets a token whose role is `oauth_identity` (no data
---     access), never `authenticated`;
---   * a stranger never gets an `authenticated` token: they are refused, or (a
---     production client, once any member may sign in to it) downgraded the
---     same way. A development client must refuse them.
+--   * a token that carries an OAuth client's id is an identity and nothing
+--     else: its role becomes `oauth_identity` (no data access), never
+--     `authenticated`, whichever tier the client has and whoever signed in
+--     (the client's owner, or a stranger). Sign-in to a client is decided on
+--     the consent page now, so the hook no longer refuses anyone;
+--   * a token for a client nobody registered gets the same downgrade;
+--   * a token with no client (a first-party session) keeps `authenticated`.
 --
--- The registration's tier column is `type` today; the check finds whichever of
--- `tier` or `type` the table has, so the OAuth tier rework does not break it.
+-- The hook has only ever had to hold the first rule. A refusal (an `error`
+-- key instead of claims) also passes for the stranger, so this check does not
+-- go red if an older hook is deployed during a rollout.
+--
+-- The registration's tier column is `tier` (`type` before the OAuth tier
+-- rework); the row is inserted WITH its tier, because the tier is immutable
+-- once written.
 begin;
 
 do $check$
@@ -53,13 +59,14 @@ begin
       client_id, '', 'manual', 'http://localhost:3000/cb',
       'authorization_code,refresh_token', 'q39 ' || kind, 'public', 'none', now(), now()
     );
-    insert into platform."oauthRegistrations" ("clientId", "userId")
-    values (client_id, owner_id);
     if tier_col is not null then
       execute format(
-        'update platform."oauthRegistrations" set %I = %L::%s where "clientId" = $1',
+        'insert into platform."oauthRegistrations" ("clientId", "userId", %I) values ($1, $2, %L::%s)',
         tier_col, kind, tier_type
-      ) using client_id;
+      ) using client_id, owner_id;
+    else
+      insert into platform."oauthRegistrations" ("clientId", "userId")
+      values (client_id, owner_id);
     end if;
 
     result := platform.restrict_oauth_tokens(jsonb_build_object(
@@ -77,10 +84,26 @@ begin
     if result -> 'claims' ->> 'role' = 'authenticated' then
       raise exception 'q39: a % client issued a stranger an undowngraded token: %', kind, result;
     end if;
-    if kind = 'development' and not (result ? 'error') then
-      raise exception 'q39: a development client must refuse a stranger: %', result;
+    if not (result ? 'error') and result -> 'claims' ->> 'role' is distinct from 'oauth_identity' then
+      raise exception 'q39: a % client''s token for a stranger was neither refused nor downgraded: %', kind, result;
     end if;
   end loop;
+
+  result := platform.restrict_oauth_tokens(jsonb_build_object(
+    'user_id', stranger_id,
+    'claims', jsonb_build_object('role', 'authenticated', 'client_id', gen_random_uuid())
+  ));
+  if result -> 'claims' ->> 'role' = 'authenticated' then
+    raise exception 'q39: a token for a client nobody registered kept the authenticated role: %', result;
+  end if;
+
+  result := platform.restrict_oauth_tokens(jsonb_build_object(
+    'user_id', owner_id,
+    'claims', jsonb_build_object('role', 'authenticated')
+  ));
+  if result -> 'claims' ->> 'role' is distinct from 'authenticated' then
+    raise exception 'q39: a first-party token (no client) was changed: %', result;
+  end if;
 
   raise notice 'q39: the hook downgrades development and production client tokens';
 end
