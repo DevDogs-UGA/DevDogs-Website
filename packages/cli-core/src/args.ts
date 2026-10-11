@@ -42,6 +42,12 @@ export const VALUE_FLAGS = new Set([
   "--user",
   "--filter",
   "--shell",
+  // `moderation send`: so `--to https://... content.hide` reads the action as the
+  // positional and the URL as the target.
+  "--to",
+  "--secret",
+  "--content-type",
+  "--content-ref",
 ]);
 
 export function positionals(argv: readonly string[]): string[] {

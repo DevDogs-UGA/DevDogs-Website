@@ -175,5 +175,18 @@ async function enqueueStanding(
           ${userId}::uuid, ${action}, null, null, null
         )) as ids`,
   );
-  return rows[0]?.ids ?? [];
+  const ids = rows[0]?.ids ?? [];
+  if (ids.length === 0) return [];
+
+  // Only what is ready to send goes on the queue: a delivery recorded as failed
+  // (its app has no endpoint) waits for a person and a resend.
+  const pending = await tx.execute<{ id: string }>(
+    sql`select "id" from "platform"."moderationDeliveries"
+        where "status" = 'pending'
+          and "id" in (${sql.join(
+            ids.map((id) => sql`${id}::uuid`),
+            sql`, `,
+          )})`,
+  );
+  return pending.map((row) => row.id);
 }

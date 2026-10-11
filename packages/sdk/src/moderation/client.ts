@@ -10,8 +10,8 @@ import {
   type ReportError,
   type ReportRequest,
   type ReportResponse,
-} from "./messages";
-import { signMessage } from "./signing";
+} from "./messages.js";
+import { signMessage } from "./signing.js";
 
 /** Names the OAuth client whose secret signed the request. */
 export const CLIENT_ID_HEADER = "moderation-client-id";

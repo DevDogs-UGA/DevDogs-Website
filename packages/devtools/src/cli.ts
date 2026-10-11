@@ -54,6 +54,7 @@ import { handleCompletions } from "./completions/commands.js";
 import { handleDoctor } from "./doctor/commands.js";
 import { handleEnv } from "./env/commands.js";
 import { handleJobs } from "./jobs/commands.js";
+import { handleModeration } from "./moderation/commands.js";
 import { handleRoles } from "./roles/commands.js";
 import { handleOAuth } from "./oauth/commands.js";
 import { handlePassthrough } from "./passthrough/commands.js";
@@ -96,6 +97,7 @@ const CONTRIBUTOR_HANDLERS: Record<string, CommandHandler> = {
   "apply-migrations": handleApplyMigrations,
   "push-config": handlePushConfig,
   roles: handleRoles,
+  moderation: handleModeration,
 };
 
 /**

@@ -3,9 +3,9 @@
  * `apply_event` are tested against, and what `devtools moderation send` and
  * the console's "Send test action" build their bodies from.
  */
-import type { ModerationMessage, MessageType } from "./messages";
-import type { Outcome } from "./receiver";
-import { signMessage, type SignedHeaders } from "./signing";
+import type { ModerationMessage, MessageType } from "./messages.js";
+import type { Outcome } from "./receiver.js";
+import { signMessage, type SignedHeaders } from "./signing.js";
 
 /** A well-known secret for samples. Never a real client's. */
 export const SAMPLE_SECRET =

@@ -8,8 +8,8 @@
  * - `samples`: signed sample messages for tests and `devtools moderation send`.
  * - `client`: a small signed client for the report API.
  */
-export * from "./signing";
-export * from "./messages";
-export * from "./receiver";
-export * from "./samples";
-export * from "./client";
+export * from "./signing.js";
+export * from "./messages.js";
+export * from "./receiver.js";
+export * from "./samples.js";
+export * from "./client.js";

@@ -183,6 +183,18 @@ describe("prompts", () => {
       // `check migrations`: CI names the ref it compared against; the
       // check is typed-only, so there is no wizard to ask.
       "--base",
+      // `moderation send` and `samples`: the receiver's URL and secret, and
+      // the message's targets. They are free-form values an app developer has
+      // in hand (a function URL they are serving, their own row ids), and the
+      // defaults aim at the local Edge Function with the well-known sample
+      // secret, so the wizard can run it with none of them.
+      "--to",
+      "--secret",
+      "--content-type",
+      "--content-ref",
+      "--user",
+      "--replay",
+      "--stale",
     ]);
     const unasked = new Set<string>();
 
@@ -219,6 +231,7 @@ describe("coverage of what the CLI dispatches", () => {
     "script",
     "env",
     "jobs",
+    "moderation",
     // Both are dispatched twice: once in `main()` ahead of `intro()`, which is
     // what a typed command line reaches, and once in `dispatch` for the walk
     // the wizard hands back. They belong here for the second of those.
@@ -268,7 +281,9 @@ describe("coverage of what the CLI dispatches", () => {
   it("has no command for what was deleted", () => {
     for (const path of [
       ["persona"],
-      ["moderation"],
+      // Not `moderation`: the old one (report and resolve from the terminal)
+      // is gone, and a new one with a different job replaced it. `moderation
+      // send` and `samples` exercise a receiver; nothing here moderates.
       ["docs"],
       ["db"],
       ["cf"],

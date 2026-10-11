@@ -23,12 +23,12 @@ import {
   isContentMessage,
   parseMessage,
   type ModerationMessage,
-} from "./messages";
+} from "./messages.js";
 import {
   verifyMessage,
   type HeaderSource,
   type VerifyOptions,
-} from "./signing";
+} from "./signing.js";
 
 export type Outcome = "applied" | "duplicate" | "stale";
 

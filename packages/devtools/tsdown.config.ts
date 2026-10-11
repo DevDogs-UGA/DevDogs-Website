@@ -10,8 +10,8 @@ const pkg = JSON.parse(
 
 /**
  * Bundles the CLI into a flat `dist/`, inlining `@devdogsuga/cli-core` (the
- * private shared core) and `@devdogsuga/telemetry` (which the core imports),
- * both `workspace:*` devDependencies, and nothing else: every
+ * private shared core), `@devdogsuga/telemetry` (which the core imports) and
+ * `@devdogsuga/sdk` (for `moderation send`), all `workspace:*` devDependencies, and nothing else: every
  * other import stays external and must be declared in this package's
  * `dependencies`/`peerDependencies`. The build fails (`onlyBundle`) if
  * anything from `node_modules` is inlined, and (`onlyImport`) if the output
@@ -46,6 +46,9 @@ export default defineConfig({
     alwaysBundle: [
       /^@devdogsuga\/cli-core(\/|$)/,
       /^@devdogsuga\/telemetry(\/|$)/,
+      // The moderation subpath's signing and samples; its one dependency (zod)
+      // is already devtools'.
+      /^@devdogsuga\/sdk(\/|$)/,
     ],
     onlyBundle: [],
     onlyImport: [
