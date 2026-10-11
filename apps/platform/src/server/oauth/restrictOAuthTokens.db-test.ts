@@ -9,10 +9,12 @@ import { db } from "~/server/db";
  *
  * GoTrue calls it for every token it issues; these call it directly with the
  * event shape GoTrue sends (`user_id` plus the draft `claims`). A token for an
- * OAuth client is recognised by its `client_id` claim or, failing that, by
- * the `oauth_client_id` on its session row, and is issued only to the
- * client's owner or one of the owner's test accounts, re-roled to
- * `oauth_identity`. The last case proves that role really cannot read data.
+ * OAuth client is recognised by its `client_id` claim or, failing that, by the
+ * `oauth_client_id` on its session row, and is re-roled to `oauth_identity`
+ * whatever the client's tier and whoever signed in. Who may sign in to which
+ * client is the consent page's decision (`decideConsent`), not the hook's; the
+ * hook is the downgrade and nothing else. The last case proves the role it
+ * hands out really cannot read data.
  */
 
 const IDS = {
@@ -20,9 +22,11 @@ const IDS = {
   other: "f5000000-0000-4000-a000-000000000002",
   testAccount: "f5000000-0000-4000-a000-000000000003",
   otherTestAccount: "f5000000-0000-4000-a000-000000000004",
-  client: "f5000000-0000-4000-b000-000000000001",
-  unregisteredClient: "f5000000-0000-4000-b000-000000000002",
-  session: "f5000000-0000-4000-c000-000000000001",
+  devClient: "f5000000-0000-4000-b000-000000000001",
+  productionClient: "f5000000-0000-4000-b000-000000000002",
+  unregisteredClient: "f5000000-0000-4000-b000-000000000003",
+  devSession: "f5000000-0000-4000-c000-000000000001",
+  productionSession: "f5000000-0000-4000-c000-000000000002",
 };
 
 const USERS = [
@@ -32,7 +36,7 @@ const USERS = [
   [IDS.otherTestAccount, "oh00002@oauth-hook-other.devdogsuga.test"],
 ] as const;
 
-const CLIENTS = [IDS.client, IDS.unregisteredClient];
+const CLIENTS = [IDS.devClient, IDS.productionClient, IDS.unregisteredClient];
 
 async function cleanup() {
   await db.execute(sql`
@@ -85,8 +89,9 @@ beforeAll(async () => {
   }
 
   await db.execute(sql`
-    insert into platform."oauthRegistrations" ("clientId", "userId")
-    values (${IDS.client}::uuid, ${IDS.owner}::uuid)
+    insert into platform."oauthRegistrations" ("clientId", "userId", "tier")
+    values (${IDS.devClient}::uuid, ${IDS.owner}::uuid, 'development'),
+           (${IDS.productionClient}::uuid, ${IDS.owner}::uuid, 'production')
   `);
   await db.execute(sql`
     insert into platform."oauthTestAccounts" ("testUserId", "ownerUserId")
@@ -95,7 +100,8 @@ beforeAll(async () => {
   `);
   await db.execute(sql`
     insert into auth.sessions (id, user_id, created_at, updated_at, oauth_client_id)
-    values (${IDS.session}::uuid, ${IDS.other}::uuid, now(), now(), ${IDS.client}::uuid)
+    values (${IDS.devSession}::uuid, ${IDS.other}::uuid, now(), now(), ${IDS.devClient}::uuid),
+           (${IDS.productionSession}::uuid, ${IDS.other}::uuid, now(), now(), ${IDS.productionClient}::uuid)
   `);
 });
 
@@ -128,39 +134,70 @@ describe("platform.restrict_oauth_tokens", () => {
     });
   });
 
-  it("issues the owner a token with no data access", async () => {
-    const result = await hook(IDS.owner, { client_id: IDS.client });
-    expect(result.error).toBeUndefined();
-    expect(result.claims?.role).toBe("oauth_identity");
-    expect(result.claims?.client_id).toBe(IDS.client);
+  describe("a development client's token", () => {
+    it("is downgraded for the owner", async () => {
+      const result = await hook(IDS.owner, { client_id: IDS.devClient });
+      expect(result.error).toBeUndefined();
+      expect(result.claims?.role).toBe("oauth_identity");
+      expect(result.claims?.client_id).toBe(IDS.devClient);
+    });
+
+    it("is downgraded for the owner's test account", async () => {
+      const result = await hook(IDS.testAccount, {
+        client_id: IDS.devClient,
+      });
+      expect(result.error).toBeUndefined();
+      expect(result.claims?.role).toBe("oauth_identity");
+    });
+
+    it("is downgraded, not refused, for anyone else (consent decides who may sign in)", async () => {
+      for (const user of [IDS.other, IDS.otherTestAccount]) {
+        const result = await hook(user, { client_id: IDS.devClient });
+        expect(result.error).toBeUndefined();
+        expect(result.claims?.role).toBe("oauth_identity");
+      }
+    });
   });
 
-  it("issues the owner's test account a token with no data access", async () => {
-    const result = await hook(IDS.testAccount, { client_id: IDS.client });
-    expect(result.claims?.role).toBe("oauth_identity");
+  describe("a production client's token", () => {
+    it("is downgraded for the owner", async () => {
+      const result = await hook(IDS.owner, { client_id: IDS.productionClient });
+      expect(result.error).toBeUndefined();
+      expect(result.claims?.role).toBe("oauth_identity");
+      expect(result.claims?.client_id).toBe(IDS.productionClient);
+    });
+
+    it("is downgraded for a member and a test account the owner does not own", async () => {
+      for (const user of [IDS.other, IDS.otherTestAccount]) {
+        const result = await hook(user, { client_id: IDS.productionClient });
+        expect(result.error).toBeUndefined();
+        expect(result.claims?.role).toBe("oauth_identity");
+        expect(result.claims?.client_id).toBe(IDS.productionClient);
+      }
+    });
   });
 
-  it("refuses any other member", async () => {
-    const result = await hook(IDS.other, { client_id: IDS.client });
-    expect(result.error?.http_code).toBe(403);
-    expect(result.claims).toBeUndefined();
-  });
-
-  it("refuses another member's test account", async () => {
-    const result = await hook(IDS.otherTestAccount, { client_id: IDS.client });
-    expect(result.error?.http_code).toBe(403);
-  });
-
-  it("refuses a client nobody registered, even for its would-be owner", async () => {
+  it("downgrades a client nobody registered", async () => {
     const result = await hook(IDS.owner, {
       client_id: IDS.unregisteredClient,
     });
-    expect(result.error?.http_code).toBe(403);
+    expect(result.error).toBeUndefined();
+    expect(result.claims?.role).toBe("oauth_identity");
   });
 
   it("recognises an OAuth session by its session row when the claim is absent", async () => {
-    const result = await hook(IDS.other, { session_id: IDS.session });
-    expect(result.error?.http_code).toBe(403);
+    for (const session_id of [IDS.devSession, IDS.productionSession]) {
+      const result = await hook(IDS.other, { session_id });
+      expect(result.error).toBeUndefined();
+      expect(result.claims?.role).toBe("oauth_identity");
+    }
+  });
+
+  it("leaves a session that belongs to no OAuth client alone", async () => {
+    const result = await hook(IDS.other, {
+      session_id: "f5000000-0000-4000-c000-0000000000ff",
+    });
+    expect(result.claims?.role).toBe("authenticated");
   });
 
   it("gives oauth_identity no access to any API schema", async () => {

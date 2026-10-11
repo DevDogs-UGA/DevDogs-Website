@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import type { TestAccount } from "~/server/actions/testAccounts";
-import { expectUserWith } from "~/server/auth";
-import { db } from "~/server/db";
+import { expectSession, expectUserWith } from "~/server/auth";
 import ConsentForm from "~/components/ConsentForm";
 import { testAccountName } from "~/lib/testAccountName";
+import { approveAuthorization } from "~/server/oauth/approveAuthorization";
+import { findConsentTarget } from "~/server/oauth/consentTarget";
+import { decideConsent } from "~/server/oauth/tier";
+import { createSupabaseServerClient } from "~/supabase/server";
 
 /**
  * A step inside an authorization flow, reachable only with a live
@@ -29,14 +32,52 @@ export default async function ConsentPage({ searchParams }: Props) {
     notFound();
   }
 
-  const oauthRegistration = await db.query.oauthRegistrations.findFirst({
-    where: { authorizations: { authorizationId } },
-  });
+  // The client's registration decides everything, and it is read before the
+  // visitor is asked to sign in: a client nobody registered, or an
+  // authorization that has gone, is a 404 for everyone.
+  const target = await findConsentTarget(authorizationId);
 
-  if (!oauthRegistration) {
+  if (!target) {
     notFound();
   }
-  // Ensure the user is signed in.
+
+  const userId = await expectSession().catch(() => {
+    const callbackPath = `/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`;
+    redirect(`/auth?callbackPath=${encodeURIComponent(callbackPath)}`);
+  });
+
+  // Decided on the server before anything renders. A production client is
+  // approved here, for whoever signed in, when it returns to a Supabase
+  // callback; a development client shows its owner the test-account form;
+  // everything else is the same 404 as a stale id. The access token hook
+  // (migration 57) downgrades every token this authorization produces to
+  // `oauth_identity`, because GoTrue's own consent endpoint does not go
+  // through this page.
+  const decision = decideConsent({
+    tier: target.tier,
+    redirectUri: target.redirectUri,
+    ownerUserId: target.ownerUserId,
+    userId,
+  });
+
+  if (decision === "not-found") {
+    notFound();
+  }
+
+  if (decision === "auto-approve") {
+    let destination: string;
+    try {
+      destination = await approveAuthorization(
+        await createSupabaseServerClient(),
+        authorizationId,
+      );
+    } catch {
+      // An expired or already-used authorization: same answer as a stale id.
+      notFound();
+    }
+    redirect(destination);
+  }
+
   const user = await expectUserWith({
     testAccounts: {
       columns: {
@@ -53,24 +94,7 @@ export default async function ConsentPage({ searchParams }: Props) {
         },
       },
     },
-    oauthRegistrations: {
-      where: {
-        authorizations: { authorizationId },
-      },
-    },
-  }).catch(() => {
-    const callbackPath = `/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`;
-    redirect(`/auth?callbackPath=${encodeURIComponent(callbackPath)}`);
-  });
-
-  // Sign in with DevDogs is a local-development tool: only the member who
-  // registered the client can approve it, and only as themselves or one of
-  // their test accounts. Everyone else gets the same 404 as a stale id. The
-  // access token hook (migration 50) enforces the same rule on every token,
-  // since GoTrue's own consent endpoint does not go through this page.
-  if (!user.oauthRegistrations[0]) {
-    notFound();
-  }
+  }).catch(() => notFound());
 
   const testAccounts = user.testAccounts.map(
     ({ user, createdAt }) =>
