@@ -1,4 +1,4 @@
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { defineConfig, mergeConfig } from "vitest/config";
 import { nodePreset } from "@devdogsuga/config/vitest/node";
 
@@ -12,7 +12,7 @@ export default mergeConfig(
   nodePreset,
   defineConfig({
     resolve: {
-      alias: { "~": fileURLToPath(new URL("./src", import.meta.url)) },
+      alias: { "~": resolve(import.meta.dirname, "src") },
     },
     test: {
       include: ["test/**/*.live-test.ts"],

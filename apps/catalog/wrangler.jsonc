@@ -1,0 +1,166 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  // Worker naming is `${DEPLOY_ENV}-${APP_NAME}`, as for the platform and
+  // schedule-builder: development-catalog, staging-catalog, production-catalog.
+  // The top level is the development shape; the bindings wrangler does not
+  // inherit into an environment (`vars`, `hyperdrive`, `workflows`, `ratelimits`,
+  // `routes`) are written out in full per environment below.
+  "name": "development-catalog",
+  // Not a secret. The scoped deploy token defeats wrangler's account
+  // inference, so the account is pinned, as in the other Workers.
+  "account_id": "61d185ff419ef7bd5bd4b3d314081a49",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-09-16",
+  // nodejs_compat for the Postgres driver's sockets and Buffer.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // The API is reachable on its zone route only: no *.workers.dev name and no
+  // preview URLs around the rate limiter and the edge cache.
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+    },
+  },
+  // `.csv` files are the building data, bundled as text (src/buildings/files.ts).
+  "rules": [{ "type": "Text", "globs": ["**/*.csv"], "fallthrough": true }],
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
+  "vars": {
+    "DEPLOY_ENV": "development",
+  },
+  // Development runs on a local Postgres through DB_URL (.dev.vars), without
+  // Hyperdrive. wrangler dev simulates workflows and rate limits locally.
+  "workflows": [
+    {
+      "binding": "SCRAPE_WORKFLOW",
+      "name": "development-catalog-scrape",
+      "class_name": "ScrapeWorkflow",
+    },
+    {
+      "binding": "PROGRAMS_WORKFLOW",
+      "name": "development-catalog-programs",
+      "class_name": "ProgramsWorkflow",
+    },
+  ],
+  // The limits are the numbers in src/api/limits.ts (a test compares them):
+  // 120 requests a minute per IP, 60 on /search. `namespace_id` is any unique
+  // integer in the account; each environment has its own pair so their counters
+  // never share a window.
+  "ratelimits": [
+    {
+      "name": "CATALOG_LIMITER",
+      "namespace_id": "1301",
+      "simple": { "limit": 120, "period": 60 },
+    },
+    {
+      "name": "SEARCH_LIMITER",
+      "namespace_id": "1302",
+      "simple": { "limit": 60, "period": 60 },
+    },
+  ],
+
+  "env": {
+    "staging": {
+      "name": "staging-catalog",
+      "vars": { "DEPLOY_ENV": "staging" },
+      "version_metadata": { "binding": "CF_VERSION_METADATA" },
+      // The platform's staging Hyperdrive, shared: the catalog reads and writes
+      // the same project the platform does (the `uga` views and the registrar
+      // tables live in it), so it reuses that configuration rather than
+      // provisioning a second against the same origin.
+      "hyperdrive": [
+        { "binding": "HYPERDRIVE", "id": "7ca9f62ed356489f956cc854a17d7eed" },
+      ],
+      // No schedule on staging: the scrape hits UGA's registrar from a shared
+      // IP pool, and running it from two environments doubles the load that
+      // site sees. Trigger it by hand:
+      //   wrangler workflows trigger staging-catalog-scrape '{"terms":[202702]}' --env staging
+      "workflows": [
+        {
+          "binding": "SCRAPE_WORKFLOW",
+          "name": "staging-catalog-scrape",
+          "class_name": "ScrapeWorkflow",
+        },
+        {
+          "binding": "PROGRAMS_WORKFLOW",
+          "name": "staging-catalog-programs",
+          "class_name": "ProgramsWorkflow",
+        },
+      ],
+      "ratelimits": [
+        {
+          "name": "CATALOG_LIMITER",
+          "namespace_id": "1311",
+          "simple": { "limit": 120, "period": 60 },
+        },
+        {
+          "name": "SEARCH_LIMITER",
+          "namespace_id": "1312",
+          "simple": { "limit": 60, "period": 60 },
+        },
+      ],
+      // api-staging.devdogsuga.org is a proxied record in the zone (the
+      // placeholder `AAAA 100::`), which is what lets a Worker route attach.
+      "routes": [
+        {
+          "pattern": "api-staging.devdogsuga.org/catalog/v1/*",
+          "zone_name": "devdogsuga.org",
+        },
+      ],
+    },
+
+    "production": {
+      "name": "production-catalog",
+      "vars": { "DEPLOY_ENV": "production" },
+      "version_metadata": { "binding": "CF_VERSION_METADATA" },
+      // The platform's production Hyperdrive, shared.
+      "hyperdrive": [
+        { "binding": "HYPERDRIVE", "id": "2bb3ae474d974fe99e4f36b3c5aaf896" },
+      ],
+      "workflows": [
+        {
+          "binding": "SCRAPE_WORKFLOW",
+          "name": "production-catalog-scrape",
+          "class_name": "ScrapeWorkflow",
+          // Workflow schedules are UTC. This is the schedule the registrar
+          // scrape has always had (14:05 UTC, after the registrar's morning
+          // publish), moved here with it.
+          "schedules": ["5 14 * * *"],
+        },
+        {
+          "binding": "PROGRAMS_WORKFLOW",
+          "name": "production-catalog-programs",
+          "class_name": "ProgramsWorkflow",
+          // Ten minutes after the scrape, and not at the same moment: both
+          // write through the one Hyperdrive. It was the last route of the
+          // platform's midnight-UTC repair group; the Bulletin needs no
+          // particular hour.
+          "schedules": ["35 14 * * *"],
+        },
+      ],
+      "ratelimits": [
+        {
+          "name": "CATALOG_LIMITER",
+          "namespace_id": "1321",
+          "simple": { "limit": 120, "period": 60 },
+        },
+        {
+          "name": "SEARCH_LIMITER",
+          "namespace_id": "1322",
+          "simple": { "limit": 60, "period": 60 },
+        },
+      ],
+      // api.devdogsuga.org is Supabase's custom domain for the platform project
+      // until the Gate's cutover (Q90), so this route is inert until `api`
+      // becomes a proxied record in the zone: nothing reaches the Worker
+      // before that.
+      "routes": [
+        {
+          "pattern": "api.devdogsuga.org/catalog/v1/*",
+          "zone_name": "devdogsuga.org",
+        },
+      ],
+    },
+  },
+}

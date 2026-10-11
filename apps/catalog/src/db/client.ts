@@ -1,6 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import * as schema from "./schema.ts";
 
 /**
  * The scrape's Drizzle client, on an explicit connection string.
@@ -13,7 +12,7 @@ import * as schema from "./schema.ts";
  */
 export function createScrapeDb(url: string, max = 5) {
   const client = postgres(url, { prepare: false, idle_timeout: 20, max });
-  return drizzle({ client, schema });
+  return drizzle({ client });
 }
 
 export type ScrapeDb = ReturnType<typeof createScrapeDb>;

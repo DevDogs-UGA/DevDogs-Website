@@ -1,4 +1,4 @@
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { defineConfig, mergeConfig } from "vitest/config";
 import { nodePreset } from "@devdogsuga/config/vitest/node";
 import type { Plugin } from "vite";
@@ -25,12 +25,21 @@ const cloudflareModulesStub: Plugin = {
   },
 };
 
+/** wrangler.jsonc bundles `*.csv` as text (the building data); under Vitest this does the same. */
+const csvAsText: Plugin = {
+  name: "csv-as-text",
+  enforce: "pre",
+  transform(code, id) {
+    if (id.endsWith(".csv")) return { code: `export default ${JSON.stringify(code)};`, map: null };
+  },
+};
+
 export default mergeConfig(
   nodePreset,
   defineConfig({
-    plugins: [cloudflareModulesStub],
+    plugins: [cloudflareModulesStub, csvAsText],
     resolve: {
-      alias: { "~": fileURLToPath(new URL("./src", import.meta.url)) },
+      alias: { "~": resolve(import.meta.dirname, "src") },
     },
     test: {
       include: ["src/**/*.test.ts", "test/**/*.test.ts", "scripts/**/*.test.ts"],

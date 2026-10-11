@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
-import { db } from "~/server/db";
-import { academicPrograms } from "~/server/db/schema";
-import { scrapeBulletinPrograms } from "./bulletin";
+import type { ScrapeDb } from "~/db/client";
+import { academicPrograms } from "~/db/schema";
+import type { BulletinScrape } from "./bulletin";
 
 const UPSERT_BATCH_SIZE = 200;
 
@@ -13,10 +13,20 @@ export interface AcademicProgramSyncReport {
   syncedAt: string;
 }
 
-export async function syncAcademicPrograms(): Promise<AcademicProgramSyncReport> {
-  const scrape = await scrapeBulletinPrograms();
-  const syncedAt = new Date();
-
+/**
+ * Writes a complete Bulletin scrape into `platform."academicPrograms"` as one
+ * transaction.
+ *
+ * The scrape finishes and validates every rate-limited page before this opens
+ * a transaction, so an upstream outage or a markup change leaves the previous
+ * catalog intact. Programs the scrape no longer lists are kept, marked
+ * `active = false`, because a profile may still reference them.
+ */
+export async function writeAcademicPrograms(
+  db: ScrapeDb,
+  scrape: BulletinScrape,
+  syncedAt: Date = new Date(),
+): Promise<AcademicProgramSyncReport> {
   await db.transaction(async (tx) => {
     // Keep rows referenced by a profile, but stop offering anything the latest
     // complete scrape did not contain. The transaction rolls this back if any
@@ -55,14 +65,6 @@ export async function syncAcademicPrograms(): Promise<AcademicProgramSyncReport>
           },
         });
     }
-  });
-
-  console.info("academic_program_sync_succeeded", {
-    programs: scrape.programs.length,
-    pages: scrape.pages,
-    requests: scrape.requests,
-    retries: scrape.retries,
-    syncedAt: syncedAt.toISOString(),
   });
 
   return {

@@ -1,130 +1,108 @@
-/// <reference path="../cloudflare-env.d.ts" />
 /**
- * Registrar scrape, as a Cloudflare Workflow instead of one long HTTP
- * request (see the former src/app/(api)/cron/scrape-registrar/route.ts,
- * which this supersedes as the cron target). The native schedule is declared
- * on the Workflow binding in wrangler.jsonc.
+ * The daily registrar scrape, as a Cloudflare Workflow. It moved here from
+ * schedule-builder, which only ever read what it wrote; the catalog Worker owns
+ * the registrar data now and DogDays, DogPack and the rest read it through the
+ * catalog API. The native schedule is on the Workflow binding in wrangler.jsonc.
  *
- * Splitting into one step per term means a single term's failure -- a
- * vanished CSV, a bad calendar lookup, a constraint violation -- can't burn
- * the CPU/wall-time budget of, or abort, every other term's reconcile the
- * way the single-request version could. Each `step.do` call is also
- * separately retried and checkpointed by the Workflows engine, so a crash
- * mid-run resumes from the last completed step instead of restarting the
- * whole scrape.
+ * One `step.do` per term, so a single term's failure (a vanished CSV, a bad
+ * calendar lookup, a violated invariant) cannot burn the budget of, or abort,
+ * the others. Each step is retried and checkpointed by the Workflows engine, so
+ * a crash resumes from the last completed step instead of restarting the run.
  *
- * A Workflow step runs with no per-request context to key a cached Drizzle
- * client on (unlike `~/server/db`'s `db` proxy, which keys one to the
- * current request via vinext's `cacheForRequest`). Every step that talks
- * to Postgres therefore builds its own client from
- * the deployed Hyperdrive binding (or local `DB_URL`) via
- * `createScheduleBuilderDb`
- * *inside* the step callback, never cached on `this` -- a step may resume in
- * a brand-new isolate after the Workflow sleeps, crashes, or is rescheduled,
- * and a live Postgres connection can't survive that gap.
+ * A step runs with no per-request context, so each builds its own database
+ * client from the Hyperdrive binding (or local `DB_URL`) INSIDE the step and
+ * closes it there: a step may resume in a new isolate, and a live Postgres
+ * connection cannot survive that gap.
+ *
+ * Memory. A term is streamed (see ../scrape/csv.ts), never parsed whole; the
+ * daily "Worker exceeded memory limit" of the old scrape is why. And no step
+ * output carries rows: the Workflows engine persists whatever a step returns.
  */
 import { WorkflowEntrypoint } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
+import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import * as Sentry from "@sentry/cloudflare";
-import { buildSentryOptions } from "@devdogsuga/telemetry";
-import { sql } from "drizzle-orm";
+import { importBuildings, type BuildingImportResult } from "~/buildings/importBuildings";
+import { withScrapeDb } from "~/db/client";
+import { resolveDatabaseUrl, type DatabaseEnv } from "~/db/url";
+import { catalogSentryOptions, type SentryEnv } from "~/sentry";
+import { recordHeartbeat, recordRun, SCRAPE_HEARTBEAT_JOB } from "./heartbeat";
+import { InvariantViolationError } from "./invariants";
 import {
+  CalendarNotFoundError,
+  academicPeriodInfo,
   detectAvailableTerms,
   fetchPartsOfTerm,
-  academicPeriodInfo,
-  CalendarNotFoundError,
-} from "~/lib/parsers";
+} from "./parsers";
 import {
   fetchSemesterCsv,
   type FailedFetch,
-} from "~/lib/parsers/AvailableTerms";
+} from "./parsers/AvailableTerms";
 import {
   reconcileTerm,
   type TermReconcileResult,
-} from "~/lib/parsers/reconcileTerm";
-import type { ResolvedTerm } from "~/lib/parsers/termPartsOfTerm";
-// Import the env-free leaf, not `~/server/db`: this module is evaluated during
-// Cloudflare's Worker startup validation, before Next's build-time replacement
-// of required `NEXT_PUBLIC_*` values. The request-scoped barrel imports
-// `~/env`, while this factory only needs an explicit connection string.
-import { createScheduleBuilderDb } from "~/server/db/create";
-import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
-import { resolveWorkflowDatabaseUrl } from "./database-url";
-import { SCRAPE_HEARTBEAT_JOB } from "./scheduled";
+} from "./parsers/reconcileTerm";
 
 /**
- * Opaque -- scheduled and manual instances need no per-instance parameters.
+ * What a manual run can ask for. A scheduled run passes nothing.
+ *
+ * `terms` limits the run to those academic periods (`202702`), which is how a
+ * staging check scrapes one term; a limited run never writes the heartbeat,
+ * since it is not the whole scrape. `skipInvariants` waives the named
+ * invariants for this run, for the day a human has looked at a 20% swing in
+ * sections and says it is real:
+ *
+ *   wrangler workflows trigger production-catalog-scrape '{"skipInvariants":["sectionCountStable"]}'
  */
-export type ScrapeWorkflowParams = Record<string, never>;
+export type ScrapeWorkflowParams = {
+  terms?: number[];
+  skipInvariants?: string[];
+};
 
-/**
- * The bindings Sentry instrumentation reads out of the Workflow's `env`.
- * Hand-rolled, structural, and deliberately not imported from `~/env` -- same
- * reasoning as `WorkflowDatabaseEnv` in `./database-url.ts`: this module
- * evaluates during Worker startup validation, before the request-scoped `env`
- * barrel is safe to import. `SCHEDULE_BUILDER_SENTRY_DSN` is a Worker secret, invisible to
- * `wrangler types`' generated `CloudflareEnv`, so `CloudflareEnv` is passed
- * here structurally rather than cast.
- */
-interface WorkflowSentryEnv {
-  readonly SCHEDULE_BUILDER_SENTRY_DSN?: string;
-  readonly DEPLOY_ENV?: string;
-  /** Git SHA of the deploy; see `cloudflare/worker.ts`'s `WorkerEnv` for why
-   * this isn't part of `~/env`'s schema. Reaches this Worker (and so this
-   * Workflow, which shares its bindings) the same `--var` way. */
-  readonly SENTRY_RELEASE?: string;
-}
+type Env = DatabaseEnv & SentryEnv;
 
 /**
  * `run()`'s return value, and every intermediate `step.do` return value, is
- * persisted by the Workflows engine and replayed on resume -- it must be
- * `Rpc.Serializable` (plain data only: no class instances, no `Map`s, no
- * Drizzle rows). `TermReconcileResult` is already documented as such; this
- * shape adds nothing that isn't.
+ * persisted by the Workflows engine and replayed on resume: plain data only.
  */
 export type ScrapeWorkflowResult = {
   termResults: TermReconcileResult[];
   failedFetches: FailedFetch[];
-  failures: { academicPeriod: number; error: string }[];
+  failures: { step: string; academicPeriod?: number; error: string }[];
+  buildings: BuildingImportResult | null;
 };
 
-/**
- * Undecorated class. Exported (below) only after
- * `Sentry.instrumentWorkflowWithSentry` wraps it -- see the cheatsheet's
- * Cloudflare Workflows pattern. That wrapper substitutes `step` for a
- * Sentry-instrumented proxy before calling `run()`, so every `step.do` call
- * below already gets a span, and -- on its last retry attempt -- an automatic
- * `captureException` for free, with no per-attempt/per-retry event of its
- * own. This class therefore only adds what the wrapper does NOT give it:
- * breadcrumbs so a retry's history is visible on whatever event eventually
- * fires, and a `captureException` for the two failure paths that happen
- * OUTSIDE any `step.do` call (zero terms detected; the aggregate "completed
- * partially" throw at the end) and so are invisible to the wrapper's per-step
- * capture.
- *
- * A run that never happens raises no exception, so a successful one records
- * itself in `platform."jobHeartbeats"` instead, and the platform's
- * fifteen-minute cron reports the row overdue through its Sentry Crons
- * monitor. The scrape no longer checks in to a monitor of its own: Sentry
- * bills a seat per monitor.
- */
-class ScrapeWorkflowBase extends WorkflowEntrypoint<
-  CloudflareEnv,
-  ScrapeWorkflowParams
-> {
+/** Retries for the steps that read the registrar or write a term. Backoff is longer than the database's idle-in-transaction timeout (30 s), so a retry after a killed attempt finds its locks released. */
+const TERM_STEP = {
+  retries: { limit: 3, delay: "45 seconds", backoff: "exponential" },
+  timeout: "15 minutes",
+} as const;
+
+const DB_STEP = {
+  retries: { limit: 3, delay: "10 seconds", backoff: "exponential" },
+  timeout: "5 minutes",
+} as const;
+
+function message(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+class ScrapeWorkflowBase extends WorkflowEntrypoint<Env, ScrapeWorkflowParams> {
   async run(
-    _event: Readonly<WorkflowEvent<ScrapeWorkflowParams>>,
+    event: Readonly<WorkflowEvent<ScrapeWorkflowParams>>,
     step: WorkflowStep,
   ): Promise<ScrapeWorkflowResult> {
+    const params = event.payload ?? {};
+    const only = params.terms && params.terms.length > 0 ? new Set(params.terms) : null;
+    const skipInvariants = params.skipInvariants ?? [];
+    const startedAt = new Date(event.timestamp);
+
     try {
-      // Only the academic period + description survive to the next step --
-      // NOT the parsed `.rows`. Step output is persisted/replayed by the
-      // Workflows engine, and a whole semester's CSV is unbounded; each
-      // term's own step re-fetches its CSV from scratch instead.
+      // Only the academic period + description survive to the next step: a
+      // step's return value is persisted, and each term's own step streams its
+      // file again.
       const detection = await step.do("detect-available-terms", async (ctx) => {
-        console.log(
-          `[scrape-workflow] detect-available-terms attempt ${ctx.attempt}`,
-        );
+        console.log(`[catalog-scrape] detect-available-terms attempt ${ctx.attempt}`);
         Sentry.addBreadcrumb({
           category: "workflow-step",
           message: `detect-available-terms attempt ${ctx.attempt}`,
@@ -132,15 +110,9 @@ class ScrapeWorkflowBase extends WorkflowEntrypoint<
         });
         const { terms, failedFetches } = await detectAvailableTerms();
         if (failedFetches.length > 0) {
-          console.error("[scrape-workflow] CSV fetch failures:", failedFetches);
+          console.error("[catalog-scrape] CSV fetch failures:", failedFetches);
         }
-        return {
-          terms: terms.map(({ academicPeriod, description }) => ({
-            academicPeriod,
-            description,
-          })),
-          failedFetches,
-        };
+        return { terms, failedFetches };
       });
 
       if (detection.terms.length === 0) {
@@ -149,84 +121,79 @@ class ScrapeWorkflowBase extends WorkflowEntrypoint<
         );
       }
 
-      const termResults: TermReconcileResult[] = [];
-      const failures: { academicPeriod: number; error: string }[] = [];
+      const failures: ScrapeWorkflowResult["failures"] = [];
 
+      // Before the terms, so a building the registrar uses for the first time
+      // already has its point when the term's coverage is counted. The dataset
+      // is validated here as well as in CI; a bad edit that got past CI fails
+      // this step and is reported, without holding the registrar data back.
+      let buildings: BuildingImportResult | null = null;
+      try {
+        buildings = await step.do("import-buildings", DB_STEP, async () =>
+          withScrapeDb(resolveDatabaseUrl(this.env), (db) => importBuildings(db)),
+        );
+      } catch (err) {
+        failures.push({ step: "import-buildings", error: message(err) });
+      }
+
+      const termResults: TermReconcileResult[] = [];
       for (const { academicPeriod } of detection.terms) {
-        // One term's failure must not abort the loop -- caught here rather
-        // than left to reject `run()` and take every other term down with it.
+        if (only && !only.has(academicPeriod)) continue;
+        // One term's failure must not abort the loop: caught here rather than
+        // left to reject `run()` and take every other term down with it.
         try {
           const result = await step.do(
             `reconcile-term-${academicPeriod}`,
+            TERM_STEP,
             async (ctx) => {
               console.log(
-                `[scrape-workflow] reconcile-term-${academicPeriod} attempt ${ctx.attempt}`,
+                `[catalog-scrape] reconcile-term-${academicPeriod} attempt ${ctx.attempt}`,
               );
               Sentry.addBreadcrumb({
                 category: "workflow-step",
                 message: `reconcile-term-${academicPeriod} attempt ${ctx.attempt}`,
                 level: "info",
               });
-              const { semester } = academicPeriodInfo(academicPeriod);
-
-              // Re-fetched here, not carried over from
-              // "detect-available-terms" (see that step's comment for why).
-              let csv: Awaited<ReturnType<typeof fetchSemesterCsv>>;
-              let partOfTermRows: Awaited<ReturnType<typeof fetchPartsOfTerm>>;
-              try {
-                [csv, partOfTermRows] = await Promise.all([
-                  fetchSemesterCsv(semester),
-                  fetchPartsOfTerm(academicPeriod),
-                ]);
-              } catch (error) {
-                // The registrar does not publish calendars indefinitely. A
-                // missing year cannot heal on retry, so let the outer
-                // per-term catch record it immediately instead of running
-                // the same HTTP request through every default Workflow
-                // retry.
-                if (error instanceof CalendarNotFoundError) {
-                  throw new NonRetryableError(error.message);
-                }
-                throw error;
-              }
-
-              // Deterministic, per-term failures: the registrar's CSV for
-              // this semester is gone, or its parts-of-term calendar
-              // resolved to zero rows. `NonRetryableError` tells the
-              // Workflows engine not to retry -- retrying would just
-              // re-fetch the same missing data.
-              if (!csv) {
-                throw new NonRetryableError(
-                  `No CSV rows available for academic period ${academicPeriod}`,
-                );
-              }
-              if (partOfTermRows.length === 0) {
-                throw new NonRetryableError(
-                  `No parts-of-term rows resolved for academic period ${academicPeriod}`,
-                );
-              }
-
-              const term: ResolvedTerm = { ...csv, partOfTermRows };
-              const db = createScheduleBuilderDb(
-                resolveWorkflowDatabaseUrl(this.env),
-              );
-              return reconcileTerm(term, db);
+              return reconcileOneTerm(this.env, academicPeriod, skipInvariants);
             },
           );
           termResults.push(result);
         } catch (err) {
           failures.push({
+            step: `reconcile-term-${academicPeriod}`,
             academicPeriod,
-            error: err instanceof Error ? err.message : String(err),
+            error: message(err),
           });
         }
       }
 
-      // Partial writes are useful, but a partially refreshed catalog is not
-      // a successful scrape. Mark the instance errored after every viable
-      // term had its chance to reconcile so the dashboard/CLI cannot report
-      // a false green.
-      if (detection.failedFetches.length > 0 || failures.length > 0) {
+      const ok = detection.failedFetches.length === 0 && failures.length === 0;
+
+      // The run's report, kept whether or not it was clean: the heartbeat says
+      // "no success since", this says why. Its own step so a replay does not
+      // write it twice.
+      await step.do("record-run", DB_STEP, async () =>
+        withScrapeDb(resolveDatabaseUrl(this.env), (db) =>
+          recordRun(db, {
+            job: SCRAPE_HEARTBEAT_JOB,
+            startedAt,
+            ok,
+            report: {
+              params,
+              termResults,
+              failures,
+              failedFetches: detection.failedFetches,
+              buildings,
+            },
+          }),
+        ),
+      );
+
+      // Partial writes are useful, but a partially refreshed catalog is not a
+      // successful scrape. Mark the instance errored after every viable term
+      // had its chance, so the dashboard and CLI cannot report a false green,
+      // and write no heartbeat, so the platform's daily-jobs check goes overdue.
+      if (!ok) {
         throw new NonRetryableError(
           `Registrar scrape completed partially: ${JSON.stringify({
             failedFetches: detection.failedFetches,
@@ -236,40 +203,29 @@ class ScrapeWorkflowBase extends WorkflowEntrypoint<
         );
       }
 
-      // Its own step so a replay after this point does not write it twice,
-      // and so a failed write is retried like any other database call.
-      // Raw SQL: the table is the platform's, outside the `schedule_builder`
-      // schema this Drizzle client is typed for.
-      await step.do("record-heartbeat", async () => {
-        const db = createScheduleBuilderDb(
-          resolveWorkflowDatabaseUrl(this.env),
+      // Not for a run limited to some terms: that is not the whole scrape.
+      // Its own step so a replay after this point does not write it twice, and
+      // so a failed write is retried like any other database call.
+      if (!only) {
+        await step.do("record-heartbeat", DB_STEP, async () =>
+          withScrapeDb(resolveDatabaseUrl(this.env), (db) =>
+            recordHeartbeat(db, SCRAPE_HEARTBEAT_JOB),
+          ),
         );
-        await db.execute(sql`
-          insert into "platform"."jobHeartbeats" ("job", "succeededAt")
-          values (${SCRAPE_HEARTBEAT_JOB}, now())
-          on conflict ("job") do update set "succeededAt" = excluded."succeededAt"
-        `);
-      });
+      }
 
-      return {
-        termResults,
-        failedFetches: detection.failedFetches,
-        failures,
-      };
+      return { termResults, failedFetches: detection.failedFetches, failures, buildings };
     } catch (err) {
-      // Terminal only: this catches the two failure paths above that happen
-      // OUTSIDE a `step.do` call (zero terms detected; the aggregate
-      // "completed partially" throw), plus any truly unexpected bug in this
-      // method's own control flow. A per-term step that exhausted its
-      // retries was already captured once by the wrapper's per-step
-      // instrumentation before landing in the per-term `catch` above; this
-      // is a separate, aggregate signal for the run as a whole, not a
-      // duplicate of that one.
+      // Terminal only: the failure paths above that happen OUTSIDE a
+      // `step.do` call (zero terms detected; the aggregate "completed
+      // partially" throw), plus any truly unexpected bug in this method's own
+      // control flow. A per-term step that exhausted its retries was already
+      // captured by the wrapper's per-step instrumentation before landing in
+      // the per-term `catch` above; this is a separate, aggregate signal for
+      // the run as a whole.
       Sentry.captureException(err);
       // `flush` is normally handled per-step by the wrapper, but this throw
-      // happens outside any `step.do` call, so nothing else guarantees the
-      // exception above reaches Sentry before the Workflow's isolate is torn
-      // down.
+      // happens outside any `step.do` call.
       await Sentry.flush(2000);
       throw err;
     }
@@ -277,50 +233,91 @@ class ScrapeWorkflowBase extends WorkflowEntrypoint<
 }
 
 /**
- * Split out of the `instrumentWorkflowWithSentry` call below so its parameter
- * can be typed as `WorkflowSentryEnv` (structural, hand-rolled) rather than
- * `CloudflareEnv` (the generated, DSN-blind type). `instrumentWorkflowWithSentry`
- * infers its environment type parameter from BOTH arguments at once -- the
- * class's own constructor parameter fixes it at `CloudflareEnv` -- so
- * annotating the options callback's OWN parameter as `WorkflowSentryEnv`
- * would conflict with that inference instead of merely narrowing it. The
- * callback passed below stays typed `(env: CloudflareEnv) => ...` to satisfy
- * that inference, and calls this function as an ordinary function call
- * instead, which only needs the argument assignable to the parameter type --
- * true here since every field `WorkflowSentryEnv` declares is optional.
+ * One term, start to finish, inside one step attempt: open both of the
+ * registrar's sources, stream the CSV through the collectors, then write it in
+ * one short transaction.
  */
-function scrapeWorkflowSentryOptions(env: WorkflowSentryEnv) {
-  const options = buildSentryOptions({
-    service: "schedule-builder",
-    environment: env.DEPLOY_ENV ?? "development",
-    dsn: env.SCHEDULE_BUILDER_SENTRY_DSN,
-    release: env.SENTRY_RELEASE,
-  });
-  // Forwards console warn/error to Sentry Logs, as ./worker.ts does.
-  return options
-    ? {
-        ...options,
-        integrations: [
-          Sentry.consoleLoggingIntegration({ levels: ["warn", "error"] }),
-        ],
-      }
-    : {};
+async function reconcileOneTerm(
+  env: Env,
+  academicPeriod: number,
+  skipInvariants: readonly string[],
+): Promise<TermReconcileResult> {
+  const { semester } = academicPeriodInfo(academicPeriod);
+  const startedAt = new Date();
+
+  // allSettled, not all: if the calendar lookup fails while the CSV opened,
+  // the CSV's download has to be cancelled, not left to the garbage collector.
+  const [csvResult, partsResult] = await Promise.allSettled([
+    fetchSemesterCsv(semester),
+    fetchPartsOfTerm(academicPeriod),
+  ]);
+  if (csvResult.status === "rejected" || partsResult.status === "rejected") {
+    if (csvResult.status === "fulfilled") await csvResult.value?.close();
+    const error: unknown =
+      csvResult.status === "rejected"
+        ? csvResult.reason
+        : (partsResult as PromiseRejectedResult).reason;
+    // The registrar does not publish calendars indefinitely. A missing year
+    // cannot heal on retry, so fail it now instead of running the same HTTP
+    // request through every retry.
+    if (error instanceof CalendarNotFoundError) {
+      throw new NonRetryableError(error.message);
+    }
+    throw error;
+  }
+  const csv = csvResult.value;
+  const partOfTermRows = partsResult.value;
+
+  try {
+    // Deterministic, per-term failures: the registrar's CSV for this semester
+    // is gone or now carries another term, or its parts-of-term calendar
+    // resolved to zero rows. Retrying would re-fetch the same.
+    if (!csv) {
+      throw new NonRetryableError(
+        `No CSV rows available for academic period ${academicPeriod}`,
+      );
+    }
+    if (csv.academicPeriod !== academicPeriod) {
+      throw new NonRetryableError(
+        `${semester}.csv now carries ${csv.academicPeriod}, not ${academicPeriod}`,
+      );
+    }
+    if (partOfTermRows.length === 0) {
+      throw new NonRetryableError(
+        `No parts-of-term rows resolved for academic period ${academicPeriod}`,
+      );
+    }
+
+    return await withScrapeDb(resolveDatabaseUrl(env), (db) =>
+      reconcileTerm(
+        {
+          academicPeriod,
+          description: csv.description,
+          partOfTermRows,
+          rows: csv.rows,
+        },
+        db,
+        { startedAt, skipInvariants },
+      ),
+    );
+  } catch (error) {
+    // Re-running would read the same feed and break the same invariant.
+    if (error instanceof InvariantViolationError) {
+      throw new NonRetryableError(error.message);
+    }
+    throw error;
+  } finally {
+    await csv?.close();
+  }
 }
 
 /**
- * The instrumented export. wrangler.jsonc's `workflows[].class_name:
- * "ScrapeWorkflow"` binding, and `cloudflare/worker.ts`'s re-export, both
- * name this export -- neither needs to change for the wrapping to apply.
- *
- * `scrapeWorkflowSentryOptions` returning `{}` when `buildSentryOptions`
- * returns `undefined` (no `SCHEDULE_BUILDER_SENTRY_DSN` configured), rather than skipping
- * `instrumentWorkflowWithSentry` altogether, still satisfies the no-DSN
- * no-op contract: `@sentry/core`'s `Client` constructor makes no transport
- * and does no network I/O when `options.dsn` is falsy (see
- * Backstage's `packages/telemetry` README), and its one console line behind that path
- * is gated on `debug`, which is never set here.
+ * The instrumented export. wrangler.jsonc's `workflows[].class_name` binding and
+ * `src/worker.ts`'s re-export both name it. `instrumentWorkflowWithSentry`
+ * substitutes `step` for a Sentry-instrumented proxy before `run()`, so every
+ * `step.do` gets a span and, on its last retry, an automatic `captureException`.
  */
 export const ScrapeWorkflow = Sentry.instrumentWorkflowWithSentry(
-  (env: CloudflareEnv) => scrapeWorkflowSentryOptions(env),
+  (env: Env) => catalogSentryOptions(env) ?? {},
   ScrapeWorkflowBase,
 );
