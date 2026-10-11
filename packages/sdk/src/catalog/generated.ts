@@ -212,10 +212,10 @@ export interface SubjectList {
 export interface Term {
   academicPeriod: TermCode;
   description: string;
-  /** First day of classes in the term's longest part of term, or null if it has none. */
+  /** First day of classes in the term's Full Term part (code `1`, else its longest part), or null if it has none. */
   classesBegin: DateString | null;
   classesEnd: DateString | null;
-  /** Last day to add or drop in the term's longest part of term, or null if it has none. */
+  /** Last day to add or drop in the term's Full Term part (code `1`, else its longest part), or null if it has none. */
   dropAddEnds: DateString | null;
   partsOfTerm: PartOfTerm[];
 }
@@ -235,7 +235,8 @@ export interface CatalogClient {
    * Terms with sections on offer
    *
    * Every term that has at least one section that is not cancelled, newest first, with its parts of term.
-   * `dropAddEnds` is the last day to add or drop a class in the term's longest part of term.
+   * `classesBegin`, `classesEnd` and `dropAddEnds` are the dates of the term's Full Term part (code `1`), or of its
+   * longest part when it has none; the other parts carry their own dates.
    */
   listTerms(options?: RequestOptions): Promise<TermList>;
   /**

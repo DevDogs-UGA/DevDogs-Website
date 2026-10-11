@@ -51,3 +51,16 @@ Every green push to `main` publishes changed packages to the `next` dist-tag, as
 ```sh
 pnpm add @devdogsuga/sdk@next
 ```
+
+How that is wired, and what a maintainer must set up once:
+
+- npm prereleases go out on **every green push to `main`** (Q88: publishing happens from `main` only), not on a
+  tag push, through the reviewer-less `publishing-next` environment (`ci.yaml` job `publish-next`, which calls
+  `publish.yaml` with `channel: next`). Only the Dart SDK publishes by **tag push**
+  (`devdogsuga_sdk-vX.Y.Z-next.N`, see `.github/workflows/publish-dart.yaml`), because pub.dev authenticates a tag.
+- npm Trusted Publishing for `@devdogsuga/sdk`, `devtools`, `config` and `backstage` must name this repository and
+  the workflow file `publish.yaml`, with the **environment field left blank**. An environment of `publishing`
+  would refuse the `publishing-next` job, and one of `publishing-next` would refuse the stable job.
+- pub.dev automated publishing for `devdogsuga_sdk` takes the tag pattern `devdogsuga_sdk-v{{version}}`.
+- The five packages merged into the sdk are deprecated by `node scripts/deprecate-old-packages.mjs --apply`
+  (a maintainer, signed in to npm).

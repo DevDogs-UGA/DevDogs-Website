@@ -17,7 +17,7 @@ describe("the drift check", () => {
     const outputs = buildOutputs();
     expect(outputs.length).toBeGreaterThan(15);
     // On failure the message names the files: run `pnpm -F @devdogsuga/sdk-spec codegen`.
-    expect(findDrift(outputs)).toEqual({ changed: [], stale: [], copies: [] });
+    expect(findDrift(outputs)).toEqual({ changed: [], stale: [] });
   });
 
   it("is deterministic: two builds are byte-identical", () => {

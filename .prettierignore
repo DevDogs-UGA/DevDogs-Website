@@ -13,6 +13,8 @@ apps/slides/workshops/
 packages/sdk/src/catalog/generated.ts
 packages/sdk/src/platform/generated.ts
 packages/sdk/src/constants/generated.ts
+packages/sdk-spec/openapi/
+apps/catalog/openapi/catalog.yaml
 packages/sdk-spec/moderation/schema.json
 packages/sdk-spec/brand/tokens.json
 packages/sdk-spec/telemetry/scrub.json

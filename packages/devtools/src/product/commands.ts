@@ -179,7 +179,7 @@ async function runSync(
   product: Product,
   deps: ProductDeps,
   rest: readonly string[],
-): Promise<SyncResult> {
+): Promise<{ result: SyncResult; cli: SupabaseCli; target: DbTarget | null }> {
   const cli = await cliFor(product, deps);
   const preference = preferenceOf(rest);
   const kind = chooseKind(product, preference);
@@ -256,7 +256,37 @@ async function runSync(
       log.warn(err.message);
     }
   }
-  return result;
+  return { result, cli, target: dryRun ? null : target };
+}
+
+/**
+ * Q82: `db sync` also regenerates the types, so an edit-schema, sync loop never
+ * leaves them behind. Skipped when nothing changed and the types on disk are
+ * already for this schema. A failure here does not undo the sync.
+ */
+export async function regenerateAfterSync(
+  product: Product,
+  cli: SupabaseCli,
+  target: DbTarget | null,
+  result: SyncResult,
+  deps: Pick<ProductDeps, "run">,
+): Promise<void> {
+  if (target === null) {
+    log.info(`Would regenerate ${product.config.types.out}.`);
+    return;
+  }
+  if (!result.migration && typesAreCurrent(product)) return;
+  try {
+    await generateTypes(product, cli, target, deps.run, (line) =>
+      log.info(line),
+    );
+    log.success(`Regenerated ${product.config.types.out}.`);
+  } catch (err) {
+    if (!(err instanceof TypesError)) throw err;
+    log.warn(
+      `${err.message} The sync itself worked; run \`devtools db types\` once that is fixed.`,
+    );
+  }
 }
 
 // ── db types ────────────────────────────────────────────────────────────────
@@ -324,10 +354,11 @@ export function createProductHandlers(
       const flags = rest.filter((arg) => arg !== sub);
       switch (sub) {
         case "sync": {
-          const result = await runSync(product, deps, flags);
+          const { result, cli, target } = await runSync(product, deps, flags);
           if (result.migration) {
             log.success("Your database now matches supabase/schemas.");
           }
+          await regenerateAfterSync(product, cli, target, result, deps);
           return DONE;
         }
         case "types":

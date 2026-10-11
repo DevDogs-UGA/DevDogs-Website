@@ -17,6 +17,7 @@ import {
   itemKey,
   moderationJsonSchemas,
   parseMessage,
+  reportRequestSchema,
   signMessage,
   signedSamples,
   verifyMessage,
@@ -186,6 +187,37 @@ describe("messages", () => {
   });
 });
 
+describe("the report request", () => {
+  const base = {
+    reporterUserId: "00000000-0000-4000-8000-000000000001",
+    authorUserId: "00000000-0000-4000-8000-000000000002",
+    contentType: "session",
+    contentRef: "s1",
+    contentSnapshot: "text",
+    reason: "spam",
+  };
+
+  it("takes an https content link and refuses every other scheme", () => {
+    expect(
+      reportRequestSchema.safeParse({
+        ...base,
+        contentUrl: "https://app.example/s/1",
+      }).success,
+    ).toBe(true);
+    for (const contentUrl of [
+      "javascript:alert(1)",
+      "data:text/html,<script>1</script>",
+      "http://app.example/s/1",
+      "ftp://app.example/s/1",
+    ]) {
+      expect(
+        reportRequestSchema.safeParse({ ...base, contentUrl }).success,
+        contentUrl,
+      ).toBe(false);
+    }
+  });
+});
+
 describe("the reference receiver", () => {
   it("passes the conformance sequence: applied once, a replay ignored, an out-of-order message ignored", async () => {
     const store = createMemoryStore();
@@ -195,7 +227,9 @@ describe("the reference receiver", () => {
       verify: { now: Math.floor(Date.now() / 1000) },
     });
 
-    const samples = await signedSamples();
+    const samples = await signedSamples({
+      contentRef: SAMPLE_CONTENT.contentRef,
+    });
     const outcomes: string[] = [];
     for (const sample of samples) {
       const response = await receiver.handle(sample.headers, sample.body);
@@ -224,6 +258,24 @@ describe("the reference receiver", () => {
       ),
     ).toBe("visible");
     expect(store.users.get(SAMPLE_USER_ID)).toBe("suspended");
+  });
+
+  it("passes the conformance sequence again against the same store, because each run has its own message ids", async () => {
+    const store = createMemoryStore();
+    const receiver = createReceiver({
+      secret: SAMPLE_SECRET,
+      store,
+      verify: { now: Math.floor(Date.now() / 1000) + 60 },
+    });
+    const start = Date.now();
+    // Back to back and 10 s apart: the restore of one run is dated a second
+    // after its hide, which must not make the next run's hide look stale.
+    for (const now of [start, start + 5, start + 10_000]) {
+      for (const sample of await signedSamples({ now })) {
+        const response = await receiver.handle(sample.headers, sample.body);
+        expect(response.outcome, sample.name).toBe(sample.expected);
+      }
+    }
   });
 
   it("refuses an unsigned or mis-signed request without touching the store", async () => {

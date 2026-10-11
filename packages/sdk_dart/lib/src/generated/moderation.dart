@@ -124,6 +124,7 @@ enum ReportErrorErrorCode {
   invalidRequest('invalid_request'),
   missingClient('missing_client'),
   unknownClient('unknown_client'),
+  clientNotRegistered('client_not_registered'),
   badSignature('bad_signature'),
   unknownContentType('unknown_content_type'),
   unknownUser('unknown_user'),

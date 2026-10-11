@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 
 /**
  * brand, env, db, headers and telemetry are subpaths of this package now, and
- * the five old packages are deprecated on npm. Nothing in the repository may
+ * the five old packages are to be deprecated on npm (a maintainer runs
+ * `scripts/deprecate-old-packages.mjs --apply`). Nothing in the repository may
  * import, require or depend on them any more: Checkpoint 3a, "every import
  * uses `@devdogsuga/sdk/*`".
  */

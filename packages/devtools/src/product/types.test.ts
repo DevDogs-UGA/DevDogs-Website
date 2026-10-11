@@ -74,6 +74,33 @@ describe("generateTypes (TypeScript)", () => {
     ]);
   });
 
+  it("never shows the database password in the log or the failure output", async () => {
+    const product = makeProduct();
+    const hosted: DbTarget = {
+      ...LOCAL,
+      kind: "hosted",
+      dbUrl:
+        "postgresql://postgres.abc:S3cretPassw0rd@pooler.example:5432/postgres",
+    };
+    const lines: string[] = [];
+    const ok = recordingRunner(() => ({ stdout: "x" }));
+    await generateTypes(product, CLI, hosted, ok.run, (l) => lines.push(l));
+    // The real command still gets the real URL.
+    expect(ok.calls[0]?.args).toContain(hosted.dbUrl);
+    expect(lines.join("\n")).toContain("<DB_URL>");
+    expect(lines.join("\n")).not.toContain("S3cretPassw0rd");
+
+    const failing = recordingRunner(() => ({
+      code: 1,
+      stderr: `failed to connect to ${hosted.dbUrl}`,
+    }));
+    const err = await generateTypes(product, CLI, hosted, failing.run).catch(
+      (e: unknown) => e,
+    );
+    expect(err).toBeInstanceOf(TypesError);
+    expect((err as TypesError).output).not.toContain("S3cretPassw0rd");
+  });
+
   it("stops being current when the schema changes", async () => {
     const product = makeProduct();
     const { run } = recordingRunner(() => ({ stdout: "x" }));

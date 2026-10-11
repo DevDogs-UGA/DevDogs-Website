@@ -27,8 +27,12 @@ pnpm -F @devdogsuga/sdk-spec check:drift      # write nothing; fail if anything 
 pnpm -F @devdogsuga/sdk-spec test
 ```
 
-`check` also fails for a file the generator owns but no longer writes, and when `apps/catalog/openapi/catalog.yaml`
-exists and differs from `openapi/catalog.yaml` (there must be one copy of the contract).
+`check` also fails for a file the generator owns but no longer writes.
+
+`openapi/catalog.yaml` is the one catalog contract. The catalog Worker's contract tests read
+`apps/catalog/openapi/catalog.yaml`; when that directory exists, `codegen` writes a byte-for-byte copy there and
+`check:drift` fails if it differs. Edit the contract here, never there, and keep it out of Prettier (the copy is in
+`.prettierignore`; Prettier rewrites the flow mappings and breaks descriptions that contain a comma).
 
 ## Writing a spec
 

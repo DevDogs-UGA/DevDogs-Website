@@ -778,10 +778,10 @@ class Term {
 
   final TermCode academicPeriod;
   final String description;
-  /// First day of classes in the term's longest part of term, or null if it has none.
+  /// First day of classes in the term's Full Term part (code `1`, else its longest part), or null if it has none.
   final DateString? classesBegin;
   final DateString? classesEnd;
-  /// Last day to add or drop in the term's longest part of term, or null if it has none.
+  /// Last day to add or drop in the term's Full Term part (code `1`, else its longest part), or null if it has none.
   final DateString? dropAddEnds;
   final List<PartOfTerm> partsOfTerm;
 
@@ -847,7 +847,8 @@ class CatalogClient {
   /// Terms with sections on offer
   ///
   /// Every term that has at least one section that is not cancelled, newest first, with its parts of term.
-  /// `dropAddEnds` is the last day to add or drop a class in the term's longest part of term.
+  /// `classesBegin`, `classesEnd` and `dropAddEnds` are the dates of the term's Full Term part (code `1`), or of its
+  /// longest part when it has none; the other parts carry their own dates.
   Future<TermList> listTerms() async {
     final json = await _api.send('GET', '/terms', query: const {});
     return TermList.fromJson(json as Map<String, dynamic>);

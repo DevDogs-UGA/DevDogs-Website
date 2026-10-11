@@ -438,8 +438,10 @@ jobs:
   # a push here asks nobody to approve a `publishing` deployment yet: both
   # repositories publishing would race on the same npm packages, and this one
   # has no GitHub releases for the versions already out. The Gate sets the
-  # repository variable BACKSTAGE_PUBLISHES_STABLE=true (after the trusted
-  # publishers on npmjs.com name this repository's publish workflow).
+  # repository variable BACKSTAGE_PUBLISHES_STABLE=true. The trusted
+  # publishers on npmjs.com must already name this repository's publish.yaml
+  # (environment field blank) before the first prerelease below, which needs
+  # them too: that is a pre-flight item, not a Gate one.
   publish:
     needs: validate
     if: >-
@@ -455,6 +457,8 @@ jobs:
   # reviewer-less `publishing-next` environment: nobody approves a prerelease,
   # and `latest` is never touched. Products pin these until the stable bump
   # lands. Set the repository variable BACKSTAGE_PUBLISHES_NEXT=false to stop.
+  # npm prereleases ride the push to main (Q88); only the Dart SDK publishes by
+  # tag push (publish-dart.yaml).
   publish-next:
     needs: validate
     if: >-

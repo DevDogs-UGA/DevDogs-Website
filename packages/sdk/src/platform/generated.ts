@@ -39,7 +39,7 @@ export interface ReportErrorError {
   message: string;
 }
 
-export const REPORT_ERROR_ERROR_CODE_VALUES = ["invalid_json", "invalid_request", "missing_client", "unknown_client", "bad_signature", "unknown_content_type", "unknown_user", "reporter_not_allowed", "rate_limited", "not_configured"] as const;
+export const REPORT_ERROR_ERROR_CODE_VALUES = ["invalid_json", "invalid_request", "missing_client", "unknown_client", "client_not_registered", "bad_signature", "unknown_content_type", "unknown_user", "reporter_not_allowed", "rate_limited", "not_configured"] as const;
 export type ReportErrorErrorCode = (typeof REPORT_ERROR_ERROR_CODE_VALUES)[number];
 
 export interface ReportReasonOption {

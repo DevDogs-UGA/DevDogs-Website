@@ -55,7 +55,12 @@ const OWNED_DIRS = [
   join(PACKAGES, "sdk_dart", "lib", "assets"),
 ];
 
-/** Where lane 3b keeps its copy of the catalog spec; it must equal ours. */
+/**
+ * Where the catalog Worker keeps the catalog spec its contract tests read. The
+ * contract is `openapi/catalog.yaml` here; when the Worker's directory exists,
+ * codegen writes the same bytes there, and the check fails if they differ, so
+ * there is one contract, not two.
+ */
 const CATALOG_APP_COPY = join(
   ROOT,
   "apps",
@@ -88,6 +93,10 @@ export function buildOutputs(): Output[] {
   const catalog = loadSpec(catalogFile, overrides);
   const platform = loadSpec(platformFile, overrides);
   const moderationDecls = loadSchemaDefs(moderationPath, overrides);
+
+  if (existsSync(dirname(CATALOG_APP_COPY))) {
+    add(CATALOG_APP_COPY, readFileSync(catalogFile));
+  }
 
   // 3. TypeScript.
   const sdkSrc = join(PACKAGES, "sdk", "src");
@@ -184,8 +193,6 @@ export interface Drift {
   changed: string[];
   /** Files the generator owns but no longer writes. */
   stale: string[];
-  /** Other copies of a spec that disagree with the canonical one. */
-  copies: string[];
 }
 
 export function findDrift(outputs: Output[]): Drift {
@@ -198,14 +205,7 @@ export function findDrift(outputs: Output[]): Drift {
   const stale = OWNED_DIRS.flatMap(walk)
     .filter((p) => !wanted.has(p))
     .map((p) => relative(ROOT, p));
-  const copies: string[] = [];
-  if (existsSync(CATALOG_APP_COPY)) {
-    const canonical = readFileSync(join(SPEC, "openapi", "catalog.yaml"));
-    if (!readFileSync(CATALOG_APP_COPY).equals(canonical)) {
-      copies.push(relative(ROOT, CATALOG_APP_COPY));
-    }
-  }
-  return { changed, stale, copies };
+  return { changed, stale };
 }
 
 export function writeOutputs(outputs: Output[]): void {
@@ -231,9 +231,6 @@ function main(): void {
   const problems = [
     ...drift.changed.map((p) => `  out of date: ${p}`),
     ...drift.stale.map((p) => `  stale: ${p}`),
-    ...drift.copies.map(
-      (p) => `  differs from packages/sdk-spec/openapi/catalog.yaml: ${p}`,
-    ),
   ];
   if (problems.length > 0) {
     console.error(

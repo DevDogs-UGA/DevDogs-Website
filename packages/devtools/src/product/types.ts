@@ -65,6 +65,10 @@ export function typesAreCurrent(product: Product): boolean {
   );
 }
 
+function redact(output: string, secret: string): string {
+  return secret.length > 0 ? output.split(secret).join("<DB_URL>") : output;
+}
+
 export async function generateTypes(
   product: Product,
   cli: SupabaseCli,
@@ -86,12 +90,17 @@ export async function generateTypes(
       "--schema",
       supabase.schemas.join(","),
     ];
-    log(`Running ${cliLine(cli, args.slice(cli.prefix.length))}`);
+    // The connection string carries the database password; the terminal
+    // (which people screenshot for help) shows a placeholder instead.
+    const shown = args
+      .slice(cli.prefix.length)
+      .map((arg) => (arg === target.dbUrl ? "<DB_URL>" : arg));
+    log(`Running ${cliLine(cli, shown)}`);
     const result = await run(cli.command, args, { cwd: product.root });
     if (result.code !== 0 || result.stdout.trim().length === 0) {
       throw new TypesError(
         "The Supabase CLI could not generate types. Is the database up and synced (`devtools db sync`)?",
-        result.stderr || result.stdout,
+        redact(result.stderr || result.stdout, target.dbUrl),
       );
     }
     mkdirSync(dirname(out), { recursive: true });

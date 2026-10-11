@@ -121,7 +121,7 @@ How it works, in short:
   (`db schema declarative sync --no-apply`) to diff them against a git-ignored `supabase/migrations/` that
   records what this database has had applied, writes the difference as a new migration, and applies it
   (`migration up --local`, or `db push --db-url` for a hosted project). A change that drops a table or column
-  needs `--yes`.
+  needs `--yes`. It then regenerates the types (and leaves them alone when nothing changed and they are current).
 - **Types are never committed.** `db types` writes them to the path in the config, which is git-ignored.
   The schema hash covers the sorted schema paths, their LF-normalised contents and the generator version (the
   pinned CLI, or supadart); CI uploads a `<product>-types-<hash>.tgz` asset to a rolling `generated-types`
