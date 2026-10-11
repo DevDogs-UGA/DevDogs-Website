@@ -191,7 +191,10 @@ async function readBoundedText(response: Response): Promise<string> {
   let body = "";
 
   while (true) {
-    const { done, value } = await reader.read();
+    const { done, value } = (await reader.read()) as {
+      done: boolean;
+      value: Uint8Array;
+    };
     if (done) break;
     received += value.byteLength;
     if (received > MAX_RESPONSE_BYTES) {

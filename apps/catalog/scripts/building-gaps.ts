@@ -45,7 +45,7 @@ if (process.argv.includes("--download")) {
   for (const semester of SEMESTERS) {
     const res = await fetch(`https://apps.reg.uga.edu/soc/${semester}.csv`);
     if (!res.ok) throw new Error(`${semester}.csv: HTTP ${res.status}`);
-    writeFileSync(join(dir, `${semester}.csv`), Buffer.from(await res.arrayBuffer()));
+    writeFileSync(join(dir, `${semester}.csv`), new Uint8Array(await res.arrayBuffer()));
   }
 }
 

@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import postgres from "postgres";
@@ -109,7 +109,7 @@ async function loadSchemas(url: string): Promise<void> {
 
 export async function createTestDatabase(): Promise<TestDatabase> {
   const admin = adminUrl();
-  const name = `catalog_test_${randomBytes(6).toString("hex")}`;
+  const name = `catalog_test_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   const control = postgres(admin, { max: 1 });
   try {
     await control.unsafe(`create database ${name}`);

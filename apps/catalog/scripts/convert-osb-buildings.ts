@@ -53,7 +53,7 @@ mkdirSync(out, { recursive: true });
 function read(path: string): Source[] {
   // The source has a trailing space after one number ("33.95143912, "), which
   // JSON allows.
-  return JSON.parse(readFileSync(join(root as string, path), "utf8")) as Source[];
+  return JSON.parse(readFileSync(join(root!, path), "utf8")) as Source[];
 }
 
 function csvField(value: string | number | null): string {

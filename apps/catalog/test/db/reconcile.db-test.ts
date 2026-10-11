@@ -272,7 +272,7 @@ describe("scrape invariants, enforced", () => {
     }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(InvariantViolationError);
     expect((error as InvariantViolationError).failures).toEqual([
-      expect.objectContaining({ name: "timesWellFormed", detail: expect.objectContaining({ unreadableTimesInFeed: 1 }) }),
+      expect.objectContaining({ name: "timesWellFormed", detail: expect.objectContaining({ unreadableTimesInFeed: 1 }) as unknown }),
     ]);
   });
 

@@ -65,7 +65,7 @@ export async function fetchSemesterCsv(
   }
   if (!res.body) return null;
 
-  const rows = streamCsvRows(res.body);
+  const rows = streamCsvRows(res.body as ReadableStream<Uint8Array>);
   const first = await rows.next();
   const academicPeriod = parseInt(
     first.done ? "" : (first.value.ACADEMIC_PERIOD ?? ""),

@@ -27,8 +27,8 @@ afterAll(async () => {
 });
 
 describe("the Drizzle copy of the tables (src/db/schema.ts)", () => {
-  const tables = Object.values(schema).filter((value): value is PgTable =>
-    is(value, PgTable),
+  const tables = (Object.values(schema) as unknown[]).filter(
+    (value): value is PgTable => is(value, PgTable),
   );
 
   it("covers the tables the scrape writes", () => {
@@ -100,7 +100,7 @@ describe("the read-only role", () => {
         db.url,
         (tx) => tx`insert into schedule_builder.terms values (1, 'x')`,
       ),
-    ).rejects.toMatchObject({ code: expect.stringMatching(/^(42501|25006)$/) });
+    ).rejects.toMatchObject({ code: expect.stringMatching(/^(42501|25006)$/) as unknown });
   });
 
   it("is stopped by the statement timeout", async () => {

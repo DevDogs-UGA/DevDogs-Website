@@ -155,6 +155,8 @@ export async function fetchPartsOfTerm(
       `Registrar calendar endpoint returned HTTP ${ajaxRes.status}`,
     );
   }
+  // The Workers and Node typings disagree about `json()`'s return type.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   const { success, data } = (await ajaxRes.json()) as {
     success: boolean;
     data?: { html?: string; terms_html?: string };
