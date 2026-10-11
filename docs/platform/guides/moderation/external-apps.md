@@ -1,6 +1,6 @@
 ---
 name: Apps outside the platform database
-description: How an app with its own database (DogPack) files reports and receives moderators' decisions: the signed report API, the signed deliveries, the receiver rules, registration, and the three ways to test it.
+description: "How an app with its own database (DogPack) files reports and receives moderators' decisions, with the signed report API, the signed deliveries, the receiver rules, registration, and the three ways to test it."
 order: 3
 section: guides
 ---
