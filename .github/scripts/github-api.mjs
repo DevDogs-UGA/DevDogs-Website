@@ -55,3 +55,37 @@ export async function apiAll(api, path) {
     if (batch.length < perPage) return all;
   }
 }
+
+/**
+ * A GitHub REST client that can change things: any method, a JSON body, and
+ * empty (`204`) responses. Used only where a script has to write (removing a
+ * label); everything that reads uses `createApi`.
+ *
+ * @param {{ token: string, baseUrl?: string, fetchImpl?: typeof fetch }} options
+ * @returns {(method: string, path: string, body?: unknown) => Promise<any>}
+ */
+export function createRequest({
+  token,
+  baseUrl = "https://api.github.com",
+  fetchImpl = fetch,
+}) {
+  return async function request(method, path, body) {
+    const response = await fetchImpl(`${baseUrl}${path}`, {
+      method,
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${token}`,
+        "x-github-api-version": "2022-11-28",
+        ...(body === undefined ? {} : { "content-type": "application/json" }),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    if (!response.ok) {
+      throw new Error(
+        `${method} ${path} failed: ${response.status} ${await response.text()}`,
+      );
+    }
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
+  };
+}
