@@ -23,7 +23,7 @@ Some changes need a GitHub organization **owner**. The owners are the **Presiden
 
 - Approve production deploys and the destructive gate.
 - Apply the `allow-destructive` label.
-- Edit environments' secrets and variables on the repositories where they hold `maintain`.
+- Edit environments' variables on the repositories where they hold `maintain`. Environment **secrets** need `admin`, which only the owners hold.
 - Run the read-only previews: `pnpm backstage github rulesets --repo all`, `pnpm backstage github settings`.
 
 ## How the officer asks for one

@@ -17,7 +17,7 @@ These are the runbooks for the DevOps/Platform officer and the other `devops` me
 | `focus-leads`, `reviewers`                      | Review and merge pull requests through the merge queue. Cannot approve a deploy.                           |
 | Organization owners (President, Vice President) | The only people who can do [owner-only actions](./repositories/owner-actions.md). Break-glass for the lot. |
 
-Everyone else works from a fork. Nobody but the people above can push to the repositories at all.
+Everyone else works from a fork. Nobody but the people above, and the `team-*` teams on the repositories that grant them `push`, can push branches; `main` accepts changes only through a pull request.
 
 ## The runbooks
 

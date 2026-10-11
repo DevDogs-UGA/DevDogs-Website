@@ -13,20 +13,20 @@ Generated SQL may only add. A change that drops or rewrites data is stopped twic
 
 `.github/scripts/sql-classify.mjs` reads the SQL and flags `DROP TABLE`, `DROP COLUMN`, `DROP SCHEMA`, type changes, renames, `TRUNCATE`, `DELETE` and `UPDATE` (so a backfill needs the label too), and `DO` blocks (their bodies are not inspected). A dropped policy, view or function that is re-created in the same change is not a loss. Comments, strings and function bodies are not mistaken for statements. It reads two things:
 
-- the SQL the **schema tree** adds on top of the committed migrations (removing a column from a file in `supabase/schemas/` makes the diff contain `DROP COLUMN`);
-- every **hand-written migration** the pull request adds or edits.
+- the SQL the **schema tree** changes compared with where the pull request started (removing a column from a file in `supabase/schemas/` makes the diff contain `DROP COLUMN`). The check builds a scratch database at the base commit and another at the head, and reads the SQL between them;
+- every **hand-written migration** the pull request adds, edits or renames.
 
 ## Stop one: the pull request
 
 The `destructive-sql` check fails unless the pull request carries the **`allow-destructive`** label. The `destructive-gate` check fails if that label was applied by anyone who is not a `devops` member, which the check decides by repository permission: `maintain` (the `devops` team) or `admin` (the `admins` team). Admins are included because they can bypass the rulesets anyway; the gate keeps out everyone below them. The production deploy approvals are stricter, and name the `devops` team alone, read from the pull request's timeline so it is on record who did it. A label from anyone else is removed.
 
-A new push to the pull request removes the label: it was applied to SQL someone read, and the SQL has changed since. A `devops` member applies it again after reading the new diff.
+A new push to the pull request removes the label: it was applied to SQL someone read, and the SQL has changed since. The check does not trust a label it sees on a push for the same reason (removing a label with the workflow token starts no new run), so a destructive pull request stays red after each push until a `devops` member reads the new diff and applies the label again.
 
 To let one through, as a `devops` member: open the **Checks** tab, read the `db-check` summary (the exact SQL, with the destructive statements listed), and only then add the label.
 
 ## Stop two: the deploy
 
-A plan that is destructive does not apply on the ordinary approval. The database job first needs a deployment of **`production-destructive`** (staging: `staging-destructive`) approved by a `devops` member who did not write or queue the change. That environment holds no secrets; it exists only to be a second approval. Then the apply runs in `production`, and still refuses a plan whose hash is not the one approved.
+Production's own approval is a separate, weaker step: it is not enough for a destructive plan. The database job first needs a deployment of **`production-destructive`** (staging: `staging-destructive`) approved by a `devops` member who did not write or queue the change. That environment holds no secrets; it exists only to be a second approval. Then the apply runs in `production`, and still refuses a plan whose hash is not the one approved.
 
 If the job has no destructive environment configured, a destructive plan is refused outright.
 
