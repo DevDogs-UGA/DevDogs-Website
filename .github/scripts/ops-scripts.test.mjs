@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -14,6 +15,7 @@ import {
 import {
   classifyPendingMigrations,
   dbPort,
+  withEngineDrops,
   main as dbPlanMain,
   managedSchemas,
   normalizeSql,
@@ -134,6 +136,67 @@ test("splitStatements keeps quoted identifiers and drops comments", () => {
     'SELECT "a;b"',
     "SELECT 2",
   ]);
+});
+
+test("destructive forms hand-written migrations use are caught, not just the textbook ones", () => {
+  // COLUMN is optional in ALTER TABLE ... DROP.
+  assert.deepEqual(kinds('ALTER TABLE "platform"."users" DROP "email";'), [
+    "DROP COLUMN",
+  ]);
+  assert.deepEqual(kinds("ALTER TABLE a ADD COLUMN x int, DROP y;"), [
+    "DROP COLUMN",
+  ]);
+  assert.deepEqual(kinds("ALTER TABLE ONLY a DROP COLUMN IF EXISTS b;"), [
+    "DROP COLUMN",
+  ]);
+  // ...but the DROP forms that are not column drops stay quiet.
+  assert.deepEqual(
+    kinds(
+      "ALTER TABLE a DROP CONSTRAINT c, ALTER COLUMN b DROP DEFAULT, ALTER COLUMN d DROP NOT NULL, ALTER COLUMN e DROP IDENTITY;",
+    ),
+    [],
+  );
+  // CASCADE drops the dependents too, even when the object is re-created.
+  assert.deepEqual(kinds("DROP TYPE t CASCADE; CREATE TYPE t AS ENUM ('a');"), [
+    "DROP TYPE CASCADE",
+  ]);
+  assert.deepEqual(kinds("DROP TYPE t; CREATE TYPE t AS ENUM ('a');"), []);
+  // Data-modifying CTEs, MERGE that deletes or updates, DROP OWNED, CALL.
+  assert.deepEqual(kinds("WITH d AS (DELETE FROM a RETURNING *) SELECT 1;"), [
+    "DELETE or UPDATE in a WITH query",
+  ]);
+  assert.deepEqual(
+    kinds("WITH d AS (UPDATE a SET x = 1 RETURNING *) SELECT 1;"),
+    ["DELETE or UPDATE in a WITH query"],
+  );
+  assert.deepEqual(kinds("WITH d AS (SELECT 1) SELECT * FROM d;"), []);
+  assert.deepEqual(
+    kinds("MERGE INTO a USING b ON a.i = b.i WHEN MATCHED THEN DELETE;"),
+    ["MERGE"],
+  );
+  assert.deepEqual(
+    kinds(
+      "MERGE INTO a USING b ON a.i = b.i WHEN NOT MATCHED THEN INSERT VALUES (1);",
+    ),
+    [],
+  );
+  assert.deepEqual(kinds("DROP OWNED BY r;"), ["DROP OWNED"]);
+  assert.deepEqual(kinds("CALL migrate_everything();"), ["CALL"]);
+  assert.deepEqual(kinds("ALTER TYPE t DROP ATTRIBUTE a;"), ["DROP ATTRIBUTE"]);
+});
+
+test("the diff engine's own drop statements make a plan destructive", () => {
+  const clean = classifySql("ALTER TABLE a ADD COLUMN b int;");
+  assert.equal(withEngineDrops(clean, []).destructive, false);
+  const flagged = withEngineDrops(clean, ["DROP SCHEMA  s"]);
+  assert.equal(flagged.destructive, true);
+  assert.deepEqual(
+    flagged.reasons.map((r) => [r.kind, r.statement]),
+    [["DROP (diff engine)", "DROP SCHEMA s"]],
+  );
+  // A drop the classifier already reported is not listed twice.
+  const dropped = classifySql("DROP TABLE a;");
+  assert.equal(withEngineDrops(dropped, ["DROP TABLE a"]).reasons.length, 1);
 });
 
 /* ---------- db-plan ---------- */
@@ -343,6 +406,116 @@ test("migrations-apply refuses a destructive migration outside the destructive g
     !changed.calls.some((c) => c.includes("--yes")),
     "a stale approval pushes nothing",
   );
+});
+
+/** Runs real git and tar (the PR check shells out to them); fakes the rest. */
+function checkRuntime(handler) {
+  return {
+    cli: "supabase",
+    env: { PLAN_DIR: mkdtempSync(join(tmpdir(), "plan-")) },
+    log: () => {},
+    run(cmd, args, opts = {}) {
+      if (cmd === "git" || cmd === "tar") {
+        const r = spawnSync(cmd, args, { cwd: opts.cwd, encoding: "utf8" });
+        return { status: r.status ?? 1, stdout: r.stdout, stderr: r.stderr };
+      }
+      return handler(args, opts) ?? { status: 0, stdout: "", stderr: "" };
+    },
+  };
+}
+
+function gitRepo() {
+  const root = mkdtempSync(join(tmpdir(), "check-repo-"));
+  const git = (...args) => {
+    const r = spawnSync("git", args, { cwd: root, encoding: "utf8" });
+    assert.equal(r.status, 0, `git ${args.join(" ")}: ${r.stderr}`);
+    return r.stdout.trim();
+  };
+  git("init", "-q", "-b", "main", ".");
+  git("config", "user.email", "t@example.org");
+  git("config", "user.name", "t");
+  return { root, git };
+}
+
+/**
+ * The PR check compares the BASE tree with the HEAD tree, not the head tree
+ * with the committed migrations. A real git repository stands in for the
+ * checkout; the Supabase CLI is faked and records which tree each scratch
+ * database was built from.
+ */
+test("the PR check diffs the base's database against the head's", () => {
+  const { root, git } = gitRepo();
+  const table = join(root, "supabase", "schemas", "app", "tables");
+  mkdirSync(table, { recursive: true });
+  writeFileSync(join(root, "supabase", "config.toml"), "[db]\nport = 54322\n");
+  writeFileSync(join(root, "supabase", "schemas", "app", "schema.sql"), "");
+  writeFileSync(join(table, "t.sql"), "BASE TREE");
+  git("add", "-A");
+  git("commit", "-qm", "base");
+  const base = git("rev-parse", "HEAD");
+  writeFileSync(join(table, "t.sql"), "HEAD TREE");
+  git("commit", "-qam", "head");
+
+  const builtFrom = {};
+  let diffArgs = null;
+  const rt = checkRuntime((args, opts) => {
+    if (args[0] === "db" && args[1] === "start") {
+      const name = opts.cwd.endsWith("base") ? "base" : "head";
+      builtFrom[name] = readFileSync(
+        join(opts.cwd, "supabase", "schemas", "app", "tables", "t.sql"),
+        "utf8",
+      );
+    }
+    if (args[0] === "db" && args[1] === "diff") {
+      diffArgs = args;
+      return {
+        status: 0,
+        stdout: JSON.stringify({
+          diff: 'ALTER TABLE "app"."t" DROP COLUMN "c";',
+          dropStatements: [],
+        }),
+        stderr: "",
+      };
+    }
+    return undefined;
+  });
+  const out = join(rt.env.PLAN_DIR, "gh-output");
+  rt.env.GITHUB_OUTPUT = out;
+  assert.equal(dbPlanMain(["check", "--base", base], rt, { repoRoot: root }), 0);
+  assert.deepEqual(builtFrom, { base: "BASE TREE", head: "HEAD TREE" });
+  assert.ok(diffArgs, "the diff ran");
+  assert.notEqual(
+    diffArgs[diffArgs.indexOf("--from") + 1],
+    diffArgs[diffArgs.indexOf("--to") + 1],
+    "base and head are different databases",
+  );
+  assert.match(readFileSync(out, "utf8"), /destructive=true/);
+});
+
+test("the PR check handles a base with no supabase/ directory", () => {
+  const { root, git } = gitRepo();
+  writeFileSync(join(root, "README"), "x");
+  git("add", "-A");
+  git("commit", "-qm", "empty");
+  const base = git("rev-parse", "HEAD");
+  mkdirSync(join(root, "supabase", "schemas", "app"), { recursive: true });
+  writeFileSync(join(root, "supabase", "config.toml"), "[db]\nport = 54322\n");
+  writeFileSync(join(root, "supabase", "schemas", "app", "schema.sql"), "");
+  git("add", "-A");
+  git("commit", "-qm", "add supabase");
+  const rt = checkRuntime((args) =>
+    args[0] === "db" && args[1] === "diff"
+      ? {
+          status: 0,
+          stdout: JSON.stringify({
+            diff: 'CREATE SCHEMA "app";',
+            dropStatements: [],
+          }),
+          stderr: "",
+        }
+      : undefined,
+  );
+  assert.equal(dbPlanMain(["check", "--base", base], rt, { repoRoot: root }), 0);
 });
 
 test("db-plan refuses to plan with no DB_URL", () => {

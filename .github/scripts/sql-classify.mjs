@@ -148,6 +148,7 @@ const REPLACEABLE = new Set([
 
 /** Objects whose drop is always a loss. */
 const ALWAYS = new Set([
+  "OWNED",
   "TABLE",
   "SCHEMA",
   "SEQUENCE",
@@ -157,6 +158,42 @@ const ALWAYS = new Set([
   "DATABASE",
   "FOREIGN TABLE",
 ]);
+
+/**
+ * Whether an ALTER TABLE has an action that drops a column. The actions are
+ * split at top-level commas; one that starts with DROP and is not DROP
+ * CONSTRAINT drops a column, with or without the COLUMN keyword. (The
+ * ALTER COLUMN ... DROP DEFAULT / NOT NULL / IDENTITY forms do not start an
+ * action, so they never match.)
+ *
+ * @param {string} statement An ALTER statement, modifiers stripped.
+ */
+function droppedColumn(statement) {
+  const head = new RegExp(
+    `^ALTER\\s+(?:FOREIGN\\s+)?TABLE\\s+${NAME}\\s*`,
+    "i",
+  ).exec(statement);
+  if (!head) return false;
+  const body = statement.slice(head[0].length);
+  /** @type {string[]} */
+  const actions = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < body.length; i += 1) {
+    const c = body[i];
+    if (c === "(") depth += 1;
+    else if (c === ")") depth -= 1;
+    else if (c === "," && depth === 0) {
+      actions.push(body.slice(start, i));
+      start = i + 1;
+    }
+  }
+  actions.push(body.slice(start));
+  return actions.some((action) => {
+    const a = action.trim();
+    return /^DROP\b/i.test(a) && !/^DROP\s+CONSTRAINT\b/i.test(a);
+  });
+}
 
 /**
  * @typedef {{ kind: string, statement: string }} Reason
@@ -215,6 +252,10 @@ export function classifySql(sql) {
       const rest = statement.slice(drop[0].length);
       if (ALWAYS.has(object)) {
         note(`DROP ${object}`, statement);
+      } else if (/\bCASCADE\s*$/i.test(statement)) {
+        // CASCADE also drops everything that depends on the object (a type's
+        // columns, a view's dependents), so it is never a plain rewrite.
+        note(`DROP ${object} CASCADE`, statement);
       } else if (REPLACEABLE.has(object)) {
         if (object === "POLICY") {
           const policy = new RegExp(`^${NAME}\\s+ON\\s+${NAME}`, "i").exec(
@@ -241,9 +282,16 @@ export function classifySql(sql) {
     }
 
     if (/^ALTER\s+/i.test(statement)) {
-      // Every comma-separated action of an ALTER TABLE counts.
-      if (/\bDROP\s+COLUMN\b/i.test(statement)) {
+      // Every comma-separated action of an ALTER TABLE counts, and the COLUMN
+      // keyword is optional: `ALTER TABLE t DROP c` drops a column.
+      if (droppedColumn(statement)) {
         note("DROP COLUMN", statement);
+      }
+      if (
+        /^ALTER\s+TYPE\b/i.test(statement) &&
+        /\bDROP\s+ATTRIBUTE\b/i.test(statement)
+      ) {
+        note("DROP ATTRIBUTE", statement);
       }
       if (
         /^ALTER\s+(?:FOREIGN\s+)?TABLE\b/i.test(statement) &&
@@ -268,7 +316,23 @@ export function classifySql(sql) {
     if (/^TRUNCATE\b/i.test(statement)) note("TRUNCATE", statement);
     else if (/^DELETE\s+FROM\b/i.test(statement)) note("DELETE", statement);
     else if (/^UPDATE\b/i.test(statement)) note("UPDATE", statement);
-    else if (/^DO\b/i.test(upper) && /\$\$|^DO\s+''/.test(statement)) {
+    else if (
+      /^WITH\b/i.test(statement) &&
+      /\b(?:DELETE\s+FROM|UPDATE\s+\S+(?:\s+(?:AS\s+)?\w+)?\s+SET)\b/i.test(
+        statement,
+      )
+    ) {
+      // A data-modifying CTE: `WITH d AS (DELETE FROM t RETURNING *) ...`.
+      note("DELETE or UPDATE in a WITH query", statement);
+    } else if (
+      /^MERGE\b/i.test(statement) &&
+      /\bTHEN\s+(?:DELETE|UPDATE)\b/i.test(statement)
+    ) {
+      note("MERGE", statement);
+    } else if (/^CALL\b/i.test(statement)) {
+      // A procedure's body is not inspected, like a DO block's.
+      note("CALL", statement);
+    } else if (/^DO\b/i.test(upper) && /\$\$|^DO\s+''/.test(statement)) {
       note("DO block", statement);
     }
   }

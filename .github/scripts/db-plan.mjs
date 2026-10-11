@@ -228,14 +228,22 @@ export function defaultRuntime(env = process.env) {
  * @param {{ repoRoot: string, scratch: string }} options
  * @returns {{ url: string, treeMigration: string | null, teardown: () => void }}
  */
-export function buildDesired(rt, { repoRoot, scratch }) {
+export function buildDesired(
+  rt,
+  { repoRoot, scratch, name = "desired", portOffset = 0, configFrom },
+) {
   const source = join(repoRoot, "supabase");
-  if (!existsSync(join(source, "config.toml"))) {
+  const configPath = existsSync(join(source, "config.toml"))
+    ? join(source, "config.toml")
+    : configFrom && existsSync(join(configFrom, "supabase", "config.toml"))
+      ? join(configFrom, "supabase", "config.toml")
+      : null;
+  if (!configPath) {
     throw new Error(
       `${source}/config.toml not found: run from a repository with a supabase/ directory`,
     );
   }
-  const workdir = join(scratch, "desired");
+  const workdir = join(scratch, name);
   const target = join(workdir, "supabase");
   mkdirSync(target, { recursive: true });
   for (const entry of ["migrations", "schemas"]) {
@@ -244,17 +252,16 @@ export function buildDesired(rt, { repoRoot, scratch }) {
     }
   }
   mkdirSync(join(target, "migrations"), { recursive: true });
-  // A port block per run: parallel jobs on one machine do not collide.
+  // A port block per run: parallel jobs on one machine do not collide. Two
+  // databases of one run (base and head) take blocks `portOffset` apart.
   const portBase =
-    Number(rt.env.DB_PLAN_PORT_BASE) || 56000 + (process.pid % 400) * 20;
-  const projectId = `dbplan${process.pid}`;
-  const config = rewriteConfig(
-    readFileSync(join(source, "config.toml"), "utf8"),
-    {
-      projectId,
-      portBase,
-    },
-  );
+    (Number(rt.env.DB_PLAN_PORT_BASE) || 56000 + (process.pid % 400) * 20) +
+    portOffset;
+  const projectId = `dbplan${process.pid}${name === "desired" ? "" : name}`;
+  const config = rewriteConfig(readFileSync(configPath, "utf8"), {
+    projectId,
+    portBase,
+  });
   writeFileSync(join(target, "config.toml"), config);
   const port = dbPort(config);
 
@@ -275,6 +282,15 @@ export function buildDesired(rt, { repoRoot, scratch }) {
       rt.run(rt.cli, ["db", "reset", "--local", "--no-seed", "--yes"], {
         cwd: workdir,
       });
+    }
+    if (managedSchemas(join(target, "schemas")).length === 0) {
+      // No tree (a repository's first commit under supabase/, or a base with
+      // none): the database is whatever the migrations made it.
+      return {
+        url: `postgresql://postgres:${LOCAL_PASSWORD}@127.0.0.1:${port}/postgres?sslmode=disable`,
+        treeMigration: null,
+        teardown,
+      };
     }
     rt.log("db-plan: applying the schema tree on top");
     rt.run(
@@ -324,37 +340,76 @@ export function generateSchemaPlan(rt, { repoRoot, targetUrl }) {
   const scratch = mkdtempSync(join(tmpdir(), "db-plan-"));
   const desired = buildDesired(rt, { repoRoot, scratch });
   try {
-    rt.log(`db-plan: diffing ${schemas.join(", ")}`);
-    const result = rt.run(
-      rt.cli,
-      [
-        "db",
-        "diff",
-        "--from",
-        targetUrl,
-        "--to",
-        desired.url,
-        "--use-pg-delta",
-        "--schema",
-        schemas.join(","),
-        "--output-format",
-        "json",
-      ],
-      { cwd: repoRoot },
-    );
-    const { diff, dropStatements } = parseDiffJson(result.stdout);
-    const sql = diff.trim() === "" ? "" : normalizeSql(diff);
-    return {
-      sql,
-      hash: planHash(sql),
+    return diffDatabases(rt, {
+      repoRoot,
+      fromUrl: targetUrl,
+      toUrl: desired.url,
       schemas,
-      dropStatements,
-      classification: classifySql(sql),
-    };
+    });
   } finally {
     desired.teardown();
     rmSync(scratch, { recursive: true, force: true });
   }
+}
+
+/**
+ * The SQL that turns database `fromUrl` into `toUrl`, over `schemas`, with its
+ * hash and its destructive verdict. pg-delta's own `dropStatements` count
+ * toward the verdict next to the SQL classifier: a statement the diff engine
+ * calls a drop is destructive even where the classifier's patterns miss it.
+ *
+ * @param {Runtime} rt
+ * @param {{ repoRoot: string, fromUrl: string, toUrl: string, schemas: string[] }} options
+ */
+export function diffDatabases(rt, { repoRoot, fromUrl, toUrl, schemas }) {
+  rt.log(`db-plan: diffing ${schemas.join(", ")}`);
+  const result = rt.run(
+    rt.cli,
+    [
+      "db",
+      "diff",
+      "--from",
+      fromUrl,
+      "--to",
+      toUrl,
+      "--use-pg-delta",
+      "--schema",
+      schemas.join(","),
+      "--output-format",
+      "json",
+    ],
+    { cwd: repoRoot },
+  );
+  const { diff, dropStatements } = parseDiffJson(result.stdout);
+  const sql = diff.trim() === "" ? "" : normalizeSql(diff);
+  return {
+    sql,
+    hash: planHash(sql),
+    schemas,
+    dropStatements,
+    classification: withEngineDrops(classifySql(sql), dropStatements),
+  };
+}
+
+/**
+ * Adds the diff engine's drops to a classification: each drop statement the
+ * classifier did not already report is a reason of its own.
+ *
+ * @param {ReturnType<typeof classifySql>} classification
+ * @param {string[]} dropStatements
+ */
+export function withEngineDrops(classification, dropStatements) {
+  const known = new Set(classification.reasons.map((r) => r.statement));
+  const extra = dropStatements
+    .map((d) => String(d).replace(/\s+/g, " ").trim().slice(0, 160))
+    .filter((d) => d !== "" && !known.has(d))
+    .map((statement) => ({ kind: "DROP (diff engine)", statement }));
+  if (extra.length === 0) return classification;
+  return {
+    ...classification,
+    destructive: true,
+    reasons: [...classification.reasons, ...extra],
+  };
 }
 
 /**
@@ -443,6 +498,45 @@ export function changedMigrations(rt, repoRoot, base) {
     });
   }
   return out;
+}
+
+/** @returns {{ sql: string, hash: string, schemas: string[], dropStatements: string[], classification: ReturnType<typeof classifySql> }} */
+function emptyChange() {
+  return {
+    sql: "",
+    hash: "empty",
+    schemas: [],
+    dropStatements: [],
+    classification: classifySql(""),
+  };
+}
+
+/**
+ * The `supabase/` directory as it was at the merge base of `base` and HEAD,
+ * extracted to a temp directory (it may not exist there at all).
+ *
+ * @param {Runtime} rt
+ * @param {string} repoRoot
+ * @param {string} base
+ * @param {string} scratch
+ * @returns {{ root: string, commit: string }}
+ */
+export function exportBase(rt, repoRoot, base, scratch) {
+  const commit = rt
+    .run("git", ["merge-base", base, "HEAD"], { cwd: repoRoot })
+    .stdout.trim();
+  const root = join(scratch, "base-tree");
+  mkdirSync(root, { recursive: true });
+  const listed = rt.run("git", ["ls-tree", "--name-only", commit, "supabase"], {
+    cwd: repoRoot,
+  });
+  if (listed.stdout.trim() === "") return { root, commit };
+  const tar = join(scratch, "base.tar");
+  rt.run("git", ["archive", "--format=tar", "-o", tar, commit, "supabase"], {
+    cwd: repoRoot,
+  });
+  rt.run("tar", ["-xf", tar, "-C", root]);
+  return { root, commit };
 }
 
 /* ---------- reporting ---------- */
@@ -677,28 +771,77 @@ export function main(
   }
 
   if (command === "check") {
-    // The pull request check: no target database. The tree is built against
-    // the committed migrations in a scratch database, and the SQL the tree
-    // adds beyond them is the change under review.
+    // The pull request check: no target database. Two scratch databases are
+    // built, one at the state the change started from (the merge base: its
+    // migrations plus its tree) and one at the state it ends at (this commit),
+    // and the SQL between them is the change under review. Comparing with the
+    // base, not with the committed migrations, keeps the verdict about THIS
+    // pull request: a tree edit that is not yet in a migration (the normal
+    // state of a declarative repository) is neither hidden when the repository
+    // has no migration baseline, nor charged to every later pull request.
     const base = flagValue(rest, "--base");
     const migrations = base ? changedMigrations(rt, repoRoot, base) : [];
     const scratch = mkdtempSync(join(tmpdir(), "db-check-"));
-    const desired = buildDesired(rt, { repoRoot, scratch });
+    const headSchemas = managedSchemas(join(repoRoot, "supabase", "schemas"));
+    /** @type {ReturnType<typeof buildDesired>[]} */
+    const built = [];
     try {
-      const sql = desired.treeMigration
-        ? normalizeSql(desired.treeMigration)
-        : "";
-      const classification = classifySql(sql);
+      const head = buildDesired(rt, { repoRoot, scratch, name: "head" });
+      built.push(head);
+      /** @type {{ sql: string, hash: string, schemas: string[], dropStatements: string[], classification: ReturnType<typeof classifySql> }} */
+      let change;
+      let comparedWith;
+      if (base) {
+        const baseRoot = exportBase(rt, repoRoot, base, scratch);
+        const baseSchemas = managedSchemas(
+          join(baseRoot.root, "supabase", "schemas"),
+        );
+        const baseDb = buildDesired(rt, {
+          repoRoot: baseRoot.root,
+          scratch,
+          name: "base",
+          portOffset: 10,
+          configFrom: repoRoot,
+        });
+        built.push(baseDb);
+        const schemas = [...new Set([...headSchemas, ...baseSchemas])].sort();
+        change =
+          schemas.length === 0
+            ? emptyChange()
+            : diffDatabases(rt, {
+                repoRoot,
+                fromUrl: baseDb.url,
+                toUrl: head.url,
+                schemas,
+              });
+        comparedWith = `the base of this change (\`${baseRoot.commit.slice(0, 10)}\`)`;
+      } else {
+        // No base to compare with (a local run): the tree against the
+        // committed migrations.
+        const sql = head.treeMigration ? normalizeSql(head.treeMigration) : "";
+        change = {
+          sql,
+          hash: planHash(sql),
+          schemas: headSchemas,
+          dropStatements: [],
+          classification: classifySql(sql),
+        };
+        comparedWith = "the committed migrations";
+      }
       const migrationsDestructive = migrations.some((m) => m.destructive);
-      writeFileSync(join(planDir, "tree-vs-migrations.sql"), sql);
+      writeFileSync(join(planDir, "schema-change.sql"), change.sql);
+      writeFileSync(
+        join(planDir, "schema-change.json"),
+        `${JSON.stringify({ hash: change.hash, schemas: change.schemas, classification: change.classification, dropStatements: change.dropStatements }, null, 2)}\n`,
+      );
       summarize(
         [
           renderSchemaPlan({
-            title: "Schema tree compared with the committed migrations",
-            sql,
-            hash: planHash(sql),
-            classification,
-            schemas: managedSchemas(join(repoRoot, "supabase", "schemas")),
+            title: `Schema tree: what this change does, compared with ${comparedWith}`,
+            sql: change.sql,
+            hash: change.hash,
+            classification: change.classification,
+            schemas: change.schemas,
           }),
           "",
           "### Hand-written migrations in this change",
@@ -721,15 +864,15 @@ export function main(
       setOutputs(
         {
           destructive: String(
-            classification.destructive || migrationsDestructive,
+            change.classification.destructive || migrationsDestructive,
           ),
-          empty: String(sql === ""),
+          empty: String(change.sql === ""),
         },
         env,
       );
       return 0;
     } finally {
-      desired.teardown();
+      for (const db of built.reverse()) db.teardown();
       rmSync(scratch, { recursive: true, force: true });
     }
   }
