@@ -1,5 +1,5 @@
 "use server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { authenticate, expectUserWith } from "../auth";
 import { unlinkProfile } from "../auth/providers/github";
@@ -9,11 +9,23 @@ import { supabaseAdmin } from "../../supabase/admin";
 
 export default async function unlinkGithubProfile() {
   const user = await expectUserWith({
-    profile: { with: { oauthRegistrations: { columns: { clientId: true } } } },
+    profile: {
+      with: {
+        // Development clients only: production clients are DevDogs apps'
+        // sign-in credentials, owned by whichever officer created them and
+        // not gated on GitHub. They are deleted through the audited,
+        // replacement-checked path in oauth.ts, never as a side effect of
+        // unlinking an account.
+        oauthRegistrations: {
+          columns: { clientId: true },
+          where: { tier: "development" },
+        },
+      },
+    },
   }).catch(() => authenticate("google", "/account"));
 
-  // A GitHub identity gates EVERY OAuth client a member holds (see
-  // OAuthGateDialog), so unlinking takes all of them, not just one.
+  // A GitHub identity gates every DEVELOPMENT OAuth client a member holds
+  // (see OAuthGateDialog), so unlinking takes all of those, not just one.
   const clientIds = user.profile.oauthRegistrations.map((r) => r.clientId);
   await unlinkProfile();
 
@@ -22,7 +34,12 @@ export default async function unlinkGithubProfile() {
       await db.transaction(async (tx) => {
         await tx
           .delete(oauthRegistrations)
-          .where(eq(oauthRegistrations.userId, user.id));
+          .where(
+            and(
+              eq(oauthRegistrations.userId, user.id),
+              eq(oauthRegistrations.tier, "development"),
+            ),
+          );
         await Promise.all(
           clientIds.map((clientId) =>
             supabaseAdmin.auth.admin.oauth.deleteClient(clientId),

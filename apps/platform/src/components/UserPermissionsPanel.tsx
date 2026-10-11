@@ -15,6 +15,7 @@ const PERMISSION_LABELS: Record<string, string> = {
   canViewAuditLog: "View audit log",
   canManageAttendance: "Manage attendance",
   canPreviewDocs: "Preview docs",
+  canManageOAuthApps: "Manage OAuth apps",
 };
 
 const PERMISSION_KEYS = Object.keys(

@@ -50,7 +50,7 @@ export default async function AuditLogPage({
     <PageShell
       accent="blue"
       title="Audit Log"
-      description="The append-only history of attendance, reflections, exports, and moderation actions."
+      description="The append-only history of attendance, reflections, exports, moderation actions, and production OAuth client changes."
     >
       <Suspense fallback={<TableSkeleton />}>
         <AuditLogData page={page} filters={filters} />

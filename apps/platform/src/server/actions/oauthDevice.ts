@@ -81,7 +81,7 @@ export async function approveDevice(formData: FormData): Promise<void> {
 
   const { clientId, clientSecret } = await createOauthClientAndRegister({
     label: row.label,
-    callbackUri: row.callbackUri,
+    redirectUris: [row.callbackUri],
     userId: user.id,
   });
 

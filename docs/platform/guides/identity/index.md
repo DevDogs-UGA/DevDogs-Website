@@ -28,12 +28,34 @@ signup paths before an Auth user is written. Supabase's service-role admin API
 intentionally bypasses Auth hooks; possession of that key is already database
 administrator authority and must remain server-only.
 
+## Two tiers of client
+
+Every OAuth client is registered at `/tools/oauth` with a tier, chosen once at creation; a database trigger refuses any later change.
+
+|                | Development                                                                            | Production                                                                                                                        |
+| -------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| For            | a member's own local-stack testing                                                     | a DevDogs app (DogDays, DogPack) signing its members in                                                                           |
+| Created by     | any member with a linked GitHub account, or `devtools oauth`                           | only someone holding `canManageOAuthApps` (President and DevOps Director)                                                         |
+| Visible to     | its owner                                                                              | everyone holding `canManageOAuthApps`                                                                                             |
+| Consent        | only the owner sees the form, and approves as themselves or one of their test accounts | approved automatically for whoever is signed in                                                                                   |
+| Return address | any `http(s)` URI                                                                      | only `https://<project>.supabase.co/auth/v1/callback`: a product's own Supabase project                                           |
+| Audited        | no                                                                                     | creating, deleting, rolling the secret and changing a redirect URI each write an entry to `/console/audit-log` (`oauth_client.*`) |
+
+The consent page (`/oauth/consent`) decides on the server, before anything renders. A request with no `authorization_id`, a stale one, a client nobody registered, a production client whose authorization does not return to a Supabase callback, or a development client that is not yours, all get the same 404.
+
+A production client cannot be deleted until another live production client exists: the delete form names the replacement, and the audit entry records it. Roll a production secret from `/tools/oauth`; it is shown once. Each audited change and its GoTrue call share one transaction, so an entry never exists for a change that did not happen, and a secret is never rolled without its entry.
+
+Unlinking GitHub on `/account` deletes the member's development clients (they are gated on GitHub) and never touches a production client, whoever created it.
+
 ## What a Sign in with DevDogs token is good for
 
-Sign in with DevDogs is for local development only. Deployed apps share the platform's own sign-in and never use it. A client's tokens are limited to match, by the `custom_access_token` hook (`platform.restrict_oauth_tokens`):
+A client's tokens are limited by the `custom_access_token` hook (`platform.restrict_oauth_tokens`), which only downgrades. Whatever the tier, and whoever signed in, a token that carries an OAuth client gets `role = oauth_identity`, which has no database privileges, on the first code exchange and on every refresh. The userinfo endpoint answers it; the same token sent to the platform's REST, Storage or RPC endpoints is refused with `permission denied`. A token with no client (the platform's own sign-in) passes through untouched.
 
-- **Who:** a token is issued only to the member who registered the client at `/tools/oauth`, or to one of that member's test accounts. Any other account, and any client with no registration, is refused at the code exchange and again on every refresh.
-- **What:** an issued token carries `role = oauth_identity`, which has no database privileges. The userinfo endpoint answers it, and that is all your local stack should need: GoTrue reads userinfo once, creates a local user, and issues its own session. The same token sent to the platform's REST, Storage or RPC endpoints is refused with `permission denied`.
+Who may sign in to which client is the consent page's job, not the hook's. One gap is accepted: GoTrue's own consent endpoint accepts any signed-in session, so a member with a script could approve someone else's _development_ client as themselves. All they get is the downgraded identity token.
+
+## The issuer
+
+The issuer a product registers is whatever the platform's discovery document returns (`<API_URL>/auth/v1/.well-known/openid-configuration`), shown with a copy button on `/tools/oauth`. It is Supabase's to choose, not ours: it is the project's `https://<project>.supabase.co/auth/v1`, GoTrue stamps it on every ID token, and a provider configured with any other string, a custom domain included, fails its check. After any change to the host in front of the platform project, run `pnpm --dir apps/platform exec tsx scripts/check-oauth-issuer.ts --api-url <url>` and register what it prints.
 
 ## A third thing, easily confused with both
 

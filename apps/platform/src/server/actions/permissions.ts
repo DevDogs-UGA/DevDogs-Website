@@ -49,6 +49,7 @@ const PERMISSION_KEYS = [
   "canViewAuditLog",
   "canManageAttendance",
   "canPreviewDocs",
+  "canManageOAuthApps",
 ] as const satisfies readonly PermissionKey[];
 
 // Two-way exhaustiveness check: fails to compile if a nullable-boolean
@@ -95,6 +96,7 @@ const ALL_PERMISSIONS_FALSE: ResolvedPermissions = {
   canViewAuditLog: false,
   canManageAttendance: false,
   canPreviewDocs: false,
+  canManageOAuthApps: false,
 };
 
 /**
@@ -114,6 +116,7 @@ export async function resolveUserPermissions(
       canViewAuditLog: resolvedUserPermissions.canViewAuditLog,
       canManageAttendance: resolvedUserPermissions.canManageAttendance,
       canPreviewDocs: resolvedUserPermissions.canPreviewDocs,
+      canManageOAuthApps: resolvedUserPermissions.canManageOAuthApps,
     })
     .from(resolvedUserPermissions)
     .where(eq(resolvedUserPermissions.userId, userId))
@@ -154,6 +157,7 @@ export async function getCallerContext(userId: string): Promise<{
       canViewAuditLog: row.canViewAuditLog,
       canManageAttendance: row.canManageAttendance,
       canPreviewDocs: row.canPreviewDocs,
+      canManageOAuthApps: row.canManageOAuthApps,
     },
     minRank: row.minRank,
     isLeader: row.isLeader,
@@ -183,6 +187,9 @@ export async function canUserManageAttendance(
 }
 export async function canUserPreviewDocs(userId: string): Promise<boolean> {
   return resolveUserPermissions(userId).then((p) => p.canPreviewDocs);
+}
+export async function canUserManageOAuthApps(userId: string): Promise<boolean> {
+  return resolveUserPermissions(userId).then((p) => p.canManageOAuthApps);
 }
 
 // ── Shared guards ─────────────────────────────────────────────────────────────
@@ -234,6 +241,7 @@ export type CreateRoleInput = {
   canViewAuditLog?: boolean | null;
   canManageAttendance?: boolean | null;
   canPreviewDocs?: boolean | null;
+  canManageOAuthApps?: boolean | null;
 };
 
 export async function createRole(
@@ -262,6 +270,7 @@ export async function createRole(
       canViewAuditLog: data.canViewAuditLog ?? null,
       canManageAttendance: data.canManageAttendance ?? null,
       canPreviewDocs: data.canPreviewDocs ?? null,
+      canManageOAuthApps: data.canManageOAuthApps ?? null,
     })
     .returning({ id: roles.id });
 
@@ -322,6 +331,9 @@ export async function updateRole(
       }),
       ...(data.canPreviewDocs !== undefined && {
         canPreviewDocs: data.canPreviewDocs,
+      }),
+      ...(data.canManageOAuthApps !== undefined && {
+        canManageOAuthApps: data.canManageOAuthApps,
       }),
     })
     .where(eq(roles.id, roleId));
