@@ -130,6 +130,29 @@ const server = {
       secrecy: "secret",
     },
   ),
+  // Optional even when deployed, so a deploy that predates the secret still
+  // boots: without it the moderation API answers 503 `not_configured` and no
+  // delivery is signed, which is loud and harmless. Once set it is permanent in
+  // effect: every client's signing secret is derived from it, so changing it
+  // rotates every app at once.
+  MODERATION_SIGNING_KEY: define(
+    switchEnvironment({
+      local: z
+        .string()
+        .default("local-moderation-signing-key-not-for-deployment"),
+      deployed: z.string().min(32).optional(),
+    }),
+    {
+      doc:
+        "Root key for the moderation API's per-client signing secrets " +
+        "(Standard Webhooks, whsec_...). A client's secret is " +
+        "HMAC(this key, client id and secret version), so nothing that signs " +
+        "is stored in the database. Use a different random value in each " +
+        "environment; changing it changes every client's secret.",
+      scope: "environment",
+      secrecy: "secret",
+    },
+  ),
   DEVDOGS_EPOCH: define(z.coerce.date().default(new Date(2024, 7, 22)), {
     doc:
       "Epoch used for DevDogs id/time math. The default is the club's " +

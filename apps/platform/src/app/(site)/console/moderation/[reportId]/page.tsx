@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ModerationDeliveries from "~/components/ModerationDeliveries";
 import PageShell from "~/components/PageShell";
 import ReportActionForm from "~/components/ReportActionForm";
 import { StandingBadge, standingOf } from "~/components/StatusBadges";
@@ -20,6 +21,7 @@ export default async function ReportDetail({
     report,
     corroborationCount,
     quarantinable,
+    deliveries,
     reporterName,
     reportedName,
     suspension,
@@ -162,6 +164,15 @@ export default async function ReportDetail({
         </ConsoleCard.Root>
       ) : (
         <ReportActionForm reportId={reportId} quarantinable={quarantinable} />
+      )}
+
+      {deliveries.length > 0 && (
+        <ConsoleCard.Root id="deliveries">
+          <ConsoleCard.Header title="Deliveries" />
+          <ConsoleCard.Content>
+            <ModerationDeliveries deliveries={deliveries} />
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
       )}
     </PageShell>
   );

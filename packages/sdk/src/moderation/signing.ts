@@ -61,9 +61,14 @@ function fromBase64(value: string): Uint8Array<ArrayBuffer> | null {
   }
 }
 
+/** The `whsec_` form of raw key bytes. */
+export function secretFromBytes(bytes: Uint8Array): string {
+  return `${SECRET_PREFIX}${toBase64(bytes)}`;
+}
+
 /** A fresh `whsec_` secret: 32 random bytes, base64. */
 export function generateSecret(): string {
-  return `${SECRET_PREFIX}${toBase64(crypto.getRandomValues(new Uint8Array(32)))}`;
+  return secretFromBytes(crypto.getRandomValues(new Uint8Array(32)));
 }
 
 /** The raw key bytes of a `whsec_` secret (the prefix is optional). */

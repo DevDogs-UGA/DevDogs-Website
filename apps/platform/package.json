@@ -38,6 +38,7 @@
     "@devdogsuga/events": "workspace:*",
     "@devdogsuga/headers": "workspace:*",
     "@devdogsuga/newsletter": "workspace:*",
+    "@devdogsuga/sdk": "workspace:*",
     "@devdogsuga/supabase": "workspace:*",
     "@devdogsuga/telemetry": "workspace:*",
     "@discordjs/builders": "^1.14.1",

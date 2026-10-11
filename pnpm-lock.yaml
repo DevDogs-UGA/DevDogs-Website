@@ -225,6 +225,9 @@ importers:
       '@devdogsuga/newsletter':
         specifier: workspace:*
         version: link:../../packages/newsletter
+      '@devdogsuga/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       '@devdogsuga/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -1167,6 +1170,9 @@ importers:
       '@devdogsuga/env':
         specifier: workspace:*
         version: link:../env
+      '@devdogsuga/sdk':
+        specifier: workspace:*
+        version: link:../sdk
       '@devdogsuga/telemetry':
         specifier: workspace:*
         version: link:../telemetry

@@ -96,7 +96,7 @@ export const CRON_ROUTES: Record<
   // deploy-time call itself fails partway.
   "*/15 * * * *": {
     label:
-      "Config reconcile (meetings, workshops), support forum index, Discord role sync, daily job heartbeats",
+      "Config reconcile (meetings, workshops), support forum index, Discord role sync, moderation delivery re-queue, daily job heartbeats",
     monitorSlug: "platform-cron-config-reconcile",
     // Role sync pages through every guild member, so the runtime ceiling is
     // looser than the config pass alone needs.
@@ -111,6 +111,10 @@ export const CRON_ROUTES: Record<
       // Discord. After the passes above, so a slow guild member listing
       // delays none of them.
       "/cron/sync-discord-roles",
+      // Queues any moderation delivery the queue never received or lost track
+      // of, so a decision a moderator made reaches its app eventually. Cheap
+      // when there is nothing to do.
+      "/cron/moderation-deliveries",
       // Fails while a daily job is overdue, which errors this slot's
       // monitor: the daily jobs have none of their own. Last, and cheap.
       "/cron/heartbeats",

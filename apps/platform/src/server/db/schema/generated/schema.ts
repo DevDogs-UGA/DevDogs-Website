@@ -1,4 +1,4 @@
-import { pgSchema, pgTable, uuid, pgEnum, text, boolean, varchar, integer, timestamp, date, smallint, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
+import { pgSchema, pgTable, uuid, integer, boolean, text, pgEnum, varchar, timestamp, smallint, date, jsonb, doublePrecision, customType, index, uniqueIndex, foreignKey, primaryKey, unique, check, pgPolicy } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 // Cross-schema FK targets — re-injected by types:drizzle after each drizzle-kit pull
 import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"
@@ -21,6 +21,8 @@ export const reportReasonInPlatform = platform.enum("reportReason", ["harassment
 export const contentVisibilityInPlatform = platform.enum("contentVisibility", ["public", "restricted"])
 export const quarantineEffectInPlatform = platform.enum("quarantineEffect", ["hide", "freeze"])
 export const oauthDeviceCodeStatusInPlatform = platform.enum("oauthDeviceCodeStatus", ["pending", "approved", "denied"])
+export const appKindInPlatform = platform.enum("appKind", ["internal", "external"])
+export const deliveryStatusInPlatform = platform.enum("deliveryStatus", ["pending", "delivered", "failed"])
 
 
 export const academicProgramsInPlatform = platform.table.withRLS("academicPrograms", {
@@ -49,11 +51,12 @@ check("academicPrograms_credential_nonempty", sql`(btrim(credential) <> ''::text
 export const appsInPlatform = platform.table.withRLS("apps", {
 	id: uuid().defaultRandom().primaryKey(),
 	slug: text().notNull(),
-	schemaName: text().notNull(),
+	schemaName: text(),
 	displayName: text().notNull(),
 	contentResolver: text(),
 	contentActioner: text(),
 	createdAt: timestamp().default(sql`now()`).notNull(),
+	kind: appKindInPlatform().default("internal").notNull(),
 }, (table) => [
 	unique("apps_schemaName_key").on(table.schemaName),	unique("apps_slug_key").on(table.slug),
 	pgPolicy("no_client_delete", { as: "restrictive", for: "delete", to: ["anon", "authenticated"], using: sql`false` }),
@@ -63,7 +66,7 @@ export const appsInPlatform = platform.table.withRLS("apps", {
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
-]);
+check("apps_kind_shape_check", sql`(((kind = 'internal'::platform."appKind") AND ("schemaName" IS NOT NULL)) OR ((kind = 'external'::platform."appKind") AND ("schemaName" IS NULL) AND ("contentResolver" IS NULL) AND ("contentActioner" IS NULL)))`),]);
 
 export const attendanceInPlatform = platform.table.withRLS("attendance", {
 	id: uuid().defaultRandom().primaryKey(),
@@ -259,6 +262,15 @@ export const exportAuditInPlatform = platform.table.withRLS("exportAudit", {
 	pgPolicy("no_client_update", { as: "restrictive", for: "update", to: ["anon", "authenticated"], using: sql`false`, withCheck: sql`false` }),
 ]);
 
+export const externalContentTypesInPlatform = platform.table.withRLS("externalContentTypes", {
+	appId: uuid().notNull().references(() => appsInPlatform.id, { onDelete: "cascade" } ),
+	contentType: text().notNull(),
+	label: text().notNull(),
+	urlTemplate: text(),
+}, (table) => [
+	primaryKey({ columns: [table.appId, table.contentType], name: "externalContentTypes_pkey"}),
+check("externalContentTypes_contentType_check", sql`("contentType" ~ '^[a-z][a-z0-9_]{0,62}$'::text)`),]);
+
 export const jobHeartbeatsInPlatform = platform.table.withRLS("jobHeartbeats", {
 	job: text().primaryKey(),
 	succeededAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
@@ -322,6 +334,37 @@ export const meetingsInPlatform = platform.table.withRLS("meetings", {
 
 	pgPolicy("public_select", { for: "select", to: ["anon", "authenticated"], using: sql`true` }),
 check("meetings_building_choices", sql`((building IS NULL) OR (building = ANY (ARRAY['DLW'::text, 'Driftmier'::text, 'Plant Sciences'::text, 'Boyd'::text, 'MLC'::text, 'Science Learning Center'::text, 'Science Library'::text, 'Poultry Science'::text, 'Main Library'::text, 'Tate'::text, 'Other'::text])))`),check("meetings_cancellationReason_length", sql`(("cancellationReason" IS NULL) OR (char_length("cancellationReason") <= 160))`),check("meetings_cancellationReason_needs_cancellation", sql`(("cancellationReason" IS NULL) OR ("cancelledAt" IS NOT NULL))`),check("meetings_endsAt_after_startsAt", sql`("endsAt" > "startsAt")`),check("meetings_kind_choices", sql`((kind IS NULL) OR (kind = ANY (ARRAY['Build Session'::text, 'Study Session'::text, 'Interest Meeting'::text, 'Social'::text, 'Demo Night'::text])))`),check("meetings_nameOverride_length", sql`(("nameOverride" IS NULL) OR (char_length("nameOverride") <= 80))`),check("meetings_rsvpUrl_host", sql`(("rsvpUrl" IS NULL) OR ("rsvpUrl" ~ '^https://uga\.campuslabs\.com(/[A-Za-z0-9/_?=&.%#:~-]*)?$'::text))`),check("meetings_summary_length", sql`((summary IS NULL) OR (char_length(summary) <= 240))`),]);
+
+export const moderationClientsInPlatform = platform.table.withRLS("moderationClients", {
+	clientId: uuid().primaryKey().references(() => oauthClients.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	appId: uuid().references(() => appsInPlatform.id, { onDelete: "set null" } ),
+	endpointUrl: text(),
+	secretVersion: integer().default(1).notNull(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	updatedAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	unique("moderationClients_appId_key").on(table.appId),check("moderationClients_endpoint_https_check", sql`(("endpointUrl" IS NULL) OR ("endpointUrl" ~ '^https://[^[:space:]]+$'::text))`),check("moderationClients_secretVersion_check", sql`("secretVersion" >= 1)`),]);
+
+export const moderationDeliveriesInPlatform = platform.table.withRLS("moderationDeliveries", {
+	id: uuid().defaultRandom().primaryKey(),
+	appId: uuid().references(() => appsInPlatform.id, { onDelete: "cascade" } ),
+	clientId: uuid().references(() => oauthClients.id, { onDelete: "set null" } ),
+	reportId: uuid().references(() => reportsInPlatform.id, { onDelete: "set null" } ),
+	type: text().notNull(),
+	payload: jsonb().notNull(),
+	status: deliveryStatusInPlatform().default("pending").notNull(),
+	attempts: integer().default(0).notNull(),
+	lastError: text(),
+	lastAttemptAt: timestamp({ withTimezone: true }),
+	queuedAt: timestamp({ withTimezone: true }),
+	deliveredAt: timestamp({ withTimezone: true }),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+	sandbox: boolean().default(false).notNull(),
+}, (table) => [
+	index("moderationDeliveries_client_idx").using("btree", table.clientId.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
+	index("moderationDeliveries_pending_idx").using("btree", table.queuedAt.asc().nullsLast()).where(sql`(status = 'pending'::platform."deliveryStatus")`),
+	index("moderationDeliveries_report_idx").using("btree", table.reportId.asc().nullsLast()),
+check("moderationDeliveries_target_check", sql`(("appId" IS NOT NULL) OR sandbox)`),check("moderationDeliveries_type_check", sql`(type = ANY (ARRAY['content.hide'::text, 'content.remove'::text, 'content.restore'::text, 'user.suspend'::text, 'user.ban'::text, 'user.restore'::text]))`),]);
 
 export const oauthConnectCodesInPlatform = platform.table.withRLS("oauthConnectCodes", {
 	id: uuid().defaultRandom().primaryKey(),
@@ -714,6 +757,22 @@ export const rolesInPlatform = platform.table.withRLS("roles", {
 	pgPolicy("deny_test_identities", { as: "restrictive", to: ["authenticated"], using: sql`(NOT platform.is_test_identity(( SELECT auth.uid() AS uid)))`, withCheck: sql`(NOT platform.is_test_identity(( SELECT auth.uid() AS uid)))` }),
 check("roles_custom_requires_rank", sql`(("roleType" = 'custom'::platform."roleType") = (rank IS NOT NULL))`),]);
 
+export const sandboxReportsInPlatform = platform.table.withRLS("sandboxReports", {
+	id: uuid().defaultRandom().primaryKey(),
+	clientId: uuid().notNull().references(() => oauthClients.id, { onDelete: "cascade" } ),
+	reporterUserId: uuid().notNull().references(() => users.id, { onDelete: "cascade" } ),
+	authorUserId: uuid().notNull().references(() => users.id, { onDelete: "cascade" } ),
+	contentType: text().notNull(),
+	contentRef: text().notNull(),
+	contentSnapshot: varchar({ length: 5000 }).notNull(),
+	contentUrl: text(),
+	description: varchar({ length: 1000 }),
+	reason: reportReasonInPlatform().notNull(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	index("sandboxReports_client_idx").using("btree", table.clientId.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
+]);
+
 export const seasonsInPlatform = platform.table.withRLS("seasons", {
 	id: uuid().defaultRandom().primaryKey(),
 	name: text().notNull(),
@@ -1045,6 +1104,7 @@ export const resolvedUserPermissionsInPlatform = platform.materializedView("reso
 // Schema-suffix aliases — appended by types:drizzle
 export { academicProgramCategoryInPlatform as academicProgramCategory };
 export { academicProgramsInPlatform as academicPrograms };
+export { appKindInPlatform as appKind };
 export { appsInPlatform as apps };
 export { attendanceInPlatform as attendance };
 export { auditEventSourceInPlatform as auditEventSource };
@@ -1056,10 +1116,12 @@ export { configReconcileStateInPlatform as configReconcileState };
 export { contentActionInPlatform as contentAction };
 export { contentTypesInPlatform as contentTypes };
 export { contentVisibilityInPlatform as contentVisibility };
+export { deliveryStatusInPlatform as deliveryStatus };
 export { discordRoleMembershipsInPlatform as discordRoleMemberships };
 export { docsIndexStateInPlatform as docsIndexState };
 export { docsPagesInPlatform as docsPages };
 export { exportAuditInPlatform as exportAudit };
+export { externalContentTypesInPlatform as externalContentTypes };
 export { filerActionInPlatform as filerAction };
 export { graduationSemesterInPlatform as graduationSemester };
 export { jobHeartbeatsInPlatform as jobHeartbeats };
@@ -1068,6 +1130,8 @@ export { meetingsInPlatform as meetings };
 export { memberStarsInPlatform as memberStars };
 export { membershipDirectionInPlatform as membershipDirection };
 export { membershipRequestStatusInPlatform as membershipRequestStatus };
+export { moderationClientsInPlatform as moderationClients };
+export { moderationDeliveriesInPlatform as moderationDeliveries };
 export { oauthConnectCodesInPlatform as oauthConnectCodes };
 export { oauthDeviceCodeStatusInPlatform as oauthDeviceCodeStatus };
 export { oauthDeviceCodesInPlatform as oauthDeviceCodes };
@@ -1095,6 +1159,7 @@ export { reportsInPlatform as reports };
 export { resolvedUserPermissionsInPlatform as resolvedUserPermissions };
 export { roleTypeInPlatform as roleType };
 export { rolesInPlatform as roles };
+export { sandboxReportsInPlatform as sandboxReports };
 export { seasonsInPlatform as seasons };
 export { subjectActionInPlatform as subjectAction };
 export { supportConversationsInPlatform as supportConversations };

@@ -6,17 +6,22 @@ import { userSuspensions } from "~/server/db/schema";
 import { expectSession } from "~/server/auth";
 import { supabaseAdmin } from "~/supabase/admin";
 import { canUserManageSuspensions } from "~/server/actions/permissions";
+import { queueDeliveriesQuietly } from "~/server/moderation/queue";
 
 // 10 years in hours, so a permanent ban through Supabase's own ban field.
 const BAN_DURATION = "87600h";
 
+/** `db` or a transaction on it. */
+type Executor = Pick<typeof db, "insert" | "delete" | "execute">;
+
 /** Adds a global suspension record for `userId`. */
 async function suspendUser(
+  tx: Executor,
   userId: string,
   reason: string | undefined,
   suspendedBy: string,
 ) {
-  await db
+  await tx
     .insert(userSuspensions)
     .values({ userId, service: "global", reason, suspendedBy })
     .onConflictDoUpdate({
@@ -26,8 +31,8 @@ async function suspendUser(
 }
 
 /** Removes the global suspension record for `userId` (no-op if none). */
-async function unsuspendUser(userId: string) {
-  await db
+async function unsuspendUser(tx: Executor, userId: string) {
+  await tx
     .delete(userSuspensions)
     .where(
       and(
@@ -70,7 +75,10 @@ export async function resolveReport(
   const moderatorUserId = await expectSession();
 
   const rows = await db.execute<{
-    resolve_report: { bannedUserId: string | null };
+    resolve_report: {
+      bannedUserId: string | null;
+      deliveryIds?: string[];
+    };
   }>(
     sql`select "platform".resolve_report_as(
           ${moderatorUserId}::uuid,
@@ -89,6 +97,11 @@ export async function resolveReport(
       ban_duration: BAN_DURATION,
     });
   }
+
+  // A report on an app outside this database leaves signed deliveries behind,
+  // written in the decision's own transaction. Queuing them is best effort:
+  // the 15-minute cron picks up any that did not make it onto the queue.
+  await queueDeliveriesQuietly(rows[0]?.resolve_report?.deliveryIds ?? []);
 }
 
 /** Dismisses an open report without acting against the users or the content. */
@@ -123,19 +136,44 @@ export async function updateUserRole(
     throw new Error("Not authorized to change user standing");
   }
 
+  // The standing change and the deliveries that tell external apps about it
+  // commit together; queuing them comes after.
+  const deliveryIds = await db.transaction(async (tx) => {
+    if (role === "member") await unsuspendUser(tx, userId);
+    else await suspendUser(tx, userId, reason, callerUserId);
+    return enqueueStanding(
+      tx,
+      userId,
+      role === "member" ? "restore" : role === "banned" ? "ban" : "suspend",
+    );
+  });
+
   if (role === "member") {
-    await Promise.all([
-      unsuspendUser(userId),
-      supabaseAdmin.auth.admin.updateUserById(userId, { ban_duration: "none" }),
-    ]);
-  } else if (role === "suspended") {
-    await suspendUser(userId, reason, callerUserId);
-  } else {
-    await Promise.all([
-      suspendUser(userId, reason, callerUserId),
-      supabaseAdmin.auth.admin.updateUserById(userId, {
-        ban_duration: BAN_DURATION,
-      }),
-    ]);
+    await supabaseAdmin.auth.admin.updateUserById(userId, {
+      ban_duration: "none",
+    });
+  } else if (role === "banned") {
+    await supabaseAdmin.auth.admin.updateUserById(userId, {
+      ban_duration: BAN_DURATION,
+    });
   }
+
+  await queueDeliveriesQuietly(deliveryIds);
+}
+
+/**
+ * Owes every external app a standing message for `userId`. The reason is left
+ * out: a console suspension's reason is internal.
+ */
+async function enqueueStanding(
+  tx: Executor,
+  userId: string,
+  action: "suspend" | "ban" | "restore",
+): Promise<string[]> {
+  const rows = await tx.execute<{ ids: string[] }>(
+    sql`select to_jsonb("platform".enqueue_user_standing(
+          ${userId}::uuid, ${action}, null, null, null
+        )) as ids`,
+  );
+  return rows[0]?.ids ?? [];
 }

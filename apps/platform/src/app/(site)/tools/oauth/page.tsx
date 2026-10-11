@@ -2,12 +2,14 @@ import { Suspense } from "react";
 import Field from "~/ui/field";
 import OAuthCredentialsField from "~/components/OAuthCredentialsField";
 import OAuthGateDialog from "~/components/OAuthGateDialog";
+import OAuthModerationField from "~/components/OAuthModerationField";
 import Input from "~/components/Input";
 import OAuthTestAccountsField from "~/components/OAuthTestAccountsField";
 import PageShell from "~/components/PageShell";
 import { CardSkeleton } from "~/components/Skeletons";
 import { ConsoleCard } from "~/ui/card";
 import { getOAuthPageData } from "~/server/loaders/console";
+import { getOAuthModerationData } from "~/server/loaders/oauthModeration";
 import { resolveIssuer } from "~/server/oauth/issuer";
 
 interface Props {
@@ -15,9 +17,10 @@ interface Props {
 }
 
 async function OAuthData({ searchParams }: Props) {
-  const [data, issuer, { add_redirect_uri: prefillRedirectUri }] =
+  const [data, moderation, issuer, { add_redirect_uri: prefillRedirectUri }] =
     await Promise.all([
       getOAuthPageData(),
+      getOAuthModerationData(),
       // Read from discovery rather than written down: Supabase advertises
       // the project's raw host, not api.devdogsuga.org, and a provider set
       // to anything else fails its issuer check (TASK-347). If that's ever
@@ -60,6 +63,19 @@ async function OAuthData({ searchParams }: Props) {
               {...data}
               prefillRedirectUri={prefillRedirectUri}
             />
+          </Field>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
+
+      <ConsoleCard.Root id="moderation">
+        <ConsoleCard.Header title="Moderation" />
+        <ConsoleCard.Content>
+          <Field
+            id="moderation-clients"
+            label="Report &amp; Block"
+            description="Sign reports from your app's backend, and receive the decisions moderators make. Reports from a development client land in the sandbox below, never in the moderators' queue."
+          >
+            <OAuthModerationField clients={moderation} />
           </Field>
         </ConsoleCard.Content>
       </ConsoleCard.Root>

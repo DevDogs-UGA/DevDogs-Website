@@ -1,4 +1,4 @@
-import { count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, ne, sql } from "drizzle-orm";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import {
@@ -9,6 +9,9 @@ import { requirePermission } from "~/server/auth/require";
 import { db } from "~/server/db";
 import {
   apps,
+  externalContentTypes,
+  moderationClients,
+  moderationDeliveries,
   reportCorroborations,
   reportReasons,
   reports,
@@ -79,6 +82,48 @@ export const getModerationPageData = cache(async () => {
     appRows.map((a) => [a.id, a.displayName]),
   );
 
+  // Decisions that have not reached their app, oldest trouble first. A pending
+  // one is still being retried; a failed one is waiting for a person.
+  const undelivered = await db
+    .select({
+      id: moderationDeliveries.id,
+      reportId: moderationDeliveries.reportId,
+      type: moderationDeliveries.type,
+      status: moderationDeliveries.status,
+      attempts: moderationDeliveries.attempts,
+      lastError: moderationDeliveries.lastError,
+      appName: apps.displayName,
+    })
+    .from(moderationDeliveries)
+    .leftJoin(apps, eq(apps.id, moderationDeliveries.appId))
+    .where(
+      and(
+        ne(moderationDeliveries.status, "delivered"),
+        eq(moderationDeliveries.sandbox, false),
+      ),
+    )
+    .orderBy(moderationDeliveries.createdAt)
+    .limit(50);
+
+  const externalApps = await db
+    .select({
+      id: apps.id,
+      slug: apps.slug,
+      displayName: apps.displayName,
+      clientId: moderationClients.clientId,
+      endpointUrl: moderationClients.endpointUrl,
+    })
+    .from(apps)
+    .leftJoin(moderationClients, eq(moderationClients.appId, apps.id))
+    .where(eq(apps.kind, "external"))
+    .orderBy(apps.slug);
+  const declaredTypes = await db
+    .select({
+      appId: externalContentTypes.appId,
+      contentType: externalContentTypes.contentType,
+    })
+    .from(externalContentTypes);
+
   const mapped: ReportListEntry[] = rows.map((r) => ({
     id: r.id,
     appId: r.appId,
@@ -95,6 +140,14 @@ export const getModerationPageData = cache(async () => {
     openReports: mapped.filter((r) => r.status === "open"),
     resolvedReports: mapped.filter((r) => r.status !== "open"),
     appNames,
+    undeliveredDeliveries: undelivered,
+    externalApps: externalApps.map((app) => ({
+      ...app,
+      contentTypes: declaredTypes
+        .filter((t) => t.appId === app.id)
+        .map((t) => t.contentType),
+    })),
+    canRegisterApps: await canUserManageSuspensions(userId),
   };
 });
 
@@ -131,6 +184,21 @@ export const getReportDetailData = cache(async (reportId: string) => {
     .where(eq(reportCorroborations.reportId, reportId));
   const corroborationCount = corroborationRow?.value ?? 0;
 
+  // Decisions owed to an app outside this database, with how each is going.
+  const deliveries = await db
+    .select({
+      id: moderationDeliveries.id,
+      type: moderationDeliveries.type,
+      status: moderationDeliveries.status,
+      attempts: moderationDeliveries.attempts,
+      lastError: moderationDeliveries.lastError,
+      lastAttemptAt: moderationDeliveries.lastAttemptAt,
+      deliveredAt: moderationDeliveries.deliveredAt,
+    })
+    .from(moderationDeliveries)
+    .where(eq(moderationDeliveries.reportId, reportId))
+    .orderBy(moderationDeliveries.createdAt);
+
   const [reporterData, reportedData] = await Promise.all([
     supabaseAdmin.auth.admin.getUserById(report.reporterUserId),
     supabaseAdmin.auth.admin.getUserById(report.reportedUserId),
@@ -162,6 +230,11 @@ export const getReportDetailData = cache(async (reportId: string) => {
     report,
     corroborationCount,
     quarantinable,
+    deliveries: deliveries.map((d) => ({
+      ...d,
+      lastAttemptAt: d.lastAttemptAt?.toISOString() ?? null,
+      deliveredAt: d.deliveredAt?.toISOString() ?? null,
+    })),
     reporterName: getDisplayName(reporterData),
     reportedName: getDisplayName(reportedData),
     suspension,
@@ -181,10 +254,19 @@ async function isQuarantinable(
   appId: string,
   contentType: string,
 ): Promise<boolean> {
+  // An app inside this database is quarantinable when its table carries the
+  // foreign key; one outside it, when its content type is declared (the app
+  // decides what hiding means, and is told with a signed delivery).
   const rows = await db.execute<{ quarantinable: boolean }>(
-    sql`select "quarantineColumn" is not null as "quarantinable"
-        from "platform".content_types()
-        where "appId" = ${appId}::uuid and "contentType" = ${contentType}`,
+    sql`select coalesce(
+          (select "quarantineColumn" is not null
+             from "platform".content_types()
+            where "appId" = ${appId}::uuid and "contentType" = ${contentType}),
+          (select true
+             from "platform"."externalContentTypes"
+            where "appId" = ${appId}::uuid and "contentType" = ${contentType}),
+          false
+        ) as "quarantinable"`,
   );
   return rows[0]?.quarantinable ?? false;
 }

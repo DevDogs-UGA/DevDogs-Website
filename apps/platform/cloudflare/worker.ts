@@ -6,8 +6,8 @@
  * vinext's Cloudflare integration normally deploys straight from
  * `vinext/server/app-router-entry` as `main` with no custom entry at all --
  * see the migrate-to-vinext skill's config-examples.md. This app keeps a
- * custom entry anyway, for the two things that integration doesn't cover:
- * composing Sentry's `withSentry` around `fetch`/`scheduled` (see below), and
+ * custom entry anyway, for the things that integration doesn't cover: the
+ * moderation delivery queue's consumer (./queue), composing Sentry's `withSentry` around `fetch`/`scheduled` (see below), and
  * stamping the CSP nonce onto every HTML response (./nonce), which is what
  * lets pages render, and cache, without one. Unlike
  * apps/schedule-builder/cloudflare/worker.ts there is no Workflow class to
@@ -34,6 +34,7 @@ import * as Sentry from "@sentry/cloudflare";
 import { buildSentryOptions } from "@devdogsuga/telemetry";
 import handler from "vinext/server/app-router-entry";
 import { withEdgeNonce } from "./nonce";
+import { handleQueue } from "./queue";
 import { scheduled, type CronEnv } from "./scheduled";
 import { serveTerminal } from "./terminal";
 import type { env as platformEnv } from "~/env";
@@ -101,5 +102,7 @@ export default Sentry.withSentry(
       );
     },
     scheduled: (event, env) => scheduled(event, env),
+    // Signed moderation deliveries and their dead-letter queue; see ./queue.
+    queue: (batch, env) => handleQueue(batch, env),
   },
 );
