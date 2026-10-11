@@ -5,18 +5,28 @@ name: Deploy Worker
 # the product repositories' (Q15). Each caller keeps its own environments,
 # approvals and secrets; what is shared is the sequence.
 #
-#   upload a version  ->  smoke test that version  ->  switch traffic to it
-#                     ->  apply routes and crons   ->  smoke test what is live
+#   upload a version  ->  add it to the deployment at 0%  ->  smoke test it
+#                     ->  switch traffic to it  ->  apply routes and crons
+#                     ->  smoke test what is live
 #
 # Why not `wrangler deploy`. A plain deploy makes the new code live the moment
 # it uploads, so a bad build is a sign-in outage until someone rolls it back.
-# `wrangler versions upload` makes a version that serves NO traffic. It can
-# still be reached on the Worker's real hostname by sending the
-# `Cloudflare-Workers-Version-Overrides` header (worker-smoke.mjs), so the new
-# code is exercised on the production-shaped route, including the OAuth
-# authorize hand-off every product's sign-in depends on, while the live version
-# is untouched. Only a green smoke test reaches the traffic switch; a failure
-# after the switch rolls back to the version that was serving before it.
+# `wrangler versions upload` makes a version that serves NO traffic. A request
+# can be pinned to a version with the `Cloudflare-Workers-Version-Overrides`
+# header (worker-smoke.mjs), so the new code is exercised on the
+# production-shaped route, including the OAuth authorize hand-off every
+# product's sign-in depends on, while every real visitor stays on the live
+# version. Only a green smoke test reaches the traffic switch; a failure after
+# the switch rolls back to the version that was serving before it.
+#
+# ⚠️ The header only reaches a version that is part of the ACTIVE deployment.
+# An uploaded version that was never deployed is silently ignored: the request
+# is served by the live version, so a smoke test of it passes whatever the new
+# code does. (Found by driving a throwaway Worker: a version answering 500 sailed
+# through a "preview" smoke test.) So the version is first deployed at 0%
+# beside the live one (`versions deploy live@100% new@0%`), which sends it no
+# traffic and makes it addressable. The first deploy of a Worker has no live
+# version to sit beside: use `mode: full`.
 #
 # What a version upload does NOT apply, and this workflow therefore does:
 # routes, custom domains and cron triggers (`wrangler triggers deploy`). What
@@ -378,6 +388,23 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Uploaded \`$id\` for \`$WORKER_NAME\`; it serves no traffic yet. Before: \`${{ steps.previous.outputs.version_id || 'none' }}\`." >> "$GITHUB_STEP_SUMMARY"
 
+      # The version has to be in the active deployment to be addressable by the
+      # override header (see the header of this file). At 0% it is.
+      - name: Add the version to the deployment at 0% traffic
+        id: stage
+        if: inputs.mode == 'versions'
+        working-directory: ${{ inputs.worker_dir }}
+        env:
+          VERSION_ID: ${{ steps.version.outputs.version_id }}
+          PREVIOUS: ${{ steps.previous.outputs.version_id }}
+        run: |
+          if [ -z "$PREVIOUS" ]; then
+            echo "::error::$WORKER_NAME has no serving version, so the new one cannot be previewed beside it. Use mode: full for a first deploy."
+            exit 1
+          fi
+          # shellcheck disable=SC2086
+          $WRANGLER versions deploy "$PREVIOUS@100%" "$VERSION_ID@0%" $WRANGLER_ENV_FLAG --name "$WORKER_NAME" --message "preview $RELEASE" --yes
+
       # --- the preview smoke test, on the production-shaped route ----------
       - name: Smoke test the uploaded version (no traffic yet)
         if: inputs.mode == 'versions'
@@ -437,6 +464,17 @@ jobs:
           node "$SCRIPTS/worker-smoke.mjs" --path "$SMOKE_PATH" --tier "$TIER"
           --workers-json "${{ inputs.workers_json }}"
           ${{ inputs.authorize && '--authorize' || '' }}
+      # A failed preview leaves the version in the deployment at 0%. Visitors
+      # never saw it, but the deployment should say what is true.
+      - name: Take a failed version back out of the deployment
+        if: failure() && steps.stage.outcome == 'success' && steps.switch.outcome != 'success'
+        working-directory: ${{ inputs.worker_dir }}
+        env:
+          PREVIOUS: ${{ steps.previous.outputs.version_id }}
+        run: |
+          echo "::error::The uploaded version failed its smoke test and was never given traffic. $WORKER_NAME stays on $PREVIOUS."
+          # shellcheck disable=SC2086
+          $WRANGLER versions deploy "$PREVIOUS@100%" $WRANGLER_ENV_FLAG --name "$WORKER_NAME" --message "withdraw $RELEASE" --yes
       - name: Roll back to the previous version
         if: failure() && steps.live.outcome == 'failure' && steps.previous.outputs.version_id != ''
         working-directory: ${{ inputs.worker_dir }}

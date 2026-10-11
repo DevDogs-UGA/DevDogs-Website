@@ -13,6 +13,7 @@
   "prConcurrentLimit": 4,
   "prHourlyLimit": 0,
   "platformAutomerge": true,
+  "platformCommit": "enabled",
   "automergeStrategy": "squash",
   "minimumReleaseAge": "3 days",
   "osvVulnerabilityAlerts": true,
