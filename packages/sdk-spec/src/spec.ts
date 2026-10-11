@@ -309,8 +309,8 @@ class Loader {
 
     const rawType = node["type"];
     if (Array.isArray(rawType)) {
-      const rest = rawType.filter((t) => t !== "null");
-      if (rest.length !== rawType.length) {
+      const rest: unknown[] = rawType.filter((t: unknown) => t !== "null");
+      if (rest.length === 1 && rawType.length === 2) {
         const inner = this.type({ ...node, type: rest[0] }, hint, file);
         return { kind: "nullable", inner };
       }
