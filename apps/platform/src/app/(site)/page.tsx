@@ -176,7 +176,7 @@ async function HomeSections({
         <MarqueeItem>One Feature, Every Week</MarqueeItem>
         <MarqueeItem>Everyone at Once</MarqueeItem>
         <MarqueeItem>Weekly Workshops</MarqueeItem>
-        <MarqueeItem>Ship Something Real</MarqueeItem>
+        <MarqueeItem>Ship a Pull Request</MarqueeItem>
         <MarqueeItem>Build Sessions</MarqueeItem>
         <MarqueeItem>Show off to Your Friends</MarqueeItem>
         <MarqueeItem>Vote for the Best</MarqueeItem>

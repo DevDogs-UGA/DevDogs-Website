@@ -97,9 +97,9 @@ const BEATS: Beat[] = [
     title: "Build Session",
     body: (
       <>
-        Catch up on workshop materials, meet up with friends for
-        hackathons, get unblocked with support from focus leads and club
-        officers, or just come hang out and get work done!
+        Catch up on workshop materials, meet up with friends for hackathons, get
+        unblocked with support from focus leads and club officers, or just come
+        hang out and get work done!
       </>
     ),
     // No segment: a build session is AUTHORED on the meeting rather than
@@ -116,8 +116,8 @@ const BEATS: Beat[] = [
     title: "Build It",
     body: (
       <>
-        On your own or with friends, wherever and whenever. Bring what you made
-        to Monday.
+        On your own or with friends, wherever and whenever. Open a pull request
+        before Monday.
       </>
     ),
     segments: [],
