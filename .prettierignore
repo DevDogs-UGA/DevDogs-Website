@@ -27,6 +27,10 @@ apps/workshops-vscode/dist-test/
 # that prettier's markdown parser rewrites into something else.
 apps/slides/decks/
 
+# Exported once from production by scripts/archive-teams-and-competitions.ts,
+# with a manifest of hashes over these exact bytes.
+archive/
+
 # Closed cutover log; prettier is not idempotent on its wrapped list items.
 CUTOVER.md
 
