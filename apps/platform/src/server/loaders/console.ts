@@ -2,6 +2,7 @@ import { asc, eq } from "drizzle-orm";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { TestAccount } from "~/server/actions/testAccounts";
+import { canUserManageOAuthApps } from "~/server/actions/permissions";
 import { expectUserWith } from "~/server/auth";
 import { db } from "~/server/db";
 import {
@@ -96,14 +97,24 @@ export type OAuthClientSummary = {
   clientId: string;
   label: string;
   redirectUris: string[];
+  /** The registering member's preferred name; set for production clients. */
+  ownerName: string | null;
 };
 
 export const getOAuthPageData = cache(async () => {
-  const { profile, githubIdentity, testAccounts } = await expectUserWith({
+  const {
+    id: userId,
+    profile,
+    githubIdentity,
+    testAccounts,
+  } = await expectUserWith({
     profile: {
       with: {
+        // Development clients only: a production client is listed below, for
+        // whoever holds `canManageOAuthApps`, whoever registered it.
         oauthRegistrations: {
           columns: { clientId: true, label: true },
+          where: { tier: "development" },
         },
       },
     },
@@ -119,15 +130,44 @@ export const getOAuthPageData = cache(async () => {
     },
   }).catch(() => redirect("/auth"));
 
+  const canManageOAuthApps = await canUserManageOAuthApps(userId);
+
+  const summarise = async (
+    clientId: string,
+    label: string,
+    ownerName: string | null,
+  ): Promise<OAuthClientSummary> => {
+    const { data } = await supabaseAdmin.auth.admin.oauth.getClient(clientId);
+    return {
+      clientId,
+      label,
+      ownerName,
+      redirectUris: data?.redirect_uris ?? [],
+    };
+  };
+
   const registrations = profile?.oauthRegistrations ?? [];
 
   // One OAuth client per project since migration 32 -- fetch each
   // registration's live redirect URIs from the Admin SDK in parallel.
   const clients: OAuthClientSummary[] = await Promise.all(
-    registrations.map(async ({ clientId, label }) => {
-      const { data } = await supabaseAdmin.auth.admin.oauth.getClient(clientId);
-      return { clientId, label, redirectUris: data?.redirect_uris ?? [] };
-    }),
+    registrations.map(({ clientId, label }) =>
+      summarise(clientId, label, null),
+    ),
+  );
+
+  const productionRegistrations = canManageOAuthApps
+    ? await db.query.oauthRegistrations.findMany({
+        columns: { clientId: true, label: true },
+        where: { tier: "production" },
+        with: { profile: { columns: { preferredName: true } } },
+        orderBy: { label: "asc" },
+      })
+    : [];
+  const productionClients: OAuthClientSummary[] = await Promise.all(
+    productionRegistrations.map(({ clientId, label, profile: owner }) =>
+      summarise(clientId, label, owner?.preferredName ?? null),
+    ),
   );
 
   const mappedTestAccounts: TestAccount[] = testAccounts.map(
@@ -140,7 +180,11 @@ export const getOAuthPageData = cache(async () => {
 
   return {
     clients,
-    hasAnyClient: clients.length > 0,
+    productionClients,
+    canManageOAuthApps,
+    // The gate asks a member with no client of their own to enable OAuth. It
+    // has nothing to say to someone who is here to manage production clients.
+    hasAnyClient: clients.length > 0 || canManageOAuthApps,
     hasGithub: githubIdentity !== null,
     testAccounts: mappedTestAccounts,
   };
