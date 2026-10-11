@@ -16,6 +16,10 @@ import { pathToFileURL } from "node:url";
 
 export type SmokeResult = { name: string; ok: boolean; detail: string };
 
+/** A response body as the shape the check expects; `Response.json()` is typed differently under Node and workers-types. */
+const bodyOf = async <T>(response: Response): Promise<T> =>
+  JSON.parse(await response.text()) as T;
+
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 const attempt = async (
@@ -81,7 +85,7 @@ export async function smoke(
         )
       )
         return `cache-control ${response.headers.get("cache-control")}`;
-      const body = (await response.json()) as { terms?: unknown };
+      const body = await bodyOf<{ terms?: unknown }>(response);
       return Array.isArray(body.terms) ? null : "no terms array";
     }),
     await attempt("a malformed term is a 400, not a 5xx", async () => {
@@ -89,7 +93,7 @@ export async function smoke(
         headers,
       });
       if (response.status !== 400) return `status ${response.status}`;
-      const body = (await response.json()) as { error?: { code?: string } };
+      const body = await bodyOf<{ error?: { code?: string } }>(response);
       return body.error?.code ? null : "no error code in the body";
     }),
     await attempt("a write is refused with 405", async () => {

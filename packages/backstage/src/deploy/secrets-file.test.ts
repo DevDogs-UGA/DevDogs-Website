@@ -343,9 +343,9 @@ describe("an empty secrets file", () => {
     // `--secrets-file` preserves what it omits, so an empty one leaves every
     // previously set secret in place, unexamined. A no-op that looks like a
     // successful rotation.
-    await expect(
-      compose({ env: { PLATFORM_SECRET: "x" } }),
-    ).rejects.toThrow(/has no Worker secrets to send/);
+    await expect(compose({ env: { PLATFORM_SECRET: "x" } })).rejects.toThrow(
+      /has no Worker secrets to send/,
+    );
   });
 
   it("is sent, and said so, when every key the app declares is optional and unset", async () => {
