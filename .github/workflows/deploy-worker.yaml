@@ -34,7 +34,9 @@ name: Deploy Worker
 #   secrets    CLOUDFLARE_API_TOKEN. For `authorize`: SECRET_KEY. Whatever the
 #              Worker's own secrets are, reaching `upload_command` through
 #              `prepare_command`. Optionally SENTRY_AUTH_TOKEN.
-#   variables  For `authorize`: API_URL. Optionally SENTRY_ORG (or a secret).
+#   variables  For `authorize`: API_URL, or PROJECT_REF when there is no API_URL
+#              (staging derives the project's ref host). Optionally SENTRY_ORG
+#              (or a secret).
 on:
   workflow_call:
     inputs:
@@ -380,7 +382,7 @@ jobs:
       - name: Smoke test the uploaded version (no traffic yet)
         if: inputs.mode == 'versions'
         env:
-          API_URL: ${{ vars.API_URL }}
+          API_URL: ${{ vars.API_URL || (vars.PROJECT_REF && format('https://{0}.supabase.co', vars.PROJECT_REF)) || '' }}
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           VERSION_ID: ${{ steps.version.outputs.version_id }}
           SMOKE_PATH: ${{ inputs.smoke_path || inputs.worker_dir }}
@@ -428,7 +430,7 @@ jobs:
       - name: Smoke test what is live
         id: live
         env:
-          API_URL: ${{ vars.API_URL }}
+          API_URL: ${{ vars.API_URL || (vars.PROJECT_REF && format('https://{0}.supabase.co', vars.PROJECT_REF)) || '' }}
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           SMOKE_PATH: ${{ inputs.smoke_path || inputs.worker_dir }}
         run: >-

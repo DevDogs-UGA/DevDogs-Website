@@ -365,6 +365,10 @@ jobs:
       # the config push, the Worker smoke tests); no dependencies either.
       - name: Deploy script tests
         run: node --test ".github/scripts/*.test.mjs"
+      # The API hostname's route table: /catalog/v1/* to the catalog Worker,
+      # /moderation/v1/* to the platform Worker (Q22, Q90).
+      - name: API route table
+        run: node .github/scripts/check-routes.mjs
       # patches/patches.json against pnpm-workspace.yaml's patchedDependencies
       # and the files in patches/ (a mismatch fails here), then each patch's
       # upstream PRs/issues and the npm release that carries the fix. The

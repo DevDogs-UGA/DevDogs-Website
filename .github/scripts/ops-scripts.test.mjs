@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { checkRoutes, overlaps, parseJsonc } from "./check-routes.mjs";
 import {
   discoverIssuer,
   envRefs,
@@ -916,4 +917,127 @@ test("Q39 in production only reads; in staging it registers a client and runs th
     JSON.stringify(staging),
   );
   assert.ok(staging.some((c) => /hook downgrades/.test(c.name)));
+});
+
+/* ---------- check-routes ---------- */
+
+const platformConfig = (routes) => `{
+  // comments and trailing commas, as in wrangler.jsonc
+  "name": "development-platform",
+  "env": {
+    "staging": { "routes": ${JSON.stringify(routes.staging ?? [])}, },
+    "production": { "routes": ${JSON.stringify(routes.production ?? [])}, },
+  },
+}`;
+
+const ok = {
+  staging: [
+    { pattern: "staging.devdogsuga.org", custom_domain: true },
+    {
+      pattern: "api-staging.devdogsuga.org/moderation/v1/*",
+      zone_name: "devdogsuga.org",
+    },
+  ],
+  production: [
+    { pattern: "devdogsuga.org", custom_domain: true },
+    {
+      pattern: "api.devdogsuga.org/moderation/v1/*",
+      zone_name: "devdogsuga.org",
+    },
+  ],
+};
+
+const readFrom = (files) => (path) => {
+  for (const [name, text] of Object.entries(files)) {
+    if (path.endsWith(name)) return text;
+  }
+  return null;
+};
+
+test("parseJsonc reads comments and trailing commas but not a // inside a string", () => {
+  assert.deepEqual(
+    parseJsonc('{ "a": "https://x//y", /* c */ "b": [1, 2,], // end\n }'),
+    { a: "https://x//y", b: [1, 2] },
+  );
+});
+
+test("the API route table holds when the platform declares its moderation routes", () => {
+  assert.deepEqual(
+    checkRoutes(
+      "/repo",
+      readFrom({ "apps/platform/wrangler.jsonc": platformConfig(ok) }),
+    ),
+    [],
+  );
+});
+
+test("a missing, mis-zoned or custom-domain API route is a problem", () => {
+  const missing = checkRoutes(
+    "/repo",
+    readFrom({
+      "apps/platform/wrangler.jsonc": platformConfig({
+        staging: ok.staging.slice(0, 1),
+        production: ok.production,
+      }),
+    }),
+  );
+  assert.match(
+    missing.join("\n"),
+    /apps\/platform staging: missing the route api-staging/,
+  );
+  const custom = checkRoutes(
+    "/repo",
+    readFrom({
+      "apps/platform/wrangler.jsonc": platformConfig({
+        ...ok,
+        production: [
+          ok.production[0],
+          {
+            pattern: "api.devdogsuga.org/moderation/v1/*",
+            custom_domain: true,
+          },
+        ],
+      }),
+    }),
+  );
+  assert.match(custom.join("\n"), /is a custom domain/);
+  assert.match(custom.join("\n"), /needs "zone_name"/);
+});
+
+test("two Workers may not claim overlapping API paths, and a path belongs to its Worker", () => {
+  const catalogConfig = platformConfig({
+    staging: [
+      {
+        pattern: "api-staging.devdogsuga.org/catalog/v1/*",
+        zone_name: "devdogsuga.org",
+      },
+      {
+        pattern: "api-staging.devdogsuga.org/moderation/v1/*",
+        zone_name: "devdogsuga.org",
+      },
+    ],
+    production: [
+      {
+        pattern: "api.devdogsuga.org/catalog/v1/*",
+        zone_name: "devdogsuga.org",
+      },
+    ],
+  });
+  const problems = checkRoutes(
+    "/repo",
+    readFrom({
+      "apps/platform/wrangler.jsonc": platformConfig(ok),
+      "apps/catalog/wrangler.jsonc": catalogConfig,
+    }),
+  );
+  const text = problems.join("\n");
+  assert.match(text, /overlaps/);
+  assert.match(text, /belongs to apps\/platform/);
+  assert.equal(overlaps("h/a/*", "h/a/b/*"), true);
+  assert.equal(overlaps("h/a/*", "h/b/*"), false);
+  assert.equal(overlaps("h/a/*", "other/a/*"), false);
+});
+
+test("the real wrangler configs hold the table", () => {
+  assert.deepEqual(checkRoutes(join(import.meta.dirname, "..", "..")), []);
 });

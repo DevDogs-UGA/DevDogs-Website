@@ -184,6 +184,17 @@
           "pattern": "staging.devdogsuga.org",
           "custom_domain": true,
         },
+        // The cross-project moderation API (Q19, Q90) is served from the API
+        // hostname, beside the catalog (apps/catalog owns /catalog/v1/*).
+        // api-staging.devdogsuga.org is a proxied record in the zone (the
+        // placeholder `AAAA 100::`), which is what lets a route attach. A
+        // route, not a custom domain: the hostname is shared with the catalog
+        // Worker, and each owns only its path. `.github/scripts/check-routes.mjs`
+        // pins the table.
+        {
+          "pattern": "api-staging.devdogsuga.org/moderation/v1/*",
+          "zone_name": "devdogsuga.org",
+        },
       ],
       // Empty ON PURPOSE, and not merely omitted. Staging shares the club's
       // real Discord guild, so a staging cron is not a rehearsal --
@@ -270,6 +281,14 @@
         {
           "pattern": "devdogsuga.org",
           "custom_domain": true,
+        },
+        // The moderation API on the API hostname. Dormant until the Gate: until
+        // `api.devdogsuga.org` is a proxied record in this zone (it is a DNS-only
+        // record for the Supabase custom domain today) no request reaches the
+        // route, which is also why shipping it early changes nothing.
+        {
+          "pattern": "api.devdogsuga.org/moderation/v1/*",
+          "zone_name": "devdogsuga.org",
         },
       ],
       // Cron triggers replace the old vercel.json crons. cloudflare/scheduled.ts
