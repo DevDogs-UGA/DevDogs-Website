@@ -1087,3 +1087,77 @@ test("two Workers may not claim overlapping API paths, and a path belongs to its
 test("the real wrangler configs hold the table", () => {
   assert.deepEqual(checkRoutes(join(import.meta.dirname, "..", "..")), []);
 });
+
+/* ---------- the runbooks ---------- */
+
+// Q32 and the 3f lane: deploy and rollback, a failed migration, the
+// destructive bypass, the table drops, the vanity-subdomain switch, one page
+// per credential service, the sign-in incident, Sentry triage, npm and pub.dev
+// releases, catalog term rollover, owner-only org actions. The index must link
+// every page, and every page must exist with the front matter the docs need.
+const RUNBOOKS = [
+  "deploys/how-a-deploy-works.md",
+  "deploys/rollback.md",
+  "deploys/failed-migration.md",
+  "deploys/destructive-changes.md",
+  "deploys/table-drops.md",
+  "deploys/vanity-subdomain-switch.md",
+  "deploys/smoke-checks.md",
+  "repositories/rulesets.md",
+  "repositories/renovate.md",
+  "repositories/owner-actions.md",
+  "credentials/index.md",
+  "credentials/github.md",
+  "credentials/cloudflare.md",
+  "credentials/supabase.md",
+  "credentials/sentry.md",
+  "credentials/registries.md",
+  "credentials/discord.md",
+  "credentials/google-cloud.md",
+  "credentials/bitwarden.md",
+  "incidents/sign-in-down.md",
+  "incidents/sentry-triage.md",
+  "releases/publishing.md",
+  "releases/catalog-term-rollover.md",
+];
+
+test("every runbook page exists, has front matter, and is linked from its index", () => {
+  const dir = join(import.meta.dirname, "..", "..", "docs", "operations");
+  const index = readFileSync(join(dir, "index.md"), "utf8");
+  const credentials = readFileSync(
+    join(dir, "credentials", "index.md"),
+    "utf8",
+  );
+  for (const page of RUNBOOKS) {
+    const text = readFileSync(join(dir, page), "utf8");
+    assert.match(
+      text,
+      /^---\nname: .+\ndescription: .+\norder: \d+\nsection: infrastructure\n---\n/,
+      page,
+    );
+    // The credential pages hang off their own index; everything else, and
+    // that index, off the project's.
+    const inCredentials =
+      page.startsWith("credentials/") && page !== "credentials/index.md";
+    const [from, name, link] = inCredentials
+      ? [
+          credentials,
+          "credentials/index.md",
+          `(./${page.slice("credentials/".length)})`,
+        ]
+      : [index, "index.md", `(./${page})`];
+    assert.ok(from.includes(link), `${name} does not link ${page}`);
+  }
+});
+
+test("the runbooks name no secret value", () => {
+  const dir = join(import.meta.dirname, "..", "..", "docs", "operations");
+  for (const page of RUNBOOKS) {
+    const text = readFileSync(join(dir, page), "utf8");
+    assert.doesNotMatch(
+      text,
+      /(sbp_|sb_secret_|ghp_|github_pat_|eyJ[A-Za-z0-9_-]{20,}|-----BEGIN)/,
+      page,
+    );
+  }
+});
