@@ -26,9 +26,14 @@ export const JOB_HEARTBEATS = {
   // `cloudflare/scheduled.ts`'s "0 0 * * *" group, recorded by the dispatcher
   // once every route in it succeeds.
   "platform-nightly-repair": { maxAgeHours: 26 },
-  // DevDogsUGA's schedule-builder `ScrapeWorkflow`, at 14:05 UTC, recorded by
-  // its last step over the shared database connection.
+  // The catalog Worker's `ScrapeWorkflow` (schedule-builder's until the scrape
+  // moved), at 14:05 UTC, recorded by its last step over the shared database
+  // connection. The name is the old monitor slug and stays.
   "schedule-builder-scrape": { maxAgeHours: 26 },
+  // The catalog Worker's `ProgramsWorkflow`, the UGA Bulletin program sync, at
+  // 14:35 UTC. It ran as the last route of "platform-nightly-repair" until it
+  // moved with the scrape; migration 55 seeds this row.
+  "catalog-academic-programs": { maxAgeHours: 26 },
 } as const satisfies Record<string, { maxAgeHours: number }>;
 
 export type HeartbeatJob = keyof typeof JOB_HEARTBEATS;

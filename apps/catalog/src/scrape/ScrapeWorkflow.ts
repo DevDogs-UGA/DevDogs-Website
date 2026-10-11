@@ -27,21 +27,10 @@ import { withScrapeDb } from "~/db/client";
 import { resolveDatabaseUrl, type DatabaseEnv } from "~/db/url";
 import { catalogSentryOptions, type SentryEnv } from "~/sentry";
 import { recordHeartbeat, recordRun, SCRAPE_HEARTBEAT_JOB } from "./heartbeat";
-import { InvariantViolationError } from "./invariants";
-import {
-  CalendarNotFoundError,
-  academicPeriodInfo,
-  detectAvailableTerms,
-  fetchPartsOfTerm,
-} from "./parsers";
-import {
-  fetchSemesterCsv,
-  type FailedFetch,
-} from "./parsers/AvailableTerms";
-import {
-  reconcileTerm,
-  type TermReconcileResult,
-} from "./parsers/reconcileTerm";
+import { detectAvailableTerms } from "./parsers";
+import type { FailedFetch } from "./parsers/AvailableTerms";
+import type { TermReconcileResult } from "./parsers/reconcileTerm";
+import { FatalTermError, reconcileOneTerm } from "./runTerm";
 
 /**
  * What a manual run can ask for. A scheduled run passes nothing.
@@ -154,7 +143,19 @@ class ScrapeWorkflowBase extends WorkflowEntrypoint<Env, ScrapeWorkflowParams> {
                 message: `reconcile-term-${academicPeriod} attempt ${ctx.attempt}`,
                 level: "info",
               });
-              return reconcileOneTerm(this.env, academicPeriod, skipInvariants);
+              try {
+                return await reconcileOneTerm(
+                  this.env,
+                  academicPeriod,
+                  skipInvariants,
+                );
+              } catch (error) {
+                // Retrying would read the same feed and fail the same way.
+                if (error instanceof FatalTermError) {
+                  throw new NonRetryableError(error.message);
+                }
+                throw error;
+              }
             },
           );
           termResults.push(result);
@@ -229,85 +230,6 @@ class ScrapeWorkflowBase extends WorkflowEntrypoint<Env, ScrapeWorkflowParams> {
       await Sentry.flush(2000);
       throw err;
     }
-  }
-}
-
-/**
- * One term, start to finish, inside one step attempt: open both of the
- * registrar's sources, stream the CSV through the collectors, then write it in
- * one short transaction.
- */
-async function reconcileOneTerm(
-  env: Env,
-  academicPeriod: number,
-  skipInvariants: readonly string[],
-): Promise<TermReconcileResult> {
-  const { semester } = academicPeriodInfo(academicPeriod);
-  const startedAt = new Date();
-
-  // allSettled, not all: if the calendar lookup fails while the CSV opened,
-  // the CSV's download has to be cancelled, not left to the garbage collector.
-  const [csvResult, partsResult] = await Promise.allSettled([
-    fetchSemesterCsv(semester),
-    fetchPartsOfTerm(academicPeriod),
-  ]);
-  if (csvResult.status === "rejected" || partsResult.status === "rejected") {
-    if (csvResult.status === "fulfilled") await csvResult.value?.close();
-    const error: unknown =
-      csvResult.status === "rejected"
-        ? csvResult.reason
-        : (partsResult as PromiseRejectedResult).reason;
-    // The registrar does not publish calendars indefinitely. A missing year
-    // cannot heal on retry, so fail it now instead of running the same HTTP
-    // request through every retry.
-    if (error instanceof CalendarNotFoundError) {
-      throw new NonRetryableError(error.message);
-    }
-    throw error;
-  }
-  const csv = csvResult.value;
-  const partOfTermRows = partsResult.value;
-
-  try {
-    // Deterministic, per-term failures: the registrar's CSV for this semester
-    // is gone or now carries another term, or its parts-of-term calendar
-    // resolved to zero rows. Retrying would re-fetch the same.
-    if (!csv) {
-      throw new NonRetryableError(
-        `No CSV rows available for academic period ${academicPeriod}`,
-      );
-    }
-    if (csv.academicPeriod !== academicPeriod) {
-      throw new NonRetryableError(
-        `${semester}.csv now carries ${csv.academicPeriod}, not ${academicPeriod}`,
-      );
-    }
-    if (partOfTermRows.length === 0) {
-      throw new NonRetryableError(
-        `No parts-of-term rows resolved for academic period ${academicPeriod}`,
-      );
-    }
-
-    return await withScrapeDb(resolveDatabaseUrl(env), (db) =>
-      reconcileTerm(
-        {
-          academicPeriod,
-          description: csv.description,
-          partOfTermRows,
-          rows: csv.rows,
-        },
-        db,
-        { startedAt, skipInvariants },
-      ),
-    );
-  } catch (error) {
-    // Re-running would read the same feed and break the same invariant.
-    if (error instanceof InvariantViolationError) {
-      throw new NonRetryableError(error.message);
-    }
-    throw error;
-  } finally {
-    await csv?.close();
   }
 }
 

@@ -6,14 +6,13 @@
  * Dates and times are cast to text in SQL (`date` would otherwise arrive as a
  * `Date` at midnight UTC and a `time` as a string only by luck of the driver),
  * counts are cast to `int` (`count(*)` is a bigint, which the driver hands over
- * as a string), and arrays are passed with explicit type OIDs because the
- * reader skips the driver's type fetch (see db/reader.ts).
+ * as a string), and lists are passed as one jsonb parameter and unnested in
+ * SQL, because the reader skips the driver's type fetch (see db/reader.ts) and so has
+ * no array serializer.
  */
 import type { ReadSql } from "~/db/reader";
 import { notFound } from "./errors";
 
-const OID_INT4 = 23;
-const OID_TEXT = 25;
 
 // ── Terms ────────────────────────────────────────────────────────────────────
 
@@ -540,8 +539,8 @@ export async function listSections(
     left join uga.meetings m on m."academicPeriod" = o."academicPeriod" and m."offeringCrn" = o.crn
     left join uga.buildings b on b.id = m."buildingId"
     where o."academicPeriod" = ${term}
-      and (c.abbr = any(${sql.array([...codes], OID_TEXT)})
-           or c.id = any(${sql.array([...ids], OID_INT4)}))
+      and (c.abbr in (select jsonb_array_elements_text(${sql.json([...codes])}))
+           or c.id in (select (jsonb_array_elements_text(${sql.json([...ids])}))::int))
     order by c.abbr, o.crn, m.id`;
   return { term, sections: groupSections(rows) };
 }

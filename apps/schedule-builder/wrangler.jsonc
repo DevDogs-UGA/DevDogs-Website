@@ -80,17 +80,8 @@
   "images": {
     "binding": "IMAGES",
   },
-  // Backs the daily registrar scrape (see cloudflare/ScrapeWorkflow.ts).
-  // Bound in every environment, including development, so the class registers
-  // with wrangler/`wrangler dev` regardless of whether this tier has a native
-  // Workflow schedule.
-  "workflows": [
-    {
-      "binding": "SCRAPE_WORKFLOW",
-      "name": "development-schedule-builder-scrape",
-      "class_name": "ScrapeWorkflow",
-    },
-  ],
+  // No Workflow: the daily registrar scrape moved to the catalog Worker
+  // (apps/catalog), which owns everything scraped from UGA's sites.
 
   "env": {
     "staging": {
@@ -130,18 +121,7 @@
           "id": "7ca9f62ed356489f956cc854a17d7eed",
         },
       ],
-      // See the top-level block for what this binds.
-      "workflows": [
-        {
-          "binding": "SCRAPE_WORKFLOW",
-          "name": "staging-schedule-builder-scrape",
-          "class_name": "ScrapeWorkflow",
-        },
-      ],
-      // Empty ON PURPOSE. The scrape hits UGA's registrar
-      // from a shared IP pool; running it twice a day from two workers doubles
-      // the load that site sees for no extra coverage, and is the kind of
-      // thing that gets a range blocked. Trigger it by hand against staging.
+      // Nothing scheduled: the registrar scrape lives in apps/catalog.
       "triggers": {
         "crons": [],
       },
@@ -195,22 +175,9 @@
           "id": "2bb3ae474d974fe99e4f36b3c5aaf896",
         },
       ],
-      // See the top-level block for what this binds.
-      "workflows": [
-        {
-          "binding": "SCRAPE_WORKFLOW",
-          "name": "production-schedule-builder-scrape",
-          "class_name": "ScrapeWorkflow",
-          // Workflow schedules are UTC. Keeping this on the binding makes the
-          // trigger visible on the Workflow itself and creates an instance
-          // directly, without a Worker scheduled-handler intermediary.
-          "schedules": ["5 14 * * *"],
-        },
-      ],
-      // Explicitly empty so the next production deploy removes the legacy
-      // Worker cron. Omitting this block leaves deployed Worker cron triggers
-      // unchanged, which would double-start the scrape alongside the native
-      // Workflow schedule above.
+      // Explicitly empty so a deploy removes any Worker cron still attached;
+      // omitting this block leaves deployed cron triggers unchanged. The
+      // registrar scrape lives in apps/catalog now.
       "triggers": {
         "crons": [],
       },
