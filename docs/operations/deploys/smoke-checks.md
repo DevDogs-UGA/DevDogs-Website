@@ -17,7 +17,7 @@ Every product signs members in through the platform, so a broken OAuth hand-off 
 
 ## The three checks
 
-1. The authorize endpoint redirects to the platform's consent page.
+1. The authorize endpoint redirects to the platform's consent page, and the version under test answers that consent URL without a server error. The throwaway client exists only in Supabase and has no platform registration, so the platform's own answer is a **404** (a client it does not know is a 404 before sign-in); only a 5xx or a connection error fails the check.
 2. The consent page answers 404 without an `authorization_id`.
 3. The access-token hook downgrades an OAuth client's token to `oauth_identity` (a database check against staging, in a transaction that is always rolled back).
 
