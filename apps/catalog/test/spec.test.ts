@@ -57,6 +57,19 @@ describe("the paths", () => {
     );
   });
 
+  it("name the same query parameters as the router reads for its cache key", () => {
+    for (const route of ROUTES) {
+      const specPath = Object.keys(spec.paths).find(
+        (path) => routerPattern(path) === route.pattern,
+      )!;
+      const named = parametersOf(specPath)
+        .filter((p) => p.in === "query")
+        .map((p) => p.name)
+        .sort();
+      expect([...route.query].sort(), route.pattern).toEqual(named);
+    }
+  });
+
   it("are GET only, with a unique operationId each", () => {
     const ids = Object.entries(spec.paths).map(([path, methods]) => {
       expect(Object.keys(methods), path).toEqual(["get"]);
@@ -83,6 +96,23 @@ describe("the paths", () => {
         path,
       ).toBe(true);
     }
+  });
+});
+
+describe("the YAML", () => {
+  it("has no null-valued keys: a description with a comma written unquoted in a flow mapping splits into one", () => {
+    const nulls: string[] = [];
+    const walk = (value: unknown, path: string): void => {
+      if (value === null || typeof value !== "object") return;
+      for (const [key, child] of Object.entries(value)) {
+        if (child === null && !Array.isArray(value)) {
+          nulls.push(`${path}.${key}`);
+        }
+        walk(child, `${path}.${key}`);
+      }
+    };
+    walk(spec, "");
+    expect(nulls).toEqual([]);
   });
 });
 

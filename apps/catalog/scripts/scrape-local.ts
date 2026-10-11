@@ -6,6 +6,10 @@
  *   DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres \
  *     pnpm populate:courses [--terms 202702,202608] [--skip-invariants name,name] [--record]
  *
+ * With no `DB_URL` in the environment it reads the repository root's
+ * `.env.generated`, then `.env` (scripts/local-env.ts), so the documented
+ * setup needs no export.
+ *
  * - `--terms` limits the run to those academic periods. Default: every term the
  *   registrar publishes.
  * - `--skip-invariants` waives the named invariants, as the Workflow's
@@ -31,6 +35,7 @@ import { detectAvailableTerms } from "../src/scrape/parsers/index.ts";
 import type { TermReconcileResult } from "../src/scrape/parsers/reconcileTerm.ts";
 import { reconcileOneTerm } from "../src/scrape/runTerm.ts";
 import { loadBuildingSources } from "./building-sources.ts";
+import { requireLocalDatabaseUrl } from "./local-env.ts";
 
 /** An error's message and its cause's: Drizzle wraps the driver's error and puts the whole statement in its own message. */
 function describe(error: unknown): string {
@@ -47,11 +52,7 @@ function option(name: string): string | undefined {
   return at === -1 ? undefined : process.argv[at + 1];
 }
 
-const url = process.env.DB_URL;
-if (!url) {
-  console.error("DB_URL is not set.");
-  process.exit(2);
-}
+const url = requireLocalDatabaseUrl();
 const only = option("--terms")?.split(",").map(Number);
 const skipInvariants = option("--skip-invariants")?.split(",") ?? [];
 const record = process.argv.includes("--record");

@@ -13,12 +13,9 @@ import {
   importBuildings,
 } from "../src/buildings/importBuildings.ts";
 import { loadBuildingSources } from "./building-sources.ts";
+import { requireLocalDatabaseUrl } from "./local-env.ts";
 
-const url = process.env.DB_URL;
-if (!url) {
-  console.error("DB_URL is not set.");
-  process.exit(2);
-}
+const url = requireLocalDatabaseUrl();
 
 const records = buildingsToImport(loadBuildingSources());
 const db = createScrapeDb(url, 1);

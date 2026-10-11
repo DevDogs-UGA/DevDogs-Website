@@ -276,8 +276,16 @@ describe("the edge cache", () => {
   });
 
   it("sorts parameters in the cache key, and ignores the X-Client header", async () => {
-    const a = cacheKeyFor(new URL(`${BASE}/terms?x=1&y=2`));
-    const b = cacheKeyFor(new URL(`${BASE}/terms?y=2&x=1`));
+    const a = cacheKeyFor(new URL(`${BASE}/search?term=1&q=x`), [
+      "term",
+      "q",
+      "limit",
+    ]);
+    const b = cacheKeyFor(new URL(`${BASE}/search?q=x&term=1`), [
+      "term",
+      "q",
+      "limit",
+    ]);
     expect(a.url).toBe(b.url);
 
     const cache = memoryCache();
@@ -285,6 +293,21 @@ describe("the edge cache", () => {
     await get("/terms", deps, { headers: { "X-Client": "dogdays/1.4" } });
     await get("/terms", deps, { headers: { "X-Client": "dogpack/0.3" } });
     expect(reads).toHaveLength(1);
+  });
+
+  it("ignores parameters the route does not read, so junk cannot walk around the cache", async () => {
+    const cache = memoryCache();
+    const { deps, reads } = setup({ cache });
+    await get("/terms", deps);
+    await get("/terms?cb=1", deps);
+    await get("/terms?cb=2&utm=x", deps);
+    expect(reads).toHaveLength(1);
+
+    await get("/search?term=202702&q=intro", deps);
+    await get("/search?term=202702&q=intro&cb=9", deps);
+    await get("/search?term=202702&q=intro&limit=5", deps);
+    // `limit` changes the answer; `cb` does not.
+    expect(reads).toHaveLength(3);
   });
 
   it("marks answers cacheable by browsers and the edge", async () => {

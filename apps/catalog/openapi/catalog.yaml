@@ -349,11 +349,8 @@ components:
         - finalsEnd
       properties:
         code:
-          {
-            type: string,
-            description: The registrar's code,
-            for example `1` for the full term.,
-          }
+          type: string
+          description: The registrar's code, for example `1` for the full term.
         description: { type: string }
         classesBegin: { $ref: "#/components/schemas/Date" }
         dropAddEnds: { $ref: "#/components/schemas/Date" }
@@ -476,11 +473,8 @@ components:
       properties:
         term: { $ref: "#/components/schemas/TermCode" }
         query:
-          {
-            type: string,
-            description: The query as the server read it,
-            trimmed.,
-          }
+          type: string
+          description: The query as the server read it, trimmed.
         limit: { type: integer, minimum: 1, maximum: 50 }
         results:
           type: array
@@ -569,12 +563,8 @@ components:
       required: [abbr, term, exists, offered]
       properties:
         abbr:
-          {
-            type: string,
-            description: The code as the catalog spells it; the input,
-            normalized,
-            when unknown.,
-          }
+          type: string
+          description: The code as the catalog spells it; the input, normalized, when unknown.
         term:
           oneOf:
             - { $ref: "#/components/schemas/TermCode" }

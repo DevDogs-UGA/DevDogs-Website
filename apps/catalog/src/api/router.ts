@@ -28,6 +28,12 @@ type Handler = (
 type Route = {
   /** The path after the prefix, with `:name` segments. */
   pattern: string;
+  /**
+   * The query parameters that change the answer, and so the cache key; the
+   * spec test compares them with openapi/catalog.yaml. Any other parameter is
+   * ignored by `handle`, so it must not make a request a cache miss.
+   */
+  query: readonly string[];
   /** Which rate limiter applies besides the general one. */
   limiter?: "search";
   handle: Handler;
@@ -40,10 +46,12 @@ type Route = {
 export const ROUTES: readonly Route[] = [
   {
     pattern: "/terms",
+    query: [],
     handle: () => (sql) => queries.listTerms(sql),
   },
   {
     pattern: "/subjects",
+    query: ["term"],
     handle: (url) => {
       const term = parseTerm(url.searchParams.get("term"));
       return (sql) => queries.listSubjects(sql, term);
@@ -51,6 +59,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     pattern: "/subjects/:abbr/courses",
+    query: ["term"],
     handle: (url, [abbr]) => {
       const subject = parseSubjectAbbr(abbr!);
       const term = requireTerm(url.searchParams.get("term"));
@@ -59,6 +68,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     pattern: "/search",
+    query: ["term", "q", "limit"],
     limiter: "search",
     handle: (url) => {
       const term = requireTerm(url.searchParams.get("term"));
@@ -69,6 +79,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     pattern: "/courses/:abbr",
+    query: ["term"],
     handle: (url, [abbr]) => {
       const code = parseCourseCode(abbr!);
       const term = parseTerm(url.searchParams.get("term"));
@@ -77,6 +88,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     pattern: "/course-exists",
+    query: ["abbr", "term"],
     handle: (url) => {
       const code = parseCourseCode(url.searchParams.get("abbr"));
       const term = parseTerm(url.searchParams.get("term"));
@@ -85,6 +97,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     pattern: "/sections",
+    query: ["term", "courses", "courseIds"],
     handle: (url) => {
       const term = requireTerm(url.searchParams.get("term"));
       const { codes, ids } = parseCourseSelection(
@@ -173,12 +186,16 @@ const CACHEABLE = `public, max-age=${BROWSER_CACHE_SECONDS}, s-maxage=${EDGE_CAC
 
 /**
  * A cache key that treats `?term=1&q=x` and `?q=x&term=1` as one request, and
- * ignores everything that does not change the answer.
+ * ignores every parameter the route does not read: `?term=1&junk=7` is the
+ * same answer as `?term=1`, so junk parameters cannot be used to walk around
+ * the edge cache into the database.
  */
-export function cacheKeyFor(url: URL): Request {
-  const params = [...url.searchParams].sort(([a, av], [b, bv]) =>
-    a === b ? av.localeCompare(bv) : a.localeCompare(b),
-  );
+export function cacheKeyFor(url: URL, query: readonly string[]): Request {
+  const params = [...url.searchParams]
+    .filter(([name]) => query.includes(name))
+    .sort(([a, av], [b, bv]) =>
+      a === b ? av.localeCompare(bv) : a.localeCompare(b),
+    );
   const key = new URL(url.origin + url.pathname);
   for (const [name, value] of params) key.searchParams.append(name, value);
   return new Request(key.toString(), { method: "GET" });
@@ -273,7 +290,7 @@ export async function handleApiRequest(
     // an answer is cached for something similar, and costs no database time.
     const read = matched.route.handle(url, matched.params);
 
-    const key = cacheKeyFor(url);
+    const key = cacheKeyFor(url, matched.route.query);
     const cached = await deps.cache?.match(key);
     if (cached) {
       return finish(withHeadHandling(request, cached), "hit");
