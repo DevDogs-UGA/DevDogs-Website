@@ -1,4 +1,7 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { parse } from "yaml";
 import { ERROR_CODES } from "~/api/errors";
 import {
   BROWSER_CACHE_SECONDS,
@@ -23,6 +26,7 @@ import {
   resolveRef,
   responseValidator,
   routerPattern,
+  SPEC_PATH,
 } from "./spec";
 import { loadWrangler, tiersOf, type WranglerTier } from "./wrangler";
 
@@ -319,4 +323,23 @@ describe("the response validator", () => {
       }),
     ).not.toEqual([]);
   });
+});
+
+describe("the SDK generators' copy of the spec", () => {
+  // Lane 3a keeps a copy of this file in packages/sdk-spec for the SDK
+  // generators. Until it lands there is nothing to compare; once it does, the
+  // two must stay the same document (formatting aside).
+  const copy = resolve(
+    import.meta.dirname,
+    "../../../packages/sdk-spec/openapi/catalog.yaml",
+  );
+
+  it.skipIf(!existsSync(copy))(
+    "is the same document as openapi/catalog.yaml",
+    () => {
+      expect(parse(readFileSync(copy, "utf8"))).toEqual(
+        parse(readFileSync(SPEC_PATH, "utf8")),
+      );
+    },
+  );
 });

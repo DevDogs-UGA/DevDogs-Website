@@ -32,6 +32,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260820.1",
     "@devdogsuga/config": "workspace:*",
+    "@devdogsuga/env": "workspace:*",
     "@types/node": "catalog:",
     "@types/papaparse": "catalog:",
     "@vitest/coverage-v8": "catalog:",

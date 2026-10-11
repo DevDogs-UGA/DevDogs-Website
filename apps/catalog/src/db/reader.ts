@@ -34,6 +34,9 @@ export async function withCatalogReader<T>(
     idle_timeout: 5,
     connect_timeout: 5,
     fetch_types: false,
+    // A stop-word query ("the") makes Postgres send a NOTICE; the driver would
+    // print the object into the Worker log on every such request.
+    onnotice: () => undefined,
   });
   try {
     return (await client.begin("read only", async (tx) => {

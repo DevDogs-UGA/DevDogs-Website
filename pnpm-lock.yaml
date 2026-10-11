@@ -226,6 +226,9 @@ importers:
       '@devdogsuga/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@devdogsuga/env':
+        specifier: workspace:*
+        version: link:../../packages/env
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.2
