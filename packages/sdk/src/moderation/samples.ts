@@ -66,6 +66,12 @@ export interface SampleOptions {
   secret?: string;
   /** Epoch milliseconds the sequence is anchored to. Defaults to now. */
   now?: number;
+  /**
+   * Distinguishes this run's message ids from every other run's. A receiver
+   * remembers the ids it has seen, so a second run against the same database
+   * would otherwise see all of them as duplicates. Defaults to a random value.
+   */
+  runId?: string;
 }
 
 /**
@@ -89,6 +95,8 @@ export async function signedSamples(
   const at = (offsetSeconds: number) =>
     new Date(now + offsetSeconds * 1000).toISOString();
   const signedAt = Math.floor(now / 1000);
+  const run = options.runId ?? Math.random().toString(36).slice(2, 10);
+  const messageId = (n: number) => `msg_sample_${run}_${n}`;
 
   async function sample(
     name: string,
@@ -107,23 +115,23 @@ export async function signedSamples(
 
   const hide = buildMessage({ type: "content.hide", timestamp: at(0) });
   return [
-    await sample("hide a session", "msg_sample_1", "applied", hide),
-    await sample("replay of the hide", "msg_sample_1", "duplicate", hide),
+    await sample("hide a session", messageId(1), "applied", hide),
+    await sample("replay of the hide", messageId(1), "duplicate", hide),
     await sample(
       "a restore dated before the hide",
-      "msg_sample_2",
+      messageId(2),
       "stale",
       buildMessage({ type: "content.restore", timestamp: at(-60) }),
     ),
     await sample(
       "a restore dated after the hide",
-      "msg_sample_3",
+      messageId(3),
       "applied",
-      buildMessage({ type: "content.restore", timestamp: at(60) }),
+      buildMessage({ type: "content.restore", timestamp: at(1) }),
     ),
     await sample(
       "suspend a user",
-      "msg_sample_4",
+      messageId(4),
       "applied",
       buildMessage({
         type: "user.suspend",
@@ -133,7 +141,7 @@ export async function signedSamples(
     ),
     await sample(
       "a user restore dated before the suspension",
-      "msg_sample_5",
+      messageId(5),
       "stale",
       buildMessage({ type: "user.restore", timestamp: at(-60) }),
     ),

@@ -14,8 +14,13 @@ import { stampQueued, staleDeliveryIds } from "./deliveryStore";
 /** Cloudflare accepts at most 100 messages in one `sendBatch`. */
 const BATCH = 100;
 
-/** How long a queued delivery may sit before the cron queues it again. */
-export const REQUEUE_AFTER_MINUTES = 30;
+/**
+ * How long a delivery may show no sign of life (queued, or attempted) before
+ * the cron queues it again. It must outlast the longest retry backoff
+ * (`MAX_RETRY_SECONDS`, an hour), or a delivery waiting out its backoff would be
+ * queued a second time while the first copy is still retrying.
+ */
+export const REQUEUE_AFTER_MINUTES = 90;
 
 export async function queueDeliveries(ids: readonly string[]): Promise<number> {
   const queue = workerEnv.MODERATION_DELIVERIES;

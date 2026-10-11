@@ -78,7 +78,13 @@ export const databaseDeliveryStore: DeliveryStore = {
   },
 };
 
-/** Pending deliveries that never reached the queue, or sat in it too long. */
+/**
+ * Pending deliveries that never reached the queue, or that the queue has gone
+ * quiet about. "Quiet" is measured from the latest sign of life, the queue stamp
+ * or the last attempt: a delivery in its retry backoff attempts again within
+ * `retryDelaySeconds` (at most an hour), so it is not stale, only a message that
+ * was lost is silent for longer than that.
+ */
 export async function staleDeliveryIds(
   olderThanMinutes: number,
   limit: number,
@@ -92,7 +98,7 @@ export async function staleDeliveryIds(
         or(
           isNull(moderationDeliveries.queuedAt),
           lt(
-            moderationDeliveries.queuedAt,
+            sql`greatest(${moderationDeliveries.queuedAt}, ${moderationDeliveries.lastAttemptAt})`,
             sql`now() - make_interval(mins => ${olderThanMinutes})`,
           ),
         ),

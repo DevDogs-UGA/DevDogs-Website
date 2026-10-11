@@ -426,6 +426,38 @@ describe("a report round trip through the console", () => {
     expect(await requeueStaleDeliveries()).toBe(0);
   });
 
+  it("does not re-queue a delivery that is still working through its retry backoff", async () => {
+    await registerApp("e3-dogpack", PROD_CLIENT);
+    const filed = await (await appClient(PROD_CLIENT)).fileReport(report());
+    await resolveReport(filed.reportId, "no_action", "no_action", "quarantine");
+    const [delivery] = await deliveriesOf(filed.reportId);
+    queued.length = 0;
+
+    // The receiver is down: six failed attempts, so the next one is due 960s
+    // after the sixth. The queue stamp is old, but the last attempt is recent.
+    const down = () =>
+      Promise.resolve(new Response("bad gateway", { status: 502 }));
+    for (let i = 0; i < 6; i++) await deliver(delivery!.id, down);
+    await db.execute(sql`
+      update platform."moderationDeliveries"
+      set "queuedAt" = now() - interval '80 minutes',
+          "lastAttemptAt" = now() - interval '20 minutes'
+      where id = ${delivery!.id}::uuid
+    `);
+    expect(await requeueStaleDeliveries()).toBe(0);
+    expect(queued).toHaveLength(0);
+
+    // Once even the last attempt is older than the longest backoff, the queue
+    // has lost it.
+    await db.execute(sql`
+      update platform."moderationDeliveries"
+      set "queuedAt" = now() - interval '2 hours',
+          "lastAttemptAt" = now() - interval '2 hours'
+      where id = ${delivery!.id}::uuid
+    `);
+    expect(await requeueStaleDeliveries()).toBe(1);
+  });
+
   it("records a failed delivery for an app with no endpoint instead of dropping it", async () => {
     const appId = await registerApp("e3-dogpack", PROD_CLIENT);
     await db.execute(
@@ -510,6 +542,18 @@ describe("the report API's database rules", () => {
       sql`select count(*)::int as n from platform."reportCorroborations" where "reportId" = ${first.reportId}::uuid`,
     );
     expect(count!.n).toBe(1);
+  });
+
+  it("does not count the reporter's own resend as a corroboration", async () => {
+    await registerApp("e3-dogpack", PROD_CLIENT);
+    const app = await appClient(PROD_CLIENT);
+    const first = await app.fileReport(report());
+    const again = await app.fileReport(report());
+    expect(again).toMatchObject({ reportId: first.reportId });
+    const [count] = await db.execute<{ n: number }>(
+      sql`select count(*)::int as n from platform."reportCorroborations" where "reportId" = ${first.reportId}::uuid`,
+    );
+    expect(count!.n).toBe(0);
   });
 
   it("refuses an undeclared content type, unknown users, suspended and test reporters", async () => {

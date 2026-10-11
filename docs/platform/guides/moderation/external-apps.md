@@ -24,7 +24,7 @@ The platform stores nothing it can sign with. A client's secret is derived from 
 
 ## The secret
 
-Each OAuth client has one signing secret (`whsec_...`, [Standard Webhooks](https://www.standardwebhooks.com/)). It signs your reports **and** verifies the platform's deliveries. Turn moderation on for a client on [`/tools/oauth`](/tools/oauth) under **Moderation**; the secret is shown once. **Rotate** invalidates the old one at once, so update your function's secret in the same minute.
+Each OAuth client has one signing secret (`whsec_...`, [Standard Webhooks](https://www.standardwebhooks.com/)). It signs your reports **and** verifies the platform's deliveries. Turn moderation on for a client on [`/tools/oauth`](/tools/oauth) under **Moderation**; the secret is shown once (turning moderation on again does not show it again; rotate for a new one). **Rotate** invalidates the old one at once, so update your function's secret in the same minute.
 
 Every message carries three headers:
 
@@ -54,6 +54,8 @@ Headers: the three above, `moderation-client-id: <your OAuth client id>`, `conte
   "description": "optional, required for 'other' (max 1000)"
 }
 ```
+
+`contentUrl` is optional and must be an `https` link.
 
 The platform user id is the DevDogs identity's subject: `auth.identities.provider_id` where `provider = 'custom:devdogsuga'`. `GET /moderation/v1/reasons` returns the reasons to offer.
 
@@ -95,7 +97,7 @@ The platform POSTs to the endpoint URL you registered. Six message types:
 3. **Be order-safe.** Ignore (but acknowledge) a message whose `timestamp` is older than the last decision applied to the same item (`content:<type>:<ref>` or `user:<id>`).
 4. Answer **2xx** once handled, including for a duplicate or a stale message, and **5xx** only for a failure worth retrying.
 
-Anything but a 2xx is retried with a growing delay (30 s doubling to an hour, about ten tries). After that the delivery is dead-lettered: it is marked failed, an alert is raised, and the report page in the console shows a **Resend** button. A delivery to an app with no endpoint is recorded as failed immediately instead of being dropped. A 15-minute cron re-queues any delivery the queue never received.
+Anything but a 2xx is retried with a growing delay (30 s doubling to an hour, about ten tries). After that the delivery is dead-lettered: it is marked failed, an alert is raised, and the report page in the console shows a **Resend** button. A delivery to an app with no endpoint is recorded as failed immediately instead of being dropped. A 15-minute cron re-queues a pending delivery only when it has shown no sign of life (queued or attempted) for 90 minutes, longer than the longest retry delay, so a delivery that is still retrying is never queued twice.
 
 `createReceiver` in `@devdogsuga/sdk/moderation` is the reference implementation of all of it, with an in-memory store. Port its three rules to SQL in `apply_event`; do not invent others.
 

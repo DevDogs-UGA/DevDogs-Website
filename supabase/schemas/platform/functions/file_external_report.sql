@@ -61,9 +61,15 @@ begin
     and r."status" = 'open';
 
   if found then
+    -- The report's own reporter sending it again (a retry, a replay) adds
+    -- nothing: a corroboration is a second person agreeing.
     insert into "platform"."reportCorroborations"
       ("reportId", "reporterUserId", "reason", "description")
-    values (existing, p_reporter, p_reason, left(p_description, 1000))
+    select existing, p_reporter, p_reason, left(p_description, 1000)
+    where not exists (
+      select 1 from "platform"."reports" r
+      where r."id" = existing and r."reporterUserId" = p_reporter
+    )
     on conflict on constraint "reportCorroborations_report_reporter_key" do nothing;
     return query select existing, true;
     return;
@@ -90,9 +96,15 @@ begin
       and r."contentRef" = p_content_ref
       and r."status" = 'open';
 
+    -- The report's own reporter sending it again (a retry, a replay) adds
+    -- nothing: a corroboration is a second person agreeing.
     insert into "platform"."reportCorroborations"
       ("reportId", "reporterUserId", "reason", "description")
-    values (existing, p_reporter, p_reason, left(p_description, 1000))
+    select existing, p_reporter, p_reason, left(p_description, 1000)
+    where not exists (
+      select 1 from "platform"."reports" r
+      where r."id" = existing and r."reporterUserId" = p_reporter
+    )
     on conflict on constraint "reportCorroborations_report_reporter_key" do nothing;
     return query select existing, true;
     return;

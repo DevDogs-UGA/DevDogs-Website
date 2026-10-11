@@ -87,6 +87,13 @@ export default async function oauthModerationAction(
       const problem = endpointUrl ? endpointUrlProblem(endpointUrl) : null;
       if (problem) return fail(problem);
 
+      // The secret is shown once, when moderation is first turned on. A second
+      // "enable" must not show it again: the owner rotates to get a new one.
+      if (existing) {
+        return fail(
+          "Moderation is already on for this client. Rotate the secret to get a new one",
+        );
+      }
       await db
         .insert(moderationClients)
         .values({ clientId, endpointUrl: endpointUrl || null })
@@ -95,11 +102,7 @@ export default async function oauthModerationAction(
       return {
         ...EMPTY,
         clientId,
-        secret: await deriveClientSecret(
-          signingKey,
-          clientId,
-          existing?.secretVersion ?? 1,
-        ),
+        secret: await deriveClientSecret(signingKey, clientId, 1),
         message: "Moderation is on. Copy the secret now: it is shown once.",
       };
     }

@@ -43,7 +43,11 @@ export const reportRequestSchema = z.object({
   contentRef: z.string().min(1).max(256),
   /** What the content said when it was reported. Frozen on the report. */
   contentSnapshot: z.string().min(1).max(5000),
-  contentUrl: z.url().max(2000).nullish(),
+  /** A link a moderator can follow to the live content. https only. */
+  contentUrl: z
+    .url({ protocol: /^https$/ })
+    .max(2000)
+    .nullish(),
   reason: reportReasonSchema,
   description: z.string().max(1000).nullish(),
 });

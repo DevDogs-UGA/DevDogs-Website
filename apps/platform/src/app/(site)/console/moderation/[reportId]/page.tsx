@@ -11,6 +11,19 @@ import { ConsoleCard } from "~/ui/card";
 const LINK_CLASS =
   "rounded-sm text-mauve-400 transition-colors outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950";
 
+/**
+ * An app chooses a report's link, so only an https link, or a path on this
+ * site, becomes an `href`. The API refuses other schemes, and this is the
+ * second line for anything stored before it did.
+ */
+function isFollowableLink(url: string | null): url is string {
+  return (
+    url !== null &&
+    (url.startsWith("https://") ||
+      (url.startsWith("/") && !url.startsWith("//")))
+  );
+}
+
 export default async function ReportDetail({
   params,
 }: {
@@ -69,7 +82,7 @@ export default async function ReportDetail({
             <p className="font-mono text-xs text-mauve-400">
               ID: {report.contentRef}
             </p>
-            {report.contentUrl && (
+            {isFollowableLink(report.contentUrl) && (
               <a
                 href={report.contentUrl}
                 target="_blank"
