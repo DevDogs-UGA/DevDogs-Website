@@ -1,0 +1,83 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "The DevDogs Renovate preset (Q33). One file for DevDogsUGA, DogDays and DogPack: `\"extends\": [\"github>DevDogsUGA/DevDogsUGA//renovate/default\"]`. Covers npm, pub, GitHub Actions digests and the Supabase CLI pin. One grouped PR per repository on weekends; patch and minor updates automerge through the merge queue once the required checks pass; majors wait for the officer.",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    "group:allNonMajor",
+    ":semanticCommitsDisabled"
+  ],
+  "labels": ["dependencies"],
+  "timezone": "America/New_York",
+  "schedule": ["every weekend"],
+  "prConcurrentLimit": 4,
+  "prHourlyLimit": 0,
+  "platformAutomerge": true,
+  "automergeStrategy": "squash",
+  "minimumReleaseAge": "3 days",
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "description": "Renovate's vulnerability alerts replace Dependabot security updates (switched off): they open at any time, never wait for the weekend, and are never held back by the release-age gate.",
+    "enabled": true,
+    "labels": ["dependencies", "security"],
+    "schedule": ["at any time"],
+    "minimumReleaseAge": null,
+    "automerge": false
+  },
+  "enabledManagers": [
+    "npm",
+    "pub",
+    "github-actions",
+    "custom.regex"
+  ],
+  "customManagers": [
+    {
+      "description": "Versions pinned in workflow inputs and scripts with a `# renovate: datasource=<ds> depName=<name>` comment on the line above (the Supabase CLI default in deploy-database.yaml).",
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>[^\\s]+?)\\s+default: (?<currentValue>[^\\s]+)"
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Majors are never automerged and arrive one at a time, on any day, for the officer to read.",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "schedule": ["at any time"],
+      "labels": ["dependencies", "major", "needs-officer"],
+      "dependencyDashboardApproval": false
+    },
+    {
+      "description": "Patch and minor updates: one grouped PR per repository (group:allNonMajor), merged by auto-merge once the required checks pass in the merge queue.",
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
+      "automerge": true
+    },
+    {
+      "description": "The Supabase CLI pin. A new CLI can change the SQL the declarative diff writes and the schema hash the generated types are keyed by, and the pin must stay equal in the pnpm catalog, devDependencies and deploy-database.yaml. So: one PR for all three places, never automerged, on any day.",
+      "matchPackageNames": ["supabase"],
+      "groupName": "Supabase CLI",
+      "groupSlug": "supabase-cli",
+      "automerge": false,
+      "schedule": ["at any time"],
+      "labels": ["dependencies", "supabase-cli", "needs-officer"]
+    },
+    {
+      "description": "Our own packages: published from this organization's CI, so there is no release-age gate, and they land as soon as they publish. Automerge applies to all update types because the product repositories pin the `next` prerelease and the stable bump is the only change.",
+      "matchPackageNames": ["/^@devdogsuga\\//", "devdogsuga_sdk"],
+      "groupName": "DevDogs packages",
+      "groupSlug": "devdogsuga-packages",
+      "schedule": ["at any time"],
+      "minimumReleaseAge": null,
+      "rangeStrategy": "bump",
+      "automerge": true
+    },
+    {
+      "description": "Flutter and Dart: the SDK constraint follows the Flutter channel, not pub, so it is left to the officer.",
+      "matchManagers": ["pub"],
+      "matchDepNames": ["dart", "flutter"],
+      "enabled": false
+    }
+  ]
+}
