@@ -166,7 +166,7 @@ export const getOAuthPageData = cache(async () => {
     : [];
   const productionClients: OAuthClientSummary[] = await Promise.all(
     productionRegistrations.map(({ clientId, label, profile: owner }) =>
-      summarise(clientId, label, owner.preferredName),
+      summarise(clientId, label, owner?.preferredName ?? null),
     ),
   );
 
