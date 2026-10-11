@@ -527,6 +527,52 @@ test("an inline array loses only its unset entries", () => {
   assert.equal(result.toml, 'urls = ["a", "b"]');
 });
 
+test("the callback variables are derived from their URL, as supabase/env.ts declares", () => {
+  const lookup = lookupFrom({
+    VARS_JSON: JSON.stringify({
+      BASE_URL: "https://devdogsuga.org/",
+      SCHEDULE_BUILDER_URL: "https://dogdays.dev",
+    }),
+  });
+  assert.equal(
+    lookup("BASE_URL_CALLBACK"),
+    "https://devdogsuga.org/auth/callback",
+  );
+  assert.equal(
+    lookup("SCHEDULE_BUILDER_URL_CALLBACK"),
+    "https://dogdays.dev/auth/callback",
+  );
+  // No URL, no callback: the entry is dropped from the allowlist, not sent as text.
+  assert.equal(lookup("STUDY_GROUP_FINDER_URL_CALLBACK"), undefined);
+  // A stored value wins over the derivation.
+  assert.equal(
+    lookupFrom({
+      VARS_JSON: JSON.stringify({
+        BASE_URL: "https://a",
+        BASE_URL_CALLBACK: "https://b/cb",
+      }),
+    })("BASE_URL_CALLBACK"),
+    "https://b/cb",
+  );
+});
+
+test("the derivation matches the registry's own formulas", () => {
+  const manifest = readFileSync(
+    join(import.meta.dirname, "..", "..", "supabase", "env.ts"),
+    "utf8",
+  );
+  for (const name of [
+    "BASE_URL",
+    "SCHEDULE_BUILDER_URL",
+    "STUDY_GROUP_FINDER_URL",
+  ]) {
+    assert.ok(
+      manifest.includes(`example: "$${name}/auth/callback"`),
+      `supabase/env.ts no longer derives ${name}_CALLBACK as $${name}/auth/callback`,
+    );
+  }
+});
+
 test("secrets win over variables in the lookup", () => {
   const lookup = lookupFrom({
     VARS_JSON: '{"A":"var","B":"b"}',

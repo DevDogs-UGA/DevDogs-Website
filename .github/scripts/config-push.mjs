@@ -177,7 +177,30 @@ export function lookupFrom(env) {
       throw new Error(`${key} is not valid JSON`);
     }
   }
-  return (name) => merged[name] ?? env[name];
+  /** @type {(name: string) => string | undefined} */
+  const lookup = (name) =>
+    merged[name] ?? env[name] ?? deriveCallback(name, lookup);
+  return lookup;
+}
+
+/**
+ * The redirect-allowlist variables are derived, not stored: GitHub holds
+ * `BASE_URL` and `SCHEDULE_BUILDER_URL`, and `supabase/env.ts` declares
+ * `BASE_URL_CALLBACK` as `$BASE_URL/auth/callback` (and the others the same
+ * way) because the CLI substitutes `env()` only when it is the whole value.
+ * The old flow got them from the env file `write-env` composed; this reads the
+ * job's own secrets and variables, so it applies the same rule. Without it a
+ * push would DROP the callback URLs from `auth.additional_redirect_urls` and
+ * every sign-in redirect would fail.
+ *
+ * @param {string} name
+ * @param {(name: string) => string | undefined} lookup
+ */
+export function deriveCallback(name, lookup) {
+  const match = /^(.+_URL)_CALLBACK$/.exec(name);
+  if (!match) return undefined;
+  const base = lookup(match[1]);
+  return base ? `${base.replace(/\/+$/, "")}/auth/callback` : undefined;
 }
 
 /**
