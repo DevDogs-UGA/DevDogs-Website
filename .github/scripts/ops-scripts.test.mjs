@@ -9,6 +9,7 @@ import {
   discoverIssuer,
   envRefs,
   lookupFrom,
+  pushConfig,
   registerProvider,
   resolveConfig,
 } from "./config-push.mjs";
@@ -772,6 +773,46 @@ test("an unset env() is dropped from a list, a switched-off section, and refused
     n === "GH_CLIENT_ID" ? undefined : set[n],
   );
   assert.deepEqual(broken.missing, ["GH_CLIENT_ID"]);
+});
+
+test("config push --dry-run runs `config diff`, never a push", () => {
+  const root = mkdtempSync(join(tmpdir(), "cfg-"));
+  mkdirSync(join(root, "supabase"), { recursive: true });
+  writeFileSync(join(root, "supabase", "config.toml"), 'project_id = "x"\n');
+  const env = {
+    PROJECT_REF: "abcdefghijklmnopqrst",
+    SUPABASE_ACCESS_TOKEN: "sbp_x",
+  };
+  const run = (dryRun) => {
+    const seen = [];
+    const code = pushConfig({
+      env,
+      repoRoot: root,
+      dryRun,
+      spawn: (_cmd, args, options) => {
+        seen.push({ args, stdio: options.stdio });
+        return { status: 0 };
+      },
+    });
+    return { code, seen: seen[0] };
+  };
+  const dry = run(true);
+  assert.equal(dry.code, 0);
+  assert.deepEqual(dry.seen.args, [
+    "config",
+    "diff",
+    "--project-ref",
+    "abcdefghijklmnopqrst",
+  ]);
+  assert.ok(!dry.seen.args.includes("push"));
+  const real = run(false);
+  assert.deepEqual(real.seen.args, [
+    "config",
+    "push",
+    "--project-ref",
+    "abcdefghijklmnopqrst",
+    "--yes",
+  ]);
 });
 
 test("an inline array loses only its unset entries", () => {

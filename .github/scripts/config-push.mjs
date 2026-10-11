@@ -374,10 +374,16 @@ export async function registerProvider({
  * `supabase config push` from a temporary copy of `supabase/` whose
  * config.toml has no unresolved `env()`.
  *
- * @param {{ env: NodeJS.ProcessEnv, repoRoot: string, dryRun: boolean, log?: (line: string) => void }} input
+ * @param {{ env: NodeJS.ProcessEnv, repoRoot: string, dryRun: boolean, log?: (line: string) => void, spawn?: typeof spawnSync }} input
  * @returns {number} exit code
  */
-export function pushConfig({ env, repoRoot, dryRun, log = () => {} }) {
+export function pushConfig({
+  env,
+  repoRoot,
+  dryRun,
+  log = () => {},
+  spawn = spawnSync,
+}) {
   const lookup = lookupFrom(env);
   const ref = lookup("PROJECT_REF");
   if (!ref) throw new Error("PROJECT_REF is not set");
@@ -413,18 +419,16 @@ export function pushConfig({ env, repoRoot, dryRun, log = () => {} }) {
     childEnv.SUPABASE_ACCESS_TOKEN = lookup("SUPABASE_ACCESS_TOKEN");
     delete childEnv.SECRETS_JSON;
     delete childEnv.VARS_JSON;
-    const args = [
-      "config",
-      "push",
-      "--project-ref",
-      ref,
-      ...(dryRun ? [] : ["--yes"]),
-    ];
-    const result = spawnSync(env.SUPABASE_BIN || "supabase", args, {
+    // A dry run is `config diff`, which the CLI documents as read-only. It is
+    // NOT `config push` with the prompt declined: a non-interactive push
+    // (no TTY, or piped stdin) defaults to proceeding and writes the config.
+    const args = dryRun
+      ? ["config", "diff", "--project-ref", ref]
+      : ["config", "push", "--project-ref", ref, "--yes"];
+    const result = spawn(env.SUPABASE_BIN || "supabase", args, {
       cwd: scratch,
       env: childEnv,
-      stdio: dryRun ? ["ignore", "inherit", "inherit"] : "inherit",
-      input: dryRun ? "n\n" : undefined,
+      stdio: "inherit",
     });
     return result.status ?? 1;
   } finally {
