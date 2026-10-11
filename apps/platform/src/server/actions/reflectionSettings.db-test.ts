@@ -12,8 +12,8 @@ import { auditEvents, reflectionSettings } from "~/server/db/schema";
  * through `roles`/`userRoles`/the `resolvedUserPermissions` matview, and doing
  * so here would test the permission system a second time instead of this
  * action's own logic (validation bounds, the update, the audit event).
- * `expectSession` is mocked the same way `teams.db-test.ts` and
- * `reflections.db-test.ts` mock it.
+ * `expectSession` is mocked the same way
+ * `reflections.db-test.ts` does.
  *
  * `reflectionSettings` is a global singleton -- every caller, including
  * `saveReflection` and `getReflectionActivities`, reads the same one row --
