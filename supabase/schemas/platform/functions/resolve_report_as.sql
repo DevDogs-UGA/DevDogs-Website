@@ -122,9 +122,14 @@ begin
       when coalesce(apply_globally, false) and subject_action = 'ban'
       then report."reportedUserId"
     end,
-    -- The deliveries this decision owes. The caller queues them once the
-    -- transaction has committed.
-    'deliveryIds', to_jsonb(deliveries)
+    -- The deliveries this decision owes that are ready to send, for the caller
+    -- to queue once the transaction has committed. One already marked failed
+    -- (its app has no endpoint) waits for a person and a resend instead.
+    'deliveryIds', (
+      select coalesce(jsonb_agg(d."id" order by d."createdAt", d."id"), '[]'::jsonb)
+      from "platform"."moderationDeliveries" d
+      where d."id" = any(deliveries) and d."status" = 'pending'
+    )
   );
 end;
 $function$;
