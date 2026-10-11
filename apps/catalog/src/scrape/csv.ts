@@ -113,13 +113,12 @@ export class CsvRowParser {
   }
 
   private endRecord(rows: Row[]): void {
-    // A line with nothing on it is not a record (Papa's skipEmptyLines).
-    const empty =
-      this.record.length === 0 && this.field === "" && !this.fieldStarted;
-    if (empty) return;
     this.endField();
     const values = this.record;
     this.record = [];
+    // A line holding a single empty field (nothing, or just `""`) is not a
+    // record (Papa's skipEmptyLines).
+    if (values.length === 1 && values[0] === "") return;
 
     if (this.header === null) {
       this.header = values;
