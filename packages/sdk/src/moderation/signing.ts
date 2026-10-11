@@ -20,11 +20,11 @@ export const WEBHOOK_TOLERANCE_SECONDS = 5 * 60;
 
 const SECRET_PREFIX = "whsec_";
 
-export interface SignedHeaders {
+export type SignedHeaders = {
   [WEBHOOK_ID_HEADER]: string;
   [WEBHOOK_TIMESTAMP_HEADER]: string;
   [WEBHOOK_SIGNATURE_HEADER]: string;
-}
+};
 
 export class WebhookVerificationError extends Error {
   constructor(
