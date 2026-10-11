@@ -834,7 +834,7 @@ test("register creates the provider with the platform's discovered issuer, enabl
     ],
     [
       "GET",
-      /custom-providers\/custom%3Adevdogsuga$/,
+      /custom-providers\/custom:devdogsuga$/,
       () => ({ status: 404, json: {} }),
     ],
     ["POST", /custom-providers$/, () => ({ status: 201, json: {} })],
@@ -880,10 +880,10 @@ test("register updates an existing provider, and skips a project with no client"
     ],
     [
       "GET",
-      /custom-providers\/custom%3Adevdogsuga$/,
+      /custom-providers\/custom:devdogsuga$/,
       () => ({ json: { identifier: "custom:devdogsuga" } }),
     ],
-    ["PUT", /custom-providers\/custom%3Adevdogsuga$/, () => ({ json: {} })],
+    ["PUT", /custom-providers\/custom:devdogsuga$/, () => ({ json: {} })],
   ]);
   assert.equal(
     (await registerProvider({ env: PROVIDER_ENV, fetchImpl })).action,
@@ -902,6 +902,86 @@ test("register updates an existing provider, and skips a project with no client"
     "skipped",
   );
   assert.equal(none.calls.length, 0);
+});
+
+test("register waits out GoTrue's 'disabled' 404 right after enabling custom OAuth, and sends the identifier unencoded", async () => {
+  let reads = 0;
+  const fetchImpl = scriptedFetch([
+    [
+      "GET",
+      /api\.supabase\.com.*config\/auth$/,
+      () => ({ json: { custom_oauth_enabled: false } }),
+    ],
+    ["PATCH", /api\.supabase\.com.*config\/auth$/, () => ({ json: {} })],
+    [
+      "GET",
+      /openid-configuration$/,
+      () => ({ json: { issuer: "https://platformref.supabase.co/auth/v1" } }),
+    ],
+    [
+      "GET",
+      /custom-providers\/custom:devdogsuga$/,
+      () =>
+        ++reads < 3
+          ? {
+              status: 404,
+              json: { msg: "Custom OAuth providers are disabled" },
+            }
+          : { status: 404, json: { msg: "provider not found" } },
+    ],
+    ["POST", /custom-providers$/, () => ({ status: 201, json: {} })],
+  ]);
+  const waits = [];
+  const result = await registerProvider({
+    env: PROVIDER_ENV,
+    fetchImpl,
+    sleep: async (ms) => {
+      waits.push(ms);
+    },
+  });
+  assert.equal(result.action, "created");
+  assert.equal(waits.length, 2, "waited twice for the Auth service to reload");
+  assert.ok(
+    fetchImpl.calls.every((c) => !c.url.includes("%3A")),
+    "the identifier colon is never percent-encoded",
+  );
+
+  const stuck = scriptedFetch([
+    [
+      "GET",
+      /api\.supabase\.com.*config\/auth$/,
+      () => ({ json: { custom_oauth_enabled: true } }),
+    ],
+    [
+      "GET",
+      /openid-configuration$/,
+      () => ({ json: { issuer: "https://platformref.supabase.co/auth/v1" } }),
+    ],
+    [
+      "GET",
+      /custom-providers\/custom:devdogsuga$/,
+      () => ({
+        status: 404,
+        json: { msg: "Custom OAuth providers are disabled" },
+      }),
+    ],
+    [
+      "POST",
+      /custom-providers$/,
+      () => ({
+        status: 404,
+        json: { msg: "Custom OAuth providers are disabled" },
+      }),
+    ],
+  ]);
+  await assert.rejects(
+    registerProvider({
+      env: PROVIDER_ENV,
+      fetchImpl: stuck,
+      sleep: async () => {},
+    }),
+    /creating custom:devdogsuga failed: 404/,
+  );
 });
 
 test("register never guesses the platform: no DEVDOGS_OAUTH_BASE_URL is an error before any request", async () => {

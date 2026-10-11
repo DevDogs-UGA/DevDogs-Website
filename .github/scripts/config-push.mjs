@@ -234,6 +234,7 @@ export async function discoverIssuer(baseUrl, fetchImpl = fetch) {
  *   env: NodeJS.ProcessEnv,
  *   fetchImpl?: typeof fetch,
  *   log?: (line: string) => void,
+ *   sleep?: (ms: number) => Promise<void>,
  * }} input
  * @returns {Promise<{ action: "skipped" | "created" | "updated", issuer?: string }>}
  */
@@ -241,6 +242,7 @@ export async function registerProvider({
   env,
   fetchImpl = fetch,
   log = () => {},
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 }) {
   const lookup = lookupFrom(env);
   const clientId = lookup("DEVDOGS_OAUTH_CLIENT_ID");
@@ -295,6 +297,26 @@ export async function registerProvider({
   }
 
   // 2. The provider itself.
+  //
+  // GoTrue answers 404 both for "no such provider" and, from its
+  // requireCustomOAuthEnabled middleware, for "custom OAuth providers are
+  // disabled". Right after the PATCH above the running Auth service can still
+  // be on the old config, so a 404 that says "disabled" is waited out (up to
+  // about a minute) instead of being read as "not found".
+  /** @param {() => Promise<Response>} call */
+  const adminCall = async (call) => {
+    for (let attempt = 0; ; attempt++) {
+      const response = await call();
+      if (response.status !== 404 || attempt >= 12) return response;
+      const text = await response
+        .clone()
+        .text()
+        .catch(() => "");
+      if (!/disabled/i.test(text)) return response;
+      log("register: custom OAuth is not live yet, waiting");
+      await sleep(5000);
+    }
+  };
   const issuer = await discoverIssuer(platformUrl, fetchImpl);
   const admin = `${apiUrl}/auth/v1/admin/custom-providers`;
   const adminHeaders = {
@@ -310,16 +332,22 @@ export async function registerProvider({
     scopes: PROVIDER_SCOPES,
     enabled: true,
   };
-  const existing = await fetchImpl(
-    `${admin}/${encodeURIComponent(identifier)}`,
-    { headers: adminHeaders },
+  // The identifier goes into the path as is: GoTrue's router matches on the
+  // raw path, so `custom%3Adevdogsuga` would reach the handler still encoded
+  // and be refused for not starting with `custom:`. A colon is legal in a
+  // path segment.
+  const providerUrl = `${admin}/${identifier}`;
+  const existing = await adminCall(() =>
+    fetchImpl(providerUrl, { headers: adminHeaders }),
   );
   if (existing.status === 404) {
-    const created = await fetchImpl(admin, {
-      method: "POST",
-      headers: adminHeaders,
-      body: JSON.stringify({ provider_type: "oidc", identifier, ...body }),
-    });
+    const created = await adminCall(() =>
+      fetchImpl(admin, {
+        method: "POST",
+        headers: adminHeaders,
+        body: JSON.stringify({ provider_type: "oidc", identifier, ...body }),
+      }),
+    );
     if (!created.ok)
       throw new Error(
         `creating ${identifier} failed: ${created.status} ${await created.text()}`,
@@ -329,14 +357,11 @@ export async function registerProvider({
   }
   if (!existing.ok)
     throw new Error(`GET ${identifier} failed: ${existing.status}`);
-  const updated = await fetchImpl(
-    `${admin}/${encodeURIComponent(identifier)}`,
-    {
-      method: "PUT",
-      headers: adminHeaders,
-      body: JSON.stringify(body),
-    },
-  );
+  const updated = await fetchImpl(providerUrl, {
+    method: "PUT",
+    headers: adminHeaders,
+    body: JSON.stringify(body),
+  });
   if (!updated.ok)
     throw new Error(
       `updating ${identifier} failed: ${updated.status} ${await updated.text()}`,
