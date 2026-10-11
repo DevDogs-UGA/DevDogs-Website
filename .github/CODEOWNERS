@@ -10,6 +10,13 @@
 /scripts/** @DevDogsUGA/devops
 /workers.json @DevDogsUGA/devops
 /patches/** @DevDogsUGA/devops
+/renovate.json5 @DevDogsUGA/devops
+/renovate/** @DevDogsUGA/devops
+/docs/operations/** @DevDogsUGA/devops
+
+# Hand-written migrations are where destructive and data-moving changes live
+# (Q10): the focus leads read them too, and either team can approve.
+/supabase/migrations/** @DevDogsUGA/focus-leads @DevDogsUGA/devops
 
 # Only admins own the ownership policy itself. This must stay after the rules
 # above because the last matching CODEOWNERS pattern wins.

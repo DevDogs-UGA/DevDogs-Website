@@ -66,9 +66,18 @@ export function labelState(timeline, label = LABEL) {
  * @param {string} login
  */
 export async function isDevops(api, repo, login) {
-  const permission = await api(
-    `/repos/${repo}/collaborators/${encodeURIComponent(login)}/permission`,
-  );
+  let permission;
+  try {
+    permission = await api(
+      `/repos/${repo}/collaborators/${encodeURIComponent(login)}/permission`,
+    );
+  } catch (error) {
+    // GitHub answers 404 for a login it cannot resolve to a user with access
+    // (a deleted account, an app). That is "not devops", not a crash: a crash
+    // would fail the check but leave the label sitting there.
+    if (/\b404\b/.test(String(error?.message))) return false;
+    throw error;
+  }
   return DEVOPS_ROLES.has(permission?.role_name ?? permission?.permission);
 }
 

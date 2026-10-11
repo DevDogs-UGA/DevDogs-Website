@@ -410,6 +410,10 @@ test("the gate rejects a label applied by someone who is not devops", async () =
   assert.equal(rejected.reject, true);
   assert.match(rejected.message, /@member/);
   assert.equal((await gate([labeled("reviewer")])).pass, false);
+  // A login GitHub cannot resolve (a deleted account) is rejected, not a crash.
+  const stranger = await gate([labeled("ghost")]);
+  assert.equal(stranger.pass, false);
+  assert.equal(stranger.reject, true);
   // Re-applied by a devops member after a rejected one: the latest applier counts.
   assert.equal(
     (await gate([labeled("member"), unlabeled("lathryx"), labeled("lathryx")]))
