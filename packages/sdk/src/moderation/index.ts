@@ -1,53 +1,15 @@
 /**
- * `@devdogsuga/sdk/moderation`: the protocol between an app and the platform's
- * moderation API. Message types (zod), Standard Webhooks signing and
- * verification, signed samples to test a receiver against, and a reference
- * receiver. See `./messages.ts` for the shape of the protocol.
+ * `@devdogsuga/sdk/moderation`: everything an app needs to file reports with
+ * the platform and to receive its decisions back.
+ *
+ * - `signing`: Standard Webhooks sign and verify (Web Crypto only).
+ * - `messages`: the report and delivery schemas (zod) and their JSON Schema.
+ * - `receiver`: the reference receiver and its in-memory store.
+ * - `samples`: signed sample messages for tests and `devtools moderation send`.
+ * - `client`: a small signed client for the report API.
  */
-export {
-  MODERATION_API_BASE_PATH,
-  MODERATION_EVENT_TYPES,
-  MODERATION_PROTOCOL_VERSION,
-  REPORT_REASONS,
-  contentEventSchema,
-  moderationEventSchema,
-  moderationReportReceiptSchema,
-  moderationReportSchema,
-  pingEventSchema,
-  reportReasonSchema,
-  subjectOf,
-  userEventSchema,
-  type ModerationEvent,
-  type ModerationEventType,
-  type ModerationReport,
-  type ModerationReportReceipt,
-} from "./messages.js";
-export {
-  WEBHOOK_ID_HEADER,
-  WEBHOOK_SIGNATURE_HEADER,
-  WEBHOOK_TIMESTAMP_HEADER,
-  WEBHOOK_TOLERANCE_SECONDS,
-  WebhookVerificationError,
-  generateSigningSecret,
-  signMessage,
-  signedHeaders,
-  verifyMessage,
-  type SignedHeaders,
-  type VerifyOptions,
-} from "./signing.js";
-export {
-  SAMPLE_EVENTS,
-  SAMPLE_NOW,
-  SAMPLE_SECRET,
-  signSample,
-  signedSamples,
-  type SampleDelivery,
-} from "./samples.js";
-export {
-  createMemoryReceiverStore,
-  createReferenceReceiver,
-  type ReceiveOutcome,
-  type ReceiveResult,
-  type ReceiverStore,
-  type ReferenceReceiverOptions,
-} from "./receiver.js";
+export * from "./signing.js";
+export * from "./messages.js";
+export * from "./receiver.js";
+export * from "./samples.js";
+export * from "./client.js";

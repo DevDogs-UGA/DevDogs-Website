@@ -1,126 +1,141 @@
-import type { ModerationEvent } from "./messages.js";
-import {
-  signedHeaders,
-  type SignedHeaders,
-} from "./signing.js";
-
 /**
- * Signed sample deliveries, for testing a receiver without the platform.
- *
- * The secret is the Standard Webhooks documentation's example, public and
- * worthless: never configure it anywhere that matters. Timestamps are fixed,
- * so a test passes `{ now: SAMPLE_NOW }` to the verifier and gets the same
- * bytes every run.
+ * Signed sample messages: the fixture an app's receiver and its
+ * `apply_event` are tested against, and what `devtools moderation send` and
+ * the console's "Send test action" build their bodies from.
  */
-export const SAMPLE_SECRET = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";
+import type { ModerationMessage, MessageType } from "./messages.js";
+import type { Outcome } from "./receiver.js";
+import { signMessage, type SignedHeaders } from "./signing.js";
 
-/** The instant the samples were "sent". */
-export const SAMPLE_NOW = new Date("2026-10-12T12:00:00.000Z");
+/** A well-known secret for samples. Never a real client's. */
+export const SAMPLE_SECRET =
+  "whsec_c2FtcGxlLW1vZGVyYXRpb24tc2VjcmV0LW5vdC1yZWFs";
 
-const OWNER = "11111111-1111-4111-8111-111111111111";
-const MODERATOR_TARGET = "22222222-2222-4222-8222-222222222222";
+export const SAMPLE_CONTENT = {
+  contentType: "session",
+  contentRef: "00000000-0000-4000-8000-0000000000a1",
+} as const;
+export const SAMPLE_USER_ID = "00000000-0000-4000-8000-0000000000b1";
 
-/** Events in the order a moderator took the decisions. */
-export const SAMPLE_EVENTS = {
-  ping: {
-    id: "msg_sample_ping",
-    type: "ping",
-    occurredAt: "2026-10-12T11:59:00.000Z",
-    data: {},
-  },
-  hide: {
-    id: "msg_sample_hide",
-    type: "content.hide",
-    occurredAt: "2026-10-12T11:58:00.000Z",
-    data: {
-      contentType: "session",
-      contentId: "session-1",
-      ownerId: OWNER,
-      reportId: "rep_sample_1",
-      reason: "Reported as spam",
-    },
-  },
-  /** Decided BEFORE `hide`: delivered late, a receiver must ignore it. */
-  restoreOlder: {
-    id: "msg_sample_restore_older",
-    type: "content.restore",
-    occurredAt: "2026-10-12T11:30:00.000Z",
-    data: {
-      contentType: "session",
-      contentId: "session-1",
-      ownerId: OWNER,
-    },
-  },
-  restore: {
-    id: "msg_sample_restore",
-    type: "content.restore",
-    occurredAt: "2026-10-12T11:59:30.000Z",
-    data: {
-      contentType: "session",
-      contentId: "session-1",
-      ownerId: OWNER,
-    },
-  },
-  remove: {
-    id: "msg_sample_remove",
-    type: "content.remove",
-    occurredAt: "2026-10-12T11:57:00.000Z",
-    data: {
-      contentType: "session",
-      contentId: "session-2",
-      ownerId: OWNER,
-    },
-  },
-  suspend: {
-    id: "msg_sample_suspend",
-    type: "user.suspend",
-    occurredAt: "2026-10-12T11:56:00.000Z",
-    data: {
-      userId: MODERATOR_TARGET,
-      until: "2026-11-12T00:00:00.000Z",
-      reason: "Repeated harassment reports",
-    },
-  },
-  unsuspend: {
-    id: "msg_sample_unsuspend",
-    type: "user.unsuspend",
-    occurredAt: "2026-10-12T11:59:45.000Z",
-    data: { userId: MODERATOR_TARGET },
-  },
-} as const satisfies Record<string, ModerationEvent>;
-
-export interface SampleDelivery {
-  name: keyof typeof SAMPLE_EVENTS;
-  event: ModerationEvent;
-  headers: SignedHeaders;
-  /** The exact text the signature covers. */
-  body: string;
+export interface BuildMessageInput {
+  type: MessageType;
+  /** ISO 8601. Defaults to now. */
+  timestamp?: string;
+  contentType?: string;
+  contentRef?: string;
+  userId?: string;
+  reason?: string | null;
+  reportId?: string | null;
 }
 
-/** One sample, signed. */
-export async function signSample(
-  name: keyof typeof SAMPLE_EVENTS,
-  options: { secret?: string; now?: Date } = {},
-): Promise<SampleDelivery> {
-  const event: ModerationEvent = SAMPLE_EVENTS[name];
-  const body = JSON.stringify(event);
+/** A message of any type, with sample targets unless told otherwise. */
+export function buildMessage(input: BuildMessageInput): ModerationMessage {
+  const timestamp = input.timestamp ?? new Date().toISOString();
+  const reportId = input.reportId ?? null;
+  if (input.type.startsWith("content.")) {
+    return {
+      type: input.type as Extract<MessageType, `content.${string}`>,
+      timestamp,
+      data: {
+        contentType: input.contentType ?? SAMPLE_CONTENT.contentType,
+        contentRef: input.contentRef ?? SAMPLE_CONTENT.contentRef,
+        reportId,
+      },
+    };
+  }
   return {
-    name,
-    event,
-    body,
-    headers: await signedHeaders(
-      options.secret ?? SAMPLE_SECRET,
-      event.id,
-      body,
-      { now: options.now ?? SAMPLE_NOW },
-    ),
+    type: input.type as Extract<MessageType, `user.${string}`>,
+    timestamp,
+    data: {
+      userId: input.userId ?? SAMPLE_USER_ID,
+      reason: input.reason ?? null,
+      reportId,
+    },
   };
 }
 
-/** Every sample, signed, in the order they are declared. */
+export interface SignedSample {
+  name: string;
+  /** What a correct receiver does with it, when the samples are sent in order. */
+  expected: Outcome;
+  headers: SignedHeaders;
+  body: string;
+}
+
+export interface SampleOptions {
+  secret?: string;
+  /** Epoch milliseconds the sequence is anchored to. Defaults to now. */
+  now?: number;
+}
+
+/**
+ * The conformance sequence. Send it in order to a fresh receiver:
+ *
+ * 1. hide a session: applied
+ * 2. the same message again: duplicate
+ * 3. a restore dated before the hide: stale
+ * 4. a restore dated after it: applied
+ * 5. suspend a user: applied
+ * 6. a user restore dated before the suspension: stale
+ *
+ * Every message is signed for "now", so it is inside the five-minute window
+ * however old its decision timestamp is.
+ */
 export async function signedSamples(
-  options: { secret?: string; now?: Date } = {},
-): Promise<SampleDelivery[]> {
-  const names = Object.keys(SAMPLE_EVENTS) as (keyof typeof SAMPLE_EVENTS)[];
-  return Promise.all(names.map((name) => signSample(name, options)));
+  options: SampleOptions = {},
+): Promise<SignedSample[]> {
+  const secret = options.secret ?? SAMPLE_SECRET;
+  const now = options.now ?? Date.now();
+  const at = (offsetSeconds: number) =>
+    new Date(now + offsetSeconds * 1000).toISOString();
+  const signedAt = Math.floor(now / 1000);
+
+  async function sample(
+    name: string,
+    id: string,
+    expected: Outcome,
+    message: ModerationMessage,
+  ): Promise<SignedSample> {
+    const body = JSON.stringify(message);
+    return {
+      name,
+      expected,
+      body,
+      headers: await signMessage(secret, body, { id, timestamp: signedAt }),
+    };
+  }
+
+  const hide = buildMessage({ type: "content.hide", timestamp: at(0) });
+  return [
+    await sample("hide a session", "msg_sample_1", "applied", hide),
+    await sample("replay of the hide", "msg_sample_1", "duplicate", hide),
+    await sample(
+      "a restore dated before the hide",
+      "msg_sample_2",
+      "stale",
+      buildMessage({ type: "content.restore", timestamp: at(-60) }),
+    ),
+    await sample(
+      "a restore dated after the hide",
+      "msg_sample_3",
+      "applied",
+      buildMessage({ type: "content.restore", timestamp: at(60) }),
+    ),
+    await sample(
+      "suspend a user",
+      "msg_sample_4",
+      "applied",
+      buildMessage({
+        type: "user.suspend",
+        timestamp: at(0),
+        reason: "sample suspension",
+      }),
+    ),
+    await sample(
+      "a user restore dated before the suspension",
+      "msg_sample_5",
+      "stale",
+      buildMessage({ type: "user.restore", timestamp: at(-60) }),
+    ),
+  ];
 }

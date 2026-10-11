@@ -1,271 +1,379 @@
+import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
-  MODERATION_EVENT_TYPES,
-  SAMPLE_EVENTS,
-  SAMPLE_NOW,
+  CLIENT_ID_HEADER,
+  REASONS_PATH,
+  ReportRejectedError,
+  SAMPLE_CONTENT,
   SAMPLE_SECRET,
-  WEBHOOK_ID_HEADER,
-  WEBHOOK_SIGNATURE_HEADER,
-  WEBHOOK_TIMESTAMP_HEADER,
-  WebhookVerificationError,
-  createMemoryReceiverStore,
-  createReferenceReceiver,
-  generateSigningSecret,
-  moderationEventSchema,
-  moderationReportSchema,
+  SAMPLE_USER_ID,
+  applyModerationEvent,
+  buildMessage,
+  computeSignature,
+  createMemoryStore,
+  createModerationClient,
+  createReceiver,
+  generateSecret,
+  itemKey,
+  moderationJsonSchemas,
+  parseMessage,
   signMessage,
-  signSample,
-  signedHeaders,
   signedSamples,
-  subjectOf,
   verifyMessage,
-  type ModerationEvent,
-} from "./index.js";
+} from "./index";
 
-describe("signing", () => {
-  it("matches the Standard Webhooks reference vector", async () => {
-    // The vector from the Standard Webhooks specification: this secret, this
-    // id, timestamp and payload sign to this value.
-    const signature = await signMessage(
-      "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw",
-      "msg_p5jXN8AQM9LWM0D4loKWxJek",
-      1614265330,
-      '{"test": 2432232314}',
+const NOW = 1_800_000_000;
+
+describe("Standard Webhooks signing", () => {
+  it("agrees with an independent HMAC-SHA256 over `id.timestamp.body`", async () => {
+    const secret = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";
+    const id = "msg_p5jXN8AQM9LWM0D4loKWxJek";
+    const body = '{"test": 2432232314}';
+    const expected = createHmac(
+      "sha256",
+      Buffer.from(secret.slice("whsec_".length), "base64"),
+    )
+      .update(`${id}.1614265330.${body}`)
+      .digest("base64");
+    expect(await computeSignature(secret, id, 1614265330, body)).toBe(
+      `v1,${expected}`,
     );
-    expect(signature).toBe("v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=");
   });
 
-  it("verifies what it signs and returns the message id", async () => {
+  it("round-trips and rejects any change to the body, id or timestamp", async () => {
+    const secret = generateSecret();
     const body = '{"a":1}';
-    const headers = await signedHeaders(SAMPLE_SECRET, "msg_1", body, {
-      now: SAMPLE_NOW,
+    const headers = await signMessage(secret, body, {
+      id: "msg_1",
+      timestamp: NOW,
     });
-    await expect(
-      verifyMessage(SAMPLE_SECRET, headers, body, { now: SAMPLE_NOW }),
-    ).resolves.toBe("msg_1");
+    expect(await verifyMessage(secret, headers, body, { now: NOW })).toEqual({
+      ok: true,
+      id: "msg_1",
+      timestamp: NOW,
+    });
+    expect(
+      await verifyMessage(secret, headers, '{"a":2}', { now: NOW }),
+    ).toEqual({ ok: false, reason: "bad_signature" });
+    expect(
+      await verifyMessage(secret, { ...headers, "webhook-id": "msg_2" }, body, {
+        now: NOW,
+      }),
+    ).toEqual({ ok: false, reason: "bad_signature" });
+    expect(
+      await verifyMessage(generateSecret(), headers, body, { now: NOW }),
+    ).toEqual({ ok: false, reason: "bad_signature" });
   });
 
-  it("accepts a Headers object and any header-name casing", async () => {
-    const body = "{}";
-    const signed = await signedHeaders(SAMPLE_SECRET, "msg_2", body, {
-      now: SAMPLE_NOW,
+  it("enforces the five-minute window in both directions", async () => {
+    const secret = generateSecret();
+    const headers = await signMessage(secret, "{}", { timestamp: NOW });
+    expect(
+      (await verifyMessage(secret, headers, "{}", { now: NOW + 300 })).ok,
+    ).toBe(true);
+    expect(
+      await verifyMessage(secret, headers, "{}", { now: NOW + 301 }),
+    ).toEqual({
+      ok: false,
+      reason: "expired",
     });
-    const headers = new Headers(signed);
-    await expect(
-      verifyMessage(SAMPLE_SECRET, headers, body, { now: SAMPLE_NOW }),
-    ).resolves.toBe("msg_2");
-    await expect(
-      verifyMessage(
-        SAMPLE_SECRET,
-        {
-          "Webhook-Id": signed[WEBHOOK_ID_HEADER],
-          "Webhook-Timestamp": signed[WEBHOOK_TIMESTAMP_HEADER],
-          "Webhook-Signature": signed[WEBHOOK_SIGNATURE_HEADER],
-        },
-        body,
-        { now: SAMPLE_NOW },
-      ),
-    ).resolves.toBe("msg_2");
+    expect(
+      await verifyMessage(secret, headers, "{}", { now: NOW - 301 }),
+    ).toEqual({
+      ok: false,
+      reason: "expired",
+    });
   });
 
-  it("rejects a tampered body, a wrong secret and a missing header", async () => {
-    const headers = await signedHeaders(SAMPLE_SECRET, "msg_3", "{}", {
-      now: SAMPLE_NOW,
+  it("refuses missing and malformed headers", async () => {
+    const secret = generateSecret();
+    expect(await verifyMessage(secret, {}, "{}")).toEqual({
+      ok: false,
+      reason: "missing_headers",
     });
-    await expect(
-      verifyMessage(SAMPLE_SECRET, headers, '{"x":1}', { now: SAMPLE_NOW }),
-    ).rejects.toMatchObject({ reason: "no-valid-signature" });
-    await expect(
-      verifyMessage(generateSigningSecret(), headers, "{}", { now: SAMPLE_NOW }),
-    ).rejects.toMatchObject({ reason: "no-valid-signature" });
-    await expect(
-      verifyMessage(
-        SAMPLE_SECRET,
-        { [WEBHOOK_ID_HEADER]: "msg_3" },
+    const headers = await signMessage(secret, "{}", { timestamp: NOW });
+    expect(
+      await verifyMessage(
+        secret,
+        { ...headers, "webhook-timestamp": "soon" },
         "{}",
-        { now: SAMPLE_NOW },
+        {
+          now: NOW,
+        },
       ),
-    ).rejects.toMatchObject({ reason: "missing-headers" });
+    ).toEqual({ ok: false, reason: "bad_timestamp" });
+    expect(
+      await verifyMessage(
+        secret,
+        { ...headers, "webhook-signature": "v2,AAAA" },
+        "{}",
+        { now: NOW },
+      ),
+    ).toEqual({ ok: false, reason: "bad_signature" });
   });
 
-  it("rejects messages more than five minutes old or new", async () => {
-    const headers = await signedHeaders(SAMPLE_SECRET, "msg_4", "{}", {
-      now: SAMPLE_NOW,
+  it("accepts either secret during a rotation and reads Headers case-insensitively", async () => {
+    const oldSecret = generateSecret();
+    const newSecret = generateSecret();
+    const headers = await signMessage(oldSecret, "{}", { timestamp: NOW });
+    const asHeaders = new Headers({
+      "Webhook-Id": headers["webhook-id"],
+      "Webhook-Timestamp": headers["webhook-timestamp"],
+      "Webhook-Signature": headers["webhook-signature"],
     });
-    const inside = new Date(SAMPLE_NOW.getTime() + 4 * 60 * 1000);
-    const late = new Date(SAMPLE_NOW.getTime() + 6 * 60 * 1000);
-    const early = new Date(SAMPLE_NOW.getTime() - 6 * 60 * 1000);
-    await expect(
-      verifyMessage(SAMPLE_SECRET, headers, "{}", { now: inside }),
-    ).resolves.toBe("msg_4");
-    await expect(
-      verifyMessage(SAMPLE_SECRET, headers, "{}", { now: late }),
-    ).rejects.toMatchObject({ reason: "timestamp-too-old" });
-    await expect(
-      verifyMessage(SAMPLE_SECRET, headers, "{}", { now: early }),
-    ).rejects.toMatchObject({ reason: "timestamp-too-new" });
-  });
-
-  it("accepts any one of several space-delimited signatures", async () => {
-    const body = "{}";
-    const signed = await signedHeaders(SAMPLE_SECRET, "msg_5", body, {
-      now: SAMPLE_NOW,
-    });
-    const headers = {
-      ...signed,
-      [WEBHOOK_SIGNATURE_HEADER]: `v1,AAAA v2,ignored ${signed[WEBHOOK_SIGNATURE_HEADER]}`,
-    };
-    await expect(
-      verifyMessage(SAMPLE_SECRET, headers, body, { now: SAMPLE_NOW }),
-    ).resolves.toBe("msg_5");
-  });
-
-  it("generates secrets in the whsec_ form", () => {
-    expect(generateSigningSecret()).toMatch(/^whsec_[A-Za-z0-9+/]{32}$/);
-    expect(new WebhookVerificationError("bad-timestamp", "x").name).toBe(
-      "WebhookVerificationError",
-    );
+    expect(
+      (
+        await verifyMessage([newSecret, oldSecret], asHeaders, "{}", {
+          now: NOW,
+        })
+      ).ok,
+    ).toBe(true);
   });
 });
 
 describe("messages", () => {
-  it("parses every sample", () => {
-    for (const event of Object.values(SAMPLE_EVENTS)) {
-      expect(moderationEventSchema.safeParse(event).success).toBe(true);
+  it("parses every type and rejects a mismatched payload", () => {
+    for (const type of [
+      "content.hide",
+      "content.remove",
+      "content.restore",
+      "user.suspend",
+      "user.ban",
+      "user.restore",
+    ] as const) {
+      expect(
+        parseMessage(JSON.stringify(buildMessage({ type }))),
+      ).not.toBeNull();
     }
-  });
-
-  it("covers every event type with a sample", () => {
-    const sampled = new Set(Object.values(SAMPLE_EVENTS).map((e) => e.type));
-    for (const type of MODERATION_EVENT_TYPES) expect(sampled).toContain(type);
-  });
-
-  it("refuses an unknown type and a malformed owner", () => {
+    expect(parseMessage("not json")).toBeNull();
     expect(
-      moderationEventSchema.safeParse({ ...SAMPLE_EVENTS.hide, type: "nope" })
-        .success,
-    ).toBe(false);
+      parseMessage(
+        JSON.stringify({
+          type: "content.hide",
+          timestamp: new Date().toISOString(),
+          data: { userId: SAMPLE_USER_ID, reason: null, reportId: null },
+        }),
+      ),
+    ).toBeNull();
     expect(
-      moderationEventSchema.safeParse({
-        ...SAMPLE_EVENTS.hide,
-        data: { ...SAMPLE_EVENTS.hide.data, ownerId: "not-a-uuid" },
-      }).success,
-    ).toBe(false);
+      parseMessage(
+        JSON.stringify({
+          ...buildMessage({ type: "content.hide" }),
+          type: "content.nuke",
+        }),
+      ),
+    ).toBeNull();
   });
 
-  it("keys ordering by subject", () => {
-    expect(subjectOf(SAMPLE_EVENTS.hide)).toBe("content:session:session-1");
-    expect(subjectOf(SAMPLE_EVENTS.restore)).toBe("content:session:session-1");
-    expect(subjectOf(SAMPLE_EVENTS.suspend)).toBe(
-      `user:${SAMPLE_EVENTS.unsuspend.data.userId}`,
+  it("keys content and users apart", () => {
+    expect(itemKey(buildMessage({ type: "content.hide" }))).toBe(
+      `content:${SAMPLE_CONTENT.contentType}:${SAMPLE_CONTENT.contentRef}`,
     );
-    expect(subjectOf(SAMPLE_EVENTS.ping)).toBeNull();
+    expect(itemKey(buildMessage({ type: "user.ban" }))).toBe(
+      `user:${SAMPLE_USER_ID}`,
+    );
   });
 
-  it("validates a report", () => {
-    const report = {
-      contentType: "session",
-      contentId: "s1",
-      ownerId: "11111111-1111-4111-8111-111111111111",
-      reporterId: "22222222-2222-4222-8222-222222222222",
-      reason: "spam",
-      snapshot: { title: "Study group" },
-    };
-    expect(moderationReportSchema.safeParse(report).success).toBe(true);
-    expect(
-      moderationReportSchema.safeParse({ ...report, reason: "boring" }).success,
-    ).toBe(false);
-    expect(
-      moderationReportSchema.safeParse({ ...report, details: "x".repeat(1001) })
-        .success,
-    ).toBe(false);
+  it("exports JSON Schema for the spec package", () => {
+    const schemas = moderationJsonSchemas();
+    expect(Object.keys(schemas).sort()).toEqual([
+      "ModerationMessage",
+      "ReportError",
+      "ReportRequest",
+      "ReportResponse",
+    ]);
+    expect(schemas.ReportRequest.required).toContain("reporterUserId");
   });
 });
 
 describe("the reference receiver", () => {
-  const options = { now: SAMPLE_NOW };
-
-  function setup() {
-    const store = createMemoryReceiverStore();
-    const applied: ModerationEvent[] = [];
-    const receiver = createReferenceReceiver({
+  it("passes the conformance sequence: applied once, a replay ignored, an out-of-order message ignored", async () => {
+    const store = createMemoryStore();
+    const receiver = createReceiver({
       secret: SAMPLE_SECRET,
       store,
-      apply: (event) => void applied.push(event),
-      verify: options,
+      verify: { now: Math.floor(Date.now() / 1000) },
     });
-    return { store, applied, receiver };
-  }
 
-  it("applies a signed event once and ignores its replay", async () => {
-    const { receiver, applied } = setup();
-    const hide = await signSample("hide");
-
-    const first = await receiver.handle(hide.headers, hide.body);
-    expect(first).toMatchObject({ httpStatus: 200, outcome: { status: "applied" } });
-
-    const replay = await receiver.handle(hide.headers, hide.body);
-    expect(replay).toMatchObject({
-      httpStatus: 200,
-      outcome: { status: "duplicate", id: "msg_sample_hide" },
-    });
-    expect(applied).toHaveLength(1);
-  });
-
-  it("ignores an event decided before the last one applied to the same subject", async () => {
-    const { receiver, applied } = setup();
-    const hide = await signSample("hide");
-    const older = await signSample("restoreOlder");
-
-    await receiver.handle(hide.headers, hide.body);
-    const late = await receiver.handle(older.headers, older.body);
-    expect(late).toMatchObject({ httpStatus: 200, outcome: { status: "stale" } });
-    expect(applied.map((e) => e.id)).toEqual(["msg_sample_hide"]);
-
-    // A genuinely newer decision on the same subject still applies.
-    const newer = await signSample("restore");
-    expect(await receiver.handle(newer.headers, newer.body)).toMatchObject({
-      outcome: { status: "applied" },
-    });
-  });
-
-  it("acknowledges a ping without applying it", async () => {
-    const { receiver, applied } = setup();
-    const ping = await signSample("ping");
-    expect(await receiver.handle(ping.headers, ping.body)).toMatchObject({
-      httpStatus: 200,
-      outcome: { status: "pinged" },
-    });
-    expect(applied).toHaveLength(0);
-  });
-
-  it("answers 401 to a bad signature and 400 to a signed body that is not an event", async () => {
-    const { receiver, applied } = setup();
-    const hide = await signSample("hide");
-    expect(
-      await receiver.handle(hide.headers, `${hide.body} `),
-    ).toMatchObject({ httpStatus: 401 });
-
-    const body = '{"not":"an event"}';
-    const headers = await signedHeaders(SAMPLE_SECRET, "msg_x", body, options);
-    expect(await receiver.handle(headers, body)).toMatchObject({
-      httpStatus: 400,
-      outcome: { status: "malformed" },
-    });
-    const text = "not json";
-    const textHeaders = await signedHeaders(SAMPLE_SECRET, "msg_y", text, options);
-    expect(await receiver.handle(textHeaders, text)).toMatchObject({
-      httpStatus: 400,
-    });
-    expect(applied).toHaveLength(0);
-  });
-
-  it("round-trips every sample through the receiver", async () => {
-    const { receiver, store } = setup();
-    for (const sample of await signedSamples()) {
-      const result = await receiver.handle(sample.headers, sample.body);
-      expect(result.httpStatus).toBe(200);
+    const samples = await signedSamples();
+    const outcomes: string[] = [];
+    for (const sample of samples) {
+      const response = await receiver.handle(sample.headers, sample.body);
+      expect(response.status).toBe(200);
+      outcomes.push(response.outcome ?? "none");
+      expect(response.outcome, sample.name).toBe(sample.expected);
     }
-    expect(store.messages.size).toBe(Object.keys(SAMPLE_EVENTS).length);
+    expect(outcomes).toEqual([
+      "applied",
+      "duplicate",
+      "stale",
+      "applied",
+      "applied",
+      "stale",
+    ]);
+
+    // The hide was applied once, then undone only by the newer restore.
+    expect(store.applied.map((m) => m.type)).toEqual([
+      "content.hide",
+      "content.restore",
+      "user.suspend",
+    ]);
+    expect(
+      store.content.get(
+        `${SAMPLE_CONTENT.contentType}:${SAMPLE_CONTENT.contentRef}`,
+      ),
+    ).toBe("visible");
+    expect(store.users.get(SAMPLE_USER_ID)).toBe("suspended");
+  });
+
+  it("refuses an unsigned or mis-signed request without touching the store", async () => {
+    const store = createMemoryStore();
+    const receiver = createReceiver({ secret: SAMPLE_SECRET, store });
+    const [hide] = await signedSamples();
+    expect((await receiver.handle({}, hide!.body)).status).toBe(401);
+    expect(
+      (
+        await receiver.handle(
+          { ...hide!.headers, "webhook-signature": "v1,AAAA" },
+          hide!.body,
+        )
+      ).status,
+    ).toBe(401);
+    expect(store.applied).toHaveLength(0);
+  });
+
+  it("answers 400 for a signed body that is not a moderation message", async () => {
+    const receiver = createReceiver({
+      secret: SAMPLE_SECRET,
+      store: createMemoryStore(),
+    });
+    const headers = await signMessage(SAMPLE_SECRET, '{"hello":1}');
+    expect(await receiver.handle(headers, '{"hello":1}')).toEqual({
+      status: 400,
+      error: "invalid_body",
+    });
+  });
+
+  it("serves the same contract as a fetch handler", async () => {
+    const receiver = createReceiver({
+      secret: SAMPLE_SECRET,
+      store: createMemoryStore(),
+    });
+    const [hide] = await signedSamples();
+    const response = await receiver.fetch(
+      new Request("https://app.test/platform-moderation", {
+        method: "POST",
+        headers: hide!.headers,
+        body: hide!.body,
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ outcome: "applied" });
+    expect(
+      (
+        await receiver.fetch(
+          new Request("https://app.test/x", { method: "GET" }),
+        )
+      ).status,
+    ).toBe(405);
+  });
+
+  it("treats a replayed stale message as a duplicate, not stale twice", async () => {
+    const store = createMemoryStore();
+    await applyModerationEvent(
+      store,
+      "m1",
+      buildMessage({
+        type: "content.hide",
+        timestamp: "2027-01-01T00:00:10.000Z",
+      }),
+    );
+    const old = buildMessage({
+      type: "content.restore",
+      timestamp: "2027-01-01T00:00:00.000Z",
+    });
+    expect(await applyModerationEvent(store, "m2", old)).toBe("stale");
+    expect(await applyModerationEvent(store, "m2", old)).toBe("duplicate");
+  });
+});
+
+describe("the report client", () => {
+  const request = {
+    reporterUserId: "00000000-0000-4000-8000-0000000000c1",
+    authorUserId: SAMPLE_USER_ID,
+    contentType: "session",
+    contentRef: "s-1",
+    contentSnapshot: "a session title",
+    reason: "spam",
+  } as const;
+
+  it("signs the exact body it sends and names its client", async () => {
+    const secret = generateSecret();
+    let seen: { url: string; headers: Headers; body: string } | undefined;
+    const client = createModerationClient({
+      baseUrl: "https://api-staging.devdogsuga.org/",
+      clientId: "client-1",
+      secret,
+      fetch: (input, init) => {
+        seen = {
+          url: input as string,
+          headers: new Headers(init?.headers),
+          body: init?.body as string,
+        };
+        return Promise.resolve(
+          Response.json({
+            reportId: "00000000-0000-4000-8000-0000000000d1",
+            corroborated: false,
+            sandbox: true,
+          }),
+        );
+      },
+    });
+    const result = await client.fileReport(request);
+    expect(result.sandbox).toBe(true);
+    expect(seen?.url).toBe(
+      "https://api-staging.devdogsuga.org/moderation/v1/reports",
+    );
+    expect(seen?.headers.get(CLIENT_ID_HEADER)).toBe("client-1");
+    expect((await verifyMessage(secret, seen!.headers, seen!.body)).ok).toBe(
+      true,
+    );
+    expect(REASONS_PATH).toBe("/moderation/v1/reasons");
+  });
+
+  it("throws the platform's error code on a refusal", async () => {
+    const client = createModerationClient({
+      baseUrl: "https://api.test",
+      clientId: "c",
+      secret: generateSecret(),
+      fetch: () =>
+        Promise.resolve(
+          Response.json(
+            { error: { code: "rate_limited", message: "Too many reports" } },
+            { status: 429 },
+          ),
+        ),
+    });
+    await expect(client.fileReport(request)).rejects.toMatchObject({
+      status: 429,
+      code: "rate_limited",
+    });
+    await expect(client.fileReport(request)).rejects.toBeInstanceOf(
+      ReportRejectedError,
+    );
+  });
+
+  it("refuses a malformed report before sending anything", async () => {
+    const client = createModerationClient({
+      baseUrl: "https://api.test",
+      clientId: "c",
+      secret: generateSecret(),
+      fetch: () => {
+        throw new Error("must not be called");
+      },
+    });
+    await expect(
+      client.fileReport({ ...request, reason: "nope" as never }),
+    ).rejects.toThrow();
   });
 });

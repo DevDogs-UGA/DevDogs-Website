@@ -1,168 +1,165 @@
+/**
+ * The moderation wire format: what an app sends to `/moderation/v1/reports`
+ * and what the platform delivers back after a moderator decides.
+ *
+ * zod is the source. `moderationJsonSchemas()` exports the same shapes as JSON
+ * Schema for the spec package, so the two cannot drift.
+ */
 import { z } from "zod";
 
-/**
- * The moderation protocol: what an app files with the platform (a report) and
- * what the platform sends back after a moderator decides (an event).
- *
- * These schemas are the source. `@devdogsuga/sdk-spec` exports them as JSON
- * Schema (`moderation/schema.json`) and the Dart SDK's models are generated
- * from that file, so a change here that is not regenerated fails the drift
- * check.
- *
- * Both directions travel as Standard Webhooks messages (see `./signing.ts`):
- * `webhook-id`, `webhook-timestamp` and `webhook-signature` headers over the
- * raw JSON body, HMAC-SHA256, one signing secret per OAuth client.
- */
+// ── Reports (app to platform) ────────────────────────────────────────────────
 
-/** Bumped only for a breaking change to a message shape. */
-export const MODERATION_PROTOCOL_VERSION = 1;
-
-/** The paths the platform serves, under the platform Worker's origin. */
-export const MODERATION_API_BASE_PATH = "/moderation/v1";
-
-/** A platform user id: the `sub` of the DevDogs identity. */
-const platformUserId = z.uuid();
-
-/** Why a user reported something. */
+/** Mirrors the platform's `reportReason` enum. */
 export const REPORT_REASONS = [
-  "spam",
   "harassment",
-  "inappropriate",
-  "safety",
+  "hate_speech",
+  "spam",
+  "sexual_content",
+  "violence",
+  "impersonation",
+  "off_topic",
   "other",
 ] as const;
 
 export const reportReasonSchema = z.enum(REPORT_REASONS);
+export type ReportReason = z.infer<typeof reportReasonSchema>;
 
 /**
- * A report, filed by an app over HTTPS: the content as it was when the
- * reporter saw it (`snapshot`), who wrote it (`ownerId`), who reported it
- * (`reporterId`, the reporter's platform user id).
+ * A content type is the app's own name for a kind of thing a member can write
+ * (`session`, `profile`). Registered per app on the platform; a report naming
+ * an unregistered one is refused.
  */
-export const moderationReportSchema = z.object({
-  /** What kind of thing is reported, in the app's own words: `session`. */
-  contentType: z.string().min(1).max(64),
-  /** The app's id for it. Opaque to the platform. */
-  contentId: z.string().min(1).max(128),
-  ownerId: platformUserId,
-  reporterId: platformUserId,
+export const contentTypeSchema = z
+  .string()
+  .regex(/^[a-z][a-z0-9_]{0,62}$/, "lowercase letters, digits and underscores");
+
+export const reportRequestSchema = z.object({
+  /** The platform user id of the member filing the report. */
+  reporterUserId: z.uuid(),
+  /** The platform user id of the member who wrote the content. */
+  authorUserId: z.uuid(),
+  contentType: contentTypeSchema,
+  /** The app's own id for the row; opaque to the platform. */
+  contentRef: z.string().min(1).max(256),
+  /** What the content said when it was reported. Frozen on the report. */
+  contentSnapshot: z.string().min(1).max(5000),
+  contentUrl: z.url().max(2000).nullish(),
   reason: reportReasonSchema,
-  details: z.string().max(1000).optional(),
-  /** The content as reported. Small, flat and JSON: the console shows it. */
-  snapshot: z.record(z.string(), z.unknown()),
-  /** When the reporter filed it, if the app queued it. Defaults to receipt. */
-  reportedAt: z.iso.datetime().optional(),
+  description: z.string().max(1000).nullish(),
 });
+export type ReportRequest = z.infer<typeof reportRequestSchema>;
 
-export type ModerationReport = z.infer<typeof moderationReportSchema>;
-
-/** What the platform answers a report with. */
-export const moderationReportReceiptSchema = z.object({
-  reportId: z.string().min(1),
-  status: z.literal("received"),
+export const reportResponseSchema = z.object({
+  reportId: z.uuid(),
+  /** True when an open report already existed and this one was added to it. */
+  corroborated: z.boolean(),
+  /** True when the client is a development client: only its owner sees it. */
+  sandbox: z.boolean(),
 });
+export type ReportResponse = z.infer<typeof reportResponseSchema>;
 
-export type ModerationReportReceipt = z.infer<
-  typeof moderationReportReceiptSchema
->;
+export const REPORT_ERROR_CODES = [
+  "invalid_json",
+  "invalid_request",
+  "missing_client",
+  "unknown_client",
+  "bad_signature",
+  "unknown_content_type",
+  "unknown_user",
+  "reporter_not_allowed",
+  "rate_limited",
+  "not_configured",
+] as const;
 
-const eventBase = {
-  /** The message id. The receiver records it, so a redelivery applies once. */
-  id: z.string().min(1).max(128),
-  /**
-   * When the moderator decided. A receiver ignores an event older than the
-   * last decision it applied to the same subject, so a late retry cannot
-   * undo a newer decision.
-   */
-  occurredAt: z.iso.datetime(),
-};
-
-const contentEventData = z.object({
-  contentType: z.string().min(1).max(64),
-  contentId: z.string().min(1).max(128),
-  ownerId: platformUserId,
-  reportId: z.string().min(1).optional(),
-  reason: z.string().max(500).optional(),
+export const reportErrorSchema = z.object({
+  error: z.object({
+    code: z.enum(REPORT_ERROR_CODES),
+    message: z.string(),
+  }),
 });
+export type ReportError = z.infer<typeof reportErrorSchema>;
 
-/** Hide or remove sets the content's `quarantinedBy`; restore clears it. */
-export const contentEventSchema = z.discriminatedUnion("type", [
-  z.object({
-    ...eventBase,
-    type: z.literal("content.hide"),
-    data: contentEventData,
-  }),
-  z.object({
-    ...eventBase,
-    type: z.literal("content.remove"),
-    data: contentEventData,
-  }),
-  z.object({
-    ...eventBase,
-    type: z.literal("content.restore"),
-    data: contentEventData,
-  }),
-]);
+// ── Deliveries (platform to app) ─────────────────────────────────────────────
 
-export const userEventSchema = z.discriminatedUnion("type", [
-  z.object({
-    ...eventBase,
-    type: z.literal("user.suspend"),
-    data: z.object({
-      userId: platformUserId,
-      /** Null: until a moderator lifts it. */
-      until: z.iso.datetime().nullable(),
-      reason: z.string().max(500).optional(),
-    }),
-  }),
-  z.object({
-    ...eventBase,
-    type: z.literal("user.unsuspend"),
-    data: z.object({ userId: platformUserId }),
-  }),
-]);
-
-/** The console's "Send test action": proves the pipe end to end. */
-export const pingEventSchema = z.object({
-  ...eventBase,
-  type: z.literal("ping"),
-  data: z.object({}),
-});
-
-export const moderationEventSchema = z.union([
-  contentEventSchema,
-  userEventSchema,
-  pingEventSchema,
-]);
-
-export type ModerationEvent = z.infer<typeof moderationEventSchema>;
-export type ModerationEventType = ModerationEvent["type"];
-
-/** Every event type, in the order the console lists them. */
-export const MODERATION_EVENT_TYPES = [
+export const CONTENT_MESSAGE_TYPES = [
   "content.hide",
   "content.remove",
   "content.restore",
+] as const;
+export const USER_MESSAGE_TYPES = [
   "user.suspend",
-  "user.unsuspend",
-  "ping",
-] as const satisfies readonly ModerationEventType[];
+  "user.ban",
+  "user.restore",
+] as const;
+export const MESSAGE_TYPES = [
+  ...CONTENT_MESSAGE_TYPES,
+  ...USER_MESSAGE_TYPES,
+] as const;
+
+export const contentMessageSchema = z.object({
+  type: z.enum(CONTENT_MESSAGE_TYPES),
+  /** When the moderator decided, ISO 8601. The ordering key. */
+  timestamp: z.iso.datetime(),
+  data: z.object({
+    contentType: contentTypeSchema,
+    contentRef: z.string().min(1).max(256),
+    reportId: z.uuid().nullable(),
+  }),
+});
+
+export const userMessageSchema = z.object({
+  type: z.enum(USER_MESSAGE_TYPES),
+  timestamp: z.iso.datetime(),
+  data: z.object({
+    /** The platform user id. Maps to the app's user through the identity. */
+    userId: z.uuid(),
+    reason: z.string().max(1000).nullable(),
+    reportId: z.uuid().nullable(),
+  }),
+});
+
+export const moderationMessageSchema = z.union([
+  contentMessageSchema,
+  userMessageSchema,
+]);
+export type ModerationMessage = z.infer<typeof moderationMessageSchema>;
+export type ContentMessage = z.infer<typeof contentMessageSchema>;
+export type UserMessage = z.infer<typeof userMessageSchema>;
+export type MessageType = (typeof MESSAGE_TYPES)[number];
+
+export function isContentMessage(
+  message: ModerationMessage,
+): message is ContentMessage {
+  return message.type.startsWith("content.");
+}
 
 /**
- * What an event is about, for ordering: two events with the same subject are
- * ordered by `occurredAt`; events about different subjects never conflict.
- * `ping` has no subject.
+ * What a message is about, for ordering: a decision on one item is only
+ * "older" than another decision on the same item.
  */
-export function subjectOf(event: ModerationEvent): string | null {
-  switch (event.type) {
-    case "content.hide":
-    case "content.remove":
-    case "content.restore":
-      return `content:${event.data.contentType}:${event.data.contentId}`;
-    case "user.suspend":
-    case "user.unsuspend":
-      return `user:${event.data.userId}`;
-    case "ping":
-      return null;
+export function itemKey(message: ModerationMessage): string {
+  return isContentMessage(message)
+    ? `content:${message.data.contentType}:${message.data.contentRef}`
+    : `user:${message.data.userId}`;
+}
+
+export function parseMessage(body: string): ModerationMessage | null {
+  let json: unknown;
+  try {
+    json = JSON.parse(body);
+  } catch {
+    return null;
   }
+  const parsed = moderationMessageSchema.safeParse(json);
+  return parsed.success ? parsed.data : null;
+}
+
+/** The request and message shapes as JSON Schema, for the spec package. */
+export function moderationJsonSchemas() {
+  return {
+    ReportRequest: z.toJSONSchema(reportRequestSchema),
+    ReportResponse: z.toJSONSchema(reportResponseSchema),
+    ReportError: z.toJSONSchema(reportErrorSchema),
+    ModerationMessage: z.toJSONSchema(moderationMessageSchema),
+  };
 }

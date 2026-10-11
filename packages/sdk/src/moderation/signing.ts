@@ -1,208 +1,204 @@
 /**
- * Standard Webhooks signing and verification (https://www.standardwebhooks.com/).
+ * Standard Webhooks signing, in both directions.
  *
- * Both directions of the moderation protocol use it: the platform signs the
- * events it delivers, and an app signs the reports it files. One signing
- * secret per OAuth client serves both.
+ * The platform signs every moderation delivery it sends to an app, and an app
+ * signs every report it files with the platform, with the same per-client
+ * secret and the same scheme (https://www.standardwebhooks.com/):
  *
- * Only Web Crypto and `TextEncoder` are used, so the same code runs in a
- * Cloudflare Worker, a Supabase Edge Function (Deno) and Node. Signing stays
- * TypeScript-only: the Dart SDK carries the message models but no signer.
+ * - `webhook-id`: unique per message; receivers dedupe on it.
+ * - `webhook-timestamp`: unix seconds; anything more than five minutes from
+ *   the receiver's clock is rejected.
+ * - `webhook-signature`: `v1,<base64 HMAC-SHA256>` over
+ *   `<id>.<timestamp>.<raw body>`, space-separated when more than one secret
+ *   is valid at once.
+ *
+ * Web Crypto only (no Node imports), so the same file runs in a Cloudflare
+ * Worker, a Supabase Edge Function (Deno) and Node. Verification goes through
+ * `crypto.subtle.verify`, which compares in constant time.
  */
 
-/** The three headers a signed message carries. */
-export const WEBHOOK_ID_HEADER = "webhook-id";
-export const WEBHOOK_TIMESTAMP_HEADER = "webhook-timestamp";
-export const WEBHOOK_SIGNATURE_HEADER = "webhook-signature";
+export const SECRET_PREFIX = "whsec_";
+export const TIMESTAMP_TOLERANCE_SECONDS = 300;
 
-/** A message older (or newer) than this many seconds is rejected. */
-export const WEBHOOK_TOLERANCE_SECONDS = 5 * 60;
+export const WEBHOOK_ID = "webhook-id";
+export const WEBHOOK_TIMESTAMP = "webhook-timestamp";
+export const WEBHOOK_SIGNATURE = "webhook-signature";
 
-const SECRET_PREFIX = "whsec_";
-
+// A type alias, not an interface: only an alias is assignable to the
+// `Record<string, ...>` a header bag is.
 export type SignedHeaders = {
-  [WEBHOOK_ID_HEADER]: string;
-  [WEBHOOK_TIMESTAMP_HEADER]: string;
-  [WEBHOOK_SIGNATURE_HEADER]: string;
+  [WEBHOOK_ID]: string;
+  [WEBHOOK_TIMESTAMP]: string;
+  [WEBHOOK_SIGNATURE]: string;
 };
 
-export class WebhookVerificationError extends Error {
-  constructor(
-    readonly reason:
-      | "missing-headers"
-      | "bad-timestamp"
-      | "timestamp-too-old"
-      | "timestamp-too-new"
-      | "no-valid-signature",
-    message: string,
-  ) {
-    super(message);
-    this.name = "WebhookVerificationError";
-  }
-}
+export type HeaderSource =
+  Headers | Readonly<Record<string, string | null | undefined>>;
 
-function base64ToBytes(value: string): Uint8Array<ArrayBuffer> {
-  const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
+export type VerifyFailure =
+  "missing_headers" | "bad_timestamp" | "expired" | "bad_signature";
 
-function bytesToBase64(bytes: Uint8Array): string {
+export type VerifyResult =
+  | { ok: true; id: string; timestamp: number }
+  | { ok: false; reason: VerifyFailure };
+
+const encoder = new TextEncoder();
+
+function toBase64(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary);
 }
 
-/** The key bytes of a `whsec_<base64>` secret (a bare base64 key also works). */
-function keyBytes(secret: string): Uint8Array<ArrayBuffer> {
-  return base64ToBytes(
-    secret.startsWith(SECRET_PREFIX) ? secret.slice(SECRET_PREFIX.length) : secret,
-  );
+function fromBase64(value: string): Uint8Array<ArrayBuffer> | null {
+  try {
+    const binary = atob(value);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  } catch {
+    return null;
+  }
 }
 
-/** A fresh signing secret: 24 random bytes, `whsec_` plus base64. */
-export function generateSigningSecret(): string {
-  return `${SECRET_PREFIX}${bytesToBase64(crypto.getRandomValues(new Uint8Array(24)))}`;
+/** The `whsec_` form of raw key bytes. */
+export function secretFromBytes(bytes: Uint8Array): string {
+  return `${SECRET_PREFIX}${toBase64(bytes)}`;
 }
 
-async function hmac(secret: string, content: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
+/** A fresh `whsec_` secret: 32 random bytes, base64. */
+export function generateSecret(): string {
+  return secretFromBytes(crypto.getRandomValues(new Uint8Array(32)));
+}
+
+/** The raw key bytes of a `whsec_` secret (the prefix is optional). */
+export function secretBytes(secret: string): Uint8Array<ArrayBuffer> {
+  const raw = secret.startsWith(SECRET_PREFIX)
+    ? secret.slice(SECRET_PREFIX.length)
+    : secret;
+  const bytes = fromBase64(raw);
+  if (!bytes || bytes.length === 0) {
+    throw new Error("The signing secret is not a base64 value");
+  }
+  return bytes;
+}
+
+async function hmacKey(
+  secret: string,
+  usage: "sign" | "verify",
+): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
     "raw",
-    keyBytes(secret),
+    secretBytes(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"],
+    [usage],
   );
-  const signature = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(content),
-  );
-  return bytesToBase64(new Uint8Array(signature));
 }
 
-/** The `webhook-signature` value for a message: `v1,<base64 HMAC>`. */
-export async function signMessage(
+function signedContent(id: string, timestamp: string, body: string): string {
+  return `${id}.${timestamp}.${body}`;
+}
+
+/** `v1,<base64>` for one message. */
+export async function computeSignature(
   secret: string,
-  messageId: string,
-  timestampSeconds: number,
+  id: string,
+  timestamp: number | string,
   body: string,
 ): Promise<string> {
-  const signature = await hmac(
-    secret,
-    `${messageId}.${timestampSeconds}.${body}`,
+  const key = await hmacKey(secret, "sign");
+  const mac = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(signedContent(id, String(timestamp), body)),
   );
-  return `v1,${signature}`;
+  return `v1,${toBase64(new Uint8Array(mac))}`;
 }
 
-/** The three headers to send with `body`. */
-export async function signedHeaders(
+export interface SignOptions {
+  /** The message id. Defaults to `msg_` plus a random UUID. */
+  id?: string;
+  /** Unix seconds. Defaults to now. */
+  timestamp?: number;
+}
+
+/** The three headers that authenticate `body`. */
+export async function signMessage(
   secret: string,
-  messageId: string,
   body: string,
-  options: { now?: Date } = {},
+  options: SignOptions = {},
 ): Promise<SignedHeaders> {
-  const timestamp = Math.floor((options.now ?? new Date()).getTime() / 1000);
+  const id = options.id ?? `msg_${crypto.randomUUID()}`;
+  const timestamp = options.timestamp ?? Math.floor(Date.now() / 1000);
   return {
-    [WEBHOOK_ID_HEADER]: messageId,
-    [WEBHOOK_TIMESTAMP_HEADER]: String(timestamp),
-    [WEBHOOK_SIGNATURE_HEADER]: await signMessage(
-      secret,
-      messageId,
-      timestamp,
-      body,
-    ),
+    [WEBHOOK_ID]: id,
+    [WEBHOOK_TIMESTAMP]: String(timestamp),
+    [WEBHOOK_SIGNATURE]: await computeSignature(secret, id, timestamp, body),
   };
 }
 
-/** Constant-time comparison of two equal-purpose strings. */
-function safeEqual(a: string, b: string): boolean {
-  const left = new TextEncoder().encode(a);
-  const right = new TextEncoder().encode(b);
-  let diff = left.length ^ right.length;
-  const length = Math.max(left.length, right.length);
-  for (let i = 0; i < length; i++) diff |= (left[i] ?? 0) ^ (right[i] ?? 0);
-  return diff === 0;
-}
-
-type HeaderSource =
-  | Headers
-  | Record<string, string | string[] | undefined>;
-
-function readHeader(headers: HeaderSource, name: string): string | undefined {
-  if (headers instanceof Headers) return headers.get(name) ?? undefined;
-  for (const [key, value] of Object.entries(headers)) {
-    if (key.toLowerCase() !== name) continue;
-    return Array.isArray(value) ? value.join(" ") : value;
+function readHeader(source: HeaderSource, name: string): string | null {
+  if (source instanceof Headers) return source.get(name);
+  const wanted = name.toLowerCase();
+  for (const [key, value] of Object.entries(source)) {
+    if (key.toLowerCase() === wanted) return value ?? null;
   }
-  return undefined;
+  return null;
 }
 
 export interface VerifyOptions {
-  /** The current time; tests pass a fixed one. */
-  now?: Date;
-  /** Seconds either side of `now`. Defaults to {@link WEBHOOK_TOLERANCE_SECONDS}. */
+  /** Unix seconds, for tests. Defaults to now. */
+  now?: number;
+  /** Defaults to {@link TIMESTAMP_TOLERANCE_SECONDS}. */
   toleranceSeconds?: number;
 }
 
 /**
- * Checks a message's headers against its raw `body` and returns the message
- * id. Throws {@link WebhookVerificationError} for a missing header, a
- * timestamp outside the tolerance, or no matching `v1` signature.
+ * Checks `body` against its headers.
  *
- * `body` must be the exact bytes received, as text: parsing and
- * re-serialising the JSON changes the signature.
+ * `secrets` can be a list so a receiver can accept the old and new secret
+ * together while one is being rotated; any match passes.
  */
 export async function verifyMessage(
-  secret: string,
+  secrets: string | readonly string[],
   headers: HeaderSource,
   body: string,
   options: VerifyOptions = {},
-): Promise<string> {
-  const id = readHeader(headers, WEBHOOK_ID_HEADER);
-  const timestampHeader = readHeader(headers, WEBHOOK_TIMESTAMP_HEADER);
-  const signatureHeader = readHeader(headers, WEBHOOK_SIGNATURE_HEADER);
-  if (!id || !timestampHeader || !signatureHeader) {
-    throw new WebhookVerificationError(
-      "missing-headers",
-      "Missing webhook-id, webhook-timestamp or webhook-signature.",
-    );
+): Promise<VerifyResult> {
+  const id = readHeader(headers, WEBHOOK_ID);
+  const rawTimestamp = readHeader(headers, WEBHOOK_TIMESTAMP);
+  const signatureHeader = readHeader(headers, WEBHOOK_SIGNATURE);
+  if (!id || !rawTimestamp || !signatureHeader) {
+    return { ok: false, reason: "missing_headers" };
   }
 
-  const timestamp = Number(timestampHeader);
-  if (!Number.isInteger(timestamp)) {
-    throw new WebhookVerificationError(
-      "bad-timestamp",
-      "The webhook-timestamp is not an integer number of seconds.",
-    );
+  if (!/^\d{1,12}$/.test(rawTimestamp)) {
+    return { ok: false, reason: "bad_timestamp" };
   }
-  const nowSeconds = Math.floor((options.now ?? new Date()).getTime() / 1000);
-  const tolerance = options.toleranceSeconds ?? WEBHOOK_TOLERANCE_SECONDS;
-  if (nowSeconds - timestamp > tolerance) {
-    throw new WebhookVerificationError(
-      "timestamp-too-old",
-      "The message is older than the tolerance.",
-    );
-  }
-  if (timestamp - nowSeconds > tolerance) {
-    throw new WebhookVerificationError(
-      "timestamp-too-new",
-      "The message is dated in the future.",
-    );
+  const timestamp = Number(rawTimestamp);
+  const now = options.now ?? Math.floor(Date.now() / 1000);
+  const tolerance = options.toleranceSeconds ?? TIMESTAMP_TOLERANCE_SECONDS;
+  if (Math.abs(now - timestamp) > tolerance) {
+    return { ok: false, reason: "expired" };
   }
 
-  const expected = (await signMessage(secret, id, timestamp, body)).slice(3);
-  // The header may carry several signatures, space-delimited, while a secret
-  // rotates. Only `v1` is understood.
-  for (const candidate of signatureHeader.split(" ")) {
-    const [version, signature] = candidate.split(",", 2);
-    if (version === "v1" && signature && safeEqual(signature, expected)) {
-      return id;
+  const candidates = signatureHeader
+    .split(" ")
+    .map((part) => part.trim())
+    .filter((part) => part.startsWith("v1,"))
+    .map((part) => fromBase64(part.slice(3)))
+    .filter((bytes): bytes is Uint8Array<ArrayBuffer> => bytes !== null);
+  if (candidates.length === 0) return { ok: false, reason: "bad_signature" };
+
+  const content = encoder.encode(signedContent(id, rawTimestamp, body));
+  for (const secret of typeof secrets === "string" ? [secrets] : secrets) {
+    const key = await hmacKey(secret, "verify");
+    for (const candidate of candidates) {
+      if (await crypto.subtle.verify("HMAC", key, candidate, content)) {
+        return { ok: true, id, timestamp };
+      }
     }
   }
-  throw new WebhookVerificationError(
-    "no-valid-signature",
-    "No signature matched.",
-  );
+  return { ok: false, reason: "bad_signature" };
 }
