@@ -1,6 +1,5 @@
 CREATE TABLE "schedule_builder"."userPreferences" (
   "userId"                uuid    NOT NULL,
-  "currentAcademicPeriod" integer,
   CONSTRAINT "userPreferences_pkey" PRIMARY KEY ("userId")
 );
 
