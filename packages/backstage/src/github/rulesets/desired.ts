@@ -41,6 +41,23 @@ export const DESTRUCTIVE_GATE_CHECKS = [
 ] as const;
 
 /**
+ * The destructive gate as a product repository reports it. A product calls
+ * database-pr.yaml and destructive-gate.yaml as reusable workflows, and a
+ * called workflow's job reports as `<caller job> / <called job>`, so the bare
+ * `destructive-sql` and `destructive-gate` can never appear there. Both caller
+ * jobs are named `destructive-gate` (docs/operations/repositories/product-ci.md
+ * has the two workflow files): the pull-request workflow's caller reports
+ * `destructive-gate / destructive-gate` (from destructive-gate.yaml) and the
+ * merge queue's caller reports `destructive-gate / destructive-sql` and, on the
+ * queue only, `destructive-gate / destructive-gate` (from database-pr.yaml), so
+ * the same two required names are satisfied on a pull request and on the queue.
+ */
+export const PRODUCT_DESTRUCTIVE_GATE_CHECKS = [
+  "destructive-gate / destructive-sql",
+  "destructive-gate / destructive-gate",
+] as const;
+
+/**
  * Required status checks per product repository. The product repositories'
  * CI (stage 4) must name its jobs to match; a check that no workflow reports
  * would hold every pull request forever, which is why `backstage github
@@ -50,8 +67,13 @@ export const DESTRUCTIVE_GATE_CHECKS = [
 export const PRODUCT_REQUIRED_CHECKS: Readonly<
   Record<ProductRepo, readonly string[]>
 > = {
-  DogDays: ["validate", "database", ...DESTRUCTIVE_GATE_CHECKS],
-  DogPack: ["validate", "flutter", "database", ...DESTRUCTIVE_GATE_CHECKS],
+  DogDays: ["validate", "database", ...PRODUCT_DESTRUCTIVE_GATE_CHECKS],
+  DogPack: [
+    "validate",
+    "flutter",
+    "database",
+    ...PRODUCT_DESTRUCTIVE_GATE_CHECKS,
+  ],
 };
 
 /** Earlier live names which occupy the same managed slot. */

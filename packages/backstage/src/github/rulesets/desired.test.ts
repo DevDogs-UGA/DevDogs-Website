@@ -391,10 +391,14 @@ describe("buildDesiredRulesets for the product repositories", () => {
         expect(checksOf(repo)).toEqual(
           expect.arrayContaining([
             "validate",
-            "destructive-sql",
-            "destructive-gate",
+            "destructive-gate / destructive-sql",
+            "destructive-gate / destructive-gate",
           ]),
         );
+        // A called workflow's job reports as "<caller job> / <job>": the bare
+        // names can never be satisfied by a product repository.
+        expect(checksOf(repo)).not.toContain("destructive-sql");
+        expect(checksOf(repo)).not.toContain("destructive-gate");
       });
     });
   }

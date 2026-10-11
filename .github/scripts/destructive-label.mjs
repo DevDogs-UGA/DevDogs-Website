@@ -6,10 +6,15 @@
  * is read from the PR's timeline, so who applied it is on record: it is not
  * enough that the label is there.
  *
- * "A devops member" is decided by repository permission. The devops team holds
- * `maintain` on every repository and no other team holds more than `write`
- * (the runbook "Who can approve" says so), so `maintain` or `admin` on the
- * repository is the test. It is read with the job's own `GITHUB_TOKEN`: the
+ * "A devops member" is decided by repository permission, as an approximation:
+ * the devops team holds `maintain` on every repository and the admins team
+ * holds `admin`, so `maintain` or `admin` on the repository is the test, and
+ * it admits members of the admins team who are not on devops. That is
+ * deliberate: an admin can already bypass the rulesets, so the label gate
+ * keeps out everyone BELOW them (focus leads, reviewers, members, bots), not
+ * admins. The production deploy approvals are stricter (the environment
+ * reviewers are the devops team alone). It is read with the job's own
+ * `GITHUB_TOKEN`: the
  * team-membership endpoints need an organization-level token, and a pull
  * request from a fork has none.
  *

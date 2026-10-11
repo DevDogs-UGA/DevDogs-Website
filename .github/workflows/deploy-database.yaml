@@ -226,13 +226,18 @@ jobs:
           --expect-hash "${{ needs.plan-migrations.outputs.hash }}"
           ${{ inputs.include_seed && '--include-seed' || '' }}
 
-  # 2. The declarative diff, computed after the migrations are in.
+  # 2. The declarative diff, computed after the migrations are in. `apply-
+  # migrations` is skipped when nothing is pending (go on) and also when the
+  # destructive approval was rejected (stop): only the first lets the schema
+  # diff be planned, because a diff computed against a target that is missing
+  # a rejected migration would be applied on its own approval.
   plan-schema:
     needs: [plan-migrations, apply-migrations]
     if: >-
       always()
       && needs.plan-migrations.result == 'success'
-      && (needs.apply-migrations.result == 'success' || needs.apply-migrations.result == 'skipped')
+      && (needs.apply-migrations.result == 'success'
+          || (needs.apply-migrations.result == 'skipped' && needs.plan-migrations.outputs.pending == '0'))
     runs-on: ubuntu-latest
     timeout-minutes: 25
     environment: ${{ inputs.plan_environment || inputs.environment }}

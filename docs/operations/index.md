@@ -35,6 +35,7 @@ Everyone else works from a fork. Nobody but the people above can push to the rep
 
 - [Rulesets and signed commits](./repositories/rulesets.md)
 - [Renovate](./repositories/renovate.md)
+- [Product repository CI](./repositories/product-ci.md): the caller job names the product rulesets require.
 - [Owner-only actions](./repositories/owner-actions.md)
 
 **Credentials** (one page per service, with owner, admins and recovery): [overview](./credentials/index.md).

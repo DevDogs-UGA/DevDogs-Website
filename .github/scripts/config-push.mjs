@@ -35,8 +35,15 @@
  *   SECRET_KEY                the project's service-role / secret key (register).
  *   DEVDOGS_OAUTH_CLIENT_ID, DEVDOGS_OAUTH_CLIENT_SECRET
  *                             the product's client on the platform (register).
- *   DEVDOGS_OAUTH_BASE_URL    where the platform's OAuth server lives
- *                             (default `https://api.devdogsuga.org`).
+ *   DEVDOGS_OAUTH_BASE_URL    where the platform's OAuth server lives: the
+ *                             platform's Supabase API origin for THIS
+ *                             environment (staging products point at the
+ *                             staging platform, production at production).
+ *                             Required when the client credentials are set;
+ *                             there is deliberately no default, because the
+ *                             platform's host changes at the vanity switch and
+ *                             a default would register a staging project
+ *                             against production.
  *   SUPABASE_BIN              the CLI; default `supabase`.
  *
  * Usage: node config-push.mjs <push|register> [--dry-run]
@@ -58,7 +65,6 @@ import { isMain } from "./is-main.mjs";
 export const PROVIDER_IDENTIFIER = "custom:devdogsuga";
 export const PROVIDER_NAME = "DevDogs";
 export const PROVIDER_SCOPES = ["openid", "email", "profile"];
-const DEFAULT_PLATFORM_URL = "https://api.devdogsuga.org";
 
 /** @param {string} toml */
 export function envRefs(toml) {
@@ -257,7 +263,12 @@ export async function registerProvider({
     /\/+$/,
     "",
   );
-  const platformUrl = lookup("DEVDOGS_OAUTH_BASE_URL") || DEFAULT_PLATFORM_URL;
+  const platformUrl = lookup("DEVDOGS_OAUTH_BASE_URL");
+  if (!platformUrl) {
+    throw new Error(
+      "register needs DEVDOGS_OAUTH_BASE_URL (a variable of this environment): the platform's Supabase API origin whose discovery document names the issuer. There is no default, so a staging project can never register against production.",
+    );
+  }
   const identifier =
     lookup("DEVDOGS_PROVIDER_IDENTIFIER") || PROVIDER_IDENTIFIER;
 

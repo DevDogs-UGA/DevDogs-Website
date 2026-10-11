@@ -33,7 +33,11 @@ import {
 } from "./destructive-label.mjs";
 import { q39Checks } from "./q39-checks.mjs";
 import { classifySql, splitStatements } from "./sql-classify.mjs";
-import { overrideHeader, runSmoke } from "./worker-smoke.mjs";
+import {
+  overrideHeader,
+  runSmoke,
+  sweepStaleClients,
+} from "./worker-smoke.mjs";
 import { activeVersion, lastUpload } from "./wrangler-version.mjs";
 
 /* ---------- sql-classify ---------- */
@@ -481,7 +485,10 @@ test("the PR check diffs the base's database against the head's", () => {
   });
   const out = join(rt.env.PLAN_DIR, "gh-output");
   rt.env.GITHUB_OUTPUT = out;
-  assert.equal(dbPlanMain(["check", "--base", base], rt, { repoRoot: root }), 0);
+  assert.equal(
+    dbPlanMain(["check", "--base", base], rt, { repoRoot: root }),
+    0,
+  );
   assert.deepEqual(builtFrom, { base: "BASE TREE", head: "HEAD TREE" });
   assert.ok(diffArgs, "the diff ran");
   assert.notEqual(
@@ -515,7 +522,10 @@ test("the PR check handles a base with no supabase/ directory", () => {
         }
       : undefined,
   );
-  assert.equal(dbPlanMain(["check", "--base", base], rt, { repoRoot: root }), 0);
+  assert.equal(
+    dbPlanMain(["check", "--base", base], rt, { repoRoot: root }),
+    0,
+  );
 });
 
 test("db-plan refuses to plan with no DB_URL", () => {
@@ -884,6 +894,17 @@ test("register updates an existing provider, and skips a project with no client"
   assert.equal(none.calls.length, 0);
 });
 
+test("register never guesses the platform: no DEVDOGS_OAUTH_BASE_URL is an error before any request", async () => {
+  const none = scriptedFetch([]);
+  const env = { ...PROVIDER_ENV };
+  delete env.DEVDOGS_OAUTH_BASE_URL;
+  await assert.rejects(
+    registerProvider({ env, fetchImpl: none }),
+    /DEVDOGS_OAUTH_BASE_URL/,
+  );
+  assert.equal(none.calls.length, 0, "nothing was sent anywhere");
+});
+
 test("discoverIssuer refuses a discovery document without an issuer", async () => {
   const fetchImpl = scriptedFetch([
     ["GET", /openid-configuration$/, () => ({ json: {} })],
@@ -1049,8 +1070,15 @@ function oauthFetch({
         headers: { location: authorizeLocation },
       });
     }
-    if (u.pathname === "/oauth/consent")
+    if (u.pathname === "/oauth/consent") {
+      // With an authorization_id the platform sends a visitor to sign in.
+      if (u.searchParams.has("authorization_id"))
+        return new Response(null, {
+          status: 307,
+          headers: { location: "/sign-in" },
+        });
       return new Response("", { status: consentStatus });
+    }
     if (
       u.pathname === "/auth/v1/admin/oauth/clients/cid" &&
       init.method === "DELETE"
@@ -1095,11 +1123,88 @@ test("the authorize checks pass, and the throwaway client is always deleted", as
   });
   assert.deepEqual(
     failed.map((c) => c.ok),
-    [true, false, false, true],
+    [true, false, false, false, true],
   );
   assert.ok(
     bad.calls.includes("DELETE /auth/v1/admin/oauth/clients/cid"),
     "deleted even though checks failed",
+  );
+});
+
+test("the authorize check follows the consent redirect with the version override, and sweeps stale throwaway clients", async () => {
+  const seen = [];
+  const fetchImpl = oauthFetch({
+    authorizeLocation:
+      "https://staging.example.org/oauth/consent?authorization_id=1",
+  });
+  const recording = async (url, init = {}) => {
+    if (new URL(url).pathname === "/oauth/consent")
+      seen.push(init.headers?.["cloudflare-workers-version-overrides"]);
+    return fetchImpl(url, init);
+  };
+  const checks = await runSmoke({
+    smoke: { ...SMOKE, publicPaths: [], protectedPath: undefined },
+    tier: "staging",
+    workerName: "w",
+    versionId: "v1",
+    fetchImpl: recording,
+    authorize: { apiUrl: "https://api.example.org", secretKey: "k" },
+  });
+  assert.ok(checks.some((c) => /consent hand-off/.test(c.name) && c.ok));
+  assert.deepEqual(
+    seen,
+    ['w="v1"', 'w="v1"'],
+    "both consent requests hit the version under test",
+  );
+
+  const now = Date.parse("2026-10-11T12:00:00Z");
+  const deleted = [];
+  const sweep = await sweepStaleClients({
+    api: "https://api.example.org",
+    adminHeaders: {},
+    now,
+    fetchImpl: async (url, init = {}) => {
+      if (init.method === "DELETE") {
+        deleted.push(String(url).split("/").pop());
+        return new Response(null, { status: 204 });
+      }
+      return Response.json({
+        clients: [
+          {
+            client_id: "old",
+            client_name: "deploy smoke (throwaway)",
+            created_at: "2026-10-11T10:00:00Z",
+          },
+          {
+            client_id: "fresh",
+            client_name: "deploy smoke (throwaway)",
+            created_at: "2026-10-11T11:50:00Z",
+          },
+          {
+            client_id: "real",
+            client_name: "DogDays",
+            created_at: "2026-01-01T00:00:00Z",
+          },
+        ],
+      });
+    },
+  });
+  assert.equal(sweep, 1);
+  assert.deepEqual(
+    deleted,
+    ["old"],
+    "only an old client with the throwaway name goes",
+  );
+  assert.equal(
+    await sweepStaleClients({
+      api: "x",
+      adminHeaders: {},
+      fetchImpl: async () => {
+        throw new Error("down");
+      },
+    }),
+    0,
+    "a failing sweep is not a smoke failure",
   );
 });
 

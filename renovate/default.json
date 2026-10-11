@@ -28,11 +28,12 @@
   "enabledManagers": ["npm", "pub", "github-actions", "custom.regex"],
   "customManagers": [
     {
-      "description": "Versions pinned in workflow inputs and scripts with a `# renovate: datasource=<ds> depName=<name>` comment on the line above (the Supabase CLI default in deploy-database.yaml).",
+      "description": "Versions pinned in workflow inputs and scripts with a `# renovate: datasource=<ds> depName=<name>` comment on the line above (the Supabase CLI default in deploy-database.yaml and database-pr.yaml, and the `inputs.x || 'version'` fallback beside it).",
       "customType": "regex",
       "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>[^\\s]+?)\\s+default: (?<currentValue>[^\\s]+)"
+        "# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>[^\\s]+?)\\s+default: (?<currentValue>[^\\s]+)",
+        "# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>[^\\s]+?)\\s+[A-Z_]+: \\$\\{\\{ inputs\\.[a-z_]+ \\|\\| '(?<currentValue>[^']+)' \\}\\}"
       ]
     }
   ],

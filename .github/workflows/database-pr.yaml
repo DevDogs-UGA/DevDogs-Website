@@ -75,6 +75,9 @@ jobs:
       issues: read
     env:
       BASE_SHA: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || github.event.pull_request.base.sha }}
+      # The fallback is for the `pull_request` and `merge_group` runs of this
+      # repository, where `inputs` is empty; Renovate bumps it with the default.
+      # renovate: datasource=npm depName=supabase
       SUPABASE_VERSION: ${{ inputs.supabase_version || '2.117.0' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4

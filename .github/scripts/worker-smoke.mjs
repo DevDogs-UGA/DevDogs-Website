@@ -178,11 +178,12 @@ export async function authorizeChecks({
     authorization: `Bearer ${secretKey}`,
   };
   const redirectUri = "https://example.invalid/smoke/callback";
+  await sweepStaleClients({ api, adminHeaders, fetchImpl });
   const created = await fetchImpl(`${api}/auth/v1/admin/oauth/clients`, {
     method: "POST",
     headers: adminHeaders,
     body: JSON.stringify({
-      client_name: "deploy smoke (throwaway)",
+      client_name: THROWAWAY_NAME,
       redirect_uris: [redirectUri],
       client_type: "public",
     }),
@@ -194,6 +195,7 @@ export async function authorizeChecks({
     ok: created.ok && typeof clientId === "string",
     detail: `status ${created.status}`,
   });
+  let location = "";
   try {
     if (typeof clientId === "string") {
       const verifier = randomBytes(32).toString("base64url");
@@ -213,7 +215,7 @@ export async function authorizeChecks({
         `${api}/auth/v1/oauth/authorize?${params}`,
         { redirect: "manual" },
       );
-      const location = authorize.headers.get("location") ?? "";
+      location = authorize.headers.get("location") ?? "";
       const target = location ? new URL(location, api) : null;
       checks.push({
         name: "authorize redirects to the platform consent page",
@@ -226,6 +228,14 @@ export async function authorizeChecks({
           target.searchParams.has("authorization_id"),
         detail: `status ${authorize.status}, location ${target ? `${target.origin}${target.pathname}` : "(none)"}`,
       });
+    }
+    if (typeof clientId === "string") {
+      // The authorize request above goes to Supabase, which never sees the
+      // version under test. Following its redirect to the consent page does:
+      // `headers` carries the version override, so this is the new build
+      // answering a real authorization_id (a visitor with no session is sent
+      // to sign in; a 404 or a 5xx means the build cannot take the hand-off).
+      checks.push(await followConsent({ base, headers, fetchImpl, location }));
     }
     const consent = await fetchImpl(`${base}/oauth/consent`, {
       redirect: "manual",
@@ -254,6 +264,95 @@ export async function authorizeChecks({
     }
   }
   return checks;
+}
+
+/**
+ * GET the consent URL Supabase redirected to, against `base` (so the version
+ * override applies), and check the platform answers it.
+ *
+ * @param {{ base: string, headers: Record<string, string>, fetchImpl: typeof fetch, location: string }} input
+ * @returns {Promise<Check>}
+ */
+async function followConsent({ base, headers, fetchImpl, location }) {
+  const name = "the new build answers the consent hand-off";
+  let target;
+  try {
+    target = location ? new URL(location, base) : null;
+  } catch {
+    target = null;
+  }
+  if (
+    !target ||
+    target.origin !== new URL(base).origin ||
+    !target.searchParams.has("authorization_id")
+  ) {
+    return {
+      name,
+      ok: false,
+      detail: `no consent URL to follow (${location || "none"})`,
+    };
+  }
+  try {
+    const response = await fetchImpl(
+      `${base}${target.pathname}${target.search}`,
+      { redirect: "manual", headers },
+    );
+    await response.arrayBuffer().catch(() => {});
+    return {
+      name,
+      ok: response.status < 400,
+      detail: `status ${response.status}`,
+    };
+  } catch (error) {
+    return { name, ok: false, detail: String(error) };
+  }
+}
+
+/** The name every throwaway client carries, which is how a leftover is found. */
+const THROWAWAY_NAME = "deploy smoke (throwaway)";
+
+/**
+ * Deletes throwaway clients an earlier run left behind (a cancelled job never
+ * reaches its `finally`). Only a client with exactly the throwaway name and
+ * older than half an hour is touched, and a failure here is never a smoke
+ * failure: the sweep is best effort.
+ *
+ * @param {{ api: string, adminHeaders: Record<string, string>, fetchImpl: typeof fetch, now?: number }} input
+ */
+export async function sweepStaleClients({
+  api,
+  adminHeaders,
+  fetchImpl,
+  now = Date.now(),
+}) {
+  try {
+    const listed = await fetchImpl(
+      `${api}/auth/v1/admin/oauth/clients?per_page=200`,
+      { headers: adminHeaders },
+    );
+    if (!listed.ok) return 0;
+    const body = await listed.json();
+    const clients = Array.isArray(body) ? body : (body?.clients ?? []);
+    let removed = 0;
+    for (const client of clients) {
+      const created = Date.parse(client?.created_at ?? "");
+      if (
+        client?.client_name !== THROWAWAY_NAME ||
+        typeof client?.client_id !== "string" ||
+        !Number.isFinite(created) ||
+        now - created < 30 * 60 * 1000
+      )
+        continue;
+      const response = await fetchImpl(
+        `${api}/auth/v1/admin/oauth/clients/${client.client_id}`,
+        { method: "DELETE", headers: adminHeaders },
+      );
+      if (response.ok) removed += 1;
+    }
+    return removed;
+  } catch {
+    return 0;
+  }
 }
 
 /** @param {Check[]} checks */

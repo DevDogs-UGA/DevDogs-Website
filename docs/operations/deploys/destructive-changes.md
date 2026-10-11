@@ -18,7 +18,7 @@ Generated SQL may only add. A change that drops or rewrites data is stopped twic
 
 ## Stop one: the pull request
 
-The `destructive-sql` check fails unless the pull request carries the **`allow-destructive`** label. The `destructive-gate` check fails if that label was applied by anyone who is not a `devops` member (a member with `maintain` or `admin` on the repository), read from the pull request's timeline so it is on record who did it. A label from anyone else is removed.
+The `destructive-sql` check fails unless the pull request carries the **`allow-destructive`** label. The `destructive-gate` check fails if that label was applied by anyone who is not a `devops` member, which the check decides by repository permission: `maintain` (the `devops` team) or `admin` (the `admins` team). Admins are included because they can bypass the rulesets anyway; the gate keeps out everyone below them. The production deploy approvals are stricter, and name the `devops` team alone, read from the pull request's timeline so it is on record who did it. A label from anyone else is removed.
 
 A new push to the pull request removes the label: it was applied to SQL someone read, and the SQL has changed since. A `devops` member applies it again after reading the new diff.
 

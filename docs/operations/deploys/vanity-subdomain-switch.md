@@ -33,7 +33,7 @@ A project cannot have a custom domain and a vanity subdomain at once, so **sign-
    ```
 
 3. **Re-register the sign-in providers' callback.** Discord, GitHub, Google and LinkedIn each list `https://api.devdogsuga.org/auth/v1/callback`. Add `https://devdogsuga.supabase.co/auth/v1/callback` to each (LinkedIn also needs the OpenID Connect product enabled). Keep the old one until step 7.
-4. **Point the apps at the new host.** Change `API_URL` (and the derived public Supabase URL) in the `production` and `production-build` GitHub environments, then run the production deploy so the Workers are rebuilt with it. Sign-in works again once this lands.
+4. **Point the apps at the new host.** Change `API_URL` (and the derived public Supabase URL) in the `production` and `production-build` GitHub environments, and `DEVDOGS_OAUTH_BASE_URL` in DogDays' and DogPack's `production` environment (see [The issuer](#the-issuer)), then run the production deploy so the Workers are rebuilt with it. Sign-in works again once this lands.
 5. **Give the hostname to the Workers.** In the `devdogsuga.org` zone, delete the old record for `api` (a DNS-only CNAME to Supabase) and the custom-hostname verification records, then add a **proxied** record for `api` (the placeholder `AAAA 100::` that `api-staging` already uses). Only now do the two routes start receiving traffic.
 6. **Check.**
    - `curl https://devdogsuga.supabase.co/auth/v1/.well-known/openid-configuration` answers, and so does `/auth/v1/health`.
@@ -45,6 +45,8 @@ A project cannot have a custom domain and a vanity subdomain at once, so **sign-
 ## The issuer
 
 GoTrue's OpenID discovery document reports the **project ref host** (`https://<ref>.supabase.co/auth/v1`) as the issuer, and it did so even while the custom domain was active. A provider must be registered with exactly the issuer discovery reports, so the products register `custom:devdogsuga` against it (`config-push.mjs register` reads it from discovery, never from configuration). Do not expect the issuer to become `devdogsuga.supabase.co`.
+
+Each product deploy registers the provider from `DEVDOGS_OAUTH_BASE_URL`, a variable of the product's `production` and `staging` GitHub environments: the **platform's Supabase API origin** whose discovery document names the issuer. It has no default. In step 4, set the `production` value of DogDays and DogPack to `https://devdogsuga.supabase.co` (it was `https://api.devdogsuga.org`, which stops serving Supabase auth in step 5); the `staging` value stays the staging platform's origin. A product deploy that finds it unset fails with a message saying so, instead of registering against the wrong platform.
 
 After step 2, read `issuer` from the discovery document on `devdogsuga.supabase.co`. If it changed, re-run provider registration for DogDays and DogPack; a mismatch makes every sign-in fail at the token exchange.
 

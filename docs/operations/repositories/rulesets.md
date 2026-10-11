@@ -23,16 +23,16 @@ The output is a diff: `+ create`, `~ update` with the rules and checks added (`+
 
 The merge queue ruleset is withheld until the repository's `ci.yaml` has a `merge_group` trigger. Without it a queued pull request waits forever for a check that never starts.
 
-**Order matters.** `main-ci` requires the checks `destructive-sql` and `destructive-gate`, which are reported by `database-pr.yaml` and `destructive-gate.yaml`. Apply the ruleset only **after** those workflows are on `main`: a required check that no workflow reports blocks every pull request. The same goes for a product repository: its CI must report the job names in `PRODUCT_REQUIRED_CHECKS` (`packages/backstage/src/github/rulesets/desired.ts`) before its `main-ci` is applied.
+**Order matters.** `main-ci` requires the checks `destructive-sql` and `destructive-gate`, which are reported by `database-pr.yaml` and `destructive-gate.yaml`. Apply the ruleset only **after** those workflows are on `main`: a required check that no workflow reports blocks every pull request. The same goes for a product repository: its CI must report the job names in `PRODUCT_REQUIRED_CHECKS` (`packages/backstage/src/github/rulesets/desired.ts`) before its `main-ci` is applied. The destructive gate reports there as `destructive-gate / destructive-sql` and `destructive-gate / destructive-gate`, because a called workflow's jobs carry the caller job's name: see [Product repository CI](./product-ci.md).
 
 ## What each ruleset does
 
-| Ruleset            | Purpose                                                                                                                                          |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `main-integrity`   | No deleting or force-pushing `main`, and **signed commits only**. No bypass for anyone.                                                          |
-| `main-reviews`     | Pull requests only; squash only; one code-owner approval; threads resolved. Admins bypass; Renovate may open its own pull requests but not push. |
-| `main-ci`          | Required checks: `validate`, `database`, `toolchain`/`flutter` as the repository has them, `destructive-sql` and `destructive-gate`.             |
-| `main-merge-queue` | Squash, up to five entries built and merged together, all checks green.                                                                          |
+| Ruleset            | Purpose                                                                                                                                                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `main-integrity`   | No deleting or force-pushing `main`, and **signed commits only**. No bypass for anyone.                                                                                                                                                           |
+| `main-reviews`     | Pull requests only; squash only; one code-owner approval; threads resolved. Admins bypass; Renovate may open its own pull requests but not push.                                                                                                  |
+| `main-ci`          | Required checks: `validate`, `database`, `toolchain`/`flutter` as the repository has them, `destructive-sql` and `destructive-gate` (in the product repositories `destructive-gate / destructive-sql` and `destructive-gate / destructive-gate`). |
+| `main-merge-queue` | Squash, up to five entries built and merged together, all checks green.                                                                                                                                                                           |
 
 A bypass actor bypasses **every** rule in its ruleset, which is why they are split: letting admins push directly past the review rule must not also let them force-push.
 

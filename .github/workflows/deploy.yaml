@@ -328,7 +328,8 @@ jobs:
   # Each approved job refuses an approver who wrote or queued the change (Q61)
   # and refuses a candidate that is no longer the head of `main`.
   production-database:
-    needs: [supersede, resolve, build, staging-platform, staging-schedule-builder]
+    needs:
+      [supersede, resolve, build, staging-platform, staging-schedule-builder]
     if: >-
       github.event_name == 'push'
       && !cancelled()

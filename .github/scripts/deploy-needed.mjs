@@ -105,6 +105,9 @@ const LEGACY_PRODUCTION_DEPLOY_STEPS = [
 /** The step of deploy-worker.yaml that gives the new version traffic. */
 const SWITCH_STEP = "Switch traffic to the new version";
 
+/** The step a `mode: full` deploy (no preview, no switch) deploys with. */
+const FULL_STEP = "Deploy (classic, no preview)";
+
 /** The Workers a tier ships, as the caller jobs in deploy.yaml name them. */
 const WORKER_CALLS = {
   staging: ["staging-platform", "staging-schedule-builder"],
@@ -120,7 +123,8 @@ function callSucceeded(jobs, call) {
   if (!job || job.conclusion !== "success") return false;
   return (job.steps ?? []).some(
     (/** @type {any} */ step) =>
-      step.name === SWITCH_STEP && step.conclusion === "success",
+      (step.name === SWITCH_STEP || step.name === FULL_STEP) &&
+      step.conclusion === "success",
   );
 }
 

@@ -364,6 +364,28 @@ test("runDeployed: a superseded production job deployed nothing", () => {
   assert.equal(runDeployed([superseded], "production"), false);
 });
 
+test("runDeployed: a mode: full Worker deploy (no switch step) counts once its classic deploy step succeeded", () => {
+  const full = (name, step = "success") =>
+    job(`deploy / ${name} / deploy`, "success", [
+      { name: "Switch traffic to the new version", conclusion: "skipped" },
+      { name: "Deploy (classic, no preview)", conclusion: step },
+    ]);
+  assert.equal(
+    runDeployed(
+      [full("staging-platform"), full("staging-schedule-builder")],
+      "staging",
+    ),
+    true,
+  );
+  assert.equal(
+    runDeployed(
+      [full("staging-platform"), full("staging-schedule-builder", "skipped")],
+      "staging",
+    ),
+    false,
+  );
+});
+
 test("runDeployed: the shared Worker workflow counts only after its traffic switch", () => {
   const call = (name, conclusion = "success", switched = true) =>
     job(`deploy / ${name} / deploy`, conclusion, [
