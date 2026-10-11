@@ -11,7 +11,9 @@
     "directory": "packages/sdk-spec"
   },
   "scripts": {
+    "precodegen": "pnpm --filter @devdogsuga/sdk run codegen",
     "codegen": "tsx src/generate.ts",
+    "precheck:drift": "pnpm --filter @devdogsuga/sdk run codegen",
     "check:drift": "tsx src/generate.ts --check",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

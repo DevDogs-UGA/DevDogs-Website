@@ -23,7 +23,7 @@ pnpm install
 pnpm devtools setup
 ```
 
-`pnpm devtools` runs `@devdogsuga/devtools@next`, the newest prerelease: this checkout needs the sdk-era CLI, and the stable `latest` tag does not carry it until the Gate. CI runs the workspace build of the same code.
+`pnpm devtools` runs `@devdogsuga/devtools@next`, the newest prerelease: this checkout needs the sdk-era CLI, and the stable `latest` tag does not carry it until the Gate. CI, and the docs build's check of every documented `pnpm devtools` command, use the workspace build of the same code, so neither waits for a publish. Before the first `next` publish lands, run `node packages/devtools/bin/devtools.mjs` (after a devtools build) instead.
 
 Full docs: [devdogsuga.org/docs](https://devdogsuga.org/docs)
 

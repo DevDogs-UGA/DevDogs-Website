@@ -160,6 +160,15 @@ jobs:
         env:
           DEVTOOLS_SENTRY_DSN: ${{ vars.DEVTOOLS_SENTRY_DSN }}
         run: pnpm -r --filter './packages/**' --if-present run build
+      # The same gate the stable channel has: the CLIs on `next` are what
+      # products and `npx @devdogsuga/devtools@next` run, so a broken tarball
+      # must fail here, before anything is uploaded for publishing.
+      - name: Re-run CLI contract tests against the release build
+        env:
+          DEVTOOLS_TELEMETRY: "0"
+        run: |
+          pnpm --filter @devdogsuga/devtools run test:contract
+          pnpm --filter @devdogsuga/backstage run test:contract
       - name: Prepare the prerelease candidate
         env:
           NEXT_BUILD_NUMBER: ${{ github.run_number }}

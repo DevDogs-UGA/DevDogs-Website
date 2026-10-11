@@ -7,9 +7,20 @@
  * `{ "version": …, "commands": [{ "path": "deploy smoke", … }, …] }`, groups
  * included. That is the one published, versioned surface, and it needs no
  * checkout of the CLI's source. It is read by running what a contributor would
- * type, `pnpm devtools` / `pnpm backstage` from the repo root (the root
- * scripts `pnpm dlx` the latest publish), so the docs are checked against the
- * CLI people will actually get.
+ * type, `pnpm backstage` from the repo root (the root script `pnpm dlx`s the
+ * latest publish), so the docs are checked against the CLI people will
+ * actually get.
+ *
+ * ## devtools: the workspace build first
+ *
+ * devtools lives in this repository (`packages/devtools`), and the docs and
+ * the platform depend on it, so by the time a docs build runs it is built.
+ * That build is what the checkout's own commands are documented against, so
+ * it is used when it exists. The root `pnpm devtools` script is the fallback
+ * (a standalone docs checkout, or a package that has not been built). Reading
+ * the published CLI instead made CI depend on a publish that only happens
+ * after CI passes: the first prerelease could never ship, and a PR that added
+ * a command and its docs failed against the CLI without it.
  *
  * ## The override
  *
@@ -27,6 +38,8 @@
  * no longer exists, which is the thing the check is for.
  */
 import { execFile } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 import { promisify } from "node:util";
 
 const run = promisify(execFile);
@@ -51,9 +64,37 @@ export function cliOverrides(
   };
 }
 
-function commandFor(cli: CliName, env: NodeJS.ProcessEnv): string[] {
+/** The built devtools in this workspace: its bin and the build it loads. */
+function workspaceDevtools(
+  repoRoot: string,
+): { bin: string; launch: string } | null {
+  const dir = path.join(repoRoot, "packages", "devtools");
+  const bin = path.join(dir, "bin", "devtools.mjs");
+  const launch = path.join(dir, "dist", "launch.js");
+  return fs.existsSync(bin) && fs.existsSync(launch) ? { bin, launch } : null;
+}
+
+/**
+ * What the default devtools source is, for the build cache key: the
+ * workspace build's mtime, or empty when the published CLI is the source.
+ */
+export function workspaceDevtoolsIdentity(repoRoot: string): string {
+  const found = workspaceDevtools(repoRoot);
+  return found === null ? "" : `workspace@${fs.statSync(found.launch).mtimeMs}`;
+}
+
+function commandFor(
+  repoRoot: string,
+  cli: CliName,
+  env: NodeJS.ProcessEnv,
+): string[] {
   const override = (env[OVERRIDE_VARIABLE[cli]] ?? "").trim();
-  return override === "" ? ["pnpm", cli] : override.split(/\s+/);
+  if (override !== "") return override.split(/\s+/);
+  if (cli === "devtools") {
+    const found = workspaceDevtools(repoRoot);
+    if (found !== null) return [process.execPath, found.bin];
+  }
+  return ["pnpm", cli];
 }
 
 /**
@@ -105,7 +146,7 @@ export async function loadCliCommands(
   cli: CliName,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<ReadonlySet<string>> {
-  const [file, ...args] = commandFor(cli, env);
+  const [file, ...args] = commandFor(repoRoot, cli, env);
   if (file === undefined)
     throw new Error(`${OVERRIDE_VARIABLE[cli]} is empty.`);
 

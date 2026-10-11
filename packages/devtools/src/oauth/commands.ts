@@ -21,6 +21,11 @@ export const handleOAuth: CommandHandler = async (rest) => {
   // In a product repo the client secret goes where the product keeps its
   // secrets (`.env.tooling`), and that file is made sure to be git-ignored.
   const product = currentProduct();
+  // The wizard reads and writes relative to the working directory, and the
+  // ignore entry is anchored to the product root: from a subdirectory the
+  // secret would land in a file the entry does not cover, and `db sync
+  // --rebuild` would not find it.
+  if (product) process.chdir(product.root);
   if (product && ensureGitignored(product.root, product.config.env.tooling)) {
     process.stderr.write(
       `devtools: added /${product.config.env.tooling} to .gitignore (it holds secrets).\n`,
