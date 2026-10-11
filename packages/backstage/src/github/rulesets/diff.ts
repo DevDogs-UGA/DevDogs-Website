@@ -45,6 +45,8 @@ export interface UpdateAction {
   id: number;
   /** The live ruleset's current name, when different from `desired.name` — a rename is part of this update. */
   liveName: string;
+  /** What the repository has now, so a dry run can print the difference rather than the whole target. */
+  live?: LiveRuleset;
   desired: DesiredRuleset;
 }
 
@@ -260,6 +262,7 @@ export function planRulesets(
         kind: "update",
         id: live.id,
         liveName: detail.name,
+        live: detail,
         desired,
       });
     } else {

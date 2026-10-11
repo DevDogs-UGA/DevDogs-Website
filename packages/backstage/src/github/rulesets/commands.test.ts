@@ -35,8 +35,8 @@ vi.mock("./api.js", () => ({
 }));
 
 import { resolveAppId } from "./actors.js";
-import { createRuleset, getFileContent } from "./api.js";
-import { runGithubRulesets } from "./commands.js";
+import { createRuleset, getFileContent, listRulesets } from "./api.js";
+import { renderChange, runGithubRulesets } from "./commands.js";
 
 const mockResolveAppId = vi.mocked(resolveAppId);
 
@@ -183,5 +183,122 @@ describe("--repo Backstage", () => {
     expect(created).toContain("main-merge-queue");
     expect(created).toContain("deploy/devdogsuga");
     restore();
+  });
+});
+
+describe("--repo DogDays, DogPack and all", () => {
+  beforeEach(() => {
+    vi.mocked(createRuleset).mockClear();
+    vi.mocked(getFileContent).mockReset();
+    vi.mocked(listRulesets).mockReset();
+    vi.mocked(listRulesets).mockResolvedValue([]);
+    mockResolveAppId.mockImplementation(async (_org, slug) => {
+      if (slug === "renovate") return 7001;
+      if (slug === "devdogs-platform") return 4595259;
+      throw new Error(`no installation for "${slug}"`);
+    });
+  });
+
+  it("dry-runs a repository that does not exist yet as all creates, and refuses to apply", async () => {
+    vi.mocked(listRulesets).mockRejectedValue(
+      new Error("gh: Not Found (HTTP 404)"),
+    );
+    const { log, err, restore } = captureConsole();
+    expect(await runGithubRulesets(["--repo", "DogDays"])).toBe(0);
+    const printed = log.mock.calls.map((c) => String(c[0])).join("\n");
+    for (const name of [
+      "main-integrity",
+      "main-reviews",
+      "main-ci",
+      "main-merge-queue",
+    ]) {
+      expect(printed).toContain(`+ create   "${name}"`);
+    }
+    expect(printed).toContain("does not exist yet");
+    expect(printed).toContain("required_signatures");
+
+    expect(
+      await runGithubRulesets(["--repo", "DogDays", "--apply", "--yes"]),
+    ).toBe(1);
+    expect(createRuleset).not.toHaveBeenCalled();
+    expect(err).toHaveBeenCalledWith(expect.stringContaining("does not exist"));
+    restore();
+  });
+
+  it("fails on a real error for a product repository, not only a missing one", async () => {
+    vi.mocked(listRulesets).mockRejectedValue(new Error("HTTP 500"));
+    const { restore } = captureConsole();
+    expect(await runGithubRulesets(["--repo", "DogPack"])).toBe(1);
+    restore();
+  });
+
+  it("prints the diff for all three repositories with --repo all, and never applies", async () => {
+    // DevDogsUGA exists in this scenario: only the product repos are missing.
+    vi.mocked(listRulesets).mockImplementation(async (r) => {
+      if (r.repo === "DevDogsUGA") return [];
+      throw new Error("404 Not Found");
+    });
+    vi.mocked(getFileContent).mockResolvedValue("on:\n  merge_group:\n");
+    const { log, err, restore } = captureConsole();
+    expect(await runGithubRulesets(["--repo", "all"])).toBe(0);
+    const printed = log.mock.calls.map((c) => String(c[0])).join("\n");
+    expect(printed).toContain("=== DevDogsUGA/DevDogsUGA ===");
+    expect(printed).toContain("=== DevDogsUGA/DogDays ===");
+    expect(printed).toContain("=== DevDogsUGA/DogPack ===");
+    expect(await runGithubRulesets(["--repo", "all", "--apply"])).toBe(1);
+    expect(err).toHaveBeenCalledWith(expect.stringContaining("dry run only"));
+    expect(createRuleset).not.toHaveBeenCalled();
+    restore();
+  });
+});
+
+describe("renderChange", () => {
+  it("prints the rules and checks that change, not the whole ruleset", () => {
+    const base = {
+      name: "main-ci",
+      target: "branch" as const,
+      enforcement: "active" as const,
+      bypass_actors: [],
+      conditions: { ref_name: { include: ["refs/heads/main"], exclude: [] } },
+    };
+    const live = {
+      ...base,
+      id: 1,
+      rules: [
+        {
+          type: "required_status_checks" as const,
+          parameters: {
+            do_not_enforce_on_create: false,
+            strict_required_status_checks_policy: false,
+            required_status_checks: [
+              { context: "validate", integration_id: 15368 },
+              { context: "format", integration_id: 15368 },
+            ],
+          },
+        },
+      ],
+    };
+    const desired = {
+      ...base,
+      rules: [
+        {
+          type: "required_status_checks" as const,
+          parameters: {
+            do_not_enforce_on_create: false,
+            strict_required_status_checks_policy: false,
+            required_status_checks: [
+              { context: "validate", integration_id: 15368 },
+              { context: "destructive-gate", integration_id: 15368 },
+            ],
+          },
+        },
+        { type: "required_signatures" as const },
+      ],
+    };
+    expect(renderChange(live, desired)).toEqual([
+      "    + rule   required_status_checks [destructive-gate, validate]",
+      "    + rule   required_signatures",
+      "    - rule   required_status_checks [format, validate]",
+    ]);
   });
 });

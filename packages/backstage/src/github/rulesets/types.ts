@@ -53,6 +53,16 @@ export interface PullRequestRule {
   };
 }
 
+/**
+ * Signed commits (`required_signatures`): every commit that lands on the
+ * branch must carry a verified signature. GitHub signs the squash commit a
+ * merge makes, so a pull request through the merge queue always satisfies it;
+ * the rule bites a direct push, which needs the pusher's signing key.
+ */
+export interface RequiredSignaturesRule {
+  type: "required_signatures";
+}
+
 export interface RequiredStatusChecksRule {
   type: "required_status_checks";
   parameters: {
@@ -86,6 +96,7 @@ export type Rule =
   | UpdateRule
   | DeletionRule
   | NonFastForwardRule
+  | RequiredSignaturesRule
   | CreationRule
   | PullRequestRule
   | RequiredStatusChecksRule
