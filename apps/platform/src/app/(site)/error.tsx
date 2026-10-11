@@ -7,7 +7,7 @@ import { reloadForChunkError } from "~/lib/chunkReload";
 
 /**
  * The boundary for every page in the site layout that does not bring its own:
- * the console, the account and tools pages, teams and competitions.
+ * the console and the account and tools pages.
  * The events segment has its own; see `events/error.tsx`.
  *
  * Until this existed, a loader that threw put Next's unstyled default error

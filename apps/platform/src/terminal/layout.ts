@@ -24,7 +24,7 @@ import { ACCENT, TONE, type Accent } from "./theme";
 
 /**
  * The masthead words, a closed list. A page names its SECTION here, never its
- * own title (a competition's name is copy, and copy belongs in the body where
+ * own title (a project's name is copy, and copy belongs in the body where
  * it wraps); the list keeps the big type to a handful of words drawn from a
  * font that has every glyph they need.
  */
@@ -34,9 +34,7 @@ export const BANNERS = [
   "GDGC",
   "EVENTS",
   "DIRECTIONS",
-  "COMPETITIONS",
   "COMMUNITY",
-  "PARTNERS",
   "DOCS",
   "HELP",
   "404",

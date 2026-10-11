@@ -16,7 +16,6 @@ const HIDDEN_PREFIXES = [
   "/attendance",
   "/console",
   "/oauth",
-  "/teams",
   "/tools",
 ];
 

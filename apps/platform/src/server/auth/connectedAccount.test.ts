@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   guildNickname,
-  isSuccessfulGitHubInvitation,
   isSuccessfulRemovalStatus,
   withConnectedAccountStatus,
 } from "./connectedAccount";
@@ -13,24 +12,6 @@ describe("connected-account side-effect statuses", () => {
 
   it.each([401, 403, 500])("rejects removal status %i", (status) => {
     expect(isSuccessfulRemovalStatus(status)).toBe(false);
-  });
-
-  it("accepts GitHub's already-member invitation response", async () => {
-    const existing = new Response(
-      JSON.stringify({
-        message: "Invitee is already a part of this organization",
-      }),
-      { status: 422 },
-    );
-    await expect(isSuccessfulGitHubInvitation(existing)).resolves.toBe(true);
-  });
-
-  it("does not swallow unrelated GitHub validation failures", async () => {
-    const invalid = new Response(
-      JSON.stringify({ message: "Validation Failed" }),
-      { status: 422 },
-    );
-    await expect(isSuccessfulGitHubInvitation(invalid)).resolves.toBe(false);
   });
 });
 

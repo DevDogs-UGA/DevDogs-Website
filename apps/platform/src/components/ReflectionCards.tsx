@@ -22,7 +22,7 @@ export default function ReflectionCards({
     <section className="rounded-xl border-2 border-mauve-800 bg-mauve-950 px-6 py-6 shadow-lg shadow-black/30">
       <h2 className="text-lg font-semibold text-white">EL reflections</h2>
       <p className="mt-1 text-sm text-mauve-400">
-        Eligible workshops and DevDogs competitions count as one club hour. Save
+        Eligible workshops count as one club hour. Save
         a draft anytime during the submission window; submission requires at
         least {minimumWordCount} words.
       </p>

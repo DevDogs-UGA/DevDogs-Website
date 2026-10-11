@@ -18,7 +18,6 @@ import {
 import Avatar from "~/components/AvatarField/Avatar";
 import * as icons from "~/config/icons";
 import {
-  COMPETITION_GROUP,
   CONSOLE_GROUP,
   type ConsoleItem,
   type NavItem,
@@ -223,7 +222,6 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
                   onPointerEnter={keepOpen}
                   onPointerLeave={closeSoon}
                 >
-                  <NavSubMenu {...COMPETITION_GROUP} panelRef={subPanelRef} />
                   <NavSubMenu
                     {...CONSOLE_GROUP}
                     items={consoleItems}

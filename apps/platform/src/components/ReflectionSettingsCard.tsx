@@ -32,7 +32,7 @@ export default function ReflectionSettingsCard({
     <ConsoleCard.Root id="reflection-settings">
       <ConsoleCard.Header
         title="Reflection settings"
-        description="Governs every EL reflection member-wide: how many words a submission needs, and how many days after a meeting or competition closes members may still submit one."
+        description="Governs every EL reflection member-wide: how many words a submission needs, and how many days after a meeting ends members may still submit one."
       />
       <ConsoleCard.Content>
         <form action={action} className="flex flex-col gap-4 py-6">

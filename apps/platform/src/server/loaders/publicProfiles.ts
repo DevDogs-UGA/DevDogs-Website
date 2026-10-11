@@ -1,15 +1,8 @@
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { asc, eq, inArray, sql } from "drizzle-orm";
 import { cache } from "react";
 import { env } from "~/env";
 import { db } from "~/server/db";
-import {
-  competitionEntries,
-  competitions,
-  profileLinks,
-  publicProfiles,
-  teamMembers,
-  teams,
-} from "~/server/db/schema";
+import { profileLinks, publicProfiles } from "~/server/db/schema";
 import { getStarsForUser, totalStars, type StarTotals } from "./stars";
 
 /**
@@ -51,8 +44,6 @@ export interface PublicProfileVisibility {
   avatar: boolean;
   bio: boolean;
   links: boolean;
-  competitions: boolean;
-  contributions: boolean;
   stars: boolean;
 }
 
@@ -80,14 +71,6 @@ export interface PublicProfileSummary {
   bio: string | null;
 }
 
-/** An invite-picker hit. The only public-profile shape that carries `userId`. */
-export interface PublicProfileMatch {
-  userId: string;
-  handle: string;
-  displayName: string | null;
-  avatarUrl: string | null;
-}
-
 type ViewRow = typeof publicProfiles.$inferSelect;
 
 function toProfile(row: ViewRow): PublicProfile {
@@ -105,8 +88,6 @@ function toProfile(row: ViewRow): PublicProfile {
       avatar: row.showAvatar!,
       bio: row.showBio!,
       links: row.showLinks!,
-      competitions: row.showCompetitions!,
-      contributions: row.showContributions!,
       stars: row.showStars!,
     },
   };
@@ -182,126 +163,9 @@ export const getPublicHandlesByUserId = cache(
   },
 );
 
-/**
- * The directory row of each given account that has a public profile, keyed by
- * user id. Like `getPublicHandlesByUserId` but with the name and avatar a list
- * of people needs; hidden fields are already null, and accounts the view drops
- * are absent.
- *
- * Server-side only: the result is keyed by `userId`. Look values up and pass
- * the summary on; never forward the map to a client component.
- */
-export const getPublicSummariesByUserId = cache(
-  async (
-    userIds: readonly string[],
-  ): Promise<Map<string, PublicProfileSummary>> => {
-    if (userIds.length === 0) return new Map();
-    const rows = await db
-      .select({
-        userId: publicProfiles.userId,
-        handle: publicProfiles.handle,
-        displayName: publicProfiles.displayName,
-        hasAvatar: publicProfiles.hasAvatar,
-        bio: publicProfiles.bio,
-      })
-      .from(publicProfiles)
-      .where(inArray(publicProfiles.userId, [...userIds]));
-    return new Map(
-      rows.map((row) => [
-        row.userId!,
-        {
-          handle: row.handle!,
-          displayName: row.displayName,
-          avatarUrl: row.hasAvatar ? avatarUrlFor(row.userId!) : null,
-          bio: row.bio,
-        },
-      ]),
-    );
-  },
-);
-
-const SEARCH_LIMIT_MAX = 25;
-
-/** Escape `%`, `_` and `\` so user input is matched literally by LIKE. */
-function likeEscape(input: string): string {
-  return input.replace(/[\\%_]/g, (ch) => `\\${ch}`);
-}
-
-/**
- * Prefix search for the team invite picker: a public profile matches when the
- * query is a prefix of its handle, of its displayed name, or of any word of the
- * displayed name. A hidden name is NULL in the view and so never matches, which
- * keeps "search for the name I hid" from finding me.
- *
- * Returns `userId`, because an invite names an account. This is server-side
- * only: do not forward the raw match to a client component; map it to what the
- * picker renders and keep the id behind the invite action.
- */
-export const searchPublicProfiles = cache(
-  async (query: string, limit = 8): Promise<PublicProfileMatch[]> => {
-    const q = query.trim().replace(/^@/, "").toLowerCase();
-    if (q.length === 0) return [];
-    const pattern = `${likeEscape(q)}%`;
-    const wordPattern = `% ${likeEscape(q)}%`;
-
-    const rows = await db
-      .select({
-        userId: publicProfiles.userId,
-        handle: publicProfiles.handle,
-        displayName: publicProfiles.displayName,
-        hasAvatar: publicProfiles.hasAvatar,
-      })
-      .from(publicProfiles)
-      .where(
-        sql`${publicProfiles.handle} like ${pattern}
-          or lower(${publicProfiles.displayName}) like ${pattern}
-          or lower(${publicProfiles.displayName}) like ${wordPattern}`,
-      )
-      // Handle matches first (exact, then prefix), so typing a full handle
-      // puts that member on top.
-      .orderBy(
-        desc(sql`${publicProfiles.handle} = ${q}`),
-        asc(
-          sql`lower(coalesce(${publicProfiles.displayName}, ${publicProfiles.handle}))`,
-        ),
-      )
-      .limit(Math.min(Math.max(Math.trunc(limit), 1), SEARCH_LIMIT_MAX));
-
-    return rows.map((row) => ({
-      userId: row.userId!,
-      handle: row.handle!,
-      displayName: row.displayName,
-      avatarUrl: row.hasAvatar ? avatarUrlFor(row.userId!) : null,
-    }));
-  },
-);
-
 export interface PublicProfileLink {
   title: string;
   url: string;
-}
-
-/** One competition the member entered, with the team they entered under. */
-export interface PublicCompetitionEntry {
-  competitionSlug: string;
-  competitionTitle: string;
-  teamSlug: string;
-  teamName: string;
-  /** The team had an entry merged in this competition. */
-  won: boolean;
-  /** When the earliest qualifying entry opened. */
-  enteredAt: Date;
-}
-
-/** One merged pull request credited to the member through a team. */
-export interface PublicContribution {
-  prNumber: number;
-  url: string;
-  mergedAt: Date;
-  competitionSlug: string;
-  competitionTitle: string;
-  teamSlug: string;
-  teamName: string;
 }
 
 /**
@@ -311,22 +175,13 @@ export interface PublicContribution {
  */
 export interface PublicProfileActivity {
   links: PublicProfileLink[] | null;
-  competitions: PublicCompetitionEntry[] | null;
-  contributions: PublicContribution[] | null;
   stars: StarTotals | null;
 }
 
 /**
- * Links, competitions, merged contributions and star totals for a public
- * profile, each gated on its own visibility flag. Null when the handle is not
- * a public profile (resolved through the view, so the visibility rule is not
- * repeated).
- *
- * "Belongs to the team" means what `memberStars` means: an active membership
- * at the moment the entry's pull request opened (`joinedAt <= openedAt` and not
- * yet left), and the entry opened before the competition closed. So somebody
- * who joins a team after it already won does not inherit the win, and the
- * totals here agree with the star totals.
+ * Links and star totals for a public profile, each gated on its own
+ * visibility flag. Null when the handle is not a public profile (resolved
+ * through the view, so the visibility rule is not repeated).
  *
  * Attendance, streak and reflections are not read here and must never be.
  */
@@ -336,8 +191,6 @@ export const getPublicProfileActivity = cache(
       .select({
         userId: publicProfiles.userId,
         showLinks: publicProfiles.showLinks,
-        showCompetitions: publicProfiles.showCompetitions,
-        showContributions: publicProfiles.showContributions,
         showStars: publicProfiles.showStars,
       })
       .from(publicProfiles)
@@ -345,16 +198,7 @@ export const getPublicProfileActivity = cache(
     if (!member) return null;
     const userId = member.userId!;
 
-    // The membership predicate shared by competitions and contributions; see
-    // the doc comment above.
-    const qualifyingEntries = and(
-      eq(teamMembers.userId, userId),
-      sql`${teamMembers.joinedAt} <= ${competitionEntries.openedAt}`,
-      sql`(${teamMembers.leftAt} is null or ${teamMembers.leftAt} > ${competitionEntries.openedAt})`,
-      sql`(${competitions.closedAt} is null or ${competitionEntries.openedAt} < ${competitions.closedAt})`,
-    );
-
-    const [links, entered, contributions, stars] = await Promise.all([
+    const [links, stars] = await Promise.all([
       member.showLinks
         ? db
             .select({ title: profileLinks.title, url: profileLinks.url })
@@ -362,79 +206,12 @@ export const getPublicProfileActivity = cache(
             .where(eq(profileLinks.userId, userId))
             .orderBy(asc(profileLinks.sortOrder))
         : null,
-      member.showCompetitions
-        ? db
-            .select({
-              competitionSlug: competitions.slug,
-              competitionTitle: competitions.title,
-              teamSlug: teams.slug,
-              teamName: teams.name,
-              won: sql<boolean>`bool_or(${competitionEntries.mergedAt} is not null)`,
-              enteredAt: sql<Date>`min(${competitionEntries.openedAt})`,
-            })
-            .from(competitionEntries)
-            .innerJoin(
-              competitions,
-              eq(competitions.id, competitionEntries.competitionId),
-            )
-            .innerJoin(teams, eq(teams.id, competitionEntries.teamId))
-            .innerJoin(teamMembers, eq(teamMembers.teamId, teams.id))
-            .where(qualifyingEntries)
-            .groupBy(
-              competitions.id,
-              competitions.slug,
-              competitions.title,
-              teams.id,
-              teams.slug,
-              teams.name,
-            )
-            .orderBy(desc(sql`min(${competitionEntries.openedAt})`))
-        : null,
-      member.showContributions
-        ? db
-            .select({
-              prNumber: competitionEntries.prNumber,
-              url: competitionEntries.url,
-              mergedAt: competitionEntries.mergedAt,
-              competitionSlug: competitions.slug,
-              competitionTitle: competitions.title,
-              teamSlug: teams.slug,
-              teamName: teams.name,
-            })
-            .from(competitionEntries)
-            .innerJoin(
-              competitions,
-              eq(competitions.id, competitionEntries.competitionId),
-            )
-            .innerJoin(teams, eq(teams.id, competitionEntries.teamId))
-            .innerJoin(teamMembers, eq(teamMembers.teamId, teams.id))
-            .where(
-              and(
-                qualifyingEntries,
-                sql`${competitionEntries.mergedAt} is not null`,
-              ),
-            )
-            .orderBy(desc(competitionEntries.mergedAt))
-        : null,
       member.showStars
         ? getStarsForUser(userId).then((cells) => totalStars(cells))
         : null,
     ]);
 
-    return {
-      links,
-      competitions:
-        entered?.map((row) => ({
-          ...row,
-          enteredAt: new Date(row.enteredAt),
-        })) ?? null,
-      contributions:
-        contributions?.map((row) => ({
-          ...row,
-          mergedAt: row.mergedAt!,
-        })) ?? null,
-      stars,
-    };
+    return { links, stars };
   },
 );
 

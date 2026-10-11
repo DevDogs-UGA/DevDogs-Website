@@ -8,7 +8,7 @@ import {
 } from "~/server/actions/permissions";
 import { expectUserWith } from "~/server/auth";
 import type { profiles } from "~/server/db/schema";
-import { githubLoginFor } from "~/server/github/teamSync";
+import { githubLoginFor } from "~/server/auth/githubLogin";
 import {
   getInvolvementFullName,
   getVerificationStatus,

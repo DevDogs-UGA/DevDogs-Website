@@ -18,14 +18,13 @@ describe("showsAnnouncement", () => {
     "/docs/platform/guides/meetings-and-teams/events",
     "/legal/privacy",
     "/legal/terms",
-    "/competitions/spring-2026",
+    "/events/directions",
   ];
 
   const appPaths = [
     "/account",
     "/console",
     "/console/permissions",
-    "/teams/requests",
     "/tools/oauth",
     "/oauth/consent",
   ];

@@ -16,8 +16,6 @@ const base: PublicProfile = {
     avatar: true,
     bio: true,
     links: true,
-    competitions: true,
-    contributions: true,
     stars: true,
   },
 };

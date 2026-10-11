@@ -19,13 +19,8 @@
  */
 
 /**
- * What a meeting is, derived from its structure.
- *
- * A competition is not a child of a workshop or a meeting -- it is a
- * mirrored GitHub issue with its own asynchronous lifecycle (see the
- * competitions migration's header), so nothing about a meeting's STRUCTURE
- * can answer "does this meeting kick off or judge a competition". What is
- * left is the one thing a meeting's rows can still say about themselves:
+ * What a meeting is, derived from its structure: the one thing a meeting's
+ * rows can say about themselves.
  *
  * | Segment    | Derived from                                     |
  * | ---------- | ------------------------------------------------- |

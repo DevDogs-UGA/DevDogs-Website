@@ -64,17 +64,17 @@ export default async function DocsLandingPage() {
       description="Guides and references for DevDogs projects, published straight from the monorepo."
     >
       <div className="flex flex-col gap-8">
-        {/* The front door: which competition team a new contributor is
-            actually choosing between. Large marks, because this is the one
+        {/* The front door: which product a new contributor is actually
+            choosing between. Large marks, because this is the one
             place in the docs a reader is picking a destination rather than
             looking something up. */}
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-semibold tracking-wide text-mauve-400 uppercase">
-            Which team are you on?
+            Which project are you working on?
           </h2>
           <DocsTileGrid tiles={large.map((project) => tile(project, "lg"))} />
           <p className="text-sm text-mauve-400">
-            Not on a team yet?{" "}
+            Not on a project yet?{" "}
             <a
               href="/discord"
               className="font-medium text-mauve-200 underline-offset-4 hover:text-white hover:underline"
@@ -96,7 +96,7 @@ export default async function DocsLandingPage() {
           </section>
         )}
 
-        {/* Everyone touches these two regardless of team, so they stay one
+        {/* Everyone touches these two whichever product they pick, so they stay one
             tap away without competing with the choice above. */}
         {small.length > 0 && (
           <section className="flex flex-col gap-3">
