@@ -45,6 +45,13 @@ export interface ModerationStore {
  * The idempotency and ordering rules, store-agnostic. The id is recorded
  * before the ordering check, so a stale message that is replayed is a
  * duplicate, not stale twice.
+ *
+ * The three store calls must run in ONE transaction in a database-backed
+ * port (DogPack's `moderation.apply_event` is a single SQL function). Recorded
+ * and then failing to apply, outside a transaction, would make the platform's
+ * retry a "duplicate" and lose the decision for good: if `apply` throws, the
+ * recorded id has to roll back with it. The in-memory store below cannot fail
+ * halfway, so it does not need to.
  */
 export async function applyModerationEvent(
   store: ModerationStore,

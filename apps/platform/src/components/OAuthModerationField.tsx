@@ -30,7 +30,8 @@ const ACTIONS = [
 ] as const;
 
 /**
- * Moderation for each of the member's OAuth clients: the signing secret, where
+ * Moderation for each OAuth client the member manages (their own, plus every
+ * production client for a holder of `canManageOAuthApps`): the signing secret, where
  * decisions are delivered, the sandbox reports their app has filed, and a
  * button that sends a real signed delivery to their endpoint.
  *
@@ -80,7 +81,13 @@ export default function OAuthModerationField({
               </Badge>
             </div>
 
-            {!client.enabled ? (
+            {!client.enabled && client.production ? (
+              <p className="text-sm text-mauve-400">
+                A production client is turned on by registering it under Apps
+                Outside the Platform on the moderation page of the console. The
+                secret is shown there once, and rotated here if it is lost.
+              </p>
+            ) : !client.enabled ? (
               <form action={dispatch} className="flex flex-col gap-3">
                 <input type="hidden" name="intent" value="enable" />
                 <input type="hidden" name="clientId" value={client.clientId} />

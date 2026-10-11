@@ -30,8 +30,14 @@ export type ClientModeration = {
   label: string;
   enabled: boolean;
   endpointUrl: string | null;
-  /** An officer registered this client as a production app. */
+  /**
+   * A production-tier client, or one an officer registered as a production
+   * app. Its reports reach the moderators; it never takes sandbox test
+   * actions.
+   */
   production: boolean;
+  /** Whether an officer has registered it as a moderation app (the console's Apps Outside the Platform). */
+  registered: boolean;
   sandboxReports: SandboxReportRow[];
   testDeliveries: TestDeliveryRow[];
 };
@@ -39,14 +45,21 @@ export type ClientModeration = {
 const PER_CLIENT = 10;
 
 /**
- * Moderation state for each of the signed-in member's OAuth clients: whether
+ * Moderation state for each OAuth client the signed-in member manages: their
+ * own development clients, plus every production client when they hold
+ * `canManageOAuthApps` (the same rule `/tools/oauth` lists them by). Whether
  * it is on, where decisions go, the sandbox reports its backend has filed and
- * the test actions sent to it. Reads only the caller's own clients, since the
- * ids come from `getOAuthPageData`.
+ * the test actions sent to it. The ids come from `getOAuthPageData`, so this
+ * never reads a client the member cannot manage.
  */
 export const getOAuthModerationData = cache(
   async (): Promise<ClientModeration[]> => {
-    const { clients } = await getOAuthPageData();
+    const { clients: development, productionClients } =
+      await getOAuthPageData();
+    const productionIds = new Set(
+      productionClients.map((client) => client.clientId),
+    );
+    const clients = [...development, ...productionClients];
     if (clients.length === 0) return [];
     const ids = clients.map((client) => client.clientId);
 
@@ -76,7 +89,9 @@ export const getOAuthModerationData = cache(
         label: client.label,
         enabled: setting !== undefined,
         endpointUrl: setting?.endpointUrl ?? null,
-        production: setting?.appId != null,
+        production:
+          productionIds.has(client.clientId) || setting?.appId != null,
+        registered: setting?.appId != null,
         sandboxReports: reports
           .filter((r) => r.clientId === client.clientId)
           .slice(0, PER_CLIENT)

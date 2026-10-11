@@ -9,8 +9,14 @@ import {
 } from "@devdogsuga/sdk/moderation";
 import { env } from "~/env";
 import { db } from "~/server/db";
-import { moderationClients, moderationDeliveries } from "~/server/db/schema";
+import {
+  auditEvents,
+  moderationClients,
+  moderationDeliveries,
+} from "~/server/db/schema";
 import { expectSession } from "~/server/auth";
+import { canUserManageOAuthApps } from "~/server/actions/permissions";
+import { oauthAuditEvent } from "~/server/oauth/audit";
 import { attemptDelivery } from "~/server/moderation/delivery";
 import { databaseDeliveryStore } from "~/server/moderation/deliveryStore";
 import { endpointUrlProblem } from "~/server/moderation/endpoint";
@@ -44,21 +50,37 @@ const field = (formData: FormData, name: string): string => {
   return typeof value === "string" ? value.trim() : "";
 };
 
-/** The registration row, if `userId` owns the client. */
-async function ownedClient(clientId: string, userId: string) {
-  return db.query.oauthRegistrations.findFirst({
-    columns: { clientId: true },
-    where: { clientId, userId },
+/**
+ * The registration of a client `userId` may manage, or null.
+ *
+ * Same rule as the OAuth credentials above it: a development client belongs to
+ * whoever registered it; a production client is managed by everyone who holds
+ * `canManageOAuthApps`, whoever registered it. Anyone else gets the "not
+ * found" they would get for an id that does not exist.
+ */
+async function managedClient(clientId: string, userId: string) {
+  const registration = await db.query.oauthRegistrations.findFirst({
+    columns: { clientId: true, userId: true, tier: true, label: true },
+    where: { clientId },
   });
+  if (!registration) return null;
+  const allowed =
+    registration.tier === "production"
+      ? await canUserManageOAuthApps(userId)
+      : registration.userId === userId;
+  return allowed ? registration : null;
 }
 
 /**
  * The per-client moderation controls on `/tools/oauth`.
  *
- * Every intent starts from ownership: the client must be one of the signed-in
- * member's own. A client an officer has registered as a production app
- * (`moderationClients."appId"` set) keeps its secret controls, but cannot send
- * test actions: those would hit the live receiver.
+ * Every intent starts from management rights: a development client must be the
+ * signed-in member's own, a production client needs `canManageOAuthApps`. A
+ * production client keeps its secret and endpoint controls, audited like the
+ * rest of its credentials, so a secret copied wrongly at the Gate can be
+ * rotated without a database edit. It cannot be turned on here (registering it
+ * in the console does that, and shows the secret once) and cannot send test
+ * actions: those would hit the live receiver.
  */
 export default async function oauthModerationAction(
   _previous: OAuthModerationState,
@@ -68,9 +90,9 @@ export default async function oauthModerationAction(
   const intent = field(formData, "intent");
   const clientId = field(formData, "clientId");
 
-  if (!(await ownedClient(clientId, userId))) {
-    return fail("OAuth client not found");
-  }
+  const registration = await managedClient(clientId, userId);
+  if (!registration) return fail("OAuth client not found");
+  const production = registration.tier === "production";
   if (!env.MODERATION_SIGNING_KEY) {
     return fail("Moderation is not configured on this deployment yet");
   }
@@ -83,6 +105,11 @@ export default async function oauthModerationAction(
 
   switch (intent) {
     case "enable": {
+      if (production) {
+        return fail(
+          "A production client is turned on by registering it under Apps Outside the Platform in the console",
+        );
+      }
       const endpointUrl = field(formData, "endpointUrl");
       const problem = endpointUrl ? endpointUrlProblem(endpointUrl) : null;
       if (problem) return fail(problem);
@@ -112,24 +139,56 @@ export default async function oauthModerationAction(
       const endpointUrl = field(formData, "endpointUrl");
       const problem = endpointUrl ? endpointUrlProblem(endpointUrl) : null;
       if (problem) return fail(problem);
-      await db
-        .update(moderationClients)
-        .set({ endpointUrl: endpointUrl || null, updatedAt: sql`now()` })
-        .where(eq(moderationClients.clientId, clientId));
+      await db.transaction(async (tx) => {
+        if (production) {
+          await tx.insert(auditEvents).values(
+            oauthAuditEvent({
+              actorUserId: userId,
+              action: "oauth_client.moderation_endpoint_changed",
+              clientId,
+              metadata: {
+                label: registration.label,
+                endpointUrl: endpointUrl || null,
+              },
+            }),
+          );
+        }
+        await tx
+          .update(moderationClients)
+          .set({ endpointUrl: endpointUrl || null, updatedAt: sql`now()` })
+          .where(eq(moderationClients.clientId, clientId));
+      });
       revalidatePath("/tools/oauth");
       return { ...EMPTY, message: "Endpoint saved" };
     }
 
     case "rotate-secret": {
       if (!existing) return fail("Turn moderation on first");
-      const [row] = await db
-        .update(moderationClients)
-        .set({
-          secretVersion: sql`${moderationClients.secretVersion} + 1`,
-          updatedAt: sql`now()`,
-        })
-        .where(eq(moderationClients.clientId, clientId))
-        .returning({ secretVersion: moderationClients.secretVersion });
+      // The audit entry goes in first, in the same transaction: a rotation is
+      // never made without a record, and one that fails leaves none.
+      const [row] = await db.transaction(async (tx) => {
+        if (production) {
+          await tx.insert(auditEvents).values(
+            oauthAuditEvent({
+              actorUserId: userId,
+              action: "oauth_client.moderation_secret_rotated",
+              clientId,
+              metadata: {
+                label: registration.label,
+                secretVersion: existing.secretVersion + 1,
+              },
+            }),
+          );
+        }
+        return tx
+          .update(moderationClients)
+          .set({
+            secretVersion: sql`${moderationClients.secretVersion} + 1`,
+            updatedAt: sql`now()`,
+          })
+          .where(eq(moderationClients.clientId, clientId))
+          .returning({ secretVersion: moderationClients.secretVersion });
+      });
       revalidatePath("/tools/oauth");
       return {
         ...EMPTY,
@@ -146,7 +205,7 @@ export default async function oauthModerationAction(
 
     case "send-test": {
       if (!existing) return fail("Turn moderation on first");
-      if (existing.appId) {
+      if (production || existing.appId) {
         return fail(
           "This client is a registered production app. Test actions only go to development clients",
         );

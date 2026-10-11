@@ -24,7 +24,7 @@ The platform stores nothing it can sign with. A client's secret is derived from 
 
 ## The secret
 
-Each OAuth client has one signing secret (`whsec_...`, [Standard Webhooks](https://www.standardwebhooks.com/)). It signs your reports **and** verifies the platform's deliveries. Turn moderation on for a client on [`/tools/oauth`](/tools/oauth) under **Moderation**; the secret is shown once (turning moderation on again does not show it again; rotate for a new one). **Rotate** invalidates the old one at once, so update your function's secret in the same minute.
+Each OAuth client has one signing secret (`whsec_...`, [Standard Webhooks](https://www.standardwebhooks.com/)). It signs your reports **and** verifies the platform's deliveries. Turn moderation on for a client on [`/tools/oauth`](/tools/oauth) under **Moderation**; the secret is shown once (turning moderation on again does not show it again; rotate for a new one). A production client is turned on by registering it (below), which shows the secret once. **Rotate** invalidates the old one at once, so update your function's secret in the same minute.
 
 Every message carries three headers:
 
@@ -99,15 +99,15 @@ The platform POSTs to the endpoint URL you registered. Six message types:
 
 Anything but a 2xx is retried with a growing delay (30 s doubling to an hour, about ten tries). After that the delivery is dead-lettered: it is marked failed, an alert is raised for a registered app (a development client's failure only marks it failed: it is the owner's endpoint under test), and the report page in the console shows a **Resend** button. A delivery to an app with no endpoint is recorded as failed immediately instead of being dropped. A 15-minute cron re-queues a pending delivery only when it has shown no sign of life (queued or attempted) for 90 minutes, longer than the longest retry delay, so a delivery that is still retrying is never queued twice.
 
-`createReceiver` in `@devdogsuga/sdk/moderation` is the reference implementation of all of it, with an in-memory store. Port its three rules to SQL in `apply_event`; do not invent others.
+`createReceiver` in `@devdogsuga/sdk/moderation` is the reference implementation of all of it, with an in-memory store. Port its three rules to SQL in `apply_event`; do not invent others. Record the message id, check the order and apply the change in one transaction: an id recorded by a run that then failed would make the platform's retry a duplicate, and the decision would be lost.
 
 ## Registering a production app
 
-An officer registers an OAuth client as a production app on the moderation console (**Apps Outside the Platform**): a slug, a name, the client id, the endpoint URL (`https`, a public hostname) and one content type per line, `type | Label | https://app/{ref}`. Reports from that client then reach the moderators. Re-registering a slug updates it; pointing it at another client moves the registration, and the old client's reports are then refused until it is registered again.
+An officer who holds `canManageOAuthApps` (the permission that manages production OAuth clients) registers an OAuth client as a production app on the moderation console (**Apps Outside the Platform**): a slug, a name, the client id, the endpoint URL (`https`, a public hostname) and one content type per line, `type | Label | https://app/{ref}`. Reports from that client then reach the moderators. Re-registering a slug updates it; pointing it at another client moves the registration, and the old client's reports are then refused until it is registered again.
 
-Only a **production** OAuth client can be registered; registering a development client is refused. A **development** client that is not registered files its reports into a sandbox only its owner reads (below). A **production** client that is not registered gets `403 client_not_registered` instead of a sandbox answer, so a missed registration shows up in the app's first Report & Block instead of sending every report where no moderator will see it. (Before the OAuth tiers are in, nothing is known about a client's tier and the registry alone decides.)
+Only a **production** OAuth client can be registered; registering a development client is refused. A **development** client that is not registered files its reports into a sandbox only its owner reads (below). A **production** client that is not registered gets `403 client_not_registered` instead of a sandbox answer, so a missed registration shows up in the app's first Report & Block instead of sending every report where no moderator will see it.
 
-When registering is what first creates the client's moderation record, the console shows the client's signing secret once, under the form. Copy it into the app's environment (DogPack: `PLATFORM_MODERATION_SECRET`). If the client's owner had already turned moderation on from `/tools/oauth`, they hold the secret from then, and rotate it there if it is lost (the old one stops working at once).
+When registering is what first creates the client's moderation record, the console shows the client's signing secret once, under the form. Copy it into the app's environment (DogPack: `PLATFORM_MODERATION_SECRET`). If the secret is lost or copied wrongly, a holder of `canManageOAuthApps` rotates it on [`/tools/oauth`](/tools/oauth) under **Moderation**, where every production client is listed (the old secret stops working at once). Registering, rotating the secret and changing the endpoint of a production client are written to the audit log (`oauth_client.moderation_registered`, `oauth_client.moderation_secret_rotated`, `oauth_client.moderation_endpoint_changed`).
 
 ## Testing, in three layers
 
@@ -117,6 +117,6 @@ When registering is what first creates the client's moderation record, the conso
 
 ## Operating notes
 
-- The root key is the Worker secret `MODERATION_SIGNING_KEY`. Without it the API answers 503 and no delivery is signed. Changing it changes **every** client's secret.
+- The root key is `MODERATION_SIGNING_KEY`, set as a secret on the GitHub environment (`staging`, `production`): the deploy writes it onto the Worker, so never set it on the Worker directly, where the next deploy would silently replace it. Without it the API answers 503 and no delivery is signed. Changing it changes **every** client's secret.
 - The queues are `<tier>-moderation-deliveries` and `<tier>-moderation-deliveries-dlq`, created with `wrangler queues create`. The dead-letter consumer calls `postAlert`.
 - Staging runs no crons, so a delivery that missed the queue there is re-queued by hitting `/cron/moderation-deliveries` by hand with the staging `CRON_SECRET`.

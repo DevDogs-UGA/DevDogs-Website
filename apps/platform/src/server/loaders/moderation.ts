@@ -2,6 +2,7 @@ import { and, count, desc, eq, ne, sql } from "drizzle-orm";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import {
+  canUserManageOAuthApps,
   canUserManageSuspensions,
   canUserModerate,
 } from "~/server/actions/permissions";
@@ -147,7 +148,7 @@ export const getModerationPageData = cache(async () => {
         .filter((t) => t.appId === app.id)
         .map((t) => t.contentType),
     })),
-    canRegisterApps: await canUserManageSuspensions(userId),
+    canRegisterApps: await canUserManageOAuthApps(userId),
   };
 });
 

@@ -13,6 +13,15 @@ ALTER TABLE "platform"."oauthRegistrations"
 ALTER TABLE "platform"."oauthRegistrations"
   ADD COLUMN "type" platform."oauthRegistrationType" NOT NULL DEFAULT 'development'::platform."oauthRegistrationType";
 
+ALTER TABLE "platform"."oauthRegistrations"
+  ADD COLUMN "tier" platform."oauthTier" NOT NULL DEFAULT 'development'::platform."oauthTier";
+
+CREATE TRIGGER "oauthRegistrations_tier_immutable"
+  BEFORE UPDATE OF tier ON platform."oauthRegistrations"
+  FOR EACH ROW
+  WHEN ((old.tier IS DISTINCT FROM new.tier))
+  EXECUTE FUNCTION platform.reject_oauth_tier_change();
+
 CREATE POLICY "crud_public_policy_delete" ON "platform"."oauthRegistrations"
   AS RESTRICTIVE
   FOR DELETE

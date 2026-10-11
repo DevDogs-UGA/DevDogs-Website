@@ -3,6 +3,7 @@ import Field from "~/ui/field";
 import OAuthCredentialsField from "~/components/OAuthCredentialsField";
 import OAuthGateDialog from "~/components/OAuthGateDialog";
 import OAuthModerationField from "~/components/OAuthModerationField";
+import OAuthProductionClientsField from "~/components/OAuthProductionClientsField";
 import Input from "~/components/Input";
 import OAuthTestAccountsField from "~/components/OAuthTestAccountsField";
 import PageShell from "~/components/PageShell";
@@ -21,10 +22,10 @@ async function OAuthData({ searchParams }: Props) {
     await Promise.all([
       getOAuthPageData(),
       getOAuthModerationData(),
-      // Read from discovery rather than written down: Supabase advertises
-      // the project's raw host, not api.devdogsuga.org, and a provider set
-      // to anything else fails its issuer check (TASK-347). If that's ever
-      // fixed, this follows on its own.
+      // Read from discovery rather than written down: GoTrue stamps the
+      // issuer it reports on every ID token, and a provider set to anything
+      // else fails its issuer check (TASK-347). It is a `<project>.supabase.co`
+      // host, so this follows the platform project wherever it is reached from.
       resolveIssuer().catch(() => null),
       searchParams,
     ]);
@@ -79,6 +80,20 @@ async function OAuthData({ searchParams }: Props) {
           </Field>
         </ConsoleCard.Content>
       </ConsoleCard.Root>
+      {data.canManageOAuthApps && (
+        <ConsoleCard.Root id="production-clients">
+          <ConsoleCard.Header title="Production clients" />
+          <ConsoleCard.Content>
+            <Field
+              id="production-client-list"
+              label="First-party clients"
+              description="The credentials a DevDogs app signs its members in with. Approved automatically at sign-in, so only an app's own Supabase callback is accepted. Every change here is recorded in the audit log."
+            >
+              <OAuthProductionClientsField {...data} />
+            </Field>
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
+      )}
 
       <ConsoleCard.Root id="test-accounts">
         <ConsoleCard.Header title="Test Accounts" />

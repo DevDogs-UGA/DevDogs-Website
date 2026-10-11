@@ -88,7 +88,7 @@ export async function approveConnect(formData: FormData): Promise<void> {
 
   const { clientId, clientSecret } = await createOauthClientAndRegister({
     label,
-    callbackUri,
+    redirectUris: [callbackUri],
     userId: user.id,
   });
 

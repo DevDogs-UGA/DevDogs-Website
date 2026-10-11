@@ -50,6 +50,7 @@ import { env } from "~/env";
 import { db } from "~/server/db";
 import { resolveReport, updateUserRole } from "~/server/actions/moderation";
 import { registerExternalApp } from "~/server/actions/moderationDeliveries";
+import oauthModerationAction from "~/server/actions/oauthModeration";
 import { handleFileReport } from "./api";
 import { attemptDelivery } from "./delivery";
 import { databaseDeliveryStore, resetForResend } from "./deliveryStore";
@@ -83,6 +84,7 @@ const DEV_CLIENT = id("b000", 3);
 const CLIENTS = [PROD_CLIENT, OTHER_CLIENT, DEV_CLIENT];
 
 const MODERATOR_ROLE = id("c000", 1);
+const SUSPENDER_ROLE = id("c000", 2);
 const SLUGS = ["e3-dogpack", "e3-second"];
 const ENDPOINT = "https://dogpack.example.com/functions/v1/platform-moderation";
 const KEY = env.MODERATION_SIGNING_KEY!;
@@ -115,7 +117,7 @@ async function cleanup() {
     )})`,
   );
   await db.execute(
-    sql`delete from platform.roles where id = ${MODERATOR_ROLE}::uuid`,
+    sql`delete from platform.roles where id in (${MODERATOR_ROLE}::uuid, ${SUSPENDER_ROLE}::uuid)`,
   );
 }
 
@@ -159,13 +161,18 @@ beforeAll(async () => {
     insert into platform."oauthRegistrations" ("clientId", "userId", label)
     values (${DEV_CLIENT}::uuid, ${OWNER}::uuid, 'dev')
   `);
+  // The moderator also holds canManageOAuthApps: registering an app and
+  // managing a production client's moderation both need it. The suspender has
+  // the old gate (canManageSuspensions) and nothing else.
   await db.execute(sql`
-    insert into platform.roles (id, title, rank, "canModerate", "canManageSuspensions")
-    values (${MODERATOR_ROLE}::uuid, 'e3 moderator', 987654.5, true, true)
+    insert into platform.roles (id, title, rank, "canModerate", "canManageSuspensions", "canManageOAuthApps")
+    values (${MODERATOR_ROLE}::uuid, 'e3 moderator', 987654.5, true, true, true),
+           (${SUSPENDER_ROLE}::uuid, 'e3 suspender', 987654.6, false, true, false)
   `);
   await db.execute(sql`
     insert into platform."userRoles" ("userId", "roleId")
-    values (${MODERATOR}::uuid, ${MODERATOR_ROLE}::uuid)
+    values (${MODERATOR}::uuid, ${MODERATOR_ROLE}::uuid),
+           (${OTHER_REPORTER}::uuid, ${SUSPENDER_ROLE}::uuid)
   `);
 });
 
@@ -769,15 +776,11 @@ describe("a development client's failing endpoint", () => {
 });
 
 /**
- * Lane 3c gives `oauthRegistrations` a `tier`. This lane must not depend on it
- * being there, so the tests add a stand-in column when it is missing (and drop
- * only what they added): without the column nothing is enforced; with it, a
- * development client cannot be registered as a production moderation app, and
- * a production client nobody registered is refused instead of sandboxed.
+ * `oauthRegistrations.tier` (lane 3c): a development client cannot be
+ * registered as a production moderation app, and a production client nobody
+ * registered is refused instead of sandboxed.
  */
 describe("OAuth tiers", () => {
-  let addedColumn = false;
-
   const registration = async (
     client: string,
     tier: "development" | "production",
@@ -786,33 +789,9 @@ describe("OAuth tiers", () => {
       sql`delete from platform."oauthRegistrations" where "clientId" = ${client}::uuid`,
     );
     await db.execute(
-      tier === "production"
-        ? sql`insert into platform."oauthRegistrations" ("clientId", "userId", label, tier) values (${client}::uuid, ${OWNER}::uuid, 'x', 'production')`
-        : sql`insert into platform."oauthRegistrations" ("clientId", "userId", label, tier) values (${client}::uuid, ${OWNER}::uuid, 'x', 'development')`,
+      sql`insert into platform."oauthRegistrations" ("clientId", "userId", label, tier) values (${client}::uuid, ${OWNER}::uuid, 'x', ${tier}::platform."oauthTier")`,
     );
   };
-
-  beforeAll(async () => {
-    const [column] = await db.execute<{ n: number }>(sql`
-      select count(*)::int as n from pg_attribute
-      where attrelid = 'platform."oauthRegistrations"'::regclass
-        and attname = 'tier' and not attisdropped
-    `);
-    if (column!.n === 0) {
-      await db.execute(
-        sql`alter table platform."oauthRegistrations" add column tier text`,
-      );
-      addedColumn = true;
-    }
-  });
-
-  afterAll(async () => {
-    if (addedColumn) {
-      await db.execute(
-        sql`alter table platform."oauthRegistrations" drop column tier`,
-      );
-    }
-  });
 
   it("reports the tier, and null for a client with no registration", async () => {
     await registration(DEV_CLIENT, "development");
@@ -862,5 +841,183 @@ describe("OAuth tiers", () => {
     await expect(
       (await appClient(PROD_CLIENT)).fileReport(report()),
     ).resolves.toMatchObject({ sandbox: false });
+  });
+});
+
+/**
+ * The `/tools/oauth` moderation controls under the OAuth tiers: a production
+ * client is managed by whoever holds `canManageOAuthApps`, not by its owner, so
+ * a secret copied wrongly at the Gate can be rotated without a database edit;
+ * and every change to one is audited.
+ */
+describe("moderation controls on /tools/oauth", () => {
+  const act = (fields: Record<string, string>) => {
+    const data = new FormData();
+    for (const [name, value] of Object.entries(fields)) data.set(name, value);
+    return oauthModerationAction(
+      { clientId: null, secret: null, message: null, ok: true },
+      data,
+    );
+  };
+
+  const registerForm = (client: string) => {
+    const data = new FormData();
+    data.set("slug", "e3-dogpack");
+    data.set("displayName", "DogPack");
+    data.set("clientId", client);
+    data.set("endpointUrl", ENDPOINT);
+    data.set("contentTypes", "session | Study session");
+    return data;
+  };
+
+  const auditCount = async (client: string, action: string) => {
+    const [row] = await db.execute<{ n: number }>(
+      sql`select count(*)::int as n from platform."auditEvents"
+          where "targetType" = 'oauth_client' and "targetId" = ${client}
+            and action = ${action}`,
+    );
+    return row!.n;
+  };
+
+  const tiered = async (client: string, tier: "development" | "production") => {
+    await db.execute(
+      sql`delete from platform."oauthRegistrations" where "clientId" = ${client}::uuid`,
+    );
+    await db.execute(
+      sql`insert into platform."oauthRegistrations" ("clientId", "userId", label, tier) values (${client}::uuid, ${OWNER}::uuid, 'x', ${tier}::platform."oauthTier")`,
+    );
+  };
+
+  /** A registered production client with a moderation record. */
+  const registeredProduction = async () => {
+    await tiered(PROD_CLIENT, "production");
+    await registerApp("e3-dogpack", PROD_CLIENT);
+    await db.execute(
+      sql`insert into platform."moderationClients" ("clientId", "endpointUrl")
+          values (${PROD_CLIENT}::uuid, ${ENDPOINT}) on conflict do nothing`,
+    );
+  };
+
+  it("lets a development client's owner turn it on once, and never shows the secret again", async () => {
+    await tiered(DEV_CLIENT, "development");
+    signedInAs = OWNER;
+    const first = await act({ intent: "enable", clientId: DEV_CLIENT });
+    expect(first.ok).toBe(true);
+    expect(first.secret).toBe(await deriveClientSecret(KEY, DEV_CLIENT, 1));
+
+    const second = await act({ intent: "enable", clientId: DEV_CLIENT });
+    expect(second).toMatchObject({ ok: false, secret: null });
+  });
+
+  it("answers 'not found' to anyone but the owner of a development client", async () => {
+    await tiered(DEV_CLIENT, "development");
+    signedInAs = MODERATOR; // holds canManageOAuthApps, which is about production
+    expect(await act({ intent: "enable", clientId: DEV_CLIENT })).toMatchObject(
+      { ok: false, message: "OAuth client not found" },
+    );
+  });
+
+  it("does not audit a development client's rotation", async () => {
+    await tiered(DEV_CLIENT, "development");
+    signedInAs = OWNER;
+    await act({ intent: "enable", clientId: DEV_CLIENT });
+    const result = await act({
+      intent: "rotate-secret",
+      clientId: DEV_CLIENT,
+    });
+    expect(result.secret).toBe(await deriveClientSecret(KEY, DEV_CLIENT, 2));
+    expect(
+      await auditCount(DEV_CLIENT, "oauth_client.moderation_secret_rotated"),
+    ).toBe(0);
+  });
+
+  it("lets a holder of canManageOAuthApps register and rotate a production client's secret, and records both", async () => {
+    await tiered(PROD_CLIENT, "production");
+    signedInAs = MODERATOR;
+    // A production client is turned on by registering it, which shows v1.
+    const registered = await registerExternalApp(
+      { ok: true, message: null },
+      registerForm(PROD_CLIENT),
+    );
+    expect(registered.secret).toBe(
+      await deriveClientSecret(KEY, PROD_CLIENT, 1),
+    );
+    expect(
+      await auditCount(PROD_CLIENT, "oauth_client.moderation_registered"),
+    ).toBeGreaterThan(0);
+
+    const before = await auditCount(
+      PROD_CLIENT,
+      "oauth_client.moderation_secret_rotated",
+    );
+    const rotated = await act({
+      intent: "rotate-secret",
+      clientId: PROD_CLIENT,
+    });
+    expect(rotated).toMatchObject({ ok: true, clientId: PROD_CLIENT });
+    expect(rotated.secret).toBe(await deriveClientSecret(KEY, PROD_CLIENT, 2));
+    expect(
+      await auditCount(PROD_CLIENT, "oauth_client.moderation_secret_rotated"),
+    ).toBe(before + 1);
+  });
+
+  it("records an endpoint change on a production client", async () => {
+    await registeredProduction();
+    signedInAs = MODERATOR;
+    const before = await auditCount(
+      PROD_CLIENT,
+      "oauth_client.moderation_endpoint_changed",
+    );
+    const result = await act({
+      intent: "set-endpoint",
+      clientId: PROD_CLIENT,
+      endpointUrl: "https://dogpack.example.com/functions/v1/other",
+    });
+    expect(result.ok).toBe(true);
+    expect(
+      await auditCount(PROD_CLIENT, "oauth_client.moderation_endpoint_changed"),
+    ).toBe(before + 1);
+  });
+
+  it("refuses a production client to its owner without the permission, and to a member with only canManageSuspensions", async () => {
+    await registeredProduction();
+    const rotations = () =>
+      auditCount(PROD_CLIENT, "oauth_client.moderation_secret_rotated");
+    const before = await rotations();
+    for (const member of [OWNER, OTHER_REPORTER]) {
+      signedInAs = member;
+      expect(
+        await act({ intent: "rotate-secret", clientId: PROD_CLIENT }),
+      ).toMatchObject({ ok: false, message: "OAuth client not found" });
+    }
+    expect(await rotations()).toBe(before);
+  });
+
+  it("turns a production client on only by registering it, and sends no test actions to it", async () => {
+    await tiered(PROD_CLIENT, "production");
+    signedInAs = MODERATOR;
+    const enable = await act({ intent: "enable", clientId: PROD_CLIENT });
+    expect(enable).toMatchObject({ ok: false, secret: null });
+    expect(enable.message).toContain("registering");
+
+    await registeredProduction();
+    const test = await act({
+      intent: "send-test",
+      clientId: PROD_CLIENT,
+      type: "content.hide",
+    });
+    expect(test).toMatchObject({ ok: false });
+    expect(test.message).toContain("production");
+  });
+
+  it("will not register an app for a member with only canManageSuspensions", async () => {
+    await tiered(PROD_CLIENT, "production");
+    signedInAs = OTHER_REPORTER;
+    expect(
+      await registerExternalApp(
+        { ok: true, message: null },
+        registerForm(PROD_CLIENT),
+      ),
+    ).toMatchObject({ ok: false, message: "You cannot register apps" });
   });
 });

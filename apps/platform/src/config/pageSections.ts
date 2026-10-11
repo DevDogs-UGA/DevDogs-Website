@@ -174,6 +174,18 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
       ],
     },
     {
+      id: "production-clients",
+      label: "Production clients",
+      fields: [
+        {
+          id: "production-client-list",
+          label: "First-party clients",
+          description:
+            "The credentials a DevDogs app signs its members in with. Approved automatically at sign-in, so only an app's own Supabase callback is accepted. Every change here is recorded in the audit log.",
+        },
+      ],
+    },
+    {
       id: "test-accounts",
       label: "Test Accounts",
       fields: [

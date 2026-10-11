@@ -4,12 +4,13 @@ import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
 import { env } from "~/env";
 import { db } from "~/server/db";
-import { moderationClients } from "~/server/db/schema";
+import { auditEvents, moderationClients } from "~/server/db/schema";
 import { expectSession } from "~/server/auth";
 import {
-  canUserManageSuspensions,
+  canUserManageOAuthApps,
   canUserModerate,
 } from "~/server/actions/permissions";
+import { oauthAuditEvent } from "~/server/oauth/audit";
 import { parseContentTypes } from "~/server/moderation/contentTypes";
 import { endpointUrlProblem } from "~/server/moderation/endpoint";
 import { resetForResend } from "~/server/moderation/deliveryStore";
@@ -56,16 +57,17 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * `/tools/oauth` keeps the secret the owner saw; they rotate there to get a
  * new one.
  *
- * `canManageSuspensions` is the closest standing permission to "an officer who
- * administers other apps' accounts"; swap in `canManageOAuthApps` when that
- * permission exists (lane 3c).
+ * Registering needs `canManageOAuthApps`, the permission that creates and
+ * manages production OAuth clients: an app that can report content and receive
+ * decisions about members is the same level of trust as one that signs them
+ * in. The registration is audited like every other production client change.
  */
 export async function registerExternalApp(
   _previous: RegisterAppState,
   formData: FormData,
 ): Promise<RegisterAppState> {
   const userId = await expectSession();
-  if (!(await canUserManageSuspensions(userId))) {
+  if (!(await canUserManageOAuthApps(userId))) {
     return { ok: false, message: "You cannot register apps" };
   }
 
@@ -99,12 +101,24 @@ export async function registerExternalApp(
     .where(eq(moderationClients.clientId, clientId.toLowerCase()));
 
   try {
-    await db.execute(
-      sql`select "platform".register_external_app(
-            ${slug}, ${displayName}, ${clientId.toLowerCase()}::uuid,
-            ${endpointUrl}, ${JSON.stringify(parsed.types)}::jsonb
-          )`,
-    );
+    await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select "platform".register_external_app(
+              ${slug}, ${displayName}, ${clientId.toLowerCase()}::uuid,
+              ${endpointUrl}, ${JSON.stringify(parsed.types)}::jsonb
+            )`,
+      );
+      // After the function: it refuses a development client, and a refused
+      // registration must leave no entry.
+      await tx.insert(auditEvents).values(
+        oauthAuditEvent({
+          actorUserId: userId,
+          action: "oauth_client.moderation_registered",
+          clientId: clientId.toLowerCase(),
+          metadata: { slug, endpointUrl },
+        }),
+      );
+    });
   } catch (error) {
     const cause =
       error instanceof Error && error.cause instanceof Error
@@ -141,7 +155,7 @@ export async function registerExternalApp(
   return {
     ok: true,
     message: before
-      ? `${displayName} is registered. Its owner already holds the secret; they rotate it in Tools, OAuth if it is lost.`
+      ? `${displayName} is registered. Its secret was shown when moderation was first turned on; rotate it under Tools, OAuth if it is lost.`
       : `${displayName} is registered. Moderation has no signing key on this deployment yet, so there is no secret to show.`,
   };
 }
