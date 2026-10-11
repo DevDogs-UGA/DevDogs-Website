@@ -1,5 +1,5 @@
-import { ACCENT, PageCard } from "@devdogsuga/brand";
-import { contentType, ogResponse, size } from "@devdogsuga/brand/next";
+import { ACCENT, PageCard } from "@devdogsuga/sdk/brand";
+import { contentType, ogResponse, size } from "@devdogsuga/sdk/brand/next";
 import { getCompetitionBySlug } from "~/server/loaders/competitions";
 import { getEntrants } from "~/server/loaders/teams";
 

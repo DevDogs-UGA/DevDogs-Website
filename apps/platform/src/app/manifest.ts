@@ -42,7 +42,7 @@ export default function manifest(): MetadataRoute.Manifest {
      * Chrome wants 192 and 512 before it offers to install, that there was no
      * second rendering of the logo to point at, and that making one was a
      * design task. That task is done: the 192 is rendered by `codegen`
-     * (`scripts/brand-images.ts`) from `@devdogsuga/brand`'s app icon into
+     * (`scripts/brand-images.ts`) from `@devdogsuga/sdk/brand`'s app icon into
      * `public/brand/icons/`, and the 512 is `icon.tsx`. So the two Chrome wants
      * are declared here, and the app is installable.
      *

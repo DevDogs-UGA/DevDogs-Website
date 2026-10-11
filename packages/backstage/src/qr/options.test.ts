@@ -9,7 +9,7 @@ import {
   QR_LOGO_PRESETS,
   QR_THEMES,
   qrRequestSchema,
-} from "@devdogsuga/brand/qr";
+} from "@devdogsuga/sdk/brand/qr";
 import { describe, expect, it } from "vitest";
 import { catalog } from "../catalog.js";
 import {

@@ -1,0 +1,179 @@
+{
+  "name": "@devdogsuga/sdk",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "The DevDogs SDK: brand, the env registry, Supabase and Drizzle client factories, security headers, telemetry, the moderation protocol and the generated catalog and platform API clients, as subpaths of one package.",
+  "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DevDogsUGA/DevDogsUGA.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://devdogsuga.org/docs",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./brand": {
+      "types": "./dist/brand/index.d.ts",
+      "default": "./dist/brand/index.js"
+    },
+    "./brand/event": {
+      "types": "./dist/brand/event.d.ts",
+      "default": "./dist/brand/event.js"
+    },
+    "./brand/marks": {
+      "types": "./dist/brand/marks-data.d.ts",
+      "default": "./dist/brand/marks-data.js"
+    },
+    "./brand/qr": {
+      "types": "./dist/brand/qr.d.ts",
+      "default": "./dist/brand/qr.js"
+    },
+    "./brand/render": {
+      "types": "./dist/brand/render.d.ts",
+      "default": "./dist/brand/render.js"
+    },
+    "./brand/next": {
+      "types": "./dist/brand/next.d.ts",
+      "default": "./dist/brand/next.js"
+    },
+    "./brand/palette.css": "./palette.css",
+    "./brand/artwork/*": "./artwork/*",
+    "./catalog": {
+      "types": "./dist/catalog/index.d.ts",
+      "default": "./dist/catalog/index.js"
+    },
+    "./db/client": {
+      "types": "./dist/db/client/index.d.ts",
+      "default": "./dist/db/client/index.js"
+    },
+    "./db/server": {
+      "types": "./dist/db/server/index.d.ts",
+      "default": "./dist/db/server/index.js"
+    },
+    "./db/typegen": {
+      "types": "./dist/db/typegen/index.d.ts",
+      "default": "./dist/db/typegen/index.js"
+    },
+    "./env": {
+      "types": "./dist/env/index.d.ts",
+      "default": "./dist/env/index.js"
+    },
+    "./env/derivation": {
+      "types": "./dist/env/derivation.d.ts",
+      "default": "./dist/env/derivation.js"
+    },
+    "./env/targets": {
+      "types": "./dist/env/targets.d.ts",
+      "default": "./dist/env/targets.js"
+    },
+    "./headers": {
+      "types": "./dist/headers/index.d.ts",
+      "default": "./dist/headers/index.js"
+    },
+    "./moderation": {
+      "types": "./dist/moderation/index.d.ts",
+      "default": "./dist/moderation/index.js"
+    },
+    "./platform": {
+      "types": "./dist/platform/index.d.ts",
+      "default": "./dist/platform/index.js"
+    },
+    "./telemetry": {
+      "types": "./dist/telemetry/index.d.ts",
+      "default": "./dist/telemetry/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "artwork",
+    "palette.css"
+  ],
+  "scripts": {
+    "codegen": "tsx scripts/brand-codegen.ts",
+    "fetch:fonts": "tsx scripts/brand-fetch-fonts.ts",
+    "prebuild": "pnpm codegen",
+    "build": "tsc",
+    "pretypecheck": "pnpm codegen",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "pretest": "pnpm codegen",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prelint": "pnpm codegen",
+    "lint": "eslint .",
+    "prelint:fix": "pnpm codegen",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "@sentry/core": "catalog:",
+    "@supabase/ssr": "catalog:",
+    "@supabase/supabase-js": "catalog:",
+    "@t3-oss/env-core": "^0.13.11",
+    "@t3-oss/env-nextjs": "^0.13.11",
+    "qrcode": "1.5.4",
+    "server-only": "^0.0.1",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "drizzle-orm": "1.0.0-rc.4",
+    "next": ">=16",
+    "postgres": "^3.4.9",
+    "react": "^19.0.0",
+    "satori": "^0.33.4",
+    "sharp": "0.35.5"
+  },
+  "peerDependenciesMeta": {
+    "@resvg/resvg-js": {
+      "optional": true
+    },
+    "drizzle-orm": {
+      "optional": true
+    },
+    "next": {
+      "optional": true
+    },
+    "postgres": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "satori": {
+      "optional": true
+    },
+    "sharp": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@phosphor-icons/react": "^2.1.10",
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/node": "catalog:",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "drizzle-orm": "catalog:",
+    "eslint": "catalog:",
+    "postgres": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "satori": "^0.33.4",
+    "sharp": "0.35.5",
+    "tailwindcss": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

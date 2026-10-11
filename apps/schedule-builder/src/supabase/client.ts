@@ -1,4 +1,4 @@
-import { createBrowserClient } from "@devdogsuga/db/client";
+import { createBrowserClient } from "@devdogsuga/sdk/db/client";
 import type { Database } from "@devdogsuga/supabase";
 import { env } from "~/env";
 import { APP_SCHEMA } from "./schema";

@@ -31,7 +31,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { declare, define, resetRegistry } from "@devdogsuga/env";
+import { declare, define, resetRegistry } from "@devdogsuga/sdk/env";
 import {
   loadEnv,
   resetEnvSyncCacheForTests,

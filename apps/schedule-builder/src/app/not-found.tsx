@@ -1,4 +1,4 @@
-import { DogDaysMark } from "@devdogsuga/brand";
+import { DogDaysMark } from "@devdogsuga/sdk/brand";
 import Link from "next/link";
 
 export default function NotFound() {

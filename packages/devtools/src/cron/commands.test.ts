@@ -8,7 +8,7 @@ import type * as RepoPeers from "@devdogsuga/cli-core/repo/peers";
  * `runCronRun`'s own dependencies, faked at the module boundary for the
  * `MissingEnvFileError` test near the bottom of this file: `discoverCronMaps`
  * and `discoverWranglerConfigs` so the picker sees one controlled route cron
- * instead of walking `apps/*` on disk, and `@devdogsuga/env/load` so the
+ * instead of walking `apps/*` on disk, and `env-runtime/load` so the
  * tier's env load fails the way a missing `.env.staging` would without an
  * actual missing file. Every other test in this file exercises a pure helper
  * directly (`resolveBaseUrl`, the source check below) and needs none of this.
@@ -44,7 +44,7 @@ vi.mock("./discovery.js", async (importOriginal) => ({
 }));
 
 // Mocks `../repo/peers.js`'s `loadEnvLoad()` rather than the bare
-// `@devdogsuga/env/load` specifier: devtools resolves that module
+// `env-runtime/load` specifier: devtools resolves that module
 // dynamically FROM the target repo now (see `repo/peers.ts`).
 vi.mock("@devdogsuga/cli-core/repo/peers", async (importOriginal) => {
   class MissingEnvFileError extends Error {}

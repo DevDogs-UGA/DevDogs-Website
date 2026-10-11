@@ -1,5 +1,5 @@
-import { PAGE_CARDS, PageCard } from "@devdogsuga/brand";
-import { contentType, ogResponse, size } from "@devdogsuga/brand/next";
+import { PAGE_CARDS, PageCard } from "@devdogsuga/sdk/brand";
+import { contentType, ogResponse, size } from "@devdogsuga/sdk/brand/next";
 
 /**
  * The club's own card, on `/` and as the fallback under every segment that does
@@ -14,7 +14,7 @@ import { contentType, ogResponse, size } from "@devdogsuga/brand/next";
  * param, or a row.
  *
  * The public pages each override it with their own; see `PAGE_CARDS` in
- * `@devdogsuga/brand` for which ones, and why that list is the sitemap's.
+ * `@devdogsuga/sdk/brand` for which ones, and why that list is the sitemap's.
  */
 export const alt = "DevDogs — learn by doing";
 export { contentType, size };

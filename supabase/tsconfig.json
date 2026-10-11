@@ -3,7 +3,7 @@
   // config.toml reads. This directory is not a workspace package, so the
   // check is invoked from @devdogsuga/supabase's typecheck script
   // (`tsc --noEmit -p ../../supabase`); imports resolve because the ROOT
-  // package.json depends on @devdogsuga/env and zod.
+  // package.json depends on @devdogsuga/sdk and zod.
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     // The base sets `incremental`, which would strew a tsbuildinfo file into

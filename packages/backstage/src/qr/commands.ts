@@ -8,7 +8,7 @@
  * output format at once. The page stays, deprecated; new options are
  * CLI-only.
  *
- * Both read one request schema from `@devdogsuga/brand/qr`, so what a request
+ * Both read one request schema from `@devdogsuga/sdk/brand/qr`, so what a request
  * means cannot differ between them. The scannability warning is the page's
  * too: `qrVersionIssue`.
  *
@@ -25,8 +25,8 @@ import {
   qrVersionIssue,
   resolveQrRequest,
   type QrRequest,
-} from "@devdogsuga/brand/qr";
-import { renderQr } from "@devdogsuga/brand/render";
+} from "@devdogsuga/sdk/brand/qr";
+import { renderQr } from "@devdogsuga/sdk/brand/render";
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { isDryRun } from "@devdogsuga/cli-core/dry-run";
 import { isNonInteractive } from "@devdogsuga/cli-core/mode";

@@ -108,10 +108,10 @@ default, in both `pnpm devtools` and `devtools-ci`:
   no `Sentry.init()` call happens: no network request, no console output.
 - **What's scrubbed**: this CLI touches local `.env` files, so every event
   passes through
-  `@devdogsuga/telemetry`'s shared scrubbers before it leaves the process —
+  `@devdogsuga/sdk/telemetry`'s shared scrubbers before it leaves the process —
   file paths reduced to basenames, email addresses redacted, and
   token/secret-shaped values stripped out of messages, breadcrumbs, and
-  stack frames. See Backstage's `packages/telemetry/src/scrub.ts` for exactly what each
+  stack frames. See `packages/sdk/src/telemetry/scrub.ts` for exactly what each
   scrubber matches.
 
 ## Layout

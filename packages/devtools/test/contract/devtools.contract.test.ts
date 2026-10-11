@@ -18,8 +18,7 @@
  * default `pnpm test` — see package.json.
  *
  * PREREQUISITE: `pnpm --filter @devdogsuga/devtools build` (and the same for
- * `@devdogsuga/telemetry` and `@devdogsuga/env`) must already have produced
- * `dist/` for each — this suite packs whatever is currently on disk, it does
+ * `@devdogsuga/sdk`) must already have produced `dist/` for each — this suite packs whatever is currently on disk, it does
  * not build. CI's `ci.yaml`/`publish.yaml` both run the build step first;
  * see this repo's root README or those workflow files for the exact order.
  */
@@ -91,20 +90,15 @@ describe("devtools contract tests", () => {
   beforeAll(
     () => {
       requireBuilt(DEVTOOLS_ROOT, "launch.js");
-      requireBuilt(join(BACKSTAGE_ROOT, "packages", "telemetry"), "index.js");
-      requireBuilt(join(BACKSTAGE_ROOT, "packages", "env"), "index.js");
+      requireBuilt(join(BACKSTAGE_ROOT, "packages", "sdk"), "index.js");
 
       tmpRoot = mkdtempSync(join(tmpdir(), "devtools-contract-"));
       packDir = join(tmpRoot, "packs");
       mkdirSync(packDir, { recursive: true });
 
       const devtoolsTgz = packPackage(DEVTOOLS_ROOT, packDir);
-      const telemetryTgz = packPackage(
-        join(BACKSTAGE_ROOT, "packages", "telemetry"),
-        packDir,
-      );
-      const envTgz = packPackage(
-        join(BACKSTAGE_ROOT, "packages", "env"),
+      const sdkTgz = packPackage(
+        join(BACKSTAGE_ROOT, "packages", "sdk"),
         packDir,
       );
 
@@ -137,8 +131,7 @@ describe("devtools contract tests", () => {
       writeFileSync(
         workspaceYamlPath,
         `${workspaceYaml}\noverrides:\n` +
-          `  "@devdogsuga/telemetry": "file:${telemetryTgz}"\n` +
-          `  "@devdogsuga/env": "file:${envTgz}"\n` +
+          `  "@devdogsuga/sdk": "file:${sdkTgz}"\n` +
           `allowBuilds:\n` +
           `  core-js: false\n` +
           `  esbuild: true\n`,
@@ -165,9 +158,9 @@ describe("devtools contract tests", () => {
 
       // A second install of the same tarball OUTSIDE the fixture, the shape
       // `pnpm dlx` gives a real run: devtools alone in its own directory, with
-      // no `@devdogsuga/env` installed next to it (an optional peer nothing
-      // here depends on). The fixture install above cannot catch a bare peer
-      // import from devtools' own files, because the fixture supplies the peer.
+      // no `@devdogsuga/sdk` installed next to it (the repo's own dependency,
+      // never devtools'). The fixture install above cannot catch a bare import
+      // of it from devtools' own files, because the fixture supplies it.
       const dlxDir = join(tmpRoot, "dlx");
       mkdirSync(dlxDir);
       writeFileSync(
@@ -180,11 +173,7 @@ describe("devtools contract tests", () => {
       );
       writeFileSync(
         join(dlxDir, "pnpm-workspace.yaml"),
-        `overrides:\n` +
-          `  "@devdogsuga/telemetry": "file:${telemetryTgz}"\n` +
-          `allowBuilds:\n` +
-          `  core-js: false\n` +
-          `  esbuild: true\n`,
+        `allowBuilds:\n` + `  core-js: false\n` + `  esbuild: true\n`,
       );
       const dlxInstall = spawnSync(
         "pnpm",
@@ -201,9 +190,9 @@ describe("devtools contract tests", () => {
             `${dlxInstall.stdout}\n${dlxInstall.stderr}`,
         );
       }
-      if (existsSync(join(dlxDir, "node_modules", "@devdogsuga", "env"))) {
+      if (existsSync(join(dlxDir, "node_modules", "@devdogsuga", "sdk"))) {
         throw new Error(
-          "The dlx directory installed @devdogsuga/env, so it no longer models pnpm dlx.",
+          "The dlx directory installed @devdogsuga/sdk, so it no longer models pnpm dlx.",
         );
       }
       dlxBin = join(dlxDir, "node_modules", ".bin", "devtools");
@@ -336,7 +325,7 @@ describe("devtools contract tests", () => {
   });
 
   it("env example loads devtools' own manifest from a dlx-shaped install", async () => {
-    // Regression: devtools' `env.ts` imports `@devdogsuga/env` by bare
+    // Regression: devtools' `env.ts` imports `@devdogsuga/sdk/env` by bare
     // specifier, which does not resolve next to a dlx copy; every env
     // command failed with "The env manifest at .../env.ts failed to import".
     const { status, stdout, stderr } = await run(

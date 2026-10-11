@@ -11,7 +11,7 @@ There is one env file per **target**, not one file with modes. `.env` and `.env.
 
 ## Your file
 
-`.env` at the repo root **is** the development target. Every script that needs it goes through `with-env`, the wrapper from `@devdogsuga/env`, which loads the file and prints on every run which files it actually loaded.
+`.env` at the repo root **is** the development target. Every script that needs it goes through `with-env`, the wrapper from `@devdogsuga/sdk/env`, which loads the file and prints on every run which files it actually loaded.
 
 Creating it is the one thing `with-env` cannot do, so `pnpm devtools setup` deliberately runs outside the wrapper — it is the one command that works with no `.env` present.
 

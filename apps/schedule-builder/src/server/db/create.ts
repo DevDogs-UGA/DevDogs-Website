@@ -1,4 +1,4 @@
-import { createDb } from "@devdogsuga/db/server";
+import { createDb } from "@devdogsuga/sdk/db/server";
 import { relations } from "./relations";
 
 /**

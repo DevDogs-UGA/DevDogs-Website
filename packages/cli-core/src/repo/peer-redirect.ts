@@ -2,7 +2,7 @@
  * Points one module's bare import of a peer at the copy the target repo
  * resolved (`repo/peers.ts`).
  *
- * devtools' own `env.ts` manifest imports `@devdogsuga/env` by bare
+ * devtools' own `env.ts` manifest imports `@devdogsuga/sdk/env` by bare
  * specifier, and from an installed copy that specifier resolves relative to
  * the manifest's own location: inside the pnpm store, next to devtools,
  * where an optional peer is never installed under `pnpm dlx`. The import

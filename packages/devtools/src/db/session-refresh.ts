@@ -25,7 +25,7 @@
  * (`start`/`stop`/`restart`) that only ever touches the LOCAL Docker stack
  * in the first place.
  */
-import type { EnteredEnvironment } from "@devdogsuga/env/session";
+import type { EnteredEnvironment } from "@devdogsuga/cli-core/env-runtime/session";
 import { loadEnvLoad, loadEnvSession } from "@devdogsuga/cli-core/repo/peers";
 
 export interface RefreshSessionEnvOptions {

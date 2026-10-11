@@ -28,7 +28,7 @@ const {
   cacheForRequestCaches: new WeakMap<() => unknown, WeakMap<object, unknown>>(),
 }));
 
-vi.mock("@devdogsuga/db/server", () => ({ createDb: createDbMock }));
+vi.mock("@devdogsuga/sdk/db/server", () => ({ createDb: createDbMock }));
 vi.mock("cloudflare:workers", () => ({ env: workerEnvMock }));
 vi.mock("vinext/cache", () => ({
   cacheForRequest:

@@ -8,7 +8,7 @@ import {
   planOnlyKeys,
   storableKeys,
   variableKeys,
-} from "@devdogsuga/env";
+} from "@devdogsuga/sdk/env";
 import { z } from "zod";
 import { buildDesiredSettings } from "../github/settings/desired.js";
 import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";

@@ -1,4 +1,4 @@
-import { createAdminClient } from "@devdogsuga/db/server";
+import { createAdminClient } from "@devdogsuga/sdk/db/server";
 import type { Database } from "@devdogsuga/supabase";
 import { env } from "~/env";
 import { APP_SCHEMA } from "./schema";

@@ -11,14 +11,14 @@ import type { CSSProperties } from "react";
 import {
   EVENT_KIND_VISUALS,
   EVENT_SEGMENT_VISUALS,
-} from "@devdogsuga/brand/event";
+} from "@devdogsuga/sdk/brand/event";
 
 /** The club accent — UGA arch black on red. */
 export const UGA = "#ba0c2f";
 
 /**
  * Event-type colors, taken from the calendar's own vocabulary in
- * `@devdogsuga/brand/event` rather than restated: the chips here and the
+ * `@devdogsuga/sdk/brand/event` rather than restated: the chips here and the
  * chips on the site's schedule are the same promise about the same event
  * types.
  */

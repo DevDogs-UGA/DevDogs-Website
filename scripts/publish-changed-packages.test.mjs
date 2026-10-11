@@ -70,17 +70,28 @@ test("cycles are rejected with the path", () => {
   );
 });
 
-test("the repo's own public packages layer cleanly, and the officer CLIs stay unpublished", () => {
+test("the repo's own public packages layer cleanly: four published, the rest bundled or internal", () => {
   const dir = join(import.meta.dirname, "..", "packages");
   const all = readdirSync(dir)
     .filter((name) => existsSync(join(dir, name, "package.json")))
     .map((name) =>
       JSON.parse(readFileSync(join(dir, name, "package.json"), "utf8")),
     );
-  // TASK-478 Phase 3: officers run these from a Backstage clone and DevDogsUGA
-  // no longer depends on them, so they must not reach npm.
-  for (const name of [
+  // Q24-Q25: four published packages. `events` and `newsletter` ride inside
+  // the backstage bundle and `cli-core` inside both CLIs, so none of them
+  // reaches npm on its own; `email`, `docs-kit` and `supabase` are internal.
+  const published = all
+    .filter((json) => json.private !== true)
+    .map((json) => json.name)
+    .sort();
+  assert.deepEqual(published, [
     "@devdogsuga/backstage",
+    "@devdogsuga/config",
+    "@devdogsuga/devtools",
+    "@devdogsuga/sdk",
+  ]);
+  for (const name of [
+    "@devdogsuga/cli-core",
     "@devdogsuga/events",
     "@devdogsuga/newsletter",
   ]) {
@@ -98,7 +109,11 @@ test("the repo's own public packages layer cleanly, and the officer CLIs stay un
   assert.equal(
     layerOf("@devdogsuga/devtools"),
     0,
-    "devtools inlines telemetry",
+    "devtools inlines the sdk subpaths it needs",
+  );
+  assert.ok(
+    layerOf("@devdogsuga/backstage") > layerOf("@devdogsuga/sdk"),
+    "backstage depends on the sdk (brand), so it publishes after it",
   );
 });
 

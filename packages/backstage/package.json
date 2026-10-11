@@ -1,13 +1,13 @@
 {
   "name": "@devdogsuga/backstage",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "type": "module",
   "description": "Officer and production CLI for DevDogsUGA: deploys, env sync with Bitwarden and GitHub, the migration planner role, club graphics and QR codes, GitHub rulesets and settings, and the newsletter. Ships built JS; run it anywhere with `pnpm dlx @devdogsuga/backstage` (no checkout needed to start; commands that read a checkout say so).",
   "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
-    "url": "https://github.com/DevDogsUGA/Backstage.git",
+    "url": "https://github.com/DevDogsUGA/DevDogsUGA.git",
     "directory": "packages/backstage"
   },
   "publishConfig": {
@@ -39,41 +39,29 @@
     "@bitwarden/cli": "2026.7.0",
     "@bitwarden/sdk-napi": "1.0.0",
     "@clack/prompts": "catalog:",
-    "@devdogsuga/brand": "workspace:*",
-    "@devdogsuga/events": "workspace:*",
-    "@devdogsuga/newsletter": "workspace:*",
-    "@devdogsuga/telemetry": "workspace:*",
+    "@devdogsuga/sdk": "workspace:*",
+    "@dotenvx/dotenvx": "^2.21.0",
     "@resvg/resvg-js": "^2.6.2",
     "@sentry/node": "catalog:",
     "@supabase/supabase-js": "catalog:",
     "dotenv": "^17.4.2",
     "postgres": "catalog:",
     "react": "catalog:",
+    "react-dom": "catalog:",
     "satori": "^0.33.4",
     "sharp": "0.35.5",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "zod": "catalog:"
   },
-  "peerDependencies": {
-    "@devdogsuga/db": "*",
-    "@devdogsuga/env": "*"
-  },
-  "peerDependenciesMeta": {
-    "@devdogsuga/db": {
-      "optional": true
-    },
-    "@devdogsuga/env": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "@devdogsuga/cli-core": "workspace:*",
     "@devdogsuga/config": "workspace:*",
-    "@devdogsuga/db": "workspace:*",
-    "@devdogsuga/env": "workspace:*",
+    "@devdogsuga/events": "workspace:*",
+    "@devdogsuga/newsletter": "workspace:*",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",
     "tsdown": "^0.23.0",

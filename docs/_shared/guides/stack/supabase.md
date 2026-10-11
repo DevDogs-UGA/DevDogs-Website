@@ -23,7 +23,7 @@ Ports in `config.toml` stay literals rather than `env(...)`: `supabase seed` val
 
 ## The three client factories
 
-`@devdogsuga/db` (`/client` and `/server` subpaths) is the client layer over
+`@devdogsuga/sdk/db` (`/client` and `/server` subpaths) is the client layer over
 the one shared Supabase project — merged with the Drizzle factory in the
 Backstage cutover, generic over a `Database` type the consumer supplies.
 `@devdogsuga/supabase` keeps this repo's own data: the generated `Database`
@@ -31,7 +31,7 @@ type, the `SCHEMAS` app → schema map, and the RLS persona suite. Three
 factories, and which one you call is the whole decision:
 
 ```ts
-import { createServerClient } from "@devdogsuga/db/client";
+import { createServerClient } from "@devdogsuga/sdk/db/client";
 import type { Database } from "@devdogsuga/supabase";
 import { cookies } from "next/headers";
 
@@ -52,9 +52,9 @@ const supabase = createServerClient<Database, typeof APP_SCHEMA>({
 
 Each app binds `Database` once in its own `~/supabase/{client,server,admin}.ts`
 wrapper rather than threading the type argument through every call site —
-`createAdminClient` lives in `@devdogsuga/db/server` (server-only, behind
+`createAdminClient` lives in `@devdogsuga/sdk/db/server` (server-only, behind
 `import "server-only"`); `createBrowserClient`/`createServerClient` live in
-`@devdogsuga/db/client`.
+`@devdogsuga/sdk/db/client`.
 
 - **`createBrowserClient`** — the anon client. `@supabase/ssr` caches it in one
   module-level slot, first call wins, **arguments never compared** — so calling
@@ -78,7 +78,7 @@ profile, which belongs to whichever schema is listed first in `config.toml`.
 `Database` type, `SCHEMAS`) are in the generated
 [`@devdogsuga/supabase`](../../../toolkit/reference/api/supabase.md) reference; the
 client/server factories are documented in
-[`@devdogsuga/db`](https://github.com/DevDogsUGA/Backstage/tree/main/packages/db).
+[`@devdogsuga/sdk/db`](https://github.com/DevDogsUGA/DevDogsUGA/tree/main/packages/sdk/src/db).
 
 ## Locking down a function takes both halves
 

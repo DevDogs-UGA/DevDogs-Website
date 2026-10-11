@@ -9,7 +9,7 @@ pnpm-lock.yaml
 apps/slides/workshops/
 
 # Generated and committed. Reformatting is a change the generator undoes.
-packages/brand/src/generated/
+packages/sdk/src/brand/generated/
 packages/newsletter/src/generated/
 apps/slides/worker/worker-configuration.d.ts
 

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 // Every content slide's fixed decoration: the DevDogs mark + wordmark in the
 // top-left corner, and the GDG on Campus mark + two-line footer in the
-// bottom-right. Marks come straight from the workspace @devdogsuga/brand
+// bottom-right. Marks come straight from the workspace @devdogsuga/sdk/brand
 // package — never redrawn here, so a brand refresh there is a dependency bump
 // away from showing up in the deck.
 //
 // A slide can turn this whole block off with `chrome: false` in its
 // frontmatter (see each layout's props).
-import { MARK, WORDMARK_ON_DARK, GDG_MARK } from '@devdogsuga/brand'
+import { MARK, WORDMARK_ON_DARK, GDG_MARK } from '@devdogsuga/sdk/brand'
 import Chip from './Chip.vue'
 
 const props = withDefaults(defineProps<{

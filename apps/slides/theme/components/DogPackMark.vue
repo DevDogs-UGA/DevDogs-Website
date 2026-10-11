@@ -1,9 +1,9 @@
 <script setup lang="ts">
-// DevDogs "DogPack" project mark. The geometry is @devdogsuga/brand's one copy
-// (`@devdogsuga/brand/marks`); this component owns only the <svg> element.
+// DevDogs "DogPack" project mark. The geometry is @devdogsuga/sdk/brand's one copy
+// (`@devdogsuga/sdk/brand/marks`); this component owns only the <svg> element.
 // Renders in currentColor, sized to sit on the text baseline like a glyph: the
 // viewBox is cropped to the ink and the height is 0.68em of cap height.
-import { markBody, MARKS } from '@devdogsuga/brand/marks'
+import { markBody, MARKS } from '@devdogsuga/sdk/brand/marks'
 
 const { viewBox } = MARKS.dogpack
 const body = markBody('dogpack')

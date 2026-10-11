@@ -193,7 +193,7 @@ export function describeRecipient(roster: Roster | undefined, email: string) {
 
 /**
  * The production project in Secrets Manager. The same name the target table in
- * `@devdogsuga/env` gives it, spelled out here because `creds` runs with no
+ * `@devdogsuga/sdk/env` gives it, spelled out here because `creds` runs with no
  * checkout, where that package is not installed.
  */
 const PRODUCTION_PROJECT = "production";

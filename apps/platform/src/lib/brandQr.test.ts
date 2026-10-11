@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { QR_DEFAULTS, qrVersionIssue, renderQrSvg } from "@devdogsuga/brand/qr";
+import {
+  QR_DEFAULTS,
+  qrVersionIssue,
+  renderQrSvg,
+} from "@devdogsuga/sdk/brand/qr";
 
-describe("QR renderer (@devdogsuga/brand/qr)", () => {
+describe("QR renderer (@devdogsuga/sdk/brand/qr)", () => {
   it("reproduces the reference dimensions and centered logo box", () => {
     const svg = renderQrSvg(
       "https://devdogsuga.org/attendance",

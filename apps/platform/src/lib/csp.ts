@@ -3,7 +3,7 @@ import {
   originOf,
   type CspDirectives,
   type Environment,
-} from "@devdogsuga/headers";
+} from "@devdogsuga/sdk/headers";
 
 /**
  * Discord's CDN and media proxy, for the docs support widget's avatars, emoji,

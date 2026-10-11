@@ -18,10 +18,13 @@
  * NOT `tracesSampleRateFor(environment)`, which is a server-only knob) and no
  * Session Replay (no `replayIntegration()`, `integrations: []`, both replay
  * sample rates zeroed). `browserNoiseFilter` drops the known
- * extension/ad-blocker noise `@devdogsuga/telemetry` documents.
+ * extension/ad-blocker noise `@devdogsuga/sdk/telemetry` documents.
  */
 import * as Sentry from "@sentry/nextjs";
-import { browserNoiseFilter, buildSentryOptions } from "@devdogsuga/telemetry";
+import {
+  browserNoiseFilter,
+  buildSentryOptions,
+} from "@devdogsuga/sdk/telemetry";
 import { env } from "~/env";
 
 const options = buildSentryOptions({
@@ -30,7 +33,7 @@ const options = buildSentryOptions({
   dsn: env.NEXT_PUBLIC_PLATFORM_SENTRY_DSN,
   // `process.env.NEXT_PUBLIC_SENTRY_RELEASE` directly, not `env.*` from
   // `~/env` -- it is the deploy's git SHA, set only by `deploy.yaml`'s
-  // `Build` step, not a value that fits `@devdogsuga/env`'s `EnvScope`
+  // `Build` step, not a value that fits `@devdogsuga/sdk/env`'s `EnvScope`
   // (see `apps/platform/cloudflare/worker.ts`'s `WorkerEnv` doc). The
   // `NEXT_PUBLIC_` prefix is what makes Next.js inline it into this client
   // bundle; undefined in every environment that doesn't set it (local dev,

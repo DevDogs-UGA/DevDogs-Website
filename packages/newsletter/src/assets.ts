@@ -8,7 +8,7 @@ import { campaignDataUri, type CampaignImage } from "./campaign-assets.js";
  * 33px masthead height, so a re-exported SVG with a new viewBox cannot
  * silently stretch.
  */
-import { GDGC_UGA, LOCKUP_ON_DARK, type Asset } from "@devdogsuga/brand";
+import { GDGC_UGA, LOCKUP_ON_DARK, type Asset } from "@devdogsuga/sdk/brand";
 import { socialIconDataUri, type SocialIconName } from "./icons.js";
 import { PARTNERS, partnerDataUri, type PartnerName } from "./partners.js";
 import type { FontStacks } from "./theme.js";

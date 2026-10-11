@@ -1,4 +1,4 @@
-import type { DatabaseSchema } from "@devdogsuga/db/client";
+import type { DatabaseSchema } from "@devdogsuga/sdk/db/client";
 import type { Database } from "./database.types.js";
 
 /**

@@ -1,9 +1,9 @@
-import { DOGDAYS_MARK, markBody } from "@devdogsuga/brand/marks";
+import { DOGDAYS_MARK, markBody } from "@devdogsuga/sdk/brand/marks";
 
 /**
  * DogDays: a wall calendar with a bone pinned to it, in currentColor.
  *
- * The geometry is `@devdogsuga/brand/marks`' (the same drawing as `DogDaysMark`,
+ * The geometry is `@devdogsuga/sdk/brand/marks`' (the same drawing as `DogDaysMark`,
  * which takes a fixed pixel size and color; this one flows with text). Drawn
  * against Alan Sans' metrics: the viewBox is cropped to the ink with the mark's
  * bottom on the box's bottom edge, so rendered `inline-block h-[0.799em] w-auto

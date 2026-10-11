@@ -14,7 +14,7 @@
  * wizard question first anyway.
  *
  * This module settles the tier ONCE, before any command's imports — let alone
- * its code — run, using the shared policy in `@devdogsuga/env/session`. By
+ * its code — run, using the shared policy in `env-runtime/session`. By
  * the time `cli.ts` is imported, `process.env.DEPLOY_ENV` already names the
  * tier, so `cli.ts`, `menu.ts` and every runner underneath them just read
  * `process.env.DEPLOY_ENV`/`DEV_DB` like any other command would under
@@ -23,7 +23,7 @@
  * ## Entering the environment: at launch, or deferred to the menu
  *
  * "Settling the tier" and "entering it" (loading `.env.<tier>` and its
- * `DEV_DB` overlay onto `process.env`, via `@devdogsuga/env/session`'s
+ * `DEV_DB` overlay onto `process.env`, via `env-runtime/session`'s
  * `enterEnvironment`) are two different steps, and a MENU invocation —
  * a bare `pnpm devtools`, or a bare group like `pnpm devtools db` resumed
  * through `bareGroupStartPath` — only gets the first one here. Entering holds
@@ -48,11 +48,11 @@
  * already been made, and `resolveTier` (see `tier.ts`) falls back to reading
  * it off `process.env.DEPLOY_ENV` rather than asking again.
  */
-import type { DeployEnvironment } from "@devdogsuga/env";
-import type { DevDatabase } from "@devdogsuga/env/load";
-import type * as EnvLoadModule from "@devdogsuga/env/load";
-import type * as EnvSessionModule from "@devdogsuga/env/session";
-import type { SessionTierResolution } from "@devdogsuga/env/session";
+import type { DeployEnvironment } from "@devdogsuga/sdk/env/targets";
+import type { DevDatabase } from "@devdogsuga/cli-core/env-runtime/load";
+import type * as EnvLoadModule from "@devdogsuga/cli-core/env-runtime/load";
+import type * as EnvSessionModule from "@devdogsuga/cli-core/env-runtime/session";
+import type { SessionTierResolution } from "@devdogsuga/cli-core/env-runtime/session";
 import { helpPath } from "@devdogsuga/cli-core/help";
 import { catalog } from "./catalog.js";
 import {
@@ -182,7 +182,7 @@ async function gated<T>(
 
 /**
  * The session resolution from before `askSession` existed, for a repo whose
- * `@devdogsuga/env` does not have it yet: the development database is asked
+ * `@devdogsuga/sdk/env` does not have it yet: the development database is asked
  * about every time and never remembered.
  */
 async function resolveAskingEveryTime(
@@ -285,7 +285,7 @@ export async function launch(argv: readonly string[]): Promise<void> {
   // `override: false` comment below describes. `Object.keys(process.env)` at
   // this exact point is still a faithful snapshot of the calling shell: the
   // imports above load code, not env; nothing before this line has mutated
-  // `process.env`. See `SHELL_KEYS_ENV` (`@devdogsuga/env/load`) for how
+  // `process.env`. See `SHELL_KEYS_ENV` (`env-runtime/load`) for how
   // `loadEnvironment` narrows "a shell var beats the file" to just this list.
   //
   // Guarded on absence so a NESTED devtools launcher (one `pnpm devtools`
@@ -365,7 +365,7 @@ export async function launch(argv: readonly string[]): Promise<void> {
     // files to look for and no picker to show. The tier is whatever it names.
     // Otherwise `askSession`, shared with `with-env`, asks the same questions
     // it does, including offering to remember the development database as
-    // `DEV_DB` in `.env`. An `@devdogsuga/env` older than that (the repo's
+    // `DEV_DB` in `.env`. An `@devdogsuga/sdk/env` older than that (the repo's
     // copy is the one loaded) gets the previous, ask-every-time resolution.
     const repoRoot = findRepoRoot();
     const available = noEnv ? [] : await envSession.availableTiers(repoRoot);

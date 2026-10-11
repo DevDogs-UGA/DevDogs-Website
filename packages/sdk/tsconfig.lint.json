@@ -1,0 +1,12 @@
+{
+  // ESLint's type-aware project, not a build or typecheck config. tsconfig.json
+  // leaves tests out of the build, so this adds them back. Never emitted.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    "tsBuildInfoFile": "./tsconfig.lint.tsbuildinfo"
+  },
+  "include": ["src", "scripts", "test-stubs", "vitest.config.ts"],
+  "exclude": ["node_modules", "dist"]
+}

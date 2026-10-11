@@ -10,14 +10,14 @@ import {
   THEME,
   type EventDetail,
   type Format,
-} from "@devdogsuga/brand";
+} from "@devdogsuga/sdk/brand";
 import { UsageError } from "@devdogsuga/cli-core/ui";
 import type { ReactElement } from "react";
 
 /**
  * What the club draws pictures OF, as opposed to what size it draws them at.
  *
- * Those are two axes and this file owns one of them; `@devdogsuga/brand`'s
+ * Those are two axes and this file owns one of them; `@devdogsuga/sdk/brand`'s
  * `formats.ts` owns the other. Keeping them apart is the point: an event poster
  * for the GDG on Campus platform is the pairing "this meeting" x "that
  * platform's banner", and while they were one flat list of hard-coded

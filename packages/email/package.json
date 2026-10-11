@@ -23,8 +23,8 @@
     "preview": "tsx scripts/preview.ts"
   },
   "devDependencies": {
-    "@devdogsuga/brand": "workspace:*",
     "@devdogsuga/config": "workspace:*",
+    "@devdogsuga/sdk": "workspace:*",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.1.0",
     "@types/node": "catalog:",

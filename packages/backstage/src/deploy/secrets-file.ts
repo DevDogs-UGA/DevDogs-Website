@@ -8,7 +8,7 @@
  *
  * ## Which keys, and why they are derived rather than listed
  *
- * `buildWorkerEnv(app, env, "deploy")` in `@devdogsuga/env`, the same function
+ * `buildWorkerEnv(app, env, "deploy")` in `@devdogsuga/cli-core`, the same function
  * `with-env` uses for the env file `wrangler dev` reads, so what runs locally
  * and what is uploaded cannot drift apart. It is `storableKeys()` intersected
  * with the keys the app's own manifest declares. A hand-written list per
@@ -53,6 +53,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { assertRegistryLoaded } from "@devdogsuga/cli-core/env/discovery";
+import { buildWorkerEnv } from "@devdogsuga/cli-core/env-runtime/worker-env";
 import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
 import { DeployError, say, summary } from "./report.js";
 
@@ -84,17 +85,9 @@ export async function runDeploySecretsFile(
   const { app } = options;
   const env = options.env ?? process.env;
 
-  // The checkout's own copy of the library, which may predate the function.
-  const { buildWorkerEnv } = getEnvSync() as Partial<
-    ReturnType<typeof getEnvSync>
-  >;
-  if (buildWorkerEnv === undefined) {
-    throw new DeployError(
-      "This checkout's @devdogsuga/env is too old to build a Worker's environment.",
-      ["Update it: buildWorkerEnv() arrived with the with-env release."],
-    );
-  }
-  const built = buildWorkerEnv(app, env, "deploy");
+  // The checkout's own copy of the registry, passed in: it is the instance the
+  // manifests filled.
+  const built = buildWorkerEnv(app, env, "deploy", getEnvSync());
   const send = new Map(Object.entries(built.env));
   const absent = built.absent;
   const minted = built.minted;

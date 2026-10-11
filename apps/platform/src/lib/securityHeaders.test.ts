@@ -1,4 +1,4 @@
-import { buildSecurityHeaders } from "@devdogsuga/headers";
+import { buildSecurityHeaders } from "@devdogsuga/sdk/headers";
 import { describe, expect, it } from "vitest";
 import { platformCsp } from "~/lib/csp";
 import golden from "./securityHeaders.golden.json";

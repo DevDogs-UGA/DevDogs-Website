@@ -3,7 +3,7 @@ import {
   originOf,
   type CspDirectives,
   type Environment,
-} from "@devdogsuga/headers";
+} from "@devdogsuga/sdk/headers";
 import { THEME_INIT_SCRIPT_HASH } from "~/config/theme-init-script";
 
 export interface ScheduleBuilderCspInput {

@@ -1,4 +1,4 @@
-import { alert } from "@devdogsuga/telemetry";
+import { alert } from "@devdogsuga/sdk/telemetry";
 
 /**
  * Platform's operational alert sink.
@@ -6,11 +6,11 @@ import { alert } from "@devdogsuga/telemetry";
  * Successor to the deleted `server/discord/alerts.ts`, which posted to a
  * Discord channel. The Discord webhook plumbing (the bot client, the
  * `DISCORD_ALERT_CHANNEL_ID` env var) is gone; this wraps
- * `@devdogsuga/telemetry`'s `alert()`, which is a `Sentry.captureMessage` at
+ * `@devdogsuga/sdk/telemetry`'s `alert()`, which is a `Sentry.captureMessage` at
  * `warning` level instead.
  *
  * Kept as a thin app-local wrapper -- rather than call sites importing
- * `alert` from `@devdogsuga/telemetry` directly -- for two reasons:
+ * `alert` from `@devdogsuga/sdk/telemetry` directly -- for two reasons:
  *
  * 1. Call-site churn: every existing call passes a `footer` as a third
  *    positional string argument (`postAlert(title, lines, footer)`), the

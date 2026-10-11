@@ -1,8 +1,11 @@
-import { EventCard } from "@devdogsuga/brand";
-import { meetingCardDetail, meetingLocation } from "@devdogsuga/brand/event";
+import { EventCard } from "@devdogsuga/sdk/brand";
+import {
+  meetingCardDetail,
+  meetingLocation,
+} from "@devdogsuga/sdk/brand/event";
 import { isCancelled } from "~/components/EventsSection/meetingView";
 import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
-import { contentType, ogResponse, size } from "@devdogsuga/brand/next";
+import { contentType, ogResponse, size } from "@devdogsuga/sdk/brand/next";
 import {
   getMeetingBySlug,
   getMeetingWorkshops,

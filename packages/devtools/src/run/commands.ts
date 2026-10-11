@@ -583,7 +583,7 @@ async function dispatch(
 // ── Tier ─────────────────────────────────────────────────────────────────────
 
 /** The tiers a loaded env can select. `preflight` is not a deploy environment
- * (see `@devdogsuga/env`'s target table) and is refused here for the same
+ * (see `@devdogsuga/sdk/env`'s target table) and is refused here for the same
  * reason `loadEnvironment` itself would refuse it. */
 const RUN_TIERS = new Set(["development", "staging", "production"]);
 
@@ -781,7 +781,7 @@ export async function runTask(argv: string[]): Promise<never> {
   if (tier) {
     // Dynamic import, not a top-level one: this module is on the `pnpm build`
     // hot path (see the header), and a bare `pnpm build` with no `--tier`
-    // must never load `@devdogsuga/env/load` or drag dotenvx into the graph.
+    // must never load `env-runtime/load` or drag dotenvx into the graph.
     const { loadEnvironment, MissingEnvFileError } = await loadEnvLoad();
     try {
       // override: true because THIS process runs under `with-env`

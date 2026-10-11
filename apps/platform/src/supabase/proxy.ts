@@ -1,4 +1,4 @@
-import { createServerClient } from "@devdogsuga/db/client";
+import { createServerClient } from "@devdogsuga/sdk/db/client";
 import type { Database } from "@devdogsuga/supabase";
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "~/env";

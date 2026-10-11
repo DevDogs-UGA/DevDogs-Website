@@ -8,7 +8,7 @@ import type { InitializeHook, ResolveHook } from "node:module";
 export interface PeerRedirect {
   /** The exact file URL of the importing module the redirect applies to. */
   parentURL: string;
-  /** The bare specifier it imports, e.g. `@devdogsuga/env`. */
+  /** The bare specifier it imports, e.g. `@devdogsuga/sdk/env`. */
   specifier: string;
   /** Where that specifier should resolve instead. */
   url: string;

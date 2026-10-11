@@ -36,14 +36,16 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-  TARGETS,
-  VAULT_TARGETS,
   applyOnlyKeys,
   mintedKeys,
   neverStoreKeys,
   variables,
+} from "@devdogsuga/sdk/env";
+import {
+  TARGETS,
+  VAULT_TARGETS,
   type VaultTarget,
-} from "@devdogsuga/env";
+} from "@devdogsuga/sdk/env/targets";
 import {
   resetEnvSyncCacheForTests,
   resetPeerCacheForTests,

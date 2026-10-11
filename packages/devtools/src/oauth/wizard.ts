@@ -28,7 +28,7 @@ import {
   spinner,
   text,
 } from "@clack/prompts";
-import type { DeployEnvironment } from "@devdogsuga/env";
+import type { DeployEnvironment } from "@devdogsuga/sdk/env/targets";
 import {
   DEFAULT_API_URL,
   ENV_KEYS,

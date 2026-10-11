@@ -20,7 +20,7 @@
  *     rules it out.
  */
 import { select } from "@clack/prompts";
-import type { VaultTarget } from "@devdogsuga/env";
+import type { VaultTarget } from "@devdogsuga/sdk/env/targets";
 import { loadEnv } from "@devdogsuga/cli-core/repo/peers";
 import { noVaultProjectHints, NoVaultProjectError } from "./environments.js";
 import { explain, unwrap } from "@devdogsuga/cli-core/ui";

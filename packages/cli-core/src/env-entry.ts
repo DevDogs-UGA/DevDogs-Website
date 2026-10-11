@@ -48,10 +48,10 @@
  * error handling below, since the file is still missing either way.
  */
 import { confirm } from "@clack/prompts";
-import type { DeployEnvironment } from "@devdogsuga/env";
-import type { DevDatabase } from "@devdogsuga/env/load";
-import type * as EnvLoadModule from "@devdogsuga/env/load";
-import type * as EnvSessionModule from "@devdogsuga/env/session";
+import type { DeployEnvironment } from "@devdogsuga/sdk/env/targets";
+import type { DevDatabase } from "./env-runtime/load.js";
+import type * as EnvLoadModule from "./env-runtime/load.js";
+import type * as EnvSessionModule from "./env-runtime/session.js";
 import {
   ensureGeneratedEnvFile,
   realEnsureGeneratedEnvDeps,

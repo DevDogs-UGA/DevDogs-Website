@@ -73,7 +73,7 @@ export interface ParamDoc {
 export interface DocSymbol {
   name: string;
   kind: SymbolKind;
-  /** What you type to get it: `~/ui/button`, `@devdogsuga/env`. */
+  /** What you type to get it: `~/ui/button`, `@devdogsuga/sdk/env`. */
   importPath: string;
   importStyle: "default" | "named";
   /**

@@ -2,7 +2,7 @@
  * Unit tests for `enterSessionEnvironment` — the block `launch.ts` runs
  * eagerly for a typed command and `menu.ts`'s `runMenu` runs (via the hook
  * below) right before dispatching a menu-chosen one. `envLoad`/`envSession`
- * are hand-rolled fakes rather than the real `@devdogsuga/env` peer, the same
+ * are hand-rolled fakes rather than the real `@devdogsuga/sdk/env` peer, the same
  * shape `launch.test.ts` mocks `./repo/peers.js` with, so every branch —
  * success, the two `LocalStackOfflineError` outcomes, both
  * `MissingEnvFileError` tiers — is reachable without a filesystem, a Docker

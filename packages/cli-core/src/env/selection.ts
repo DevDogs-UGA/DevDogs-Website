@@ -34,7 +34,8 @@
  * `getEnvSync().variableKeys()` differ only in `secrecy`, so no key can be in both, and the
  * loop below routes to one or the other and never to neither-nor-both.
  */
-import type { EnvEntry, VaultTarget } from "@devdogsuga/env";
+import type { EnvEntry } from "@devdogsuga/sdk/env";
+import type { VaultTarget } from "@devdogsuga/sdk/env/targets";
 import { getEnvSync } from "../repo/peers.js";
 import { assertRegistryLoaded } from "./discovery.js";
 

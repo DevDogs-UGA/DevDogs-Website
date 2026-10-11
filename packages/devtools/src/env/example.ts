@@ -62,12 +62,8 @@ import { resolve } from "node:path";
 import { log, multiselect, note } from "@clack/prompts";
 import { EnvDocument } from "@devdogsuga/cli-core/env/document";
 import { unwrap } from "@devdogsuga/cli-core/ui";
-import type {
-  EnvTarget,
-  EnvEntry,
-  EnvMeta,
-  VaultTarget,
-} from "@devdogsuga/env";
+import type { EnvEntry, EnvMeta } from "@devdogsuga/sdk/env";
+import type { EnvTarget, VaultTarget } from "@devdogsuga/sdk/env/targets";
 import { assertRegistryLoaded } from "@devdogsuga/cli-core/env/discovery";
 import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
 import { recordResolved } from "@devdogsuga/cli-core/invocation";

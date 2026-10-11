@@ -19,10 +19,13 @@
  * NOT `tracesSampleRateFor(environment)`, which is a server-only knob) and no
  * Session Replay (no `replayIntegration()`, `integrations: []`, both replay
  * sample rates zeroed). `browserNoiseFilter` drops the known
- * extension/ad-blocker noise `@devdogsuga/telemetry` documents.
+ * extension/ad-blocker noise `@devdogsuga/sdk/telemetry` documents.
  */
 import * as Sentry from "@sentry/nextjs";
-import { browserNoiseFilter, buildSentryOptions } from "@devdogsuga/telemetry";
+import {
+  browserNoiseFilter,
+  buildSentryOptions,
+} from "@devdogsuga/sdk/telemetry";
 import { env } from "~/env";
 
 const options = buildSentryOptions({

@@ -10,7 +10,7 @@
  * the same source — whatever THIS PROCESS already entered — `launch.ts`
  * runs before
  * `cli.ts`'s command dispatch even imports, and enters a tier (development,
- * by default) into `process.env` via `@devdogsuga/env/session`'s
+ * by default) into `process.env` via `env-runtime/session`'s
  * `enterEnvironment`, applying `selectEnvFiles`'s overlay-plus-liveness-probe
  * logic (`.env.generated`, the running local stack's connection block,
  * ahead of `.env` — see `load.ts`'s probe table) along the way.
@@ -40,7 +40,7 @@
  * it falls back to `loadEnvironment("development")`, never a raw dotenv
  * parse, so the overlay-plus-probe logic still applies.
  */
-import type { LoadedEnvironment } from "@devdogsuga/env/load";
+import type { LoadedEnvironment } from "@devdogsuga/cli-core/env-runtime/load";
 import { loadEnvLoad } from "@devdogsuga/cli-core/repo/peers";
 
 export interface ResolveLocalToolingEnvOptions {

@@ -42,7 +42,7 @@ describe("the registry", () => {
     // One cheap format per graphic: the templates run for real, the renderer
     // is not asked for the 1024px icons.
     for (const graphic of registry) {
-      const { FORMATS } = await import("@devdogsuga/brand");
+      const { FORMATS } = await import("@devdogsuga/sdk/brand");
       const name = graphic.formats.find((n) => FORMATS[n]!.width <= 512)!;
       expect(() => graphic.render(FORMATS[name]!), graphic.name).not.toThrow();
     }

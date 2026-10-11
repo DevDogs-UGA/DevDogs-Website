@@ -15,7 +15,7 @@
  * value: the CLI matches it anchored. That is why the callbacks are their
  * own variables rather than `"env(BASE_URL)/auth/callback"`.
  */
-import { declare, define, type DefineMeta } from "@devdogsuga/env";
+import { declare, define, type DefineMeta } from "@devdogsuga/sdk/env";
 import { z } from "zod";
 
 /**

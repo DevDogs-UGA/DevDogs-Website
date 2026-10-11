@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "QR Codes | DevDogs" };
 
 /**
  * Deprecated in favour of `backstage qr`, which takes the same options (both
- * parse `qrRequestSchema` from `@devdogsuga/brand/qr`) and needs no login.
+ * parse `qrRequestSchema` from `@devdogsuga/sdk/brand/qr`) and needs no login.
  * Kept working for now, with new features going to the CLI only.
  */
 export default async function QrPage() {

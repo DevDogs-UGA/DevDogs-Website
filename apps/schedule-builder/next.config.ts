@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
-import { buildSecurityHeaders } from "@devdogsuga/headers";
+import { buildSecurityHeaders } from "@devdogsuga/sdk/headers";
 import { scheduleBuilderCsp } from "~/config/csp";
 import { env } from "~/env";
 

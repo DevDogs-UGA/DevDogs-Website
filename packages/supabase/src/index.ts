@@ -3,7 +3,7 @@
  * Postgres schema map (`SCHEMAS`/`AppKey`/`SchemaName`).
  *
  * The client/server factories that used to live here (`createBrowserClient`,
- * `createServerClient`, `createAdminClient`) moved to `@devdogsuga/db`'s
+ * `createServerClient`, `createAdminClient`) moved to `@devdogsuga/sdk/db`'s
  * `client`/`server` subpaths as part of the Backstage cutover: they are
  * framework, generic over any consumer's `Database` type, not this repo's
  * data. Import them from there and supply `Database` from this package (see

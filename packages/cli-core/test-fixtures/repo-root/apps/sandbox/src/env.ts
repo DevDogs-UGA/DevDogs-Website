@@ -5,7 +5,7 @@
  * `cf/local-env.test.ts`'s `createTemporaryWranglerEnv` case, which needs a
  * real registry entry with `source: "sandbox"` rather than an injected one.
  */
-import { declare, define } from "@devdogsuga/env";
+import { declare, define } from "@devdogsuga/sdk/env";
 import { z } from "zod";
 
 declare({

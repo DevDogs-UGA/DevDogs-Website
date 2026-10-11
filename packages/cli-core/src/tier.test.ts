@@ -2,7 +2,7 @@
  * Unit tests for the per-command `--tier` resolver.
  *
  * `availableTiers` itself now lives in, and is tested by,
- * `@devdogsuga/env/session`'s own `session.test.ts` — see `tier.ts`'s header.
+ * `env-runtime/session`'s own `session.test.ts` — see `tier.ts`'s header.
  * `resolveTier`'s `available`/`isTTY`/`prompt`/`deployEnv` are all injectable
  * for exactly this file: no test here touches the real filesystem,
  * `process.stdin`, a real terminal, or the real `DEPLOY_ENV`.

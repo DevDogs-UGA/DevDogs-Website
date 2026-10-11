@@ -1,7 +1,7 @@
 /**
  * `pnpm backstage graphics [graphic…] [--format …] [--out …]`
  *
- * Renders the club's pictures from the templates in `@devdogsuga/brand`. Two
+ * Renders the club's pictures from the templates in `@devdogsuga/sdk/brand`. Two
  * axes, asked for separately: WHICH picture (`event/2026-09-08`, `app/dogdays`,
  * `brand/club`) and at WHAT SIZE (`gdgc-square`, `og`, `icon-512`). That split
  * is the point of the command: an event poster for the GDG on Campus platform
@@ -12,14 +12,14 @@
  * it, and a script can pass every flag and never see a prompt.
  *
  * It needs no checkout and no credentials: the templates are in
- * `@devdogsuga/brand`, the meetings in `@devdogsuga/events`, and the files go
+ * `@devdogsuga/sdk/brand`, the meetings in `@devdogsuga/events`, and the files go
  * to `--out` or the current directory, flat, as `<stem>-<format>.png`.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, relative, resolve } from "node:path";
 import { log, note } from "@clack/prompts";
-import { FORMATS } from "@devdogsuga/brand";
+import { FORMATS } from "@devdogsuga/sdk/brand";
 import { positionals } from "@devdogsuga/cli-core/args";
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import {

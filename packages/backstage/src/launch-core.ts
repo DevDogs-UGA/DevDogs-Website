@@ -186,7 +186,7 @@ async function enterSession(
   // Records which keys THIS shell actually exported before anything touched
   // `process.env`, so a shell variable can beat a file without a value loaded
   // from a file beating it on a nested launch. See `SHELL_KEYS_ENV`
-  // (`@devdogsuga/env/load`). Guarded on absence for the nested case.
+  // (`env-runtime/load`). Guarded on absence for the nested case.
   process.env[envLoad.SHELL_KEYS_ENV] ??= Object.keys(process.env).join(",");
 
   try {

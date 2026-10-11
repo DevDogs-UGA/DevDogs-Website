@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "The shared core of the published CLIs (devtools, backstage): repo root and peer loading, ui, telemetry, tier and env entry, env discovery, db/run, instance, args and the command catalog. Never published; each CLI inlines it with tsdown, so it is only ever a workspace:* devDependency.",
+  "description": "The shared core of the published CLIs (devtools, backstage): repo root and peer loading, ui, telemetry, tier and env entry, env discovery, the env runtime (target table, env-file loading, sessions, with-env), db/run, instance, args and the command catalog. Never published; each CLI inlines it with tsdown, so it is only ever a workspace:* devDependency.",
   "license": "BSD-3-Clause",
   "exports": {
     "./*": "./src/*.ts"
@@ -17,17 +17,19 @@
   },
   "dependencies": {
     "@clack/prompts": "catalog:",
-    "@devdogsuga/telemetry": "workspace:*",
+    "@devdogsuga/sdk": "workspace:*",
+    "@dotenvx/dotenvx": "^2.21.0",
     "@sentry/node": "catalog:",
     "@supabase/supabase-js": "catalog:",
+    "@yarnpkg/fslib": "^3.1.5",
+    "@yarnpkg/shell": "^4.1.3",
+    "commander": "^14.0.3",
     "dotenv": "^17.4.2",
     "tsx": "catalog:",
     "typescript": "catalog:"
   },
   "devDependencies": {
     "@devdogsuga/config": "workspace:*",
-    "@devdogsuga/db": "workspace:*",
-    "@devdogsuga/env": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "vitest": "catalog:",

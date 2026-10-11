@@ -12,7 +12,7 @@
  * repository, refused storage because storing it defeats the thing it
  * protects. See the long-form reasoning in `src/bws/environments.ts`.
  */
-import { declare, define } from "@devdogsuga/env";
+import { declare, define } from "@devdogsuga/sdk/env";
 import { z } from "zod";
 
 declare({

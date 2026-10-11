@@ -1,5 +1,5 @@
-import { MARK, Mark } from "@devdogsuga/brand";
-import { imageResponse } from "@devdogsuga/brand/next";
+import { MARK, Mark } from "@devdogsuga/sdk/brand";
+import { imageResponse } from "@devdogsuga/sdk/brand/next";
 
 /**
  * The browser favicon: the DevDogs mascot on a transparent canvas, without the

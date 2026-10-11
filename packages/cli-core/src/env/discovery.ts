@@ -1,5 +1,5 @@
 /**
- * Fills the `@devdogsuga/env` registry by importing every manifest.
+ * Fills the `@devdogsuga/sdk/env` registry by importing every manifest.
  *
  * The registry populates as a SIDE EFFECT of importing each manifest module.
  * `declare()` runs at import time, so a process that never imports them sees an
@@ -23,7 +23,7 @@
  * workspace globs. Its variables belong to `config.toml` and the Supabase
  * CLI, not to any package, so it lives next to the config that reads them.
  *
- * `@devdogsuga/env` itself (the package that exports `define()`/`declare()`)
+ * `@devdogsuga/sdk/env` itself (the package that exports `define()`/`declare()`)
  * no longer needs a special-case exclusion here: since the Backstage
  * cutover it is an installed npm dependency, not a workspace package under
  * `packages/`, so this scan never sees it at all.
@@ -38,13 +38,13 @@
  * workspace checkout and from an installed `pnpm dlx`/`node_modules` copy,
  * and for why loading it through the same `importRepoTs()` tsx path as
  * every other manifest (rather than a plain static `import`) is what keeps
- * its `declare()`/`define()` calls landing in the SAME `@devdogsuga/env`
+ * its `declare()`/`define()` calls landing in the SAME `@devdogsuga/sdk/env`
  * registry instance the target repo's manifests populate (module identity —
  * see `repo/peers.ts`'s header and the devtools-dlx prototype's
- * FINDINGS.md experiment 3). Its bare `@devdogsuga/env` import is
+ * FINDINGS.md experiment 3). Its bare `@devdogsuga/sdk/env` import is
  * redirected to the copy `loadEnv()` resolved through the repo, because
  * from a `pnpm dlx` copy the specifier does not resolve at all: devtools
- * ships no copy of its own (`@devdogsuga/env` is only ever an optional
+ * ships no copy of its own (`@devdogsuga/sdk/env` is only ever an optional
  * peer), and nothing installs one next to it. See `repo/peer-redirect.ts`.
  *
  * Most workspace packages declare nothing, so "no env.ts found" means
@@ -62,12 +62,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { redirectPeers } from "../repo/peer-redirect.js";
 import type { PeerRedirect } from "../repo/peer-redirect-hooks.js";
-import {
-  getEnvSync,
-  loadEnv,
-  repoPeerUrl,
-  resolveRepoPeerUrl,
-} from "../repo/peers.js";
+import { getEnvSync, loadEnv, repoPeerUrl } from "../repo/peers.js";
 import { resolveLayout } from "../repo/layout.js";
 import { importRepoTs } from "../repo/tsx-loader.js";
 import { ownPackageDir } from "../version.js";
@@ -116,20 +111,20 @@ export function assertRegistryLoaded(): void {
 async function importManifests(): Promise<void> {
   // Warms `repo/peers.ts`'s sync cache before any manifest imports: each
   // manifest's own `declare()`/`define()` calls run against the SAME
-  // `@devdogsuga/env` module instance this line resolves (module identity —
+  // `@devdogsuga/sdk/env` module instance this line resolves (module identity —
   // see `repo/peers.ts`'s header), and `assertRegistryLoaded()` /
   // `gh/environments.ts`'s getters read it back synchronously afterward.
   await loadEnv();
 
-  // devtools' own manifest imports `@devdogsuga/env` by bare specifier, which
+  // devtools' own manifest imports `@devdogsuga/sdk/env` by bare specifier, which
   // does not resolve at all from a `pnpm dlx` copy. Point it at the copy
   // `loadEnv()` just resolved through the repo. See `repo/peer-redirect.ts`.
   const redirects: PeerRedirect[] = [];
-  const envUrl = repoPeerUrl("@devdogsuga/env");
+  const envUrl = repoPeerUrl("@devdogsuga/sdk/env");
   if (envUrl) {
     redirects.push({
       parentURL: pathToFileURL(ownManifestPath()).href,
-      specifier: "@devdogsuga/env",
+      specifier: "@devdogsuga/sdk/env",
       url: envUrl,
     });
     redirects.push(...siblingRedirects(envUrl));
@@ -163,7 +158,7 @@ async function importManifests(): Promise<void> {
 
 /**
  * From a Backstage checkout, the manifests under `devdogsuga/` import
- * `@devdogsuga/env` through THAT checkout's `node_modules` (or not at all, when
+ * `@devdogsuga/sdk/env` through THAT checkout's `node_modules` (or not at all, when
  * it has none): a second copy of the package, and so a second registry that
  * every `declare()` there would populate instead of the one this process
  * reads. Point their imports at the copy `loadEnv()` resolved. Resolved
@@ -173,19 +168,15 @@ async function importManifests(): Promise<void> {
 function siblingRedirects(envUrl: string): PeerRedirect[] {
   const layout = resolveLayout();
   if (layout.kind !== "backstage" || !layout.hasDevdogsuga) return [];
-  const nextjs = resolveRepoPeerUrl("@devdogsuga/env/nextjs");
   const redirects: PeerRedirect[] = [];
   for (const path of manifestPaths()) {
     if (!path.startsWith(layout.devdogsugaRoot)) continue;
     const parentURL = pathToFileURL(realpathSync(path)).href;
-    redirects.push({ parentURL, specifier: "@devdogsuga/env", url: envUrl });
-    if (nextjs) {
-      redirects.push({
-        parentURL,
-        specifier: "@devdogsuga/env/nextjs",
-        url: nextjs,
-      });
-    }
+    redirects.push({
+      parentURL,
+      specifier: "@devdogsuga/sdk/env",
+      url: envUrl,
+    });
   }
   return redirects;
 }

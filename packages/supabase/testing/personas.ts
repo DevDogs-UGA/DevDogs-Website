@@ -13,8 +13,8 @@
  *
  * Requires the local stack: `pnpm devtools link`.
  */
-import { createAdminClient } from "@devdogsuga/db/server";
-import { createServerClient } from "@devdogsuga/db/client";
+import { createAdminClient } from "@devdogsuga/sdk/db/server";
+import { createServerClient } from "@devdogsuga/sdk/db/client";
 import postgres from "postgres";
 
 export const LOCAL_API_URL = process.env.API_URL ?? "http://127.0.0.1:54321";
@@ -31,7 +31,7 @@ const PUBLISHABLE_KEY = process.env.PUBLISHABLE_KEY;
 const SCHEMA = "platform" as const;
 
 /**
- * A cookie jar backing `createServerClient` (`@devdogsuga/db/client`) in
+ * A cookie jar backing `createServerClient` (`@devdogsuga/sdk/db/client`) in
  * place of a browser's `document.cookie`. `@supabase/ssr`'s server client
  * persists the session by round-tripping it through this adapter rather than
  * `window.localStorage`, so it needs something implementing the shape even

@@ -1,8 +1,8 @@
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { AppIcon, EmailSignature, FORMATS } from "@devdogsuga/brand";
-import { render } from "@devdogsuga/brand/render";
+import { AppIcon, EmailSignature, FORMATS } from "@devdogsuga/sdk/brand";
+import { render } from "@devdogsuga/sdk/brand/render";
 
 /**
  * Renders the deployed images that no route draws.
@@ -17,7 +17,7 @@ import { render } from "@devdogsuga/brand/render";
  * - `/brand/icons/platform-192.png` is named in `manifest.ts`, which a route
  *   cannot serve as a file Chrome will cache against the manifest's own URL.
  *
- * They are gitignored, derived from `@devdogsuga/brand`, and written into
+ * They are gitignored, derived from `@devdogsuga/sdk/brand`, and written into
  * `public/` by `codegen` so they ship in the bundle like any other static
  * file. Resvg is a devDependency of this app for that reason alone: nothing
  * that runs in the Worker imports it.

@@ -31,7 +31,7 @@
  * itself carries none.
  */
 import * as Sentry from "@sentry/cloudflare";
-import { buildSentryOptions } from "@devdogsuga/telemetry";
+import { buildSentryOptions } from "@devdogsuga/sdk/telemetry";
 import handler from "vinext/server/app-router-entry";
 import { withEdgeNonce } from "./nonce";
 import { scheduled, type CronEnv } from "./scheduled";

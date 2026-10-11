@@ -19,8 +19,8 @@
     "lint:fix": "eslint worker --fix"
   },
   "dependencies": {
-    "@devdogsuga/brand": "workspace:*",
     "@devdogsuga/events": "workspace:*",
+    "@devdogsuga/sdk": "workspace:*",
     "@slidev/cli": "^53.0.0",
     "@slidev/theme-default": "^0.25.0",
     "jose": "^6.1.0",
