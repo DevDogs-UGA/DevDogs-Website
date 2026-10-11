@@ -1555,3 +1555,27 @@ test("the runbooks name no secret value", () => {
     );
   }
 });
+
+test("deploy.yaml's supersede pattern matches the nested production job names and nothing else", () => {
+  const workflow = readFileSync(
+    new URL("../workflows/deploy.yaml", import.meta.url),
+    "utf8",
+  );
+  const source = /\(\.name \| test\("([^"]+)"\)\)/.exec(workflow)?.[1];
+  assert.ok(source, "the supersede jq expression is in deploy.yaml");
+  const pattern = new RegExp(source);
+  for (const name of [
+    "deploy / production-database / apply",
+    "deploy / production-database / gate",
+    "deploy / production-platform / deploy",
+    "production-database / apply",
+  ])
+    assert.ok(pattern.test(name), name);
+  for (const name of [
+    "publish",
+    "deploy / staging-platform / deploy",
+    "deploy / build / build (production)",
+    "deploy / resolve",
+  ])
+    assert.ok(!pattern.test(name), name);
+});

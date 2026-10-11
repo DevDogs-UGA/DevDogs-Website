@@ -57,9 +57,12 @@ jobs:
       # production approval. This repo's CI run also carries the `publish`
       # job, which waits on its own environment: a run with any other waiting
       # job is left alone (its production jobs refuse to deploy a commit that
-      # is no longer main anyway). The jobs of a called workflow are named
-      # `<caller job> / <job>`, so the production jobs are the ones whose name
-      # starts with `production-`.
+      # is no longer main anyway). This workflow is itself called by ci.yaml's
+      # `deploy` job, and the jobs of a called workflow are named
+      # `<caller job> / <job>`, so a production job reads
+      # `deploy / production-database / apply` or
+      # `deploy / production-platform / deploy`: the pattern matches a
+      # `production-` segment after the start of the name or after ` / `.
       - name: Cancel only older candidates still waiting for approval
         env:
           GH_TOKEN: ${{ github.token }}
@@ -72,7 +75,7 @@ jobs:
           while read -r run_id; do
             [ -n "$run_id" ] || continue
             read -r production other < <(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs?per_page=100" \
-              --jq '[.jobs[] | select(.status == "waiting") | (.name | test("^production-"))] as $w
+              --jq '[.jobs[] | select(.status == "waiting") | (.name | test("(^| / )production-"))] as $w
                     | "\($w | map(select(.)) | length) \($w | map(select(. | not)) | length)"')
             if [ "$production" -gt 0 ] && [ "$other" -eq 0 ]; then
               gh api --method POST "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/cancel"
