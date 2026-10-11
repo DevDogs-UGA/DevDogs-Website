@@ -43,6 +43,10 @@ An environment with required reviewers asks for approval once per job. The uploa
 
 </details>
 
+## When a deploy needs the full mode
+
+A version upload cannot apply a **Durable Object migration** or a **new queue consumer**, and cannot create a Worker that does not exist yet. For the one deploy that changes one of those, set the repository variable `WORKER_DEPLOY_MODE` to `full`. The Workers then deploy the classic way (no 0% preview; the live smoke test still runs and still rolls back on failure). Delete the variable straight after: left set, every deploy skips the preview.
+
 ## When something goes wrong
 
 - A red staging run is information, not an emergency. Production does not start until staging succeeds.

@@ -30,10 +30,11 @@ name: Deploy Worker
 #
 # What a version upload does NOT apply, and this workflow therefore does:
 # routes, custom domains and cron triggers (`wrangler triggers deploy`). What
-# it cannot apply at all: a Durable Object migration, and the very first
-# upload of a Worker that does not exist yet. For those, call with
-# `mode: full`, which runs a classic `wrangler deploy` (no preview; the live
-# smoke test still runs). The runbook (docs/operations) says when.
+# it cannot apply at all: a Durable Object migration, a new queue consumer, and
+# the very first upload of a Worker that does not exist yet. For those, call
+# with `mode: full`, which runs a classic `wrangler deploy` (no preview; the
+# live smoke test still runs). deploy.yaml reads the repository variable
+# WORKER_DEPLOY_MODE for it. The runbook (docs/operations) says when.
 #
 # One job, one approval. The upload, both smoke tests and the switch share a
 # job because an environment with required reviewers asks for approval once per
@@ -166,6 +167,11 @@ on:
         required: false
         type: string
         default: ""
+      full_deploy_command:
+        description: "For `mode: full`, the command that does the classic deploy (for example `backstage deploy platform --tier staging`). Empty runs a plain `wrangler deploy`."
+        required: false
+        type: string
+        default: ""
       after_switch_command:
         description: Runs after the live smoke test passes (reconcile, search indexing). Optional.
         required: false
@@ -255,6 +261,14 @@ jobs:
             echo "::error::Candidate $GITHUB_SHA was superseded by $latest. Nothing was changed; the newer commit has its own run."
             exit 1
           fi
+      - name: Refuse an unknown mode
+        env:
+          MODE: ${{ inputs.mode }}
+        run: |
+          case "$MODE" in
+            versions | full) ;;
+            *) echo "::error::mode must be 'versions' or 'full', not '$MODE'."; exit 1 ;;
+          esac
       - name: Refuse a missing Cloudflare token
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
@@ -442,12 +456,12 @@ jobs:
         working-directory: ${{ inputs.worker_dir }}
         env:
           SENTRY_RELEASE: ${{ env.RELEASE }}
-          UPLOAD_COMMAND: ${{ inputs.upload_command }}
+          FULL_DEPLOY_COMMAND: ${{ inputs.full_deploy_command }}
         run: |
           set -euo pipefail
-          if [ -n "$UPLOAD_COMMAND" ]; then
+          if [ -n "$FULL_DEPLOY_COMMAND" ]; then
             cd "$GITHUB_WORKSPACE"
-            bash -euo pipefail -c "$UPLOAD_COMMAND"
+            bash -euo pipefail -c "$FULL_DEPLOY_COMMAND"
           else
             # shellcheck disable=SC2086
             $WRANGLER deploy $WRANGLER_ENV_FLAG --var "SENTRY_RELEASE:$RELEASE"

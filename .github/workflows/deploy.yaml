@@ -267,6 +267,8 @@ jobs:
       # file tier resolution would insist on reading.
       prepare_command: backstage deploy write-env --no-env --yes
       upload_command: backstage deploy platform --tier staging --upload
+      full_deploy_command: backstage deploy platform --tier staging
+      mode: ${{ vars.WORKER_DEPLOY_MODE || 'versions' }}
       # The docs search index lives in the platform's database, written from
       # the docs the artifact carries (docs/dist); after the switch, so it does
       # not describe pages the previous Worker cannot render yet. Then
@@ -305,6 +307,8 @@ jobs:
       sourcemaps_dir: apps/schedule-builder/dist
       prepare_command: backstage deploy write-env --no-env --yes
       upload_command: backstage deploy schedule-builder --tier staging --upload
+      full_deploy_command: backstage deploy schedule-builder --tier staging
+      mode: ${{ vars.WORKER_DEPLOY_MODE || 'versions' }}
       after_switch_command: |
         set -a; . ".env.$TIER"; set +a
         SENTRY_PROJECT=schedule-builder GITHUB_SHA="$RELEASE" backstage deploy smoke --tier staging --yes --app schedule-builder --no-env
@@ -379,6 +383,8 @@ jobs:
         backstage deploy write-env --no-env --yes
         (set -a; . ".env.$TIER"; set +a; backstage deploy avatars --no-env --yes)
       upload_command: backstage deploy platform --tier production --upload
+      full_deploy_command: backstage deploy platform --tier production
+      mode: ${{ vars.WORKER_DEPLOY_MODE || 'versions' }}
       after_switch_command: |
         set -a; . ".env.$TIER"; set +a
         pnpm --filter @devdogsuga/docs run populate:search
@@ -419,6 +425,8 @@ jobs:
       sourcemaps_dir: apps/schedule-builder/dist
       prepare_command: backstage deploy write-env --no-env --yes
       upload_command: backstage deploy schedule-builder --tier production --upload
+      full_deploy_command: backstage deploy schedule-builder --tier production
+      mode: ${{ vars.WORKER_DEPLOY_MODE || 'versions' }}
       after_switch_command: |
         set -a; . ".env.$TIER"; set +a
         SENTRY_PROJECT=schedule-builder GITHUB_SHA="$RELEASE" backstage deploy smoke --tier production --yes --app schedule-builder --no-env
