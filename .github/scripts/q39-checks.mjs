@@ -23,7 +23,7 @@
  * Usage: node q39-checks.mjs --tier staging|production [--workers-json workers.json]
  */
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./is-main.mjs";
@@ -152,8 +152,10 @@ if (isMain(import.meta.url)) {
       const text = renderChecks(checks, `Q39 checks (${tier})`);
       process.stdout.write(`${text}\n`);
       if (process.env.GITHUB_STEP_SUMMARY) {
-        import("node:fs").then(({ appendFileSync }) =>
-          appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${text}\n`),
+        appendFileSync(
+          process.env.GITHUB_STEP_SUMMARY,
+          `${text}
+`,
         );
       }
       process.exit(checks.every((c) => c.ok) ? 0 : 1);

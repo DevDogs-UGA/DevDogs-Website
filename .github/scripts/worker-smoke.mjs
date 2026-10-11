@@ -30,11 +30,11 @@
  *
  * Usage:
  *   node worker-smoke.mjs --path apps/platform --tier staging \
- *     [--workers-json workers.json] [--worker-name staging-platform --version-id UUID] \
+ *     [--workers-json workers.json | --smoke-json '{"hosts":{...},...}'] [--worker-name staging-platform --version-id UUID] \
  *     [--authorize]
  */
 import { createHash, randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { isMain } from "./is-main.mjs";
 
 /**
@@ -253,17 +253,25 @@ if (isMain(import.meta.url)) {
     const i = argv.indexOf(name);
     return i === -1 ? undefined : argv[i + 1];
   };
-  const path = flag("--path");
+  const path = flag("--path") ?? "(inline config)";
   const tier = flag("--tier");
-  if (!path || !tier) {
-    process.stderr.write("--path and --tier are required\n");
+  if (!tier || (!flag("--path") && !flag("--smoke-json"))) {
+    process.stderr.write(
+      "--tier and one of --path or --smoke-json are required\n",
+    );
     process.exit(2);
   }
-  const workers = JSON.parse(
-    readFileSync(flag("--workers-json") ?? "workers.json", "utf8"),
-  );
-  const entry = workers.find((w) => w.path === path);
-  if (!entry?.smoke) {
+  /** @type {SmokeConfig | undefined} */
+  let smoke;
+  if (flag("--smoke-json")) {
+    smoke = JSON.parse(flag("--smoke-json"));
+  } else {
+    const workers = JSON.parse(
+      readFileSync(flag("--workers-json") ?? "workers.json", "utf8"),
+    );
+    smoke = workers.find((w) => w.path === path)?.smoke;
+  }
+  if (!smoke) {
     process.stderr.write(`workers.json has no smoke config for ${path}\n`);
     process.exit(2);
   }
@@ -278,7 +286,7 @@ if (isMain(import.meta.url)) {
     process.exit(2);
   }
   runSmoke({
-    smoke: entry.smoke,
+    smoke,
     tier,
     workerName: flag("--worker-name"),
     versionId: flag("--version-id"),
@@ -289,8 +297,10 @@ if (isMain(import.meta.url)) {
       const text = renderChecks(checks, title);
       process.stdout.write(`${text}\n`);
       if (process.env.GITHUB_STEP_SUMMARY) {
-        import("node:fs").then(({ appendFileSync }) =>
-          appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${text}\n`),
+        appendFileSync(
+          process.env.GITHUB_STEP_SUMMARY,
+          `${text}
+`,
         );
       }
       process.exit(checks.every((c) => c.ok) ? 0 : 1);
