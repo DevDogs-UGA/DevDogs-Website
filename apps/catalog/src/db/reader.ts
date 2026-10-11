@@ -2,7 +2,7 @@ import postgres from "postgres";
 
 /**
  * How long a catalog read may run, in milliseconds. The `catalog_reader`
- * role carries the same limit for a direct login (migration 55), but Postgres
+ * role carries the same limit for a direct login (migration 58), but Postgres
  * does not apply a role's defaults under `SET ROLE`, so each read sets it again.
  */
 export const READ_STATEMENT_TIMEOUT_MS = 3000;

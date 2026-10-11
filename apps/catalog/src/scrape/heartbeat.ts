@@ -16,7 +16,7 @@ export const SCRAPE_HEARTBEAT_JOB = "schedule-builder-scrape";
 /**
  * The Bulletin program sync's row. The platform's nightly-repair group used to
  * run it, so `platform-nightly-repair` covered it; now it is its own job and
- * its own row, which migration 55 seeds.
+ * its own row, which migration 58 seeds.
  */
 export const PROGRAMS_HEARTBEAT_JOB = "catalog-academic-programs";
 

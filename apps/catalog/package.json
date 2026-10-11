@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:db": "vitest run --config vitest.db.config.ts",
     "test:live": "vitest run --config vitest.live.config.ts",
+    "test:smoke": "tsx scripts/smoke.ts",
     "check:buildings": "tsx scripts/check-buildings.ts",
     "check:spec": "vitest run test/spec.test.ts",
     "format:check": "prettier --check \"**/*.{ts,json,yaml,md}\" --cache",

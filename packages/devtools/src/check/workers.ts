@@ -62,30 +62,62 @@ export function expandWorkspacePackages(
 }
 
 /** The `matrix.include` blocks' `app:` values, in the `strategy: matrix:
- * include:` shape `deploy-app.yaml` uses. */
+ * include:` shape the deploy workflows use. An entry may carry other keys
+ * (`dir:`, `release:`, `mint:`), indented under its `- app:` line. */
 export function deployMatrixApps(yamlText: string): string[][] {
   const lines = yamlText.split("\n");
   const blocks: string[][] = [];
+  const indentOf = (line: string): number =>
+    line.length - line.trimStart().length;
   for (let i = 0; i < lines.length; i += 1) {
     if (!/^\s*matrix:\s*$/.test(lines[i]!)) continue;
     let j = i + 1;
     while (j < lines.length && !/^\s*include:\s*$/.test(lines[j]!)) j += 1;
     const apps: string[] = [];
+    let entryIndent: number | null = null;
     for (let k = j + 1; k < lines.length; k += 1) {
       const line = lines[k]!;
       const appMatch = /^\s*- app:\s*(\S+)\s*$/.exec(line);
       if (appMatch?.[1]) {
         apps.push(appMatch[1]);
+        entryIndent ??= indentOf(line);
         continue;
       }
-      if (/^\s*mint:/.test(line) || /^\s*#/.test(line) || /^\s*$/.test(line)) {
-        continue;
-      }
+      if (/^\s*#/.test(line) || /^\s*$/.test(line)) continue;
+      // A key of the current entry sits deeper than its `- app:` dash.
+      if (entryIndent !== null && indentOf(line) > entryIndent) continue;
       break;
     }
     if (apps.length > 0) blocks.push(apps);
   }
   return blocks;
+}
+
+/** Steps of `backstage deploy` that are not an app's deploy. */
+const DEPLOY_STEPS = new Set([
+  "write-env",
+  "preflight",
+  "plan",
+  "migrate",
+  "avatars",
+  "smoke",
+  "reconcile",
+  "prune-monitors",
+]);
+
+/**
+ * The apps `deploy.yaml` deploys to production: one `backstage deploy <app>
+ * --tier production` step each. The staging matrix is read by
+ * {@link deployMatrixApps}.
+ */
+export function productionDeployApps(yamlText: string): string[] {
+  return [
+    ...new Set(
+      [...yamlText.matchAll(/backstage deploy ([\w-]+) --tier production/g)]
+        .map((m) => m[1]!)
+        .filter((name) => !DEPLOY_STEPS.has(name)),
+    ),
+  ];
 }
 
 /**
@@ -172,6 +204,34 @@ export function checkWorkers(
       problems.push(
         `${path}/package.json is named "${name}"; the directory name, package name and app slug must agree ("${slug}").`,
       );
+    }
+  }
+
+  // A Worker the deploy workflow does not deploy is a Worker nothing ships:
+  // `workers.json` lists it, its code merges, and no pipeline puts it live.
+  // The same drift in the other direction would deploy something the list
+  // (smoke tests, env registry, orphan sweep) does not know.
+  const deployWorkflow = join(root, ".github", "workflows", "deploy.yaml");
+  if (existsSync(deployWorkflow)) {
+    const text = readFileSync(deployWorkflow, "utf8");
+    const staging = deployMatrixApps(text);
+    for (const block of staging) {
+      if (!sameSet(block, apps)) {
+        problems.push(
+          `deploy.yaml's staging matrix is [${block.join(", ")}]; workers.json lists [${apps.join(", ")}].`,
+        );
+      }
+    }
+    if (staging.length === 0) {
+      problems.push("deploy.yaml has no staging deploy matrix.");
+    }
+    if (text.includes("--tier production")) {
+      const production = productionDeployApps(text);
+      if (!sameSet(production, apps)) {
+        problems.push(
+          `deploy.yaml deploys [${production.join(", ")}] to production; workers.json lists [${apps.join(", ")}].`,
+        );
+      }
     }
   }
 

@@ -32,7 +32,7 @@ export const JOB_HEARTBEATS = {
   "schedule-builder-scrape": { maxAgeHours: 26 },
   // The catalog Worker's `ProgramsWorkflow`, the UGA Bulletin program sync, at
   // 14:35 UTC. It ran as the last route of "platform-nightly-repair" until it
-  // moved with the scrape; migration 55 seeds this row.
+  // moved with the scrape; migration 58 seeds this row.
   "catalog-academic-programs": { maxAgeHours: 26 },
 } as const satisfies Record<string, { maxAgeHours: number }>;
 

@@ -238,6 +238,13 @@ jobs:
           - app: schedule-builder
             dir: apps/schedule-builder
             release: ${{ github.sha }}
+          # The catalog API and the registrar scrape. No build artifact (the
+          # deploy bundles src/worker.ts), no Sentry project of its own (it
+          # reports to the platform's, tagged worker:catalog) and no web
+          # routes for `deploy smoke`; its own smoke step is below.
+          - app: catalog
+            dir: apps/catalog
+            release: ${{ github.sha }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-workspace
@@ -280,10 +287,12 @@ jobs:
       # SENTRY_AUTH_TOKEN absent means the Sentry org is not onboarded: a
       # visible skip. Present and failing must fail the job.
       - name: Sentry release skipped (SENTRY_AUTH_TOKEN not configured)
-        if: env.SENTRY_AUTH_TOKEN == ''
+        if: env.SENTRY_AUTH_TOKEN == '' && matrix.app != 'catalog'
         run: echo "::warning::Sentry release for ${{ matrix.app }} skipped — SENTRY_AUTH_TOKEN is not configured (org not onboarded yet)."
+      # Not the catalog: it ships no source maps and reports to the platform's
+      # Sentry project, whose release for this commit the platform leg creates.
       - name: Create Sentry release and upload source maps (${{ matrix.app }})
-        if: env.SENTRY_AUTH_TOKEN != ''
+        if: env.SENTRY_AUTH_TOKEN != '' && matrix.app != 'catalog'
         uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
         env:
           SENTRY_PROJECT: ${{ matrix.app }}
@@ -324,12 +333,22 @@ jobs:
       # platform and schedule-builder alike, so it is set on the command rather
       # than on the step (the runner owns GITHUB_*).
       - name: Smoke test ${{ matrix.app }} (staging)
+        if: matrix.app != 'catalog'
         env:
           SENTRY_PROJECT: ${{ matrix.app }}
           RELEASE: ${{ matrix.release }}
         run: >-
           GITHUB_SHA="$RELEASE" backstage deploy smoke --tier staging --yes
           --app ${{ matrix.app }} --no-env
+      # The catalog is an API, not a site: its smoke test asks the deployed
+      # Worker for what an empty database answers too (apps/catalog/scripts/
+      # smoke.ts), so the first deploy of an environment passes before its
+      # first scrape. The data-dependent contract run is `test:live`.
+      - name: Smoke test catalog (staging)
+        if: matrix.app == 'catalog'
+        env:
+          CATALOG_URL: https://api-staging.devdogsuga.org/catalog/v1
+        run: pnpm --filter catalog run test:smoke
 
   production-plan:
     needs: resolve
@@ -460,6 +479,25 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: pnpm exec with-env -c 'supabase config push --project-ref $PROJECT_REF'
+      # BEFORE the platform and schedule-builder: this commit's platform and
+      # schedule-builder no longer run the registrar scrape or the Bulletin
+      # sync, so the catalog's Workflows have to exist first or the daily
+      # data stops for the length of this job. The Worker reaches its
+      # database through Hyperdrive (the platform's), after the migrations
+      # above created the `uga` schema it reads.
+      - name: Deploy and verify catalog
+        if: steps.freshness.outputs.fresh == 'true'
+        run: backstage deploy catalog --tier production --yes
+      # api.devdogsuga.org is Supabase's custom domain for the platform
+      # project until the cutover (Q90), so the catalog's production route
+      # reaches nothing until `api` is a proxied record in the zone. Set the
+      # repository variable CATALOG_PRODUCTION_ROUTED to `true` then, and this
+      # starts gating the deploy.
+      - name: Smoke test catalog (production)
+        if: steps.freshness.outputs.fresh == 'true' && vars.CATALOG_PRODUCTION_ROUTED == 'true'
+        env:
+          CATALOG_URL: https://api.devdogsuga.org/catalog/v1
+        run: pnpm --filter catalog run test:smoke
       - name: Create Sentry release and upload platform source maps
         if: steps.freshness.outputs.fresh == 'true' && env.SENTRY_AUTH_TOKEN != ''
         uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0

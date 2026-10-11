@@ -25,9 +25,9 @@ is a `400` before it costs a database call), per-IP rate limit (`429` with
 `Retry-After`: 120 requests a minute, 60 on `/search`), the edge cache (5 minutes;
 the scrape is daily), then one read-only transaction.
 
-The read runs as the **`catalog_reader`** role (migration 55): `set local role`
+The read runs as the **`catalog_reader`** role (migration 58): `set local role`
 inside a `READ ONLY` transaction with a 3 second `statement_timeout`. The role can
-see the views in the `uga` schema (migration 56) and nothing else, so even a
+see the views in the `uga` schema (migration 59) and nothing else, so even a
 mistake in a query cannot write or read another schema. A timeout is a `503`.
 
 The optional `X-Client` header (`dogdays/1.4`) is tagged on Sentry events for
@@ -100,9 +100,23 @@ Supabase project. The one optional Worker secret is `PLATFORM_SENTRY_DSN`
 (the catalog reports to the platform's Sentry project, tagged `worker:catalog`);
 `SENTRY_RELEASE` is passed as a `--var`.
 
+The pipeline deploys it: `.github/workflows/deploy.yaml` has a `catalog` leg in
+the staging matrix and a `backstage deploy catalog --tier production` step that
+runs **before** the platform and schedule-builder (this commit's platform and
+schedule-builder no longer run the scrape or the Bulletin sync, so the catalog's
+Workflows must exist first). `devtools check workers` fails CI if `workers.json`
+and the workflow disagree. After each deploy `pnpm -F catalog test:smoke` asks
+the deployed Worker what an empty database answers too (200 JSON, a 400 for a
+malformed term, a 405 for a write). The production smoke step is gated by the
+repository variable `CATALOG_PRODUCTION_ROUTED=true`, which is set when
+`api.devdogsuga.org` is proxied in the zone.
+
+By hand, for a rehearsal or a fix:
+
 ```bash
-pnpm exec wrangler deploy --env staging --var SENTRY_RELEASE:$(git rev-parse HEAD)
+backstage deploy catalog --tier staging --yes   # needs CLOUDFLARE_API_TOKEN
 wrangler workflows trigger staging-catalog-scrape '{"terms":[202702]}' --env staging
+CATALOG_URL=https://api-staging.devdogsuga.org/catalog/v1 pnpm -F catalog test:live
 ```
 
 Staging has no schedule, so the registrar is not scraped from two environments.
@@ -122,4 +136,4 @@ in the zone.
 | The scrape                        | `src/scrape/`                                                                 |
 | The Bulletin sync                 | `src/programs/`                                                               |
 | Building dataset and its CI check | `data/buildings/`, `src/buildings/`, `scripts/check-buildings.ts`             |
-| The `uga` schema                  | `supabase/schemas/uga/`, migrations 55 and 56                                 |
+| The `uga` schema                  | `supabase/schemas/uga/`, migrations 58 and 59                                 |

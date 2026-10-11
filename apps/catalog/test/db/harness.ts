@@ -11,7 +11,7 @@ import postgres from "postgres";
  * stack, or the same image in a container). Each test file creates its own
  * database on that server, loads `supabase/schemas` into it (the registrar
  * tables, the `uga` schema, and the two platform tables the scrape touches),
- * runs migration 55 for the role, and drops the database afterwards. Nothing in
+ * runs migration 58 for the role, and drops the database afterwards. Nothing in
  * the database `DB_URL` names is read or written, and no migration history is
  * needed, so this works the same against a fresh `supabase start` and a bare
  * container.

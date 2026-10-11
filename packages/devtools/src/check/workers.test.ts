@@ -3,7 +3,12 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { checkWorkers, deployMatrixApps, workspaceGlobs } from "./workers.js";
+import {
+  checkWorkers,
+  deployMatrixApps,
+  productionDeployApps,
+  workspaceGlobs,
+} from "./workers.js";
 
 const MATRIX = (apps: string[]) =>
   [
@@ -34,6 +39,39 @@ describe("deployMatrixApps", () => {
     expect(deployMatrixApps(MATRIX(["platform", "schedule-builder"]))).toEqual([
       ["platform", "schedule-builder"],
     ]);
+  });
+});
+
+describe("deployMatrixApps with entry keys", () => {
+  it("reads past the dir and release keys under each entry, and stops at the next key of the job", () => {
+    const text = [
+      "jobs:",
+      "  staging-deploy:",
+      "    strategy:",
+      "      matrix:",
+      "        include:",
+      "          - app: platform",
+      "            dir: apps/platform",
+      "            release: ${{ github.sha }}",
+      "          # a comment between entries",
+      "          - app: catalog",
+      "            dir: apps/catalog",
+      "    steps:",
+      "      - app: not-an-entry",
+    ].join("\n");
+    expect(deployMatrixApps(text)).toEqual([["platform", "catalog"]]);
+  });
+});
+
+describe("productionDeployApps", () => {
+  it("lists the apps deployed to production and not the steps", () => {
+    const text = [
+      "run: backstage deploy platform --tier production --yes",
+      "run: backstage deploy smoke --tier production --yes --app platform --no-env",
+      "run: backstage deploy catalog --tier production --yes",
+      "run: backstage deploy schedule-builder --tier staging --yes",
+    ].join("\n");
+    expect(productionDeployApps(text)).toEqual(["platform", "catalog"]);
   });
 });
 
@@ -86,6 +124,43 @@ describe("checkWorkers", () => {
     repo(["platform", "schedule-builder"]);
     write("apps/platform/package.json", '{"name":"web"}');
     expect(checkWorkers(root).join("\n")).toContain('named "web"');
+  });
+
+  function deployWorkflow(staging: string[], production: string[]): void {
+    write(
+      ".github/workflows/deploy.yaml",
+      [
+        MATRIX(staging),
+        ...production.map(
+          (app) => `run: backstage deploy ${app} --tier production --yes`,
+        ),
+      ].join("\n"),
+    );
+  }
+
+  it("passes when deploy.yaml deploys every Worker to staging and production", () => {
+    repo(["platform", "schedule-builder"]);
+    deployWorkflow(
+      ["platform", "schedule-builder"],
+      ["platform", "schedule-builder"],
+    );
+    expect(checkWorkers(root)).toEqual([]);
+  });
+
+  it("flags a Worker in workers.json that deploy.yaml does not deploy to staging", () => {
+    repo(["platform", "schedule-builder"]);
+    deployWorkflow(["platform"], ["platform", "schedule-builder"]);
+    expect(checkWorkers(root)).toEqual([
+      "deploy.yaml's staging matrix is [platform]; workers.json lists [platform, schedule-builder].",
+    ]);
+  });
+
+  it("flags a Worker that deploy.yaml does not deploy to production", () => {
+    repo(["platform", "schedule-builder"]);
+    deployWorkflow(["platform", "schedule-builder"], ["platform"]);
+    expect(checkWorkers(root)).toEqual([
+      "deploy.yaml deploys [platform] to production; workers.json lists [platform, schedule-builder].",
+    ]);
   });
 
   it("flags a deploy matrix that drifted", () => {

@@ -17,7 +17,7 @@ import * as Sentry from "@sentry/cloudflare";
 import { handleApiRequest, type ApiDeps } from "./api/router";
 import { withCatalogReader } from "./db/reader";
 import { resolveDatabaseUrl } from "./db/url";
-import type { CatalogEnv } from "./env";
+import type { CatalogEnv } from "./bindings";
 import { catalogSentryOptions } from "./sentry";
 
 export { ScrapeWorkflow } from "./scrape/ScrapeWorkflow";
