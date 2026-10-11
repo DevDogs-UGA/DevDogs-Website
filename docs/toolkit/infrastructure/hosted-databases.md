@@ -42,26 +42,27 @@ the project's data.
 
 ## Applying a migration to a hosted tier
 
-| Target                 | How                                                                 |
-| ---------------------- | ------------------------------------------------------------------- |
-| the shared dev project | `pnpm devtools --tier development:remote apply-migrations`          |
-| staging                | `staging-migrate` in Backstage's `.github/workflows/deploy.yaml`    |
-| production             | the `production` job in Backstage's `.github/workflows/deploy.yaml` |
+| Target                 | How                                                        |
+| ---------------------- | ---------------------------------------------------------- |
+| the shared dev project | `pnpm devtools --tier development:remote apply-migrations` |
+| staging                | `staging-database` in `.github/workflows/deploy.yaml`      |
+| production             | `production-database` in `.github/workflows/deploy.yaml`   |
 
 `apply-migrations` runs `supabase db push --db-url` against the
 session's database — only the migrations its history table has not recorded.
 
-Backstage's deploy pushes staging and production with `backstage deploy migrate
---include-seed`, so the seed files a tier has not recorded run right after its
-migrations, and then `backstage deploy avatars` uploads any seeded headshot the
-bucket lacks without replacing existing ones (see
-[Migrations](../../platform/guides/migrations.md)'s "Seeds"). Production sits
-behind two dry runs (`backstage deploy plan --include-seed`): `production-plan`
-prints the plan, seeds included, on every merge to `main` under the read-only
-`migration_planner` role, and the `production` job recomputes it seconds before
-the real push, because the first goes stale as soon as another promotion lands.
-The migrations and seeds it applies are this repository's, at the commit
-Backstage's `devdogsuga.lock` names.
+The deploy applies a tier in two parts through the shared `deploy-database.yaml`
+([How a deploy works](../../operations/deploys/how-a-deploy-works.md)): first
+the hand-written migrations in `supabase/migrations/` (with `--include-seed`, so
+the seed files a tier has not recorded run right after them), then the diff
+between the database and the declarative tree in `supabase/schemas/`. Each part
+is planned first under a read-only credential, approved, then applied against
+the plan's hash, so a database that moved between plan and apply changes
+nothing. `backstage deploy avatars` then uploads any seeded headshot the bucket
+lacks without replacing existing ones (see
+[Migrations](../../platform/guides/migrations.md)'s "Seeds"). A plan that drops
+or rewrites data needs a further approval:
+[Destructive changes](../../operations/deploys/destructive-changes.md).
 
 > [!WARNING]
 > Never run `drizzle-kit push` against a hosted database: it writes the
