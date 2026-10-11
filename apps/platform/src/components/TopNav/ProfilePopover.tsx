@@ -17,11 +17,7 @@ import {
 } from "@phosphor-icons/react/ssr";
 import Avatar from "~/components/AvatarField/Avatar";
 import * as icons from "~/config/icons";
-import {
-  CONSOLE_GROUP,
-  type ConsoleItem,
-  type NavItem,
-} from "~/config/nav";
+import { CONSOLE_GROUP, type ConsoleItem, type NavItem } from "~/config/nav";
 import signOut from "~/server/actions/signOut";
 import NavMenuTrigger from "./NavMenuTrigger";
 import NavSubMenu from "./NavSubMenu";

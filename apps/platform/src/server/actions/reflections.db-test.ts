@@ -122,7 +122,10 @@ describe("saveReflection", () => {
         intent: "save",
       }),
     );
-    expect(result).toEqual({ ok: false, message: "That reflection is invalid." });
+    expect(result).toEqual({
+      ok: false,
+      message: "That reflection is invalid.",
+    });
   });
 
   it("saves a meeting reflection instead of throwing on the decoded deadline", async () => {

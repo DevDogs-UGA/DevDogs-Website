@@ -15,8 +15,7 @@ export interface RouteContext {
 }
 
 export type RouteResult =
-  | { kind: "page"; page: TerminalPage }
-  | { kind: "notFound" };
+  { kind: "page"; page: TerminalPage } | { kind: "notFound" };
 
 /** What a switched-off gate does, matching what the page does when it's off. */
 export type GateOff = { kind: "notFound" } | { kind: "redirect"; url: string };
