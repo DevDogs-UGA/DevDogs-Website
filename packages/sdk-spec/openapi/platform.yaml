@@ -1,0 +1,136 @@
+openapi: 3.1.0
+info:
+  title: DevDogs UGA platform API
+  version: 1.0.0
+  summary: What an app outside the platform database calls on the DevDogs platform.
+  description: |
+    The platform's public HTTP API for apps that run their own database (DogPack). Today that is the moderation
+    API: an app files reports about its members' content and the platform delivers moderators' decisions back
+    (the delivery side is a webhook the app serves, described by the `ModerationMessage` schema and the
+    Standard Webhooks signing rules below).
+
+    ### Signing
+
+    A report is signed with the OAuth client's moderation secret using
+    [Standard Webhooks](https://www.standardwebhooks.com/): the `webhook-id`, `webhook-timestamp` and
+    `webhook-signature` headers over the raw JSON body (HMAC-SHA256, `v1,<base64>` of
+    `<id>.<timestamp>.<body>`), plus `moderation-client-id` naming the client. A timestamp more than five
+    minutes from the platform's clock is refused. Signing is TypeScript-only: use
+    `createModerationClient` from `@devdogsuga/sdk/moderation` in the app's Edge Function. The generated
+    clients therefore carry the report's types but no `fileReport` method.
+
+    **The schemas come from the SDK's zod definitions.** `../moderation/schema.json` is exported from
+    `@devdogsuga/sdk/moderation`; this file only references it.
+  license:
+    name: BSD-3-Clause
+    identifier: BSD-3-Clause
+servers:
+  - url: https://api.devdogsuga.org
+    description: Production
+  - url: https://api-staging.devdogsuga.org
+    description: Staging
+tags:
+  - name: Moderation
+paths:
+  /moderation/v1/reasons:
+    get:
+      operationId: listReportReasons
+      tags: [Moderation]
+      summary: The reasons an app can offer when reporting
+      description: |
+        A fixed list in display order. Public, because an app's report dialog needs it before it has anything to
+        sign. Cached for five minutes.
+      responses:
+        "200":
+          description: The reasons.
+          headers:
+            Cache-Control:
+              description: Always `public, max-age=300`.
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReasonList" }
+  /moderation/v1/reports:
+    post:
+      operationId: fileReport
+      tags: [Moderation]
+      summary: File a report about a member's content
+      x-sdk-client: false
+      description: |
+        From the app's backend, never a member's device. A second report of content that already has an open
+        report is added to it (`corroborated: true`). A development client's reports go to a sandbox only its
+        owner reads (`sandbox: true`).
+      parameters:
+        - name: moderation-client-id
+          in: header
+          required: true
+          description: The OAuth client id that signed the request.
+          schema: { type: string, format: uuid }
+        - name: webhook-id
+          in: header
+          required: true
+          description: Unique per message.
+          schema: { type: string }
+        - name: webhook-timestamp
+          in: header
+          required: true
+          description: Unix seconds.
+          schema: { type: string }
+        - name: webhook-signature
+          in: header
+          required: true
+          description: "`v1,<base64 HMAC-SHA256>` over `<id>.<timestamp>.<raw body>`."
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "../moderation/schema.json#/$defs/ReportRequest" }
+      responses:
+        "201":
+          description: The report was filed.
+          content:
+            application/json:
+              schema: { $ref: "../moderation/schema.json#/$defs/ReportResponse" }
+        "400": { $ref: "#/components/responses/ReportError" }
+        "401": { $ref: "#/components/responses/ReportError" }
+        "403": { $ref: "#/components/responses/ReportError" }
+        "422": { $ref: "#/components/responses/ReportError" }
+        "429": { $ref: "#/components/responses/ReportError" }
+        "503": { $ref: "#/components/responses/ReportError" }
+# Schemas that no operation mentions but the SDKs still ship: what the platform
+# POSTs to an app's moderation endpoint after a moderator decides. Signed like a
+# report, in the other direction. `@devdogsuga/sdk/moderation` is the reference
+# receiver.
+x-sdk-schemas:
+  - ../moderation/schema.json#/$defs/ModerationMessage
+components:
+  responses:
+    ReportError:
+      description: |
+        The report was refused. `400` for a malformed body, `401` for a missing, unknown or badly signed client,
+        `403` when the reporter may not file reports, `422` for an unregistered content type or a user id that is
+        not a platform user, `429` after ten reports an hour from one reporter, `503` when moderation is not
+        configured.
+      content:
+        application/json:
+          schema: { $ref: "../moderation/schema.json#/$defs/ReportError" }
+  schemas:
+    ReportReasonOption:
+      type: object
+      additionalProperties: false
+      required: [reason, title, description]
+      properties:
+        reason:
+          type: string
+          description: The value to send as `reason`.
+        title: { type: string }
+        description: { type: string }
+    ReasonList:
+      type: object
+      additionalProperties: false
+      required: [reasons]
+      properties:
+        reasons:
+          type: array
+          items: { $ref: "#/components/schemas/ReportReasonOption" }

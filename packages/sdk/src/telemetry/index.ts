@@ -17,6 +17,7 @@ export {
 } from "./options.js";
 
 export {
+  SCRUB_RULES,
   scrubEmails,
   scrubEvent,
   scrubPaths,

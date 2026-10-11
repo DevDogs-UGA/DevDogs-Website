@@ -1,0 +1,22 @@
+name: devdogsuga_sdk
+description: The DevDogs SDK for Flutter apps - brand, sign in with DevDogs, the catalog API client, moderation models, telemetry and env.
+version: 0.1.0
+homepage: https://devdogsuga.org/docs
+repository: https://github.com/DevDogsUGA/DevDogsUGA/tree/main/packages/sdk_dart
+issue_tracker: https://github.com/DevDogsUGA/DevDogsUGA/issues
+
+environment:
+  sdk: ^3.5.0
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0
+  sentry_flutter: ^10.0.0
+  supabase_flutter: ^2.18.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0

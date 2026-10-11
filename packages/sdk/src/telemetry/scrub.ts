@@ -55,6 +55,52 @@ export function scrubSecrets(text: string): string {
     .replace(BEARER_TOKEN, "Bearer [redacted]");
 }
 
+/**
+ * The text scrubbers as data, in the order {@link scrubText} applies them.
+ *
+ * Another language cannot import a regular expression, so the Dart SDK is
+ * generated from this table (`@devdogsuga/sdk-spec` exports it to
+ * `telemetry/scrub.json`). A replacement is a JavaScript replacement string:
+ * `$1` is the first capture group.
+ */
+export const SCRUB_RULES: readonly {
+  name: string;
+  pattern: string;
+  flags: string;
+  replacement: string;
+}[] = [
+  {
+    name: "windowsPath",
+    pattern: WINDOWS_PATH.source,
+    flags: WINDOWS_PATH.flags,
+    replacement: "$1",
+  },
+  {
+    name: "posixPath",
+    pattern: POSIX_PATH.source,
+    flags: POSIX_PATH.flags,
+    replacement: "$1",
+  },
+  {
+    name: "email",
+    pattern: EMAIL.source,
+    flags: EMAIL.flags,
+    replacement: "[redacted-email]",
+  },
+  {
+    name: "envAssignment",
+    pattern: ENV_ASSIGNMENT.source,
+    flags: ENV_ASSIGNMENT.flags,
+    replacement: "$1=[redacted]",
+  },
+  {
+    name: "bearerToken",
+    pattern: BEARER_TOKEN.source,
+    flags: BEARER_TOKEN.flags,
+    replacement: "Bearer [redacted]",
+  },
+];
+
 /** Runs all three text scrubbers, in order. */
 export function scrubText(text: string): string {
   return scrubSecrets(scrubEmails(scrubPaths(text)));

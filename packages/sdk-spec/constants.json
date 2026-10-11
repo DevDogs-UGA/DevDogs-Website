@@ -1,0 +1,40 @@
+{
+  "$comment": "Authored. Shared constants for both SDKs: `pnpm -F @devdogsuga/sdk-spec generate` writes them to packages/sdk/src/constants/generated.ts and packages/sdk_dart/lib/src/generated/constants.dart. The telemetry block is also pinned to @devdogsuga/sdk/telemetry by a test, so the two cannot disagree.",
+  "hosts": {
+    "api": {
+      "production": "https://api.devdogsuga.org",
+      "staging": "https://api-staging.devdogsuga.org"
+    },
+    "site": {
+      "production": "https://devdogsuga.org",
+      "staging": "https://staging.devdogsuga.org"
+    }
+  },
+  "paths": {
+    "catalog": "/catalog/v1",
+    "moderation": "/moderation/v1"
+  },
+  "oauth": {
+    "providerId": "custom:devdogsuga",
+    "providerName": "DevDogs",
+    "scopes": ["openid", "email", "profile"],
+    "tiers": ["development", "production"],
+    "authPath": "/auth/v1",
+    "discoveryPath": "/auth/v1/.well-known/openid-configuration",
+    "callbackPath": "/auth/v1/callback"
+  },
+  "moderation": {
+    "clientIdHeader": "moderation-client-id",
+    "secretPrefix": "whsec_",
+    "toleranceSeconds": 300
+  },
+  "client": {
+    "header": "X-Client"
+  },
+  "telemetry": {
+    "services": ["platform", "schedule-builder", "devtools"],
+    "environments": ["production", "staging", "development", "ci", "local"],
+    "tracesSampleRates": { "production": 0.2, "staging": 0.05 },
+    "errorSampleRate": 1
+  }
+}

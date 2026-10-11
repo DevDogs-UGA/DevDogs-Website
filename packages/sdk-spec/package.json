@@ -1,0 +1,33 @@
+{
+  "name": "@devdogsuga/sdk-spec",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The SDKs' source of truth: OpenAPI for the catalog and the platform, the moderation JSON Schema, brand tokens and shared constants, and the one generator that writes packages/sdk and packages/sdk_dart from them.",
+  "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DevDogsUGA/DevDogsUGA.git",
+    "directory": "packages/sdk-spec"
+  },
+  "scripts": {
+    "generate": "tsx src/generate.ts",
+    "check": "tsx src/generate.ts --check",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@devdogsuga/sdk": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "yaml": "^2.9.1",
+    "zod": "catalog:"
+  }
+}

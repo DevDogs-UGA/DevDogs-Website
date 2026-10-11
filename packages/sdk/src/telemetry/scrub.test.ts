@@ -6,6 +6,7 @@ import {
   scrubPaths,
   scrubSecrets,
   scrubText,
+  SCRUB_RULES,
 } from "./scrub.js";
 
 describe("scrubPaths", () => {
@@ -108,5 +109,23 @@ describe("scrubEvent", () => {
     const event: ErrorEvent = { type: undefined, message: "plain message" };
     expect(() => scrubEvent(event)).not.toThrow();
     expect(scrubEvent(event).message).toBe("plain message");
+  });
+});
+
+describe("SCRUB_RULES", () => {
+  it("applied in order, reproduce scrubText", () => {
+    const samples = [
+      "at /home/sloan/code/DevDogsUGA/src/foo.ts:12:4 for hello@sloanfinger.com",
+      "C:\\Users\\sloan\\project\\foo.ts failed with API_SECRET_KEY=abc123 and Bearer eyJ.x.y",
+      "nothing to scrub here",
+    ];
+    for (const sample of samples) {
+      const viaRules = SCRUB_RULES.reduce(
+        (text, rule) =>
+          text.replace(new RegExp(rule.pattern, rule.flags), rule.replacement),
+        sample,
+      );
+      expect(viaRules).toBe(scrubText(sample));
+    }
   });
 });

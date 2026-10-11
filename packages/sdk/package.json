@@ -25,6 +25,7 @@
       "types": "./dist/brand/index.d.ts",
       "default": "./dist/brand/index.js"
     },
+    "./brand/artwork/*": "./artwork/*",
     "./brand/event": {
       "types": "./dist/brand/event.d.ts",
       "default": "./dist/brand/event.js"
@@ -33,6 +34,11 @@
       "types": "./dist/brand/marks-data.d.ts",
       "default": "./dist/brand/marks-data.js"
     },
+    "./brand/next": {
+      "types": "./dist/brand/next.d.ts",
+      "default": "./dist/brand/next.js"
+    },
+    "./brand/palette.css": "./palette.css",
     "./brand/qr": {
       "types": "./dist/brand/qr.d.ts",
       "default": "./dist/brand/qr.js"
@@ -41,15 +47,17 @@
       "types": "./dist/brand/render.d.ts",
       "default": "./dist/brand/render.js"
     },
-    "./brand/next": {
-      "types": "./dist/brand/next.d.ts",
-      "default": "./dist/brand/next.js"
-    },
-    "./brand/palette.css": "./palette.css",
-    "./brand/artwork/*": "./artwork/*",
     "./catalog": {
       "types": "./dist/catalog/index.d.ts",
       "default": "./dist/catalog/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "default": "./dist/client/index.js"
+    },
+    "./constants": {
+      "types": "./dist/constants/index.d.ts",
+      "default": "./dist/constants/index.js"
     },
     "./db/client": {
       "types": "./dist/db/client/index.d.ts",

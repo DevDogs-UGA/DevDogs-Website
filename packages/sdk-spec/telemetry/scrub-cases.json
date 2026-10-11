@@ -1,0 +1,45 @@
+{
+  "$comment": "Authored. Both SDKs' scrub tests read these: TypeScript (packages/sdk/src/telemetry/scrub-cases.test.ts) and Dart (packages/sdk_dart/test/scrub_test.dart). Add a case here when a scrubber changes, and both languages must agree.",
+  "cases": [
+    {
+      "name": "posix path in a stack frame",
+      "input": "at /home/sloan/code/DevDogsUGA/src/foo.ts:12:4",
+      "expected": "at foo.ts:12:4"
+    },
+    {
+      "name": "windows path",
+      "input": "C:\\Users\\sloan\\project\\foo.ts",
+      "expected": "foo.ts"
+    },
+    {
+      "name": "relative path is left alone",
+      "input": "src/foo.ts imported bar",
+      "expected": "src/foo.ts imported bar"
+    },
+    {
+      "name": "email address",
+      "input": "contact hello@sloanfinger.com for help",
+      "expected": "contact [redacted-email] for help"
+    },
+    {
+      "name": "env assignment",
+      "input": "failed with SUPABASE_SECRET_KEY=sb_secret_abc123 set",
+      "expected": "failed with SUPABASE_SECRET_KEY=[redacted] set"
+    },
+    {
+      "name": "bearer token",
+      "input": "Authorization: Bearer eyJhbGciOi.payload.sig",
+      "expected": "Authorization: Bearer [redacted]"
+    },
+    {
+      "name": "everything at once",
+      "input": "/home/sloan/app/main.dart threw for hello@uga.edu with API_TOKEN=abc and Bearer xyz.123",
+      "expected": "main.dart threw for [redacted-email] with API_TOKEN=[redacted] and Bearer [redacted]"
+    },
+    {
+      "name": "nothing to scrub",
+      "input": "Null check operator used on a null value",
+      "expected": "Null check operator used on a null value"
+    }
+  ]
+}
