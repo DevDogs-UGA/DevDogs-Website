@@ -653,4 +653,110 @@ describe("devtools contract tests", () => {
     expect(status).toBe(1);
     expect(stderr).toContain('has no script "no-such-script"');
   });
+
+  // ── a product repository (devtools.config.json), the way DogPack runs it:
+  //    the packed CLI alone, in a directory with no workspace and no sdk ─────
+
+  describe("a product repository", () => {
+    let productDir: string;
+
+    const CONFIG = {
+      product: "contract",
+      name: "Contract",
+      supabase: { version: "2.117.0", schemas: ["contract"] },
+      types: { kind: "typescript", out: "lib/database.types.ts" },
+    };
+
+    beforeAll(() => {
+      productDir = join(tmpRoot, "product");
+      mkdirSync(join(productDir, "supabase", "schemas", "contract"), {
+        recursive: true,
+      });
+      writeFileSync(
+        join(productDir, "devtools.config.json"),
+        JSON.stringify(CONFIG),
+      );
+      writeFileSync(
+        join(productDir, "supabase", "schemas", "contract", "schema.sql"),
+        "create schema if not exists contract;\n",
+      );
+      writeFileSync(
+        join(productDir, ".env.example"),
+        "SUPABASE_URL=\nSUPABASE_PUBLISHABLE_KEY=\n",
+      );
+    });
+
+    const runProduct = (args: string[]) =>
+      run(args, {
+        bin: dlxBin,
+        cwd: productDir,
+        env: { CI: "true" },
+      });
+
+    it("shows the product's commands, not the platform's", async () => {
+      const { status, stdout } = await runProduct(["--help"]);
+      expect(status).toBe(0);
+      for (const command of ["setup", "db", "dev-data", "doctor", "oauth"]) {
+        expect(stdout).toMatch(new RegExp(`^ {2}${command}\\s`, "m"));
+      }
+      expect(stdout).not.toMatch(/^ {2}jobs\s/m);
+      expect(stdout).not.toMatch(/^ {2}wrangler\s/m);
+    });
+
+    it("lists db's subcommands", async () => {
+      const { status, stdout } = await runProduct(["db", "--help"]);
+      expect(status).toBe(0);
+      for (const sub of ["sync", "types", "hash"]) {
+        expect(stdout).toContain(sub);
+      }
+    });
+
+    it("db hash prints only the schema hash on stdout, the same twice", async () => {
+      const first = await runProduct(["db", "hash"]);
+      const second = await runProduct(["db", "hash"]);
+      expect(first.status).toBe(0);
+      expect(first.stdout.trim()).toMatch(/^[0-9a-f]{64}$/);
+      expect(second.stdout).toBe(first.stdout);
+      expect(first.stderr).toContain("generator supabase@2.117.0");
+    });
+
+    it("db hash changes when a schema file does", async () => {
+      const before = (await runProduct(["db", "hash"])).stdout;
+      writeFileSync(
+        join(productDir, "supabase", "schemas", "contract", "t.sql"),
+        "create table contract.t (id int);\n",
+      );
+      const after = (await runProduct(["db", "hash"])).stdout;
+      expect(after).not.toBe(before);
+    });
+
+    it("check env-example passes a public manifest and fails a secret one", async () => {
+      const ok = await runProduct(["check", "env-example"]);
+      expect(ok.status).toBe(0);
+
+      writeFileSync(
+        join(productDir, ".env.example"),
+        "SUPABASE_URL=\nSUPABASE_SECRET_KEY=sb_secret_x\n",
+      );
+      const bad = await runProduct(["check", "env-example"]);
+      expect(bad.status).toBe(1);
+      expect(`${bad.stdout}${bad.stderr}`).toContain("SUPABASE_SECRET_KEY");
+    });
+
+    it("db sync --dry-run names the Supabase CLI calls and runs nothing", async () => {
+      const { status, stdout, stderr } = await runProduct([
+        "db",
+        "sync",
+        "--dry-run",
+      ]);
+      expect(status).toBe(0);
+      expect(`${stdout}${stderr}`).toContain("declarative sync --no-apply");
+    });
+
+    it("the platform's commands are not available here", async () => {
+      const { status, stderr, stdout } = await runProduct(["jobs", "list"]);
+      expect(status).toBe(1);
+      expect(`${stdout}${stderr}`).toContain("Unknown command: jobs");
+    });
+  });
 });
