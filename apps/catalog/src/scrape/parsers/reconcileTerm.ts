@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import type { ScrapeDb } from "~/db/client";
+import type { ScrapeDb, ScrapeTx } from "~/db/client";
 import type { partsOfTerm } from "~/db/schema";
 import { terms } from "~/db/schema";
 import {
@@ -86,6 +86,23 @@ export const TERM_TRANSACTION_LIMITS = {
 } as const;
 
 /**
+ * Applies the limits to the transaction `tx` (`set_config(..., true)`, so they
+ * end with it and never reach a pooled connection's next user).
+ */
+export async function applyTermLimits(
+  tx: ScrapeTx,
+  limits: Record<keyof typeof TERM_TRANSACTION_LIMITS, string> = {
+    ...TERM_TRANSACTION_LIMITS,
+  },
+): Promise<void> {
+  await tx.execute(
+    sql`select set_config('lock_timeout', ${limits.lockTimeout}, true),
+               set_config('idle_in_transaction_session_timeout', ${limits.idleInTransactionTimeout}, true),
+               set_config('statement_timeout', ${limits.statementTimeout}, true)`,
+  );
+}
+
+/**
  * Reads every row of a term into the collectors, one at a time. What is kept is
  * the collectors' compact records, deduplicated by natural key, never the
  * rows; see `csv.ts` for why that matters.
@@ -158,12 +175,10 @@ export async function reconcileTerm(
   const c = await collect(term.rows);
 
   return database.transaction(async (tx) => {
-    const limits = { ...TERM_TRANSACTION_LIMITS, ...options.limits };
-    await tx.execute(
-      sql`select set_config('lock_timeout', ${limits.lockTimeout}, true),
-                 set_config('idle_in_transaction_session_timeout', ${limits.idleInTransactionTimeout}, true),
-                 set_config('statement_timeout', ${limits.statementTimeout}, true)`,
-    );
+    await applyTermLimits(tx, {
+      ...TERM_TRANSACTION_LIMITS,
+      ...options.limits,
+    });
 
     // What the term looked like before this run, for the section-count check.
     const before = await tx.execute<{ active: string }>(

@@ -72,7 +72,7 @@ curl -X POST http://127.0.0.1:8787/cdn-cgi/local/explorer/api/workflows/developm
    in place.
 
 3. **Check the invariants.** Before the transaction commits, the term is checked
-   (the section count moved at most 15%, every active section has a meeting, no
+   (the section count fell at most 15%, every active section has a meeting, no
    unreadable times, every building exists, every missing section is flagged
    cancelled). A term that fails is rolled back, not published, and the
    heartbeat is not written, so the platform's daily-jobs check goes overdue and

@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql as dsql } from "drizzle-orm";
 import postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createScrapeDb, type ScrapeDb } from "~/db/client";
@@ -8,6 +8,8 @@ import {
   checkTermInvariants,
 } from "~/scrape/invariants";
 import {
+  TERM_TRANSACTION_LIMITS,
+  applyTermLimits,
   reconcileTerm,
   type TermToReconcile,
 } from "~/scrape/parsers/reconcileTerm";
@@ -281,6 +283,21 @@ describe("scrape invariants, enforced", () => {
     });
     // Put it back for the next test.
     await reconcileTerm(term(P, sections(P, 9020001, 10)), db);
+  });
+
+  it("publishes a term that grew by more than 15%, so a filling-in term never stalls its own refresh", async () => {
+    const G = 900205;
+    await reconcileTerm(term(G, sections(G, 9020501, 10)), db, {
+      invariants: "report",
+    });
+    const grown = await reconcileTerm(term(G, sections(G, 9020501, 12)), db);
+    expect(
+      grown.invariants.find((i) => i.name === "sectionCountStable"),
+    ).toMatchObject({
+      ok: true,
+      detail: { previous: 10, current: 12, changePercent: 20 },
+    });
+    expect(grown.offeringCount).toBe(12);
   });
 
   it("rolls the term back when the section count falls by more than 15%", async () => {
@@ -568,5 +585,49 @@ describe("a retry after an attempt that died mid-transaction", () => {
       invariants: "report",
     });
     expect(retry.offeringCount).toBe(3);
+  });
+});
+
+describe("a transaction the Worker abandoned while idle", () => {
+  const P = 900502;
+
+  it("is ended by the idle_in_transaction_session_timeout the term's limits set, which frees its row locks", async () => {
+    await reconcileTerm(term(P, sections(P, 9050201, 2)), db, {
+      invariants: "report",
+    });
+
+    // The shape of a Worker that died after its writes began: the limits are
+    // applied by the same function reconcileTerm uses, the term row is locked,
+    // and then nothing ever talks to this transaction again.
+    const started = Date.now();
+    const abandoned = db.transaction(async (tx) => {
+      await applyTermLimits(tx, {
+        ...TERM_TRANSACTION_LIMITS,
+        idleInTransactionTimeout: "1s",
+      });
+      await tx.execute(
+        dsql`select 1 from schedule_builder.terms where "academicPeriod" = ${P} for update`,
+      );
+      // Idle well past the timeout; the connection is gone by the next statement.
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await tx.execute(dsql`select 1`);
+    });
+    await expect(abandoned).rejects.toThrow();
+    expect(Date.now() - started).toBeLessThan(10_000);
+
+    // Its lock is free again: a retry takes the row without waiting.
+    const retry = await reconcileTerm(term(P, sections(P, 9050201, 2)), db, {
+      invariants: "report",
+      limits: { lockTimeout: "1s" },
+    });
+    expect(retry.offeringCount).toBe(2);
+  });
+
+  it("sets nothing beyond the transaction it was applied in", async () => {
+    await db.transaction((tx) => applyTermLimits(tx));
+    const [after] = await sql<
+      { v: string }[]
+    >`select current_setting('idle_in_transaction_session_timeout') as v`;
+    expect(after?.v).not.toBe("30s");
   });
 });

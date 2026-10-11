@@ -36,7 +36,7 @@ export const INVARIANT_NAMES = [
   "partsOfTermKnown",
 ] as const;
 
-/** How far the active section count may move between two runs: ±15%. */
+/** How far the active section count may FALL between two runs: 15%. Growth is not limited; see {@link sectionCountStable}. */
 export const SECTION_COUNT_TOLERANCE = 0.15;
 
 export class InvariantViolationError extends Error {
@@ -56,6 +56,16 @@ export class InvariantViolationError extends Error {
  * The section-count check, on its own so its arithmetic is unit-tested. With no
  * previous sections (a term's first scrape) there is nothing to compare, so
  * it passes and says so.
+ *
+ * Only a FALL beyond the tolerance blocks. A feed that lost sections is what a
+ * truncated or half-published download looks like, and publishing it would
+ * cancel real sections. A feed that gained sections is the registrar
+ * publishing (a Summer term filling in, a department adding its sections), and
+ * a block there protects nothing: a rolled-back term keeps its old count, so
+ * every later daily run would compare against the same old count and fail too,
+ * until a person waived the check by hand. A rise is reported through
+ * `changePercent` and never blocks. Sections are keyed by CRN, so a duplicated
+ * feed row cannot inflate the count.
  */
 export function sectionCountStable(
   previous: number,
@@ -73,7 +83,7 @@ export function sectionCountStable(
   const change = (current - previous) / previous;
   return {
     name: "sectionCountStable",
-    ok: Math.abs(change) <= tolerance,
+    ok: change >= -tolerance,
     severity: "error",
     detail: {
       previous,
@@ -103,7 +113,7 @@ type CheckInput = {
  * | name | holds when |
  * |---|---|
  * | `termExists` | the term has its `terms` row and at least one part of term |
- * | `sectionCountStable` | active sections moved at most 15% since the last run |
+ * | `sectionCountStable` | active sections fell at most 15% since the last run (a rise is reported, never blocks) |
  * | `noSectionWithoutMeetings` | every active section has a meeting row (TBA and online ones too: the registrar lists them with a `TBA` time or `NCRR` building) |
  * | `timesWellFormed` | the feed had no unreadable time, and every stored meeting has both times or neither, start before end |
  * | `buildingsResolve` | every meeting's building exists, and none is `RESERVED` without one |

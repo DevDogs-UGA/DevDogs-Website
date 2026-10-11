@@ -46,7 +46,8 @@ engine, so one term's failure cannot sink the others:
 4. `record-run`, then `record-heartbeat` when everything passed.
 
 Inside each term's transaction the **invariants** run
-(`src/scrape/invariants.ts`): the section count moved at most 15%, every active
+(`src/scrape/invariants.ts`): the section count fell at most 15% (a rise is reported, never blocks: a term
+the registrar is still filling in must not stall its own refresh), every active
 section has a meeting, no unreadable times, every building exists, every section
 missing from the feed is flagged cancelled. One that fails rolls the term back.
 The heartbeat row (`platform."jobHeartbeats"`, job `schedule-builder-scrape`) is
@@ -54,7 +55,7 @@ written only when every term passed, so a failing scrape makes the platform's
 daily-jobs check go overdue and Sentry alert. The full per-term report, building
 coverage included, is kept in `uga."scrapeRuns"`.
 
-If a human has looked at a 20% swing and says it is real:
+If a human has looked at a 20% drop and says it is real:
 
 ```bash
 wrangler workflows trigger production-catalog-scrape '{"skipInvariants":["sectionCountStable"]}'
