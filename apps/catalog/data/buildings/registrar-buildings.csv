@@ -1,0 +1,126 @@
+id,name,campus,meetings,terms
+24,Meigs Hall,athens,19,202608 202702
+25,Moore College,athens,88,202608 202702
+30,New College,athens,20,202608 202702
+31,Candler Hall,athens,37,202608 202702
+33,School of Social Work Building,athens,176,202608 202702 202705
+40,Jackson St Bldg,athens,156,202608 202702 202705
+42,Peabody Hall,athens,196,202608 202702
+43,Law School,athens,218,202608 202702
+44,Denmark Hall,athens,26,202608 202702
+45,Dean Rusk Hall,athens,39,202608 202702
+46,Caldwell Hall,athens,376,202608 202702 202705
+50,Baldwin Hall,athens,375,202608 202702 202705
+53,Leconte Hall,athens,256,202608 202702
+55,Brooks Hall,athens,88,202608 202702
+56,Park Hall,athens,552,202608 202702 202705
+58,Sanford Hall,athens,233,202608 202702
+60,Fine Arts,athens,227,202608 202702
+61,"Military,Army Rotc",athens,59,202608 202702
+62,Journalism,athens,553,202608 202702 202705
+64,Psychology,athens,191,202608 202702
+66,Inst Plaza,athens,115,202608 202702
+81,Zell B Miller Learning Center,athens,532,202608 202702
+120,Holmes/Hunter Acad,athens,11,202608 202702
+121,Bus. Service Annex,athens,8,202608 202702
+123,Tanner Building,athens,28,202608 202702
+130,Old College,athens,22,202608 202702
+145,Athena Studios,athens,5,202608
+250,Joe Brown,athens,192,202608 202702
+640,Gilbert Hall,athens,255,202608 202702
+650,Founders House,athens,3,202608
+734,Ivester,athens,105,202608 202702
+735,BLC II Benson Hall,athens,161,202608 202702
+736,Amos Hall,athens,87,202608 202702
+737,Orkin,athens,105,202608 202702
+738,Moore-Rooker Hall,athens,31,202608 202702
+739,Correll Hall,athens,304,202608 202702
+740,Spec Coll Library,athens,1,202608
+766,Broad St Studio 1,athens,28,202608 202702
+767,Broad St Studio 2,athens,9,202608 202702
+768,Broad St Studio 3,athens,2,202702
+1000,Cedar Street Building B,athens,120,202608 202702
+1001,Cedar Street Building C,athens,353,202608 202702 202705
+1002,Geography Geology,athens,398,202608 202702
+1003,Physics,athens,170,202608 202702 202705
+1004,Cedar Street Building D,athens,5,202608 202702
+1010,Dawson Hall,athens,318,202608 202702
+1011,Conner Hall,athens,155,202608 202702
+1013,Cedar Street Building A,athens,224,202608 202702
+1020,Food Science,athens,100,202608 202702 202705
+1021,Barrow Hall,athens,50,202608 202702
+1023,Boyd Research & Education CTR,athens,507,202608 202702 202705
+1025,Poultry Science Bldg.,athens,125,202608 202702
+1030,Marine Sci - Dance,athens,124,202608 202702
+1031,Hardman Hall,athens,62,202608 202702
+1033,Ecology,athens,122,202608 202702 202705
+1035,Science Learning Center,athens,525,202608 202702 202705
+1038,Pharmacy South,athens,170,202608 202702
+1040,Forest Resources-1,athens,237,202608 202702
+1041,Robt C Wilson Phar,athens,185,202608 202702
+1046,Forest Resources-4,athens,136,202608 202702
+1050,Enviro Health Sci,athens,31,202608 202702
+1057,Life Sci F.Davison,athens,229,202608 202702 202705
+1060,Aderhold Hall,athens,752,202608 202702 202705
+1061,Miller Plant Sci,athens,318,202608 202702
+1070,Vet Med - 1,athens,111,202608 202702
+1082,Wildlife Health,athens,1,202608
+1090,Driftmier Eng Ctr,athens,451,202608 202702
+1111,Coverdell Center,athens,41,202608 202702
+1130,Stat/Computer Srvs,athens,3,202608 202702
+1131,I-STEM 1,athens,39,202608 202702
+1132,I-STEM 2,athens,56,202608 202702
+1140,Forest Resources-2,athens,30,202608 202702
+1215,Rutherford Hal New,athens,2,202608
+1246,Family Sci Ctr I,athens,7,202608 202702
+1247,Schwab Financial Planning Cntr,athens,15,202608 202702
+1248,Consumer Rsch Cntr,athens,1,202608
+1501,Animal Dairy Sci -,athens,16,202608 202702
+1502,Rhodes Cntr Ads -C,athens,6,202608 202702
+1503,Rhodes Cntr Ads -B,athens,77,202608 202702
+1504,Livest Ins Arena,athens,6,202608 202702
+1632,Ecology Centers,athens,5,202608
+1640,Georgia Center C.E,athens,3,202608 202702
+1652,Child Devel. Lab,athens,5,202608 202702
+1690,Ramsey Stu Ctr Pa,athens,432,202608 202702 202705
+1691,Music Building,athens,520,202608 202702
+1692,Performng Arts Ctr,athens,44,202608 202702
+1693,Ga Mus Of Art Pvac,athens,6,202608 202702
+1694,Main Art Building,athens,354,202608 202702
+1902,Miller Hall,athens,2,202608
+1906,Pound Hall,athens,18,202608 202702
+1909,Russell Hall Hsc,athens,25,202608 202702
+1911,Hudson Clinic,athens,1,202702
+1912,Wright Hall,athens,38,202608 202702
+1922,105 Bowstrom Rd,athens,6,202608 202702
+2127,C A I S,athens,2,202608
+2131,Ceramics,athens,18,202608 202702
+2267,DLW Center,athens,68,202608 202702
+2411,Greenhse Res P Agy,athens,2,202608
+2418,Riverbend Rsch S,athens,1,202608
+2419,Ccrc,athens,1,202608
+2438,C A G T,athens,20,202608 202702
+2493,Strength Lab,athens,14,202608 202702
+2580,A B E L,athens,6,202608 202702
+2600,"Thomas St., South",athens,3,202608
+2607,Intramural Fields,athens,50,202608 202702 202705
+2639,River'S Crossing,athens,44,202608 202702
+2640,Bank Of America,athens,9,202608 202702
+2680,Jewelry&Metalwork,athens,19,202608 202702
+2691,Thomas St Sculp,athens,30,202608 202702
+2692,Golf Driv Rng Bld,athens,21,202608 202702 202705
+2835,Four Towers,athens,32,202608 202702 202705
+2850,Ps Service Bldg A,athens,2,202608
+2980,South Milledge Gh1,athens,23,202608 202702
+4062,Quail Hse E Srpgl,athens,1,202702
+4400,Griffin Slc,griffin,132,202608 202702 202705
+4413,Cowart Building,griffin,3,202702
+4416,Flynt Building,griffin,2,202608
+4475,Redding Building,griffin,4,202608
+4602,H. H. Tift Bldg,tifton,16,202608 202702
+4604,Horticulture Bldg,tifton,15,202608 202702
+4791,Nespal,tifton,53,202608 202702
+4897,NESPAL South,tifton,31,202608 202702
+7012,Skidaway Mar Ext,georgia,55,202608 202702
+7210,Uga Gwinnett,gwinnett,210,202608 202702 202705
+8365,HM Pharmacy GRU,georgia,38,202608 202702 202705
