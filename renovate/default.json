@@ -25,12 +25,7 @@
     "minimumReleaseAge": null,
     "automerge": false
   },
-  "enabledManagers": [
-    "npm",
-    "pub",
-    "github-actions",
-    "custom.regex"
-  ],
+  "enabledManagers": ["npm", "pub", "github-actions", "custom.regex"],
   "customManagers": [
     {
       "description": "Versions pinned in workflow inputs and scripts with a `# renovate: datasource=<ds> depName=<name>` comment on the line above (the Supabase CLI default in deploy-database.yaml).",
