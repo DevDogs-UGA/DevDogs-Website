@@ -13,6 +13,7 @@ import {
   resolveConfig,
 } from "./config-push.mjs";
 import {
+  checkPlannerCredential,
   classifyPendingMigrations,
   dbPort,
   withEngineDrops,
@@ -348,6 +349,60 @@ function fakeRuntime({ diff = "", push, env }) {
   };
   return rt;
 }
+
+test("planner-check accepts only the read-only migration_planner role", () => {
+  const answering = (stdout, status = 0, stderr = "") => ({
+    env: { DB_URL: "postgres://u:pw@h/db", PLAN_DIR: join(tmpdir(), "p") },
+    log: () => {},
+    run: () => ({ status, stdout, stderr }),
+  });
+  const verdict = (rt) =>
+    checkPlannerCredential(rt, { url: "postgres://u:pw@h/db" });
+  assert.equal(verdict(answering("migration_planner|false\n")).ok, true);
+  const admin = verdict(answering("postgres|true\n"));
+  assert.equal(admin.ok, false);
+  assert.match(admin.detail, /not migration_planner/);
+  const overreach = verdict(answering("migration_planner|true\n"));
+  assert.equal(overreach.ok, false);
+  assert.match(overreach.detail, /can read platform\.profile/);
+  const down = verdict(
+    answering("", 2, "psql: connection to postgres://u:secret@h/db failed"),
+  );
+  assert.equal(down.ok, false);
+  assert.doesNotMatch(down.detail, /secret/);
+
+  const rt = answering("postgres|false\n");
+  assert.equal(dbPlanMain(["planner-check"], rt), 1);
+  const good = answering("migration_planner|false\n");
+  assert.equal(dbPlanMain(["planner-check"], good), 0);
+  assert.throws(
+    () => dbPlanMain(["planner-check"], fakeRuntime({ env: {} })),
+    /DB_URL is not set/,
+  );
+});
+
+test("the production database job verifies the planner credential before planning", () => {
+  const deploy = readFileSync(
+    new URL("../workflows/deploy.yaml", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    deploy,
+    /plan_environment: preflight\n\s+require_read_only_planner: true/,
+  );
+  const shared = readFileSync(
+    new URL("../workflows/deploy-database.yaml", import.meta.url),
+    "utf8",
+  );
+  const checks = [...shared.matchAll(/db-plan\.mjs" planner-check/g)].length;
+  assert.equal(checks, 2, "both plan jobs run the check");
+  for (const plan of ["migrations-plan", "schema-plan"]) {
+    assert.ok(
+      shared.indexOf('db-plan.mjs" planner-check') <
+        shared.indexOf(`db-plan.mjs" ${plan}`),
+    );
+  }
+});
 
 test("migrations-apply refuses a destructive migration outside the destructive gate, and a changed plan", () => {
   const root = mkdtempSync(join(tmpdir(), "repo-"));

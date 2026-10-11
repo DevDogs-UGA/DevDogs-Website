@@ -40,6 +40,7 @@
  *   node db-plan.mjs migrations-apply [--include-seed] --expect-hash HASH
  *   node db-plan.mjs schema-plan
  *   node db-plan.mjs schema-apply --expect-hash HASH
+ *   node db-plan.mjs planner-check        # DB_URL must be the read-only migration_planner
  *   node db-plan.mjs check [--base SHA]   # the PR check: no target, see `check`
  */
 import { spawnSync } from "node:child_process";
@@ -228,6 +229,70 @@ export function defaultRuntime(env = process.env) {
       }
       return { status, stdout: result.stdout, stderr: result.stderr };
     },
+  };
+}
+
+/** The one login a pre-approval planning job may hold (packages/backstage planner/role.ts). */
+export const PLANNER_ROLE = "migration_planner";
+
+/**
+ * One row: who the connection authenticated as, and whether that role can read
+ * `platform.profile` (member data; the one table every tier has that the
+ * planner must never reach). A repository without that table reports `f`.
+ */
+const PLANNER_CHECK_SQL =
+  "select current_user || '|' || exists(select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace " +
+  "where n.nspname = 'platform' and c.relname = 'profile' and has_table_privilege(current_user, c.oid, 'SELECT'))::text";
+
+/**
+ * The preflight credential is reachable before anyone approves, so it must be
+ * the read-only planner role and nothing more: a deploy-tier URL pasted there
+ * would plan identically, and nothing else would notice. This is the check the
+ * old `backstage planner status` step made, for a workflow that has no
+ * Backstage CLI.
+ *
+ * @param {Runtime} rt
+ * @param {{ url: string }} input
+ * @returns {{ ok: boolean, detail: string }}
+ */
+export function checkPlannerCredential(rt, { url }) {
+  const result = rt.run(
+    "psql",
+    [
+      url,
+      "-v",
+      "ON_ERROR_STOP=1",
+      "--no-psqlrc",
+      "-At",
+      "-c",
+      PLANNER_CHECK_SQL,
+    ],
+    { allowFail: true },
+  );
+  if (result.status !== 0) {
+    return {
+      ok: false,
+      detail: `could not connect to check the planner credential: ${redactUrls(
+        (result.stderr || "psql failed").trim().split("\n").at(-1) ?? "",
+      )}`,
+    };
+  }
+  const [who, canRead] = result.stdout.trim().split("|");
+  if (who !== PLANNER_ROLE) {
+    return {
+      ok: false,
+      detail: `the connection authenticated as "${who}", not ${PLANNER_ROLE}: a full-privilege connection string where the read-only planner belongs.`,
+    };
+  }
+  if (canRead !== "false") {
+    return {
+      ok: false,
+      detail: `${PLANNER_ROLE} can read platform.profile: it has grants beyond the validated pair (see packages/backstage/src/planner/role.ts).`,
+    };
+  }
+  return {
+    ok: true,
+    detail: `authenticated as ${PLANNER_ROLE}, which cannot read platform.*`,
   };
 }
 
@@ -646,6 +711,16 @@ export function main(
   const includeSeed = rest.includes("--include-seed");
   const expect = flagValue(rest, "--expect-hash");
 
+  if (command === "planner-check") {
+    const verdict = checkPlannerCredential(rt, { url: need() });
+    rt.log(`db-plan: planner credential: ${verdict.detail}`);
+    summarize(
+      `### Planner credential\n\n${verdict.ok ? "Read-only." : "**Refused:** "}${verdict.ok ? "" : verdict.detail}`,
+      env,
+    );
+    return verdict.ok ? 0 : 1;
+  }
+
   if (command === "migrations-plan") {
     const plan = generateMigrationsPlan(rt, { targetUrl: need(), includeSeed });
     const classified = classifyPendingMigrations(repoRoot, plan.migrations);
@@ -890,7 +965,7 @@ export function main(
   }
 
   process.stderr.write(
-    "usage: db-plan.mjs <migrations-plan|migrations-apply|schema-plan|schema-apply|check> [--include-seed] [--expect-hash HASH]\n",
+    "usage: db-plan.mjs <migrations-plan|migrations-apply|schema-plan|schema-apply|planner-check|check> [--include-seed] [--expect-hash HASH]\n",
   );
   return 2;
 }

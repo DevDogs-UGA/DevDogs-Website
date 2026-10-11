@@ -66,6 +66,11 @@ on:
         required: false
         type: boolean
         default: false
+      require_read_only_planner:
+        description: Before planning, refuse a plan_environment DB_URL that is not the read-only migration_planner role. Set it whenever plan_environment is a separate, pre-approval credential.
+        required: false
+        type: boolean
+        default: false
       self_approval_gate:
         description: Refuse an approver who wrote or queued the change (approval-gate.mjs), on every approved job.
         required: false
@@ -129,6 +134,12 @@ jobs:
         run: echo "SCRIPTS=${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
       - name: Install the Supabase CLI
         run: npm install --global "supabase@$SUPABASE_VERSION" && supabase --version
+      - name: Verify the planner credential is read-only
+        if: inputs.require_read_only_planner
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/db-plan.mjs" planner-check
       - name: Plan the hand-written migrations
         id: plan
         env:
@@ -258,6 +269,12 @@ jobs:
         run: echo "SCRIPTS=${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
       - name: Install the Supabase CLI
         run: npm install --global "supabase@$SUPABASE_VERSION" && supabase --version
+      - name: Verify the planner credential is read-only
+        if: inputs.require_read_only_planner
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/db-plan.mjs" planner-check
       - name: Plan the declarative diff
         id: plan
         env:

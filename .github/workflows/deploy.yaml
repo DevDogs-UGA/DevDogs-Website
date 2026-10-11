@@ -351,6 +351,7 @@ jobs:
     with:
       environment: production
       plan_environment: preflight
+      require_read_only_planner: true
       destructive_environment: production-destructive
       include_seed: true
       apply_config: true
