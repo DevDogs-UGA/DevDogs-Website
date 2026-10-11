@@ -40,7 +40,7 @@
  *   node db-plan.mjs migrations-apply [--include-seed] --expect-hash HASH
  *   node db-plan.mjs schema-plan
  *   node db-plan.mjs schema-apply --expect-hash HASH
- *   node db-plan.mjs check            # the PR check: no target, see `check`
+ *   node db-plan.mjs check [--base SHA]   # the PR check: no target, see `check`
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -407,6 +407,44 @@ export function classifyPendingMigrations(repoRoot, pending) {
   return out;
 }
 
+/**
+ * The hand-written migrations a pull request adds or edits, read for the
+ * destructive check. The declarative tree is compared with the committed
+ * migrations, so a destructive statement written as a migration never shows up
+ * in that diff: it has to be read from the files themselves.
+ *
+ * @param {Runtime} rt
+ * @param {string} repoRoot
+ * @param {string} base  The commit the change is compared with.
+ */
+export function changedMigrations(rt, repoRoot, base) {
+  const result = rt.run(
+    "git",
+    [
+      "diff",
+      "--name-only",
+      "--diff-filter=AM",
+      `${base}...HEAD`,
+      "--",
+      "supabase/migrations",
+    ],
+    { cwd: repoRoot },
+  );
+  /** @type {Array<{ file: string, destructive: boolean, reasons: import("./sql-classify.mjs").Reason[] }>} */
+  const out = [];
+  for (const file of result.stdout.split("\n").filter(Boolean)) {
+    const path = join(repoRoot, file);
+    if (!existsSync(path)) continue;
+    const classification = classifySql(readFileSync(path, "utf8"));
+    out.push({
+      file,
+      destructive: classification.destructive,
+      reasons: classification.reasons,
+    });
+  }
+  return out;
+}
+
 /* ---------- reporting ---------- */
 
 /**
@@ -642,6 +680,8 @@ export function main(
     // The pull request check: no target database. The tree is built against
     // the committed migrations in a scratch database, and the SQL the tree
     // adds beyond them is the change under review.
+    const base = flagValue(rest, "--base");
+    const migrations = base ? changedMigrations(rt, repoRoot, base) : [];
     const scratch = mkdtempSync(join(tmpdir(), "db-check-"));
     const desired = buildDesired(rt, { repoRoot, scratch });
     try {
@@ -649,20 +689,40 @@ export function main(
         ? normalizeSql(desired.treeMigration)
         : "";
       const classification = classifySql(sql);
+      const migrationsDestructive = migrations.some((m) => m.destructive);
       writeFileSync(join(planDir, "tree-vs-migrations.sql"), sql);
       summarize(
-        renderSchemaPlan({
-          title: "Schema tree compared with the committed migrations",
-          sql,
-          hash: planHash(sql),
-          classification,
-          schemas: managedSchemas(join(repoRoot, "supabase", "schemas")),
-        }),
+        [
+          renderSchemaPlan({
+            title: "Schema tree compared with the committed migrations",
+            sql,
+            hash: planHash(sql),
+            classification,
+            schemas: managedSchemas(join(repoRoot, "supabase", "schemas")),
+          }),
+          "",
+          "### Hand-written migrations in this change",
+          "",
+          migrations.length === 0
+            ? "None added or edited."
+            : migrations
+                .map(
+                  (m) =>
+                    `- \`${m.file}\`: ${
+                      m.destructive
+                        ? `**destructive** (${m.reasons.map((r) => r.kind).join(", ")})`
+                        : "not destructive"
+                    }`,
+                )
+                .join("\n"),
+        ].join("\n"),
         env,
       );
       setOutputs(
         {
-          destructive: String(classification.destructive),
+          destructive: String(
+            classification.destructive || migrationsDestructive,
+          ),
           empty: String(sql === ""),
         },
         env,

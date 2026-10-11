@@ -106,6 +106,25 @@ describe("deploy <app>", () => {
     expect(existsSync(built.dir)).toBe(false);
   });
 
+  it("--upload creates a version with the same secrets and no traffic", async () => {
+    process.env.SENTRY_RELEASE = "abc123";
+    await runAppDeploy("platform", ["--tier", "staging", "--upload"]);
+    expect(spawned.calls).toHaveLength(1);
+    expect(spawned.calls[0]!.args).toEqual([
+      "exec",
+      "wrangler",
+      "versions",
+      "upload",
+      "-e",
+      "staging",
+      "--secrets-file",
+      built.file,
+      "--var",
+      "SENTRY_RELEASE:abc123",
+    ]);
+    expect(existsSync(built.dir)).toBe(false);
+  });
+
   it("sends the deploy's release as a var, not through the secrets file", async () => {
     process.env.SENTRY_RELEASE = "abc123";
     await runAppDeploy("platform", ["--tier", "production"]);

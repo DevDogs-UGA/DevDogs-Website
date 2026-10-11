@@ -8,9 +8,12 @@
  * so the preview smoke test and the traffic switch name the exact version that
  * was uploaded and never "whatever is latest".
  *
- * Usage: node wrangler-version.mjs <wrangler-output.ndjson>
- * Prints `{"versionId", "workerName"}` as JSON; exits 1 when the file has no
- * upload entry.
+ * Usage:
+ *   node wrangler-version.mjs <wrangler-output.ndjson>
+ *     Prints `{"versionId", "workerName"}` as JSON; exits 1 when the file has
+ *     no upload entry.
+ *   node wrangler-version.mjs --active <deployments-status.json>
+ *     Prints the version id serving the most traffic; exits 1 if none.
  */
 import { readFileSync } from "node:fs";
 import { isMain } from "./is-main.mjs";
@@ -48,8 +51,47 @@ export function lastUpload(ndjson) {
   return found;
 }
 
+/**
+ * The version serving the most traffic, from `wrangler deployments status
+ * --json`. This is what the deploy rolls back to if the new version fails
+ * after the traffic switch.
+ *
+ * @param {string} json
+ * @returns {string | undefined}
+ */
+export function activeVersion(json) {
+  let status;
+  try {
+    status = JSON.parse(json);
+  } catch {
+    return undefined;
+  }
+  const versions = Array.isArray(status?.versions) ? status.versions : [];
+  let best;
+  for (const v of versions) {
+    if (typeof v?.version_id !== "string") continue;
+    if (!best || (v.percentage ?? 0) > (best.percentage ?? 0)) best = v;
+  }
+  return best?.version_id;
+}
+
 /* c8 ignore start */
 if (isMain(import.meta.url)) {
+  if (process.argv[2] === "--active") {
+    let text = "";
+    try {
+      text = readFileSync(process.argv[3] ?? "", "utf8");
+    } catch {
+      // Nothing to read means no known active version.
+    }
+    const active = activeVersion(text);
+    if (!active) {
+      process.stderr.write("wrangler-version: no active version found\n");
+      process.exit(1);
+    }
+    process.stdout.write(`${active}\n`);
+    process.exit(0);
+  }
   const file = process.argv[2];
   if (!file) {
     process.stderr.write(

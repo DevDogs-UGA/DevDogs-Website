@@ -1,0 +1,409 @@
+name: Deploy Worker
+
+# The shared Worker deploy: one building block, called with `workflow_call` by
+# this repository's deploy.yaml and slides.yaml and, pinned by commit SHA, by
+# the product repositories' (Q15). Each caller keeps its own environments,
+# approvals and secrets; what is shared is the sequence.
+#
+#   upload a version  ->  smoke test that version  ->  switch traffic to it
+#                     ->  apply routes and crons   ->  smoke test what is live
+#
+# Why not `wrangler deploy`. A plain deploy makes the new code live the moment
+# it uploads, so a bad build is a sign-in outage until someone rolls it back.
+# `wrangler versions upload` makes a version that serves NO traffic. It can
+# still be reached on the Worker's real hostname by sending the
+# `Cloudflare-Workers-Version-Overrides` header (worker-smoke.mjs), so the new
+# code is exercised on the production-shaped route, including the OAuth
+# authorize hand-off every product's sign-in depends on, while the live version
+# is untouched. Only a green smoke test reaches the traffic switch; a failure
+# after the switch rolls back to the version that was serving before it.
+#
+# What a version upload does NOT apply, and this workflow therefore does:
+# routes, custom domains and cron triggers (`wrangler triggers deploy`). What
+# it cannot apply at all: a Durable Object migration, and the very first
+# upload of a Worker that does not exist yet. For those, call with
+# `mode: full`, which runs a classic `wrangler deploy` (no preview; the live
+# smoke test still runs). The runbook (docs/operations) says when.
+#
+# One job, one approval. The upload, both smoke tests and the switch share a
+# job because an environment with required reviewers asks for approval once per
+# job: splitting them would ask a reviewer to approve the same commit three
+# times.
+#
+# What the caller provides, in `environment`:
+#   secrets    CLOUDFLARE_API_TOKEN. For `authorize`: SECRET_KEY. Whatever the
+#              Worker's own secrets are, reaching `upload_command` through
+#              `prepare_command`. Optionally SENTRY_AUTH_TOKEN.
+#   variables  For `authorize`: API_URL. Optionally SENTRY_ORG (or a secret).
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: The GitHub environment the job runs in (holds the Cloudflare token and the Worker's secrets).
+        required: true
+        type: string
+      tier:
+        description: staging or production. Selects the smoke host in workers.json and, unless use_wrangler_env is false, the wrangler environment.
+        required: true
+        type: string
+      use_wrangler_env:
+        description: Pass `-e <tier>` to wrangler. Off for a Worker whose config has no environments.
+        required: false
+        type: boolean
+        default: true
+      worker_dir:
+        description: The directory wrangler runs in (the one with the Worker's config, or its build redirect).
+        required: true
+        type: string
+      worker_name:
+        description: The deployed Worker's name for this tier, e.g. staging-platform. Used for the version override header and the rollback.
+        required: true
+        type: string
+      smoke_path:
+        description: The `path` of this Worker's entry in the workers.json that holds its smoke test. Defaults to worker_dir.
+        required: false
+        type: string
+        default: ""
+      workers_json:
+        description: Where the smoke config lives, in the caller's checkout.
+        required: false
+        type: string
+        default: workers.json
+      authorize:
+        description: Also run the OAuth authorize and consent checks (the platform). Needs API_URL and SECRET_KEY in the environment.
+        required: false
+        type: boolean
+        default: false
+      mode:
+        description: "`versions` (upload, preview, switch) or `full` (a classic deploy, for a first deploy or a Durable Object migration)."
+        required: false
+        type: string
+        default: versions
+      release:
+        description: The Sentry release and the version message. Defaults to the commit.
+        required: false
+        type: string
+        default: ""
+      sentry_project:
+        description: The Sentry project to create the release in. Empty skips the release.
+        required: false
+        type: string
+        default: ""
+      sourcemaps_dir:
+        description: The directory of source maps to upload with the release.
+        required: false
+        type: string
+        default: ""
+      setup_workspace:
+        description: Run this repository's setup-workspace action (checkout, Node, pnpm install). Product repositories without it set this false and use setup_command.
+        required: false
+        type: boolean
+        default: true
+      setup_command:
+        description: Replaces setup-workspace when it is not used (a shell command run after checkout).
+        required: false
+        type: string
+        default: ""
+      checkout_submodules:
+        description: Check out submodules too (the slides deck reads the workshop repositories).
+        required: false
+        type: boolean
+        default: false
+      checkout_token_secret:
+        description: Use the WORKSHOPS_READ_TOKEN secret for the checkout (the slides deck clones private repositories).
+        required: false
+        type: boolean
+        default: false
+      artifact_name:
+        description: A prebuilt artifact to download and verify before anything else (RELEASE_SHA256SUMS inside it is checked).
+        required: false
+        type: string
+        default: ""
+      artifact_run_id:
+        description: The run that built the artifact. Empty means this run.
+        required: false
+        type: string
+        default: ""
+      build_command:
+        description: A build to run in the job when there is no artifact (the slides deck).
+        required: false
+        type: string
+        default: ""
+      prepare_command:
+        description: Runs before the upload with DEPLOY_GITHUB_SECRETS and DEPLOY_GITHUB_VARS set (the only step that sees them), e.g. writing the Worker's env file.
+        required: false
+        type: string
+        default: ""
+      upload_command:
+        description: Uploads the version with the env WRANGLER_OUTPUT_FILE_PATH set, e.g. `backstage deploy platform --tier staging --upload`. Empty runs a plain `wrangler versions upload` in worker_dir.
+        required: false
+        type: string
+        default: ""
+      after_switch_command:
+        description: Runs after the live smoke test passes (reconcile, search indexing). Optional.
+        required: false
+        type: string
+        default: ""
+      wrangler_command:
+        description: How to run wrangler from worker_dir.
+        required: false
+        type: string
+        default: pnpm exec wrangler
+      shared_ref:
+        description: >-
+          A commit of DevDogsUGA/DevDogsUGA to take the scripts from. Leave empty
+          when DevDogsUGA calls this; product repositories pass the SHA they
+          pinned this workflow at.
+        required: false
+        type: string
+        default: ""
+    outputs:
+      version_id:
+        description: The Worker version that was uploaded (and switched to).
+        value: ${{ jobs.deploy.outputs.version_id }}
+      previous_version_id:
+        description: The version that was serving before the switch.
+        value: ${{ jobs.deploy.outputs.previous_version_id }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-worker-${{ github.repository }}-${{ inputs.environment }}-${{ inputs.worker_name }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      version_id: ${{ steps.version.outputs.version_id }}
+      previous_version_id: ${{ steps.previous.outputs.version_id }}
+    env:
+      TIER: ${{ inputs.tier }}
+      DEPLOY_ENV: ${{ inputs.tier }}
+      WORKER_DIR: ${{ inputs.worker_dir }}
+      WORKER_NAME: ${{ inputs.worker_name }}
+      WRANGLER: ${{ inputs.wrangler_command }}
+      WRANGLER_ENV_FLAG: ${{ inputs.use_wrangler_env && format('-e {0}', inputs.tier) || '' }}
+      RELEASE: ${{ inputs.release || github.sha }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG || secrets.SENTRY_ORG }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          token: ${{ inputs.checkout_token_secret && secrets.WORKSHOPS_READ_TOKEN || github.token }}
+          submodules: ${{ inputs.checkout_submodules }}
+          fetch-depth: ${{ inputs.checkout_submodules && '0' || '1' }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: Locate the shared scripts
+        run: echo "SCRIPTS=$GITHUB_WORKSPACE/${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
+      - name: Refuse a missing Cloudflare token
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::The ${{ inputs.environment }} environment has no CLOUDFLARE_API_TOKEN secret."
+            exit 1
+          fi
+      - uses: ./.github/actions/setup-workspace
+        if: inputs.setup_workspace
+      - name: Set up the workspace (custom)
+        if: ${{ !inputs.setup_workspace && inputs.setup_command != '' }}
+        env:
+          SETUP_COMMAND: ${{ inputs.setup_command }}
+        run: bash -euo pipefail -c "$SETUP_COMMAND"
+
+      # --- artifacts ------------------------------------------------------
+      - name: Download the prebuilt artifact
+        if: inputs.artifact_name != '' && inputs.artifact_run_id != ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: .
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+      - name: Download the artifact built in this run
+        if: inputs.artifact_name != '' && inputs.artifact_run_id == ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: .
+      - name: Verify exact artifact hashes
+        if: inputs.artifact_name != ''
+        run: sha256sum --check RELEASE_SHA256SUMS
+      - name: Build
+        if: inputs.build_command != ''
+        env:
+          BUILD_COMMAND: ${{ inputs.build_command }}
+        run: bash -euo pipefail -c "$BUILD_COMMAND"
+
+      # The ONLY step that reads the `secrets` and `vars` contexts as a whole.
+      - name: Prepare the Worker's environment
+        if: inputs.prepare_command != ''
+        env:
+          DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
+          DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
+          PREPARE_COMMAND: ${{ inputs.prepare_command }}
+        run: bash -euo pipefail -c "$PREPARE_COMMAND"
+      - name: Export SENTRY_ORG from the prepared environment
+        if: inputs.sentry_project != '' && inputs.prepare_command != ''
+        run: |
+          if [ -z "${SENTRY_ORG:-}" ] && [ -f ".env.$TIER" ]; then
+            grep -m1 '^SENTRY_ORG=' ".env.$TIER" | tr -d "\"'" >> "$GITHUB_ENV" || true
+          fi
+
+      # --- what is serving now (the rollback target) ----------------------
+      - name: Record the version serving traffic
+        id: previous
+        working-directory: ${{ inputs.worker_dir }}
+        run: |
+          set +e
+          # shellcheck disable=SC2086
+          $WRANGLER deployments status --json $WRANGLER_ENV_FLAG --name "$WORKER_NAME" > "$RUNNER_TEMP/previous.json" 2> "$RUNNER_TEMP/previous.err"
+          previous=$(node "$SCRIPTS/wrangler-version.mjs" --active "$RUNNER_TEMP/previous.json" 2>/dev/null)
+          echo "version_id=$previous" >> "$GITHUB_OUTPUT"
+          if [ -n "$previous" ]; then
+            echo "Serving now: $previous"
+          else
+            echo "::notice::No version is serving $WORKER_NAME yet (a first deploy), so there is nothing to roll back to."
+          fi
+
+      # --- Sentry release, before any code runs ---------------------------
+      - name: Sentry release skipped (not configured)
+        if: inputs.sentry_project != '' && env.SENTRY_AUTH_TOKEN == ''
+        run: echo "::warning::Sentry release for ${{ inputs.sentry_project }} skipped, SENTRY_AUTH_TOKEN is not configured."
+      - name: Create the Sentry release and upload source maps
+        if: inputs.sentry_project != '' && env.SENTRY_AUTH_TOKEN != '' && inputs.sourcemaps_dir != ''
+        uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
+        env:
+          SENTRY_PROJECT: ${{ inputs.sentry_project }}
+        with:
+          environment: ${{ inputs.tier }}
+          release: ${{ env.RELEASE }}
+          set_commits: skip
+          sourcemaps: ${{ inputs.sourcemaps_dir }}
+      - name: Create the Sentry release (no source maps)
+        if: inputs.sentry_project != '' && env.SENTRY_AUTH_TOKEN != '' && inputs.sourcemaps_dir == ''
+        uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
+        env:
+          SENTRY_PROJECT: ${{ inputs.sentry_project }}
+        with:
+          environment: ${{ inputs.tier }}
+          release: ${{ env.RELEASE }}
+          set_commits: skip
+
+      # --- the version ----------------------------------------------------
+      - name: Upload the version (no traffic)
+        id: upload
+        if: inputs.mode == 'versions'
+        env:
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.ndjson
+          SENTRY_RELEASE: ${{ env.RELEASE }}
+          UPLOAD_COMMAND: ${{ inputs.upload_command }}
+        run: |
+          set -euo pipefail
+          if [ -n "$UPLOAD_COMMAND" ]; then
+            bash -euo pipefail -c "$UPLOAD_COMMAND"
+          else
+            cd "$WORKER_DIR"
+            # shellcheck disable=SC2086
+            $WRANGLER versions upload $WRANGLER_ENV_FLAG --message "$RELEASE" --var "SENTRY_RELEASE:$RELEASE"
+          fi
+      - name: Read the uploaded version
+        id: version
+        if: inputs.mode == 'versions'
+        run: |
+          set -euo pipefail
+          json=$(node "$SCRIPTS/wrangler-version.mjs" "$RUNNER_TEMP/wrangler-output.ndjson")
+          id=$(echo "$json" | jq -r .versionId)
+          echo "version_id=$id" >> "$GITHUB_OUTPUT"
+          echo "### Worker version" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Uploaded \`$id\` for \`$WORKER_NAME\`; it serves no traffic yet. Before: \`${{ steps.previous.outputs.version_id || 'none' }}\`." >> "$GITHUB_STEP_SUMMARY"
+
+      # --- the preview smoke test, on the production-shaped route ----------
+      - name: Smoke test the uploaded version (no traffic yet)
+        if: inputs.mode == 'versions'
+        env:
+          API_URL: ${{ vars.API_URL }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          VERSION_ID: ${{ steps.version.outputs.version_id }}
+          SMOKE_PATH: ${{ inputs.smoke_path || inputs.worker_dir }}
+        run: >-
+          node "$SCRIPTS/worker-smoke.mjs" --path "$SMOKE_PATH" --tier "$TIER"
+          --workers-json "${{ inputs.workers_json }}"
+          --worker-name "$WORKER_NAME" --version-id "$VERSION_ID"
+          ${{ inputs.authorize && '--authorize' || '' }}
+
+      # --- the traffic switch ----------------------------------------------
+      - name: Switch traffic to the new version
+        id: switch
+        if: inputs.mode == 'versions'
+        working-directory: ${{ inputs.worker_dir }}
+        env:
+          VERSION_ID: ${{ steps.version.outputs.version_id }}
+        run: |
+          # shellcheck disable=SC2086
+          $WRANGLER versions deploy "$VERSION_ID@100%" $WRANGLER_ENV_FLAG --name "$WORKER_NAME" --message "$RELEASE" --yes
+      # A version upload leaves routes, custom domains and cron triggers alone.
+      - name: Apply routes and cron triggers
+        if: inputs.mode == 'versions'
+        working-directory: ${{ inputs.worker_dir }}
+        run: |
+          # shellcheck disable=SC2086
+          $WRANGLER triggers deploy $WRANGLER_ENV_FLAG
+      - name: Deploy (classic, no preview)
+        id: full
+        if: inputs.mode == 'full'
+        working-directory: ${{ inputs.worker_dir }}
+        env:
+          SENTRY_RELEASE: ${{ env.RELEASE }}
+          UPLOAD_COMMAND: ${{ inputs.upload_command }}
+        run: |
+          set -euo pipefail
+          if [ -n "$UPLOAD_COMMAND" ]; then
+            cd "$GITHUB_WORKSPACE"
+            bash -euo pipefail -c "$UPLOAD_COMMAND"
+          else
+            # shellcheck disable=SC2086
+            $WRANGLER deploy $WRANGLER_ENV_FLAG --var "SENTRY_RELEASE:$RELEASE"
+          fi
+
+      # --- what is live ------------------------------------------------------
+      - name: Smoke test what is live
+        id: live
+        env:
+          API_URL: ${{ vars.API_URL }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          SMOKE_PATH: ${{ inputs.smoke_path || inputs.worker_dir }}
+        run: >-
+          node "$SCRIPTS/worker-smoke.mjs" --path "$SMOKE_PATH" --tier "$TIER"
+          --workers-json "${{ inputs.workers_json }}"
+          ${{ inputs.authorize && '--authorize' || '' }}
+      - name: Roll back to the previous version
+        if: failure() && steps.live.outcome == 'failure' && steps.previous.outputs.version_id != ''
+        working-directory: ${{ inputs.worker_dir }}
+        env:
+          PREVIOUS: ${{ steps.previous.outputs.version_id }}
+        run: |
+          echo "::error::The live smoke test failed; rolling $WORKER_NAME back to $PREVIOUS."
+          # shellcheck disable=SC2086
+          $WRANGLER versions deploy "$PREVIOUS@100%" $WRANGLER_ENV_FLAG --name "$WORKER_NAME" --message "rollback of $RELEASE" --yes
+          echo "### Rolled back" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "The live smoke test failed after the switch; \`$WORKER_NAME\` is back on \`$PREVIOUS\`." >> "$GITHUB_STEP_SUMMARY"
+      - name: After the switch
+        if: inputs.after_switch_command != ''
+        env:
+          AFTER_SWITCH_COMMAND: ${{ inputs.after_switch_command }}
+        run: bash -euo pipefail -c "$AFTER_SWITCH_COMMAND"

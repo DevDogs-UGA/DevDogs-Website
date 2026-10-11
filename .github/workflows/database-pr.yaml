@@ -1,0 +1,113 @@
+name: Database change
+
+# The pull request side of the destructive gate (Q10, Q11).
+#
+# A change to the database is destructive when it drops or rewrites data (see
+# .github/scripts/sql-classify.mjs). Two places can introduce one:
+#
+#   * the declarative schema tree (`supabase/schemas/`): removing a column from
+#     a file there makes the diff from the migrations to the tree contain
+#     `DROP COLUMN`. `db-plan.mjs check` builds a scratch database at the
+#     committed migrations, applies the tree on top, and classifies the SQL the
+#     tree adds;
+#   * a hand-written migration (`supabase/migrations/`): read from the files
+#     the pull request adds or edits.
+#
+# `destructive-sql` fails unless the pull request carries the `allow-destructive`
+# label. `destructive-gate` fails if that label was applied by anyone who is not
+# a `devops` member (the label is read from the PR timeline, so who applied it
+# is on record). The `pull_request_target` half of the gate, which can also
+# REMOVE a label a non-devops user applied, lives in destructive-gate.yaml; the
+# merge queue has no such event, so the same check runs here on `merge_group`,
+# and a queued pull request is re-checked on the exact commit the queue built.
+#
+# Both are required checks on `main` (the `main-ci` ruleset). They run on every
+# pull request and queue entry, unconditionally: a required check that is
+# skipped by a path filter never reports, and the pull request waits forever.
+# The expensive part (the scratch database) is skipped inside the job when
+# nothing under `supabase/` changed.
+#
+# No secrets are involved: the scratch database is local, and the label is read
+# with the job's own read-only token.
+on:
+  # `labeled` and `unlabeled` re-run the check when a devops member applies the
+  # label: the SQL is classified again and the verdict follows the label.
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+  merge_group:
+
+concurrency:
+  group: database-pr-${{ github.event_name == 'merge_group' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'merge_group' }}
+
+permissions:
+  contents: read
+
+jobs:
+  destructive-sql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    env:
+      BASE_SHA: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || github.event.pull_request.base.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Did the database change?
+        id: changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet "$BASE_SHA...HEAD" -- supabase/schemas supabase/migrations supabase/config.toml; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            echo 'Nothing under supabase/ changed: no SQL to classify.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: ./.github/actions/setup-workspace
+        if: steps.changed.outputs.changed == 'true'
+      - name: Classify the SQL this change adds
+        id: plan
+        if: steps.changed.outputs.changed == 'true'
+        env:
+          SUPABASE_BIN: ${{ github.workspace }}/node_modules/.bin/supabase
+          PLAN_DIR: ${{ runner.temp }}/db-check
+        run: node .github/scripts/db-plan.mjs check --base "$BASE_SHA"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: steps.changed.outputs.changed == 'true'
+        with:
+          name: db-check
+          path: ${{ runner.temp }}/db-check
+          retention-days: 30
+      - name: The allow-destructive label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DESTRUCTIVE: ${{ steps.plan.outputs.destructive || 'false' }}
+          PR: ${{ github.event.pull_request.number }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+        run: |
+          set -euo pipefail
+          if [ -n "$PR" ]; then target=(--pr "$PR"); else target=(--ref "$QUEUE_REF"); fi
+          node .github/scripts/destructive-label.mjs need --repo "$GITHUB_REPOSITORY" "${target[@]}" --destructive "$DESTRUCTIVE" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  # On the merge queue only: pull_request_target does not fire for it, but the
+  # required check must report there too (destructive-gate.yaml has the other
+  # half).
+  destructive-gate:
+    if: github.event_name == 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Who applied the allow-destructive label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+        run: node .github/scripts/destructive-label.mjs gate --repo "$GITHUB_REPOSITORY" --ref "$QUEUE_REF" | tee -a "$GITHUB_STEP_SUMMARY"

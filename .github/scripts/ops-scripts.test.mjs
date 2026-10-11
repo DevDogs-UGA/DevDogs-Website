@@ -31,6 +31,7 @@ import {
 import { q39Checks } from "./q39-checks.mjs";
 import { classifySql, splitStatements } from "./sql-classify.mjs";
 import { overrideHeader, runSmoke } from "./worker-smoke.mjs";
+import { activeVersion, lastUpload } from "./wrangler-version.mjs";
 
 /* ---------- sql-classify ---------- */
 
@@ -735,6 +736,69 @@ test("smoke fails on a broken page and on an unprotected protected page", async 
     runSmoke({ smoke: SMOKE, tier: "staging", versionId: "v", fetchImpl }),
     /needs --worker-name/,
   );
+});
+
+test("expected statuses prove a Worker that answers something other than 200", async () => {
+  const fetchImpl = async (url) =>
+    new Response("x", {
+      status: new URL(url).pathname === "/follow" ? 426 : 403,
+    });
+  const smoke = {
+    hosts: { production: "relay.example.org" },
+    publicPaths: [],
+    expectedStatuses: { "/follow": 426, "/": 403 },
+  };
+  const checks = await runSmoke({ smoke, tier: "production", fetchImpl });
+  assert.deepEqual(
+    checks.map((c) => c.ok),
+    [true, true],
+  );
+  const broken = await runSmoke({
+    smoke: { ...smoke, expectedStatuses: { "/follow": 200 } },
+    tier: "production",
+    fetchImpl,
+  });
+  assert.equal(broken[0].ok, false);
+});
+
+test("the uploaded version is read from wrangler's output file", () => {
+  const ndjson = [
+    JSON.stringify({ type: "wrangler-session", version: 1 }),
+    "not json",
+    JSON.stringify({
+      type: "version-upload",
+      version: 1,
+      worker_name: "old",
+      version_id: "11111111-1111-1111-1111-111111111111",
+    }),
+    JSON.stringify({
+      type: "version-upload",
+      version: 1,
+      worker_name: "staging-platform",
+      version_id: "22222222-2222-2222-2222-222222222222",
+    }),
+  ].join("\n");
+  assert.deepEqual(lastUpload(ndjson), {
+    versionId: "22222222-2222-2222-2222-222222222222",
+    workerName: "staging-platform",
+  });
+  assert.equal(lastUpload(""), undefined);
+});
+
+test("the active version is the one with the most traffic", () => {
+  assert.equal(
+    activeVersion(
+      JSON.stringify({
+        versions: [
+          { version_id: "a", percentage: 10 },
+          { version_id: "b", percentage: 90 },
+        ],
+      }),
+    ),
+    "b",
+  );
+  assert.equal(activeVersion("not json"), undefined);
+  assert.equal(activeVersion("{}"), undefined);
 });
 
 /** The OAuth server and the consent page, as a fake. */

@@ -44,6 +44,7 @@ import { isMain } from "./is-main.mjs";
  *   publicPaths: string[],
  *   protectedPath?: string,
  *   protectedRedirectPrefix?: string,
+ *   expectedStatuses?: Record<string, number>,
  * }} SmokeConfig
  */
 
@@ -100,6 +101,26 @@ export async function runSmoke({
     } catch (error) {
       checks.push({
         name: `${path} answers 200`,
+        ok: false,
+        detail: String(error),
+      });
+    }
+  }
+  // Paths that answer something other than 200 on purpose: a websocket
+  // endpoint asked for a page (426), a Worker that refuses an anonymous
+  // visitor (403). Enough to prove the Worker code is running.
+  for (const [path, status] of Object.entries(smoke.expectedStatuses ?? {})) {
+    try {
+      const response = await get(`${base}${path}`);
+      await response.arrayBuffer().catch(() => {});
+      checks.push({
+        name: `${path} answers ${status}`,
+        ok: response.status === status,
+        detail: `status ${response.status}`,
+      });
+    } catch (error) {
+      checks.push({
+        name: `${path} answers ${status}`,
         ok: false,
         detail: String(error),
       });
