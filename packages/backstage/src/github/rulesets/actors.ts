@@ -3,9 +3,8 @@
  * never hardcoded, because a team or App id is only stable until somebody
  * deletes and recreates it, and a stale id in a bypass actor is the
  * dangerous failure: the ruleset then blocks the team or App it is named
- * for while letting whoever inherited the old id through (the same
- * reasoning `teamSync.ts`'s `ensureTeamRuleset` gives for always re-writing
- * rather than skipping on an existing ruleset).
+ * for while letting whoever inherited the old id through (which
+ * is why a ruleset is always re-written rather than skipped when it exists).
  *
  * Both come from plain, read-only `gh api` GETs — no Octokit, same as every
  * other GitHub call in this package.

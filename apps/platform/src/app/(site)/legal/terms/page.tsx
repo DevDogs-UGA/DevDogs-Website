@@ -166,10 +166,6 @@ export default async function Terms() {
           ends.
         </li>
         <li>
-          <strong>Two-factor authentication:</strong> GitHub requires it on your
-          GitHub account to be a member of the DevDogs organization.
-        </li>
-        <li>
           <strong>Stars and awards:</strong> stars, streaks and other
           recognition are for fun and motivation. They have no cash value. We
           may correct them if they were awarded by mistake or through a rule

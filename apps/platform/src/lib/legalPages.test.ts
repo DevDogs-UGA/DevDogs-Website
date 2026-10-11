@@ -157,7 +157,7 @@ describe("the deleted features are gone from the legal copy", () => {
   ])("%s does not describe teams or competitions", (_name, text) => {
     expect(text).not.toMatch(/competition/i);
     expect(text).not.toMatch(/team repositor/i);
-    expect(text).not.toMatch(/two-factor authentication on/i);
+    expect(text).not.toMatch(/two-factor authentication/i);
     expect(text).not.toMatch(
       /invite you to the DevDogs (?:GitHub )?organization/i,
     );
