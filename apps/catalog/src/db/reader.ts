@@ -36,11 +36,11 @@ export async function withCatalogReader<T>(
     fetch_types: false,
   });
   try {
-    return await client.begin("read only", async (tx) => {
+    return (await client.begin("read only", async (tx) => {
       await tx`set local role catalog_reader`;
       await tx`select set_config('statement_timeout', ${String(READ_STATEMENT_TIMEOUT_MS)}, true)`;
       return fn(tx);
-    }) as T;
+    })) as T;
   } finally {
     await client.end({ timeout: 1 }).catch(() => undefined);
   }

@@ -37,7 +37,10 @@ export type BuildingCheck = {
 };
 
 /** Reads `data/buildings/` under `dataDir` and checks it against the bundle list in `filesTs`. */
-export function checkBuildingData(dataDir: string, filesTs: string): BuildingCheck {
+export function checkBuildingData(
+  dataDir: string,
+  filesTs: string,
+): BuildingCheck {
   const problems: string[] = [];
 
   const onDisk = [
@@ -51,7 +54,9 @@ export function checkBuildingData(dataDir: string, filesTs: string): BuildingChe
   ];
 
   const bundled = new Set(
-    [...filesTs.matchAll(/data\/buildings\/([\w./-]+\.csv)/g)].map((m) => m[1]!),
+    [...filesTs.matchAll(/data\/buildings\/([\w./-]+\.csv)/g)].map(
+      (m) => m[1]!,
+    ),
   );
   for (const file of [...onDisk, REGISTRAR]) {
     if (!bundled.has(file)) {
@@ -62,14 +67,20 @@ export function checkBuildingData(dataDir: string, filesTs: string): BuildingChe
   }
   for (const file of bundled) {
     if (![...onDisk, REGISTRAR].includes(file)) {
-      problems.push(`src/buildings/files.ts imports data/buildings/${file}, which does not exist.`);
+      problems.push(
+        `src/buildings/files.ts imports data/buildings/${file}, which does not exist.`,
+      );
     }
   }
 
-  const registrar = parseBuildingCsv(REGISTRAR, readFileSync(join(dataDir, REGISTRAR), "utf8"));
+  const registrar = parseBuildingCsv(
+    REGISTRAR,
+    readFileSync(join(dataDir, REGISTRAR), "utf8"),
+  );
   const registrarMeetings = new Map<number, number>();
   const registrarRows = parseRegistrarMeetings(join(dataDir, REGISTRAR));
-  for (const [id, meetings] of registrarRows) registrarMeetings.set(id, meetings);
+  for (const [id, meetings] of registrarRows)
+    registrarMeetings.set(id, meetings);
   const knownIds = new Set(registrar.records.map((r) => r.record.id));
   for (const p of registrar.problems) problems.push(formatProblem(p));
 
@@ -87,7 +98,9 @@ export function checkBuildingData(dataDir: string, filesTs: string): BuildingChe
   const placed = new Set(
     files.flatMap((f) =>
       f.records
-        .filter(({ record }) => record.latitude !== null && record.longitude !== null)
+        .filter(
+          ({ record }) => record.latitude !== null && record.longitude !== null,
+        )
         .map(({ record }) => record.id),
     ),
   );
@@ -98,8 +111,14 @@ export function checkBuildingData(dataDir: string, filesTs: string): BuildingChe
     coverage: {
       registrarBuildings: knownIds.size,
       placedBuildings: placedKnown.length,
-      registrarMeetings: [...registrarMeetings.values()].reduce((a, b) => a + b, 0),
-      placedMeetings: placedKnown.reduce((n, id) => n + (registrarMeetings.get(id) ?? 0), 0),
+      registrarMeetings: [...registrarMeetings.values()].reduce(
+        (a, b) => a + b,
+        0,
+      ),
+      placedMeetings: placedKnown.reduce(
+        (n, id) => n + (registrarMeetings.get(id) ?? 0),
+        0,
+      ),
     },
   };
 }
@@ -120,13 +139,18 @@ function parseRegistrarMeetings(path: string): Map<number, number> {
     // followed only by `terms`, so count from the ends.
     const parts = line.split(",");
     const id = Number(parts[idAt]);
-    const meetings = Number(parts[parts.length - (columns.length - meetingsAt)]);
-    if (Number.isInteger(id)) map.set(id, Number.isFinite(meetings) ? meetings : 0);
+    const meetings = Number(
+      parts[parts.length - (columns.length - meetingsAt)],
+    );
+    if (Number.isInteger(id))
+      map.set(id, Number.isFinite(meetings) ? meetings : 0);
   }
   return map;
 }
 
-const isMain = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+const isMain =
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
   const root = resolve(import.meta.dirname, "..");
   const result = checkBuildingData(
@@ -134,7 +158,8 @@ if (isMain) {
     readFileSync(join(root, "src", "buildings", "files.ts"), "utf8"),
   );
   const c = result.coverage;
-  const pct = (a: number, b: number) => (b === 0 ? "n/a" : `${((a / b) * 100).toFixed(1)}%`);
+  const pct = (a: number, b: number) =>
+    b === 0 ? "n/a" : `${((a / b) * 100).toFixed(1)}%`;
   console.log(
     `buildings with a point: ${c.placedBuildings} of ${c.registrarBuildings} (${pct(c.placedBuildings, c.registrarBuildings)}); ` +
       `meetings in them: ${c.placedMeetings} of ${c.registrarMeetings} (${pct(c.placedMeetings, c.registrarMeetings)})`,

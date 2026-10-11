@@ -16,7 +16,11 @@ import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import * as Sentry from "@sentry/cloudflare";
 import { withScrapeDb } from "~/db/client";
 import { resolveDatabaseUrl, type DatabaseEnv } from "~/db/url";
-import { recordHeartbeat, recordRun, PROGRAMS_HEARTBEAT_JOB } from "~/scrape/heartbeat";
+import {
+  recordHeartbeat,
+  recordRun,
+  PROGRAMS_HEARTBEAT_JOB,
+} from "~/scrape/heartbeat";
 import { catalogSentryOptions, type SentryEnv } from "~/sentry";
 import { scrapeBulletinPrograms, type BulletinScrape } from "./bulletin";
 import { writeAcademicPrograms, type AcademicProgramSyncReport } from "./sync";
@@ -26,7 +30,10 @@ export type ProgramsWorkflowParams = Record<string, never>;
 
 type Env = DatabaseEnv & SentryEnv;
 
-class ProgramsWorkflowBase extends WorkflowEntrypoint<Env, ProgramsWorkflowParams> {
+class ProgramsWorkflowBase extends WorkflowEntrypoint<
+  Env,
+  ProgramsWorkflowParams
+> {
   async run(
     event: Readonly<WorkflowEvent<ProgramsWorkflowParams>>,
     step: WorkflowStep,
@@ -42,7 +49,9 @@ class ProgramsWorkflowBase extends WorkflowEntrypoint<Env, ProgramsWorkflowParam
           timeout: "10 minutes",
         },
         async (ctx) => {
-          console.log(`[catalog-programs] scrape-bulletin attempt ${ctx.attempt}`);
+          console.log(
+            `[catalog-programs] scrape-bulletin attempt ${ctx.attempt}`,
+          );
           return scrapeBulletinPrograms();
         },
       );

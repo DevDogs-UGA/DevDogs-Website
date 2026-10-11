@@ -30,7 +30,8 @@ const csvAsText: Plugin = {
   name: "csv-as-text",
   enforce: "pre",
   transform(code, id) {
-    if (id.endsWith(".csv")) return { code: `export default ${JSON.stringify(code)};`, map: null };
+    if (id.endsWith(".csv"))
+      return { code: `export default ${JSON.stringify(code)};`, map: null };
   },
 };
 
@@ -42,7 +43,11 @@ export default mergeConfig(
       alias: { "~": resolve(import.meta.dirname, "src") },
     },
     test: {
-      include: ["src/**/*.test.ts", "test/**/*.test.ts", "scripts/**/*.test.ts"],
+      include: [
+        "src/**/*.test.ts",
+        "test/**/*.test.ts",
+        "scripts/**/*.test.ts",
+      ],
     },
   }),
 );

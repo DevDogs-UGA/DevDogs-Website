@@ -76,7 +76,10 @@ function parseNumber(value: string): number | null {
 }
 
 /** Parses one building CSV. Structural problems (a bad id, an unreadable number) are returned, not thrown. */
-export function parseBuildingCsv(file: string, text: string): ParsedBuildingFile {
+export function parseBuildingCsv(
+  file: string,
+  text: string,
+): ParsedBuildingFile {
   const parser = new CsvRowParser();
   const rows = [...parser.push(text), ...parser.end()];
   const records: ParsedBuildingFile["records"] = [];
@@ -185,7 +188,10 @@ export function validateBuildings(
       const { latitude, longitude } = record;
       if (latitude === null && longitude === null) {
         if (!options.allowEmptyCoordinates(file)) {
-          problems.push({ ...at, message: "latitude and longitude are empty." });
+          problems.push({
+            ...at,
+            message: "latitude and longitude are empty.",
+          });
         }
       } else if (latitude === null || longitude === null) {
         problems.push({

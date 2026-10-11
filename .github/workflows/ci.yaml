@@ -160,6 +160,11 @@ jobs:
         run: node packages/devtools/bin/devtools.mjs check workers
       # The same vocabulary as `check:scripts` above, plus its exceptions
       # being live (devdogs.scriptExceptions in the root package.json).
+      # The building coordinates dataset (apps/catalog/data/buildings): every
+      # id exists, every point is inside its campus's box, no id twice, and
+      # every file is bundled into the Worker. Prints the coverage figure.
+      - name: Catalog building data is valid
+        run: pnpm --filter catalog run check:buildings
       - name: Package scripts use the shared vocabulary
         run: node packages/devtools/bin/devtools.mjs check scripts
       # Every env variable is declared in a manifest, and the registry agrees.
@@ -281,6 +286,15 @@ jobs:
         run: pnpm --filter platform run test:db
       - name: Query validity + privilege surface (schedule-builder)
         run: pnpm --filter schedule-builder run test:db
+      # The catalog API's contract against a real database: every endpoint
+      # through the real router and the read-only role, each response checked
+      # against openapi/catalog.yaml, plus the scrape's reconcile and
+      # invariants. Each file builds its own throwaway database on this stack
+      # from supabase/schemas, so it needs only the admin connection string.
+      - name: Catalog contract + scrape (catalog)
+        run: |
+          set -a; . ./.env.generated; set +a
+          pnpm --filter catalog run test:db
       # Validation ENFORCED, unlike the validate job: a newly added required
       # variable with no default fails here rather than at deploy time.
       - name: Build the platform, with the env schema enforced

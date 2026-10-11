@@ -33,6 +33,7 @@ export const INVARIANT_NAMES = [
   "timesWellFormed",
   "buildingsResolve",
   "cancelledFlagged",
+  "partsOfTermKnown",
 ] as const;
 
 /** How far the active section count may move between two runs: ±15%. */
@@ -46,9 +47,7 @@ export class InvariantViolationError extends Error {
   ) {
     super(
       `Scrape invariants failed for ${academicPeriod}, term not written: ` +
-        failures
-          .map((f) => `${f.name} ${JSON.stringify(f.detail)}`)
-          .join("; "),
+        failures.map((f) => `${f.name} ${JSON.stringify(f.detail)}`).join("; "),
     );
   }
 }
@@ -93,6 +92,8 @@ type CheckInput = {
   /** Active sections in the term before this run wrote anything. */
   previousActive: number;
   stats: RowStats;
+  /** Sections the reconcile left out for want of a part of term, by part code. */
+  unknownParts?: ReadonlyMap<string, number>;
   skip: ReadonlySet<string>;
 };
 
@@ -107,6 +108,7 @@ type CheckInput = {
  * | `timesWellFormed` | the feed had no unreadable time, and every stored meeting has both times or neither, start before end |
  * | `buildingsResolve` | every meeting's building exists, and none is `RESERVED` without one |
  * | `cancelledFlagged` | every section missing from the feed is flagged cancelled |
+ * | `partsOfTermKnown` | (`info`) every section's part of term has dates, so none was left out |
  *
  * The scrape stores a section the feed no longer lists as cancelled and keeps
  * its meetings (saved plans reference it), so `cancelledFlagged` is the check
@@ -117,6 +119,8 @@ export async function checkTermInvariants(
   input: CheckInput,
 ): Promise<InvariantResult[]> {
   const { academicPeriod: ap, startedAt, previousActive, stats, skip } = input;
+  const unknownParts = input.unknownParts ?? new Map<string, number>();
+  const unknownSections = [...unknownParts.values()].reduce((a, b) => a + b, 0);
   const rows = await tx.execute<Record<string, string | number>>(sql`
     select
       (select count(*) from schedule_builder.terms where "academicPeriod" = ${ap}) as terms,
@@ -185,6 +189,17 @@ export async function checkTermInvariants(
       ok: n("unflagged") === 0,
       severity: "error",
       detail: { activeSectionsMissingFromFeed: n("unflagged") },
+    },
+    {
+      name: "partsOfTermKnown",
+      ok: unknownSections === 0,
+      // Reported, never blocking: a calendar cell the registrar left as "n/a"
+      // must not stop the rest of the term from being published.
+      severity: "info",
+      detail: {
+        sectionsInUnknownParts: unknownSections,
+        partCodes: [...unknownParts.keys()].sort().join(",") || null,
+      },
     },
   ];
 

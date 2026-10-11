@@ -33,7 +33,9 @@ export function loadWrangler(): WranglerConfig {
     readFileSync(WRANGLER_PATH, "utf8"),
   );
   if (parsed.error) {
-    throw new Error(ts.flattenDiagnosticMessageText(parsed.error.messageText, "\n"));
+    throw new Error(
+      ts.flattenDiagnosticMessageText(parsed.error.messageText, "\n"),
+    );
   }
   return parsed.config as WranglerConfig;
 }

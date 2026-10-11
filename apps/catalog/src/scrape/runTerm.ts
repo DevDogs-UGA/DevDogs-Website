@@ -10,9 +10,16 @@
 import { withScrapeDb } from "~/db/client";
 import { resolveDatabaseUrl, type DatabaseEnv } from "~/db/url";
 import { InvariantViolationError } from "./invariants";
-import { CalendarNotFoundError, academicPeriodInfo, fetchPartsOfTerm } from "./parsers";
+import {
+  CalendarNotFoundError,
+  academicPeriodInfo,
+  fetchPartsOfTerm,
+} from "./parsers";
 import { fetchSemesterCsv } from "./parsers/AvailableTerms";
-import { reconcileTerm, type TermReconcileResult } from "./parsers/reconcileTerm";
+import {
+  reconcileTerm,
+  type TermReconcileResult,
+} from "./parsers/reconcileTerm";
 
 /** A failure that re-running would repeat: the feed is gone, is another term, or broke an invariant. */
 export class FatalTermError extends Error {

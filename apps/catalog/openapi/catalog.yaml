@@ -347,7 +347,12 @@ components:
         - classesEnd
         - finalsEnd
       properties:
-        code: { type: string, description: The registrar's code, for example `1` for the full term. }
+        code:
+          {
+            type: string,
+            description: The registrar's code,
+            for example `1` for the full term.,
+          }
         description: { type: string }
         classesBegin: { $ref: "#/components/schemas/Date" }
         dropAddEnds: { $ref: "#/components/schemas/Date" }
@@ -434,7 +439,12 @@ components:
         abbr: { type: string, example: CSCI1301 }
         courseNumber: { type: string, example: "1301" }
         title: { type: string }
-        subject: { type: string, description: The subject abbreviation., example: CSCI }
+        subject:
+          {
+            type: string,
+            description: The subject abbreviation.,
+            example: CSCI,
+          }
         minCreditHours: { type: number }
         maxCreditHours: { type: number }
         honors: { type: boolean }
@@ -464,7 +474,12 @@ components:
       required: [term, query, limit, results]
       properties:
         term: { $ref: "#/components/schemas/TermCode" }
-        query: { type: string, description: The query as the server read it, trimmed. }
+        query:
+          {
+            type: string,
+            description: The query as the server read it,
+            trimmed.,
+          }
         limit: { type: integer, minimum: 1, maximum: 50 }
         results:
           type: array
@@ -552,7 +567,13 @@ components:
       additionalProperties: false
       required: [abbr, term, exists, offered]
       properties:
-        abbr: { type: string, description: The code as the catalog spells it; the input, normalized, when unknown. }
+        abbr:
+          {
+            type: string,
+            description: The code as the catalog spells it; the input,
+            normalized,
+            when unknown.,
+          }
         term:
           oneOf:
             - { $ref: "#/components/schemas/TermCode" }
@@ -577,7 +598,8 @@ components:
           description: Null until the building is in the coordinates dataset.
           oneOf: [{ type: number, minimum: -90, maximum: 90 }, { type: "null" }]
         lon:
-          oneOf: [{ type: number, minimum: -180, maximum: 180 }, { type: "null" }]
+          oneOf:
+            [{ type: number, minimum: -180, maximum: 180 }, { type: "null" }]
     Meeting:
       type: object
       additionalProperties: false
@@ -596,7 +618,8 @@ components:
           uniqueItems: true
           items:
             type: string
-            enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+            enum:
+              [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
         startDate:
           oneOf: [{ $ref: "#/components/schemas/Date" }, { type: "null" }]
         endDate:

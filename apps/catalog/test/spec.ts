@@ -11,9 +11,13 @@ import { parse } from "yaml";
  * openapi/catalog.yaml is the contract; nothing here restates it.
  */
 
-export const SPEC_PATH = resolve(import.meta.dirname, "../openapi/catalog.yaml");
+export const SPEC_PATH = resolve(
+  import.meta.dirname,
+  "../openapi/catalog.yaml",
+);
 
-export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
+export type Json =
+  null | boolean | number | string | Json[] | { [key: string]: Json };
 
 type Operation = {
   operationId: string;
@@ -57,7 +61,9 @@ export function resolveRef(spec: Spec, ref: string): unknown {
   let node: unknown = spec;
   for (const part of ref.slice(2).split("/")) {
     if (node === null || typeof node !== "object") return undefined;
-    node = (node as Record<string, unknown>)[part.replaceAll("~1", "/").replaceAll("~0", "~")];
+    node = (node as Record<string, unknown>)[
+      part.replaceAll("~1", "/").replaceAll("~0", "~")
+    ];
   }
   return node;
 }
@@ -86,7 +92,10 @@ export function responseValidator(spec: Spec = loadSpec()): ResponseValidator {
 
   const validators = new Map<string, ValidateFunction>();
   const responseSchema = (response: unknown): unknown => {
-    let node = response as { $ref?: string; content?: Record<string, { schema?: unknown }> };
+    let node = response as {
+      $ref?: string;
+      content?: Record<string, { schema?: unknown }>;
+    };
     if (node.$ref) node = resolveRef(spec, node.$ref) as typeof node;
     return node.content?.["application/json"]?.schema;
   };
@@ -113,7 +122,8 @@ export function responseValidator(spec: Spec = loadSpec()): ResponseValidator {
     has: (operationId, status) => validators.has(`${operationId}:${status}`),
     check(operationId, status, body) {
       const validate = validators.get(`${operationId}:${status}`);
-      if (!validate) return [`The spec defines no ${status} response for ${operationId}.`];
+      if (!validate)
+        return [`The spec defines no ${status} response for ${operationId}.`];
       if (validate(body)) return [];
       return (validate.errors ?? []).map(
         (e) => `${e.instancePath || "/"} ${e.message ?? "is invalid"}`,

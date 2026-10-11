@@ -17,7 +17,13 @@
  *   Existing files, filled or not, are never rewritten and their ids are never
  *   listed again; only buildings that are new to the data get new files.
  */
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 import { CsvRowParser } from "../src/scrape/csv.ts";
 import { parseBuildingCsv } from "../src/buildings/dataset.ts";
@@ -32,7 +38,9 @@ function arg(name: string): string | undefined {
 
 const dir = arg("--dir");
 if (!dir) {
-  console.error("usage: tsx scripts/building-gaps.ts --dir <folder> [--download]");
+  console.error(
+    "usage: tsx scripts/building-gaps.ts --dir <folder> [--download]",
+  );
   process.exit(2);
 }
 
@@ -45,7 +53,10 @@ if (process.argv.includes("--download")) {
   for (const semester of SEMESTERS) {
     const res = await fetch(`https://apps.reg.uga.edu/soc/${semester}.csv`);
     if (!res.ok) throw new Error(`${semester}.csv: HTTP ${res.status}`);
-    writeFileSync(join(dir, `${semester}.csv`), new Uint8Array(await res.arrayBuffer()));
+    writeFileSync(
+      join(dir, `${semester}.csv`),
+      new Uint8Array(await res.arrayBuffer()),
+    );
   }
 }
 
@@ -93,7 +104,11 @@ for (const semester of SEMESTERS) {
 }
 
 function top(counts: Map<string, number>, fallback: string): string {
-  return [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? fallback;
+  return (
+    [...counts].sort(
+      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+    )[0]?.[0] ?? fallback
+  );
 }
 
 function csvField(value: string | number): string {
@@ -115,7 +130,9 @@ writeFileSync(
   join(data, "registrar-buildings.csv"),
   "id,name,campus,meetings,terms\n" +
     registrar
-      .map((r) => [r.id, r.name, r.campus, r.meetings, r.terms].map(csvField).join(","))
+      .map((r) =>
+        [r.id, r.name, r.campus, r.meetings, r.terms].map(csvField).join(","),
+      )
       .join("\n") +
     "\n",
 );
@@ -123,14 +140,22 @@ console.error(`registrar-buildings.csv: ${registrar.length} buildings`);
 
 // Ids already in some file: the datasets, and every gap file written so far.
 const listed = new Set<number>();
-const existingGaps = readdirSync(gapsDir).filter((f) => /^gap-\d+\.csv$/.test(f)).sort();
+const existingGaps = readdirSync(gapsDir)
+  .filter((f) => /^gap-\d+\.csv$/.test(f))
+  .sort();
 for (const file of ["athens.csv", "griffin.csv", "tifton.csv"]) {
-  for (const { record } of parseBuildingCsv(file, readFileSync(join(data, file), "utf8")).records) {
+  for (const { record } of parseBuildingCsv(
+    file,
+    readFileSync(join(data, file), "utf8"),
+  ).records) {
     listed.add(record.id);
   }
 }
 for (const file of existingGaps) {
-  for (const { record } of parseBuildingCsv(file, readFileSync(join(gapsDir, file), "utf8")).records) {
+  for (const { record } of parseBuildingCsv(
+    file,
+    readFileSync(join(gapsDir, file), "utf8"),
+  ).records) {
     listed.add(record.id);
   }
 }
@@ -139,20 +164,32 @@ const missing = registrar
   .filter((r) => !listed.has(r.id))
   .sort((a, b) => b.meetings - a.meetings || a.id - b.id);
 
-let next = existingGaps.length === 0 ? 1 : Number(/gap-(\d+)/.exec(existingGaps.at(-1)!)![1]) + 1;
+let next =
+  existingGaps.length === 0
+    ? 1
+    : Number(/gap-(\d+)/.exec(existingGaps.at(-1)!)![1]) + 1;
 for (let i = 0; i < missing.length; i += BATCH_SIZE) {
   const batch = missing.slice(i, i + BATCH_SIZE);
   const name = `gap-${String(next).padStart(3, "0")}.csv`;
   next += 1;
-  if (existsSync(join(gapsDir, name))) throw new Error(`${name} already exists`);
+  if (existsSync(join(gapsDir, name)))
+    throw new Error(`${name} already exists`);
   writeFileSync(
     join(gapsDir, name),
     "id,campus,name,address,latitude,longitude,meetings\n" +
       batch
-        .map((r) => [r.id, r.campus, r.name, "", "", "", r.meetings].map(csvField).join(","))
+        .map((r) =>
+          [r.id, r.campus, r.name, "", "", "", r.meetings]
+            .map(csvField)
+            .join(","),
+        )
         .join("\n") +
       "\n",
   );
-  console.error(`${name}: ${batch.length} buildings, ${batch.reduce((n, r) => n + r.meetings, 0)} meetings`);
+  console.error(
+    `${name}: ${batch.length} buildings, ${batch.reduce((n, r) => n + r.meetings, 0)} meetings`,
+  );
 }
-console.error(`${missing.length} buildings new to the data, in ${Math.ceil(missing.length / BATCH_SIZE)} new files`);
+console.error(
+  `${missing.length} buildings new to the data, in ${Math.ceil(missing.length / BATCH_SIZE)} new files`,
+);

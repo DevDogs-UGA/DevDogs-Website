@@ -39,14 +39,17 @@ export const locationStatus = scheduleBuilder.enum("locationStatus", [
   "RESERVED",
 ]);
 
-export const academicProgramCategory = platform.enum("academicProgramCategory", [
-  "undergraduate_major",
-  "graduate_major",
-  "undergraduate_minor",
-  "undergraduate_certificate",
-  "graduate_certificate",
-  "professional_program",
-]);
+export const academicProgramCategory = platform.enum(
+  "academicProgramCategory",
+  [
+    "undergraduate_major",
+    "graduate_major",
+    "undergraduate_minor",
+    "undergraduate_certificate",
+    "graduate_certificate",
+    "professional_program",
+  ],
+);
 
 export const buildings = scheduleBuilder.table("buildings", {
   id: integer().primaryKey(),
@@ -119,7 +122,10 @@ export const courses = scheduleBuilder.table(
   },
   (table) => [
     unique("courses_abbr_key").on(table.abbr),
-    unique("unique_subject_courseNumber").on(table.subjectId, table.courseNumber),
+    unique("unique_subject_courseNumber").on(
+      table.subjectId,
+      table.courseNumber,
+    ),
   ],
 );
 

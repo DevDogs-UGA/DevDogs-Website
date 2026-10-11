@@ -30,7 +30,10 @@ function depsFor(env: CatalogEnv, ctx: ExecutionContext): ApiDeps {
     searchLimiter: env.SEARCH_LIMITER,
     // The Cache API exists only on a Worker that runs behind a zone route,
     // which the deployed catalog does; `wrangler dev` has it too.
-    cache: typeof caches === "undefined" ? undefined : (caches as unknown as { default: ApiDeps["cache"] }).default,
+    cache:
+      typeof caches === "undefined"
+        ? undefined
+        : (caches as unknown as { default: ApiDeps["cache"] }).default,
     waitUntil: (promise) => ctx.waitUntil(promise),
   };
 }
@@ -49,7 +52,10 @@ export default Sentry.withSentry(
         Sentry.captureException(error);
         return new Response(
           JSON.stringify({
-            error: { code: "internal", message: "Something went wrong on our side." },
+            error: {
+              code: "internal",
+              message: "Something went wrong on our side.",
+            },
           }),
           {
             status: 500,

@@ -6,22 +6,25 @@ import {
   validateBuildings,
   type BuildingRecord,
 } from "./dataset";
-import { BUILDING_FILES, DATASET_FILES, REGISTRAR_BUILDINGS_CSV } from "./files";
+
+/** Where the building data comes from: file name to CSV text, as `files.ts` bundles it or a script reads it from disk. */
+export type BuildingSources = {
+  /** Every dataset and gap file. */
+  files: Readonly<Record<string, string>>;
+  /** The complete datasets (`athens.csv`...); gap files are the rest. */
+  datasetFiles: Readonly<Record<string, string>>;
+  /** `registrar-buildings.csv`: every building number the registrar uses. */
+  registrarCsv: string;
+};
 
 /** The ids the registrar uses, from `registrar-buildings.csv`. */
-export function registrarBuildingIds(csv: string = REGISTRAR_BUILDINGS_CSV): Set<number> {
+export function registrarBuildingIds(csv: string): Set<number> {
   const ids = new Set<number>();
-  for (const { record } of parseBuildingCsv("registrar-buildings.csv", csv).records) {
+  for (const { record } of parseBuildingCsv("registrar-buildings.csv", csv)
+    .records) {
     ids.add(record.id);
   }
   return ids;
-}
-
-/** Parses every bundled file; the same input the CI check validates. */
-export function parseBundledBuildings(
-  files: Readonly<Record<string, string>> = BUILDING_FILES,
-) {
-  return Object.entries(files).map(([name, text]) => parseBuildingCsv(name, text));
 }
 
 /**
@@ -30,14 +33,14 @@ export function parseBundledBuildings(
  * building in the ocean; the scrape reports the error and carries on without
  * buildings (see ScrapeWorkflow).
  */
-export function buildingsToImport(
-  files: Readonly<Record<string, string>> = BUILDING_FILES,
-): BuildingRecord[] {
-  const parsed = parseBundledBuildings(files);
+export function buildingsToImport(sources: BuildingSources): BuildingRecord[] {
+  const parsed = Object.entries(sources.files).map(([name, text]) =>
+    parseBuildingCsv(name, text),
+  );
   const problems = validateBuildings(parsed, {
-    knownIds: registrarBuildingIds(),
-    requireKnownId: (file) => !(file in DATASET_FILES),
-    allowEmptyCoordinates: (file) => !(file in DATASET_FILES),
+    knownIds: registrarBuildingIds(sources.registrarCsv),
+    requireKnownId: (file) => !(file in sources.datasetFiles),
+    allowEmptyCoordinates: (file) => !(file in sources.datasetFiles),
   });
   if (problems.length > 0) {
     throw new Error(
@@ -70,7 +73,7 @@ export type BuildingImportResult = {
  */
 export async function importBuildings(
   db: ScrapeDb,
-  records: readonly BuildingRecord[] = buildingsToImport(),
+  records: readonly BuildingRecord[],
 ): Promise<BuildingImportResult> {
   if (records.length === 0) return { placed: 0, inserted: 0, updated: 0 };
 

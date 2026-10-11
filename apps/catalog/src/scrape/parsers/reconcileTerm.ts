@@ -173,6 +173,13 @@ export async function reconcileTerm(
       { academicPeriod: term.academicPeriod, description: term.description },
     ]);
     await upsertPartsOfTerm(tx, term.partOfTermRows);
+    const knownParts = new Set(
+      (
+        await tx.execute<{ code: string }>(
+          sql`select code from schedule_builder."partsOfTerm" where "academicPeriod" = ${term.academicPeriod}`,
+        )
+      ).map((r) => r.code),
+    );
 
     const [
       subjectIdMap,
@@ -202,6 +209,7 @@ export async function reconcileTerm(
       instructorIdMap,
       scheduleTypeIdMap,
       campusIdMap,
+      knownParts,
     );
     const meetingCount = await c.meetingCollector.flush(
       tx,
@@ -232,6 +240,7 @@ export async function reconcileTerm(
       startedAt,
       previousActive,
       stats: c.stats,
+      unknownParts: c.offeringCollector.sectionsInUnknownParts,
       skip,
     });
     const blocking = invariants.filter(

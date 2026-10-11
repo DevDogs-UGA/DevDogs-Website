@@ -10,7 +10,9 @@ import {
 export function parseTerm(value: string | null, name = "term"): number | null {
   if (value === null || value === "") return null;
   if (!/^\d{6}$/.test(value)) {
-    throw invalid(`${name} must be a six-digit academic period such as 202702.`);
+    throw invalid(
+      `${name} must be a six-digit academic period such as 202702.`,
+    );
   }
   const term = Number(value);
   const year = Math.floor(term / 100);
@@ -51,7 +53,9 @@ export function parseCourseCode(value: string | null, name = "abbr"): string {
   if (value === null || value.trim() === "") throw missing(name);
   const code = normalizeCourseCode(value);
   if (!/^[A-Z0-9]{3,12}$/.test(code)) {
-    throw invalid(`${name} must look like a course code, for example CSCI1301.`);
+    throw invalid(
+      `${name} must look like a course code, for example CSCI1301.`,
+    );
   }
   return code;
 }

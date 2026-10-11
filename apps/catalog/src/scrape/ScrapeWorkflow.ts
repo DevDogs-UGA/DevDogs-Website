@@ -22,7 +22,8 @@ import { WorkflowEntrypoint } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import * as Sentry from "@sentry/cloudflare";
-import { importBuildings, type BuildingImportResult } from "~/buildings/importBuildings";
+import { importBundledBuildings } from "~/buildings/bundled";
+import type { BuildingImportResult } from "~/buildings/importBuildings";
 import { withScrapeDb } from "~/db/client";
 import { resolveDatabaseUrl, type DatabaseEnv } from "~/db/url";
 import { catalogSentryOptions, type SentryEnv } from "~/sentry";
@@ -82,7 +83,8 @@ class ScrapeWorkflowBase extends WorkflowEntrypoint<Env, ScrapeWorkflowParams> {
     step: WorkflowStep,
   ): Promise<ScrapeWorkflowResult> {
     const params = event.payload ?? {};
-    const only = params.terms && params.terms.length > 0 ? new Set(params.terms) : null;
+    const only =
+      params.terms && params.terms.length > 0 ? new Set(params.terms) : null;
     const skipInvariants = params.skipInvariants ?? [];
     const startedAt = new Date(event.timestamp);
 
@@ -91,7 +93,9 @@ class ScrapeWorkflowBase extends WorkflowEntrypoint<Env, ScrapeWorkflowParams> {
       // step's return value is persisted, and each term's own step streams its
       // file again.
       const detection = await step.do("detect-available-terms", async (ctx) => {
-        console.log(`[catalog-scrape] detect-available-terms attempt ${ctx.attempt}`);
+        console.log(
+          `[catalog-scrape] detect-available-terms attempt ${ctx.attempt}`,
+        );
         Sentry.addBreadcrumb({
           category: "workflow-step",
           message: `detect-available-terms attempt ${ctx.attempt}`,
@@ -119,7 +123,9 @@ class ScrapeWorkflowBase extends WorkflowEntrypoint<Env, ScrapeWorkflowParams> {
       let buildings: BuildingImportResult | null = null;
       try {
         buildings = await step.do("import-buildings", DB_STEP, async () =>
-          withScrapeDb(resolveDatabaseUrl(this.env), (db) => importBuildings(db)),
+          withScrapeDb(resolveDatabaseUrl(this.env), (db) =>
+            importBundledBuildings(db),
+          ),
         );
       } catch (err) {
         failures.push({ step: "import-buildings", error: message(err) });
@@ -215,7 +221,12 @@ class ScrapeWorkflowBase extends WorkflowEntrypoint<Env, ScrapeWorkflowParams> {
         );
       }
 
-      return { termResults, failedFetches: detection.failedFetches, failures, buildings };
+      return {
+        termResults,
+        failedFetches: detection.failedFetches,
+        failures,
+        buildings,
+      };
     } catch (err) {
       // Terminal only: the failure paths above that happen OUTSIDE a
       // `step.do` call (zero terms detected; the aggregate "completed

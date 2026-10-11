@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  SEARCH_MAX_LIMIT,
-  SECTIONS_MAX_COURSES,
-} from "~/api/limits";
+import { SEARCH_MAX_LIMIT, SECTIONS_MAX_COURSES } from "~/api/limits";
 import {
   cacheKeyFor,
   handleApiRequest,
@@ -40,7 +37,10 @@ async function get(
   deps: ApiDeps,
   init: RequestInit = {},
 ): Promise<{ response: Response; body: any }> {
-  const response = await handleApiRequest(new Request(`${BASE}${path}`, init), deps);
+  const response = await handleApiRequest(
+    new Request(`${BASE}${path}`, init),
+    deps,
+  );
   const text = await response.text();
   return { response, body: text ? JSON.parse(text) : null };
 }
@@ -54,7 +54,10 @@ describe("validation (a 400 never reaches the database)", () => {
     ["/search?term=202703&q=x", "invalid_parameter"],
     ["/search?term=abcdef&q=x", "invalid_parameter"],
     [`/search?term=202702&q=${"x".repeat(101)}`, "invalid_parameter"],
-    [`/search?term=202702&q=x&limit=${SEARCH_MAX_LIMIT + 1}`, "invalid_parameter"],
+    [
+      `/search?term=202702&q=x&limit=${SEARCH_MAX_LIMIT + 1}`,
+      "invalid_parameter",
+    ],
     ["/search?term=202702&q=x&limit=0", "invalid_parameter"],
     ["/search?term=202702&q=x&limit=-1", "invalid_parameter"],
     ["/search?term=202702&q=x&limit=ten", "invalid_parameter"],
@@ -80,16 +83,24 @@ describe("validation (a 400 never reaches the database)", () => {
 
   it(`accepts a search of exactly ${SEARCH_MAX_LIMIT} results`, async () => {
     const { deps } = setup();
-    const { response } = await get(`/search?term=202702&q=x&limit=${SEARCH_MAX_LIMIT}`, deps);
+    const { response } = await get(
+      `/search?term=202702&q=x&limit=${SEARCH_MAX_LIMIT}`,
+      deps,
+    );
     expect(response.status).toBe(200);
   });
 
   it(`refuses ${SECTIONS_MAX_COURSES + 1} courses, however they are named, and accepts ${SECTIONS_MAX_COURSES}`, async () => {
     const { deps, reads } = setup();
     const code = (i: number) => `ABC${1000 + i}`;
-    const sixteen = Array.from({ length: SECTIONS_MAX_COURSES + 1 }, (_, i) => code(i));
+    const sixteen = Array.from({ length: SECTIONS_MAX_COURSES + 1 }, (_, i) =>
+      code(i),
+    );
 
-    const tooManyCodes = await get(`/sections?term=202702&courses=${sixteen.join(",")}`, deps);
+    const tooManyCodes = await get(
+      `/sections?term=202702&courses=${sixteen.join(",")}`,
+      deps,
+    );
     expect(tooManyCodes.response.status).toBe(400);
     expect(tooManyCodes.body.error.code).toBe("too_many_courses");
 
@@ -132,38 +143,52 @@ describe("routing and methods", () => {
     expect(outside.status).toBe(404);
   });
 
-  it.each(["POST", "PUT", "PATCH", "DELETE"])("%s is 405 with an Allow header", async (method) => {
-    const { deps, reads } = setup();
-    const { response, body } = await get("/terms", deps, { method });
-    expect(response.status).toBe(405);
-    expect(response.headers.get("Allow")).toBe("GET, HEAD, OPTIONS");
-    expect(body.error.code).toBe("method_not_allowed");
-    expect(reads).toHaveLength(0);
-  });
+  it.each(["POST", "PUT", "PATCH", "DELETE"])(
+    "%s is 405 with an Allow header",
+    async (method) => {
+      const { deps, reads } = setup();
+      const { response, body } = await get("/terms", deps, { method });
+      expect(response.status).toBe(405);
+      expect(response.headers.get("Allow")).toBe("GET, HEAD, OPTIONS");
+      expect(body.error.code).toBe("method_not_allowed");
+      expect(reads).toHaveLength(0);
+    },
+  );
 
   it("answers a CORS preflight, and every response carries the CORS header", async () => {
     const { deps } = setup();
     const preflight = await get("/terms", deps, { method: "OPTIONS" });
     expect(preflight.response.status).toBe(204);
-    expect(preflight.response.headers.get("Access-Control-Allow-Headers")).toBe("X-Client");
+    expect(preflight.response.headers.get("Access-Control-Allow-Headers")).toBe(
+      "X-Client",
+    );
     for (const path of ["/terms", "/nope", "/search"]) {
       const { response } = await get(path, deps);
-      expect(response.headers.get("Access-Control-Allow-Origin"), path).toBe("*");
+      expect(response.headers.get("Access-Control-Allow-Origin"), path).toBe(
+        "*",
+      );
     }
   });
 
   it("answers HEAD like GET, without a body", async () => {
     const { deps } = setup();
-    const response = await handleApiRequest(new Request(`${BASE}/terms`, { method: "HEAD" }), deps);
+    const response = await handleApiRequest(
+      new Request(`${BASE}/terms`, { method: "HEAD" }),
+      deps,
+    );
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("");
     expect(response.headers.get("Cache-Control")).toMatch(/s-maxage=\d+/);
   });
 
   it("matches captures and decodes them", () => {
-    expect(matchRoute("/courses/:abbr", "/courses/CSCI%201301")).toEqual(["CSCI 1301"]);
+    expect(matchRoute("/courses/:abbr", "/courses/CSCI%201301")).toEqual([
+      "CSCI 1301",
+    ]);
     expect(matchRoute("/courses/:abbr", "/courses/")).toBeNull();
-    expect(matchRoute("/subjects/:abbr/courses", "/subjects/CSCI/courses")).toEqual(["CSCI"]);
+    expect(
+      matchRoute("/subjects/:abbr/courses", "/subjects/CSCI/courses"),
+    ).toEqual(["CSCI"]);
   });
 });
 
@@ -197,7 +222,9 @@ describe("rate limits", () => {
       },
     };
     const { deps } = setup({ limiter });
-    await get("/terms", deps, { headers: { "CF-Connecting-IP": "203.0.113.9" } });
+    await get("/terms", deps, {
+      headers: { "CF-Connecting-IP": "203.0.113.9" },
+    });
     await get("/terms", deps);
     expect(keys).toEqual(["203.0.113.9", "unknown"]);
   });
@@ -263,7 +290,9 @@ describe("the edge cache", () => {
   it("marks answers cacheable by browsers and the edge", async () => {
     const { deps } = setup();
     const { response } = await get("/terms", deps);
-    expect(response.headers.get("Cache-Control")).toMatch(/^public, max-age=\d+, s-maxage=\d+$/);
+    expect(response.headers.get("Cache-Control")).toMatch(
+      /^public, max-age=\d+, s-maxage=\d+$/,
+    );
   });
 
   it("writes through waitUntil when the Worker provides it", async () => {
@@ -280,9 +309,12 @@ describe("the edge cache", () => {
 describe("errors from the database", () => {
   it("answers 503 with Retry-After when a read times out, and does not cache it", async () => {
     const cache = memoryCache();
-    const timeout = Object.assign(new Error("canceling statement due to statement timeout"), {
-      code: "57014",
-    });
+    const timeout = Object.assign(
+      new Error("canceling statement due to statement timeout"),
+      {
+        code: "57014",
+      },
+    );
     const { deps } = setup({
       cache,
       read: (async () => {

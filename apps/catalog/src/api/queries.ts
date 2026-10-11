@@ -13,7 +13,6 @@
 import type { ReadSql } from "~/db/reader";
 import { notFound } from "./errors";
 
-
 // ── Terms ────────────────────────────────────────────────────────────────────
 
 type PartOfTermRow = {
@@ -39,7 +38,10 @@ export type TermJson = {
 };
 
 function daysBetween(from: string, to: string): number {
-  return (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000;
+  return (
+    (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) /
+    86_400_000
+  );
 }
 
 /** The part of term that runs longest: the term's own dates. Ties go to the first code. */
@@ -58,7 +60,11 @@ export function longestPart(parts: readonly TermPart[]): TermPart | null {
 
 export async function listTerms(sql: ReadSql): Promise<{ terms: TermJson[] }> {
   const rows = await sql<
-    (Partial<PartOfTermRow> & { academicPeriod: number; termDescription: string; partDescription: string | null })[]
+    (Partial<PartOfTermRow> & {
+      academicPeriod: number;
+      termDescription: string;
+      partDescription: string | null;
+    })[]
   >`
     select t."academicPeriod", t.description as "termDescription",
            p.code, p.description as "partDescription",
@@ -109,7 +115,11 @@ export async function listTerms(sql: ReadSql): Promise<{ terms: TermJson[] }> {
 
 // ── Subjects ─────────────────────────────────────────────────────────────────
 
-export type SubjectJson = { abbr: string; description: string; courseCount: number };
+export type SubjectJson = {
+  abbr: string;
+  description: string;
+  courseCount: number;
+};
 
 export async function listSubjects(
   sql: ReadSql,
@@ -157,7 +167,9 @@ export async function listSubjectCourses(
   subject: { abbr: string; description: string };
   courses: CourseSummaryJson[];
 }> {
-  const [subject] = await sql<{ id: number; abbr: string; description: string }[]>`
+  const [subject] = await sql<
+    { id: number; abbr: string; description: string }[]
+  >`
     select id, abbr, description from uga.subjects where abbr = ${subjectAbbr}`;
   if (!subject) throw notFound(`No subject ${subjectAbbr}.`);
 
@@ -193,7 +205,12 @@ export async function searchCourses(
   term: number,
   query: string,
   limit: number,
-): Promise<{ term: number; query: string; limit: number; results: CourseSummaryJson[] }> {
+): Promise<{
+  term: number;
+  query: string;
+  limit: number;
+  results: CourseSummaryJson[];
+}> {
   const prefix = codePrefix(query);
   // `like` metacharacters cannot occur: the prefix is letters and digits only.
   const prefixPattern = prefix === null ? null : `${prefix}%`;
@@ -341,7 +358,12 @@ export async function courseExists(
   sql: ReadSql,
   code: string,
   term: number | null,
-): Promise<{ abbr: string; term: number | null; exists: boolean; offered: boolean | null }> {
+): Promise<{
+  abbr: string;
+  term: number | null;
+  exists: boolean;
+  offered: boolean | null;
+}> {
   const [row] = await sql<{ abbr: string; offered: boolean }[]>`
     select c.abbr,
            (${term}::int is not null and exists (

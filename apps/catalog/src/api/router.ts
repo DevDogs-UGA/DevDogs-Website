@@ -20,7 +20,10 @@ import * as queries from "./queries";
 /** Where the API lives on the zone; the Worker route is `<host>/catalog/v1/*`. */
 export const API_PREFIX = "/catalog/v1";
 
-type Handler = (url: URL, params: string[]) => (sql: ReadSql) => Promise<unknown>;
+type Handler = (
+  url: URL,
+  params: string[],
+) => (sql: ReadSql) => Promise<unknown>;
 
 type Route = {
   /** The path after the prefix, with `:name` segments. */
@@ -222,9 +225,14 @@ export async function handleApiRequest(
   }
   if (request.method !== "GET" && request.method !== "HEAD") {
     return finish(
-      errorJson(405, "method_not_allowed", "The catalog is read-only: GET only.", {
-        Allow: "GET, HEAD, OPTIONS",
-      }),
+      errorJson(
+        405,
+        "method_not_allowed",
+        "The catalog is read-only: GET only.",
+        {
+          Allow: "GET, HEAD, OPTIONS",
+        },
+      ),
     );
   }
 
@@ -273,7 +281,9 @@ export async function handleApiRequest(
 
     let response: Response;
     try {
-      response = json(200, await deps.read(read), { "Cache-Control": CACHEABLE });
+      response = json(200, await deps.read(read), {
+        "Cache-Control": CACHEABLE,
+      });
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
         // A short negative cache, so probing for courses that do not exist
@@ -293,14 +303,24 @@ export async function handleApiRequest(
     return finish(withHeadHandling(request, response), "miss");
   } catch (error) {
     if (error instanceof ApiError) {
-      return finish(withHeadHandling(request, errorJson(error.status, error.code, error.message)));
+      return finish(
+        withHeadHandling(
+          request,
+          errorJson(error.status, error.code, error.message),
+        ),
+      );
     }
     if (isUnavailableError(error)) {
       console.error("catalog read unavailable:", error);
       return finish(
-        errorJson(503, "unavailable", "The catalog database is busy. Try again shortly.", {
-          "Retry-After": "5",
-        }),
+        errorJson(
+          503,
+          "unavailable",
+          "The catalog database is busy. Try again shortly.",
+          {
+            "Retry-After": "5",
+          },
+        ),
       );
     }
     // Rethrown to Sentry's `withSentry` wrapper, which reports it and
@@ -313,5 +333,8 @@ export async function handleApiRequest(
 /** HEAD gets GET's status and headers, no body. */
 function withHeadHandling(request: Request, response: Response): Response {
   if (request.method !== "HEAD") return response;
-  return new Response(null, { status: response.status, headers: response.headers });
+  return new Response(null, {
+    status: response.status,
+    headers: response.headers,
+  });
 }

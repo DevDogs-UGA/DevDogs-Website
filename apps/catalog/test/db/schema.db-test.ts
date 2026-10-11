@@ -78,21 +78,31 @@ function byName(a: { name: string }, b: { name: string }): number {
 describe("the read-only role", () => {
   it("reads the uga views as catalog_reader", async () => {
     await sql`insert into schedule_builder.terms ("academicPeriod", description) values (209902, 'Test Spring 2099')`;
-    const rows = await withCatalogReader(db.url, (tx) =>
-      tx<{ academicPeriod: number }[]>`select "academicPeriod" from uga.terms`,
+    const rows = await withCatalogReader(
+      db.url,
+      (tx) =>
+        tx<
+          { academicPeriod: number }[]
+        >`select "academicPeriod" from uga.terms`,
     );
     expect(rows.map((r) => r.academicPeriod)).toContain(209902);
   });
 
   it("cannot read the tables behind the views, the scrape log, or write anything", async () => {
     await expect(
-      withCatalogReader(db.url, (tx) => tx`select * from schedule_builder.terms`),
+      withCatalogReader(
+        db.url,
+        (tx) => tx`select * from schedule_builder.terms`,
+      ),
     ).rejects.toMatchObject({ code: "42501" });
     await expect(
       withCatalogReader(db.url, (tx) => tx`select * from uga."scrapeRuns"`),
     ).rejects.toMatchObject({ code: "42501" });
     await expect(
-      withCatalogReader(db.url, (tx) => tx`select * from platform."jobHeartbeats"`),
+      withCatalogReader(
+        db.url,
+        (tx) => tx`select * from platform."jobHeartbeats"`,
+      ),
     ).rejects.toMatchObject({ code: "42501" });
     // The transaction is read-only, and the role has no write grant either way.
     await expect(
@@ -100,7 +110,9 @@ describe("the read-only role", () => {
         db.url,
         (tx) => tx`insert into schedule_builder.terms values (1, 'x')`,
       ),
-    ).rejects.toMatchObject({ code: expect.stringMatching(/^(42501|25006)$/) as unknown });
+    ).rejects.toMatchObject({
+      code: expect.stringMatching(/^(42501|25006)$/) as unknown,
+    });
   });
 
   it("is stopped by the statement timeout", async () => {

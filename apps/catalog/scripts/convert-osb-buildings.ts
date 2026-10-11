@@ -41,9 +41,7 @@ type Source = {
 
 const root = process.argv[2];
 if (!root) {
-  console.error(
-    "usage: tsx scripts/convert-osb-buildings.ts <OSB clone>",
-  );
+  console.error("usage: tsx scripts/convert-osb-buildings.ts <OSB clone>");
   process.exit(2);
 }
 
@@ -64,7 +62,9 @@ function csvField(value: string | number | null): string {
 
 function inBox(campus: string, lat: number, lon: number): boolean {
   const box = CAMPUSES[campus]!;
-  return lat >= box.south && lat <= box.north && lon >= box.west && lon <= box.east;
+  return (
+    lat >= box.south && lat <= box.north && lon >= box.west && lon <= box.east
+  );
 }
 
 function toRecords(entries: Source[], defaultCampus: string): BuildingRecord[] {
@@ -80,7 +80,10 @@ function toRecords(entries: Source[], defaultCampus: string): BuildingRecord[] {
   for (const [id, list] of byId) {
     for (const e of list) {
       const key = `${e.Latitude},${e.Longitude}`;
-      coordinateOwners.set(key, (coordinateOwners.get(key) ?? new Set()).add(id));
+      coordinateOwners.set(
+        key,
+        (coordinateOwners.get(key) ?? new Set()).add(id),
+      );
     }
   }
 
@@ -92,7 +95,9 @@ function toRecords(entries: Source[], defaultCampus: string): BuildingRecord[] {
     let chosen = distinct[0]!;
     if (distinct.length > 1) {
       const own = distinct.filter(
-        (e) => (coordinateOwners.get(`${e.Latitude},${e.Longitude}`)?.size ?? 0) === 1,
+        (e) =>
+          (coordinateOwners.get(`${e.Latitude},${e.Longitude}`)?.size ?? 0) ===
+          1,
       );
       chosen = own[0] ?? chosen;
       console.error(
@@ -120,23 +125,30 @@ function toRecords(entries: Source[], defaultCampus: string): BuildingRecord[] {
 }
 
 const athensAll = toRecords(
-  read("services/course-information/src/main/resources/buildingData/AthensBuildingData.json"),
+  read(
+    "services/course-information/src/main/resources/buildingData/AthensBuildingData.json",
+  ),
   "athens",
 );
 const griffin = toRecords(
-  read("algorithm-prototyping/src/main/resources/buildingData/GriffinBuildingData.json"),
+  read(
+    "algorithm-prototyping/src/main/resources/buildingData/GriffinBuildingData.json",
+  ),
   "griffin",
 );
 const tifton = toRecords(
-  read("algorithm-prototyping/src/main/resources/buildingData/TiftonBuildingData.json"),
+  read(
+    "algorithm-prototyping/src/main/resources/buildingData/TiftonBuildingData.json",
+  ),
   "tifton",
 );
 
 // The Athens file's two Tifton entries go with Tifton.
 const athens = athensAll.filter((r) => r.campus === "athens");
-const tiftonAll = [...tifton, ...athensAll.filter((r) => r.campus === "tifton")].sort(
-  (a, b) => a.id - b.id,
-);
+const tiftonAll = [
+  ...tifton,
+  ...athensAll.filter((r) => r.campus === "tifton"),
+].sort((a, b) => a.id - b.id);
 
 const header = "id,campus,name,address,latitude,longitude\n";
 function write(name: string, records: BuildingRecord[]): void {

@@ -43,7 +43,9 @@ type SectionSpec = {
 function rowsOf(section: SectionSpec): Row[] {
   const subject = section.subject ?? section.course.replace(/\d+$/, "");
   const number = section.course.replace(/\D/g, "");
-  const meetings = section.meetings ?? [{ days: "MW", time: "10:00 am-10:50 am", building: "" }];
+  const meetings = section.meetings ?? [
+    { days: "MW", time: "10:00 am-10:50 am", building: "" },
+  ];
   return meetings.map((m) => ({
     ACADEMIC_PERIOD: String(section.period),
     "SCHEDULE_OFFERING.COURSE_REFERENCE_NUMBER": String(section.crn),
@@ -56,15 +58,18 @@ function rowsOf(section: SectionSpec): Row[] {
     "SCHEDULE_OFFERING.MAX_CREDITS": "4",
     "SCHEDULE_OFFERING.MIN_BILLING": "3",
     "SCHEDULE_OFFERING.SUBJECT": subject,
-    "SCHEDULE_OFFERING.SUBJECT_DESC": section.subjectDesc ?? `${subject} Studies`,
+    "SCHEDULE_OFFERING.SUBJECT_DESC":
+      section.subjectDesc ?? `${subject} Studies`,
     "SCHEDULE_OFFERING.COLLEGE_DESC": "Franklin College",
     "SCHEDULE_OFFERING.DEPARTMENT_DESC": `${subject} Department`,
     "SCHEDULE_OFFERING.SCHEDULE": "LEC",
     "SCHEDULE_OFFERING.SCHEDULE_DESC": "Lecture",
     "SCHEDULE_OFFERING.CAMPUS": "ATH",
     "SCHEDULE_OFFERING.CAMPUS_DESC": "Athens",
-    "SCHEDULE_OFFERING.PRIMARY_INSTRUCTOR_FIRST_NAME": section.instructor?.[0] ?? "",
-    "SCHEDULE_OFFERING.PRIMARY_INSTRUCTOR_LAST_NAME": section.instructor?.[1] ?? "",
+    "SCHEDULE_OFFERING.PRIMARY_INSTRUCTOR_FIRST_NAME":
+      section.instructor?.[0] ?? "",
+    "SCHEDULE_OFFERING.PRIMARY_INSTRUCTOR_LAST_NAME":
+      section.instructor?.[1] ?? "",
     "SCHEDULE_OFFERING.MAXIMUM_ENROLLMENT": "30",
     "SCHEDULE_OFFERING.ACTUAL_ENROLLMENT": "10",
     "SCHEDULE_OFFERING.SEATS_AVAILABLE": "20",
@@ -77,7 +82,8 @@ function rowsOf(section: SectionSpec): Row[] {
     "MEETING_TIME.END_DATE": "05/04/2027",
     Time: m.time,
     Building: m.building,
-    "MEETING_TIME.BUILDING_DESC": m.building && m.building !== "NCRR" ? `Building ${m.building}` : "",
+    "MEETING_TIME.BUILDING_DESC":
+      m.building && m.building !== "NCRR" ? `Building ${m.building}` : "",
     Room: m.room ?? "",
   }));
 }
@@ -95,9 +101,29 @@ const SECTIONS: SectionSpec[] = [
       { days: "F", time: "09:30 am-10:20 am", building: "0024", room: "101" },
     ],
   },
-  { crn: 20002, course: "CSCI1301", title: "Introduction to Programming", subjectDesc: "Computer Science", period: SPRING, instructor: ["Jane", "Doe"] },
-  { crn: 20003, course: "CSCI1301", title: "Introduction to Programming", subjectDesc: "Computer Science", period: SPRING, status: "C" },
-  { crn: 20004, course: "CSCI1302", title: "Software Development", subjectDesc: "Computer Science", period: SPRING },
+  {
+    crn: 20002,
+    course: "CSCI1301",
+    title: "Introduction to Programming",
+    subjectDesc: "Computer Science",
+    period: SPRING,
+    instructor: ["Jane", "Doe"],
+  },
+  {
+    crn: 20003,
+    course: "CSCI1301",
+    title: "Introduction to Programming",
+    subjectDesc: "Computer Science",
+    period: SPRING,
+    status: "C",
+  },
+  {
+    crn: 20004,
+    course: "CSCI1302",
+    title: "Software Development",
+    subjectDesc: "Computer Science",
+    period: SPRING,
+  },
   {
     crn: 20010,
     course: "MATH2250",
@@ -108,9 +134,28 @@ const SECTIONS: SectionSpec[] = [
     meetings: [{ days: "MW", time: "11:00 am-11:50 am", building: "NCRR" }],
   },
   // Every section cancelled: the course exists, but it is not on offer.
-  { crn: 20020, course: "HIST1111", title: "Cancelled History", subjectDesc: "History", period: SPRING, status: "C" },
-  { crn: 20030, course: "CSCI1301", title: "Introduction to Programming", subjectDesc: "Computer Science", period: FALL },
-  { crn: 20031, course: "ENGL1101", title: "Composition", subjectDesc: "English", period: FALL },
+  {
+    crn: 20020,
+    course: "HIST1111",
+    title: "Cancelled History",
+    subjectDesc: "History",
+    period: SPRING,
+    status: "C",
+  },
+  {
+    crn: 20030,
+    course: "CSCI1301",
+    title: "Introduction to Programming",
+    subjectDesc: "Computer Science",
+    period: FALL,
+  },
+  {
+    crn: 20031,
+    course: "ENGL1101",
+    title: "Composition",
+    subjectDesc: "English",
+    period: FALL,
+  },
 ];
 
 function partOfTerm(academicPeriod: number) {
@@ -166,10 +211,20 @@ function deps(overrides: Partial<ApiDeps> = {}): ApiDeps {
   };
 }
 
-async function call(operationId: string, path: string, expectStatus = 200, apiDeps = deps()) {
-  const response = await handleApiRequest(new Request(`${BASE}${path}`), apiDeps);
+async function call(
+  operationId: string,
+  path: string,
+  expectStatus = 200,
+  apiDeps = deps(),
+) {
+  const response = await handleApiRequest(
+    new Request(`${BASE}${path}`),
+    apiDeps,
+  );
   const body: unknown = await response.json();
-  expect(response.status, `${path}: ${JSON.stringify(body)}`).toBe(expectStatus);
+  expect(response.status, `${path}: ${JSON.stringify(body)}`).toBe(
+    expectStatus,
+  );
   if (validator.has(operationId, expectStatus)) {
     expect(validator.check(operationId, expectStatus, body), path).toEqual([]);
   }
@@ -179,7 +234,10 @@ async function call(operationId: string, path: string, expectStatus = 200, apiDe
 describe("GET /terms", () => {
   it("lists available terms newest first, with the drop/add end dates", async () => {
     const { body } = await call("listTerms", "/terms");
-    expect(body.terms.map((t: any) => t.academicPeriod)).toEqual([SPRING, FALL]);
+    expect(body.terms.map((t: any) => t.academicPeriod)).toEqual([
+      SPRING,
+      FALL,
+    ]);
     expect(body.terms[0]).toMatchObject({
       description: "Spring 2027",
       classesBegin: "2027-01-11",
@@ -211,13 +269,22 @@ describe("GET /subjects", () => {
   it("counts every course without a term, and only the offered ones with one", async () => {
     const all = await call("listSubjects", "/subjects");
     expect(all.body.term).toBeNull();
-    expect(all.body.subjects.map((s: any) => s.abbr)).toEqual(["CSCI", "ENGL", "HIST", "MATH"]);
-    expect(all.body.subjects.find((s: any) => s.abbr === "CSCI").courseCount).toBe(2);
+    expect(all.body.subjects.map((s: any) => s.abbr)).toEqual([
+      "CSCI",
+      "ENGL",
+      "HIST",
+      "MATH",
+    ]);
+    expect(
+      all.body.subjects.find((s: any) => s.abbr === "CSCI").courseCount,
+    ).toBe(2);
 
     const spring = await call("listSubjects", `/subjects?term=${SPRING}`);
     expect(spring.body.term).toBe(SPRING);
     // HIST1111 is fully cancelled and ENGL1101 is Fall only.
-    expect(spring.body.subjects.map((s: any) => [s.abbr, s.courseCount])).toEqual([
+    expect(
+      spring.body.subjects.map((s: any) => [s.abbr, s.courseCount]),
+    ).toEqual([
       ["CSCI", 2],
       ["MATH", 1],
     ]);
@@ -226,8 +293,14 @@ describe("GET /subjects", () => {
 
 describe("GET /subjects/{abbr}/courses", () => {
   it("lists a subject's offered courses with their non-cancelled section counts, case-insensitively", async () => {
-    const { body } = await call("listSubjectCourses", `/subjects/csci/courses?term=${SPRING}`);
-    expect(body.subject).toEqual({ abbr: "CSCI", description: "Computer Science" });
+    const { body } = await call(
+      "listSubjectCourses",
+      `/subjects/csci/courses?term=${SPRING}`,
+    );
+    expect(body.subject).toEqual({
+      abbr: "CSCI",
+      description: "Computer Science",
+    });
     expect(body.courses.map((c: any) => [c.abbr, c.sectionCount])).toEqual([
       ["CSCI1301", 2],
       ["CSCI1302", 1],
@@ -243,44 +316,93 @@ describe("GET /subjects/{abbr}/courses", () => {
   });
 
   it("404s an unknown subject and returns an empty list for a term without it", async () => {
-    await call("listSubjectCourses", `/subjects/ZZZZ/courses?term=${SPRING}`, 404);
-    const { body } = await call("listSubjectCourses", `/subjects/ENGL/courses?term=${SPRING}`);
+    await call(
+      "listSubjectCourses",
+      `/subjects/ZZZZ/courses?term=${SPRING}`,
+      404,
+    );
+    const { body } = await call(
+      "listSubjectCourses",
+      `/subjects/ENGL/courses?term=${SPRING}`,
+    );
     expect(body.courses).toEqual([]);
   });
 });
 
 describe("GET /search", () => {
   it("finds a course by title words, by code with or without the space, and by code prefix", async () => {
-    for (const q of ["programming", "csci1301", "csci 1301", "CSCI-1301", "csci13"]) {
-      const { body } = await call("searchCourses", `/search?term=${SPRING}&q=${encodeURIComponent(q)}`);
-      expect(body.results.map((c: any) => c.abbr), q).toContain("CSCI1301");
+    for (const q of [
+      "programming",
+      "csci1301",
+      "csci 1301",
+      "CSCI-1301",
+      "csci13",
+    ]) {
+      const { body } = await call(
+        "searchCourses",
+        `/search?term=${SPRING}&q=${encodeURIComponent(q)}`,
+      );
+      expect(
+        body.results.map((c: any) => c.abbr),
+        q,
+      ).toContain("CSCI1301");
     }
   });
 
   it("puts the exact code first, and leaves out courses not on offer in the term", async () => {
-    const { body } = await call("searchCourses", `/search?term=${SPRING}&q=csci1302`);
+    const { body } = await call(
+      "searchCourses",
+      `/search?term=${SPRING}&q=csci1302`,
+    );
     expect(body.results[0].abbr).toBe("CSCI1302");
-    const history = await call("searchCourses", `/search?term=${SPRING}&q=history`);
+    const history = await call(
+      "searchCourses",
+      `/search?term=${SPRING}&q=history`,
+    );
     expect(history.body.results).toEqual([]);
-    const composition = await call("searchCourses", `/search?term=${SPRING}&q=composition`);
+    const composition = await call(
+      "searchCourses",
+      `/search?term=${SPRING}&q=composition`,
+    );
     expect(composition.body.results).toEqual([]);
-    const fall = await call("searchCourses", `/search?term=${FALL}&q=composition`);
+    const fall = await call(
+      "searchCourses",
+      `/search?term=${FALL}&q=composition`,
+    );
     expect(fall.body.results.map((c: any) => c.abbr)).toEqual(["ENGL1101"]);
   });
 
   it("honours limit and echoes it, and never returns more than asked", async () => {
-    const { body } = await call("searchCourses", `/search?term=${SPRING}&q=csci&limit=1`);
+    const { body } = await call(
+      "searchCourses",
+      `/search?term=${SPRING}&q=csci&limit=1`,
+    );
     expect(body.limit).toBe(1);
     expect(body.results).toHaveLength(1);
-    const defaults = await call("searchCourses", `/search?term=${SPRING}&q=csci`);
+    const defaults = await call(
+      "searchCourses",
+      `/search?term=${SPRING}&q=csci`,
+    );
     expect(defaults.body.limit).toBe(20);
   });
 
   it("treats web-search syntax as syntax and hostile input as text", async () => {
-    await call("searchCourses", `/search?term=${SPRING}&q=${encodeURIComponent('"intro to" -calculus')}`);
-    await call("searchCourses", `/search?term=${SPRING}&q=${encodeURIComponent("'; drop table x; --")}`);
-    await call("searchCourses", `/search?term=${SPRING}&q=${encodeURIComponent("%_\\")}`);
-    const { body } = await call("searchCourses", `/search?term=${SPRING}&q=${encodeURIComponent("calculus -programming")}`);
+    await call(
+      "searchCourses",
+      `/search?term=${SPRING}&q=${encodeURIComponent('"intro to" -calculus')}`,
+    );
+    await call(
+      "searchCourses",
+      `/search?term=${SPRING}&q=${encodeURIComponent("'; drop table x; --")}`,
+    );
+    await call(
+      "searchCourses",
+      `/search?term=${SPRING}&q=${encodeURIComponent("%_\\")}`,
+    );
+    const { body } = await call(
+      "searchCourses",
+      `/search?term=${SPRING}&q=${encodeURIComponent("calculus -programming")}`,
+    );
     expect(body.results.map((c: any) => c.abbr)).toEqual(["MATH2250"]);
   });
 
@@ -291,7 +413,10 @@ describe("GET /search", () => {
 
 describe("GET /courses/{abbr}", () => {
   it("returns the course, its Bulletin details, and every term it is offered", async () => {
-    const { body } = await call("getCourse", `/courses/CSCI1301?term=${SPRING}`);
+    const { body } = await call(
+      "getCourse",
+      `/courses/CSCI1301?term=${SPRING}`,
+    );
     expect(body.course).toMatchObject({
       abbr: "CSCI1301",
       title: "Introduction to Programming",
@@ -319,7 +444,10 @@ describe("GET /courses/{abbr}", () => {
   });
 
   it("has null details for a course without Bulletin data, and an empty offeredIn when fully cancelled", async () => {
-    const { body } = await call("getCourse", `/courses/HIST1111?term=${SPRING}`);
+    const { body } = await call(
+      "getCourse",
+      `/courses/HIST1111?term=${SPRING}`,
+    );
     expect(body.details).toBeNull();
     expect(body.offeredIn).toEqual([]);
     expect(body.sectionCount).toBe(0);
@@ -333,20 +461,39 @@ describe("GET /courses/{abbr}", () => {
 
 describe("GET /course-exists", () => {
   it("is always 200: exists, and whether it is on offer in a term", async () => {
-    const yes = await call("courseExists", `/course-exists?abbr=csci%201301&term=${SPRING}`);
-    expect(yes.body).toEqual({ abbr: "CSCI1301", term: SPRING, exists: true, offered: true });
+    const yes = await call(
+      "courseExists",
+      `/course-exists?abbr=csci%201301&term=${SPRING}`,
+    );
+    expect(yes.body).toEqual({
+      abbr: "CSCI1301",
+      term: SPRING,
+      exists: true,
+      offered: true,
+    });
 
-    const notOffered = await call("courseExists", `/course-exists?abbr=ENGL1101&term=${SPRING}`);
+    const notOffered = await call(
+      "courseExists",
+      `/course-exists?abbr=ENGL1101&term=${SPRING}`,
+    );
     expect(notOffered.body).toMatchObject({ exists: true, offered: false });
 
     const none = await call("courseExists", "/course-exists?abbr=NOPE0000");
-    expect(none.body).toEqual({ abbr: "NOPE0000", term: null, exists: false, offered: null });
+    expect(none.body).toEqual({
+      abbr: "NOPE0000",
+      term: null,
+      exists: false,
+      offered: null,
+    });
   });
 });
 
 describe("GET /sections", () => {
   it("returns sections with their meetings, building coordinates and cancelled flag", async () => {
-    const { body } = await call("listSections", `/sections?term=${SPRING}&courses=CSCI1301`);
+    const { body } = await call(
+      "listSections",
+      `/sections?term=${SPRING}&courses=CSCI1301`,
+    );
     expect(body.term).toBe(SPRING);
     expect(body.sections.map((s: any) => [s.crn, s.cancelled])).toEqual([
       [20001, false],
@@ -385,20 +532,37 @@ describe("GET /sections", () => {
       "listSections",
       `/sections?term=${SPRING}&courseIds=${id}&courses=NOPE0000,CSCI1302`,
     );
-    expect(body.sections.map((s: any) => s.courseAbbr)).toEqual(["CSCI1302", "MATH2250"]);
-    expect(body.sections[1].meetings[0]).toMatchObject({ locationStatus: "NCRR", building: null });
-    expect(body.sections[0].meetings[0]).toMatchObject({ locationStatus: "TBA", building: null });
+    expect(body.sections.map((s: any) => s.courseAbbr)).toEqual([
+      "CSCI1302",
+      "MATH2250",
+    ]);
+    expect(body.sections[1].meetings[0]).toMatchObject({
+      locationStatus: "NCRR",
+      building: null,
+    });
+    expect(body.sections[0].meetings[0]).toMatchObject({
+      locationStatus: "TBA",
+      building: null,
+    });
   });
 
   it("returns an empty list, not an error, when the courses have no sections in the term", async () => {
-    const { body } = await call("listSections", `/sections?term=${SPRING}&courses=ENGL1101`);
+    const { body } = await call(
+      "listSections",
+      `/sections?term=${SPRING}&courses=ENGL1101`,
+    );
     expect(body.sections).toEqual([]);
   });
 
   it("accepts exactly 15 courses and refuses 16 with the spec's 400", async () => {
-    const codes = (n: number) => Array.from({ length: n }, (_, i) => `ZZZ${1000 + i}`).join(",");
+    const codes = (n: number) =>
+      Array.from({ length: n }, (_, i) => `ZZZ${1000 + i}`).join(",");
     await call("listSections", `/sections?term=${SPRING}&courses=${codes(15)}`);
-    const { body } = await call("listSections", `/sections?term=${SPRING}&courses=${codes(16)}`, 400);
+    const { body } = await call(
+      "listSections",
+      `/sections?term=${SPRING}&courses=${codes(16)}`,
+      400,
+    );
     expect(body.error.code).toBe("too_many_courses");
   });
 });
@@ -408,12 +572,27 @@ describe("limits", () => {
     const deny: Limiter = { limit: async () => ({ success: false }) };
     const allow: Limiter = { limit: async () => ({ success: true }) };
 
-    const blocked = await call("listTerms", "/terms", 429, deps({ limiter: deny }));
+    const blocked = await call(
+      "listTerms",
+      "/terms",
+      429,
+      deps({ limiter: deny }),
+    );
     expect(blocked.body.error.code).toBe("rate_limited");
     expect(blocked.response.headers.get("Retry-After")).toBe("60");
 
-    await call("searchCourses", `/search?term=${SPRING}&q=csci`, 429, deps({ limiter: allow, searchLimiter: deny }));
-    await call("listTerms", "/terms", 200, deps({ limiter: allow, searchLimiter: deny }));
+    await call(
+      "searchCourses",
+      `/search?term=${SPRING}&q=csci`,
+      429,
+      deps({ limiter: allow, searchLimiter: deny }),
+    );
+    await call(
+      "listTerms",
+      "/terms",
+      200,
+      deps({ limiter: allow, searchLimiter: deny }),
+    );
   });
 });
 
@@ -421,7 +600,9 @@ describe("the read-only role", () => {
   it("cannot write, even through the router's own connection", async () => {
     await expect(
       withCatalogReader(testDb.url, (tx) => tx`delete from uga.offerings`),
-    ).rejects.toMatchObject({ code: expect.stringMatching(/^(42501|25006)$/) as unknown });
+    ).rejects.toMatchObject({
+      code: expect.stringMatching(/^(42501|25006)$/) as unknown,
+    });
   });
 
   it("answers 503 with Retry-After when a query outlives the statement timeout", async () => {

@@ -52,7 +52,8 @@ function catalogMigration(): string {
   const file = readdirSync(join(SUPABASE, "migrations")).find((f) =>
     f.includes("catalog_reader"),
   );
-  if (!file) throw new Error("No catalog_reader migration in supabase/migrations.");
+  if (!file)
+    throw new Error("No catalog_reader migration in supabase/migrations.");
   return join(SUPABASE, "migrations", file);
 }
 
@@ -97,7 +98,9 @@ async function loadSchemas(url: string): Promise<void> {
         }
       }
       if (failed.length === pending.length) {
-        throw new Error(`Schema files that cannot load:\n${lastErrors.join("\n")}`);
+        throw new Error(
+          `Schema files that cannot load:\n${lastErrors.join("\n")}`,
+        );
       }
       pending = failed;
     }

@@ -13,7 +13,7 @@
     "test:db": "vitest run --config vitest.db.config.ts",
     "test:live": "vitest run --config vitest.live.config.ts",
     "check:buildings": "tsx scripts/check-buildings.ts",
-    "check:spec": "tsx scripts/check-spec.ts",
+    "check:spec": "vitest run test/spec.test.ts",
     "format:check": "prettier --check \"**/*.{ts,json,yaml,md}\" --cache",
     "format:write": "prettier --write \"**/*.{ts,json,yaml,md}\" --cache",
     "populate:buildings": "tsx scripts/import-buildings.ts",

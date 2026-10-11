@@ -27,6 +27,10 @@ export class ApiError extends Error {
 export const invalid = (message: string) =>
   new ApiError(400, "invalid_parameter", message);
 export const missing = (name: string) =>
-  new ApiError(400, "missing_parameter", `Missing required parameter: ${name}.`);
+  new ApiError(
+    400,
+    "missing_parameter",
+    `Missing required parameter: ${name}.`,
+  );
 export const notFound = (message: string) =>
   new ApiError(404, "not_found", message);

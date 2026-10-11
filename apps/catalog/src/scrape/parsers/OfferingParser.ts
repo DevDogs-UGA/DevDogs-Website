@@ -21,6 +21,16 @@ interface PendingOffering {
 
 export class OfferingCollector {
   private readonly pending = new Map<number, PendingOffering>();
+  private readonly unknownParts = new Map<string, number>();
+
+  /**
+   * Sections left out because the feed names a part of term the calendar did
+   * not give dates for (and the database has none), by part code. Valid for
+   * after `flush`.
+   */
+  get sectionsInUnknownParts(): ReadonlyMap<string, number> {
+    return this.unknownParts;
+  }
 
   collect(row: Row): void {
     const crn = parseInt(
@@ -77,6 +87,7 @@ export class OfferingCollector {
     instructorIdMap: Map<string, number>,
     scheduleTypeIdMap: Map<string, number>,
     campusIdMap: Map<string, number>,
+    knownParts: ReadonlySet<string>,
   ): Promise<Set<number>> {
     const validCrns = new Set<number>();
     const rows: (typeof offerings.$inferInsert)[] = [];
@@ -86,6 +97,18 @@ export class OfferingCollector {
       const scheduleTypeId = scheduleTypeIdMap.get(o.scheduleTypeAbbr);
       const campusId = campusIdMap.get(o.campusAbbr);
       if (!courseId || !scheduleTypeId || !campusId) continue;
+      // `offerings` references `partsOfTerm` by (term, code). A part the
+      // registrar's calendar lists with a date it cannot parse (a clinical
+      // rotation with "n/a" for its last day) has no row, and inserting its
+      // sections would fail the whole term on the foreign key. They are left
+      // out and reported instead (the `partsOfTermKnown` invariant).
+      if (!knownParts.has(o.partOfTerm)) {
+        this.unknownParts.set(
+          o.partOfTerm,
+          (this.unknownParts.get(o.partOfTerm) ?? 0) + 1,
+        );
+        continue;
+      }
 
       validCrns.add(o.crn);
       rows.push({

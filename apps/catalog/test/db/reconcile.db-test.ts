@@ -86,7 +86,9 @@ function row(opts: {
     "MEETING_TIME.MONDAY_IND": "Y",
     Time: opts.time ?? "10:00 am-10:50 am",
     Building: opts.building ?? "",
-    "MEETING_TIME.BUILDING_DESC": opts.building ? `Building ${opts.building}` : "",
+    "MEETING_TIME.BUILDING_DESC": opts.building
+      ? `Building ${opts.building}`
+      : "",
   };
 }
 
@@ -103,7 +105,11 @@ function term(period: number, rows: Row[]): TermToReconcile {
 function sections(period: number, firstCrn: number, count: number): Row[] {
   return Array.from({ length: count }, (_, i) => {
     const minute = String(i * 5).padStart(2, "0");
-    return row({ period, crn: firstCrn + i, time: `09:${minute} am-10:${minute} am` });
+    return row({
+      period,
+      crn: firstCrn + i,
+      time: `09:${minute} am-10:${minute} am`,
+    });
   });
 }
 
@@ -111,7 +117,9 @@ const meetingsOf = (period: number, crn: number) =>
   db
     .select()
     .from(meetings)
-    .where(and(eq(meetings.academicPeriod, period), eq(meetings.offeringCrn, crn)));
+    .where(
+      and(eq(meetings.academicPeriod, period), eq(meetings.offeringCrn, crn)),
+    );
 
 describe("reconcileTerm", () => {
   const A = 900101;
@@ -120,24 +128,40 @@ describe("reconcileTerm", () => {
 
   beforeAll(async () => {
     await reconcileTerm(
-      term(A, [row({ period: A, crn: 9010001 }), row({ period: A, crn: 9010002, time: "11:00 am-11:50 am" })]),
+      term(A, [
+        row({ period: A, crn: 9010001 }),
+        row({ period: A, crn: 9010002, time: "11:00 am-11:50 am" }),
+      ]),
       db,
       { invariants: "report" },
     );
     await reconcileTerm(
-      term(B, [row({ period: B, crn: 9010001, course: "RCTEST102", time: "09:00 am-09:50 am" })]),
+      term(B, [
+        row({
+          period: B,
+          crn: 9010001,
+          course: "RCTEST102",
+          time: "09:00 am-09:50 am",
+        }),
+      ]),
       db,
       { invariants: "report" },
     );
     await reconcileTerm(
-      term(EMPTY, [row({ period: EMPTY, crn: 9010201 }), row({ period: EMPTY, crn: 9010202 })]),
+      term(EMPTY, [
+        row({ period: EMPTY, crn: 9010201 }),
+        row({ period: EMPTY, crn: 9010202 }),
+      ]),
       db,
       { invariants: "report" },
     );
   });
 
   it("touches only the reconciled term: cancels a vanished offering, keeps and adds others, replaces only this term's meetings, leaves other terms byte-identical", async () => {
-    const beforeB = await db.select().from(offerings).where(eq(offerings.academicPeriod, B));
+    const beforeB = await db
+      .select()
+      .from(offerings)
+      .where(eq(offerings.academicPeriod, B));
     const beforeBMeetings = await meetingsOf(B, 9010001);
     const beforeKeep = await meetingsOf(A, 9010001);
     const beforeDrop = await meetingsOf(A, 9010002);
@@ -165,7 +189,9 @@ describe("reconcileTerm", () => {
     });
 
     const after = new Map(
-      (await db.select().from(offerings).where(eq(offerings.academicPeriod, A))).map((o) => [o.crn, o]),
+      (
+        await db.select().from(offerings).where(eq(offerings.academicPeriod, A))
+      ).map((o) => [o.crn, o]),
     );
     expect(after.get(9010001)?.cancelled).toBe(false);
     expect(after.get(9010003)?.cancelled).toBe(false);
@@ -181,14 +207,25 @@ describe("reconcileTerm", () => {
     expect(await meetingsOf(A, 9010002)).toEqual(beforeDrop);
 
     // Term B was never passed to this run.
-    expect(await db.select().from(offerings).where(eq(offerings.academicPeriod, B))).toEqual(beforeB);
+    expect(
+      await db.select().from(offerings).where(eq(offerings.academicPeriod, B)),
+    ).toEqual(beforeB);
     expect(await meetingsOf(B, 9010001)).toEqual(beforeBMeetings);
   });
 
   it("cancels every offering when the feed is empty, without building an empty NOT IN", async () => {
-    const result = await reconcileTerm(term(EMPTY, []), db, { invariants: "report" });
-    expect(result).toMatchObject({ offeringCount: 0, meetingCount: 0, cancelledCount: 2 });
-    const rows = await db.select().from(offerings).where(eq(offerings.academicPeriod, EMPTY));
+    const result = await reconcileTerm(term(EMPTY, []), db, {
+      invariants: "report",
+    });
+    expect(result).toMatchObject({
+      offeringCount: 0,
+      meetingCount: 0,
+      cancelledCount: 2,
+    });
+    const rows = await db
+      .select()
+      .from(offerings)
+      .where(eq(offerings.academicPeriod, EMPTY));
     expect(rows).toHaveLength(2);
     expect(rows.every((o) => o.cancelled)).toBe(true);
     // ...and that is exactly what the section-count invariant is for.
@@ -215,7 +252,9 @@ describe("scrape invariants, enforced", () => {
   const P = 900201;
 
   beforeAll(async () => {
-    await reconcileTerm(term(P, sections(P, 9020001, 10)), db, { invariants: "report" });
+    await reconcileTerm(term(P, sections(P, 9020001, 10)), db, {
+      invariants: "report",
+    });
   });
 
   it("passes every invariant for a clean rescrape", async () => {
@@ -228,12 +267,15 @@ describe("scrape invariants, enforced", () => {
       "timesWellFormed",
       "buildingsResolve",
       "cancelledFlagged",
+      "partsOfTermKnown",
     ]);
   });
 
   it("allows a 10% drop in sections, and writes it", async () => {
     const result = await reconcileTerm(term(P, sections(P, 9020001, 9)), db);
-    expect(result.invariants.find((i) => i.name === "sectionCountStable")).toMatchObject({
+    expect(
+      result.invariants.find((i) => i.name === "sectionCountStable"),
+    ).toMatchObject({
       ok: true,
       detail: { previous: 10, current: 9, changePercent: -10 },
     });
@@ -242,14 +284,25 @@ describe("scrape invariants, enforced", () => {
   });
 
   it("rolls the term back when the section count falls by more than 15%", async () => {
-    const before = await db.select().from(offerings).where(eq(offerings.academicPeriod, P));
+    const before = await db
+      .select()
+      .from(offerings)
+      .where(eq(offerings.academicPeriod, P));
 
-    const error = await reconcileTerm(term(P, sections(P, 9020001, 5)), db).catch((e: unknown) => e);
+    const error = await reconcileTerm(
+      term(P, sections(P, 9020001, 5)),
+      db,
+    ).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(InvariantViolationError);
-    expect((error as InvariantViolationError).failures.map((f) => f.name)).toEqual(["sectionCountStable"]);
+    expect(
+      (error as InvariantViolationError).failures.map((f) => f.name),
+    ).toEqual(["sectionCountStable"]);
 
     // Nothing was written: the term is as it was.
-    const after = await db.select().from(offerings).where(eq(offerings.academicPeriod, P));
+    const after = await db
+      .select()
+      .from(offerings)
+      .where(eq(offerings.academicPeriod, P));
     expect(after).toEqual(before);
     expect(after.filter((o) => o.cancelled)).toHaveLength(0);
   });
@@ -258,7 +311,9 @@ describe("scrape invariants, enforced", () => {
     const result = await reconcileTerm(term(P, sections(P, 9020001, 5)), db, {
       skipInvariants: ["sectionCountStable"],
     });
-    expect(result.invariants.find((i) => i.name === "sectionCountStable")).toMatchObject({
+    expect(
+      result.invariants.find((i) => i.name === "sectionCountStable"),
+    ).toMatchObject({
       ok: false,
       skipped: true,
     });
@@ -266,24 +321,84 @@ describe("scrape invariants, enforced", () => {
   });
 
   it("rolls the term back on a time the parser cannot read", async () => {
-    const feed = [...sections(P, 9020001, 5), row({ period: P, crn: 9020099, time: "sometime Tuesday" })];
+    const feed = [
+      ...sections(P, 9020001, 5),
+      row({ period: P, crn: 9020099, time: "sometime Tuesday" }),
+    ];
     const error = await reconcileTerm(term(P, feed), db, {
       skipInvariants: ["sectionCountStable"],
     }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(InvariantViolationError);
     expect((error as InvariantViolationError).failures).toEqual([
-      expect.objectContaining({ name: "timesWellFormed", detail: expect.objectContaining({ unreadableTimesInFeed: 1 }) as unknown }),
+      expect.objectContaining({
+        name: "timesWellFormed",
+        detail: expect.objectContaining({
+          unreadableTimesInFeed: 1,
+        }) as unknown,
+      }),
     ]);
+  });
+
+  it("publishes the rest of the term when a section's part of term has no dates, and reports what it left out", async () => {
+    // The calendar gave "n/a" for a clinical rotation's last day, so the part
+    // has no row; its sections used to fail the whole term on the foreign key.
+    const fresh = 900204;
+    const clinical = {
+      ...row({ period: fresh, crn: 9020499 }),
+      "SSBSECT.SSBSECT_PTRM_CODE": "PC1",
+    };
+    const result = await reconcileTerm(
+      term(fresh, [...sections(fresh, 9020401, 3), clinical]),
+      db,
+    );
+    expect(result.offeringCount).toBe(3);
+    expect(
+      result.invariants.find((i) => i.name === "partsOfTermKnown"),
+    ).toEqual({
+      name: "partsOfTermKnown",
+      ok: false,
+      severity: "info",
+      detail: { sectionsInUnknownParts: 1, partCodes: "PC1" },
+    });
+    const stored = await db
+      .select()
+      .from(offerings)
+      .where(eq(offerings.academicPeriod, fresh));
+    expect(stored.map((o) => o.crn).sort()).toEqual([
+      9020401, 9020402, 9020403,
+    ]);
+
+    // A part the database already has (from an earlier run) is known, so the
+    // same section is kept once its dates exist.
+    await sql`insert into schedule_builder."partsOfTerm"
+      ("academicPeriod", code, description, "classesBegin", "dropAddEnds", "censusDate", "withdrawalDeadline", "classesEnd")
+      values (${fresh}, 'PC1', 'Clinical', '2026-01-01', '2026-01-08', '2026-01-15', '2026-04-01', '2026-05-01')`;
+    const again = await reconcileTerm(
+      term(fresh, [...sections(fresh, 9020401, 3), clinical]),
+      db,
+      { skipInvariants: ["sectionCountStable"] },
+    );
+    expect(again.offeringCount).toBe(4);
+    expect(
+      again.invariants.find((i) => i.name === "partsOfTermKnown")?.ok,
+    ).toBe(true);
   });
 
   it("has a term-first-seen path: no baseline, passes with sections, fails with none", async () => {
     const fresh = 900202;
-    const ok = await reconcileTerm(term(fresh, sections(fresh, 9020201, 3)), db);
-    expect(ok.invariants.find((i) => i.name === "sectionCountStable")).toMatchObject({
+    const ok = await reconcileTerm(
+      term(fresh, sections(fresh, 9020201, 3)),
+      db,
+    );
+    expect(
+      ok.invariants.find((i) => i.name === "sectionCountStable"),
+    ).toMatchObject({
       ok: true,
       detail: { baseline: false },
     });
-    await expect(reconcileTerm(term(900203, []), db)).rejects.toBeInstanceOf(InvariantViolationError);
+    await expect(reconcileTerm(term(900203, []), db)).rejects.toBeInstanceOf(
+      InvariantViolationError,
+    );
   });
 });
 
@@ -295,7 +410,9 @@ describe("checkTermInvariants on a term that was damaged after the scrape", () =
     startedAt = new Date(Date.now() - 60_000),
     activeAfter = 4,
   ) {
-    await reconcileTerm(term(P, sections(P, 9030001, 4)), db, { invariants: "report" });
+    await reconcileTerm(term(P, sections(P, 9030001, 4)), db, {
+      invariants: "report",
+    });
     await mutate();
     return db.transaction((tx) =>
       checkTermInvariants(tx, {
@@ -316,11 +433,14 @@ describe("checkTermInvariants on a term that was damaged after the scrape", () =
   });
 
   it("flags a section with no meeting", async () => {
-    const results = await check(() =>
-      sql`delete from schedule_builder.meetings where "academicPeriod" = ${P} and "offeringCrn" = 9030001`,
+    const results = await check(
+      () =>
+        sql`delete from schedule_builder.meetings where "academicPeriod" = ${P} and "offeringCrn" = 9030001`,
     );
     expect(failing(results)).toEqual(["noSectionWithoutMeetings"]);
-    expect(results.find((r) => r.name === "noSectionWithoutMeetings")?.detail).toEqual({ sectionsWithoutMeetings: 1 });
+    expect(
+      results.find((r) => r.name === "noSectionWithoutMeetings")?.detail,
+    ).toEqual({ sectionsWithoutMeetings: 1 });
   });
 
   it("does not count a cancelled section without meetings", async () => {
@@ -341,12 +461,15 @@ describe("checkTermInvariants on a term that was damaged after the scrape", () =
       await sql`update schedule_builder.meetings set "endTime" = null where "academicPeriod" = ${P} and "offeringCrn" = 9030002`;
     });
     expect(failing(results)).toEqual(["timesWellFormed"]);
-    expect(results.find((r) => r.name === "timesWellFormed")?.detail).toMatchObject({ inconsistentStoredMeetings: 2 });
+    expect(
+      results.find((r) => r.name === "timesWellFormed")?.detail,
+    ).toMatchObject({ inconsistentStoredMeetings: 2 });
   });
 
   it("flags a RESERVED meeting with no building", async () => {
-    const results = await check(() =>
-      sql`update schedule_builder.meetings set "locationStatus" = 'RESERVED', "buildingId" = null where "academicPeriod" = ${P} and "offeringCrn" = 9030001`,
+    const results = await check(
+      () =>
+        sql`update schedule_builder.meetings set "locationStatus" = 'RESERVED', "buildingId" = null where "academicPeriod" = ${P} and "offeringCrn" = 9030001`,
     );
     expect(failing(results)).toEqual(["buildingsResolve"]);
   });
@@ -398,7 +521,9 @@ describe("building coverage in the report", () => {
       buildingCoveragePercent: 50,
     });
     // The scrape does not touch coordinates it did not write.
-    const [placed] = await sql<{ latitude: number }[]>`select latitude from schedule_builder.buildings where id = 4001`;
+    const [placed] = await sql<
+      { latitude: number }[]
+    >`select latitude from schedule_builder.buildings where id = 4001`;
     expect(placed?.latitude).toBe(33.95);
   });
 });
