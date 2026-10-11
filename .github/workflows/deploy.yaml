@@ -16,7 +16,13 @@ name: Deploy
 #     this exact SHA and the deploy jobs download its artifacts. A push the
 #     queue never built (an admin bypass) is built here instead.
 #   * Release names. Both Workers' Sentry release is this commit's SHA.
-#   * `production` opens with a self-approval gate (see approval-gate.mjs).
+#   * The database and each Worker deploy through the shared building blocks
+#     (deploy-database.yaml: plan, approve, hash-checked apply, the destructive
+#     gate, the config push; deploy-worker.yaml: upload a version, smoke test
+#     it, switch traffic, smoke test what is live). Product repositories call
+#     the same two files pinned by commit SHA (Q15).
+#   * Every approved production job opens with a self-approval gate (see
+#     approval-gate.mjs) and refuses a candidate that is no longer main.
 #
 # PHASE GATE. Until the production cutover to this repository, production
 # still deploys from Backstage's copy of this flow and this one deploys STAGING
@@ -50,9 +56,10 @@ jobs:
       # Cancels an older CI run only when everything it is waiting on is a
       # production approval. This repo's CI run also carries the `publish`
       # job, which waits on its own environment: a run with any other waiting
-      # job is left alone (its production job refuses to deploy a commit that
+      # job is left alone (its production jobs refuse to deploy a commit that
       # is no longer main anyway). The jobs of a called workflow are named
-      # `<caller job> / <job>`, hence the pattern.
+      # `<caller job> / <job>`, so the production jobs are the ones whose name
+      # starts with `production-`.
       - name: Cancel only older candidates still waiting for approval
         env:
           GH_TOKEN: ${{ github.token }}
@@ -65,7 +72,7 @@ jobs:
           while read -r run_id; do
             [ -n "$run_id" ] || continue
             read -r production other < <(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs?per_page=100" \
-              --jq '[.jobs[] | select(.status == "waiting") | (.name | test("(^| / )production$"))] as $w
+              --jq '[.jobs[] | select(.status == "waiting") | (.name | test("^production-"))] as $w
                     | "\($w | map(select(.)) | length) \($w | map(select(. | not)) | length)"')
             if [ "$production" -gt 0 ] && [ "$other" -eq 0 ]; then
               gh api --method POST "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/cancel"
@@ -179,25 +186,40 @@ jobs:
           PUBLISHABLE_KEY: ${{ vars.PUBLISHABLE_KEY }}
         run: backstage deploy preflight --no-env --yes
 
-  staging-migrate:
+  # The database goes through the shared deploy-database.yaml (Q15): hand-written
+  # migrations, then the declarative diff, each hash-checked, with the
+  # destructive gate and the Supabase configuration push. Staging has no
+  # reviewers, so nothing waits here unless the plan is destructive, in which
+  # case a `devops` member approves `staging-destructive`.
+  #
+  # `--include-seed` runs the seed files staging has not recorded yet; they are
+  # insert-only, so a rerun or an edited file changes nothing there.
+  staging-database:
     needs: staging-preflight
     if: needs.staging-preflight.outputs.paused != 'true'
+    uses: ./.github/workflows/deploy-database.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    with:
+      environment: staging
+      destructive_environment: staging-destructive
+      include_seed: true
+      apply_config: true
+
+  # The seed SQL never touches Storage. This uploads only the headshots the
+  # bucket lacks, so a photo an officer replaced is never overwritten.
+  staging-avatars:
+    needs: staging-database
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     environment: staging
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/setup-workspace
       - uses: ./.github/actions/backstage-cli
-      # Migrations, seeds and avatars come from supabase/. --include-seed runs the seed files staging has
-      # not recorded yet; they are insert-only, so a rerun or an edited file
-      # changes nothing there.
-      - name: Apply staging migrations and new seeds
-        env:
-          DB_URL: ${{ secrets.DB_URL }}
-        run: backstage deploy migrate --no-env --yes --include-seed
-      # The seed SQL never touches Storage. This uploads only the headshots
-      # the bucket lacks, so a photo an officer replaced is never overwritten.
       - name: Upload new seeded headshots
         env:
           API_URL: ${{ vars.API_URL }}
@@ -205,328 +227,202 @@ jobs:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run: backstage deploy avatars --no-env --yes
 
-  # The two Workers are independent deploy targets. One failing is worth
-  # knowing about on its own; it is not a reason to leave the other on the
-  # previous version.
+  # The two Workers are independent deploy targets, each through the shared
+  # deploy-worker.yaml: upload a version, smoke test it (the platform's also
+  # runs the OAuth authorize and consent checks), switch traffic, smoke test
+  # what is live. One failing is worth knowing about on its own; it is not a
+  # reason to leave the other on the previous version.
   #
   # `!cancelled()` and explicit results: `build` is skipped whenever the merge
-  # queue already built, and a skipped need would otherwise skip this job too.
-  staging-deploy:
-    needs: [resolve, build, staging-preflight, staging-migrate]
+  # queue already built, and a skipped need would otherwise skip these too.
+  staging-platform:
+    needs: [resolve, build, staging-database, staging-avatars]
     if: >-
       !cancelled()
       && github.event_name == 'push'
       && needs.resolve.result == 'success'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
-      && needs.staging-preflight.outputs.paused != 'true'
-      && needs.staging-migrate.result == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment: staging
-    env:
-      DEPLOY_ENV: staging
-      # Lifted out of `secrets` here because the `secrets` context is not
-      # available in a step `if:`; the gating steps below test it through `env`.
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - app: platform
-            dir: apps/platform
-            release: ${{ github.sha }}
-          - app: schedule-builder
-            dir: apps/schedule-builder
-            release: ${{ github.sha }}
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: ./.github/actions/setup-workspace
-      - uses: ./.github/actions/backstage-cli
-      - name: Download the staging artifacts (built by the merge queue)
-        if: needs.resolve.outputs.merge_group_run != ''
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: staging-${{ github.sha }}
-          path: .
-          run-id: ${{ needs.resolve.outputs.merge_group_run }}
-          github-token: ${{ github.token }}
-      - name: Download the staging artifacts (built in this run)
-        if: needs.resolve.outputs.merge_group_run == ''
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: staging-${{ github.sha }}
-          path: .
-      - name: Verify exact artifact hashes
-        run: sha256sum --check RELEASE_SHA256SUMS
-      # The ONLY step in this job that reads the `secrets` and `vars` contexts.
+      && needs.staging-database.result == 'success'
+      && needs.staging-avatars.result == 'success'
+    uses: ./.github/workflows/deploy-worker.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+      actions: read
+    with:
+      environment: staging
+      tier: staging
+      worker_dir: apps/platform
+      worker_name: staging-platform
+      authorize: true
+      artifact_name: staging-${{ github.sha }}
+      artifact_run_id: ${{ needs.resolve.outputs.merge_group_run }}
+      build_cli: true
+      sentry_project: platform
+      sourcemaps_dir: apps/platform/dist
+      # The ONLY step that reads the secrets and vars contexts as a whole.
       # After it, the checkout looks like a devops laptop and every later step
-      # is the command a person would run by hand. Writes .env.staging here
-      # at the repo root, where both apps read it.
-      #
-      # ⚠️ --no-env: this step CREATES the file tier resolution would insist
-      # on reading, so routing it through tier resolution would fail on a
-      # missing env file for its own output.
-      - name: Compose .env.staging from the environment
-        env:
-          DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
-          DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
-        run: backstage deploy write-env --no-env --yes
-      # The Sentry release action runs in its own container and never sees the
-      # file above, so the org slug is lifted into the job environment for it
-      # and the smoke test. `write-env` single-quotes every value, and
-      # GITHUB_ENV keeps quotes literally, so both quote styles are stripped.
-      - name: Export SENTRY_ORG from .env.staging
-        run: grep -m1 '^SENTRY_ORG=' .env.staging | tr -d "\"'" >> "$GITHUB_ENV"
-      # SENTRY_AUTH_TOKEN absent means the Sentry org is not onboarded: a
-      # visible skip. Present and failing must fail the job.
-      - name: Sentry release skipped (SENTRY_AUTH_TOKEN not configured)
-        if: env.SENTRY_AUTH_TOKEN == ''
-        run: echo "::warning::Sentry release for ${{ matrix.app }} skipped — SENTRY_AUTH_TOKEN is not configured (org not onboarded yet)."
-      - name: Create Sentry release and upload source maps (${{ matrix.app }})
-        if: env.SENTRY_AUTH_TOKEN != ''
-        uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
-        env:
-          SENTRY_PROJECT: ${{ matrix.app }}
-        with:
-          environment: staging
-          release: ${{ matrix.release }}
-          set_commits: skip
-          # vinext writes maps under both `dist/client` and `dist/server`.
-          sourcemaps: ${{ matrix.dir }}/dist
-      # `backstage deploy <app>` is the whole Worker deploy: it refuses without
-      # CLOUDFLARE_API_TOKEN, writes the Worker's secrets file from the app's
-      # manifest, runs `wrangler deploy` in the app's own directory (the
-      # artifact's config redirect resolves the built Worker) and removes the
-      # file again. SENTRY_RELEASE reaches the Worker as a `--var`.
-      - name: Deploy ${{ matrix.app }}
-        env:
-          SENTRY_RELEASE: ${{ matrix.release }}
-        run: backstage deploy ${{ matrix.app }} --tier staging --yes
+      # is the command a person would run by hand. Writes .env.staging at the
+      # repo root, where both apps read it. --no-env: this step CREATES the
+      # file tier resolution would insist on reading.
+      prepare_command: backstage deploy write-env --no-env --yes
+      upload_command: backstage deploy platform --tier staging --upload
       # The docs search index lives in the platform's database, written from
-      # the docs the artifact carries (docs/dist). After the deploy
-      # rather than before: the index should not describe pages the previous
-      # Worker cannot render yet. `populate:search` runs through `with-env`, so
-      # it reads .env.staging for the database URL.
-      - name: Index the docs for search
-        if: matrix.app == 'platform'
-        run: pnpm --filter @devdogsuga/docs run populate:search
-      # Reconciles meetings/workshops against @devdogsuga/events the moment
-      # this deploy's code is live; it waits for the Worker that carries this
-      # commit's SHA (the platform's SENTRY_RELEASE). Platform only: the
-      # config is the platform's, and schedule-builder serves no such route.
-      - name: Reconcile meetings/workshops from @devdogsuga/events
-        if: matrix.app == 'platform'
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: backstage deploy reconcile --tier staging --no-env --yes
-      # Read-only smoke test of the Worker just deployed. The Sentry release it
-      # looks for is read from GITHUB_SHA, which is this commit for the
-      # platform and schedule-builder alike, so it is set on the command rather
-      # than on the step (the runner owns GITHUB_*).
-      - name: Smoke test ${{ matrix.app }} (staging)
-        env:
-          SENTRY_PROJECT: ${{ matrix.app }}
-          RELEASE: ${{ matrix.release }}
-        run: >-
-          GITHUB_SHA="$RELEASE" backstage deploy smoke --tier staging --yes
-          --app ${{ matrix.app }} --no-env
+      # the docs the artifact carries (docs/dist); after the switch, so it does
+      # not describe pages the previous Worker cannot render yet. Then
+      # meetings/workshops reconcile against @devdogsuga/events the moment this
+      # deploy's code is live, and the read-only Sentry check confirms the
+      # release arrived.
+      after_switch_command: |
+        set -a; . ".env.$TIER"; set +a
+        pnpm --filter @devdogsuga/docs run populate:search
+        backstage deploy reconcile --tier staging --no-env --yes
+        SENTRY_PROJECT=platform GITHUB_SHA="$RELEASE" backstage deploy smoke --tier staging --yes --app platform --no-env
 
-  production-plan:
-    needs: resolve
+  staging-schedule-builder:
+    needs: [resolve, build, staging-database, staging-avatars]
     if: >-
-      github.event_name == 'push'
-      && !inputs.prune_orphans
-      && vars.BACKSTAGE_DEPLOYS_PRODUCTION == 'true'
-      && needs.resolve.outputs.production == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment: preflight
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          fetch-depth: 0
-      - uses: ./.github/actions/setup-workspace
-      - uses: ./.github/actions/backstage-cli
-      - name: Verify the migration planner credential is read-only
-        env:
-          DB_URL: ${{ secrets.DB_URL }}
-        run: backstage planner status --no-env --yes
-      - name: Plan production migrations
-        env:
-          DB_URL: ${{ secrets.DB_URL }}
-        run: >-
-          backstage deploy plan --no-env --yes --include-seed
-          --label 'Migration plan — production candidate'
+      !cancelled()
+      && github.event_name == 'push'
+      && needs.resolve.result == 'success'
+      && (needs.build.result == 'success' || needs.build.result == 'skipped')
+      && needs.staging-database.result == 'success'
+      && needs.staging-avatars.result == 'success'
+    uses: ./.github/workflows/deploy-worker.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+      actions: read
+    with:
+      environment: staging
+      tier: staging
+      worker_dir: apps/schedule-builder
+      worker_name: staging-schedule-builder
+      artifact_name: staging-${{ github.sha }}
+      artifact_run_id: ${{ needs.resolve.outputs.merge_group_run }}
+      build_cli: true
+      sentry_project: schedule-builder
+      sourcemaps_dir: apps/schedule-builder/dist
+      prepare_command: backstage deploy write-env --no-env --yes
+      upload_command: backstage deploy schedule-builder --tier staging --upload
+      after_switch_command: |
+        set -a; . ".env.$TIER"; set +a
+        SENTRY_PROJECT=schedule-builder GITHUB_SHA="$RELEASE" backstage deploy smoke --tier staging --yes --app schedule-builder --no-env
 
-  production:
-    needs: [supersede, resolve, build, staging-deploy, production-plan]
+  # --- production -------------------------------------------------------------
+  # Four jobs, in order, each a shared building block:
+  #
+  #   production-database   plan (read-only credential, in `preflight`), then an
+  #                         approval of `production`, then migrations, the
+  #                         schema diff and the config push. A plan that drops
+  #                         or rewrites data needs a second approval, of
+  #                         `production-destructive`.
+  #   production-platform   and  production-schedule-builder
+  #                         in parallel, so one approval of `production` covers
+  #                         both: upload, preview smoke, switch, live smoke.
+  #
+  # Each approved job refuses an approver who wrote or queued the change (Q61)
+  # and refuses a candidate that is no longer the head of `main`.
+  production-database:
+    needs: [supersede, resolve, build, staging-platform, staging-schedule-builder]
     if: >-
       github.event_name == 'push'
       && !cancelled()
+      && !inputs.prune_orphans
       && vars.BACKSTAGE_DEPLOYS_PRODUCTION == 'true'
       && needs.resolve.result == 'success'
       && needs.resolve.outputs.production == 'true'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
-      && (needs.staging-deploy.result == 'success' || needs.resolve.outputs.staging == 'false')
-      && needs.production-plan.result == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    concurrency:
-      group: production
-      cancel-in-progress: false
-    environment: production
-    env:
-      DEPLOY_ENV: production
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      # Both Workers' release.
-      SENTRY_RELEASE: ${{ github.sha }}
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          fetch-depth: 0
-      # FIRST, before anything changes (Q61): whoever approved this deployment
-      # is neither the author of the PR that produced the commit nor the person
-      # who queued it. A push with no PR (an admin bypass) is covered by the
-      # environment's own prevent-self-review.
-      - name: Refuse an approver who wrote or queued this change
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          node .github/scripts/approval-gate.mjs
-          --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
-          --environment production
-      - name: Refuse an approved candidate that is no longer main
-        id: freshness
-        run: |
-          set -euo pipefail
-          latest=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" refs/heads/main | cut -f1)
-          if [ "$latest" != "$GITHUB_SHA" ]; then
-            echo "::notice::Candidate $GITHUB_SHA was superseded by $latest; nothing was changed."
-            echo 'fresh=false' >> "$GITHUB_OUTPUT"
-          else
-            echo 'fresh=true' >> "$GITHUB_OUTPUT"
-          fi
-      - uses: ./.github/actions/setup-workspace
-        if: steps.freshness.outputs.fresh == 'true'
-      - uses: ./.github/actions/backstage-cli
-        if: steps.freshness.outputs.fresh == 'true'
-      - name: Download approved production candidate (built by the merge queue)
-        if: steps.freshness.outputs.fresh == 'true' && needs.resolve.outputs.merge_group_run != ''
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: production-${{ github.sha }}
-          path: .
-          run-id: ${{ needs.resolve.outputs.merge_group_run }}
-          github-token: ${{ github.token }}
-      - name: Download approved production candidate (built in this run)
-        if: steps.freshness.outputs.fresh == 'true' && needs.resolve.outputs.merge_group_run == ''
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: production-${{ github.sha }}
-          path: .
-      - name: Verify exact artifact hashes
-        if: steps.freshness.outputs.fresh == 'true'
-        run: sha256sum --check RELEASE_SHA256SUMS
-      - name: Compose the production runtime environment
-        if: steps.freshness.outputs.fresh == 'true'
-        env:
-          DEPLOY_GITHUB_SECRETS: ${{ toJSON(secrets) }}
-          DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
-        run: backstage deploy write-env --no-env --yes
-      # The Sentry release action runs in its own container and never sees the
-      # file above, so the org slug is lifted into the job environment for it,
-      # the smoke tests and the monitor prune.
-      - name: Export SENTRY_ORG from .env.production
-        if: steps.freshness.outputs.fresh == 'true'
-        run: grep -m1 '^SENTRY_ORG=' .env.production | tr -d "\"'" >> "$GITHUB_ENV"
-      - name: Revalidate and apply migrations and new seeds
-        if: steps.freshness.outputs.fresh == 'true'
-        env:
-          DB_URL: ${{ secrets.DB_URL }}
-        run: |
-          backstage deploy plan --no-env --yes --include-seed --label 'Approved migration plan — production'
-          backstage deploy migrate --no-env --yes --include-seed
-      - name: Upload new seeded headshots
-        if: steps.freshness.outputs.fresh == 'true'
-        env:
-          API_URL: ${{ vars.API_URL }}
-          PROJECT_REF: ${{ vars.PROJECT_REF }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-        run: backstage deploy avatars --no-env --yes
-      # `supabase/` and the CLI are at the repo root, and so is the env file
-      # this reads (write-env wrote it there).
-      - name: Apply Supabase configuration
-        if: steps.freshness.outputs.fresh == 'true'
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: pnpm exec with-env -c 'supabase config push --project-ref $PROJECT_REF'
-      - name: Create Sentry release and upload platform source maps
-        if: steps.freshness.outputs.fresh == 'true' && env.SENTRY_AUTH_TOKEN != ''
-        uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
-        env:
-          SENTRY_PROJECT: platform
-        with:
-          environment: production
-          release: ${{ github.sha }}
-          set_commits: skip
-          sourcemaps: apps/platform/dist
-      - name: Deploy and verify platform
-        if: steps.freshness.outputs.fresh == 'true'
-        run: |
-          backstage deploy platform --tier production --yes
-          pnpm --filter @devdogsuga/docs run populate:search
-      - name: Reconcile production configuration
-        if: steps.freshness.outputs.fresh == 'true'
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: backstage deploy reconcile --tier production --no-env --yes
-      - name: Smoke test platform
-        if: steps.freshness.outputs.fresh == 'true'
-        env:
-          SENTRY_PROJECT: platform
-        run: backstage deploy smoke --tier production --yes --app platform --no-env
-      # Deletes the Sentry Crons monitors the app no longer declares in
-      # `cloudflare/scheduled.ts`. Sentry never removes a monitor itself.
-      # After the smoke test, so it only runs once this deploy's cron triggers
-      # are live. Production only: staging deploys `main`, which can drop a
-      # monitor production still checks in to.
-      #
-      # SENTRY_MONITORS_TOKEN is in the step's `env:` alone, not the job's: it
-      # can delete monitors and alert rules org-wide. Without it the step
-      # skips with a notice.
-      - name: Prune Sentry monitors for platform
-        if: steps.freshness.outputs.fresh == 'true'
-        env:
-          SENTRY_MONITORS_TOKEN: ${{ secrets.SENTRY_MONITORS_TOKEN }}
-        run: backstage deploy prune-monitors --tier production --yes --app platform --no-env
-      - name: Create Sentry release and upload schedule-builder source maps
-        if: steps.freshness.outputs.fresh == 'true' && env.SENTRY_AUTH_TOKEN != ''
-        uses: getsentry/action-release@ff07929a6537bac57790c3451cf4d364aca38528 # v3.7.0
-        env:
-          SENTRY_PROJECT: schedule-builder
-        with:
-          environment: production
-          release: ${{ github.sha }}
-          set_commits: skip
-          sourcemaps: apps/schedule-builder/dist
-      - name: Deploy and verify schedule-builder
-        if: steps.freshness.outputs.fresh == 'true'
-        run: backstage deploy schedule-builder --tier production --yes
-      - name: Smoke test schedule-builder
-        if: steps.freshness.outputs.fresh == 'true'
-        env:
-          SENTRY_PROJECT: schedule-builder
-        run: backstage deploy smoke --tier production --yes --app schedule-builder --no-env
-      - name: Prune Sentry monitors for schedule-builder
-        if: steps.freshness.outputs.fresh == 'true'
-        env:
-          SENTRY_MONITORS_TOKEN: ${{ secrets.SENTRY_MONITORS_TOKEN }}
-        run: backstage deploy prune-monitors --tier production --yes --app schedule-builder --no-env
-      - name: Report orphaned Worker secrets
-        if: steps.freshness.outputs.fresh == 'true'
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: backstage env audit --target production --no-env --yes
+      && ((needs.staging-platform.result == 'success' && needs.staging-schedule-builder.result == 'success') || needs.resolve.outputs.staging == 'false')
+    uses: ./.github/workflows/deploy-database.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    with:
+      environment: production
+      plan_environment: preflight
+      destructive_environment: production-destructive
+      include_seed: true
+      apply_config: true
+      self_approval_gate: true
+      require_latest: true
+
+  production-platform:
+    needs: [resolve, build, production-database]
+    if: >-
+      github.event_name == 'push'
+      && !cancelled()
+      && needs.resolve.result == 'success'
+      && (needs.build.result == 'success' || needs.build.result == 'skipped')
+      && needs.production-database.result == 'success'
+    uses: ./.github/workflows/deploy-worker.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+      actions: read
+    with:
+      environment: production
+      tier: production
+      worker_dir: apps/platform
+      worker_name: production-platform
+      authorize: true
+      self_approval_gate: true
+      require_latest: true
+      artifact_name: production-${{ github.sha }}
+      artifact_run_id: ${{ needs.resolve.outputs.merge_group_run }}
+      build_cli: true
+      sentry_project: platform
+      sourcemaps_dir: apps/platform/dist
+      prepare_command: |
+        backstage deploy write-env --no-env --yes
+        (set -a; . ".env.$TIER"; set +a; backstage deploy avatars --no-env --yes)
+      upload_command: backstage deploy platform --tier production --upload
+      after_switch_command: |
+        set -a; . ".env.$TIER"; set +a
+        pnpm --filter @devdogsuga/docs run populate:search
+        backstage deploy reconcile --tier production --no-env --yes
+        SENTRY_PROJECT=platform GITHUB_SHA="$RELEASE" backstage deploy smoke --tier production --yes --app platform --no-env
+        # Deletes the Sentry Crons monitors the app no longer declares in
+        # `cloudflare/scheduled.ts`. Sentry never removes a monitor itself.
+        # After the smoke test, so it only runs once this deploy's cron
+        # triggers are live. Production only: staging deploys `main`, which can
+        # drop a monitor production still checks in to.
+        backstage deploy prune-monitors --tier production --yes --app platform --no-env
+        backstage env audit --target production --no-env --yes
+
+  production-schedule-builder:
+    needs: [resolve, build, production-database]
+    if: >-
+      github.event_name == 'push'
+      && !cancelled()
+      && needs.resolve.result == 'success'
+      && (needs.build.result == 'success' || needs.build.result == 'skipped')
+      && needs.production-database.result == 'success'
+    uses: ./.github/workflows/deploy-worker.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+      actions: read
+    with:
+      environment: production
+      tier: production
+      worker_dir: apps/schedule-builder
+      worker_name: production-schedule-builder
+      self_approval_gate: true
+      require_latest: true
+      artifact_name: production-${{ github.sha }}
+      artifact_run_id: ${{ needs.resolve.outputs.merge_group_run }}
+      build_cli: true
+      sentry_project: schedule-builder
+      sourcemaps_dir: apps/schedule-builder/dist
+      prepare_command: backstage deploy write-env --no-env --yes
+      upload_command: backstage deploy schedule-builder --tier production --upload
+      after_switch_command: |
+        set -a; . ".env.$TIER"; set +a
+        SENTRY_PROJECT=schedule-builder GITHUB_SHA="$RELEASE" backstage deploy smoke --tier production --yes --app schedule-builder --no-env
+        backstage deploy prune-monitors --tier production --yes --app schedule-builder --no-env
 
   prune-orphans:
     if: >-

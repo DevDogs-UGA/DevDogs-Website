@@ -71,6 +71,11 @@ on:
         required: false
         type: boolean
         default: false
+      require_latest:
+        description: Refuse (before anything changes) when the commit is no longer the head of the default branch, so a late approval cannot apply an old candidate.
+        required: false
+        type: boolean
+        default: false
       supabase_version:
         description: The Supabase CLI to install. Keep equal to the repository's own pin.
         required: false
@@ -191,6 +196,16 @@ jobs:
           sparse-checkout: .github/scripts
       - name: Locate the shared scripts
         run: echo "SCRIPTS=${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
+      - name: Refuse an approved candidate that is no longer the head
+        if: inputs.require_latest
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
+        run: |
+          latest=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" "refs/heads/$DEFAULT_BRANCH" | cut -f1)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::error::Candidate $GITHUB_SHA was superseded by $latest. Nothing was changed; the newer commit has its own run."
+            exit 1
+          fi
       - name: Refuse an approver who wrote or queued this change
         if: inputs.self_approval_gate
         env:
@@ -295,6 +310,8 @@ jobs:
       pull-requests: read
     outputs:
       schema_applied: ${{ steps.schema.outputs.applied }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -308,6 +325,16 @@ jobs:
         run: echo "SCRIPTS=${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
       # FIRST, before anything changes: whoever approved this deployment is
       # neither the author of the change nor the person who queued it.
+      - name: Refuse an approved candidate that is no longer the head
+        if: inputs.require_latest
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
+        run: |
+          latest=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" "refs/heads/$DEFAULT_BRANCH" | cut -f1)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::error::Candidate $GITHUB_SHA was superseded by $latest. Nothing was changed; the newer commit has its own run."
+            exit 1
+          fi
       - name: Refuse an approver who wrote or queued this change
         if: inputs.self_approval_gate
         env:
@@ -328,12 +355,17 @@ jobs:
         run: |
           node "$SCRIPTS/db-plan.mjs" schema-apply --expect-hash "${{ needs.plan-schema.outputs.hash }}"
           echo "applied=true" >> "$GITHUB_OUTPUT"
+      # A target with no Management API token (staging, until one is added)
+      # cannot take a config push. That is said out loud rather than skipped
+      # quietly, and it does not fail the deploy: the schema is already in.
+      - name: Supabase configuration skipped (no SUPABASE_ACCESS_TOKEN)
+        if: inputs.apply_config && env.SUPABASE_ACCESS_TOKEN == ''
+        run: echo "::warning::The ${{ inputs.environment }} environment has no SUPABASE_ACCESS_TOKEN secret, so supabase/config.toml was NOT pushed to the project (auth settings, redirect URLs, hooks)."
       - name: Push the Supabase configuration
-        if: inputs.apply_config
+        if: inputs.apply_config && env.SUPABASE_ACCESS_TOKEN != ''
         env:
           SECRETS_JSON: ${{ toJSON(secrets) }}
           VARS_JSON: ${{ toJSON(vars) }}
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: node "$SCRIPTS/config-push.mjs" push
       - name: Register the DevDogs sign-in provider
         if: inputs.register_provider

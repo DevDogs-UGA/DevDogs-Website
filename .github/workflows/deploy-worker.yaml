@@ -104,6 +104,21 @@ on:
         required: false
         type: string
         default: ""
+      build_cli:
+        description: Build the Backstage CLI from this checkout (.github/actions/backstage-cli) and put `backstage` on PATH for the commands below.
+        required: false
+        type: boolean
+        default: false
+      self_approval_gate:
+        description: Refuse an approver who wrote or queued the change (approval-gate.mjs), before anything changes.
+        required: false
+        type: boolean
+        default: false
+      require_latest:
+        description: Refuse (before anything changes) when the commit is no longer the head of the default branch, so an approval that arrives late cannot deploy an old candidate.
+        required: false
+        type: boolean
+        default: false
       checkout_submodules:
         description: Check out submodules too (the slides deck reads the workshop repositories).
         required: false
@@ -193,7 +208,6 @@ jobs:
       RELEASE: ${{ inputs.release || github.sha }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      SENTRY_ORG: ${{ vars.SENTRY_ORG || secrets.SENTRY_ORG }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -209,6 +223,26 @@ jobs:
           sparse-checkout: .github/scripts
       - name: Locate the shared scripts
         run: echo "SCRIPTS=$GITHUB_WORKSPACE/${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
+      # FIRST, before anything changes: whoever approved this deployment is
+      # neither the author of the change nor the person who queued it.
+      - name: Refuse an approver who wrote or queued this change
+        if: inputs.self_approval_gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          node "$SCRIPTS/approval-gate.mjs"
+          --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
+          --environment "${{ inputs.environment }}"
+      - name: Refuse an approved candidate that is no longer the head
+        if: inputs.require_latest
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
+        run: |
+          latest=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" "refs/heads/$DEFAULT_BRANCH" | cut -f1)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::error::Candidate $GITHUB_SHA was superseded by $latest. Nothing was changed; the newer commit has its own run."
+            exit 1
+          fi
       - name: Refuse a missing Cloudflare token
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
@@ -217,6 +251,8 @@ jobs:
           fi
       - uses: ./.github/actions/setup-workspace
         if: inputs.setup_workspace
+      - uses: ./.github/actions/backstage-cli
+        if: inputs.setup_workspace && inputs.build_cli
       - name: Set up the workspace (custom)
         if: ${{ !inputs.setup_workspace && inputs.setup_command != '' }}
         env:
@@ -255,10 +291,19 @@ jobs:
           DEPLOY_GITHUB_VARS: ${{ toJSON(vars) }}
           PREPARE_COMMAND: ${{ inputs.prepare_command }}
         run: bash -euo pipefail -c "$PREPARE_COMMAND"
-      - name: Export SENTRY_ORG from the prepared environment
-        if: inputs.sentry_project != '' && inputs.prepare_command != ''
+      # The Sentry release action runs in its own container and never sees an
+      # env file, so the org slug is lifted into the job environment: from a
+      # variable or secret of that name, else from the file the prepare step
+      # composed (`write-env` single-quotes every value, and GITHUB_ENV keeps
+      # quotes literally, so both quote styles are stripped).
+      - name: Resolve SENTRY_ORG
+        if: inputs.sentry_project != ''
+        env:
+          FROM_CONTEXT: ${{ vars.SENTRY_ORG || secrets.SENTRY_ORG }}
         run: |
-          if [ -z "${SENTRY_ORG:-}" ] && [ -f ".env.$TIER" ]; then
+          if [ -n "$FROM_CONTEXT" ]; then
+            echo "SENTRY_ORG=$FROM_CONTEXT" >> "$GITHUB_ENV"
+          elif [ -f ".env.$TIER" ]; then
             grep -m1 '^SENTRY_ORG=' ".env.$TIER" | tr -d "\"'" >> "$GITHUB_ENV" || true
           fi
 
@@ -402,8 +447,13 @@ jobs:
           echo "### Rolled back" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "The live smoke test failed after the switch; \`$WORKER_NAME\` is back on \`$PREVIOUS\`." >> "$GITHUB_STEP_SUMMARY"
+      # The only step that sees these two: a cron-guarded reconcile call and the
+      # Sentry monitor prune. Both are named here rather than passed in, so a
+      # caller cannot widen what this step reads.
       - name: After the switch
         if: inputs.after_switch_command != ''
         env:
           AFTER_SWITCH_COMMAND: ${{ inputs.after_switch_command }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SENTRY_MONITORS_TOKEN: ${{ secrets.SENTRY_MONITORS_TOKEN }}
         run: bash -euo pipefail -c "$AFTER_SWITCH_COMMAND"

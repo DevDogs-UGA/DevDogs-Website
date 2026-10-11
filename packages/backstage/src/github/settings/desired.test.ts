@@ -40,7 +40,7 @@ describe("buildDesiredSettings", () => {
     });
   });
 
-  it("names the six deploy environments and publishing-next", () => {
+  it("names the six deploy environments, publishing-next and the two destructive gates", () => {
     const desired = buildDesiredSettings([]);
     expect(desired.environments.map((e) => e.name)).toEqual([
       "publishing",
@@ -50,7 +50,23 @@ describe("buildDesiredSettings", () => {
       "production-build",
       "production",
       "publishing-next",
+      "production-destructive",
+      "staging-destructive",
     ]);
+  });
+
+  it("the destructive gates need a devops approver who did not write the change", () => {
+    for (const name of ["production-destructive", "staging-destructive"]) {
+      expect(
+        buildDesiredSettings([]).environments.find((e) => e.name === name),
+      ).toMatchObject({
+        allowedBranches: ["main"],
+        requireReviewers: true,
+        preventSelfReview: true,
+        createIfMissing: true,
+        reviewerTeams: ["devops"],
+      });
+    }
   });
 
   it("publishing-next has no reviewers and runs from main only", () => {

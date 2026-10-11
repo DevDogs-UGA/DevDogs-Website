@@ -359,11 +359,12 @@ jobs:
           node-version-file: .nvmrc
       - name: Toolchain script tests
         run: node --test scripts/patch-audit.test.ts scripts/patch-issues.test.ts
-      # The deploy workflow's scripts (the production self-approval gate, the
-      # merge-queue run lookup, the deploy-needed classifier); no dependencies
-      # either.
+      # The deploy workflows' scripts (the production self-approval gate, the
+      # merge-queue run lookup, the deploy-needed classifier, the SQL
+      # classifier, the plan/approve/apply engine, the destructive label check,
+      # the config push, the Worker smoke tests); no dependencies either.
       - name: Deploy script tests
-        run: node --test .github/scripts/deploy-scripts.test.mjs
+        run: node --test ".github/scripts/*.test.mjs"
       # patches/patches.json against pnpm-workspace.yaml's patchedDependencies
       # and the files in patches/ (a mismatch fails here), then each patch's
       # upstream PRs/issues and the npm release that carries the fix. The
