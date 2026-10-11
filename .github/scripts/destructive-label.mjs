@@ -33,7 +33,7 @@
  *
  * Usage:
  *   GH_TOKEN=... node destructive-label.mjs gate --repo OWNER/REPO --pr N [--remove-rejected]
- *   GH_TOKEN=... node destructive-label.mjs need --repo OWNER/REPO (--pr N | --ref REF) --destructive true|false
+ *   GH_TOKEN=... node destructive-label.mjs need --repo OWNER/REPO (--pr N | --ref REF) --destructive true|false [--ignore-label]
  */
 import { apiAll, createApi, createRequest } from "./github-api.mjs";
 import { isMain } from "./is-main.mjs";
@@ -125,14 +125,33 @@ export async function evaluateGate({ api, repo, pr }) {
 /**
  * `need`: destructive SQL needs the label.
  *
- * @param {{ api: (path: string) => Promise<any>, repo: string, pr: number, destructive: boolean }} input
+ * `ignoreLabel` is for a run caused by a push: the label on the pull request
+ * was applied to SQL that has since changed, and destructive-gate.yaml removes
+ * it for that reason. Removing it with the workflow token does not start
+ * another run, so this check must not trust a label that is about to be
+ * removed: a devops member re-applies it after reading the new diff, and that
+ * `labeled` event runs the check again.
+ *
+ * @param {{ api: (path: string) => Promise<any>, repo: string, pr: number, destructive: boolean, ignoreLabel?: boolean }} input
  * @returns {Promise<Verdict>}
  */
-export async function evaluateNeed({ api, repo, pr, destructive }) {
+export async function evaluateNeed({
+  api,
+  repo,
+  pr,
+  destructive,
+  ignoreLabel = false,
+}) {
   if (!destructive) {
     return {
       pass: true,
       message: "The SQL is not destructive: no label needed.",
+    };
+  }
+  if (ignoreLabel) {
+    return {
+      pass: false,
+      message: `The SQL is destructive and the pull request was just pushed to, so any \`${LABEL}\` label is stale. A devops member must read the new diff and apply the label again.`,
     };
   }
   const timeline = await apiAll(api, `/repos/${repo}/issues/${pr}/timeline`);
@@ -200,6 +219,7 @@ async function cli(argv) {
       repo,
       pr,
       destructive: flag("--destructive") === "true",
+      ignoreLabel: rest.includes("--ignore-label"),
     });
     process.stdout.write(`${verdict.message}\n`);
     return verdict.pass ? 0 : 1;

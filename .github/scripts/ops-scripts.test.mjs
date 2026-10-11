@@ -14,6 +14,7 @@ import {
   resolveConfig,
 } from "./config-push.mjs";
 import {
+  changedMigrations,
   checkPlannerCredential,
   classifyPendingMigrations,
   dbPort,
@@ -711,6 +712,42 @@ test("destructive SQL needs the label; harmless SQL does not", async () => {
     ).pass,
     true,
   );
+  const stale = await evaluateNeed({
+    api: api([labeled("x")]),
+    repo: "O/R",
+    pr: 1,
+    destructive: true,
+    ignoreLabel: true,
+  });
+  assert.equal(stale.pass, false, "a label seen right after a push is stale");
+  assert.match(stale.message, /apply the label again/);
+  assert.equal(
+    (
+      await evaluateNeed({
+        api: api([labeled("x")]),
+        repo: "O/R",
+        pr: 1,
+        destructive: false,
+        ignoreLabel: true,
+      })
+    ).pass,
+    true,
+    "non-destructive SQL never needed it",
+  );
+});
+
+test("changedMigrations reads renamed migrations too", () => {
+  const seen = [];
+  const rt = {
+    env: {},
+    log: () => {},
+    run: (cmd, args) => {
+      seen.push(args);
+      return { status: 0, stdout: "", stderr: "" };
+    },
+  };
+  changedMigrations(rt, tmpdir(), "abc");
+  assert.ok(seen[0].includes("--diff-filter=AMR"));
 });
 
 test("the pull request is found from a merge queue branch name", () => {

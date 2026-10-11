@@ -123,9 +123,13 @@ jobs:
           DESTRUCTIVE: ${{ steps.plan.outputs.destructive || 'false' }}
           PR: ${{ github.event.pull_request.number }}
           QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+          # A push makes any label stale (destructive-gate.yaml removes it, and
+          # that removal starts no run): the label is not trusted on `synchronize`.
+          ACTION: ${{ github.event.action }}
         run: |
           set -euo pipefail
           if [ -n "$PR" ]; then target=(--pr "$PR"); else target=(--ref "$QUEUE_REF"); fi
+          if [ "$ACTION" = synchronize ]; then target+=(--ignore-label); fi
           node "$SCRIPTS/destructive-label.mjs" need --repo "$GITHUB_REPOSITORY" "${target[@]}" --destructive "$DESTRUCTIVE" | tee -a "$GITHUB_STEP_SUMMARY"
 
   # On the merge queue only: pull_request_target does not fire for it, but the

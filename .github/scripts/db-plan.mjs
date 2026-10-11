@@ -555,7 +555,7 @@ export function changedMigrations(rt, repoRoot, base) {
     [
       "diff",
       "--name-only",
-      "--diff-filter=AM",
+      "--diff-filter=AMR",
       `${base}...HEAD`,
       "--",
       "supabase/migrations",

@@ -33,8 +33,11 @@ on:
         type: string
         default: ""
 
+# A push (`synchronize`) clears a stale label, so its run is never cancelled by
+# the label, unlabel or reopen events that can follow it closely: those share a
+# second group.
 concurrency:
-  group: destructive-gate-${{ github.event.pull_request.number }}
+  group: destructive-gate-${{ github.event.pull_request.number }}-${{ github.event.action == 'synchronize' && 'push' || 'label' }}
   cancel-in-progress: true
 
 permissions:
