@@ -168,11 +168,13 @@ maintain.
 pnpm devtools jobs list
 pnpm devtools jobs run
 pnpm devtools jobs run --app platform --cron '*/15 * * * *' --tier staging
-pnpm devtools jobs run \
-  --app catalog \
-  --workflow SCRAPE_WORKFLOW \
-  --tier production --yes
 ```
+
+The catalog's scrape Workflow is not started this way: `apps/catalog` is a
+plain Worker, not a Next.js app, and `jobs run` starts the Next.js development
+server for a local session. Trigger it with Wrangler instead, as
+`apps/catalog/README.md` shows:
+`wrangler workflows trigger staging-catalog-scrape '{"terms":[202702]}' --env staging`.
 
 `jobs list` reconciles each Wrangler tier's `triggers.crons` and Workflow
 `schedules` with the app's `CRON_ROUTES` and `WORKFLOW_CRONS`, and flags a

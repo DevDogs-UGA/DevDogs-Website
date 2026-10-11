@@ -1,6 +1,6 @@
 /**
  * The catalog API's caps and limits, in one place. The OpenAPI file states the
- * same numbers for clients; `test/contract.test.ts` fails if they drift apart,
+ * same numbers for clients; `test/spec.test.ts` fails if they drift apart,
  * and wrangler.jsonc's rate-limit bindings are checked against these too.
  */
 

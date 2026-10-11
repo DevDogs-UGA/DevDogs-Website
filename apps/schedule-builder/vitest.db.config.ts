@@ -48,9 +48,8 @@ export default defineConfig({
     include: ["src/**/*.db-test.ts"],
     environment: "node",
     server: { deps: { inline: [/@devdogsuga\/db/] } },
-    // `passWithNoTests` stays even though schema.db-test.ts and
-    // reconcileTerm.db-test.ts exist now: a future db-test-free stretch
-    // should not break CI on an empty suite either.
+    // `passWithNoTests` stays even though schema.db-test.ts exists: a future
+    // db-test-free stretch should not break CI on an empty suite either.
     passWithNoTests: true,
     // See vitest.config.ts: Vite's own BASE_URL collides with the app's.
     env: { BASE_URL: process.env.BASE_URL ?? "http://localhost:3001" },
