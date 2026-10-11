@@ -29,6 +29,12 @@ export interface VerificationData {
   verificationStatus: VerificationStatus;
   isVerified: boolean;
   involvementFullName: string | null;
+  /**
+   * Whether public profiles are open to this viewer. What verifying unlocks is
+   * a public profile, so the alert and the dialog say so only while it is on.
+   * Decided on the server (`publicProfilesEnabled`); the browser can't know it.
+   */
+  publicProfiles: boolean;
 }
 
 export interface NavUserClientData {
@@ -58,6 +64,7 @@ interface VerificationContextValue {
   verificationStatus: VerificationStatus;
   isVerified: boolean;
   involvementFullName: string | null;
+  publicProfiles: boolean;
   completed: number;
   total: number;
   dialogOpen: boolean;
@@ -160,6 +167,7 @@ function VerificationRoot({
         verificationStatus: data.verificationStatus,
         isVerified: data.isVerified,
         involvementFullName: data.involvementFullName,
+        publicProfiles: data.publicProfiles,
         completed,
         total: 5,
         dialogOpen,

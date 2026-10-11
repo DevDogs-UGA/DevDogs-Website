@@ -14,10 +14,9 @@ of what makes it different to work on.
 
 > [!TIP]
 > Just getting started? Head to
-> [Getting started](../_shared/getting-started/prerequisites.md). Working on
-> the team's competition? Read the brief on the
-> [competition issues board](https://github.com/DevDogsUGA/DevDogsUGA/issues?q=is%3Aissue+label%3Acompetition)
-> before you start.
+> [Getting started](../_shared/getting-started/prerequisites.md). Picking up a
+> task? The work is tracked as GitHub issues in the
+> [DogPack repository](https://github.com/DevDogsUGA/DogPack/issues).
 
 ## Architecture
 

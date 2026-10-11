@@ -128,7 +128,7 @@ async function AccountContent({
           <Field
             id="github"
             label="GitHub"
-            description="Linking GitHub adds you to the DevDogs organization and grants access to this year's project repositories."
+            description="Linking GitHub is part of verifying your account and is needed to create an OAuth client for testing DevDogs sign-in. You contribute from your own fork, so it does not add you to the DevDogs organization."
           >
             <GithubField {...data} />
           </Field>

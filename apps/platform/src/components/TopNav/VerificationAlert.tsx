@@ -8,7 +8,7 @@ export default function VerificationAlert() {
   const ctx = useVerification();
   if (!ctx || ctx.isVerified) return null;
 
-  const { completed, total, openDialog } = ctx;
+  const { completed, total, openDialog, publicProfiles } = ctx;
 
   return (
     <button
@@ -27,6 +27,7 @@ export default function VerificationAlert() {
       <ProgressBar value={completed} max={total} fillColor="amber" />
       <span className="relative text-xs text-rose-300/70">
         {completed}/{total} steps complete
+        {publicProfiles ? ". Verify to be listed on the community page." : ""}
       </span>
     </button>
   );

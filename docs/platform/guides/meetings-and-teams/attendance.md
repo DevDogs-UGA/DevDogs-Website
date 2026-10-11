@@ -57,17 +57,10 @@ their own records and cannot write them.
 Meeting reflections require active attendance and `countsForCredit` on the
 meeting — the single flag that governs both star credit and EL eligibility;
 see [Stars & streaks](./stars-and-awards.md).
-Competition reflections require the member's team to have entered
-the competition -- an active membership at the moment the entry (a pull
-request linking the issue) opened, the same rule
-[Stars & streaks](./stars-and-awards.md)
-uses for the competition star -- and the competition's issue to have closed;
-a still-open competition has nothing to reflect on yet.
 
 Members may save drafts below the word minimum. Submission requires the global
 minimum (initially 100 words) and must occur before the global window closes
-(initially seven exact days after meeting end or the competition's issue
-closing).
+(initially seven exact days after meeting end).
 Submitted reflections are member-locked; there is no officer exception.
 
 Every reflection mutation creates immutable revision evidence and an audit
