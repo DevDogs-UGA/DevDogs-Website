@@ -227,7 +227,9 @@ describe("the reference receiver", () => {
       verify: { now: Math.floor(Date.now() / 1000) },
     });
 
-    const samples = await signedSamples();
+    const samples = await signedSamples({
+      contentRef: SAMPLE_CONTENT.contentRef,
+    });
     const outcomes: string[] = [];
     for (const sample of samples) {
       const response = await receiver.handle(sample.headers, sample.body);
@@ -266,7 +268,9 @@ describe("the reference receiver", () => {
       verify: { now: Math.floor(Date.now() / 1000) + 60 },
     });
     const start = Date.now();
-    for (const now of [start, start + 10_000]) {
+    // Back to back and 10 s apart: the restore of one run is dated a second
+    // after its hide, which must not make the next run's hide look stale.
+    for (const now of [start, start + 5, start + 10_000]) {
       for (const sample of await signedSamples({ now })) {
         const response = await receiver.handle(sample.headers, sample.body);
         expect(response.outcome, sample.name).toBe(sample.expected);

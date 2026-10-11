@@ -72,6 +72,13 @@ export interface SampleOptions {
    * would otherwise see all of them as duplicates. Defaults to a random value.
    */
   runId?: string;
+  /**
+   * The content item the content samples act on. Defaults to a fresh one per
+   * run, so a receiver's per-item ordering (a restore dated after the hide)
+   * from one run can never make the next run's hide look stale, however soon
+   * it starts.
+   */
+  contentRef?: string;
 }
 
 /**
@@ -97,6 +104,7 @@ export async function signedSamples(
   const signedAt = Math.floor(now / 1000);
   const run = options.runId ?? Math.random().toString(36).slice(2, 10);
   const messageId = (n: number) => `msg_sample_${run}_${n}`;
+  const contentRef = options.contentRef ?? crypto.randomUUID();
 
   async function sample(
     name: string,
@@ -113,7 +121,11 @@ export async function signedSamples(
     };
   }
 
-  const hide = buildMessage({ type: "content.hide", timestamp: at(0) });
+  const hide = buildMessage({
+    type: "content.hide",
+    timestamp: at(0),
+    contentRef,
+  });
   return [
     await sample("hide a session", messageId(1), "applied", hide),
     await sample("replay of the hide", messageId(1), "duplicate", hide),
@@ -121,13 +133,21 @@ export async function signedSamples(
       "a restore dated before the hide",
       messageId(2),
       "stale",
-      buildMessage({ type: "content.restore", timestamp: at(-60) }),
+      buildMessage({
+        type: "content.restore",
+        timestamp: at(-60),
+        contentRef,
+      }),
     ),
     await sample(
       "a restore dated after the hide",
       messageId(3),
       "applied",
-      buildMessage({ type: "content.restore", timestamp: at(1) }),
+      buildMessage({
+        type: "content.restore",
+        timestamp: at(1),
+        contentRef,
+      }),
     ),
     await sample(
       "suspend a user",
