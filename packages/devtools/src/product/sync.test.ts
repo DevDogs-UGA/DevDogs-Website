@@ -162,6 +162,25 @@ describe("dbSync", () => {
     ).rejects.toThrow(/Docker is needed/);
   });
 
+  it("retries the diff once when the shadow container fails to start", async () => {
+    const product = makeProduct();
+    let diffs = 0;
+    const { run } = recordingRunner(({ args }) => {
+      if (!args.includes("declarative")) return undefined;
+      diffs++;
+      if (diffs === 1) {
+        return { code: 1, stderr: "error running container: exit 1" };
+      }
+      writeFiles(product.root, {
+        "supabase/migrations/20261011120000_devtools_sync.sql": CREATE,
+      });
+      return undefined;
+    });
+    const result = await dbSync(product, CLI, LOCAL, run, { yes: false });
+    expect(diffs).toBe(2);
+    expect(result.applied).toBe(true);
+  });
+
   it("prints what it would run and changes nothing in a dry run", async () => {
     const product = makeProduct();
     const { run, calls } = recordingRunner();

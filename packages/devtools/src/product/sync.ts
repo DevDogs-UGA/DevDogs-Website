@@ -116,10 +116,17 @@ export async function dbSync(
   }
 
   const before = new Set(migrationFiles(migrationsDir));
-  const generated = await run(cli.command, generateArgs, { cwd: product.root });
+  let generated = await run(cli.command, generateArgs, { cwd: product.root });
+  // The shadow database runs in a container the CLI pulls and starts on first
+  // use; right after the stack boots on a fresh machine that start can fail
+  // once ("error running container: exit 1") and work the next time.
+  if (generated.code !== 0 && isContainerFailure(generated)) {
+    log("The shadow database did not start; trying once more.");
+    generated = await run(cli.command, generateArgs, { cwd: product.root });
+  }
   if (generated.code !== 0) {
     throw new SyncError(
-      /docker|container|image/i.test(generated.stderr + generated.stdout)
+      isContainerFailure(generated)
         ? "Could not diff the schema: Docker is needed for the shadow database. Start Docker and try again."
         : "Could not diff the schema against what this database has had applied.",
       generated.stderr || generated.stdout,
@@ -164,6 +171,13 @@ export async function dbSync(
     );
   }
   return { migration, applied: true, destructive };
+}
+
+function isContainerFailure(result: {
+  stderr: string;
+  stdout: string;
+}): boolean {
+  return /docker|container|image/i.test(result.stderr + result.stdout);
 }
 
 /** Forgets what was applied: removes the git-ignored local migrations. */
