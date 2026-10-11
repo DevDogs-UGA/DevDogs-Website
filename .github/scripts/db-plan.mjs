@@ -185,6 +185,16 @@ export function parseDiffJson(stdout) {
 }
 
 /**
+ * Hides the password of any connection URL in a message: the CLI echoes its
+ * own command line, which carries the target's URL, into its errors.
+ *
+ * @param {string} text
+ */
+export function redactUrls(text) {
+  return text.replace(/(postgres(?:ql)?:\/\/[^:/\s@]+:)[^@\s]+@/gi, "$1***@");
+}
+
+/**
  * @typedef {{
  *   cli: string,
  *   env: NodeJS.ProcessEnv,
@@ -211,7 +221,9 @@ export function defaultRuntime(env = process.env) {
       const status = result.status ?? 1;
       if (status !== 0 && !opts.allowFail) {
         throw new Error(
-          `${cmd} ${args.join(" ")} failed (exit ${status}):\n${(result.stderr || result.stdout).slice(-4000)}`,
+          redactUrls(
+            `${cmd} ${args.join(" ")} failed (exit ${status}):\n${(result.stderr || result.stdout).slice(-4000)}`,
+          ),
         );
       }
       return { status, stdout: result.stdout, stderr: result.stderr };

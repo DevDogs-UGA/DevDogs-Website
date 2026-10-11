@@ -23,6 +23,7 @@ import {
   parsePushJson,
   planHash,
   renderSchemaPlan,
+  redactUrls,
   rewriteConfig,
 } from "./db-plan.mjs";
 import {
@@ -525,6 +526,15 @@ test("the PR check handles a base with no supabase/ directory", () => {
   assert.equal(
     dbPlanMain(["check", "--base", base], rt, { repoRoot: root }),
     0,
+  );
+});
+
+test("a failing CLI call does not leak the target's password into the error", () => {
+  assert.equal(
+    redactUrls(
+      "supabase db diff --from postgresql://role.ref:s3cr%40t@host:5432/postgres --to postgres://postgres:postgres@127.0.0.1:1/p failed",
+    ),
+    "supabase db diff --from postgresql://role.ref:***@host:5432/postgres --to postgres://postgres:***@127.0.0.1:1/p failed",
   );
 });
 
