@@ -8,7 +8,8 @@ CREATE MATERIALIZED VIEW "platform"."resolvedUserPermissions"
             r."canManageSuspensions",
             r."canViewAuditLog",
             r."canManageAttendance",
-            r."canPreviewDocs"
+            r."canPreviewDocs",
+            r."canManageOAuthApps"
            FROM (platform."userRoles" ur
              JOIN platform.roles r ON (((r.id = ur."roleId") AND (r."roleType" = 'custom'::platform."roleType"))))
         ), first_non_null AS (
@@ -20,7 +21,8 @@ CREATE MATERIALIZED VIEW "platform"."resolvedUserPermissions"
             (array_agg(ucr."canManageSuspensions" ORDER BY ucr.rank) FILTER (WHERE (ucr."canManageSuspensions" IS NOT NULL)))[1] AS "canManageSuspensions",
             (array_agg(ucr."canViewAuditLog" ORDER BY ucr.rank) FILTER (WHERE (ucr."canViewAuditLog" IS NOT NULL)))[1] AS "canViewAuditLog",
             (array_agg(ucr."canManageAttendance" ORDER BY ucr.rank) FILTER (WHERE (ucr."canManageAttendance" IS NOT NULL)))[1] AS "canManageAttendance",
-            (array_agg(ucr."canPreviewDocs" ORDER BY ucr.rank) FILTER (WHERE (ucr."canPreviewDocs" IS NOT NULL)))[1] AS "canPreviewDocs"
+            (array_agg(ucr."canPreviewDocs" ORDER BY ucr.rank) FILTER (WHERE (ucr."canPreviewDocs" IS NOT NULL)))[1] AS "canPreviewDocs",
+            (array_agg(ucr."canManageOAuthApps" ORDER BY ucr.rank) FILTER (WHERE (ucr."canManageOAuthApps" IS NOT NULL)))[1] AS "canManageOAuthApps"
            FROM user_custom_roles ucr
           GROUP BY ucr."userId"
         ), all_users AS (
@@ -34,6 +36,7 @@ CREATE MATERIALIZED VIEW "platform"."resolvedUserPermissions"
     COALESCE(fnn."canViewAuditLog", false) AS "canViewAuditLog",
     COALESCE(fnn."canManageAttendance", false) AS "canManageAttendance",
     COALESCE(fnn."canPreviewDocs", false) AS "canPreviewDocs",
+    COALESCE(fnn."canManageOAuthApps", false) AS "canManageOAuthApps",
     COALESCE(fnn."isLeader", false) AS "isLeader",
     COALESCE(fnn."minRank", 'Infinity'::double precision) AS "minRank"
    FROM (all_users au
