@@ -23,16 +23,16 @@ export default async function Terms() {
     <div className="prose-sm prose-headings:text-balance mx-auto mt-19 max-w-xl px-3 pt-12 pb-24">
       <h1 id="devdogs-terms-of-service">DevDogs Terms of Service</h1>
       <p>
-        <strong>Effective date:</strong> October 5, 2026
+        <strong>Effective date:</strong> October 10, 2026
       </p>
       <p>
-        These terms apply when you use devdogsuga.org and DevDogs apps such as
-        DogDays, the RoboDog Discord bot, and the DevDogs GitHub organization
-        and Discord server (together, &quot;DevDogs&quot;). DevDogs is a
-        registered student organization at the University of Georgia, run
-        jointly with Google Developer Groups on Campus: UGA. &quot;We&quot;
-        means DevDogs and its officers. &quot;You&quot; means anyone using
-        DevDogs.
+        These terms apply when you use devdogsuga.org, the DevDogs apps DogDays
+        (dogdays.dev) and DogPack, the RoboDog Discord bot, and the DevDogs
+        GitHub organization and Discord server (together, &quot;DevDogs&quot;).
+        DevDogs is a registered student organization at the University of
+        Georgia, run jointly with Google Developer Groups on Campus: UGA.
+        &quot;We&quot; means DevDogs and its officers. &quot;You&quot; means
+        anyone using DevDogs.
       </p>
       <p>
         By signing in or taking part, you agree to these terms and the{" "}
@@ -65,13 +65,12 @@ export default async function Terms() {
         </strong>{" "}
         if you think someone else has access.
       </p>
-      <p>
-        When you link GitHub or Discord, you let us manage your access there:
-      </p>
+      <p>When you link GitHub or Discord, you let us do the following:</p>
       <ul>
         <li>
-          <strong>GitHub:</strong> we invite you to the DevDogs organization and
-          add you to or remove you from team repositories.
+          <strong>GitHub:</strong> we record your GitHub username and ID.
+          Linking doesn&apos;t add you to the DevDogs GitHub organization; you
+          contribute from your own fork.
         </li>
         <li>
           <strong>Discord:</strong> we add you to the server, set your nickname,
@@ -126,7 +125,7 @@ export default async function Terms() {
         <li>removing content</li>
         <li>suspending or banning an account</li>
         <li>
-          removing access to the GitHub organization, team repositories or the
+          removing access to the GitHub organization, a repository or the
           Discord server
         </li>
       </ul>
@@ -158,21 +157,17 @@ export default async function Terms() {
           whether to award EL credit, and DevDogs doesn&apos;t guarantee it.
         </li>
       </ul>
-      <h2 id="6-teams-and-competitions">6. Teams and competitions</h2>
+      <h2 id="6-github-and-recognition">6. GitHub and recognition</h2>
       <ul>
         <li>
-          <strong>Rules:</strong> each competition announces its rules, dates
-          and judging. When those rules are more specific, they take precedence
-          over this section.
+          <strong>Contributing:</strong> everyone contributes to DevDogs
+          repositories from a fork. Push access to a DevDogs repository is for
+          officers, leads and reviewers, and may be removed when their role
+          ends.
         </li>
         <li>
-          <strong>Two-factor authentication:</strong> to keep access to team
-          repositories, you need it turned on for your GitHub account.
-        </li>
-        <li>
-          <strong>Repository access:</strong> you get access while you&apos;re
-          on a team, and it may be removed when the competition ends or you
-          leave the team.
+          <strong>Two-factor authentication:</strong> GitHub requires it on your
+          GitHub account to be a member of the DevDogs organization.
         </li>
         <li>
           <strong>Stars and awards:</strong> stars, streaks and other
@@ -187,8 +182,7 @@ export default async function Terms() {
       <ul>
         <li>
           <strong>Code:</strong> DevDogs repositories are open source. That
-          includes the DevDogs monorepo, which hosts every competition, and
-          it&apos;s licensed under the{" "}
+          includes the DevDogs monorepo, and it&apos;s licensed under the{" "}
           <a
             href="https://opensource.org/license/bsd-3-clause"
             target="_blank"
@@ -197,9 +191,8 @@ export default async function Terms() {
             BSD 3-Clause License
           </a>
           . What you contribute to a repository is licensed under that
-          repository&apos;s license. This covers pull requests, competition
-          entries, issues and code review. Contribute only code you have the
-          right to contribute.
+          repository&apos;s license. This covers pull requests, issues and code
+          review. Contribute only code you have the right to contribute.
         </li>
         <li>
           <strong>Other content:</strong> you keep ownership of your profile,
@@ -232,8 +225,8 @@ export default async function Terms() {
         </li>
         <li>
           <strong>Test accounts:</strong> these are placeholders. Don&apos;t use
-          them to take part in DevDogs: no attendance, competitions, reports or
-          anything else a real member does.
+          them to take part in DevDogs: no attendance, reports or anything else
+          a real member does.
         </li>
         <li>
           <strong>Misuse:</strong> we may revoke developer access that&apos;s
@@ -282,6 +275,71 @@ export default async function Terms() {
         </strong>
         .
       </p>
+      <h2 id="dogdays">14. DogDays</h2>
+      <p>DogDays (dogdays.dev) helps you plan a semester&apos;s schedule.</p>
+      <ul>
+        <li>
+          <strong>Not official registration:</strong> course, section and
+          meeting data comes from public UGA registrar listings and may be
+          incomplete, late or wrong. A DogDays plan doesn&apos;t register you
+          for anything. Check the official registrar before you rely on a time,
+          room or seat, and register through UGA.
+        </li>
+        <li>
+          <strong>Maps:</strong> the Map of Classes uses Google Maps, so by
+          using it you also agree to the{" "}
+          <a
+            href="https://maps.google.com/help/terms_maps/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Google Maps Terms of Service
+          </a>
+          . Building locations are approximate.
+        </li>
+        <li>
+          <strong>Your plans:</strong> what you save is yours. How we store it
+          is in the <Link href="/legal/privacy#dogdays">Privacy Policy</Link>.
+        </li>
+      </ul>
+      <h2 id="dogpack">15. DogPack</h2>
+      <p>
+        DogPack helps UGA students find and join study sessions for the courses
+        they&apos;re taking. It&apos;s covered by §3 and §4, plus this section.
+      </p>
+      <ul>
+        <li>
+          <strong>Who can use it:</strong> UGA students with a DevDogs account
+          (§1). Sessions are visible to students enrolled in the same course.
+        </li>
+        <li>
+          <strong>Meeting in person is your decision:</strong> DevDogs
+          doesn&apos;t vet the people or the places behind a session. Choose
+          public, well-lit places, tell someone where you&apos;re going, and
+          leave if you&apos;re uncomfortable. You&apos;re responsible for your
+          own safety.
+        </li>
+        <li>
+          <strong>Be accurate:</strong> enroll only in courses you&apos;re
+          taking, host only sessions you intend to run, and cancel in the app if
+          your plans change.
+        </li>
+        <li>
+          <strong>Reporting and blocking:</strong> use the report and block
+          options in the app. Officers may hide a session, remove a member from
+          DogPack or ban an account, as described in §4.
+        </li>
+        <li>
+          <strong>Academic integrity:</strong> study sessions are for learning
+          together. Don&apos;t use DogPack to share graded work or break your
+          course&apos;s collaboration rules.
+        </li>
+        <li>
+          <strong>Your data:</strong> what DogPack collects, who sees it and how
+          to delete it is in the{" "}
+          <Link href="/legal/privacy#dogpack">Privacy Policy</Link>.
+        </li>
+      </ul>
     </div>
   );
 }
