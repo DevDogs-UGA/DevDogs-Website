@@ -233,8 +233,11 @@ export async function authorizeChecks({
       // The authorize request above goes to Supabase, which never sees the
       // version under test. Following its redirect to the consent page does:
       // `headers` carries the version override, so this is the new build
-      // answering a real authorization_id (a visitor with no session is sent
-      // to sign in; a 404 or a 5xx means the build cannot take the hand-off).
+      // answering a real authorization_id. The platform answers a throwaway
+      // client (registered only through GoTrue, so it has no
+      // platform.oauthRegistrations row) with a 404, before sign-in; a client
+      // it knows gets a redirect to sign in. Either is a build that took the
+      // hand-off. A 5xx or a connection error is not.
       checks.push(await followConsent({ base, headers, fetchImpl, location }));
     }
     const consent = await fetchImpl(`${base}/oauth/consent`, {
@@ -268,7 +271,10 @@ export async function authorizeChecks({
 
 /**
  * GET the consent URL Supabase redirected to, against `base` (so the version
- * override applies), and check the platform answers it.
+ * override applies), and check the platform answers it without failing. A 404
+ * is the correct answer for the throwaway client (the consent page 404s any
+ * client without a platform registration), so only a 5xx or a network error
+ * fails this check.
  *
  * @param {{ base: string, headers: Record<string, string>, fetchImpl: typeof fetch, location: string }} input
  * @returns {Promise<Check>}
@@ -300,8 +306,8 @@ async function followConsent({ base, headers, fetchImpl, location }) {
     await response.arrayBuffer().catch(() => {});
     return {
       name,
-      ok: response.status < 400,
-      detail: `status ${response.status}`,
+      ok: response.status < 500,
+      detail: `status ${response.status}${response.status === 404 ? " (expected: the throwaway client has no platform registration)" : ""}`,
     };
   } catch (error) {
     return { name, ok: false, detail: String(error) };

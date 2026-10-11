@@ -1060,6 +1060,7 @@ test("the active version is the one with the most traffic", () => {
 function oauthFetch({
   authorizeLocation,
   consentStatus = 404,
+  hookedConsentStatus = null,
   clientOk = true,
 }) {
   const calls = [];
@@ -1082,6 +1083,8 @@ function oauthFetch({
     }
     if (u.pathname === "/oauth/consent") {
       // With an authorization_id the platform sends a visitor to sign in.
+      if (u.searchParams.has("authorization_id") && hookedConsentStatus)
+        return new Response("", { status: hookedConsentStatus });
       if (u.searchParams.has("authorization_id"))
         return new Response(null, {
           status: 307,
@@ -1139,6 +1142,25 @@ test("the authorize checks pass, and the throwaway client is always deleted", as
     bad.calls.includes("DELETE /auth/v1/admin/oauth/clients/cid"),
     "deleted even though checks failed",
   );
+});
+
+test("the consent hand-off accepts the platform's 404 for an unregistered throwaway client, and fails on a 5xx", async () => {
+  const run = (hookedConsentStatus) =>
+    runSmoke({
+      smoke: { ...SMOKE, publicPaths: [], protectedPath: undefined },
+      tier: "staging",
+      fetchImpl: oauthFetch({
+        authorizeLocation:
+          "https://staging.example.org/oauth/consent?authorization_id=1",
+        hookedConsentStatus,
+      }),
+      authorize: { apiUrl: "https://api.example.org", secretKey: "k" },
+    });
+  const handOff = (checks) =>
+    checks.find((c) => /consent hand-off/.test(c.name));
+  assert.equal(handOff(await run(404)).ok, true);
+  assert.match(handOff(await run(404)).detail, /expected/);
+  assert.equal(handOff(await run(500)).ok, false);
 });
 
 test("the authorize check follows the consent redirect with the version override, and sweeps stale throwaway clients", async () => {
