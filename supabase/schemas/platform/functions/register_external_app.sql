@@ -22,6 +22,10 @@ begin
     raise exception 'moderation:invalid_request';
   end if;
 
+  if platform.moderation_client_tier(p_client_id) = 'development' then
+    raise exception 'moderation:development_client';
+  end if;
+
   select a."id" into app_id from "platform"."apps" a where a."slug" = p_slug;
   if found then
     if exists (select 1 from "platform"."apps" a where a."id" = app_id and a."kind" <> 'external') then

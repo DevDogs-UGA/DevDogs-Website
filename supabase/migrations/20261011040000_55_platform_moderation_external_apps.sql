@@ -604,6 +604,41 @@ $function$;
 
 -- ── Registering an external app ──────────────────────────────────────────────
 
+-- The OAuth tier of a client ('development' or 'production'), or null when the
+-- client has no registration or the tier column does not exist yet. Reading it
+-- here, not joining it, keeps this migration independent of the tiers change in
+-- either order. Production-tier clients must be registered as moderation apps
+-- (register_external_app refuses a development one), and a production-tier
+-- client that is not registered is refused by the report API instead of
+-- landing in the sandbox where no moderator would ever see its reports.
+create function platform.moderation_client_tier(p_client_id uuid)
+  RETURNS text
+  LANGUAGE plpgsql
+  STABLE
+  SECURITY DEFINER
+  SET search_path TO ''
+  AS $function$
+declare
+  found_tier text;
+begin
+  -- The tier column arrives with the OAuth tiers change. Until it exists
+  -- there is nothing to enforce, and the registry alone decides.
+  if not exists (
+    select 1 from pg_attribute a
+    where a.attrelid = '"platform"."oauthRegistrations"'::regclass
+      and a.attname = 'tier' and not a.attisdropped
+  ) then
+    return null;
+  end if;
+  execute 'select "tier"::text from "platform"."oauthRegistrations" where "clientId" = $1'
+    into found_tier using p_client_id;
+  return found_tier;
+end;
+$function$;
+
+revoke all on function "platform".moderation_client_tier(uuid) from public, "anon", "authenticated";
+grant execute on function "platform".moderation_client_tier(uuid) to "postgres", "service_role";
+
 -- Turns an OAuth client into a production moderation app, declaring its content
 -- types in the same call. Idempotent by slug. Re-pointing an app at a
 -- replacement client moves the registration: the old client reverts to a
@@ -630,6 +665,10 @@ begin
   if jsonb_typeof(p_content_types) is distinct from 'array'
      or jsonb_array_length(p_content_types) = 0 then
     raise exception 'moderation:invalid_request';
+  end if;
+
+  if platform.moderation_client_tier(p_client_id) = 'development' then
+    raise exception 'moderation:development_client';
   end if;
 
   select a."id" into app_id from "platform"."apps" a where a."slug" = p_slug;

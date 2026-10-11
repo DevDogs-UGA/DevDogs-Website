@@ -38,13 +38,18 @@ let signedInAs = "";
 vi.mock("~/server/auth", () => ({
   expectSession: () => Promise.resolve(signedInAs),
 }));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("~/supabase/admin", () => ({
   supabaseAdmin: { auth: { admin: { updateUserById: vi.fn() } } },
 }));
 
+const alerts = vi.hoisted(() => ({ postAlert: vi.fn() }));
+vi.mock("~/server/alerts", () => alerts);
+
 import { env } from "~/env";
 import { db } from "~/server/db";
 import { resolveReport, updateUserRole } from "~/server/actions/moderation";
+import { registerExternalApp } from "~/server/actions/moderationDeliveries";
 import { handleFileReport } from "./api";
 import { attemptDelivery } from "./delivery";
 import { databaseDeliveryStore, resetForResend } from "./deliveryStore";
@@ -168,6 +173,7 @@ afterAll(cleanup);
 
 beforeEach(async () => {
   queued.length = 0;
+  alerts.postAlert.mockClear();
   signedInAs = MODERATOR;
   await db.execute(sql`delete from platform."rateLimitHits"`);
   await db.execute(
@@ -386,6 +392,7 @@ describe("a report round trip through the console", () => {
     await markDeadLettered(delivery!.id);
     const [failed] = await deliveriesOf(filed.reportId);
     expect(failed!.status).toBe("failed");
+    expect(alerts.postAlert).toHaveBeenCalledTimes(1);
     // A failed delivery is not retried by a stray queue message.
     const { fetchToApp, received } = await appReceiver(PROD_CLIENT);
     expect(await deliver(delivery!.id, fetchToApp)).toEqual({
@@ -689,6 +696,36 @@ describe("registering an external app", () => {
     expect(types.map((t) => t.contentType)).toEqual(["session"]);
   });
 
+  it("shows the secret once, when registering is what first creates the client's moderation record", async () => {
+    const form = (client: string) => {
+      const data = new FormData();
+      data.set("slug", "e3-dogpack");
+      data.set("displayName", "DogPack");
+      data.set("clientId", client);
+      data.set("endpointUrl", ENDPOINT);
+      data.set("contentTypes", "session | Study session");
+      return data;
+    };
+    const first = await registerExternalApp(
+      { ok: true, message: null },
+      form(PROD_CLIENT),
+    );
+    expect(first).toMatchObject({ ok: true });
+    expect(first.secret).toBe(await deriveClientSecret(KEY, PROD_CLIENT, 1));
+    // The app can now sign reports with what was shown.
+    await expect(
+      (await appClient(PROD_CLIENT)).fileReport(report()),
+    ).resolves.toMatchObject({ sandbox: false });
+
+    // A second registration of the same client shows nothing.
+    const again = await registerExternalApp(
+      { ok: true, message: null },
+      form(PROD_CLIENT),
+    );
+    expect(again.ok).toBe(true);
+    expect(again.secret).toBeUndefined();
+  });
+
   it("will not turn a platform app into an external one", async () => {
     await expect(
       db.execute(sql`
@@ -709,5 +746,121 @@ describe("registering an external app", () => {
         sql`insert into platform.apps (slug, "schemaName", "displayName") values ('e3-bad', null, 'bad')`,
       ),
     ).rejects.toThrow();
+  });
+});
+
+describe("a development client's failing endpoint", () => {
+  it("is marked failed when its retries run out, without alerting officers", async () => {
+    await db.execute(
+      sql`insert into platform."moderationClients" ("clientId", "endpointUrl") values (${DEV_CLIENT}::uuid, ${ENDPOINT})`,
+    );
+    const [row] = await db.execute<{ id: string }>(sql`
+      insert into platform."moderationDeliveries" ("clientId", type, payload, sandbox, status)
+      values (${DEV_CLIENT}::uuid, 'content.hide', '{"type":"content.hide"}'::jsonb, true, 'pending')
+      returning id
+    `);
+    await markDeadLettered(row!.id);
+    const [after] = await db.execute<{ status: string }>(
+      sql`select status from platform."moderationDeliveries" where id = ${row!.id}::uuid`,
+    );
+    expect(after!.status).toBe("failed");
+    expect(alerts.postAlert).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Lane 3c gives `oauthRegistrations` a `tier`. This lane must not depend on it
+ * being there, so the tests add a stand-in column when it is missing (and drop
+ * only what they added): without the column nothing is enforced; with it, a
+ * development client cannot be registered as a production moderation app, and
+ * a production client nobody registered is refused instead of sandboxed.
+ */
+describe("OAuth tiers", () => {
+  let addedColumn = false;
+
+  const registration = async (
+    client: string,
+    tier: "development" | "production",
+  ) => {
+    await db.execute(
+      sql`delete from platform."oauthRegistrations" where "clientId" = ${client}::uuid`,
+    );
+    await db.execute(
+      tier === "production"
+        ? sql`insert into platform."oauthRegistrations" ("clientId", "userId", label, tier) values (${client}::uuid, ${OWNER}::uuid, 'x', 'production')`
+        : sql`insert into platform."oauthRegistrations" ("clientId", "userId", label, tier) values (${client}::uuid, ${OWNER}::uuid, 'x', 'development')`,
+    );
+  };
+
+  beforeAll(async () => {
+    const [column] = await db.execute<{ n: number }>(sql`
+      select count(*)::int as n from pg_attribute
+      where attrelid = 'platform."oauthRegistrations"'::regclass
+        and attname = 'tier' and not attisdropped
+    `);
+    if (column!.n === 0) {
+      await db.execute(
+        sql`alter table platform."oauthRegistrations" add column tier text`,
+      );
+      addedColumn = true;
+    }
+  });
+
+  afterAll(async () => {
+    if (addedColumn) {
+      await db.execute(
+        sql`alter table platform."oauthRegistrations" drop column tier`,
+      );
+    }
+  });
+
+  it("reports the tier, and null for a client with no registration", async () => {
+    await registration(DEV_CLIENT, "development");
+    const tier = async (client: string) => {
+      const [row] = await db.execute<{ tier: string | null }>(
+        sql`select platform.moderation_client_tier(${client}::uuid) as tier`,
+      );
+      return row!.tier;
+    };
+    expect(await tier(DEV_CLIENT)).toBe("development");
+    expect(await tier(PROD_CLIENT)).toBeNull();
+  });
+
+  it("will not register a development client as a production app, and registers a production one", async () => {
+    await registration(DEV_CLIENT, "development");
+    await registration(PROD_CLIENT, "production");
+    const refused = await registerApp("e3-dogpack", DEV_CLIENT).catch(
+      (error: unknown) => error,
+    );
+    expect(String((refused as Error).cause)).toContain(
+      "moderation:development_client",
+    );
+    await expect(registerApp("e3-dogpack", PROD_CLIENT)).resolves.toBeTruthy();
+  });
+
+  it("refuses a production client that is not registered, where a development client still gets its sandbox", async () => {
+    await registration(PROD_CLIENT, "production");
+    await registration(DEV_CLIENT, "development");
+    await db.execute(
+      sql`insert into platform."moderationClients" ("clientId", "endpointUrl") values (${PROD_CLIENT}::uuid, ${ENDPOINT}), (${DEV_CLIENT}::uuid, ${ENDPOINT})`,
+    );
+
+    await expect(
+      (await appClient(PROD_CLIENT)).fileReport(report()),
+    ).rejects.toMatchObject({ status: 403, code: "client_not_registered" });
+    const [none] = await db.execute<{ n: number }>(
+      sql`select count(*)::int as n from platform."sandboxReports" where "clientId" = ${PROD_CLIENT}::uuid`,
+    );
+    expect(none!.n).toBe(0);
+
+    await expect(
+      (await appClient(DEV_CLIENT)).fileReport(report()),
+    ).resolves.toMatchObject({ sandbox: true });
+
+    // Registered, the same production client reaches moderators.
+    await registerApp("e3-dogpack", PROD_CLIENT);
+    await expect(
+      (await appClient(PROD_CLIENT)).fileReport(report()),
+    ).resolves.toMatchObject({ sandbox: false });
   });
 });

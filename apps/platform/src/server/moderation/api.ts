@@ -19,6 +19,11 @@ export interface ClientRecord {
   secretVersion: number;
   /** Set for a production app, whose reports reach moderators. */
   appId: string | null;
+  /**
+   * The client's OAuth tier, once the tiers change is in; null before that or
+   * when the client has no registration.
+   */
+  tier?: string | null;
 }
 
 export interface ReportApiDeps {
@@ -106,6 +111,16 @@ export async function handleFileReport(
       .map((issue) => `${issue.path.join(".") || "body"}: ${issue.message}`)
       .join("; ");
     return fail(400, "invalid_request", issues);
+  }
+
+  // A production client nobody registered would file into the sandbox, where no
+  // moderator ever sees it. Say so instead of answering 201.
+  if (!client.appId && client.tier === "production") {
+    return fail(
+      403,
+      "client_not_registered",
+      "This production client is not registered as a moderation app. An officer registers it in the moderation console",
+    );
   }
 
   try {

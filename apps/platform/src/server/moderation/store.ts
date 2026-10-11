@@ -26,7 +26,11 @@ export async function findClient(
     })
     .from(moderationClients)
     .where(eq(moderationClients.clientId, clientId));
-  return row ?? null;
+  if (!row) return null;
+  const tierRows = await db.execute<{ tier: string | null }>(
+    sql`select "platform".moderation_client_tier(${clientId}::uuid) as tier`,
+  );
+  return { ...row, tier: tierRows[0]?.tier ?? null };
 }
 
 async function fileExternal(appId: string, r: ReportRequest) {

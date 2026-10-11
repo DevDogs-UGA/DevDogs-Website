@@ -59,15 +59,15 @@ Headers: the three above, `moderation-client-id: <your OAuth client id>`, `conte
 
 The platform user id is the DevDogs identity's subject: `auth.identities.provider_id` where `provider = 'custom:devdogsuga'`. `GET /moderation/v1/reasons` returns the reasons to offer.
 
-| Status | `error.code`                                        | Meaning                                                                     |
-| ------ | --------------------------------------------------- | --------------------------------------------------------------------------- |
-| 201    | none                                                | `{ reportId, corroborated, sandbox }`                                       |
-| 400    | `invalid_json`, `invalid_request`                   | the body, or a missing description for `other`                              |
-| 401    | `missing_client`, `unknown_client`, `bad_signature` | the client is not registered for moderation, or the signature is wrong      |
-| 403    | `reporter_not_allowed`                              | the reporter is suspended or an OAuth test account                          |
-| 422    | `unknown_content_type`, `unknown_user`              | the type was not declared at registration; a user id is not a platform user |
-| 429    | `rate_limited`                                      | ten reports an hour per reporter                                            |
-| 503    | `not_configured`                                    | the platform has no signing key yet                                         |
+| Status | `error.code`                                        | Meaning                                                                                |
+| ------ | --------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 201    | none                                                | `{ reportId, corroborated, sandbox }`                                                  |
+| 400    | `invalid_json`, `invalid_request`                   | the body, or a missing description for `other`                                         |
+| 401    | `missing_client`, `unknown_client`, `bad_signature` | the client is not registered for moderation, or the signature is wrong                 |
+| 403    | `reporter_not_allowed`, `client_not_registered`     | the reporter is suspended or a test account; a production client no officer registered |
+| 422    | `unknown_content_type`, `unknown_user`              | the type was not declared at registration; a user id is not a platform user            |
+| 429    | `rate_limited`                                      | ten reports an hour per reporter                                                       |
+| 503    | `not_configured`                                    | the platform has no signing key yet                                                    |
 
 A second report of content that already has an open report becomes a corroboration (`corroborated: true`). The SDK's `createModerationClient` does the signing and maps these errors.
 
@@ -97,15 +97,17 @@ The platform POSTs to the endpoint URL you registered. Six message types:
 3. **Be order-safe.** Ignore (but acknowledge) a message whose `timestamp` is older than the last decision applied to the same item (`content:<type>:<ref>` or `user:<id>`).
 4. Answer **2xx** once handled, including for a duplicate or a stale message, and **5xx** only for a failure worth retrying.
 
-Anything but a 2xx is retried with a growing delay (30 s doubling to an hour, about ten tries). After that the delivery is dead-lettered: it is marked failed, an alert is raised, and the report page in the console shows a **Resend** button. A delivery to an app with no endpoint is recorded as failed immediately instead of being dropped. A 15-minute cron re-queues a pending delivery only when it has shown no sign of life (queued or attempted) for 90 minutes, longer than the longest retry delay, so a delivery that is still retrying is never queued twice.
+Anything but a 2xx is retried with a growing delay (30 s doubling to an hour, about ten tries). After that the delivery is dead-lettered: it is marked failed, an alert is raised for a registered app (a development client's failure only marks it failed: it is the owner's endpoint under test), and the report page in the console shows a **Resend** button. A delivery to an app with no endpoint is recorded as failed immediately instead of being dropped. A 15-minute cron re-queues a pending delivery only when it has shown no sign of life (queued or attempted) for 90 minutes, longer than the longest retry delay, so a delivery that is still retrying is never queued twice.
 
 `createReceiver` in `@devdogsuga/sdk/moderation` is the reference implementation of all of it, with an in-memory store. Port its three rules to SQL in `apply_event`; do not invent others.
 
 ## Registering a production app
 
-An officer registers an OAuth client as a production app on the moderation console (**Apps Outside the Platform**): a slug, a name, the client id, the endpoint URL (`https`, a public hostname) and one content type per line, `type | Label | https://app/{ref}`. Reports from that client then reach the moderators. Re-registering a slug updates it; pointing it at another client moves the registration and the old client goes back to being a development client.
+An officer registers an OAuth client as a production app on the moderation console (**Apps Outside the Platform**): a slug, a name, the client id, the endpoint URL (`https`, a public hostname) and one content type per line, `type | Label | https://app/{ref}`. Reports from that client then reach the moderators. Re-registering a slug updates it; pointing it at another client moves the registration, and the old client's reports are then refused until it is registered again.
 
-A client that is **not** registered is a development client, and its reports go to a sandbox only its owner reads (below).
+Only a **production** OAuth client can be registered; registering a development client is refused. A **development** client that is not registered files its reports into a sandbox only its owner reads (below). A **production** client that is not registered gets `403 client_not_registered` instead of a sandbox answer, so a missed registration shows up in the app's first Report & Block instead of sending every report where no moderator will see it. (Before the OAuth tiers are in, nothing is known about a client's tier and the registry alone decides.)
+
+When registering is what first creates the client's moderation record, the console shows the client's signing secret once, under the form. Copy it into the app's environment (DogPack: `PLATFORM_MODERATION_SECRET`). If the client's owner had already turned moderation on from `/tools/oauth`, they hold the secret from then, and rotate it there if it is lost (the old one stops working at once).
 
 ## Testing, in three layers
 

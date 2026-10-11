@@ -67,6 +67,7 @@ export const REPORT_ERROR_CODES = [
   "invalid_request",
   "missing_client",
   "unknown_client",
+  "client_not_registered",
   "bad_signature",
   "unknown_content_type",
   "unknown_user",

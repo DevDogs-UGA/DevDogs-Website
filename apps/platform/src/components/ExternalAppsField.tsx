@@ -74,9 +74,10 @@ export default function ExternalAppsField({
         <form action={dispatch} className="flex flex-col gap-3">
           <span className="font-medium text-white">Register an app</span>
           <p className="text-xs text-mauve-400">
-            Re-registering a slug updates it, and pointing it at another client
-            moves the registration (the old client goes back to being a
-            development client).
+            Only a production OAuth client can be registered. Re-registering a
+            slug updates it, and pointing it at another client moves the
+            registration (the old client&apos;s reports are then refused until
+            it is registered again).
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <input
@@ -129,6 +130,11 @@ export default function ExternalAppsField({
             >
               {state.message}
             </p>
+          )}
+          {state.secret && (
+            <code className="rounded-sm bg-mauve-800 px-2 py-1.5 font-mono text-xs break-all text-white select-all">
+              {state.secret}
+            </code>
           )}
         </form>
       )}

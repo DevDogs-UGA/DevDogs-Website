@@ -101,6 +101,38 @@ describe("POST /moderation/v1/reports", () => {
     expect(d.fileExternal).not.toHaveBeenCalled();
   });
 
+  it("refuses an unregistered production-tier client instead of sandboxing it", async () => {
+    const d = deps({
+      findClient: () =>
+        Promise.resolve({
+          clientId: CLIENT,
+          secretVersion: 1,
+          appId: null,
+          tier: "production",
+        }),
+    });
+    const response = await handleFileReport(await signed(report), d);
+    expect(response.status).toBe(403);
+    expect(await errorOf(response)).toBe("client_not_registered");
+    expect(d.fileSandbox).not.toHaveBeenCalled();
+    expect(d.fileExternal).not.toHaveBeenCalled();
+  });
+
+  it("still sandboxes an unregistered development-tier client", async () => {
+    const d = deps({
+      findClient: () =>
+        Promise.resolve({
+          clientId: CLIENT,
+          secretVersion: 1,
+          appId: null,
+          tier: "development",
+        }),
+    });
+    const response = await handleFileReport(await signed(report), d);
+    expect(response.status).toBe(201);
+    expect(d.fileSandbox).toHaveBeenCalled();
+  });
+
   it("reports a corroboration", async () => {
     const response = await handleFileReport(
       await signed(report),

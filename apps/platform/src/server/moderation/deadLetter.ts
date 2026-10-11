@@ -26,6 +26,10 @@ export async function markDeadLettered(deliveryId: string): Promise<void> {
     });
   // Already delivered, already failed, or gone: nothing to raise.
   if (!row) return;
+  // A development client's endpoint is a member's own work in progress. Its
+  // failure belongs to the member (the console and /tools/oauth show it), not
+  // to the officers' alert path.
+  if (row.sandbox) return;
 
   const [app] = row.appId
     ? await db
@@ -37,7 +41,7 @@ export async function markDeadLettered(deliveryId: string): Promise<void> {
   await postAlert(
     "A moderation delivery was dead-lettered",
     [
-      `App: ${app?.displayName ?? (row.sandbox ? "a development client" : "unknown")}`,
+      `App: ${app?.displayName ?? "unknown"}`,
       `Message: ${row.type}`,
       `Attempts: ${row.attempts}`,
       `Last error: ${row.lastError ?? "none recorded"}`,
