@@ -1,8 +1,7 @@
 /**
  * Where a member's public profile lives, built one way for every consumer.
  *
- * The directory, the invite picker, competition archives and the profile page
- * itself all link to `/community/@<handle>`. Building that string in each of
+ * The directory and the profile page itself all link to `/community/@<handle>`. Building that string in each of
  * them is how one ends up with `/community/handle` and another with an
  * uppercase `@Handle`, so they all call this.
  *

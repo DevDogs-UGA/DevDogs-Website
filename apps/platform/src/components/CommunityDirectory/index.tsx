@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "~/ui/avatar";
-import { COMMUNITY_PATH, profilePath } from "~/lib/profilePath";
+import { profilePath } from "~/lib/profilePath";
 import type { PublicProfileSummary } from "~/server/loaders/publicProfiles";
 import type { LeaderProfile } from "~/components/LeadershipSection/LeaderCluster/profile";
 
@@ -119,12 +119,6 @@ export default function CommunityDirectory({
           >
             Members
           </h2>
-          <Link
-            href={`${COMMUNITY_PATH}/competitions`}
-            className="text-sm font-semibold text-mauve-200 underline underline-offset-2 hover:text-white"
-          >
-            Competition archive
-          </Link>
         </div>
         {others.length === 0 ? (
           <p className="text-muted-foreground rounded-xl border border-dashed p-6 text-center text-sm">

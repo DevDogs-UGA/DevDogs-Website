@@ -93,7 +93,7 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
           id: "github",
           label: "GitHub",
           description:
-            "Linking GitHub adds you to the DevDogs organization and grants access to this year's project repositories.",
+            "Linking GitHub is part of verifying your account and is needed to create an OAuth client for testing DevDogs sign-in. You contribute from your own fork, so it does not add you to the DevDogs organization.",
         },
         {
           id: "discord",

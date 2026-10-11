@@ -30,14 +30,6 @@ describe("terminal gates in production", () => {
   it("404s the profile pages", async () => {
     vi.stubEnv("DEPLOY_ENV", "production");
     expect((await get("/community/@someone")).status).toBe(404);
-    expect((await get("/community/competitions")).status).toBe(404);
-  });
-
-  it("shows partners as under construction", async () => {
-    vi.stubEnv("DEPLOY_ENV", "production");
-    const response = await get("/partners");
-    expect(response.status).toBe(200);
-    expect(await response.text()).toContain("Under construction");
   });
 });
 
@@ -49,11 +41,6 @@ describe("terminal responses", () => {
       "text/plain; charset=utf-8",
     );
     expect(await response.text()).toContain("No such page: /nope");
-  });
-
-  it("points browser-only pages at the browser", async () => {
-    const text = await (await get("/teams/requests")).text();
-    expect(text).toContain("https://devdogsuga.org/teams/requests");
   });
 
   it("serves the changelog without a database", async () => {

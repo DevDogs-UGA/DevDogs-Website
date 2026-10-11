@@ -64,11 +64,8 @@ describe("matchTerminalPath", () => {
     ["/changelog/v3.0.2", "/changelog/:version"],
     ["/events/directions", "/events/directions"],
     ["/events/2026-10-05-workshop", "/events/:slug"],
-    ["/community/competitions", "/community/competitions"],
     ["/community/@sloan", "/community/:handle"],
     ["/docs/platform/getting-started/setup", "/docs/:project/*"],
-    ["/console/attendance/abc/present", "/console/*"],
-    ["/tools/oauth/device", "/tools/oauth"],
   ])("%s is %s", (path, pattern) => {
     expect(matchTerminalPath(path)?.pattern).toBe(pattern);
   });
@@ -82,6 +79,9 @@ describe("matchTerminalPath", () => {
     "/join",
     "/robots.txt",
     "/changlelog",
+    "/console/attendance/abc/present",
+    "/tools/oauth/device",
+    "/teams",
   ])("passes %s through", (path) => {
     expect(matchTerminalPath(path)).toBeNull();
   });

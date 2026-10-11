@@ -144,12 +144,12 @@ order by pa."userId", q.scope, q.id, m."startsAt" nulls first`,
 
 export const EXPORTS: Record<ExportKind, ExportSpec> = {
   /**
-   * One row per earned star: a meeting attended or a competition entered.
-   * Attendance is a meeting fact and participation a competition fact;
-   * neither is attributed to a workshop.
+   * One row per earned star: a credit-eligible meeting attended. A star is a
+   * meeting fact and is not attributed to a workshop. (Competition stars are
+   * retired along with competitions.)
    */
   stars: {
-    summary: "One row per earned meeting or competition star.",
+    summary: "One row per earned meeting star.",
     columns: [
       ...MEMBER_COLUMNS,
       "activity_type",
@@ -157,10 +157,6 @@ export const EXPORTS: Record<ExportKind, ExportSpec> = {
       "activity_starts_at",
       "earned_at",
       "meeting_id",
-      "competition_id",
-      "meeting_star",
-      "competition_star",
-      "won",
     ],
     sql: `
 select ${MEMBER('ms."userId"')},
@@ -168,14 +164,11 @@ select ${MEMBER('ms."userId"')},
   ms."activityId" as "activity_id",
   ms."startsAt" as "activity_starts_at",
   ms."earnedAt" as "earned_at",
-  ms."meetingId" as "meeting_id",
-  ms."competitionId" as "competition_id",
-  ms."activityType" = 'meeting' as "meeting_star",
-  ms."activityType" = 'competition' as "competition_star",
-  ms."won" as "won"
+  ms."meetingId" as "meeting_id"
 from "platform"."memberStars" ms
 ${MEMBER_JOINS('ms."userId"')}
-where ($1::timestamptz is null or ms."startsAt" >= $1::timestamptz)
+where ms."activityType" = 'meeting'
+  and ($1::timestamptz is null or ms."startsAt" >= $1::timestamptz)
   and ($2::timestamptz is null or ms."startsAt" < $2::timestamptz)
   and $3::uuid is null
 order by ms."startsAt", ms."userId", ms."activityType", ms."activityId"`,
@@ -237,15 +230,12 @@ order by m."startsAt", a."userId", a."id"`,
     ],
     sql: `
 select ${MEMBER('r."userId"')},
-  case when r."meetingId" is not null then 'meeting' else 'competition' end as "activity_type",
-  coalesce(r."meetingId", r."competitionId") as "activity_id",
-  case
-    when r."meetingId" is not null then (
-      select coalesce(m."nameOverride", m."kind", 'Meeting')
-      from "platform"."meetings" m where m."id" = r."meetingId"
-    )
-    else (select c."title" from "platform"."competitions" c where c."id" = r."competitionId")
-  end as "activity_title",
+  'meeting' as "activity_type",
+  r."meetingId" as "activity_id",
+  (
+    select coalesce(m."nameOverride", m."kind", 'Meeting')
+    from "platform"."meetings" m where m."id" = r."meetingId"
+  ) as "activity_title",
   r."content" as "content",
   r."submittedAt" as "submitted_at",
   r."createdAt" as "created_at",
@@ -256,7 +246,8 @@ select ${MEMBER('r."userId"')},
   ) as "revision_count"
 from "platform"."reflections" r
 ${MEMBER_JOINS('r."userId"')}
-where ($1::timestamptz is null or r."createdAt" >= $1::timestamptz)
+where r."meetingId" is not null
+  and ($1::timestamptz is null or r."createdAt" >= $1::timestamptz)
   and ($2::timestamptz is null or r."createdAt" < $2::timestamptz)
   and $3::uuid is null
 order by r."createdAt", r."userId", r."id"`,

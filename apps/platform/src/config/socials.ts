@@ -11,10 +11,9 @@ import type * as icons from "./icons";
  * JSON-LD's `sameAs`, which wants the page that identifies the club rather
  * than our redirect to it.
  *
- * `/discord` and `/github` share a first segment with the Discord
- * interaction and GitHub App webhook routes (`/discord/interactions`,
- * `/github/webhook`); a redirect's source matches only its exact path, so
- * the two never meet.
+ * `/discord` shares a first segment with the Discord interaction route
+ * (`/discord/interactions`); a redirect's source matches only its exact path,
+ * so the two never meet.
  */
 export const SOCIALS: {
   label: string;

@@ -35,7 +35,7 @@ export type Block =
   | { type: "card"; card: Card }
   /** The schedule list: a date column and a coloured bar per row. */
   | { type: "events"; items: EventItem[]; empty: string }
-  /** A timeline of things with their own pages: issues, competitions. */
+  /** A timeline of things with their own pages: newsletter issues. */
   | { type: "entries"; items: Entry[]; empty: string }
   /** Aligned label / value rows. */
   | { type: "fields"; rows: Field[] }
@@ -43,7 +43,7 @@ export type Block =
   | { type: "links"; items: LinkItem[] }
   /** A boxed status message: not found, browser only, cancelled. */
   | { type: "notice"; notice: Notice }
-  /** Authored markdown (a competition brief, a support answer). */
+  /** Authored markdown (a support answer). */
   | { type: "markdown"; source: string }
   /** `curl` commands and what each prints. */
   | { type: "commands"; items: CommandItem[] };

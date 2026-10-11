@@ -176,28 +176,6 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
   },
 ];
 
-/**
- * The competition program's personal pages. Answers "what is a competition
- * waiting on me for", so the profile popover nests it in one sub-menu rather
- * than listing it beside Account, which is about the viewer.
- */
-export const COMPETITION_ITEMS: NavItem[] = [
-  {
-    label: "Teams",
-    href: "/teams",
-    icon: "UsersIcon",
-    description:
-      "Every team, and the two ways onto one: a join code, or a request to the lead.",
-  },
-  {
-    label: "Team requests",
-    href: "/teams/requests",
-    icon: "UsersIcon",
-    description:
-      "Invitations addressed to you, and join requests on teams you lead.",
-  },
-];
-
 /** Signed-in-only pages listed at the top level of the profile popover. */
 export const ACCOUNT_ITEMS: NavItem[] = [
   {
@@ -228,10 +206,7 @@ export const ACCOUNT_ITEMS: NavItem[] = [
  * back apart. Search and the mobile sheet want one flat list and read this, so
  * a page added to either half above is picked up by both without a second edit.
  */
-export const PROFILE_ITEMS: NavItem[] = [
-  ...COMPETITION_ITEMS,
-  ...ACCOUNT_ITEMS,
-];
+export const PROFILE_ITEMS: NavItem[] = [...ACCOUNT_ITEMS];
 
 /**
  * A named sub-menu inside the profile popover.
@@ -251,13 +226,6 @@ export interface NavGroup {
    */
   twoColumn?: boolean;
 }
-
-/** The competition sub-menu, as the profile popover renders it. */
-export const COMPETITION_GROUP: NavGroup = {
-  label: "Competitions",
-  iconBg: "bg-amber-300",
-  items: COMPETITION_ITEMS,
-};
 
 /**
  * The Console sub-menu's label and fill. Its items are missing because they are

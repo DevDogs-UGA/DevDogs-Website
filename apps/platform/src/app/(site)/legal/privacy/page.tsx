@@ -27,7 +27,7 @@ export default async function Privacy() {
         <strong>Effective date:</strong> October 10, 2024
       </p>
       <p>
-        <strong>Last updated:</strong> October 5, 2026
+        <strong>Last updated:</strong> October 10, 2026
       </p>
       <p>
         DevDogs is a registered student organization at the University of
@@ -44,15 +44,19 @@ export default async function Privacy() {
           and the help/support widget
         </li>
         <li>
-          <strong>DevDogs apps</strong> such as DogDays (dogdays.dev), which
-          share your devdogsuga.org account
+          <strong>DogDays</strong> (dogdays.dev), the schedule planner, and{" "}
+          <strong>DogPack</strong>, the study-session app for Android and iOS.
+          Both sign you in with your DevDogs account, and each keeps its own
+          data in its own database. See <a href="#dogdays">§13</a> and{" "}
+          <a href="#dogpack">§14</a>.
         </li>
         <li>
           <strong>RoboDog</strong>: the DevDogs Discord bot
         </li>
         <li>
-          The DevDogs GitHub organization and Discord server, where the platform
-          manages your access
+          The DevDogs Discord server, where the platform manages your roles, and
+          the DevDogs GitHub organization, which you can link your GitHub
+          account to
         </li>
       </ul>
       <p>
@@ -102,14 +106,12 @@ export default async function Privacy() {
           and your company or organization if you&apos;re a guest.
         </li>
         <li>
-          <strong>Competitions and teams:</strong> the teams you join, your
-          competition entries, merged pull requests on DevDogs repositories, and
-          the stars and streaks you earn.
+          <strong>Stars and streaks:</strong> the stars and streaks you earn
+          from the meetings you attend.
         </li>
         <li>
           <strong>Experiential Learning (EL) evidence:</strong> reflections you
-          write for eligible meetings and competitions, including every saved
-          revision.
+          write for eligible meetings, including every saved revision.
         </li>
         <li>
           <strong>Photos:</strong> we take photos at events, and you may appear
@@ -145,12 +147,11 @@ export default async function Privacy() {
       <ul>
         <li>
           <strong>Running the platform:</strong> signing you in, showing your
-          profile, recording attendance, and running teams and competitions.
+          profile, recording attendance, and showing your stars and streaks.
         </li>
         <li>
           <strong>Managing your access:</strong> adding you to the DevDogs
-          GitHub organization and Discord server and keeping your roles in sync
-          (§3).
+          Discord server and keeping your roles in sync (§3).
         </li>
         <li>
           <strong>Experiential Learning:</strong> sending attendance and
@@ -176,8 +177,8 @@ export default async function Privacy() {
           doesn&apos;t identify anyone.
         </li>
         <li>
-          <strong>Communication:</strong> email about your teams and account,
-          and Discord announcements.
+          <strong>Communication:</strong> email about your account, and Discord
+          announcements.
         </li>
         <li>
           <strong>Safety:</strong> enforcing the conduct rules in our{" "}
@@ -189,7 +190,7 @@ export default async function Privacy() {
       </p>
       <h2 id="3-connected-accounts">3. Connected accounts</h2>
       <p>
-        When you link an account, the platform does more than read your
+        When you link an account, the platform may do more than read your
         username:
       </p>
       <table>
@@ -214,10 +215,11 @@ export default async function Privacy() {
               <strong>GitHub</strong>
             </td>
             <td>
-              Invite you to the DevDogs GitHub organization and accept the
-              invite for you. Add you to and remove you from teams as your
-              competition teams change. Check whether you have two-factor
-              authentication on, because team repositories require it.
+              Record your GitHub username and ID, and show your GitHub on your
+              public profile if you choose to. Linking GitHub is one of the
+              steps that verifies your account. It does not add you to the
+              DevDogs GitHub organization: members contribute from their own
+              forks, and the organization is for officers, leads and reviewers.
             </td>
           </tr>
           <tr>
@@ -240,10 +242,9 @@ export default async function Privacy() {
       </table>
       <p>
         You can unlink an account at any time from your account settings.
-        Unlinking stops future syncing. For most members it also removes you
-        from the GitHub organization or the Discord server, but that isn&apos;t
-        guaranteed. If you&apos;re still there afterwards, leave directly or ask
-        us (§8).
+        Unlinking stops future syncing. For most members, unlinking Discord also
+        removes you from the Discord server, but that isn&apos;t guaranteed. If
+        you&apos;re still there afterwards, leave directly or ask us (§8).
       </p>
       <h2 id="4-who-can-see-your-data">4. Who can see your data</h2>
       <h3 id="other-people-through-your-public-profile">
@@ -258,8 +259,7 @@ export default async function Privacy() {
       <ul>
         <li>
           <strong>Shown unless you hide them:</strong> your name, profile
-          picture, bio, links, competition entries, contributions (merged pull
-          requests), and star totals.
+          picture, bio, links and star totals.
         </li>
         <li>
           <strong>Hidden unless you choose to show them:</strong> your GitHub,
@@ -342,7 +342,11 @@ export default async function Privacy() {
               Cloudflare: hosting, email delivery, image handling and Turnstile
             </li>
             <li>Sentry: error reports</li>
-            <li>GitHub and Discord: the access management described in §3</li>
+            <li>GitHub and Discord: the account linking described in §3</li>
+            <li>
+              Google: the map in DogDays, and DogPack&apos;s pilot builds (see
+              §13 and §14)
+            </li>
           </ul>
         </li>
       </ul>
@@ -354,10 +358,13 @@ export default async function Privacy() {
         DevDogs apps and developer testing
       </h3>
       <p>
-        DevDogs&apos; own apps, such as DogDays, run on the same system as
-        devdogsuga.org. They use the same account and sign-in, and the same data
-        and rules described in this policy. DogDays also stores the schedule
-        plans and preferences you save there.
+        DogDays and DogPack sign you in with your DevDogs account, but they are
+        separate systems with their own databases. They receive only your
+        account&apos;s ID, your UGA email, and the name and profile picture from
+        the Google account you signed in with. Your other devdogsuga.org profile
+        details, such as your preferred name, pronouns, bio, graduation year and
+        links, are not shared with them. What each app stores beyond that is
+        described in §13 and §14.
       </p>
       <p>
         Members who contribute to DevDogs apps can use{" "}
@@ -458,7 +465,8 @@ export default async function Privacy() {
           </strong>{" "}
           with the subject &quot;Data Removal Request&quot; and your name.
           We&apos;ll delete your account, profile, connected accounts and
-          personal records, and tell you when it&apos;s done.
+          personal records, including your DogDays and DogPack data, and tell
+          you when it&apos;s done.
           <ul>
             <li>
               <strong>Reflections and reports:</strong> your reflections and
@@ -525,7 +533,8 @@ export default async function Privacy() {
       <p>
         When we change this policy, we update the &quot;Last updated&quot; date
         above. If a change affects what we collect or who can see it, we also
-        announce it on Discord.
+        announce it on Discord. That includes adding or changing what DogDays
+        and DogPack collect (§13 and §14).
       </p>
       <h2 id="12-questions">12. Questions</h2>
       <p>
@@ -535,6 +544,169 @@ export default async function Privacy() {
         </strong>
         . We&apos;re happy to explain anything here.
       </p>
+      <h2 id="dogdays">13. DogDays</h2>
+      <p>
+        DogDays (dogdays.dev) is the DevDogs schedule planner. It is covered by
+        everything above, plus this section.
+      </p>
+      <ul>
+        <li>
+          <strong>Your account:</strong> when you sign in, DogDays receives your
+          DevDogs account&apos;s ID, your UGA email, and the name and profile
+          picture from the Google account you signed in with, and keeps them in
+          its own database. It doesn&apos;t receive your other devdogsuga.org
+          profile details, such as your preferred name, pronouns, bio or links.
+        </li>
+        <li>
+          <strong>Your plans:</strong> the schedule plans, drafts and
+          preferences you save while signed in are stored with your account.
+          Signed out, DogDays keeps your plan in your browser&apos;s local
+          storage on your own device, and we never receive it.
+        </li>
+        <li>
+          <strong>Course data:</strong> the course catalog comes from public UGA
+          registrar listings. It contains no personal data.
+        </li>
+        <li>
+          <strong>The map:</strong> the Map of Classes uses Google Maps. Your
+          browser loads the map from Google, so Google receives your IP address
+          and the usual details of a web request, under the{" "}
+          <a
+            href="https://policies.google.com/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Google Privacy Policy
+          </a>{" "}
+          and the{" "}
+          <a
+            href="https://maps.google.com/help/terms_maps/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Google Maps Terms of Service
+          </a>
+          . DogDays doesn&apos;t ask for your device&apos;s location and sends
+          Google nothing about your plan other than the building pins shown.
+        </li>
+        <li>
+          <strong>Feedback and errors:</strong> if you use the feedback widget,
+          we receive what you type and any name or email you add. Error reports
+          go to Sentry without IP addresses or cookies, and session replay is
+          off.
+        </li>
+        <li>
+          <strong>Who sees your plans:</strong> officers who maintain DogDays
+          can see them as database administrators. Nobody else can, and plans
+          are never public.
+        </li>
+        <li>
+          <strong>Deleting it:</strong> ask us (§8) and we delete your DogDays
+          account and everything saved in it.
+        </li>
+      </ul>
+      <h2 id="dogpack">14. DogPack</h2>
+      <p>
+        DogPack is the DevDogs study-session app for Android and iOS. This
+        section is its privacy policy; it is covered by everything above too.
+        The link{" "}
+        <a href="https://devdogsuga.org/legal/privacy#dogpack">
+          devdogsuga.org/legal/privacy#dogpack
+        </a>{" "}
+        is the one to give an app store.
+      </p>
+      <h3 id="dogpack-what-it-collects">What DogPack collects</h3>
+      <ul>
+        <li>
+          <strong>Your account:</strong> from your DevDogs account, DogPack
+          receives your ID, your UGA email, and the name and profile picture
+          from the Google account you signed in with. It doesn&apos;t receive
+          your other devdogsuga.org profile details. Only UGA students can sign
+          in, because DevDogs sign-in only accepts <code>@uga.edu</code>{" "}
+          accounts (§3).
+        </li>
+        <li>
+          <strong>Onboarding and profile:</strong> your name, your class year,
+          your major (free text) and the courses you&apos;re enrolled in this
+          term, as course codes. DogPack doesn&apos;t ask for your age, date of
+          birth, phone number or address.
+        </li>
+        <li>
+          <strong>Study sessions:</strong> the sessions you host (course, time,
+          place, capacity and notes you write) and the sessions you join or
+          leave.
+        </li>
+        <li>
+          <strong>Reports and blocks:</strong> a report you file, with a copy of
+          what you reported, and the people you block. See &quot;Reporting and
+          blocking&quot; below.
+        </li>
+        <li>
+          <strong>What it doesn&apos;t collect:</strong> DogPack doesn&apos;t
+          use your device&apos;s location, contacts or photos, doesn&apos;t
+          include advertising or analytics trackers, and never sells data. If
+          that ever changes, §11 applies before it ships.
+        </li>
+      </ul>
+      <h3 id="dogpack-who-can-see-it">Who can see it</h3>
+      <ul>
+        <li>
+          <strong>Other students:</strong> students enrolled in the same course
+          can see that course&apos;s sessions: the host&apos;s name, the time,
+          the place, how many seats are taken, and the names of the members who
+          joined. Nothing else in your profile is shown to other students.
+        </li>
+        <li>
+          <strong>Officers:</strong> officers who maintain DogPack can see its
+          data as database administrators, and officers who handle reports can
+          see what was reported (§4, §6).
+        </li>
+        <li>
+          <strong>Providers:</strong> DogPack&apos;s database and sign-in run on
+          Supabase and its hosting on Cloudflare. During the pilot, builds are
+          distributed through Google&apos;s Firebase App Distribution, which
+          receives the email address of each invited tester and nothing from
+          inside the app. Google&apos;s{" "}
+          <a
+            href="https://policies.google.com/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Privacy Policy
+          </a>{" "}
+          covers that.
+        </li>
+      </ul>
+      <h3 id="dogpack-reporting-and-blocking">Reporting and blocking</h3>
+      <p>
+        A report goes to the DevDogs platform&apos;s moderation system and is
+        handled as described in §6: officers see the reported content and who
+        filed it, and records are kept after the action ends. Blocks are stored
+        in DogPack and used only to hide the people you blocked from you.
+      </p>
+      <h3 id="dogpack-your-choices">Your choices and deleting your data</h3>
+      <ul>
+        <li>
+          <strong>In the app:</strong> you can edit your profile and your
+          enrollments, cancel sessions you host and leave sessions you joined.
+        </li>
+        <li>
+          <strong>Delete my data:</strong> DogPack has a delete-my-data option
+          that removes your DogPack profile, enrollments, the sessions you host
+          and your memberships in others. It doesn&apos;t delete your DevDogs
+          account; for that, follow §8. Reports you filed or that were filed
+          about you are handled under §6 and §8.
+        </li>
+        <li>
+          <strong>How long we keep it:</strong> DogPack keeps sessions only to
+          run the app, not as a record, and may remove ended sessions at any
+          time.
+        </li>
+        <li>
+          <strong>Who it&apos;s for:</strong> DogPack is only for UGA students
+          (§10).
+        </li>
+      </ul>
     </div>
   );
 }

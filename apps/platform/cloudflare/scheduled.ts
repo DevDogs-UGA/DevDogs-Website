@@ -71,19 +71,11 @@ export const CRON_ROUTES: Record<
   }
 > = {
   "0 0 * * *": {
-    label: "Nightly repair: GitHub reconcile, catalog",
+    label: "Nightly repair: academic program catalog",
     heartbeat: "platform-nightly-repair",
     routes: [
-      // Repairs team membership a failed API call left wrong. Nightly rather
-      // than more often on purpose: every membership change already fires on
-      // the platform event that caused it, so if this pass is doing meaningful
-      // work regularly then something upstream is broken and a tighter cadence
-      // would hide it.
-      "/cron/github-reconcile",
       // Mirrors the UGA Bulletin's program catalog for the account Academics
-      // combobox. Last in the daily group because it deliberately spaces
-      // roughly 42 upstream page requests; a slow or rate-limited Bulletin
-      // must not delay the GitHub repair pass above.
+      // combobox. It deliberately spaces roughly 42 upstream page requests.
       "/cron/academic-programs",
     ],
   },

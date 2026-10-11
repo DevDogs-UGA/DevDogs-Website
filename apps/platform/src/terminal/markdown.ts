@@ -16,8 +16,8 @@ import {
 import { TONE } from "./theme";
 
 /**
- * Authored markdown (competition briefs, support answers) drawn with the
- * kit's own primitives, so a brief's headings look like every other
+ * Authored markdown (support answers) drawn with the
+ * kit's own primitives, so its headings look like every other
  * `## heading` in the terminal rather than like whatever the author typed.
  *
  * Deliberately smaller than `DocsMarkdown`: GFM structure, links printed with

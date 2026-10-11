@@ -21,7 +21,7 @@ export interface ReflectionActionState {
 }
 
 const inputSchema = z.object({
-  activityType: z.enum(["meeting", "competition"]),
+  activityType: z.literal("meeting"),
   activityId: z.string().uuid(),
   content: z.string().max(12_000),
   intent: z.enum(["save", "submit"]),
@@ -90,32 +90,21 @@ async function writeReflection(
       );
     }
 
-    const activityWhere =
-      input.activityType === "meeting"
-        ? and(
-            eq(reflections.userId, userId),
-            eq(reflections.meetingId, input.activityId),
-          )
-        : and(
-            eq(reflections.userId, userId),
-            eq(reflections.competitionId, input.activityId),
-          );
+    const activityWhere = and(
+      eq(reflections.userId, userId),
+      eq(reflections.meetingId, input.activityId),
+    );
     const existingRows = await tx.execute<{
       id: string;
       userId: string;
-      meetingId: string | null;
-      competitionId: string | null;
+      meetingId: string;
       content: string;
       submittedAt: Date | null;
     }>(sql`
-      select id, "userId", "meetingId", "competitionId", content, "submittedAt"
+      select id, "userId", "meetingId", content, "submittedAt"
       from platform.reflections
-      where "userId" = ${userId}::uuid and
-        ${
-          input.activityType === "meeting"
-            ? sql`"meetingId" = ${input.activityId}::uuid`
-            : sql`"competitionId" = ${input.activityId}::uuid`
-        }
+      where "userId" = ${userId}::uuid
+        and "meetingId" = ${input.activityId}::uuid
       for update
     `);
     const existing = existingRows[0];
@@ -132,7 +121,6 @@ async function writeReflection(
           reflectionId: existing.id,
           userId,
           meetingId: existing.meetingId,
-          competitionId: existing.competitionId,
           content: existing.content,
           submittedAt: existing.submittedAt,
           createdByUserId: userId,
@@ -149,9 +137,7 @@ async function writeReflection(
         .insert(reflections)
         .values({
           userId,
-          meetingId: input.activityType === "meeting" ? input.activityId : null,
-          competitionId:
-            input.activityType === "competition" ? input.activityId : null,
+          meetingId: input.activityId,
           content: input.content,
           submittedAt,
         })
@@ -164,9 +150,7 @@ async function writeReflection(
       .values({
         reflectionId,
         userId,
-        meetingId: input.activityType === "meeting" ? input.activityId : null,
-        competitionId:
-          input.activityType === "competition" ? input.activityId : null,
+        meetingId: input.activityId,
         content: input.content,
         submittedAt,
         createdByUserId: userId,
@@ -200,38 +184,16 @@ async function eligibleActivity(
   userId: string,
   input: z.infer<typeof inputSchema>,
 ): Promise<{ endsAt: Date } | undefined> {
-  if (input.activityType === "meeting") {
-    // Raw SQL values do not inherit a column's Date decoder (see the same
-    // note in reflections/load.ts), so `m."endsAt"` comes back as text and
-    // has to be converted explicitly before it reaches `reflectionDeadline`.
-    const rows = await tx.execute<{ endsAt: string }>(sql`
-      select m."endsAt" from platform.attendance a
-      join platform.meetings m on m.id = a."meetingId"
-      where a."userId" = ${userId}::uuid and m.id = ${input.activityId}::uuid
-        and m."countsForCredit"
-        and m."deletedAt" is null and m."cancelledAt" is null
-      for share of a, m
-    `);
-    const row = rows[0];
-    return row && { endsAt: new Date(row.endsAt) };
-  }
-  // Competition participation, the same rule `reflections/load.ts` and
-  // `memberStars` use: held an active membership on the entering team at the
-  // moment the entry opened. `c."closedAt" is not null` is what makes this a
-  // reflection-eligible activity rather than merely a participated one -- a
-  // reflection only makes sense once the competition is actually over.
+  // Raw SQL values do not inherit a column's Date decoder (see the same
+  // note in reflections/load.ts), so `m."endsAt"` comes back as text and
+  // has to be converted explicitly before it reaches `reflectionDeadline`.
   const rows = await tx.execute<{ endsAt: string }>(sql`
-    select c."closedAt" as "endsAt"
-    from platform."competitionEntries" ce
-    join platform.competitions c on c.id = ce."competitionId"
-    join platform."teamMembers" tm
-      on tm."teamId" = ce."teamId"
-      and tm."joinedAt" <= ce."openedAt"
-      and (tm."leftAt" is null or tm."leftAt" > ce."openedAt")
-    where tm."userId" = ${userId}::uuid and c.id = ${input.activityId}::uuid
-      and c."closedAt" is not null
-    for share of ce, c, tm
-    limit 1
+    select m."endsAt" from platform.attendance a
+    join platform.meetings m on m.id = a."meetingId"
+    where a."userId" = ${userId}::uuid and m.id = ${input.activityId}::uuid
+      and m."countsForCredit"
+      and m."deletedAt" is null and m."cancelledAt" is null
+    for share of a, m
   `);
   const row = rows[0];
   return row && { endsAt: new Date(row.endsAt) };

@@ -36,10 +36,10 @@ describe("participation streaks", () => {
     ).toMatchObject({ current: 1, thisWeekEarned: 0, thisWeekRequired: 2 });
   });
 
-  it("uses a competition's supplied start week even if earned later", () => {
-    const competitionStart = at("2026-08-31");
+  it("uses a supplied start week even if the star is earned later", () => {
+    const opportunityStart = at("2026-08-31");
     expect(
-      calculateStreak([competitionStart], [competitionStart], at("2026-09-07")),
+      calculateStreak([opportunityStart], [opportunityStart], at("2026-09-07")),
     ).toMatchObject({ current: 1, longest: 1 });
   });
 });

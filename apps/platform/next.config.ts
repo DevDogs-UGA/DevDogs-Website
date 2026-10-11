@@ -45,11 +45,6 @@ const config = {
       },
     ];
   },
-  // `.gql`/`.graphql` sources no longer need a Turbopack loader rule --
-  // vinext builds with Vite, whose native `?raw` import suffix reads a
-  // file's contents as a string with no loader config at all (see
-  // src/server/github/queries/index.ts and graphql.d.ts).
-  //
   // NOT `cacheComponents: true`, deliberately, since 2026-08-20: Cache
   // Components' partial prerendering was broken on the OpenNext Cloudflare
   // adapter (opennextjs-cloudflare#1115: cached shells served without

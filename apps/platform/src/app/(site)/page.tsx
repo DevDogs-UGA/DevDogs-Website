@@ -174,7 +174,7 @@ async function HomeSections({
         icon={StarIcon}
       >
         <MarqueeItem>One Feature, Every Week</MarqueeItem>
-        <MarqueeItem>Every Team at Once</MarqueeItem>
+        <MarqueeItem>Everyone at Once</MarqueeItem>
         <MarqueeItem>Weekly Workshops</MarqueeItem>
         <MarqueeItem>Ship a Pull Request</MarqueeItem>
         <MarqueeItem>Build Sessions</MarqueeItem>

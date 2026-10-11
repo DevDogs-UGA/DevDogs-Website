@@ -45,18 +45,17 @@ pnpm -F platform types:drizzle        # re-introspect the Drizzle schema
 <details>
 <summary>What does a table with its policies look like in one migration?</summary>
 
-Everything the table needs, in the file that creates it. Abridged from `20260829050100_16_platform_team_awards.sql`:
+Everything the table needs, in the file that creates it. Modelled on `platform."profileLinks"` in `20260829010000_01_platform_profile.sql`:
 
 ```sql
-alter table "platform"."competitionEntries" enable row level security;
+alter table "platform"."profileLinks" enable row level security;
 
-create index "competitionEntries_competitionId_idx"
-  on "platform"."competitionEntries" ("competitionId");
-
-create policy "public_select" on "platform"."competitionEntries"
-  as permissive for select to anon, authenticated using (true);
-create policy "no_client_insert" on "platform"."competitionEntries"
-  as restrictive for insert to anon, authenticated with check (false);
+create policy "crud_authenticated_policy_select" on "platform"."profileLinks"
+  as permissive for select to authenticated
+  using ((select auth.uid()) = "userId");
+create policy "crud_authenticated_policy_insert" on "platform"."profileLinks"
+  as permissive for insert to authenticated
+  with check ((select auth.uid()) = "userId");
 ```
 
 Row-Level Security is the whole isolation boundary between app schemas — every one of them is reachable through the same PostgREST endpoint and the same publishable key. A new policy, grant, or `security definer` function means running the persona suite as well: `pnpm --filter @devdogsuga/supabase test:rls`, against a live stack.

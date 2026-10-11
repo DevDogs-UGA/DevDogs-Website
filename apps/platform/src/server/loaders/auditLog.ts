@@ -41,8 +41,7 @@ export type ReflectionRevisionDetail = {
   id: string;
   reflectionId: string;
   userId: string;
-  meetingId: string | null;
-  competitionId: string | null;
+  meetingId: string;
   content: string;
   submittedAt: string | null;
   createdAt: string;

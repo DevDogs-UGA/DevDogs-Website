@@ -136,3 +136,74 @@ export async function applyMembershipPlan(
 
   return { changes, errors };
 }
+
+/** What `createRecordBatcher` collected, ready to be written in bulk. */
+export type RecordBatches = {
+  /** Platform grants to insert (`userRoles`). */
+  platformAdds: Pair[];
+  /** Platform grants to delete. */
+  platformRemoves: Pair[];
+  /** Snapshot rows to insert or touch (`discordRoleMemberships`). */
+  snapshotUpserts: Pair[];
+  /** Snapshot rows to delete. */
+  snapshotDeletes: Pair[];
+};
+
+/**
+ * Collects `MembershipIo.record` calls so they can be written in a handful of
+ * statements instead of one or two per (user, role) pair.
+ *
+ * The cron used to write every pair as it went. After a stale snapshot (a
+ * first run, or a long gap) that is hundreds of sequential queries through
+ * Hyperdrive in one invocation. Sentry PLATFORM-A (a single 503 from this cron,
+ * 2026-10-05, during a busy deploy window) may have been that, though nothing
+ * proves it; the batching is cheap insurance, not a confirmed fix. Batching
+ * changes how many statements run, not what they say: a pair appears in
+ * exactly one of the plan's lists, so no two records touch the same row and the
+ * order between them does not matter.
+ */
+export function createRecordBatcher(): {
+  record: MembershipIo["record"];
+  batches(): RecordBatches;
+} {
+  const batches: RecordBatches = {
+    platformAdds: [],
+    platformRemoves: [],
+    snapshotUpserts: [],
+    snapshotDeletes: [],
+  };
+  return {
+    record(pair, change) {
+      const { userId, roleId } = pair;
+      const row = { userId, roleId };
+      if (change.platform === "add") batches.platformAdds.push(row);
+      else if (change.platform === "remove") batches.platformRemoves.push(row);
+      (change.snapshot
+        ? batches.snapshotUpserts
+        : batches.snapshotDeletes
+      ).push(row);
+      return Promise.resolve();
+    },
+    batches: () => batches,
+  };
+}
+
+/** Splits `items` into arrays of at most `size`, for bulk statements. */
+export function chunk<T>(items: readonly T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    out.push(items.slice(i, i + size));
+  }
+  return out;
+}
+
+/** Groups pairs by role, so a bulk delete can be `roleId = ? and userId in (?)`. */
+export function groupByRole(pairs: readonly Pair[]): Map<string, string[]> {
+  const byRole = new Map<string, string[]>();
+  for (const { userId, roleId } of pairs) {
+    const users = byRole.get(roleId);
+    if (users) users.push(userId);
+    else byRole.set(roleId, [userId]);
+  }
+  return byRole;
+}

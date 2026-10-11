@@ -9,14 +9,6 @@ import {
   getMeetingWorkshops,
   getMeetingsInRange,
 } from "./meetings";
-import { getCompetitionBySlug, getCompetitionSlugs } from "./competitions";
-import {
-  getAllTeams,
-  getTeamDetail,
-  getPendingForUser,
-  getMyTeams,
-  getEntrants,
-} from "./teams";
 import { getStarsForUser } from "./stars";
 
 const NIL = "00000000-0000-0000-0000-000000000000";
@@ -47,12 +39,6 @@ describe("every loader is valid SQL", () => {
     expect(true).toBe(true);
   });
 
-  it("competitions", async () => {
-    await getCompetitionBySlug("nope");
-    await getCompetitionSlugs();
-    expect(true).toBe(true);
-  });
-
   it("the calendar's range query, on an empty window and a populated one", async () => {
     // Two calls, because the loader has two code paths and only one reaches
     // the child statement. A window with no meetings returns before the
@@ -71,14 +57,7 @@ describe("every loader is valid SQL", () => {
     await getMeetingsInRange(from, to);
     expect(true).toBe(true);
   });
-  it("teams", async () => {
-    await getAllTeams();
-    await getTeamDetail("nope", NIL);
-    await getPendingForUser(NIL);
-    await getMyTeams(NIL);
-    await getEntrants("nope");
-    expect(true).toBe(true);
-  });
+
   it("stars", async () => {
     await getStarsForUser(NIL);
     expect(true).toBe(true);

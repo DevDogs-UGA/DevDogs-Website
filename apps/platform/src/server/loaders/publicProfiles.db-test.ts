@@ -15,7 +15,6 @@ import {
   getPublicHandlesByUserId,
   getPublicProfileByHandle,
   listPublicProfiles,
-  searchPublicProfiles,
 } from "./publicProfiles";
 
 /**
@@ -37,18 +36,9 @@ const E = id(5);
 const MODERATOR = id(90);
 const ALL = [A, B, C, D, E, MODERATOR] as const;
 
-const TEAM = "f9000000-0000-4000-b000-000000000001";
-const COMP = "f9000000-0000-4000-c000-000000000001";
 const OFFICER_ROLE = "f9000000-0000-4000-d000-000000000001";
 
 async function cleanup() {
-  await db.execute(
-    sql`delete from platform."competitionEntries" where "prNodeId" like 'PR_ppdbtest%'`,
-  );
-  await db.execute(
-    sql`delete from platform.competitions where id = ${COMP}::uuid`,
-  );
-  await db.execute(sql`delete from platform.teams where id = ${TEAM}::uuid`);
   await deleteMembers(ALL);
   await db.execute(
     sql`delete from platform.roles where id = ${OFFICER_ROLE}::uuid`,
@@ -268,8 +258,6 @@ describe("publicProfiles: hidden fields come back null", () => {
       avatar: true,
       bio: true,
       links: true,
-      competitions: true,
-      contributions: true,
       stars: true,
     });
   });
@@ -728,128 +716,37 @@ describe("officers are verified", () => {
   });
 });
 
-describe("searchPublicProfiles", () => {
-  it("matches handle and name prefixes, only public, never a hidden name", async () => {
-    await member({
-      id: A,
-      handle: "ppdb-grace",
-      first: "Grace",
-      last: "Hopper",
-    });
-    await member({
-      id: B,
-      handle: "ppdb-hidden",
-      first: "Grace",
-      last: "Murray",
-      profile: { showName: false },
-    });
-    await member({
-      id: C,
-      handle: "ppdb-off",
-      first: "Grace",
-      last: "Off",
-      profile: { publicProfile: false },
-    });
-    await member({
-      id: D,
-      handle: "ppdb-unver",
-      first: "Grace",
-      last: "Unver",
-      verified: false,
-    });
-
-    const byHandle = await searchPublicProfiles("@ppdb-gr");
-    expect(byHandle.map((m) => m.handle)).toEqual(["ppdb-grace"]);
-    expect(byHandle[0]!.userId).toBe(A);
-
-    const byWord = (await searchPublicProfiles("hopp")).map((m) => m.handle);
-    expect(byWord).toEqual(["ppdb-grace"]);
-
-    const byFirst = (await searchPublicProfiles("grace")).map((m) => m.handle);
-    expect(byFirst).toContain("ppdb-grace");
-    expect(byFirst).not.toContain("ppdb-hidden"); // name hidden, handle doesn't match
-    expect(byFirst).not.toContain("ppdb-off");
-    expect(byFirst).not.toContain("ppdb-unver");
-
-    expect(
-      (await searchPublicProfiles("ppdb-hid")).map((m) => m.handle),
-    ).toEqual(["ppdb-hidden"]);
-    expect(await searchPublicProfiles("")).toEqual([]);
-    expect(await searchPublicProfiles("%")).toEqual([]);
-    expect((await searchPublicProfiles("ppdb", 1)).length).toBe(1);
-  });
-});
-
 describe("getPublicProfileActivity", () => {
   async function seedActivity() {
     await member({ id: A, handle: "ppdb-active" });
-    await member({ id: B, handle: "ppdb-late" });
-    await db.execute(
-      sql`insert into platform.teams (id, slug, name, "joinCode", "createdBy") values (${TEAM}::uuid, 'ppdb-team', 'PPDB Team', 'ZZZ234', ${A}::uuid)`,
-    );
-    await db.execute(
-      sql`insert into platform."teamMembers" ("teamId", "userId", role, "joinedAt") values (${TEAM}::uuid, ${A}::uuid, 'lead', now() - interval '30 days')`,
-    );
-    await db.execute(
-      sql`insert into platform."teamMembers" ("teamId", "userId", role, "joinedAt") values (${TEAM}::uuid, ${B}::uuid, 'member', now() - interval '1 day')`,
-    );
-    await db.execute(sql`
-      insert into platform.competitions (id, slug, "issueNodeId", "issueNumber", repo, url, title, "kickedOffAt")
-      values (${COMP}::uuid, 'ppdb-comp', 'I_ppdbtest', 901, 'o/r', 'https://example.test/i/901', 'PPDB Comp', now() - interval '20 days')
-    `);
-    await db.execute(sql`
-      insert into platform."competitionEntries" ("competitionId", "teamId", "prNodeId", "prNumber", url, "openedAt", "mergedAt")
-      values (${COMP}::uuid, ${TEAM}::uuid, 'PR_ppdbtest_1', 77, 'https://example.test/pull/77', now() - interval '10 days', now() - interval '9 days')
-    `);
     await db.execute(sql`
       insert into platform."profileLinks" ("userId", url, title, "sortOrder")
       values (${A}::uuid, 'https://example.test/a', 'Site', 1)
     `);
   }
 
-  it("returns links, competitions, merged contributions and star totals", async () => {
+  it("returns links and star totals", async () => {
     await seedActivity();
     const activity = await getPublicProfileActivity("ppdb-active");
     expect(activity?.links).toEqual([
       { title: "Site", url: "https://example.test/a" },
     ]);
-    expect(activity?.competitions).toMatchObject([
-      {
-        competitionSlug: "ppdb-comp",
-        teamSlug: "ppdb-team",
-        teamName: "PPDB Team",
-        won: true,
-      },
-    ]);
-    expect(activity?.contributions).toMatchObject([
-      {
-        prNumber: 77,
-        url: "https://example.test/pull/77",
-        teamSlug: "ppdb-team",
-      },
-    ]);
-    expect(activity?.stars).toMatchObject({ competitionStars: 1, wins: 1 });
-  });
-
-  it("does not credit a member who joined after the entry opened", async () => {
-    await seedActivity();
-    const activity = await getPublicProfileActivity("ppdb-late");
-    expect(activity?.competitions).toEqual([]);
-    expect(activity?.contributions).toEqual([]);
-    expect(activity?.stars).toMatchObject({ competitionStars: 0, wins: 0 });
+    expect(activity?.stars).toEqual({ meetingStars: 0 });
   });
 
   it("returns null for each section its flag hides", async () => {
     await seedActivity();
     await db.execute(sql`
-      update platform.profile set "showLinks" = false, "showCompetitions" = false,
-        "showContributions" = false, "showStars" = false where "userId" = ${A}::uuid
+      update platform.profile set "showLinks" = false, "showStars" = false
+      where "userId" = ${A}::uuid
     `);
     expect(await getPublicProfileActivity("ppdb-active")).toEqual({
       links: null,
-      competitions: null,
-      contributions: null,
       stars: null,
     });
+  });
+
+  it("returns null for a handle that is not public", async () => {
+    expect(await getPublicProfileActivity("ppdb-nobody")).toBeNull();
   });
 });

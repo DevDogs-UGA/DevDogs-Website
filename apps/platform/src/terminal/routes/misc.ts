@@ -1,12 +1,11 @@
 import { SITE } from "@devdogsuga/newsletter";
-import { partnersPageEnabled } from "~/server/features";
 import { getVisibleDocsProjects } from "~/server/docs/queries";
 import { getPublishedFaqPost } from "~/server/support/forumIndex";
 import type { Block } from "../blocks";
-import { gatedBy, NOT_FOUND, page, PUBLIC, terminal } from "../define";
+import { NOT_FOUND, page, PUBLIC, terminal } from "../define";
 
 /**
- * The smaller paths: docs (a pointer, never the pages), help, and partners.
+ * The smaller paths: docs (a pointer, never the pages) and help.
  */
 
 /**
@@ -75,11 +74,6 @@ const HELP = [
     path: "/newsletters/gdgc/<issue>",
     description: "One GDGC issue, e.g. /newsletters/gdgc/1.",
   },
-  { path: "/competitions/<slug>", description: "A competition's brief." },
-  {
-    path: "/competitions/<slug>/results",
-    description: "Who entered, and who won.",
-  },
   {
     path: "/docs",
     description: "Documentation projects (read them in a browser).",
@@ -99,7 +93,7 @@ export const help = terminal(PUBLIC, () =>
     body: [
       {
         type: "text",
-        text: "Most of devdogsuga.org answers curl with a terminal version of the page. Anything that needs an account or a mouse points you to the browser instead.",
+        text: "Most of devdogsuga.org answers curl with a terminal version of the page. Pages without one answer with their title and a link to open in the browser.",
       },
       { type: "heading", text: "paths" },
       { type: "commands", items: [...HELP] },
@@ -149,13 +143,3 @@ export const helpThread = terminal(PUBLIC, async ({ params }) => {
     ],
   });
 });
-
-/**
- * Under construction in every environment today, exactly like the page; the
- * gate is the page's, so when it starts rendering something this route's
- * switch is already wired.
- */
-export const partners = terminal(
-  gatedBy(partnersPageEnabled, { kind: "underConstruction" }),
-  () => ({ kind: "underConstruction" }) as const,
-);

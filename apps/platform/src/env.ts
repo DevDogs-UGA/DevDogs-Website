@@ -223,143 +223,12 @@ const server = {
   // Same "default" reasoning as DISCORD_GUILD_ID, schema default included.
   GITHUB_ORG: define(z.string().default("DevDogsUGA"), {
     doc:
-      "The GitHub organization the platform administers. Any non-empty " +
-      "placeholder is enough to run the app locally.",
-    scope: "default",
-    secrecy: "public",
-    example: "DevDogsUGA",
-  }),
-  // The DevDogs GitHub App, which replaced an org-owner `ghp_` token. Every
-  // GitHub call this platform makes is an organization administration action,
-  // so under the old shape a compromise of this Worker was an organization
-  // takeover. See server/github/client.ts.
-  //
-  // The id and installation id are visible in any webhook payload, so they are
-  // NOT secrets and are GitHub environment *variables*. The private key is a
-  // secret, and a multi-line PEM.
-  GH_APP_ID: define(z.coerce.number().int().positive(), {
-    doc:
-      "The DevDogs GitHub App's id. Not a secret -- it appears in every " +
-      "webhook payload. Required at boot but only used by org invites and " +
-      "team provisioning, so the numeric placeholder is enough to run the " +
+      "The GitHub organization the platform links to (docs source links, " +
+      "the account page). Any non-empty placeholder is enough to run the " +
       "app locally.",
-    scope: "environment",
-    secrecy: "public",
-    example: "000000",
-  }),
-  GH_APP_INSTALLATION_ID: define(z.coerce.number().int().positive(), {
-    doc:
-      "The App's installation id on the organization. Not a secret -- " +
-      "visible in any webhook payload. Like GH_APP_ID, the placeholder " +
-      "is enough unless you are working on the org integration.",
-    scope: "environment",
-    secrecy: "public",
-    example: "00000000",
-  }),
-  GH_APP_PRIVATE_KEY: define(
-    z
-      .string()
-      .min(1)
-      .refine((v) => v.includes("BEGIN") && v.includes("PRIVATE KEY"), {
-        message:
-          "GH_APP_PRIVATE_KEY must be the PEM itself, not a path or an id. " +
-          "Newlines matter; keep it quoted.",
-      }),
-    {
-      doc:
-        "The App's private key: the PEM itself, on one line, double-quoted, " +
-        "with \\n escapes -- the newlines are load-bearing, and a key that " +
-        "lost them parses as a string and fails to sign. It mints " +
-        "installation tokens indefinitely, which makes it the organization " +
-        "credential.",
-      scope: "environment",
-      secrecy: "secret",
-      // The placeholder documents the one-line \n-escaped shape, which is the
-      // part people get wrong when pasting a real key.
-      example:
-        "-----BEGIN RSA PRIVATE KEY-----\\nPLACEHOLDER-NOT-A-REAL-KEY-see-docs-platform-env-md\\n-----END RSA PRIVATE KEY-----\\n",
-    },
-  ),
-  // Shared secret configured on the App's webhook (`/github/webhook`),
-  // which is how the team mirror stays live rather than waiting out the
-  // nightly reconcile: GitHub signs every delivery with it, and the route
-  // verifies `X-Hub-Signature-256` before trusting a membership, team or
-  // branch event -- see server/github/webhookSignature.ts. Same shape as
-  // CRON_SECRET: an empty local default lets `next dev` boot with no
-  // webhook configured (the route only enforces the check when deployed),
-  // deployed environments require at least 32 characters.
-  //
-  // The `GH_` (not `GITHUB_`) prefix reuses the shape GitHub Actions already
-  // forces onto the App credentials -- it refuses secret/variable names
-  // starting with `GITHUB_`, which `env/completeness.test.ts` asserts so
-  // this does not get relearned.
-  GH_WEBHOOK_SECRET: define(
-    switchEnvironment({
-      local: z.string().default(""),
-      deployed: z.string().min(32),
-    }),
-    {
-      doc:
-        "Shared secret configured on the DevDogs GitHub App's webhook. " +
-        "Verifies X-Hub-Signature-256 on every delivery to /github/webhook " +
-        "before any team-mirror event is trusted.",
-      scope: "environment",
-      secrecy: "secret",
-    },
-  ),
-  // The repository team branches live in. Defaulted rather than required:
-  // every existing deployment predates teams, and a new required variable
-  // would stop them booting over a feature they do not use yet.
-  //
-  // The old default, "DevDogs-Website", stopped being a real repository name
-  // when this repo was renamed to "DevDogsUGA". Reads survived on GitHub's
-  // redirect; the writes team provisioning performs, createRef and
-  // addOrUpdateRepoPermissionsInOrg, are not guaranteed to follow one.
-  //
-  // This IS the deploy repo, deliberately: the `production` branch, not a
-  // second repository, is the deploy boundary. The cost is that a team
-  // granted push here can reach every other team's branch, because a GitHub
-  // team grant is repository-wide with no branch dimension. The isolation
-  // comes from the branch ruleset `server/github/rulesets.ts` creates per
-  // team, restricting pushes on that team's own branch to that team; the
-  // 75-rulesets-per-repository ceiling is the real limit on how many teams
-  // can exist concurrently.
-  GITHUB_COMPETITION_REPO: define(z.string().default("DevDogsUGA"), {
-    doc:
-      "The repository team branches are cut in -- this one, deliberately: " +
-      "the production branch, not a second repo, is the deploy boundary. " +
-      "The schema default is right; set it only if that ever stops being " +
-      "true.",
     scope: "default",
     secrecy: "public",
     example: "DevDogsUGA",
-    commented: true,
-  }),
-  // The private "Competitions" GitHub Project's GraphQL node id (a
-  // `PVT_...` string, not the project's number). Optional: Sloan has to
-  // create the Project by hand and note its id, so the platform has to boot
-  // without one -- `server/github/
-  // competitions.ts` treats an unset value as "competitions ingestion is not
-  // configured yet" and no-ops every webhook delivery and reconcile pass
-  // rather than failing to start. A committed constant would work for
-  // GITHUB_ORG and GITHUB_COMPETITION_REPO because both name things this repo
-  // already controls; a Project's node id is assigned by GitHub the moment
-  // the Project is created and cannot be predicted ahead of that, so this is
-  // `scope: "environment"` -- routed to a real GitHub Actions secret/variable
-  // once Sloan sets it. `GH_`, not `GITHUB_`, for the same reason every other
-  // routed key naming something GitHub does is `GH_APP_ID`/`GH_WEBHOOK_SECRET`
-  // and not `GITHUB_APP_ID`: GitHub Actions reserves the `GITHUB_` prefix for
-  // its own automatic variables and refuses to let a workflow define a
-  // secret or variable that starts with it.
-  GH_COMPETITIONS_PROJECT_ID: define(z.string().default(""), {
-    doc:
-      'The private "Competitions" GitHub Project\'s GraphQL node id ' +
-      "(PVT_...). Empty means competition ingestion is a no-op -- the " +
-      "platform boots without it. Find it with `gh project view <number> " +
-      "--owner DevDogsUGA --format json --jq .id`.",
-    scope: "environment",
-    secrecy: "public",
-    commented: true,
   }),
   // Derived (.env / .env.generated). `localStack: true` throughout: when the
   // local Docker stack is running, `.env.generated` supplies these and wins
@@ -426,7 +295,7 @@ const server = {
     example: "https://$PROJECT_REF.supabase.co/rest/v1",
   }),
   // The S3 pair splits: the key id never appears in any public payload (so
-  // unlike GH_APP_ID there is no argument from exposure), it is half of
+  // there is no argument from exposure), it is half of
   // a credential pair, and keeping it beside its secret in Bitwarden is the
   // simplest thing to rotate. The region is a name the model doc prints in
   // plaintext.
