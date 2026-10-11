@@ -13,8 +13,10 @@
  *
  * Reads production through the Management API's read-only query endpoint with
  * the Supabase CLI's access token (`SUPABASE_ACCESS_TOKEN`, or
- * `~/.supabase/access-token`). It can't write: the endpoint rejects anything
- * but a read.
+ * `~/.supabase/access-token`). That endpoint rejects anything but a read. The
+ * one exception is the members query, which reads the `publicProfiles` view
+ * and so goes through the ordinary (write-capable) endpoint; `query` there
+ * accepts only a single bare SELECT with no write keywords.
  *
  * The repository is public, so what lands in `archive/` is what the public
  * competition archive page already showed, and no more: competitions and their
@@ -69,6 +71,9 @@ function accessToken(): string {
   );
 }
 
+const WRITE_WORDS =
+  /\b(insert|update|delete|drop|alter|create|truncate|grant|revoke|copy|call|do|set_config|nextval|setval|lo_\w+|pg_\w+|dblink\w*)\b/i;
+
 /**
  * Runs one SELECT. The read-only endpoint is the default; the members query
  * needs the `publicProfiles` view, whose helper functions that restricted role
@@ -84,6 +89,11 @@ async function query(
     throw new Error(
       "Only a single SELECT statement may be sent to production.",
     );
+  }
+  // The ordinary endpoint is write-capable, so a bare SELECT is not enough
+  // there: refuse anything that could write or call a function with effects.
+  if (WRITE_WORDS.test(sql)) {
+    throw new Error("The statement names a write or a function with effects.");
   }
   const response = await fetch(
     `https://api.supabase.com/v1/projects/${projectRef}/database/query${endpoint === "read-only" ? "/read-only" : ""}`,

@@ -23,12 +23,20 @@ archive page showed:
 - A team member is named by public handle only when they had a public profile.
   Everyone else is a row with a null handle, so the counts still match.
 
-The unredacted rows were written outside the repository, for officers.
+The unredacted rows (`teams.json`, `teamMembers.json`,
+`teamMembershipRequests.json`, `competitions.json`, `competitionEntries.json`)
+were written outside the repository, for officers: on the machine that ran the
+export, in `~/.devdogs-secrets/archive-2026-10/` (exported 2026-10-11). That is
+the only copy. An officer who wants it kept should move it to the officers'
+shared drive before the machine is retired.
 
 ## Reproducing and checking
 
 ```bash
-# Export again (reads production through the read-only Management API)
+# Export again (reads production through the Management API: the read-only
+# endpoint for every table but the members query, which needs the
+# publicProfiles view and so uses the ordinary endpoint with a single bare
+# SELECT, checked for write keywords before it is sent)
 node scripts/archive-teams-and-competitions.ts
 
 # Verify the files against the manifest, and the manifest against production

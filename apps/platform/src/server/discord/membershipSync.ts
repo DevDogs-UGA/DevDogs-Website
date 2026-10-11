@@ -155,10 +155,12 @@ export type RecordBatches = {
  *
  * The cron used to write every pair as it went. After a stale snapshot (a
  * first run, or a long gap) that is hundreds of sequential queries through
- * Hyperdrive in one invocation, and the Worker answered 503 before it finished
- * (PLATFORM-A). Batching changes how many statements run, not what they say: a
- * pair appears in exactly one of the plan's lists, so no two records touch the
- * same row and the order between them does not matter.
+ * Hyperdrive in one invocation. Sentry PLATFORM-A (a single 503 from this cron,
+ * 2026-10-05, during a busy deploy window) may have been that, though nothing
+ * proves it; the batching is cheap insurance, not a confirmed fix. Batching
+ * changes how many statements run, not what they say: a pair appears in
+ * exactly one of the plan's lists, so no two records touch the same row and the
+ * order between them does not matter.
  */
 export function createRecordBatcher(): {
   record: MembershipIo["record"];
