@@ -2,6 +2,9 @@ import type { APIGuildMember } from "discord-api-types/v10";
 import { describe, expect, it, vi } from "vitest";
 import {
   applyMembershipPlan,
+  chunk,
+  createRecordBatcher,
+  groupByRole,
   pairKey,
   planMembershipSync,
   type MembershipIo,
@@ -219,5 +222,64 @@ describe("applyMembershipPlan", () => {
     expect(result.changes).toBe(1);
     expect(result.errors).toHaveLength(1);
     expect(stub.record).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("createRecordBatcher", () => {
+  it("sorts every record into the bulk write it belongs to", async () => {
+    const batcher = createRecordBatcher();
+    const a = { userId: "a", roleId: ROLE };
+    const b = { userId: "b", roleId: ROLE };
+    const c = { userId: "c", roleId: ROLE };
+    const d = { userId: "d", roleId: ROLE };
+    await batcher.record(a, { platform: "add", snapshot: true });
+    await batcher.record(b, { platform: "remove", snapshot: false });
+    await batcher.record(c, { snapshot: true });
+    await batcher.record(d, { snapshot: false });
+
+    expect(batcher.batches()).toEqual({
+      platformAdds: [a],
+      platformRemoves: [b],
+      snapshotUpserts: [a, c],
+      snapshotDeletes: [b, d],
+    });
+  });
+
+  it("collects a whole stale-snapshot run without touching a database", async () => {
+    // The shape that 503'd in production: every pair out of date at once.
+    const batcher = createRecordBatcher();
+    const plan = {
+      pushes: [],
+      pulls: [],
+      snapshotOnly: Array.from({ length: 900 }, (_, i) => ({
+        userId: `user-${i}`,
+        roleId: ROLE,
+        present: i % 2 === 0,
+      })),
+    };
+    await applyMembershipPlan(plan, {
+      pushMemberRoleChange: vi.fn(),
+      record: batcher.record,
+    });
+    const { snapshotUpserts, snapshotDeletes } = batcher.batches();
+    expect(snapshotUpserts).toHaveLength(450);
+    expect(snapshotDeletes).toHaveLength(450);
+  });
+});
+
+describe("chunk and groupByRole", () => {
+  it("splits into bounded chunks and keeps the remainder", () => {
+    expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+    expect(chunk([], 2)).toEqual([]);
+  });
+
+  it("groups users by role", () => {
+    const grouped = groupByRole([
+      { userId: "a", roleId: "r1" },
+      { userId: "b", roleId: "r2" },
+      { userId: "c", roleId: "r1" },
+    ]);
+    expect(grouped.get("r1")).toEqual(["a", "c"]);
+    expect(grouped.get("r2")).toEqual(["b"]);
   });
 });
