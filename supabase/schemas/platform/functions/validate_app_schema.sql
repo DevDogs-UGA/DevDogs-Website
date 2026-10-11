@@ -5,6 +5,11 @@ CREATE OR REPLACE FUNCTION platform.validate_app_schema()
   SET search_path TO ''
   AS $function$
 begin
+  -- External apps have no schema to check; the table's check constraint is what
+  -- keeps a null schema from reaching an internal app.
+  if new."schemaName" is null then
+    return new;
+  end if;
   if not exists (
     select 1 from pg_catalog.pg_namespace where nspname = new."schemaName"
   ) then

@@ -16,6 +16,10 @@ declare
   report     record;
   app_slug   text;
   resolution uuid;
+  external   boolean;
+  reason_txt text;
+  scope_app  uuid;
+  deliveries uuid[] := '{}';
 begin
   if actor is null then
     raise exception 'resolve_report() requires a moderator';
@@ -24,7 +28,7 @@ begin
     raise exception 'resolve_report() requires the canModerate permission';
   end if;
 
-  select r.*, a."slug" as slug into report
+  select r.*, a."slug" as slug, a."kind" as app_kind into report
   from "platform"."reports" r
   join "platform"."apps" a on a."id" = r."appId"
   where r."id" = report_id;
@@ -36,6 +40,7 @@ begin
     raise exception 'Report % has already been decided', report_id;
   end if;
   app_slug := report.slug;
+  external := report.app_kind = 'external';
 
   update "platform"."reports"
   set "status" = 'resolved', "resolvedAt" = now()
@@ -49,12 +54,29 @@ begin
     content_action, coalesce(apply_globally, false), moderator_note
   ) returning "id" into resolution;
 
-  -- Inside the same transaction as the decision, and raises rather than
-  -- no-oping, so a content action that cannot be applied aborts the whole
-  -- resolution instead of recording an outcome that silently never landed.
-  perform "platform".apply_content_action(
-    app_slug, report."contentType", report."contentRef", content_action, resolution
-  );
+  if external then
+    -- The app's rows are in another database: record the decision and owe the
+    -- app a signed message. Quarantine is a hide; restore is a separate action.
+    if content_action = 'quarantine' then
+      deliveries := deliveries || "platform".enqueue_moderation_delivery(
+        report."appId",
+        'content.hide',
+        jsonb_build_object(
+          'contentType', report."contentType",
+          'contentRef',  report."contentRef",
+          'reportId',    report_id
+        ),
+        report_id
+      );
+    end if;
+  else
+    -- Inside the same transaction as the decision, and raises rather than
+    -- no-oping, so a content action that cannot be applied aborts the whole
+    -- resolution instead of recording an outcome that silently never landed.
+    perform "platform".apply_content_action(
+      app_slug, report."contentType", report."contentRef", content_action, resolution
+    );
+  end if;
 
   if coalesce(apply_globally, false) then
     if subject_action in ('suspend', 'ban') then
@@ -72,6 +94,26 @@ begin
     end if;
   end if;
 
+  -- Standing changes reach every external app when global, and the reported
+  -- app alone otherwise. The reason is the report's category, never the
+  -- moderator's private note.
+  if (subject_action in ('suspend', 'ban') or filer_action = 'suspend')
+     and (coalesce(apply_globally, false) or external) then
+    reason_txt := report."reason"::text;
+    scope_app := case when coalesce(apply_globally, false) then null else report."appId" end;
+
+    if subject_action in ('suspend', 'ban') then
+      deliveries := deliveries || "platform".enqueue_user_standing(
+        report."reportedUserId", subject_action::text, reason_txt, report_id, scope_app
+      );
+    end if;
+    if filer_action = 'suspend' then
+      deliveries := deliveries || "platform".enqueue_user_standing(
+        report."reporterUserId", 'suspend', reason_txt, report_id, scope_app
+      );
+    end if;
+  end if;
+
   return jsonb_build_object(
     'resolutionId', resolution,
     -- Non-null only when Supabase's native ban still has to be applied by a
@@ -79,7 +121,10 @@ begin
     'bannedUserId', case
       when coalesce(apply_globally, false) and subject_action = 'ban'
       then report."reportedUserId"
-    end
+    end,
+    -- The deliveries this decision owes. The caller queues them once the
+    -- transaction has committed.
+    'deliveryIds', to_jsonb(deliveries)
   );
 end;
 $function$;
