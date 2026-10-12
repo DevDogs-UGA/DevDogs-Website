@@ -24,6 +24,18 @@
  * Run with no `--version-id` it checks whatever is live (the post-switch
  * check and the scheduled smoke test).
  *
+ * `--settle <seconds>` (the post-switch check only) first waits for the live
+ * version to stop answering 5xx. vinext's Workers Cache stage answers an empty
+ * 503 when it runs on a different build than the one that took the request
+ * (build-skew protection), and for roughly 20 to 40 seconds after a traffic
+ * switch edge locations disagree about which version is live, so some real
+ * requests meet that 503. Measured by switching staging-platform between two
+ * versions under a request loop: about one request in ten, on both versions;
+ * none on the version-pinned preview; none seen on schedule-builder. The wait
+ * ends after `stable` good answers in a row and is itself a reported check, so
+ * a switch that needed it says so, and a version that never settles still
+ * fails.
+ *
  * Environment (only for --authorize):
  *   API_URL      the Supabase project's API origin.
  *   SECRET_KEY   the project's secret key.
@@ -31,7 +43,7 @@
  * Usage:
  *   node worker-smoke.mjs --path apps/platform --tier staging \
  *     [--workers-json workers.json | --smoke-json '{"hosts":{...},...}'] [--worker-name staging-platform --version-id UUID] \
- *     [--authorize]
+ *     [--authorize] [--settle SECONDS]
  */
 import { createHash, randomBytes } from "node:crypto";
 import { appendFileSync, readFileSync } from "node:fs";
@@ -77,8 +89,7 @@ export function overrideHeader(workerName, versionId) {
  *   versionId?: string,
  *   fetchImpl?: typeof fetch,
  *   authorize?: { apiUrl: string, secretKey: string } | null,
- *   retries?: number,
- *   retryDelayMs?: number,
+ *   settle?: { ms: number, stable?: number, intervalMs?: number } | null,
  * }} input
  * @returns {Promise<Check[]>}
  */
@@ -89,8 +100,7 @@ export async function runSmoke({
   versionId,
   fetchImpl = fetch,
   authorize = null,
-  retries = 2,
-  retryDelayMs = 3000,
+  settle = null,
 }) {
   const host = smoke.hosts?.[tier];
   if (!host)
@@ -105,28 +115,17 @@ export async function runSmoke({
       versionId,
     );
   }
-  // A request that lands on a Worker version a second after the traffic switch
-  // can meet a 5xx while the new version warms up (seen on the first staging
-  // run: `/` answered 503 once, every other path 200, and the next request
-  // was fine). A page is retried a couple of times on a 5xx or a network
-  // error; a version that is really broken answers 5xx every time and still
-  // fails.
-  const get = async (url) => {
-    for (let attempt = 0; ; attempt++) {
-      try {
-        const response = await fetchImpl(url, { redirect: "manual", headers });
-        if (response.status < 500 || attempt >= retries) return response;
-        await response.arrayBuffer().catch(() => {});
-      } catch (error) {
-        if (attempt >= retries) throw error;
-      }
-      if (retryDelayMs > 0)
-        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-    }
-  };
+  const get = (url) => fetchImpl(url, { redirect: "manual", headers });
 
   /** @type {Check[]} */
   const checks = [];
+  if (settle && settle.ms > 0) {
+    const paths = [
+      ...(smoke.publicPaths ?? []),
+      ...(smoke.protectedPath ? [smoke.protectedPath] : []),
+    ];
+    checks.push(await settleCheck({ base, paths, get, ...settle }));
+  }
   for (const path of smoke.publicPaths ?? []) {
     try {
       const response = await get(`${base}${path}`);
@@ -192,6 +191,77 @@ export async function runSmoke({
       ...(await authorizeChecks({ base, headers, fetchImpl, ...authorize })),
     );
   return checks;
+}
+
+/**
+ * Waits for the live version to stop answering 5xx (see the header). Probes the
+ * Worker's own pages round-robin and is done after `stable` answers in a row
+ * that are not 5xx; a network error counts as a 5xx. Never throws: it returns
+ * the check, which fails when the deadline passes first.
+ *
+ * @param {{
+ *   base: string,
+ *   paths: string[],
+ *   get: (url: string) => Promise<Response>,
+ *   ms: number,
+ *   stable?: number,
+ *   intervalMs?: number,
+ * }} input
+ * @returns {Promise<Check>}
+ */
+export async function settleCheck({
+  base,
+  paths,
+  get,
+  ms,
+  stable = 8,
+  intervalMs = 1000,
+}) {
+  const name = "the live version answers without a 5xx";
+  const started = Date.now();
+  /** @type {Record<string, number>} */
+  const bad = {};
+  let badCount = 0;
+  let good = 0;
+  let last = "";
+  for (let i = 0; ; i++) {
+    const path = paths[i % Math.max(paths.length, 1)] ?? "/";
+    let status;
+    try {
+      const response = await get(`${base}${path}`);
+      await response.arrayBuffer().catch(() => {});
+      status = response.status;
+    } catch {
+      status = 0;
+    }
+    if (status > 0 && status < 500) good += 1;
+    else {
+      good = 0;
+      badCount += 1;
+      bad[status || "error"] = (bad[status || "error"] ?? 0) + 1;
+      last = `${status || "error"} on ${path}`;
+    }
+    const seconds = Math.round((Date.now() - started) / 1000);
+    const history = badCount
+      ? `${badCount} 5xx or errored answers first (${Object.entries(bad)
+          .map(([code, n]) => `${code} x${n}`)
+          .join(", ")}), over ${seconds}s`
+      : "no 5xx";
+    if (good >= stable)
+      return {
+        name,
+        ok: true,
+        detail: `${stable} answers in a row after ${history}`,
+      };
+    if (Date.now() - started >= ms)
+      return {
+        name,
+        ok: false,
+        detail: `still failing after ${seconds}s: ${history}; last ${last || "none"}`,
+      };
+    if (intervalMs > 0)
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
 }
 
 /**
@@ -455,6 +525,7 @@ if (isMain(import.meta.url)) {
     workerName: flag("--worker-name"),
     versionId: flag("--version-id"),
     authorize,
+    settle: flag("--settle") ? { ms: Number(flag("--settle")) * 1000 } : null,
   }).then(
     (checks) => {
       const title = `Smoke test: ${path} (${tier})${flag("--version-id") ? `, version ${flag("--version-id")}` : ", live"}`;

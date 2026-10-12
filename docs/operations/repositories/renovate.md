@@ -24,7 +24,7 @@ The CLI version is pinned in three places that must agree: the pnpm catalog, the
 
 ## Turning it on
 
-DevDogsUGA's `renovate.json5` ships with a rollout switch: the first package rule disables everything except our own packages, so merging the preset changes nothing until you are ready. To turn Renovate on for the repository, delete that rule (and its comment) in a pull request. For a product repository, extend the preset with no switch.
+DevDogsUGA's `renovate.json5` ships with a rollout switch: the first package rule disables everything except our own packages, so merging the preset changes nothing until you are ready, with one exception: vulnerability alerts still open a security pull request for a vulnerable dependency (the first, for pnpm, opened minutes after the preset merged). Review and merge those like any other. To turn Renovate on for the repository, delete that rule (and its comment) in a pull request. For a product repository, extend the preset with no switch.
 
 Renovate itself is a GitHub App installed by an organization owner; an owner also chooses which repositories it can see ([Owner-only actions](./owner-actions.md)).
 

@@ -1195,7 +1195,6 @@ test("smoke fails on a broken page and on an unprotected protected page", async 
     smoke: SMOKE,
     tier: "staging",
     fetchImpl,
-    retryDelayMs: 0,
   });
   assert.deepEqual(
     checks.map((c) => c.ok),
@@ -1211,7 +1210,7 @@ test("smoke fails on a broken page and on an unprotected protected page", async 
   );
 });
 
-test("smoke retries a page that answers 5xx once right after a switch, but not a page that stays broken", async () => {
+test("a 5xx is a failure with no retry, and the check says what answered", async () => {
   const calls = { "/": 0, "/docs": 0 };
   const fetchImpl = async (url) => {
     const path = new URL(url).pathname;
@@ -1221,22 +1220,90 @@ test("smoke retries a page that answers 5xx once right after a switch, but not a
         headers: { location: "/auth" },
       });
     calls[path]++;
-    if (path === "/")
-      return new Response("warming", { status: calls["/"] === 1 ? 503 : 200 });
-    return new Response("boom", { status: 500 });
+    return path === "/"
+      ? new Response("warming", {
+          status: 503,
+          headers: { "cf-ray": "abc-ATL" },
+        })
+      : new Response("fine", { status: 200 });
+  };
+  const checks = await runSmoke({ smoke: SMOKE, tier: "staging", fetchImpl });
+  assert.deepEqual(
+    checks.map((c) => c.ok),
+    [false, true, true],
+  );
+  assert.equal(calls["/"], 1);
+  assert.match(checks[0].detail, /status 503, cf-ray abc-ATL, body "warming"/);
+});
+
+test("settle waits out the 5xx window after a switch and reports it", async () => {
+  let n = 0;
+  const fetchImpl = async (url) => {
+    const path = new URL(url).pathname;
+    if (path === "/console")
+      return new Response(null, {
+        status: 307,
+        headers: { location: "/auth" },
+      });
+    n += 1;
+    // the first 4 probes meet the skew 503, then the version has settled
+    return new Response("x", { status: n <= 4 ? 503 : 200 });
   };
   const checks = await runSmoke({
     smoke: SMOKE,
     tier: "staging",
     fetchImpl,
-    retryDelayMs: 0,
+    settle: { ms: 5000, stable: 3, intervalMs: 0 },
   });
-  assert.deepEqual(
-    checks.map((c) => c.ok),
-    [true, false, true],
+  assert.equal(checks[0].name, "the live version answers without a 5xx");
+  assert.equal(checks[0].ok, true);
+  assert.match(
+    checks[0].detail,
+    /3 answers in a row after 4 5xx or errored answers first \(503 x4\)/,
   );
-  assert.equal(calls["/"], 2);
-  assert.equal(calls["/docs"], 3);
+  assert.ok(
+    checks.every((c) => c.ok),
+    JSON.stringify(checks),
+  );
+});
+
+test("settle does not forgive a version that keeps answering 5xx", async () => {
+  const fetchImpl = async () => new Response("boom", { status: 503 });
+  const checks = await runSmoke({
+    smoke: SMOKE,
+    tier: "staging",
+    fetchImpl,
+    settle: { ms: 30, stable: 3, intervalMs: 1 },
+  });
+  assert.equal(checks[0].ok, false);
+  assert.match(checks[0].detail, /still failing after/);
+  assert.match(checks[0].detail, /503 x\d+/);
+});
+
+test("settle counts a network error as a 5xx and a clean version needs no waiting", async () => {
+  let n = 0;
+  const flaky = async () => {
+    n += 1;
+    if (n === 1) throw new Error("connection reset");
+    return new Response("x", { status: 200 });
+  };
+  const [first] = await runSmoke({
+    smoke: { ...SMOKE, protectedPath: undefined },
+    tier: "staging",
+    fetchImpl: flaky,
+    settle: { ms: 5000, stable: 2, intervalMs: 0 },
+  });
+  assert.match(
+    first.detail,
+    /after 1 5xx or errored answers first \(error x1\)/,
+  );
+  const [clean] = await runSmoke({
+    smoke: { ...SMOKE, protectedPath: undefined },
+    tier: "staging",
+    fetchImpl: async () => new Response("x", { status: 200 }),
+    settle: { ms: 5000, stable: 2, intervalMs: 0 },
+  });
+  assert.equal(clean.detail, "2 answers in a row after no 5xx");
 });
 
 test("expected statuses prove a Worker that answers something other than 200", async () => {

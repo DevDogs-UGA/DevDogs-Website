@@ -9,8 +9,13 @@
   // ROLLOUT SWITCH. Renovate is turned on for the whole repository as a
   // deliberate step (Workflow 2 housekeeping, runbook "Renovate"), not by the
   // merge that adds the preset: until then only the club's own packages are
-  // managed, exactly as before. To turn the preset on, delete the first rule
-  // below (the one that disables everything) and this comment.
+  // managed, exactly as before. THE EXCEPTION IS SECURITY: the preset's
+  // vulnerability alerts add their own rules after the one below, so they
+  // still open a PR for a vulnerable dependency (the first one, "Update pnpm
+  // to v11.11.0 [SECURITY]", opened 90 seconds after the lane merged). That is
+  // wanted, since Dependabot security updates are off. To turn the preset on,
+  // delete the first rule below (the one that disables everything) and this
+  // comment.
   packageRules: [
     {
       matchPackageNames: ["*"],

@@ -13,6 +13,8 @@ A Worker rollback is quick and safe: Cloudflare keeps every uploaded version, an
 
 `deploy-worker.yaml` records which version is serving before it does anything. If the smoke test of **what is live** fails after the traffic switch, it deploys the recorded version at 100% and fails the run. The summary says `Rolled back`. You do not need to act, but you do need to find out why.
 
+The live smoke test first waits up to two minutes for the version to stop answering 5xx, and reports that wait as its own line (`the live version answers without a 5xx`). The platform needs it: for 20 to 40 seconds after a traffic switch, some requests get an empty `503` with `cache-control: no-store`. It is vinext's build-skew guard: the Worker's page-cache stage answers 503 when it runs on a different build than the one that took the request, which happens while edge locations disagree about which version is live. Switching `staging-platform` between two versions under a request loop gave 503 on roughly one request in ten during that window, on both versions, and none outside it; a version pinned with the override header never saw it, and `staging-schedule-builder` showed none. Real visitors meet the same window on every platform deploy. A line that reads `8 answers in a row after 14 5xx or errored answers first (503 x14), over 31s` is that window, not a fault. A version still answering 5xx at two minutes fails and rolls back.
+
 If the smoke test of the **uploaded version** fails (before any traffic), nothing was ever switched; the version is taken back out of the deployment and the live version carries on.
 
 ## Rolling back by hand
