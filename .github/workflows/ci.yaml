@@ -86,6 +86,12 @@ jobs:
       - name: Seed the env file for wrapped checks
         if: steps.cache.outputs.cache-hit != 'true'
         run: cp .github/ci.env .env
+      # `with-env` is devtools' bin and runs from its dist, which a fresh
+      # checkout does not have. The cache hides this until a migration changes
+      # the key, so the first migration after devtools moved in failed here.
+      - name: Build the devtools CLI that codegen runs through
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: pnpm --filter '@devdogsuga/devtools...' --if-present run build
       - uses: ./.github/actions/start-supabase
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Generate the Database types from the migrations
