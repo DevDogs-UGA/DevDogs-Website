@@ -156,7 +156,7 @@ accent: indigo
 
 - Turn on **GitHub 2FA**
   - Settings → Password and authentication → Enable two-factor authentication
-- Get on a team at **devdogsuga.org/teams**
+- Get on a team at the **team mixer**
 ```
 
 ### `agenda`

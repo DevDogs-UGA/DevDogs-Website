@@ -3,8 +3,9 @@ Competition brief template. Copy everything below this comment into the body
 of a new draft item in the private Competitions project
 (https://github.com/orgs/DevDogsUGA/projects/14), fill in each [bracketed]
 part, and delete any guidance comment you no longer need. Converting the draft
-to an issue kicks the competition off, and the body is published verbatim as
-the public brief on devdogsuga.org/competitions.
+to an issue kicks the competition off, and the body is the brief teams read on
+that issue (the platform no longer publishes competitions; the old
+devdogsuga.org/competitions page is gone).
 
 Never put answers in the brief: say what will be tested, not how to pass it.
 -->
