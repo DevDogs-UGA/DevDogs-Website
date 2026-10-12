@@ -1,6 +1,9 @@
 // @vitest-environment node
 import { sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { env } from "~/env";
 import { db } from "~/server/db";
 import { recordLinkIntent } from "./linkIntent";
 
@@ -8,17 +11,25 @@ import { recordLinkIntent } from "./linkIntent";
  * What a token issued to an OAuth client cannot do through GoTrue (migration
  * 61): set a password, or attach an identity the platform did not start
  * linking. The statements are the ones GoTrue runs for `PUT /auth/v1/user` and
- * for the callback of a link; `scripts/verify-oauth-tiers.ts` makes the real
- * requests with a client's tokens against a running project.
+ * for the callback of a link, on a connection as `supabase_auth_admin` like
+ * GoTrue's (the triggers leave every other session alone, so the fixtures in
+ * other tests can still write these tables). `scripts/verify-oauth-tiers.ts`
+ * makes the real requests with a client's tokens against a running project.
  */
 
 const MEMBER = "f8000000-0000-4000-a000-000000000001";
 const OTHER = "f8000000-0000-4000-a000-000000000002";
 const EMAIL = "token-guards-member@uga.edu";
 
+/** A connection like GoTrue's: same database, same role. */
+const goTrueUrl = new URL(env.DB_URL);
+goTrueUrl.username = "supabase_auth_admin";
+const goTrueClient = postgres(goTrueUrl.toString(), { max: 1 });
+const goTrue = drizzle({ client: goTrueClient });
+
 /** Drizzle wraps the driver error; the SQL message is on `cause`. */
 async function rejectsWith(query: ReturnType<typeof sql>, pattern: RegExp) {
-  const error = (await db.execute(query).then(
+  const error = (await goTrue.execute(query).then(
     () => null,
     (e: unknown) => e,
   )) as { message: string; cause?: { message: string } } | null;
@@ -31,7 +42,7 @@ function addIdentity(
   provider: string,
   data: Record<string, unknown>,
 ) {
-  return db.execute(sql`
+  return goTrue.execute(sql`
     insert into auth.identities (id, provider_id, user_id, identity_data, provider)
     values (gen_random_uuid(), ${`${provider}-${userId}`}, ${userId}::uuid,
             ${JSON.stringify(data)}::jsonb, ${provider})
@@ -66,7 +77,10 @@ beforeAll(async () => {
   }
 });
 
-afterAll(cleanup);
+afterAll(async () => {
+  await cleanup();
+  await goTrueClient.end();
+});
 
 describe("passwords", () => {
   it("refuses to set one on an account that has none", async () => {
@@ -79,15 +93,26 @@ describe("passwords", () => {
 
   it("lets a statement that names the column without changing it through", async () => {
     // GoTrue rewrites the whole row on most updates.
-    await db.execute(
+    await goTrue.execute(
       sql`update auth.users set encrypted_password = encrypted_password,
                  last_sign_in_at = now()
           where id = ${MEMBER}::uuid`,
     );
   });
 
-  it("lets a password be cleared", async () => {
+  it("leaves a session that is not GoTrue's alone, for fixtures and operators", async () => {
     await db.execute(
+      sql`update auth.users set encrypted_password = 'hash'
+          where id = ${MEMBER}::uuid`,
+    );
+    await db.execute(
+      sql`update auth.users set encrypted_password = null
+          where id = ${MEMBER}::uuid`,
+    );
+  });
+
+  it("lets a password be cleared", async () => {
+    await goTrue.execute(
       sql`update auth.users set encrypted_password = null
           where id = ${MEMBER}::uuid`,
     );
@@ -133,7 +158,7 @@ describe("linking an identity", () => {
     await addIdentity(MEMBER, "github", { email: "member@example.com" });
     expect(await identities(MEMBER)).toEqual(["discord", "github", "google"]);
 
-    await db.execute(
+    await goTrue.execute(
       sql`delete from auth.identities
           where user_id = ${MEMBER}::uuid and provider = 'github'`,
     );
@@ -173,6 +198,14 @@ describe("linking an identity", () => {
                   '{"email":"m@example.com"}'::jsonb, 'linkedin_oidc')`,
       /linked from your DevDogs account page/,
     );
+  });
+
+  it("leaves a session that is not GoTrue's alone, for fixtures and operators", async () => {
+    await db.execute(sql`
+      insert into auth.identities (id, provider_id, user_id, identity_data, provider)
+      values (gen_random_uuid(), 'fixture', ${MEMBER}::uuid,
+              '{"email":"fixture@example.com"}'::jsonb, 'workos')
+    `);
   });
 
   it("is closed to the API roles", async () => {

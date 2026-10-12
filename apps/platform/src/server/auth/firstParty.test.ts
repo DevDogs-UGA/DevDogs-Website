@@ -7,9 +7,9 @@ describe("isFirstPartyClaims", () => {
   });
 
   it("refuses an OAuth client's downgraded access token", () => {
-    expect(
-      isFirstPartyClaims({ role: "oauth_identity", client_id: "c" }),
-    ).toBe(false);
+    expect(isFirstPartyClaims({ role: "oauth_identity", client_id: "c" })).toBe(
+      false,
+    );
   });
 
   it("refuses an access token that carries a client even with the role intact", () => {

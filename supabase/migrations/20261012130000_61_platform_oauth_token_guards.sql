@@ -18,7 +18,11 @@
 --     GitHub or Google account to the member and then sign in as them.
 --
 -- GoTrue does not tell the database which token a write came from, so the
--- guard has to hold for everyone and key on what the platform itself does:
+-- guard has to hold for every request GoTrue serves and key on what the
+-- platform itself does. Both triggers act only on statements that arrive on a
+-- GoTrue connection (`session_user` is `supabase_auth_admin`); migrations, the
+-- test fixtures and an operator's psql session are not the attack and are left
+-- alone.
 --
 -- 1. Nobody sets a password. OAuth is the only way into a deployed project;
 --    the password grant exists for local test personas, which are created with
@@ -54,6 +58,9 @@ language plpgsql
 set search_path = ''
 as $$
 begin
+  if session_user <> 'supabase_auth_admin' then
+    return new;
+  end if;
   raise exception 'passwords cannot be set on this project; sign in with an identity provider'
     using errcode = '55000';
 end;
@@ -97,6 +104,11 @@ as $$
 declare
   account_email text;
 begin
+  -- Only what GoTrue does on a request is guarded.
+  if session_user <> 'supabase_auth_admin' then
+    return new;
+  end if;
+
   -- An account's first identity is the sign-up itself.
   if not exists (
     select 1 from "auth"."identities" i where i."user_id" = new."user_id"

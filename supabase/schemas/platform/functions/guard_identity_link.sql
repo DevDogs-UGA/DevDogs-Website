@@ -7,6 +7,11 @@ CREATE OR REPLACE FUNCTION platform.guard_identity_link()
 declare
   account_email text;
 begin
+  -- Only what GoTrue does on a request is guarded.
+  if session_user <> 'supabase_auth_admin' then
+    return new;
+  end if;
+
   -- An account's first identity is the sign-up itself.
   if not exists (
     select 1 from "auth"."identities" i where i."user_id" = new."user_id"
