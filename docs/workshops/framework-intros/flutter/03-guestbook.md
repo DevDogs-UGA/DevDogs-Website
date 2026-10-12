@@ -230,6 +230,6 @@ Hot reload, open the Guestbook tab, and sign it a few times. Then press `R` for 
 1. [Flutter's docs](https://docs.flutter.dev), from first app to publishing
 1. [The widget catalog](https://docs.flutter.dev/ui/widgets), every built-in widget by category
 1. [A tour of Dart](https://dart.dev/language), the language under it all
-1. Ready to contribute? Start with DogPack's [Your first contribution](../../../study-group-finder/getting-started/first-contribution.md)
+1. Ready to contribute? Start with DogPack's [Your first contribution](https://github.com/DevDogsUGA/DogPack/blob/main/docs/getting-started/first-contribution.md)
 
 <!-- prettier-ignore-end -->

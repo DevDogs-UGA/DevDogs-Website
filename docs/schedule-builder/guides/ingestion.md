@@ -36,7 +36,7 @@ Run the scrape from the command line against whichever database `DB_URL` names.
 It reads UGA's live feeds and prints a report (counts, every invariant, building
 coverage, peak memory):
 
-```bash
+```bash nocheck
 pnpm devtools supabase start && pnpm devtools supabase db reset   # local stack, once
 pnpm -F schedule-builder populate:courses                          # runs the catalog's scrape
 ```

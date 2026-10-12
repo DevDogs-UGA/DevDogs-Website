@@ -22,7 +22,7 @@ If the smoke test of the **uploaded version** fails (before any traffic), nothin
 Use this when a version passed the smoke tests and is still wrong.
 
 ```sh
-# From apps/platform (or apps/schedule-builder). List recent versions.
+# From apps/platform . List recent versions.
 pnpm exec wrangler versions list -e production --name production-platform
 
 # What is serving now, and the version before it.
@@ -32,7 +32,7 @@ pnpm exec wrangler deployments list -e production --name production-platform
 pnpm exec wrangler versions deploy <version-id>@100% -e production --name production-platform --yes
 ```
 
-Worker names are `production-platform`, `production-schedule-builder`, `production-catalog` and `devdogs-slides`. Staging uses the `staging-` prefix. You need the Cloudflare token for that account ([Cloudflare credentials](../credentials/cloudflare.md)). Rolling back is also what the staging rollback drill practises.
+Worker names are `production-platform`, `production-catalog` and `devdogs-slides`. Staging uses the `staging-` prefix. You need the Cloudflare token for that account ([Cloudflare credentials](../credentials/cloudflare.md)). Rolling back is also what the staging rollback drill practises.
 
 ## Previewing a version without traffic
 

@@ -55,7 +55,7 @@ jobs:
       - name: Public pages (staging)
         run: |
           set -euo pipefail
-          for path in apps/platform apps/schedule-builder; do
+          for path in apps/platform; do
             node .github/scripts/worker-smoke.mjs --path "$path" --tier staging
           done
           node .github/scripts/worker-smoke.mjs --path apps/catalog --tier staging --workers-json apps/catalog/smoke.json
@@ -76,7 +76,7 @@ jobs:
       - name: Public pages (production)
         run: |
           set -euo pipefail
-          for path in apps/platform apps/schedule-builder; do
+          for path in apps/platform; do
             node .github/scripts/worker-smoke.mjs --path "$path" --tier production
           done
           # api.devdogsuga.org reaches the catalog only once the zone routes it (Q90).

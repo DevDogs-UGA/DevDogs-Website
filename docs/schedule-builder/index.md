@@ -9,6 +9,9 @@ order: 30
 `apps/schedule-builder` — branded "DogDays" — is the Next.js app that plans a
 UGA student's semester against real registrar data.
 
+> [!NOTE]
+> The app has moved to the [DogDays repository](https://github.com/DevDogsUGA/DogDays). `apps/schedule-builder` is no longer in this repository, so the paths and `pnpm` commands on these pages describe the app as it was here; the DogDays repository's own docs are current.
+
 > [!TIP]
 > Just getting started? Start at
 > [Getting started](../_shared/getting-started/prerequisites.md) instead of this

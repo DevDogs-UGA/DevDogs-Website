@@ -361,4 +361,4 @@ accent: indigo
 - [Flutter's docs](https://docs.flutter.dev), from first app to publishing
 - [The widget catalog](https://docs.flutter.dev/ui/widgets), every built-in widget by category
 - [A tour of Dart](https://dart.dev/language), the language under it all
-- Ready to contribute? Start with DogPack's [Your first contribution](/docs/study-group-finder/getting-started/first-contribution)
+- Ready to contribute? Start with DogPack's [Your first contribution](https://github.com/DevDogsUGA/DogPack/blob/main/docs/getting-started/first-contribution.md)

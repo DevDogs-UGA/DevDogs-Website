@@ -72,11 +72,8 @@ export async function checkEnv(root: string): Promise<string[]> {
   // Everything in the study-group-finder runtime manifest is compiled into the
   // mobile binary, and anything compiled into a binary is extractable.
   const shipped = everyEntry.filter((e) => e.source === "study-group-finder");
-  if (shipped.length === 0) {
-    problems.push(
-      'No variables are declared by "study-group-finder"; the no-secrets-in-the-binary check would be vacuous.',
-    );
-  }
+  // The Flutter app lives in its own repository now, so this repository has no
+  // such manifest to check; the loop below is a no-op until one returns.
   for (const entry of shipped) {
     if (entry.meta.secrecy !== "public") {
       problems.push(

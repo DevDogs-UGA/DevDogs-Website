@@ -98,7 +98,6 @@ describe("buildDesiredRulesets", () => {
           { context: "validate" },
           { context: "database" },
           { context: "toolchain" },
-          { context: "flutter" },
           { context: "destructive-sql" },
           { context: "destructive-gate" },
         ],

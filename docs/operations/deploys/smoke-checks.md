@@ -21,7 +21,7 @@ Every product signs members in through the platform, so a broken OAuth hand-off 
 2. The consent page answers 404 without an `authorization_id`.
 3. The access-token hook downgrades an OAuth client's token to `oauth_identity` (a database check against staging, in a transaction that is always rolled back).
 
-The same run also loads the public pages of the platform and schedule-builder and checks that a protected page sends an anonymous visitor to sign in. The pages and hosts come from `workers.json`.
+The same run also loads the public pages of the platform and checks that a protected page sends an anonymous visitor to sign in. The pages and hosts come from `workers.json`.
 
 ## What production may and may not do
 

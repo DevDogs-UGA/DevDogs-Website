@@ -183,8 +183,7 @@ export const PROJECTS: Project[] = [
       "supabase",
       "postgres",
     ],
-    githubUrl:
-      "https://github.com/DevDogsUGA/DevDogsUGA/tree/main/apps/schedule-builder",
+    githubUrl: "https://github.com/DevDogsUGA/DogDays",
     liveUrl: { href: "https://dogdays.dev", label: "Public Alpha" },
   },
   {
@@ -205,8 +204,7 @@ export const PROJECTS: Project[] = [
     },
     contributions: "open",
     techStack: ["flutter", "dart", "supabase", "postgres"],
-    githubUrl:
-      "https://github.com/DevDogsUGA/DevDogsUGA/tree/main/apps/study-group-finder",
+    githubUrl: "https://github.com/DevDogsUGA/DogPack",
   },
   {
     badge: PAUSED,

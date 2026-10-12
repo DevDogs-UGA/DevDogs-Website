@@ -20,7 +20,7 @@ name: CI
 # forever for a check that never starts. `publish` and `deploy` stay push-only.
 #
 # This is one repository: the platform (apps/platform, packages/email),
-# schedule-builder, the Flutter app, the database (supabase/), the docs, the
+# the Dart SDK, the database (supabase/), the docs, the
 # club's packages and CLIs. (It used to be two, DevDogsUGA and Backstage; the
 # fold-back merged them.)
 #
@@ -139,11 +139,11 @@ jobs:
       #
       # Not built here: apps/slides (its build reads the private workshop
       # submodules; it builds in slides.yaml, so a slides problem never blocks
-      # a publish), the Next apps (platform, schedule-builder), whose build
+      # a publish), the Next apps (platform), whose build
       # reads their whole environment (the `database` job builds them, with a
       # real stack and the schema enforced), and the Flutter app.
       - name: Build (workspace)
-        run: pnpm -r --filter '!slides' --filter '!platform' --filter '!schedule-builder' --filter '!study-group-finder' --if-present run build
+        run: pnpm -r --filter '!slides' --filter '!platform' --if-present run build
       - name: Lint (workspace)
         run: pnpm lint
       - name: Format check
@@ -194,9 +194,9 @@ jobs:
       # `codegen` (the Database types, the docs module, the generated route
       # types), so nothing is built first for the apps.
       - name: Typecheck (workspace)
-        run: pnpm -r --if-present --filter '!study-group-finder' run typecheck
+        run: pnpm -r --if-present run typecheck
       - name: Test (workspace)
-        run: pnpm -r --if-present --filter '!study-group-finder' run test
+        run: pnpm -r --if-present run test
       # devtools' contract tests (packages/devtools/test/contract): a real
       # `pnpm pack` + `pnpm install` + subprocess run against a committed
       # fixture repo. Separate from `pnpm -r test` above because it is slow (a
@@ -220,10 +220,9 @@ jobs:
       - name: Cloudflare binding types match the Worker configuration
         run: |
           pnpm --filter platform run types:cf:check
-          pnpm --filter schedule-builder run types:cf:check
 
-  # Everything that needs a real Postgres: the RLS suite, both apps' query
-  # tests, and both production builds with the env schema enforced.
+  # Everything that needs a real Postgres: the RLS suite, the platform's query
+  # tests, and the production build with the env schema enforced.
   #
   # Credential-free like the rest of this file, and not by exception: the local
   # stack's keys ARE the well-known constants Supabase publishes in its own
@@ -259,7 +258,7 @@ jobs:
       # newsletter, ...) from `dist/`, and `with-env` is one of them. The apps
       # themselves are left out: they build below, with their environment.
       - name: Build the apps' workspace dependencies
-        run: pnpm --filter 'platform^...' --filter 'schedule-builder^...' --if-present run build
+        run: pnpm --filter 'platform^...' --if-present run build
       # The `with-env` wrapper REFUSES a missing .env by design; the step after
       # the stack starts replaces this one and appends the generated values.
       - name: Seed the env file for wrapped checks
@@ -276,8 +275,7 @@ jobs:
       # The NEXT_PUBLIC pair is derived rather than hardcoded: it has to match
       # the running stack, and the CLI's local keys are not guaranteed stable
       # across versions. Written before the test suites, not just before the
-      # builds: schedule-builder's query hooks create the browser Supabase
-      # client at import, so its db-tests need the pair too.
+      # builds.
       - name: Synthetic environment for the suites and the builds
         run: |
           cp .github/ci.env .env
@@ -297,8 +295,6 @@ jobs:
       # typechecks perfectly. `test:db` runs the app's `codegen` first.
       - name: Query validity + privilege surface (platform)
         run: pnpm --filter platform run test:db
-      - name: Query validity + privilege surface (schedule-builder)
-        run: pnpm --filter schedule-builder run test:db
       # The catalog API's contract against a real database: every endpoint
       # through the real router and the read-only role, each response checked
       # against openapi/catalog.yaml, plus the scrape's reconcile and
@@ -314,63 +310,6 @@ jobs:
         env:
           SKIP_ENV_VALIDATION: ""
         run: pnpm --filter platform run build
-      - name: Build schedule-builder, with the env schema enforced
-        env:
-          SKIP_ENV_VALIDATION: ""
-        run: pnpm --filter schedule-builder run build
-
-  # Flutter app: only when it (or a shared dependency) is affected.
-  flutter:
-    if: github.event_name != 'schedule'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          fetch-depth: 0
-      - uses: ./.github/actions/setup-workspace
-      # Does study-group-finder, or anything it depends on, appear in the
-      # changed set since the merge base? `study-group-finder...` is pnpm's
-      # "package and its dependencies" selector, which lists exactly the
-      # directories whose content decides this; a plain `git diff --quiet`
-      # over them since the base ref is then the answer.
-      - id: base
-        uses: ./.github/actions/base-ref
-      - name: Is study-group-finder affected?
-        id: affected
-        run: |
-          BASE="${{ steps.base.outputs.ref }}"
-          PATHS=$(pnpm -r --filter 'study-group-finder...' list --depth -1 --json 2>/dev/null \
-            | node -e '
-                let d = "";
-                process.stdin.on("data", (c) => (d += c));
-                process.stdin.on("end", () => {
-                  for (const p of JSON.parse(d)) console.log(p.path);
-                });
-              ')
-          if git diff --quiet "$BASE"...HEAD -- $PATHS; then
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          fi
-      # Not subosito/flutter-action: it calls `actions/cache@v5` internally,
-      # by tag, and the org's Actions policy requires every action pinned to
-      # a full commit SHA. GitHub resolves a composite action's inner `uses:`
-      # when the job is set up, whatever its `cache:` input, so the job
-      # failed before running a step. A shallow clone of the stable branch
-      # is the SDK the action installed, uncached.
-      - name: Install Flutter (stable)
-        if: steps.affected.outputs.run == 'true'
-        run: |
-          git clone --depth 1 --branch stable https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
-          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
-      - name: Analyze + test
-        if: steps.affected.outputs.run == 'true'
-        working-directory: apps/study-group-finder
-        run: |
-          flutter pub get
-          flutter analyze
-          flutter test
 
   # The Dart SDK (packages/sdk_dart, published to pub.dev as devdogsuga_sdk):
   # analysis, its tests, and a publish dry run, which checks the package would
@@ -382,7 +321,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      # Not subosito/flutter-action; see the `flutter` job.
+      # Not subosito/flutter-action; a shallow clone of the stable branch.
       - name: Install Flutter (stable)
         run: |
           git clone --depth 1 --branch stable https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
@@ -541,8 +480,7 @@ jobs:
   # Backstage until the Gate, and both deploying would race on the same
   # Workers and database, so neither variable is a default.
   deploy:
-    needs: [validate, database, flutter, dart-sdk, toolchain]
-    # `flutter` is skipped when nothing it depends on changed.
+    needs: [validate, database, dart-sdk, toolchain]
     if: >-
       !cancelled()
       && github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -551,7 +489,6 @@ jobs:
       && needs.database.result == 'success'
       && needs.toolchain.result == 'success'
       && needs.dart-sdk.result == 'success'
-      && (needs.flutter.result == 'success' || needs.flutter.result == 'skipped')
     permissions:
       contents: read
       actions: write

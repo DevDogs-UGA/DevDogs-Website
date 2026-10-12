@@ -127,7 +127,6 @@ ds-bundle/
 # analyzer writes its extraction to tool/*.docs.json, which the generator then
 # turns into pages.
 docs/*/reference/
-apps/study-group-finder/tool/*.docs.json
 
 # Design-sync working state. Local-only by choice: the tool is run from one
 # machine, so the whole directory stays out of the repo rather than just its
@@ -143,13 +142,6 @@ apps/study-group-finder/tool/*.docs.json
 # the GDG platform (one per meeting, made once) rather than anything the repo
 # serves, so they stay out of the tree.
 .images/
-
-# Brand images derived from `@devdogsuga/sdk/brand` by schedule-builder's `codegen`
-# (`scripts/brand-assets.ts`). Nothing here is a source file, so committing them
-# stored a second copy of artwork the package already has, and one that went
-# stale silently. (The platform's own brand exports went with it to Backstage.)
-apps/schedule-builder/public/brand/
-apps/schedule-builder/public/icons/
 
 # --- From the former Backstage repo ------------------------------------------
 

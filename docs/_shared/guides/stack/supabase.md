@@ -3,7 +3,7 @@ name: Supabase
 description: One Postgres project shared by every app, one schema each, and the Row-Level Security rules that are the only real boundary between them.
 order: 3
 section: guides
-mount: [schedule-builder, study-group-finder, platform, toolkit]
+mount: [schedule-builder, platform, toolkit]
 ---
 
 # Supabase
@@ -17,7 +17,7 @@ Supabase is the database, auth and storage layer for every app in the repo: Post
 Schema isolation is **organizational, not a security boundary**. Every schema is reachable through the same PostgREST endpoint with the same publishable key, so Row-Level Security is what actually protects data. The only credential that bypasses RLS is the service role (`SECRET_KEY`).
 
 > [!WARNING]
-> `[api] schemas` lists `study_group_finder` **first on purpose** — being first makes it PostgREST's default REST profile, which is the only schema supadart can generate Dart models from (see the Flutter typed-models guide in study-group-finder's own docs). Do not reorder that list.
+> `[api] schemas` lists `study_group_finder` **first on purpose** — being first makes it PostgREST's default REST profile, which is the only schema supadart can generate Dart models from (the Flutter app now lives in the DogPack repository). Do not reorder that list.
 
 Ports in `config.toml` stay literals rather than `env(...)`: `supabase seed` validates the file against a typed schema that interpolates `env()` into _string_ fields only, so an `env()` in a numeric field makes it exit 1 — silently, under the `with-env` wrapper. Everything else in that file may still use `env()`.
 

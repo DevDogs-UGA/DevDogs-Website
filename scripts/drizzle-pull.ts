@@ -38,14 +38,6 @@ const APPS: Record<string, AppConfig> = {
     crossSchemaImport:
       'import { usersInAuth as users, oauthClientsInAuth as oauthClients } from "~/supabase/drizzle/schema"',
   },
-  "schedule-builder": {
-    configs: ["drizzle-introspection.config.ts", "drizzle.config.ts"],
-    schemaFile: "src/server/db/schema/generated/schema.ts",
-    schemaSuffix: "InScheduleBuilder",
-    // schedule_builder's tables carry no foreign keys into another schema (its
-    // `userId` columns are bare uuids), so there is nothing to re-inject.
-    crossSchemaImport: null,
-  },
 };
 
 const IMPORT_MARKER = "// Cross-schema FK targets";

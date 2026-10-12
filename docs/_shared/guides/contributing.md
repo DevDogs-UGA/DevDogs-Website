@@ -3,7 +3,7 @@ name: Contributing
 description: Branch to merged PR — the review flow, the PR template's checklist, and migration rules.
 order: 2
 section: guides
-mount: [schedule-builder, study-group-finder, platform]
+mount: [schedule-builder, platform]
 ---
 
 # Contributing

@@ -7,7 +7,7 @@ section: guides
 
 # Testing
 
-```bash
+```bash nocheck
 pnpm --filter schedule-builder test       # vitest, unit — no database
 pnpm --filter schedule-builder test:db    # vitest against a live database
 ```
@@ -38,7 +38,7 @@ The app deploys to Workers through vinext (by [Backstage](https://github.com/Dev
 differently from `next dev` (it runs on `workerd`, the same runtime as
 production). Copy `.dev.vars.example` to `.dev.vars`, then:
 
-```bash
+```bash nocheck
 pnpm --filter schedule-builder preview   # vinext build, served by workerd
 pnpm devtools jobs serve --app schedule-builder   # Workflows served locally
 ```

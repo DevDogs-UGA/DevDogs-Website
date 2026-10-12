@@ -8,11 +8,9 @@
  * out rather than skip. "Last deployed" is read from this workflow's own runs
  * on `main`, newest first:
  *
- *   staging     the `staging-platform`, `staging-schedule-builder` and
- *               `staging-catalog` calls of deploy-worker.yaml all succeeded
+ *   staging     the `staging-platform` and `staging-catalog` calls of deploy-worker.yaml all succeeded
  *               (the jobs of a called workflow are named `<caller job> / <job>`)
- *   production  the `production-platform`, `production-schedule-builder` and
- *               `production-catalog` calls all succeeded AND their traffic
+ *   production  the `production-platform` and `production-catalog` calls all succeeded AND their traffic
  *               switch ran
  *
  * Runs from before the shared workflows (jobs named `staging-deploy (…)` and
@@ -25,7 +23,7 @@
  *
  * ⚠️ The inert list is an ALLOWLIST of paths known not to reach a deployed
  * artifact. Anything not on it deploys, so a new directory deploys until
- * someone decides otherwise. schedule-builder, supabase/ (migrations, seeds,
+ * someone decides otherwise. supabase/ (migrations, seeds,
  * config) and docs/ are not on it: they all reach a tier.
  *
  * Usage: GH_TOKEN=... node .github/scripts/deploy-needed.mjs \
@@ -53,8 +51,6 @@ const INERT_PREFIXES = [
   ".github/scripts/",
   ".github/ISSUE_TEMPLATE/",
   ".vscode/",
-  // Flutter, built and distributed on its own.
-  "apps/study-group-finder/",
 ];
 const INERT_FILES = new Set([
   "CUTOVER.md",
@@ -97,7 +93,7 @@ export function isInert(path) {
   );
 }
 
-/** Steps of the pre-shared-workflow production job that only run when it deploys. */
+/** Steps of the pre-shared-workflow production job (history: runs from before the shared workflows still carry them) that only run when it deploys. */
 const LEGACY_PRODUCTION_DEPLOY_STEPS = [
   "Deploy and verify platform",
   "Deploy and verify schedule-builder",
@@ -111,12 +107,8 @@ const FULL_STEP = "Deploy (classic, no preview)";
 
 /** The Workers a tier ships, as the caller jobs in deploy.yaml name them. */
 const WORKER_CALLS = {
-  staging: ["staging-platform", "staging-schedule-builder", "staging-catalog"],
-  production: [
-    "production-platform",
-    "production-schedule-builder",
-    "production-catalog",
-  ],
+  staging: ["staging-platform", "staging-catalog"],
+  production: ["production-platform", "production-catalog"],
 };
 
 /**

@@ -21,31 +21,6 @@
     }
   },
   {
-    "path": "apps/schedule-builder",
-    "smoke": {
-      "hosts": {
-        "staging": "staging.dogdays.dev",
-        "production": "dogdays.dev"
-      },
-      "publicPaths": [
-        "/",
-        "/courses",
-        "/plans",
-        "/generate-schedule",
-        "/manual-entry",
-        "/questionnaire",
-        "/past-credits",
-        "/credit-data",
-        "/settings",
-        "/survey",
-        "/route-map",
-        "/distance-page"
-      ],
-      "protectedPath": "/dashboard",
-      "protectedRedirectPrefix": "/"
-    }
-  },
-  {
     "path": "apps/catalog"
   }
 ]

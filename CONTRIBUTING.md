@@ -2,8 +2,6 @@
 
 Start with your project's contributing guide, not this file:
 
-- [Schedule Builder](https://devdogsuga.org/docs/schedule-builder/guides/contributing)
-- [Study Group Finder](https://devdogsuga.org/docs/study-group-finder/guides/contributing)
 - [Platform](https://devdogsuga.org/docs/platform/guides/contributing)
 
 Maintaining shared packages, CI, or deploys? See [Shared packages & tooling](https://devdogsuga.org/docs/toolkit).

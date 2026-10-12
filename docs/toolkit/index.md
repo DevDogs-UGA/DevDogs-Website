@@ -10,11 +10,9 @@ Two things live here: reference-shaped guides to the packages under `packages/*`
 
 ## Which app owns what
 
-| Directory                   | What it is                                                              | Postgres schema      |
-| --------------------------- | ----------------------------------------------------------------------- | -------------------- |
-| `apps/schedule-builder`     | Next.js — course schedule planning ("DogDays")                          | `schedule_builder`   |
-| `apps/study-group-finder`   | Flutter — study groups ("Dog Pack"), still a scaffold                   | `study_group_finder` |
-| `apps/platform` (Backstage) | Next.js — shared OAuth server, plus the DevDogs site, console, and docs | `platform`           |
+| Directory                   | What it is                                                              | Postgres schema |
+| --------------------------- | ----------------------------------------------------------------------- | --------------- |
+| `apps/platform` (Backstage) | Next.js — shared OAuth server, plus the DevDogs site, console, and docs | `platform`      |
 
 Schema-per-app is an organizational boundary, not a security one — see [Supabase](../_shared/guides/stack/supabase.md?project=platform) for why Row-Level Security is what actually isolates one app's data from another's. The SQL is not in `packages/`: all three schemas are built by one migration history at the repo root, `supabase/migrations/`, including the platform's, although the platform app is not in this repository.
 
@@ -52,7 +50,7 @@ Shared versions live in the `catalog:` block of `pnpm-workspace.yaml`.
 | Tests           | Vitest, jsdom                                         | 4.1.11, ^29.1.1                  |
 | Lint and format | ESLint, Prettier                                      | ^9.39.5, 3.9.6                   |
 
-What is unusual, by app: [Next.js](../_shared/guides/stack/nextjs.md?project=platform) and [Tailwind](../_shared/guides/stack/tailwind.md?project=platform) (schedule-builder, platform); [Supabase](../_shared/guides/stack/supabase.md?project=platform) (all three apps); [Database (Drizzle)](../_shared/guides/stack/db.md?project=platform) (schedule-builder, platform); [Flutter](../study-group-finder/guides/typed-models.md) (study-group-finder); [Cloudflare](./infrastructure/cloudflare.md) (deploy, all apps).
+What is unusual, by app: [Next.js](../_shared/guides/stack/nextjs.md?project=platform) and [Tailwind](../_shared/guides/stack/tailwind.md?project=platform) (schedule-builder, platform); [Supabase](../_shared/guides/stack/supabase.md?project=platform) (all three apps); [Database (Drizzle)](../_shared/guides/stack/db.md?project=platform) (schedule-builder, platform); [Cloudflare](./infrastructure/cloudflare.md) (deploy, all apps).
 
 Four of the catalog's ranges are held back deliberately: ESLint stays on 9.x (`eslint-plugin-react`, reached through `eslint-config-next`, is not compatible with ESLint 10); TypeScript stays on 6.x (typescript-eslint peer-requires `>=4.8.4 <6.1.0`); Vitest stays on 4.x (5.x is still on the beta dist-tag); jsdom stays on 29.x (30.x raises its Node floor above this repo's declared `engines.node`). Three catalog entries are pinned to an exact version rather than a range: `drizzle-orm` and `drizzle-kit` on `1.0.0-rc.4`, because the `latest` dist-tag still points at 0.45.x, and `zod` on `4.4.3`. `prettier` is pinned to `3.9.6` in the root `package.json` rather than the catalog. `undici` is overridden repo-wide to `^7.28.0` — see [Cloudflare](./infrastructure/cloudflare.md) for the Wasm reason.
 

@@ -11,8 +11,8 @@ the fold-back merged them, and Backstage is archived.)
 Pick your team's docs to get started:
 
 - [Platform](https://devdogsuga.org/docs/platform/getting-started/prerequisites): the site, console, docs, and OAuth server (Next.js)
-- [Schedule Builder](https://devdogsuga.org/docs/schedule-builder/getting-started/prerequisites): course schedule planning (Next.js)
-- [Study Group Finder](https://devdogsuga.org/docs/study-group-finder/getting-started/prerequisites): study groups (Flutter)
+- [DogDays](https://github.com/DevDogsUGA/DogDays): course schedule planning (its own repository)
+- [DogPack](https://github.com/DevDogsUGA/DogPack): study groups (its own repository, Flutter)
 
 ## Quickstart
 
@@ -32,8 +32,6 @@ Full docs: [devdogsuga.org/docs](https://devdogsuga.org/docs)
 | Path                                   | What                                                                                                                                                                                                                                                                                                          |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `apps/platform`                        | The platform Worker (vinext), with `packages/email` for its templates                                                                                                                                                                                                                                         |
-| `apps/schedule-builder`                | Schedule Builder Worker (vinext) and its scraper                                                                                                                                                                                                                                                              |
-| `apps/study-group-finder`              | The Flutter app                                                                                                                                                                                                                                                                                               |
 | `apps/slides`, `apps/workshops-vscode` | Slidev workshop decks and the workshop VS Code extension (never deployed by `deploy.yaml`)                                                                                                                                                                                                                    |
 | `supabase/`, `packages/supabase`       | Migrations, seeds, `config.toml`; generated database types and the RLS suite                                                                                                                                                                                                                                  |
 | `docs/`, `packages/docs-kit`           | The documentation content and its compiler                                                                                                                                                                                                                                                                    |
@@ -49,7 +47,7 @@ Full docs: [devdogsuga.org/docs](https://devdogsuga.org/docs)
   stack (`pnpm devtools supabase start --tier development:local`) is started from
   this same root.
 - **Build env.** `DEPLOY_ENV=development pnpm -F platform build` against the
-  local stack; `pnpm -F platform test:db` and `pnpm -F schedule-builder test:db`
+  local stack; `pnpm -F platform test:db`
   need that stack running.
 - **Patches.** `patches/` and `patchedDependencies` hold the vinext and React
   patches both Next apps build with. Because they are keyed to exact versions,
@@ -75,8 +73,6 @@ Full docs: [devdogsuga.org/docs](https://devdogsuga.org/docs)
   enforced against `.github/ci.env` (placeholders only) plus the stack's
   generated values. The stack's Docker images are cached by Supabase CLI version
   and `config.toml`.
-- **`flutter`** analyzes and tests the Flutter app, only when it or something it
-  depends on changed.
 - **`toolchain`** audits the patches (it warns, through `::warning::`
   annotations, when a patch's upstream fix has shipped) and tests the deploy
   scripts. Daily, the `patch-issues` job opens or refreshes one issue titled
@@ -96,10 +92,10 @@ merge_group CI run:  validate -> build (staging, production)  ->  artifacts <tie
 push to main:        supersede
                      resolve (finds the merge_group run) -> build (only if none)
                      staging-preflight -> staging-database -> staging-avatars
-                                       -> staging-platform | staging-schedule-builder | staging-catalog
+                                       -> staging-platform | staging-catalog
                      production-database (plan, approval, apply)
                                        -> production-catalog
-                                       -> production-platform | production-schedule-builder
+                                       -> production-platform
 ```
 
 The database and each Worker deploy through two shared, reusable workflows
@@ -178,7 +174,7 @@ key, naming each one.
 | `publishing-next`                   | none                                                                                                                                                                                                                                   | none (prereleases publish with OIDC trusted publishing; no reviewers, `main` only)                                                   |
 
 The schema-required keys per tier come from `apps/platform/src/env.ts`,
-`apps/schedule-builder/src/env.ts`, `supabase/env.ts` and
+`supabase/env.ts` and
 `packages/backstage/env.ts`; `pnpm devtools env example` lists them.
 
 `backstage env push` addresses the repository `gh` resolves from the current
@@ -201,7 +197,7 @@ the mechanism.
 ## Scripts
 
 ```bash
-pnpm build           # every package and app except slides and the Flutter app
+pnpm build           # every package and app except slides
 pnpm typecheck       # pnpm -r typecheck
 pnpm test            # pnpm -r test
 pnpm check:scripts   # every script name is in the club's script vocabulary

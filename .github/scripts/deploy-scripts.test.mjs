@@ -312,13 +312,13 @@ test("isInert: docs, tests, slides and the CLIs ship nothing", () => {
   }
 });
 
-test("isInert: the platform, its packages, schedule-builder, supabase and the deploy ship", () => {
+test("isInert: the platform, its packages, supabase and the deploy ship", () => {
   for (const path of [
     "apps/platform/next.config.ts",
     "apps/platform/src/env.ts",
     "packages/events/src/data/meetings.json",
     "packages/email/src/TeamInvite.tsx",
-    "apps/schedule-builder/src/env.ts",
+    "apps/catalog/src/worker.ts",
     "supabase/config.toml",
     "workers.json",
     "pnpm-lock.yaml",
@@ -371,23 +371,12 @@ test("runDeployed: a mode: full Worker deploy (no switch step) counts once its c
       { name: "Deploy (classic, no preview)", conclusion: step },
     ]);
   assert.equal(
-    runDeployed(
-      [
-        full("staging-platform"),
-        full("staging-schedule-builder"),
-        full("staging-catalog"),
-      ],
-      "staging",
-    ),
+    runDeployed([full("staging-platform"), full("staging-catalog")], "staging"),
     true,
   );
   assert.equal(
     runDeployed(
-      [
-        full("staging-platform"),
-        full("staging-schedule-builder", "skipped"),
-        full("staging-catalog"),
-      ],
+      [full("staging-platform"), full("staging-catalog", "skipped")],
       "staging",
     ),
     false,
@@ -402,19 +391,11 @@ test("runDeployed: the shared Worker workflow counts only after its traffic swit
         conclusion: switched ? "success" : "skipped",
       },
     ]);
-  const staging = [
-    call("staging-platform"),
-    call("staging-schedule-builder"),
-    call("staging-catalog"),
-  ];
+  const staging = [call("staging-platform"), call("staging-catalog")];
   assert.equal(runDeployed(staging, "staging"), true);
   assert.equal(
     runDeployed(
-      [
-        call("staging-platform"),
-        call("staging-schedule-builder", "failure"),
-        call("staging-catalog"),
-      ],
+      [call("staging-platform"), call("staging-catalog", "failure")],
       "staging",
     ),
     false,
@@ -424,7 +405,6 @@ test("runDeployed: the shared Worker workflow counts only after its traffic swit
     runDeployed(
       [
         call("production-platform", "success", false),
-        call("production-schedule-builder"),
         call("production-catalog"),
       ],
       "production",
@@ -433,24 +413,14 @@ test("runDeployed: the shared Worker workflow counts only after its traffic swit
   );
   assert.equal(
     runDeployed(
-      [
-        call("production-platform"),
-        call("production-schedule-builder"),
-        call("production-catalog"),
-      ],
+      [call("production-platform"), call("production-catalog")],
       "production",
     ),
     true,
   );
   assert.equal(runDeployed([call("staging-platform")], "staging"), false);
   // The catalog is part of what a tier ships: without it the tier is not deployed.
-  assert.equal(
-    runDeployed(
-      [call("staging-platform"), call("staging-schedule-builder")],
-      "staging",
-    ),
-    false,
-  );
+  assert.equal(runDeployed([call("staging-platform")], "staging"), false);
 });
 
 test("lastDeployed skips this run's own SHA and failed deploys", async () => {

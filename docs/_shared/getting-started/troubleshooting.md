@@ -3,7 +3,7 @@ name: Troubleshooting
 description: The FAQ doctor and every setup page link into — organized by symptom, each with what's actually wrong and the fix.
 order: 4
 section: getting-started
-mount: [schedule-builder, study-group-finder, platform]
+mount: [schedule-builder, platform]
 ---
 
 # Troubleshooting
@@ -134,19 +134,6 @@ backend failed — often after a macOS update or low disk space.
 docker` for why it won't. macOS: quit Docker Desktop, check disk space, and
 restart it. Never Colima.
 
-### Flutter missing
-
-**Symptom:** `pnpm -F study-group-finder dev` fails immediately, or
-`pnpm devtools setup` reports Flutter as not found.
-
-**Cause:** The Flutter SDK isn't installed or isn't on `PATH`. Only matters
-for study-group-finder — every other check treats a missing Flutter as
-informational.
-
-**Fix:** Install the [Flutter SDK](https://docs.flutter.dev/get-started/install)
-and run `flutter doctor` — more thorough than anything here for
-Flutter/Android specifics.
-
 ### adb no devices
 
 **Symptom:** `flutter run` reports no connected devices, or the emulator
@@ -159,14 +146,6 @@ WSL2 — fighting over the same port.
 own. Without Windows 11's mirrored networking mode
 (`networkingMode=mirrored` in `.wslconfig`), the emulator and WSL2 can't
 reach each other at all.
-
-<details data-project="study-group-finder">
-<summary>For Study Group Finder</summary>
-
-See [Prerequisites](./prerequisites.md#running-the-sdk-inside-wsl2-against-an-emulator-on-windows)
-for the full setup.
-
-</details>
 
 ## Environment and Supabase
 

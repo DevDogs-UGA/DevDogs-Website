@@ -3,12 +3,12 @@ name: Prerequisites
 description: Everything to install before you start — OS setup, Git and GitHub, an editor, the Node toolchain, Docker, and Flutter.
 order: 1
 section: getting-started
-mount: [platform, schedule-builder, study-group-finder, workshops]
+mount: [platform, schedule-builder, workshops]
 ---
 
 # Prerequisites
 
-<details data-project="platform schedule-builder study-group-finder">
+<details data-project="platform schedule-builder">
 <summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 Everything here happens before you clone the repo. [Running the project](./running.md)
@@ -44,7 +44,7 @@ after that, you only need the section for your track.
 
 </details>
 
-<details data-project="platform schedule-builder study-group-finder">
+<details data-project="platform schedule-builder">
 <summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 ## OS setup
@@ -148,7 +148,7 @@ winget install --id Git.Git -e --source winget
 
 </details>
 
-<details data-project="platform schedule-builder study-group-finder">
+<details data-project="platform schedule-builder">
 <summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 ## Git and a GitHub account
@@ -186,7 +186,7 @@ GitHub — nothing about this repo's workflow is unusual there.
 
 </details>
 
-<details data-project="platform schedule-builder study-group-finder">
+<details data-project="platform schedule-builder">
 <summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 ## Editor
@@ -203,7 +203,7 @@ changes in it.
 
 </details>
 
-<details data-project="platform schedule-builder study-group-finder">
+<details data-project="platform schedule-builder">
 <summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 Nothing here is required, but VS Code is what the docs assume.
@@ -232,7 +232,7 @@ Node runs Next.js, and pnpm installs its packages.
 
 </details>
 
-<details data-project="platform schedule-builder study-group-finder">
+<details data-project="platform schedule-builder">
 <summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 ## Node, through fnm
@@ -281,7 +281,7 @@ retroactively in the one you edited it from. Without it, a fresh terminal
 falls back to whatever Node your system has (or none), and `pnpm` fails with
 a confusing error instead of a clear "Node not found."
 
-<details data-project="platform schedule-builder study-group-finder">
+<details data-project="platform schedule-builder">
 <summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 See [fnm not found](./troubleshooting.md#fnm-not-found) if that still isn't
@@ -289,7 +289,7 @@ happening.
 
 </details>
 
-<details data-project="platform schedule-builder study-group-finder">
+<details data-project="platform schedule-builder">
 <summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 For now, install any recent Node so `npm` can install pnpm below:
@@ -307,7 +307,7 @@ Install the current long-term-support Node:
 fnm install --lts
 ```
 
-<details data-project="platform schedule-builder study-group-finder">
+<details data-project="platform schedule-builder">
 <summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 After cloning, [Running the project](./running.md) switches you to the exact
@@ -326,7 +326,7 @@ the minimum that happens to work.
 
 </details>
 
-<details data-project="platform schedule-builder study-group-finder">
+<details data-project="platform schedule-builder">
 <summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 ## pnpm
@@ -343,7 +343,7 @@ reads that pin and re-execs itself as the pinned version the first time it
 runs in the repo — no separate activation step, nothing to remember to re-run
 after a pin bump.
 
-<details data-project="platform schedule-builder study-group-finder">
+<details data-project="platform schedule-builder">
 <summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 ## Git line endings
@@ -410,26 +410,13 @@ use hosted Supabase.
 
 </details>
 
-<details data-project="study-group-finder workshops">
+<details data-project="workshops">
 <summary>For Study Group Finder and Workshops</summary>
 
 <details data-project="workshops">
 <summary>For Workshops</summary>
 
 ## For the Flutter track
-
-</details>
-
-<details data-project="study-group-finder">
-<summary>For Study Group Finder</summary>
-
-## Flutter and Android tooling
-
-study-group-finder targets **Android and iOS only** — there is no `web/`
-runner directory, and no `flutter build web` path is documented for it. You
-need the Flutter SDK on `PATH` (`pubspec.yaml` pins the Dart SDK to
-`^3.5.0`) plus an emulator to run against. Nothing else in the monorepo needs
-Flutter, so a contributor without it is never blocked on the rest of the repo.
 
 </details>
 
@@ -533,30 +520,6 @@ Supabase containers — and the local stack isn't documented for native
 Windows at all, so this only comes up if you're also on WSL2 for the
 database.
 
-<details data-project="study-group-finder">
-<summary>For Study Group Finder</summary>
-
-See [adb no devices](./troubleshooting.md#adb-no-devices) if `flutter run`
-reports no connected devices.
-
-</details>
-
-</details>
-
-<details data-project="study-group-finder">
-<summary>For Study Group Finder</summary>
-
-### Verify
-
-```bash
-flutter doctor
-```
-
-Resolve anything it reports before moving on. `pnpm devtools doctor` (see
-[Running the project](./running.md)) checks the rest of the toolchain but does
-not replace `flutter doctor` — Flutter's own prerequisites are Flutter's to
-check.
-
 </details>
 
 </details>
@@ -572,7 +535,7 @@ Head back to the workshop you came from, or start at the beginning:
 
 </details>
 
-<details data-project="platform schedule-builder study-group-finder">
+<details data-project="platform schedule-builder">
 <summary>For Platform, Schedule Builder and Study Group Finder</summary>
 
 ## Next

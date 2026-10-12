@@ -530,7 +530,6 @@ function buildDevDogsUgaRulesets(actors: RulesetActors): DesiredRuleset[] {
               // `format` is a step of `validate`, not a job of its own; the
               // catalog/patch drift check (`toolchain`) is a job.
               { context: "toolchain", integration_id: 15368 },
-              { context: "flutter", integration_id: 15368 },
               ...DESTRUCTIVE_GATE_CHECKS.map((context) => ({
                 context,
                 integration_id: ACTIONS_APP,

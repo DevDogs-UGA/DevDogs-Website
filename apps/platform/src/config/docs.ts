@@ -53,14 +53,6 @@ export const DOCS_PROJECT_MARKS: Record<string, DocsProjectMarkSpec> = {
     color: "text-red-600",
     iconBg: "bg-red-400",
   },
-  // DogPack's purple, a step lighter than its card title's so it reads on
-  // the dark surface.
-  "study-group-finder": {
-    kind: "glyph",
-    icon: "DogPackIcon",
-    color: "text-purple-500",
-    iconBg: "bg-purple-400",
-  },
   toolkit: {
     kind: "glyph",
     icon: "ToolboxIcon",
@@ -121,7 +113,6 @@ export const DOCS_PROJECT_LABELS: Record<
     tagline: "Member Portal and Dev Tools",
   },
   "schedule-builder": { name: "DogDays", tagline: "Schedule Builder" },
-  "study-group-finder": { name: "DogPack", tagline: "Study Group Finder" },
   toolkit: { name: "Toolkit", tagline: "Shared Packages and Tooling" },
   workshops: { name: "Workshops", tagline: "Meeting Slides and Code" },
 };
@@ -132,10 +123,7 @@ export const DOCS_PROJECT_LABELS: Record<
  * contributor is actually choosing between; a smaller row underneath for the
  * two projects everyone eventually touches regardless of which they pick.
  */
-export const DOCS_LANDING_LARGE: readonly string[] = [
-  "schedule-builder",
-  "study-group-finder",
-];
+export const DOCS_LANDING_LARGE: readonly string[] = ["schedule-builder"];
 export const DOCS_LANDING_SMALL: readonly string[] = ["platform", "toolkit"];
 /** The workshop write-ups, for anyone catching up on a meeting. */
 export const DOCS_LANDING_WORKSHOPS: readonly string[] = ["workshops"];

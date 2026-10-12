@@ -1,7 +1,6 @@
 name: Build artifacts
 
-# The credential-free build of the two Workers (the platform and
-# schedule-builder), plus the compiled docs, once per tier.
+# The credential-free build of the platform Worker, plus the compiled docs, once per tier.
 #
 # Called from two places, and the same artifact comes out of both:
 #
@@ -21,7 +20,6 @@ name: Build artifacts
 #   BASE_URL                     the platform's public origin
 #   PUBLISHABLE_KEY              the Supabase publishable (anon) key
 #   PLATFORM_SENTRY_DSN          optional: the platform's Sentry DSN
-#   SCHEDULE_BUILDER_SENTRY_DSN  optional: schedule-builder's Sentry DSN
 #   NEXT_PUBLIC_TURNSTILE_SITE_KEY  optional: the Turnstile site key (public by design)
 #
 # `backstage env push --target <tier>` writes these, from the `build: true` flag
@@ -62,7 +60,6 @@ jobs:
       BASE_URL: ${{ vars.BASE_URL }}
       PUBLISHABLE_KEY: ${{ vars.PUBLISHABLE_KEY }}
       PLATFORM_SENTRY_DSN: ${{ vars.PLATFORM_SENTRY_DSN }}
-      SCHEDULE_BUILDER_SENTRY_DSN: ${{ vars.SCHEDULE_BUILDER_SENTRY_DSN }}
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -79,16 +76,16 @@ jobs:
               missing=1
             fi
           done
-          for name in PLATFORM_SENTRY_DSN SCHEDULE_BUILDER_SENTRY_DSN NEXT_PUBLIC_TURNSTILE_SITE_KEY; do
+          for name in PLATFORM_SENTRY_DSN NEXT_PUBLIC_TURNSTILE_SITE_KEY; do
             if [ -z "${!name}" ]; then
               echo "::warning::The $DEPLOY_ENV-build environment has no $name variable; that feature is built disabled."
             fi
           done
           exit $missing
-      # Both apps consume their workspace dependencies from `dist/`.
+      # The platform consumes their workspace dependencies from `dist/`.
       - name: Build the apps' workspace dependencies
-        run: pnpm --filter 'platform^...' --filter 'schedule-builder^...' --if-present run build
-      # One file at the repo root, read by the platform, schedule-builder and
+        run: pnpm --filter 'platform^...' --if-present run build
+      # One file at the repo root, read by the platform and
       # `with-env`. Only public values, and the NEXT_PUBLIC_* copies the
       # browser bundles inline.
       - name: Compose public build configuration
@@ -99,45 +96,31 @@ jobs:
             printf 'BASE_URL="%s"\n' "$BASE_URL"
             printf 'PUBLISHABLE_KEY="%s"\n' "$PUBLISHABLE_KEY"
             printf 'PLATFORM_SENTRY_DSN="%s"\n' "$PLATFORM_SENTRY_DSN"
-            printf 'SCHEDULE_BUILDER_SENTRY_DSN="%s"\n' "$SCHEDULE_BUILDER_SENTRY_DSN"
             printf 'NEXT_PUBLIC_DEPLOY_ENV="%s"\n' "$DEPLOY_ENV"
             printf 'NEXT_PUBLIC_SUPABASE_URL="%s"\n' "$API_URL"
             printf 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="%s"\n' "$PUBLISHABLE_KEY"
             printf 'NEXT_PUBLIC_PLATFORM_SENTRY_DSN="%s"\n' "$PLATFORM_SENTRY_DSN"
-            printf 'NEXT_PUBLIC_SCHEDULE_BUILDER_SENTRY_DSN="%s"\n' "$SCHEDULE_BUILDER_SENTRY_DSN"
             printf 'NEXT_PUBLIC_TURNSTILE_SITE_KEY="%s"\n' "$NEXT_PUBLIC_TURNSTILE_SITE_KEY"
             printf 'NEXT_PUBLIC_AVATARS_BUCKET="avatars"\n'
             printf 'NEXT_PUBLIC_AUTH_MODE="google"\n'
           } > ".env.$DEPLOY_ENV"
       # The browser bundle's Sentry release is the commit its server half
-      # deploys with: this commit, for both Workers.
+      # deploys with: this commit.
       - name: Build the platform without credentials
         env:
           NEXT_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
         run: pnpm --filter platform run build
-      # schedule-builder's origin is not the platform's BASE_URL: it comes from
-      # the tier's smoke host in workers.json, the one place the hosts live.
-      - name: Build schedule-builder without credentials
-        run: |
-          set -euo pipefail
-          host=$(jq -r --arg tier "$DEPLOY_ENV" \
-            '.[] | select(.path == "apps/schedule-builder") | .smoke.hosts[$tier]' workers.json)
-          [ -n "$host" ] && [ "$host" != null ] || { echo "::error::workers.json has no $DEPLOY_ENV host for schedule-builder."; exit 1; }
-          export BASE_URL="https://$host"
-          export NEXT_PUBLIC_SENTRY_RELEASE="$GITHUB_SHA"
-          pnpm --filter schedule-builder run build
       - name: Reject accidental placeholder or credential-shaped values
         run: |
           set -euo pipefail
           if rg -uuu -l 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|SUPABASE_DB_PASSWORD|CLOUDFLARE_API_TOKEN' \
-            apps/platform/dist apps/schedule-builder/dist; then
+            apps/platform/dist; then
             echo "A $DEPLOY_ENV artifact contains credential-shaped material." >&2
             exit 1
           fi
       - name: Hash the exact candidate
         run: |
           find apps/platform/dist apps/platform/.wrangler/deploy \
-            apps/schedule-builder/dist apps/schedule-builder/.wrangler/deploy \
             docs/dist \
             -type f -print0 | sort -z | xargs -0 sha256sum > RELEASE_SHA256SUMS
           {
@@ -159,8 +142,6 @@ jobs:
           path: |
             apps/platform/dist
             apps/platform/.wrangler/deploy
-            apps/schedule-builder/dist
-            apps/schedule-builder/.wrangler/deploy
             docs/dist
             RELEASE_SHA256SUMS
           if-no-files-found: error

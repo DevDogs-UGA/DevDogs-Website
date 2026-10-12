@@ -7,8 +7,6 @@ body:
     attributes:
       label: Project
       options:
-        - schedule-builder
-        - study-group-finder
         - platform
         - toolkit / infrastructure
     validations:

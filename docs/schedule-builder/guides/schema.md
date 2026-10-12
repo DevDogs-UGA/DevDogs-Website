@@ -42,7 +42,7 @@ refreshes it, that code is stale, not the schema.
 
 ## Making a schema change
 
-```bash
+```bash nocheck
 pnpm devtools new-migration --app schedule-builder <description>
 ```
 
@@ -52,7 +52,7 @@ platform does (see [Writing a migration](../../platform/guides/migrations.md)'s 
 table with its policies look like in one migration?"). Then replay it and
 re-introspect:
 
-```bash
+```bash nocheck
 pnpm devtools supabase db reset              # drop, replay every migration, run the seeds
 pnpm --filter @devdogsuga/supabase run codegen   # generate the Database types (gitignored)
 pnpm -F schedule-builder types:drizzle       # re-introspect the Drizzle schema

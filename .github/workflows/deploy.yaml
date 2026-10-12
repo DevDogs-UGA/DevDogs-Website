@@ -4,7 +4,7 @@ name: Deploy
 # production candidate. Production mutation is gated by the protected
 # `production` environment and deploys this commit's prebuilt artifacts.
 #
-# One repository. This commit is the whole deploy: the platform, schedule-builder,
+# One repository. This commit is the whole deploy: the platform, the catalog,
 # the migrations, seeds, avatars and docs all come from this checkout, and
 # `workers.json` lists the Workers. (Until the fold-back this flow lived in
 # Backstage and pinned DevDogsUGA by `devdogsuga.lock`.) What is particular here:
@@ -284,38 +284,6 @@ jobs:
         backstage deploy reconcile --tier staging --no-env --yes
         SENTRY_PROJECT=platform GITHUB_SHA="$RELEASE" backstage deploy smoke --tier staging --yes --app platform --no-env
 
-  staging-schedule-builder:
-    needs: [resolve, build, staging-database, staging-avatars]
-    if: >-
-      !cancelled()
-      && github.event_name == 'push'
-      && needs.resolve.result == 'success'
-      && (needs.build.result == 'success' || needs.build.result == 'skipped')
-      && needs.staging-database.result == 'success'
-      && needs.staging-avatars.result == 'success'
-    uses: ./.github/workflows/deploy-worker.yaml
-    secrets: inherit
-    permissions:
-      contents: read
-      actions: read
-    with:
-      environment: staging
-      tier: staging
-      worker_dir: apps/schedule-builder
-      worker_name: staging-schedule-builder
-      artifact_name: staging-${{ github.sha }}
-      artifact_run_id: ${{ needs.resolve.outputs.merge_group_run }}
-      build_cli: true
-      sentry_project: schedule-builder
-      sourcemaps_dir: apps/schedule-builder/dist
-      prepare_command: backstage deploy write-env --no-env --yes
-      upload_command: backstage deploy schedule-builder --tier staging --upload --yes
-      full_deploy_command: backstage deploy schedule-builder --tier staging --yes
-      mode: ${{ vars.WORKER_DEPLOY_MODE || 'versions' }}
-      after_switch_command: |
-        set -a; . ".env.$TIER"; set +a
-        SENTRY_PROJECT=schedule-builder GITHUB_SHA="$RELEASE" backstage deploy smoke --tier staging --yes --app schedule-builder --no-env
-
   # The catalog API and the registrar scrape (apps/catalog), also through the
   # shared deploy-worker.yaml. It has no build artifact (the deploy bundles
   # src/worker.ts), no Sentry project of its own (it reports to the platform's,
@@ -366,13 +334,13 @@ jobs:
   #                         or rewrites data needs a second approval, of
   #                         `production-destructive`.
   #   production-catalog    the registrar scrape and the catalog API. BEFORE
-  #                         the two below: this commit's platform and
-  #                         schedule-builder no longer run the scrape or the
+  #                         the platform: it no longer runs the scrape or the
   #                         Bulletin sync, so the catalog's Workflows have to
   #                         exist first or the daily data stops.
-  #   production-platform   and  production-schedule-builder
-  #                         in parallel, so one approval of `production` covers
-  #                         both: upload, preview smoke, switch, live smoke.
+  #   production-platform   upload, preview smoke, switch, live smoke.
+  #
+  # DogDays (dogdays.dev) deploys from its own repository; its Worker is not
+  # deployed from here any more.
   #
   # Each approved job refuses an approver who wrote or queued the change (Q61)
   # and refuses a candidate that is no longer the head of `main`.
@@ -383,7 +351,6 @@ jobs:
         resolve,
         build,
         staging-platform,
-        staging-schedule-builder,
         staging-catalog,
       ]
     if: >-
@@ -394,7 +361,7 @@ jobs:
       && needs.resolve.result == 'success'
       && needs.resolve.outputs.production == 'true'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
-      && ((needs.staging-platform.result == 'success' && needs.staging-schedule-builder.result == 'success' && needs.staging-catalog.result == 'success') || needs.resolve.outputs.staging == 'false')
+      && ((needs.staging-platform.result == 'success' && needs.staging-catalog.result == 'success') || needs.resolve.outputs.staging == 'false')
     uses: ./.github/workflows/deploy-database.yaml
     secrets: inherit
     permissions:
@@ -495,41 +462,6 @@ jobs:
         # drop a monitor production still checks in to.
         backstage deploy prune-monitors --tier production --yes --app platform --no-env
         backstage env audit --target production --no-env --yes
-
-  production-schedule-builder:
-    needs: [resolve, build, production-database, production-catalog]
-    if: >-
-      github.event_name == 'push'
-      && !cancelled()
-      && needs.resolve.result == 'success'
-      && (needs.build.result == 'success' || needs.build.result == 'skipped')
-      && needs.production-database.result == 'success'
-      && needs.production-catalog.result == 'success'
-    uses: ./.github/workflows/deploy-worker.yaml
-    secrets: inherit
-    permissions:
-      contents: read
-      actions: read
-    with:
-      environment: production
-      tier: production
-      worker_dir: apps/schedule-builder
-      worker_name: production-schedule-builder
-      self_approval_gate: true
-      require_latest: true
-      artifact_name: production-${{ github.sha }}
-      artifact_run_id: ${{ needs.resolve.outputs.merge_group_run }}
-      build_cli: true
-      sentry_project: schedule-builder
-      sourcemaps_dir: apps/schedule-builder/dist
-      prepare_command: backstage deploy write-env --no-env --yes
-      upload_command: backstage deploy schedule-builder --tier production --upload --yes
-      full_deploy_command: backstage deploy schedule-builder --tier production --yes
-      mode: ${{ vars.WORKER_DEPLOY_MODE || 'versions' }}
-      after_switch_command: |
-        set -a; . ".env.$TIER"; set +a
-        SENTRY_PROJECT=schedule-builder GITHUB_SHA="$RELEASE" backstage deploy smoke --tier production --yes --app schedule-builder --no-env
-        backstage deploy prune-monitors --tier production --yes --app schedule-builder --no-env
 
   prune-orphans:
     if: >-
