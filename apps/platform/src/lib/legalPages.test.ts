@@ -148,6 +148,24 @@ describe("what the apps receive at sign-in", () => {
     }
     expect(dogdays).not.toMatch(/can't see anything else/);
   });
+
+  // The access token and userinfo response the apps get carry the provider
+  // identifier and the linked-provider list as well (lane 3e review), so the
+  // copy must not claim the apps receive nothing but the four listed items.
+  it("discloses the provider identifier and linked providers, and never says 'only'", () => {
+    const flow = section(
+      privacyText,
+      "DevDogs apps and developer testing",
+      "5. Support conversations",
+    );
+    const dogdays = section(privacyText, "13. DogDays", "14. DogPack");
+    const dogpack = section(privacyText, "14. DogPack");
+    for (const text of [flow, dogdays, dogpack]) {
+      expect(text).toMatch(/Google.s (?:own )?identifier/);
+      expect(text).toMatch(/GitHub, Discord,? (?:or|and)? ?LinkedIn/);
+    }
+    expect(flow).not.toMatch(/receive only your/);
+  });
 });
 
 describe("the deleted features are gone from the legal copy", () => {

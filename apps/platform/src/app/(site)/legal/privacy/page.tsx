@@ -359,9 +359,13 @@ export default async function Privacy() {
       </h3>
       <p>
         DogDays and DogPack sign you in with your DevDogs account, but they are
-        separate systems with their own databases. They receive only your
+        separate systems with their own databases. They receive your
         account&apos;s ID, your UGA email, and the name and profile picture from
-        the Google account you signed in with. Your other devdogsuga.org profile
+        the Google account you signed in with. The sign-in itself also carries
+        the technical details Google gave us about that account (Google&apos;s
+        own identifier for it, and that it belongs to the uga.edu domain) and
+        which other sign-in providers, such as GitHub, Discord or LinkedIn, you
+        have linked to your DevDogs account. Your other devdogsuga.org profile
         details, such as your preferred name, pronouns, bio, graduation year and
         links, are not shared with them. What each app stores beyond that is
         described in §13 and §14.
@@ -554,8 +558,11 @@ export default async function Privacy() {
           <strong>Your account:</strong> when you sign in, DogDays receives your
           DevDogs account&apos;s ID, your UGA email, and the name and profile
           picture from the Google account you signed in with, and keeps them in
-          its own database. It doesn&apos;t receive your other devdogsuga.org
-          profile details, such as your preferred name, pronouns, bio or links.
+          its own database. The sign-in also tells it Google&apos;s identifier
+          for your account and which other sign-in providers you have linked
+          (GitHub, Discord, LinkedIn). It doesn&apos;t receive your other
+          devdogsuga.org profile details, such as your preferred name, pronouns,
+          bio or links.
         </li>
         <li>
           <strong>Your plans:</strong> the schedule plans, drafts and
@@ -620,10 +627,12 @@ export default async function Privacy() {
         <li>
           <strong>Your account:</strong> from your DevDogs account, DogPack
           receives your ID, your UGA email, and the name and profile picture
-          from the Google account you signed in with. It doesn&apos;t receive
-          your other devdogsuga.org profile details. Only UGA students can sign
-          in, because DevDogs sign-in only accepts <code>@uga.edu</code>{" "}
-          accounts (§3).
+          from the Google account you signed in with. The sign-in also tells it
+          Google&apos;s identifier for your account and which other sign-in
+          providers you have linked (GitHub, Discord, LinkedIn). It doesn&apos;t
+          receive your other devdogsuga.org profile details. Only UGA students
+          can sign in, because DevDogs sign-in only accepts{" "}
+          <code>@uga.edu</code> accounts (§3).
         </li>
         <li>
           <strong>Onboarding and profile:</strong> your name, your class year,
