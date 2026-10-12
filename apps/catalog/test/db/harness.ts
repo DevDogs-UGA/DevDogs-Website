@@ -57,6 +57,33 @@ function catalogMigration(): string {
   return join(SUPABASE, "migrations", file);
 }
 
+/**
+ * The migration creates the role with a plain `create role`, so that the
+ * deploy's destructive gate can read every statement of it (a `do` block is
+ * opaque to the gate and would need a devops approval). A role is cluster-wide
+ * though, and every test database here shares one cluster, so the statement
+ * runs once and is left out for the rest: the role is created here (a parallel
+ * file that wins the race is fine) and the migration runs without it.
+ */
+const CREATE_ROLE = /^create role "catalog_reader"[^;]*;$/m;
+
+async function migrationForThisCluster(sql: postgres.Sql): Promise<string> {
+  const text = readFileSync(catalogMigration(), "utf8");
+  const match = CREATE_ROLE.exec(text);
+  if (!match) {
+    throw new Error(
+      'The catalog migration no longer has a plain `create role "catalog_reader" ...;` statement; update the test harness.',
+    );
+  }
+  try {
+    await sql.unsafe(match[0]);
+  } catch (error) {
+    // 42710 duplicate_object: the role exists already.
+    if ((error as { code?: string }).code !== "42710") throw error;
+  }
+  return text.replace(CREATE_ROLE, "");
+}
+
 export function adminUrl(): string {
   const url = process.env.DB_URL;
   if (!url) {
@@ -104,7 +131,7 @@ async function loadSchemas(url: string): Promise<void> {
       }
       pending = failed;
     }
-    await sql.unsafe(readFileSync(catalogMigration(), "utf8"));
+    await sql.unsafe(await migrationForThisCluster(sql));
   } finally {
     await sql.end({ timeout: 5 });
   }

@@ -21,13 +21,7 @@
 -- The role-level statement_timeout applies to a direct login as the role. Under
 -- `set role` Postgres does not apply role defaults, so the Worker also sets it
 -- per transaction (apps/catalog/src/db/reader.ts); the two are meant to agree.
-do $$
-begin
-  if not exists (select 1 from pg_roles where rolname = 'catalog_reader') then
-    create role "catalog_reader" nologin noinherit;
-  end if;
-end
-$$;
+create role "catalog_reader" nologin noinherit;
 
 alter role "catalog_reader" set statement_timeout = '3s';
 
