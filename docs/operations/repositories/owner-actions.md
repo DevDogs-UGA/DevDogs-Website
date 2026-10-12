@@ -12,7 +12,7 @@ Some changes need a GitHub organization **owner**. The owners are the **Presiden
 ## What only an owner can do
 
 - Apply or change rulesets, organization-wide settings, and the 2FA requirement.
-- Install, configure or remove a GitHub App (the platform App, Renovate), and choose which repositories it sees.
+- Install, configure or remove a GitHub App (Renovate), and choose which repositories it sees.
 - Create or delete repositories, transfer them, or change their visibility.
 - Add and remove organization owners, and change member permissions.
 - Create organization-level secrets, variables and webhooks.
