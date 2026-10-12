@@ -57,10 +57,9 @@ function captureConsole() {
   };
 }
 
-describe("resolving the platform App and Renovate", () => {
-  it("succeeds and includes Renovate in the plan when both Apps resolve", async () => {
+describe("resolving Renovate", () => {
+  it("includes Renovate in the plan when it resolves", async () => {
     mockResolveAppId.mockImplementation(async (_org, slug) => {
-      if (slug === "devdogs-platform") return 4595259;
       if (slug === "renovate") return 7001;
       throw new Error(`unexpected app slug "${slug}"`);
     });
@@ -83,8 +82,7 @@ describe("resolving the platform App and Renovate", () => {
   });
 
   it("warns and omits Renovate from the plan when it cannot be resolved, without failing", async () => {
-    mockResolveAppId.mockImplementation(async (_org, slug) => {
-      if (slug === "devdogs-platform") return 4595259;
+    mockResolveAppId.mockImplementation(async () => {
       throw new Error("404 Not Found");
     });
     const { log, err, restore } = captureConsole();
@@ -110,16 +108,20 @@ describe("resolving the platform App and Renovate", () => {
     restore();
   });
 
-  it("fails outright when the platform App (required) cannot be resolved", async () => {
+  it("needs no platform App: the retired App is never looked up", async () => {
     mockResolveAppId.mockImplementation(async (_org, slug) => {
       throw new Error(`no installation for "${slug}"`);
     });
-    const { err, restore } = captureConsole();
+    const { log, restore } = captureConsole();
 
-    const code = await runGithubRulesets([]);
+    const code = await runGithubRulesets(["--json"]);
 
-    expect(code).toBe(1);
-    expect(err).toHaveBeenCalled();
+    expect(code).toBe(0);
+    expect(mockResolveAppId.mock.calls.map((c) => c[1])).toEqual(["renovate"]);
+    const printed = JSON.parse(log.mock.calls[0]![0] as string) as {
+      creates: { desired: { name: string } }[];
+    };
+    expect(printed.creates.map((c) => c.desired.name)).not.toContain("team/**");
     restore();
   });
 });
@@ -194,7 +196,6 @@ describe("--repo DogDays, DogPack and all", () => {
     vi.mocked(listRulesets).mockResolvedValue([]);
     mockResolveAppId.mockImplementation(async (_org, slug) => {
       if (slug === "renovate") return 7001;
-      if (slug === "devdogs-platform") return 4595259;
       throw new Error(`no installation for "${slug}"`);
     });
   });

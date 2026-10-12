@@ -127,9 +127,10 @@ entry for them (`envFree` in the command tree).
   `/console/qr` stays, deprecated; new options are CLI-only.
 - **`github rulesets|settings`** keep GitHub's rulesets and repository settings
   as code, through `gh` and your own login. They must keep matching what the
-  platform assumes. The `team/<slug>` per-team rulesets and `team-*` GitHub teams
-  left over from the removed Teams feature are not managed here; delete them by
-  hand (see the lane 3e notes).
+  platform assumes. The retired `team/**` ruleset is deleted by `github rulesets
+--apply` (after `~ALL` is widened to cover `team/*`). The `team/<slug>`
+  per-team rulesets and `team-*` GitHub teams left over from the removed Teams
+  feature are not managed here; delete them by hand (see the lane 3e notes).
 - **`newsletter render|draft|send`** are described in the
   [newsletter package](../newsletter/README.md). Drafts and sends use the club
   mailbox (`devdogs@uga.edu`) with the officer's own Microsoft sign-in; there

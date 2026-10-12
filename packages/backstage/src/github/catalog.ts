@@ -8,7 +8,7 @@ export const githubCommand: CommandNode = {
   name: "github",
   dryRun: "handled",
   summary: "Reconcile the repository's rulesets and settings.",
-  hint: "rulesets: main, production, ~ALL, team/**, tags; settings: security, Actions, environments",
+  hint: "rulesets: main, ~ALL, tags; settings: security, Actions, environments",
   subcommands: [
     {
       name: "rulesets",
@@ -25,12 +25,6 @@ export const githubCommand: CommandNode = {
           flag: "--repo",
           value: "<repo>",
           summary: "Repository name. Defaults to DevDogsUGA.",
-        },
-        {
-          flag: "--app-slug",
-          value: "<slug>",
-          summary:
-            "The GitHub App whose id bypasses team/** creation. Defaults to devdogs-platform.",
         },
         {
           flag: "--apply",

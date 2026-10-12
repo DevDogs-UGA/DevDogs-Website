@@ -1,18 +1,17 @@
 /**
  * `backstage github rulesets` — TASK-322.
  *
- * Prints the diff between the five fixed rulesets DevDogsUGA's
- * `apps/platform/src/server/github/rulesets.ts` has always assumed exist
- * (`main`, `production`, `~ALL`, `team/**`, and the tag ruleset — see
- * `desired.ts`'s header) and what `gh api .../rulesets` actually reports.
+ * Prints the diff between the fixed rulesets `desired.ts` declares (the
+ * `main-*` set, `~ALL` and the tag ruleset) and what `gh api .../rulesets`
+ * actually reports.
  * Defaults to a dry-run plan; `--apply` writes it, gated behind a
  * confirmation unless `--yes`.
  *
  * Never touches a per-team ruleset (`teamRulesetName()`'s `team/<slug>`) —
  * those are leftovers of the removed Teams feature (a human deletes them),
  * not this command's — and never deletes or
- * creates anything outside `desired.ts`'s five names plus the one explicit
- * deletion (`comp-branches`). See `diff.ts`'s header for the full
+ * creates anything outside `desired.ts`'s names plus its explicit deletions
+ * (`DELETE_RULESET_NAMES`, which includes the Teams-era `team/**`). See `diff.ts`'s header for the full
  * classification.
  */
 import { confirm } from "@clack/prompts";
@@ -45,7 +44,6 @@ import { unwrap } from "@devdogsuga/cli-core/ui";
 
 const DEFAULT_ORG = "DevDogsUGA";
 const DEFAULT_REPO = "DevDogsUGA";
-const DEFAULT_APP_SLUG = "devdogs-platform";
 const DEFAULT_DEVOPS_SLUG = "devops";
 const DEFAULT_ADMINS_SLUG = "admins";
 /** TASK-299 — installed separately from the platform App; may not exist yet. */
@@ -57,7 +55,6 @@ const CI_WORKFLOW_PATH = ".github/workflows/ci.yaml";
 interface RulesetsOptions {
   org: string;
   repo: string;
-  appSlug: string;
   apply: boolean;
   yes: boolean;
   json: boolean;
@@ -67,7 +64,6 @@ function parseOptions(argv: readonly string[]): RulesetsOptions {
   const opts: RulesetsOptions = {
     org: DEFAULT_ORG,
     repo: DEFAULT_REPO,
-    appSlug: DEFAULT_APP_SLUG,
     apply: false,
     yes: false,
     json: false,
@@ -76,7 +72,6 @@ function parseOptions(argv: readonly string[]): RulesetsOptions {
     const arg = argv[i];
     if (arg === "--org") opts.org = argv[++i] ?? opts.org;
     else if (arg === "--repo") opts.repo = argv[++i] ?? opts.repo;
-    else if (arg === "--app-slug") opts.appSlug = argv[++i] ?? opts.appSlug;
     else if (arg === "--apply") opts.apply = !isDryRun();
     else if (arg === "--yes") opts.yes = true;
     else if (arg === "--json") opts.json = true;
@@ -314,15 +309,11 @@ export async function runGithubRulesets(
   let devopsTeamId: number;
   let focusLeadsTeamId: number;
   let adminsTeamId: number;
-  let appId: number | undefined;
   try {
-    [devopsTeamId, focusLeadsTeamId, adminsTeamId, appId] = await Promise.all([
+    [devopsTeamId, focusLeadsTeamId, adminsTeamId] = await Promise.all([
       resolveTeamId(opts.org, DEFAULT_DEVOPS_SLUG),
       resolveTeamId(opts.org, "focus-leads"),
       resolveTeamId(opts.org, DEFAULT_ADMINS_SLUG),
-      // Backstage and the product repositories have no `team/**` rulesets, so
-      // no platform App bypass.
-      backstage || product ? undefined : resolveAppId(opts.org, opts.appSlug),
     ]);
   } catch (err) {
     process.stderr.write(
@@ -368,7 +359,6 @@ export async function runGithubRulesets(
     devopsTeamId,
     focusLeadsTeamId,
     adminsTeamId,
-    appId,
     renovateAppId,
     deployPrAppId,
   };

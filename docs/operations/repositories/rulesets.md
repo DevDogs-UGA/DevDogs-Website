@@ -34,6 +34,8 @@ The merge queue ruleset is withheld until the repository's `ci.yaml` has a `merg
 | `main-ci`          | Required checks: `validate`, `database`, `toolchain`/`flutter` as the repository has them, `destructive-sql` and `destructive-gate` (in the product repositories `destructive-gate / destructive-sql` and `destructive-gate / destructive-gate`). |
 | `main-merge-queue` | Squash, up to five entries built and merged together, all checks green.                                                                                                                                                                           |
 
+`~ALL` covers every other branch, including any `team/*` branch left over from the removed Teams feature. The old `team/**` ruleset (which exempted those branches from `~ALL`) is a deletion target in `desired.ts`: `pnpm backstage github rulesets --repo DevDogsUGA --apply` widens `~ALL` first and deletes `team/**` after, so no branch is unprotected in between. Do not delete `team/**` by hand before that, or `team/*` branches have no rule at all.
+
 A bypass actor bypasses **every** rule in its ruleset, which is why they are split: letting admins push directly past the review rule must not also let them force-push.
 
 ## Signed commits

@@ -194,11 +194,10 @@ describe("prompts", () => {
       "--qr-version",
       "--logo-crop",
       "--name",
-      // GitHub org/repo/App-slug scoping: all default to the one repository
-      // (and App) the reconciler manages.
+      // GitHub org/repo scoping: both default to the one repository the
+      // reconciler manages.
       "--org",
       "--repo",
-      "--app-slug",
       // Write gate, not a question: the confirmation before writing IS the
       // question.
       "--apply",

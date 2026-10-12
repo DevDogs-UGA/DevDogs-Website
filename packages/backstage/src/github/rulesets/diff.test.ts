@@ -7,7 +7,6 @@ const actors = {
   devopsTeamId: 9002,
   focusLeadsTeamId: 9004,
   adminsTeamId: 9001,
-  appId: 5001,
 };
 const desired = buildDesiredRulesets(actors);
 

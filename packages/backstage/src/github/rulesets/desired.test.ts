@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applyGates, hasMergeGroupTrigger } from "./gates.js";
+import type { LiveRuleset } from "./types.js";
 import { planRulesets } from "./diff.js";
 import {
   BACKSTAGE_MERGE_QUEUE,
@@ -13,7 +14,6 @@ const actors = {
   devopsTeamId: 9002,
   focusLeadsTeamId: 9004,
   adminsTeamId: 9001,
-  appId: 5001,
 };
 
 describe("buildDesiredRulesets", () => {
@@ -27,7 +27,6 @@ describe("buildDesiredRulesets", () => {
       "main-ci",
       "main-merge-queue",
       "~ALL",
-      "team/**",
       "tag-protection",
     ]);
     expect(
@@ -106,11 +105,11 @@ describe("buildDesiredRulesets", () => {
     });
   });
 
-  it("excludes main and team branches from the broad backstop", () => {
+  it("excludes only main from the broad backstop, so team/* branches are locked down", () => {
     const all = desired.find((rule) => rule.name === "~ALL")!;
     expect(all.conditions.ref_name).toEqual({
       include: ["~ALL"],
-      exclude: ["refs/heads/main", "refs/heads/team/**"],
+      exclude: ["refs/heads/main"],
     });
     expect(all.bypass_actors).toContainEqual({
       actor_id: 9004,
@@ -124,12 +123,19 @@ describe("buildDesiredRulesets", () => {
     });
   });
 
-  it("reserves team branches for the platform, competition team, and admins", () => {
-    const team = desired.find((rule) => rule.name === "team/**")!;
-    expect(team.bypass_actors).toEqual([
-      { actor_id: 5001, actor_type: "Integration", bypass_mode: "always" },
-      { actor_id: 9001, actor_type: "Team", bypass_mode: "always" },
-    ]);
+  it("declares no team/** ruleset and no platform App bypass anywhere", () => {
+    expect(desired.map((rule) => rule.name)).not.toContain("team/**");
+    const withRenovate = buildDesiredRulesets({
+      ...actors,
+      renovateAppId: 2740,
+    });
+    for (const rule of withRenovate) {
+      for (const actor of rule.bypass_actors) {
+        if (actor.actor_type === "Integration") {
+          expect(actor.actor_id).toBe(2740);
+        }
+      }
+    }
   });
 });
 
@@ -137,6 +143,34 @@ describe("migration names", () => {
   it("renames the old combined main ruleset and removes production", () => {
     expect(LEGACY_NAME_ALIASES["main-reviews"]).toContain("main");
     expect(DELETE_RULESET_NAMES).toContain("production");
+  });
+
+  it("deletes the retired team/** ruleset, and plans ~ALL's widening before that delete", () => {
+    expect(DELETE_RULESET_NAMES).toContain("team/**");
+    const all = buildDesiredRulesets(actors).find((r) => r.name === "~ALL")!;
+    const liveAll: LiveRuleset = {
+      id: 1,
+      ...all,
+      conditions: {
+        ref_name: {
+          include: ["~ALL"],
+          exclude: ["refs/heads/main", "refs/heads/team/**"],
+        },
+      },
+    };
+    const plan = planRulesets(
+      [
+        { id: 1, name: "~ALL", target: "branch" },
+        { id: 2, name: "team/**", target: "branch" },
+      ],
+      new Map([[1, liveAll]]),
+      actors,
+      [all],
+    );
+    expect(plan.updates).toEqual([expect.objectContaining({ id: 1 })]);
+    expect(plan.deletes).toEqual([
+      expect.objectContaining({ id: 2, name: "team/**" }),
+    ]);
   });
 });
 

@@ -5,8 +5,6 @@ export interface RulesetActors {
   devopsTeamId: number;
   focusLeadsTeamId: number;
   adminsTeamId: number;
-  /** The platform App (`team/**` bypass); DevDogsUGA only. */
-  appId?: number;
   renovateAppId?: number;
   /**
    * The deploy-PR App (`devdogs-deploy-pr`), which force-pushes
@@ -18,7 +16,7 @@ export interface RulesetActors {
 
 export type RulesetRepo = "DevDogsUGA" | "Backstage" | "DogDays" | "DogPack";
 
-/** The product repositories (Q40): no platform App, no `team/**` branches. */
+/** The product repositories (Q40): no `team/**` branches. */
 export const PRODUCT_REPOS = ["DogDays", "DogPack"] as const;
 export type ProductRepo = (typeof PRODUCT_REPOS)[number];
 
@@ -86,6 +84,10 @@ export const LEGACY_NAME_ALIASES: Readonly<Record<string, readonly string[]>> =
 export const DELETE_RULESET_NAMES: readonly string[] = [
   "comp-branches",
   "production",
+  // The Teams feature is gone (lane 3e), and `~ALL` covers `team/*` again.
+  // The plan applies updates before deletes, so `~ALL` widens first and no
+  // branch is ever unprotected between the two writes.
+  "team/**",
 ];
 
 export function isPerTeamRulesetName(name: string): boolean {
@@ -431,9 +433,6 @@ function mainMergeQueueRuleset(actors: RulesetActors): DesiredRuleset {
 }
 
 function buildDevDogsUgaRulesets(actors: RulesetActors): DesiredRuleset[] {
-  if (actors.appId === undefined) {
-    throw new Error("DevDogsUGA rulesets need the platform App id (appId)");
-  }
   return [
     {
       name: "main-integrity",
@@ -543,7 +542,7 @@ function buildDevDogsUgaRulesets(actors: RulesetActors): DesiredRuleset[] {
       conditions: {
         ref_name: {
           include: ["~ALL"],
-          exclude: ["refs/heads/main", "refs/heads/team/**"],
+          exclude: ["refs/heads/main"],
         },
       },
       bypass_actors: [
@@ -565,27 +564,6 @@ function buildDevDogsUgaRulesets(actors: RulesetActors): DesiredRuleset[] {
           type: "update",
           parameters: { update_allows_fetch_and_merge: false },
         },
-        { type: "creation" },
-        { type: "deletion" },
-        { type: "non_fast_forward" },
-      ],
-    },
-    {
-      name: "team/**",
-      target: "branch",
-      enforcement: "active",
-      conditions: {
-        ref_name: { include: ["refs/heads/team/**"], exclude: [] },
-      },
-      bypass_actors: [
-        {
-          actor_id: actors.appId,
-          actor_type: "Integration",
-          bypass_mode: "always",
-        },
-        always(actors.adminsTeamId),
-      ],
-      rules: [
         { type: "creation" },
         { type: "deletion" },
         { type: "non_fast_forward" },
