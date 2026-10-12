@@ -48,6 +48,22 @@ import { isMain } from "./is-main.mjs";
  * }} SmokeConfig
  */
 
+/**
+ * Drain a response. A 5xx also yields a short excerpt of its body and its
+ * `cf-ray`, so a failed check says what answered (Cloudflare's error page, the
+ * Worker's own) instead of only the status.
+ *
+ * @param {Response} response
+ * @returns {Promise<string>}
+ */
+async function drain(response) {
+  const text = await response.text().catch(() => "");
+  if (response.status < 500) return "";
+  const ray = response.headers.get("cf-ray");
+  const excerpt = text.replace(/\s+/g, " ").trim().slice(0, 200);
+  return `${ray ? `, cf-ray ${ray}` : ""}${excerpt ? `, body "${excerpt}"` : ""}`;
+}
+
 /** `Cloudflare-Workers-Version-Overrides: worker="version-id"`. */
 export function overrideHeader(workerName, versionId) {
   return `${workerName}="${versionId}"`;
@@ -114,11 +130,11 @@ export async function runSmoke({
   for (const path of smoke.publicPaths ?? []) {
     try {
       const response = await get(`${base}${path}`);
-      await response.arrayBuffer().catch(() => {});
+      const extra = await drain(response);
       checks.push({
         name: `${path} answers 200`,
         ok: response.status === 200,
-        detail: `status ${response.status}`,
+        detail: `status ${response.status}${extra}`,
       });
     } catch (error) {
       checks.push({
@@ -134,11 +150,11 @@ export async function runSmoke({
   for (const [path, status] of Object.entries(smoke.expectedStatuses ?? {})) {
     try {
       const response = await get(`${base}${path}`);
-      await response.arrayBuffer().catch(() => {});
+      const extra = await drain(response);
       checks.push({
         name: `${path} answers ${status}`,
         ok: response.status === status,
-        detail: `status ${response.status}`,
+        detail: `status ${response.status}${extra}`,
       });
     } catch (error) {
       checks.push({
@@ -151,7 +167,7 @@ export async function runSmoke({
   if (smoke.protectedPath) {
     try {
       const response = await get(`${base}${smoke.protectedPath}`);
-      await response.arrayBuffer().catch(() => {});
+      const extra = await drain(response);
       const location = response.headers.get("location") ?? "";
       const prefix = smoke.protectedRedirectPrefix ?? "/";
       const redirected = response.status >= 300 && response.status < 400;
@@ -161,7 +177,7 @@ export async function runSmoke({
       checks.push({
         name: `${smoke.protectedPath} sends an anonymous visitor to ${prefix}`,
         ok: redirected && path.startsWith(prefix),
-        detail: `status ${response.status}, location ${location || "(none)"}`,
+        detail: `status ${response.status}, location ${location || "(none)"}${extra}`,
       });
     } catch (error) {
       checks.push({
@@ -325,11 +341,11 @@ async function followConsent({ base, headers, fetchImpl, location }) {
       `${base}${target.pathname}${target.search}`,
       { redirect: "manual", headers },
     );
-    await response.arrayBuffer().catch(() => {});
+    const extra = await drain(response);
     return {
       name,
       ok: response.status < 500,
-      detail: `status ${response.status}${response.status === 404 ? " (expected: the throwaway client has no platform registration)" : ""}`,
+      detail: `status ${response.status}${extra}${response.status === 404 ? " (expected: the throwaway client has no platform registration)" : ""}`,
     };
   } catch (error) {
     return { name, ok: false, detail: String(error) };
