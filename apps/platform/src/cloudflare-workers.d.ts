@@ -9,7 +9,7 @@
  * `~/server/moderation/queue.ts` (MODERATION_DELIVERIES). This program never
  * reaches into `cloudflare/tsconfig.json`'s Workers-runtime program (its
  * `include` is rooted at `cloudflare/` and nothing there imports back into
- * `src/server/db`, unlike apps/schedule-builder's `ScrapeWorkflow.ts`), so
+ * `src/server/db`), so
  * there is no collision to avoid the way that app's shim describes -- this
  * file exists anyway because `src`'s own program (tsconfig.json, DOM lib)
  * has no ambient declaration for `cloudflare:workers` at all otherwise.

@@ -284,9 +284,8 @@ visitor's drafts live in `localStorage` until they sign in.
 
 A fresh database has no courses, so there is nothing for the generator to
 plan against yet. Trigger the registrar scrape with the app's `populate:courses`
-script — it starts a temporary local Wrangler session (the Workflow runtime the
-dev server doesn't provide on its own), runs the scrape against your database,
-and waits for it to finish:
+script — it runs the catalog's scrape (the registrar scrape lives in `apps/catalog`)
+against your database and prints a report when it finishes:
 
 ```bash
 pnpm -F schedule-builder populate:courses

@@ -13,11 +13,11 @@ Each app reports to its own Sentry project, and devtools reports to a third. Eve
 
 The project slugs are not free to choose. The deploy workflow uploads each app's source maps to the project named after the app.
 
-| Project            | Reports from                                                     |
-| ------------------ | ---------------------------------------------------------------- |
-| `platform`         | the platform Worker and its browser bundle                       |
-| `schedule-builder` | the schedule-builder Worker, `ScrapeWorkflow` and browser bundle |
-| `devtools`         | the `devtools` CLI, on contributors' machines and in CI          |
+| Project            | Reports from                                            |
+| ------------------ | ------------------------------------------------------- |
+| `platform`         | the platform Worker and its browser bundle              |
+| `schedule-builder` | the schedule-builder Worker and browser bundle          |
+| `devtools`         | the `devtools` CLI, on contributors' machines and in CI |
 
 `staging` and `production` are the event's `environment` tag, not separate projects, so each DSN is the same value in both deploy targets.
 

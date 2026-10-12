@@ -11,7 +11,7 @@ import { env } from "~/env";
  * and honors `turbopack.resolveAlias` too, so the alias must reach neither
  * `vinext build`, where it would replace the real binding in the deployed
  * Worker, nor `vinext dev`, which runs in workerd with real bindings and
- * crashes on boot when `ScrapeWorkflow extends WorkflowEntrypoint` gets the
+ * crashes on boot when a module that reads the real binding gets the
  * stub's `undefined`. vinext passes `PHASE_DEVELOPMENT_SERVER` for `vinext
  * dev` as well, so the phase alone can't tell them apart; `TURBOPACK` is set
  * only by Next's own CLI.

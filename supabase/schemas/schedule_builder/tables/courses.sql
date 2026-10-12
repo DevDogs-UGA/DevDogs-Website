@@ -24,6 +24,8 @@ ALTER TABLE "schedule_builder"."courses"
 
 ALTER SEQUENCE "schedule_builder"."courses_id_seq" OWNED BY "schedule_builder"."courses"."id";
 
+CREATE INDEX "courses_search_idx" ON schedule_builder.courses USING gin (to_tsvector('english'::regconfig, ((((((abbr)::text || ' '::text) || regexp_replace((abbr)::text, '^([A-Za-z]+)([0-9])'::text, '\1 \2'::text)) || ' '::text) || (title)::text))));
+
 CREATE POLICY "public_read" ON "schedule_builder"."courses"
   FOR SELECT
   TO "anon", "authenticated"

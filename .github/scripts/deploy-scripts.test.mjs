@@ -372,14 +372,22 @@ test("runDeployed: a mode: full Worker deploy (no switch step) counts once its c
     ]);
   assert.equal(
     runDeployed(
-      [full("staging-platform"), full("staging-schedule-builder")],
+      [
+        full("staging-platform"),
+        full("staging-schedule-builder"),
+        full("staging-catalog"),
+      ],
       "staging",
     ),
     true,
   );
   assert.equal(
     runDeployed(
-      [full("staging-platform"), full("staging-schedule-builder", "skipped")],
+      [
+        full("staging-platform"),
+        full("staging-schedule-builder", "skipped"),
+        full("staging-catalog"),
+      ],
       "staging",
     ),
     false,
@@ -394,11 +402,19 @@ test("runDeployed: the shared Worker workflow counts only after its traffic swit
         conclusion: switched ? "success" : "skipped",
       },
     ]);
-  const staging = [call("staging-platform"), call("staging-schedule-builder")];
+  const staging = [
+    call("staging-platform"),
+    call("staging-schedule-builder"),
+    call("staging-catalog"),
+  ];
   assert.equal(runDeployed(staging, "staging"), true);
   assert.equal(
     runDeployed(
-      [call("staging-platform"), call("staging-schedule-builder", "failure")],
+      [
+        call("staging-platform"),
+        call("staging-schedule-builder", "failure"),
+        call("staging-catalog"),
+      ],
       "staging",
     ),
     false,
@@ -409,6 +425,7 @@ test("runDeployed: the shared Worker workflow counts only after its traffic swit
       [
         call("production-platform", "success", false),
         call("production-schedule-builder"),
+        call("production-catalog"),
       ],
       "production",
     ),
@@ -416,12 +433,24 @@ test("runDeployed: the shared Worker workflow counts only after its traffic swit
   );
   assert.equal(
     runDeployed(
-      [call("production-platform"), call("production-schedule-builder")],
+      [
+        call("production-platform"),
+        call("production-schedule-builder"),
+        call("production-catalog"),
+      ],
       "production",
     ),
     true,
   );
   assert.equal(runDeployed([call("staging-platform")], "staging"), false);
+  // The catalog is part of what a tier ships: without it the tier is not deployed.
+  assert.equal(
+    runDeployed(
+      [call("staging-platform"), call("staging-schedule-builder")],
+      "staging",
+    ),
+    false,
+  );
 });
 
 test("lastDeployed skips this run's own SHA and failed deploys", async () => {

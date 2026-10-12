@@ -8,11 +8,12 @@
  * out rather than skip. "Last deployed" is read from this workflow's own runs
  * on `main`, newest first:
  *
- *   staging     the `staging-platform` and `staging-schedule-builder` calls of
- *               deploy-worker.yaml both succeeded (the jobs of a called
- *               workflow are named `<caller job> / <job>`)
- *   production  the `production-platform` and `production-schedule-builder`
- *               calls both succeeded AND their traffic switch ran
+ *   staging     the `staging-platform`, `staging-schedule-builder` and
+ *               `staging-catalog` calls of deploy-worker.yaml all succeeded
+ *               (the jobs of a called workflow are named `<caller job> / <job>`)
+ *   production  the `production-platform`, `production-schedule-builder` and
+ *               `production-catalog` calls all succeeded AND their traffic
+ *               switch ran
  *
  * Runs from before the shared workflows (jobs named `staging-deploy (…)` and
  * `production`) are still read, so the first run after the change does not
@@ -110,8 +111,12 @@ const FULL_STEP = "Deploy (classic, no preview)";
 
 /** The Workers a tier ships, as the caller jobs in deploy.yaml name them. */
 const WORKER_CALLS = {
-  staging: ["staging-platform", "staging-schedule-builder"],
-  production: ["production-platform", "production-schedule-builder"],
+  staging: ["staging-platform", "staging-schedule-builder", "staging-catalog"],
+  production: [
+    "production-platform",
+    "production-schedule-builder",
+    "production-catalog",
+  ],
 };
 
 /**

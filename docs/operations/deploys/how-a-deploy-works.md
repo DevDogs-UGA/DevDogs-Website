@@ -12,8 +12,8 @@ Every commit that lands on `main` is built once, deployed to staging automatical
 ## The path
 
 1. **The merge queue builds the commit.** `ci.yaml` runs on the queue's temporary branch and uploads the staging and production artifacts, each with a `RELEASE_SHA256SUMS` file. The deploy downloads those exact artifacts and verifies the hashes, so what was tested is what ships.
-2. **Staging deploys by itself.** The database first, then the platform and schedule-builder Workers.
-3. **Production waits.** It runs only when the repository variable `BACKSTAGE_DEPLOYS_PRODUCTION` is `true`, and each production job asks the `production` environment for approval.
+2. **Staging deploys by itself.** The database first, then the platform, schedule-builder and catalog Workers.
+3. **Production waits.** It runs only when the repository variable `BACKSTAGE_DEPLOYS_PRODUCTION` is `true`, and each production job asks the `production` environment for approval. The catalog Worker deploys first (this commit's platform and schedule-builder no longer run the registrar scrape, so the catalog's Workflows must exist before they ship), then the platform and schedule-builder in parallel.
 
 ## Two shared workflows
 
@@ -39,7 +39,7 @@ Production asks twice in a normal deploy: once for the database, then once for b
 <details>
 <summary>Why are the Worker steps in one job?</summary>
 
-An environment with required reviewers asks for approval once per job. The upload, both smoke tests and the switch share a job so a reviewer approves the commit once, not three times. The same reasoning puts the platform and schedule-builder Workers in parallel jobs: one click on "Review deployments" covers both.
+An environment with required reviewers asks for approval once per job. The upload, both smoke tests and the switch share a job so a reviewer approves the commit once, not three times. The same reasoning puts the platform and schedule-builder Workers in parallel jobs: one click on "Review deployments" covers both. The catalog is a job of its own that runs before them, so it is a second click.
 
 </details>
 

@@ -60,6 +60,7 @@ describe("the tree", () => {
     expect(subcommandNames(["deploy"])).toEqual([
       "platform",
       "schedule-builder",
+      "catalog",
       "write-env",
       "preflight",
       "plan",

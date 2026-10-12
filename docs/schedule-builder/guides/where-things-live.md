@@ -22,10 +22,7 @@ section: guides
 | Shared domain types (Section, Meeting, …)   | `src/lib/domain/`                                                           |
 | The generation engine itself                | `src/lib/generation/engine.ts`                                              |
 | A new schedule generation rule              | `src/lib/generation/rules/`, registered in `src/lib/generation/registry.ts` |
-| Registrar scraping / parsing                | `src/lib/parsers/`                                                          |
-| Reconciling scraped rows into Postgres      | `src/lib/parsers/reconcileTerm.ts`                                          |
-| The production scrape trigger (Workflow)    | `cloudflare/ScrapeWorkflow.ts`                                              |
-| The dev-only scrape cron route              | `src/app/(api)/cron/scrape-registrar/`                                      |
+| Registrar scraping and reconciling (moved)  | `apps/catalog/src/scrape/`, see [Ingestion](./ingestion.md)                 |
 | Sign-in / auth gating                       | `src/lib/auth.ts`, `src/app/(api)/auth/callback/`                           |
 | Merging a signed-out visitor's local drafts | `src/lib/sync/mergeLocalData.ts`                                            |
 | Anything kept in `localStorage`             | `src/lib/localStorage/`                                                     |

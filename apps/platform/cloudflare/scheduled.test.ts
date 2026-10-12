@@ -100,29 +100,45 @@ describe("cron dispatcher", () => {
     );
   });
 
+  it("has no daily group left (the nightly repair was retired)", () => {
+    expect(Object.keys(CRON_ROUTES)).toEqual(["*/15 * * * *"]);
+  });
+
   it("records the group's heartbeat once every route succeeded", async () => {
-    const paths = CRON_ROUTES["0 0 * * *"]?.routes ?? [];
-    const fetchMock = vi.fn(
-      async (_input: string | URL | Request, _init?: RequestInit) =>
-        Promise.resolve(new Response(null, { status: 200 })),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    // No group declares a heartbeat today (the daily jobs report from the
+    // catalog Worker), so the mechanism is exercised with a temporary group.
+    const cron = "5 4 * * *";
+    CRON_ROUTES[cron] = {
+      label: "test group",
+      heartbeat: "schedule-builder-scrape",
+      routes: ["/cron/heartbeats"],
+    };
+    try {
+      const paths = CRON_ROUTES[cron].routes;
+      const fetchMock = vi.fn(
+        async (_input: string | URL | Request, _init?: RequestInit) =>
+          Promise.resolve(new Response(null, { status: 200 })),
+      );
+      vi.stubGlobal("fetch", fetchMock);
 
-    await scheduled(
-      { cron: "0 0 * * *" },
-      { BASE_URL: "https://example.test", CRON_SECRET: "secret" },
-    );
+      await scheduled(
+        { cron },
+        { BASE_URL: "https://example.test", CRON_SECRET: "secret" },
+      );
 
-    expect(fetchMock).toHaveBeenCalledTimes(paths.length + 1);
-    const [input, init] = fetchMock.mock.calls.at(-1) ?? [];
-    expect(readRequestUrl(input ?? "")).toBe(
-      "https://example.test/cron/heartbeats",
-    );
-    expect(init?.method).toBe("POST");
-    expect(init?.headers).toMatchObject({ Authorization: "Bearer secret" });
-    expect(JSON.parse(String(init?.body))).toEqual({
-      job: "platform-nightly-repair",
-    });
+      expect(fetchMock).toHaveBeenCalledTimes(paths.length + 1);
+      const [input, init] = fetchMock.mock.calls.at(-1) ?? [];
+      expect(readRequestUrl(input ?? "")).toBe(
+        "https://example.test/cron/heartbeats",
+      );
+      expect(init?.method).toBe("POST");
+      expect(init?.headers).toMatchObject({ Authorization: "Bearer secret" });
+      expect(JSON.parse(String(init?.body))).toEqual({
+        job: "schedule-builder-scrape",
+      });
+    } finally {
+      delete CRON_ROUTES[cron];
+    }
   });
 
   it("checks the daily jobs' heartbeats from the monitored group", () => {

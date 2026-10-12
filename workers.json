@@ -44,5 +44,8 @@
       "protectedPath": "/dashboard",
       "protectedRedirectPrefix": "/"
     }
+  },
+  {
+    "path": "apps/catalog"
   }
 ]

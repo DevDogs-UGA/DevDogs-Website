@@ -1,0 +1,26 @@
+{
+  // The Worker (src/) is bundled by wrangler, so it runs on the Workers
+  // runtime. The tests and scripts run on Node. One program covers both, with
+  // both type sets; src/ itself imports no Node API, and the Worker bundle
+  // would fail to build if it did (no nodejs_compat polyfill for most of them).
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "es2024",
+    "lib": ["es2024"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "types": ["@cloudflare/workers-types", "node"],
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "~/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "scripts/**/*.ts",
+    "cloudflare/**/*.ts",
+    "*.ts"
+  ]
+}

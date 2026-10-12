@@ -94,8 +94,9 @@ merge_group CI run:  validate -> build (staging, production)  ->  artifacts <tie
 push to main:        supersede
                      resolve (finds the merge_group run) -> build (only if none)
                      staging-preflight -> staging-database -> staging-avatars
-                                       -> staging-platform | staging-schedule-builder
+                                       -> staging-platform | staging-schedule-builder | staging-catalog
                      production-database (plan, approval, apply)
+                                       -> production-catalog
                                        -> production-platform | production-schedule-builder
 ```
 

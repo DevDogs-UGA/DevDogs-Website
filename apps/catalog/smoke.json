@@ -1,0 +1,15 @@
+[
+  {
+    "path": "apps/catalog",
+    "smoke": {
+      "hosts": {
+        "staging": "api-staging.devdogsuga.org",
+        "production": "api.devdogsuga.org"
+      },
+      "publicPaths": ["/catalog/v1/terms"],
+      "expectedStatuses": {
+        "/catalog/v1/subjects?term=nope": 400
+      }
+    }
+  }
+]

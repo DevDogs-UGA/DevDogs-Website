@@ -316,6 +316,47 @@ jobs:
         set -a; . ".env.$TIER"; set +a
         SENTRY_PROJECT=schedule-builder GITHUB_SHA="$RELEASE" backstage deploy smoke --tier staging --yes --app schedule-builder --no-env
 
+  # The catalog API and the registrar scrape (apps/catalog), also through the
+  # shared deploy-worker.yaml. It has no build artifact (the deploy bundles
+  # src/worker.ts), no Sentry project of its own (it reports to the platform's,
+  # tagged worker:catalog) and no web pages, so its smoke test is the API's:
+  # apps/catalog/smoke.json for the pinned version and what is live, then
+  # `test:smoke` for the headers. Both pass against an empty database, so the
+  # first deploy of an environment is green before its first scrape.
+  #
+  # The first deploy of a Worker that does not exist yet has no serving version
+  # to preview beside: set the repository variable CATALOG_DEPLOY_MODE to
+  # `full` for that one run, then delete it. (WORKER_DEPLOY_MODE applies to
+  # all Workers; this one is separate so the platform keeps its previews.)
+  staging-catalog:
+    needs: [resolve, build, staging-database, staging-avatars]
+    if: >-
+      !cancelled()
+      && github.event_name == 'push'
+      && needs.resolve.result == 'success'
+      && (needs.build.result == 'success' || needs.build.result == 'skipped')
+      && needs.staging-database.result == 'success'
+      && needs.staging-avatars.result == 'success'
+    uses: ./.github/workflows/deploy-worker.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+      actions: read
+    with:
+      environment: staging
+      tier: staging
+      worker_dir: apps/catalog
+      worker_name: staging-catalog
+      smoke_path: apps/catalog
+      workers_json: apps/catalog/smoke.json
+      build_cli: true
+      prepare_command: backstage deploy write-env --no-env --yes
+      upload_command: backstage deploy catalog --tier staging --upload --yes
+      full_deploy_command: backstage deploy catalog --tier staging --yes
+      mode: ${{ vars.CATALOG_DEPLOY_MODE || vars.WORKER_DEPLOY_MODE || 'versions' }}
+      after_switch_command: |
+        CATALOG_URL=https://api-staging.devdogsuga.org/catalog/v1 pnpm --filter catalog run test:smoke
+
   # --- production -------------------------------------------------------------
   # Four jobs, in order, each a shared building block:
   #
@@ -324,6 +365,11 @@ jobs:
   #                         schema diff and the config push. A plan that drops
   #                         or rewrites data needs a second approval, of
   #                         `production-destructive`.
+  #   production-catalog    the registrar scrape and the catalog API. BEFORE
+  #                         the two below: this commit's platform and
+  #                         schedule-builder no longer run the scrape or the
+  #                         Bulletin sync, so the catalog's Workflows have to
+  #                         exist first or the daily data stops.
   #   production-platform   and  production-schedule-builder
   #                         in parallel, so one approval of `production` covers
   #                         both: upload, preview smoke, switch, live smoke.
@@ -332,7 +378,14 @@ jobs:
   # and refuses a candidate that is no longer the head of `main`.
   production-database:
     needs:
-      [supersede, resolve, build, staging-platform, staging-schedule-builder]
+      [
+        supersede,
+        resolve,
+        build,
+        staging-platform,
+        staging-schedule-builder,
+        staging-catalog,
+      ]
     if: >-
       github.event_name == 'push'
       && !cancelled()
@@ -341,7 +394,7 @@ jobs:
       && needs.resolve.result == 'success'
       && needs.resolve.outputs.production == 'true'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
-      && ((needs.staging-platform.result == 'success' && needs.staging-schedule-builder.result == 'success') || needs.resolve.outputs.staging == 'false')
+      && ((needs.staging-platform.result == 'success' && needs.staging-schedule-builder.result == 'success' && needs.staging-catalog.result == 'success') || needs.resolve.outputs.staging == 'false')
     uses: ./.github/workflows/deploy-database.yaml
     secrets: inherit
     permissions:
@@ -358,7 +411,13 @@ jobs:
       self_approval_gate: true
       require_latest: true
 
-  production-platform:
+  # api.devdogsuga.org is Supabase's custom domain for the platform project
+  # until the cutover (Q90), so the catalog's production route reaches nothing
+  # until `api` is a proxied record in the zone. Set the repository variable
+  # CATALOG_PRODUCTION_ROUTED to `true` then, and the smoke tests start gating
+  # this deploy (until then the Worker deploys and switches without them). The
+  # first production deploy needs CATALOG_DEPLOY_MODE=full, as on staging.
+  production-catalog:
     needs: [resolve, build, production-database]
     if: >-
       github.event_name == 'push'
@@ -366,6 +425,40 @@ jobs:
       && needs.resolve.result == 'success'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
       && needs.production-database.result == 'success'
+    uses: ./.github/workflows/deploy-worker.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+      actions: read
+    with:
+      environment: production
+      tier: production
+      worker_dir: apps/catalog
+      worker_name: production-catalog
+      smoke_path: apps/catalog
+      workers_json: apps/catalog/smoke.json
+      smoke: ${{ vars.CATALOG_PRODUCTION_ROUTED == 'true' }}
+      self_approval_gate: true
+      require_latest: true
+      build_cli: true
+      prepare_command: backstage deploy write-env --no-env --yes
+      upload_command: backstage deploy catalog --tier production --upload --yes
+      full_deploy_command: backstage deploy catalog --tier production --yes
+      mode: ${{ vars.CATALOG_DEPLOY_MODE || vars.WORKER_DEPLOY_MODE || 'versions' }}
+      after_switch_command: |
+        if [ "${{ vars.CATALOG_PRODUCTION_ROUTED }}" = true ]; then
+          CATALOG_URL=https://api.devdogsuga.org/catalog/v1 pnpm --filter catalog run test:smoke
+        fi
+
+  production-platform:
+    needs: [resolve, build, production-database, production-catalog]
+    if: >-
+      github.event_name == 'push'
+      && !cancelled()
+      && needs.resolve.result == 'success'
+      && (needs.build.result == 'success' || needs.build.result == 'skipped')
+      && needs.production-database.result == 'success'
+      && needs.production-catalog.result == 'success'
     uses: ./.github/workflows/deploy-worker.yaml
     secrets: inherit
     permissions:
@@ -404,13 +497,14 @@ jobs:
         backstage env audit --target production --no-env --yes
 
   production-schedule-builder:
-    needs: [resolve, build, production-database]
+    needs: [resolve, build, production-database, production-catalog]
     if: >-
       github.event_name == 'push'
       && !cancelled()
       && needs.resolve.result == 'success'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
       && needs.production-database.result == 'success'
+      && needs.production-catalog.result == 'success'
     uses: ./.github/workflows/deploy-worker.yaml
     secrets: inherit
     permissions:

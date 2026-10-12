@@ -62,30 +62,60 @@ export function expandWorkspacePackages(
 }
 
 /** The `matrix.include` blocks' `app:` values, in the `strategy: matrix:
- * include:` shape `deploy-app.yaml` uses. */
+ * include:` shape the deploy workflows use. An entry may carry other keys
+ * (`dir:`, `release:`, `mint:`), indented under its `- app:` line. */
 export function deployMatrixApps(yamlText: string): string[][] {
   const lines = yamlText.split("\n");
   const blocks: string[][] = [];
+  const indentOf = (line: string): number =>
+    line.length - line.trimStart().length;
   for (let i = 0; i < lines.length; i += 1) {
     if (!/^\s*matrix:\s*$/.test(lines[i]!)) continue;
     let j = i + 1;
     while (j < lines.length && !/^\s*include:\s*$/.test(lines[j]!)) j += 1;
     const apps: string[] = [];
+    let entryIndent: number | null = null;
     for (let k = j + 1; k < lines.length; k += 1) {
       const line = lines[k]!;
       const appMatch = /^\s*- app:\s*(\S+)\s*$/.exec(line);
       if (appMatch?.[1]) {
         apps.push(appMatch[1]);
+        entryIndent ??= indentOf(line);
         continue;
       }
-      if (/^\s*mint:/.test(line) || /^\s*#/.test(line) || /^\s*$/.test(line)) {
-        continue;
-      }
+      if (/^\s*#/.test(line) || /^\s*$/.test(line)) continue;
+      // A key of the current entry sits deeper than its `- app:` dash.
+      if (entryIndent !== null && indentOf(line) > entryIndent) continue;
       break;
     }
     if (apps.length > 0) blocks.push(apps);
   }
   return blocks;
+}
+
+/**
+ * The Workers `deploy.yaml` deploys, read from its calls of the shared
+ * `deploy-worker.yaml`: each caller job names its `tier` and `worker_dir`
+ * under `with:`. Returns the directories' basenames (the app slugs) per tier.
+ * A job that does not call deploy-worker.yaml is ignored.
+ */
+export function deployWorkerCalls(yamlText: string): {
+  staging: string[];
+  production: string[];
+} {
+  const staging: string[] = [];
+  const production: string[] = [];
+  // A job is a block opened by a two-space-indented key.
+  for (const job of yamlText.split(/^ {2}(?=[\w-]+:\s*$)/m)) {
+    if (!/uses:\s*\.\/\.github\/workflows\/deploy-worker\.yaml/.test(job)) {
+      continue;
+    }
+    const tier = /^ {6}tier:\s*(\w+)\s*$/m.exec(job)?.[1];
+    const dir = /^ {6}worker_dir:\s*(\S+)\s*$/m.exec(job)?.[1];
+    if (!tier || !dir) continue;
+    (tier === "production" ? production : staging).push(basename(dir));
+  }
+  return { staging, production };
 }
 
 /**
@@ -173,6 +203,27 @@ export function checkWorkers(
     if (name !== slug) {
       problems.push(
         `${path}/package.json is named "${name}"; the directory name, package name and app slug must agree ("${slug}").`,
+      );
+    }
+  }
+
+  // A Worker the deploy workflow does not deploy is a Worker nothing ships:
+  // `workers.json` lists it, its code merges, and no pipeline puts it live.
+  // The same drift in the other direction would deploy something the list
+  // (smoke tests, env registry, orphan sweep) does not know.
+  const deployWorkflow = join(root, ".github", "workflows", "deploy.yaml");
+  if (existsSync(deployWorkflow)) {
+    const calls = deployWorkerCalls(readFileSync(deployWorkflow, "utf8"));
+    if (calls.staging.length === 0) {
+      problems.push("deploy.yaml has no staging Worker deploy.");
+    } else if (!sameSet(calls.staging, apps)) {
+      problems.push(
+        `deploy.yaml deploys [${calls.staging.join(", ")}] to staging; workers.json lists [${apps.join(", ")}].`,
+      );
+    }
+    if (calls.production.length > 0 && !sameSet(calls.production, apps)) {
+      problems.push(
+        `deploy.yaml deploys [${calls.production.join(", ")}] to production; workers.json lists [${apps.join(", ")}].`,
       );
     }
   }

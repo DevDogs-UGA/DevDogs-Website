@@ -1,0 +1,10 @@
+# Local development vars for `pnpm dev` (wrangler dev). Copy to .dev.vars (gitignored).
+#
+# DB_URL is a direct Postgres connection with rights to write the registrar tables
+# and to `set role catalog_reader`: the postgres user of a local Supabase stack
+# (`pnpm devtools setup`, then `supabase status`), already migrated and synced so
+# the `uga` schema exists. Deployed Workers use the Hyperdrive binding and ignore it.
+DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+# Optional. Empty means no Sentry, the normal state locally.
+PLATFORM_SENTRY_DSN=

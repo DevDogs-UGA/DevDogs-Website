@@ -4,13 +4,11 @@
  * cloudflare/worker.ts composes it into the deployed worker, the same pattern
  * the platform app uses.
  *
- * The daily registrar scrape is a native Workflow schedule configured on the
- * `workflows[]` binding in wrangler.jsonc. It does not pass through this Worker
- * scheduled handler.
- *
- * Any other cron still dispatches by fetching a route out of `CRON_ROUTES`,
- * the original mechanism -- there happen to be none right now, since the
- * registrar scrape was the only entry.
+ * Nothing is scheduled today. The daily registrar scrape that used to run here
+ * (as a native Workflow schedule) moved to the catalog Worker (apps/catalog),
+ * which owns what is scraped from UGA's sites. The route-dispatch mechanism and
+ * its `devtools cron` audit stay wired for whenever a route-based cron exists
+ * again.
  */
 import type { env } from "~/env";
 
@@ -35,53 +33,10 @@ export type CronEnv = Pick<typeof env, "CRON_SECRET" | "BASE_URL">;
  * tick. A flat array and a wildcard `event.cron` match would double-fire every
  * route if a second schedule were ever added — the keyed shape closes that bug.
  *
- * Empty on purpose: the only schedule this app has is the daily registrar
- * scrape, which has a native Workflow schedule (see `WORKFLOW_CRONS` below).
- * Kept as an exported empty map so the route-dispatch
- * mechanism — and its `devtools cron` audit — stays wired for whenever a
- * route-based cron exists again.
+ * Empty on purpose; see the note at the top of the file.
  */
 export const CRON_ROUTES: Record<string, { routes: string[]; label: string }> =
   {};
-
-/**
- * The daily registrar scrape's schedule, kept in step with wrangler.jsonc's
- * production `workflows[].schedules`.
- */
-export const SCRAPE_SCHEDULE = "5 14 * * *";
-
-/**
- * The scrape's row in `platform."jobHeartbeats"`, written by
- * `./ScrapeWorkflow.ts` when a run succeeds. The platform's fifteen-minute
- * cron reports it overdue through its own Sentry Crons monitor, so the scrape
- * has none of its own (Sentry bills a seat per monitor). The name is the
- * monitor slug the scrape used to check in to.
- */
-export const SCRAPE_HEARTBEAT_JOB = "schedule-builder-scrape";
-
-/**
- * Cron expression to the natively scheduled Workflow binding and a one-line
- * description. This metadata lets `devtools cron list` give the trigger a
- * useful label and reconcile it against the binding's `schedules` field.
- *
- * Wrangler is the source of truth for whether it fires; this map is audit
- * metadata only. `devtools cron run` directs operators to `devtools workflows`
- * for manual smoke tests.
- *
- * No `monitorSlug`: `backstage deploy prune-monitors` deletes every
- * `schedule-builder-*` Sentry monitor not declared in this file's exports,
- * which is how the scrape's old monitor goes away.
- */
-export const WORKFLOW_CRONS: Record<
-  string,
-  { binding: string; label: string }
-> = {
-  [SCRAPE_SCHEDULE]: {
-    binding: "SCRAPE_WORKFLOW",
-    label:
-      "Daily registrar scrape (one retried, checkpointed ScrapeWorkflow step per term)",
-  },
-};
 
 export async function scheduled(
   event: { cron: string },
@@ -96,8 +51,7 @@ export async function scheduled(
       const response = await fetch(url, {
         headers: { Authorization: `Bearer ${env.CRON_SECRET}` },
       });
-      // Without this the course data can silently stop refreshing:
-      // a 404 or a 500 is as quiet as a success to a bare `await fetch`.
+      // A 404 or a 500 is as quiet as a success to a bare `await fetch`.
       if (!response.ok) {
         console.error(
           `[cron] ${path} responded ${response.status} ${response.statusText}`,

@@ -70,15 +70,12 @@ export const CRON_ROUTES: Record<
     heartbeat?: HeartbeatJob;
   }
 > = {
-  "0 0 * * *": {
-    label: "Nightly repair: academic program catalog",
-    heartbeat: "platform-nightly-repair",
-    routes: [
-      // Mirrors the UGA Bulletin's program catalog for the account Academics
-      // combobox. It deliberately spaces roughly 42 upstream page requests.
-      "/cron/academic-programs",
-    ],
-  },
+  // There is no daily group any more. The "0 0 * * *" group ran the GitHub
+  // reconcile (deleted with Teams and competitions) and the UGA Bulletin
+  // program sync (moved to the catalog Worker's ProgramsWorkflow, TASK-469,
+  // which reports through the "catalog-academic-programs" heartbeat). A job
+  // that needs a nightly slot adds the group, its cron trigger in
+  // wrangler.jsonc, and a heartbeat row in a migration together.
   // Fifteen minutes is the WORST case now: `.github/workflows/deploy-app.yaml`
   // also calls this route directly, right after each platform deploy, so a
   // promoted config normally lands the moment that deploy finishes (see

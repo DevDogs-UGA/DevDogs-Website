@@ -18,8 +18,6 @@ Both apps keep a **custom Worker entry**, `cloudflare/worker.ts`, named by wrang
 - **Sentry**, via `@sentry/cloudflare`'s `withSentry` wrapped around `fetch`/`scheduled` from _outside_ the request's own `AsyncLocalStorage` context — instrumenting from inside collided with vinext's request-scoped context the same way it collided with the old OpenNext adapter.
 - **Cron dispatch**, `scheduled(event, env)` from `cloudflare/scheduled.ts`, run alongside the app-router `fetch` handler in the same Worker.
 
-`schedule-builder`'s entry additionally re-exports `ScrapeWorkflow` so wrangler's `workflows[].class_name` binding can find the class from `main`.
-
 ## The KV cache, not R2
 
 vinext's own cache adapters replace what the OpenNext adapter used to do with an R2 bucket and an in-memory queue:
@@ -39,7 +37,7 @@ A `(site)` page is served from the Workers Cache, shared by every visitor, only 
 
 `wrangler dev` doesn't emulate the Workers Cache, so a local preview renders every request and never shows `X-Vinext-Cache`; check that header on staging. Entries are keyed by the deployment's version, so a deploy starts from an empty cache. `@vinext/cloudflare` is patched (see `pnpm-workspace.yaml`) because its cached stage followed redirects inside the Worker, which turned every redirecting page into a 500 once pages started using it.
 
-`schedule-builder` also binds `SCRAPE_WORKFLOW`, a Cloudflare Workflow (`ScrapeWorkflow`), and `HYPERDRIVE`, pooling connections to Supabase's direct database endpoint so request-scoped Drizzle clients don't exhaust Postgres — shared with the platform Worker's own Hyperdrive config per tier, since both point at the same Supabase project.
+`schedule-builder` also binds `HYPERDRIVE`, pooling connections to Supabase's direct database endpoint so request-scoped Drizzle clients don't exhaust Postgres — shared with the platform Worker's own Hyperdrive config per tier, since both point at the same Supabase project.
 
 ## The runtime forbids Wasm compilation at request time
 

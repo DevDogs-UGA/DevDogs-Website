@@ -1,0 +1,50 @@
+{
+  "name": "catalog",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src test scripts cloudflare",
+    "lint:fix": "eslint --fix src test scripts cloudflare",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:db": "vitest run --config vitest.db.config.ts",
+    "test:live": "vitest run --config vitest.live.config.ts",
+    "test:smoke": "tsx scripts/smoke.ts",
+    "check:buildings": "tsx scripts/check-buildings.ts",
+    "check:spec": "vitest run test/spec.test.ts",
+    "format:check": "prettier --check \"**/*.{ts,json,yaml,md}\" --cache",
+    "format:write": "prettier --write \"**/*.{ts,json,yaml,md}\" --cache",
+    "populate:buildings": "tsx scripts/import-buildings.ts",
+    "populate:courses": "tsx scripts/scrape-local.ts"
+  },
+  "dependencies": {
+    "@devdogsuga/telemetry": "workspace:*",
+    "@sentry/cloudflare": "catalog:",
+    "cheerio": "^1.2.0",
+    "date-fns": "catalog:",
+    "drizzle-orm": "catalog:",
+    "postgres": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260820.1",
+    "@devdogsuga/config": "workspace:*",
+    "@devdogsuga/env": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/papaparse": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "eslint": "catalog:",
+    "papaparse": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vite": "^8.3.0",
+    "vitest": "catalog:",
+    "wrangler": "catalog:",
+    "yaml": "^2.9.1"
+  }
+}

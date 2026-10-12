@@ -3,7 +3,12 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { checkWorkers, deployMatrixApps, workspaceGlobs } from "./workers.js";
+import {
+  checkWorkers,
+  deployMatrixApps,
+  deployWorkerCalls,
+  workspaceGlobs,
+} from "./workers.js";
 
 const MATRIX = (apps: string[]) =>
   [
@@ -34,6 +39,59 @@ describe("deployMatrixApps", () => {
     expect(deployMatrixApps(MATRIX(["platform", "schedule-builder"]))).toEqual([
       ["platform", "schedule-builder"],
     ]);
+  });
+});
+
+describe("deployMatrixApps with entry keys", () => {
+  it("reads past the dir and release keys under each entry, and stops at the next key of the job", () => {
+    const text = [
+      "jobs:",
+      "  staging-deploy:",
+      "    strategy:",
+      "      matrix:",
+      "        include:",
+      "          - app: platform",
+      "            dir: apps/platform",
+      "            release: ${{ github.sha }}",
+      "          # a comment between entries",
+      "          - app: catalog",
+      "            dir: apps/catalog",
+      "    steps:",
+      "      - app: not-an-entry",
+    ].join("\n");
+    expect(deployMatrixApps(text)).toEqual([["platform", "catalog"]]);
+  });
+});
+
+const CALL = (name: string, tier: string, dir: string) =>
+  [
+    `  ${name}:`,
+    "    needs: [resolve]",
+    "    uses: ./.github/workflows/deploy-worker.yaml",
+    "    secrets: inherit",
+    "    with:",
+    `      environment: ${tier}`,
+    `      tier: ${tier}`,
+    `      worker_dir: ${dir}`,
+    `      worker_name: ${tier}-${dir.split("/").pop()}`,
+  ].join("\n");
+
+describe("deployWorkerCalls", () => {
+  it("reads each shared-workflow call's tier and directory, and ignores other jobs", () => {
+    const text = [
+      "jobs:",
+      "  resolve:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      "      - run: backstage deploy platform --tier production",
+      CALL("staging-platform", "staging", "apps/platform"),
+      CALL("staging-catalog", "staging", "apps/catalog"),
+      CALL("production-platform", "production", "apps/platform"),
+    ].join("\n");
+    expect(deployWorkerCalls(text)).toEqual({
+      staging: ["platform", "catalog"],
+      production: ["platform"],
+    });
   });
 });
 
@@ -86,6 +144,52 @@ describe("checkWorkers", () => {
     repo(["platform", "schedule-builder"]);
     write("apps/platform/package.json", '{"name":"web"}');
     expect(checkWorkers(root).join("\n")).toContain('named "web"');
+  });
+
+  function deployWorkflow(staging: string[], production: string[]): void {
+    write(
+      ".github/workflows/deploy.yaml",
+      [
+        "jobs:",
+        ...staging.map((app) =>
+          CALL(`staging-${app}`, "staging", `apps/${app}`),
+        ),
+        ...production.map((app) =>
+          CALL(`production-${app}`, "production", `apps/${app}`),
+        ),
+      ].join("\n"),
+    );
+  }
+
+  it("passes when deploy.yaml deploys every Worker to staging and production", () => {
+    repo(["platform", "schedule-builder"]);
+    deployWorkflow(
+      ["platform", "schedule-builder"],
+      ["platform", "schedule-builder"],
+    );
+    expect(checkWorkers(root)).toEqual([]);
+  });
+
+  it("flags a Worker in workers.json that deploy.yaml does not deploy to staging", () => {
+    repo(["platform", "schedule-builder"]);
+    deployWorkflow(["platform"], ["platform", "schedule-builder"]);
+    expect(checkWorkers(root)).toEqual([
+      "deploy.yaml deploys [platform] to staging; workers.json lists [platform, schedule-builder].",
+    ]);
+  });
+
+  it("flags a Worker that deploy.yaml does not deploy to production", () => {
+    repo(["platform", "schedule-builder"]);
+    deployWorkflow(["platform", "schedule-builder"], ["platform"]);
+    expect(checkWorkers(root)).toEqual([
+      "deploy.yaml deploys [platform] to production; workers.json lists [platform, schedule-builder].",
+    ]);
+  });
+
+  it("flags a deploy.yaml with no Worker deploy at all", () => {
+    repo(["platform", "schedule-builder"]);
+    write(".github/workflows/deploy.yaml", "jobs:\n  resolve:\n    steps: []\n");
+    expect(checkWorkers(root)).toEqual(["deploy.yaml has no staging Worker deploy."]);
   });
 
   it("flags a deploy matrix that drifted", () => {

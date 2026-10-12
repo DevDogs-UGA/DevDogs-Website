@@ -124,9 +124,23 @@ export async function runDeploySecretsFile(
   }
 
   if (send.size === 0) {
-    throw new DeployError(`${app} has no Worker secrets to send.`, [
-      "That is almost certainly wrong: a --secrets-file with nothing in it",
-      "would leave every previously set secret in place, unexamined.",
+    // Nothing declared at all is almost certainly a mistake: a manifest that
+    // was never found, or a rename that lost the app's keys. A `--secrets-file`
+    // with nothing in it would leave every previously set secret in place,
+    // unexamined.
+    if (absent.length === 0) {
+      throw new DeployError(`${app} has no Worker secrets to send.`, [
+        "That is almost certainly wrong: a --secrets-file with nothing in it",
+        "would leave every previously set secret in place, unexamined.",
+      ]);
+    }
+    // Declared keys, none with a value. `deploy write-env` already failed the
+    // job for anything the app requires, so every key here is optional: an
+    // app whose only secret is an optional one (the catalog's Sentry DSN)
+    // deploys with an empty file, and says so.
+    say([
+      `deploy secrets-file: ${app} declares only optional keys and the ` +
+        "environment has none of them; sending an empty file.",
     ]);
   }
 

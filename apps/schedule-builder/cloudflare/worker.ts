@@ -1,15 +1,13 @@
 /**
  * Custom Cloudflare Worker entry; wrangler `main` points here. It composes
  * vinext's own App Router request handler with the cron `scheduled` handler
- * from ./scheduled, and re-exports the Workflow class below.
+ * from ./scheduled.
  *
  * vinext's Cloudflare integration normally deploys straight from
  * `vinext/server/app-router-entry` as `main` with no custom entry at all --
  * see the migrate-to-vinext skill's config-examples.md. This app keeps a
- * custom entry anyway, for the two things that integration doesn't cover:
- * composing Sentry's `withSentry` around `fetch`/`scheduled` (see below), and
- * exporting `ScrapeWorkflow` so wrangler.jsonc's `workflows[].class_name` can
- * find it from `main`.
+ * custom entry anyway, for what that integration doesn't cover: composing
+ * Sentry's `withSentry` around `fetch`/`scheduled` (see below).
  *
  * Server-side Sentry capture is wired HERE, via `@sentry/cloudflare`'s
  * `withSentry`, and deliberately NOT via `@sentry/nextjs`'s usual
@@ -59,14 +57,6 @@ type WorkerEnv = Pick<
   NonNullable<Parameters<typeof handler.fetch>[1]> & {
     readonly SENTRY_RELEASE?: string;
   };
-
-// The Workflow class must be reachable from `main` (this file) for
-// wrangler's `workflows[].class_name: "ScrapeWorkflow"` binding to find it.
-// See wrangler.jsonc and ./ScrapeWorkflow.ts. It carries its own,
-// independent Sentry instrumentation -- see that file -- because a Workflow
-// does not run inside this `fetch`/`scheduled` handler's call, so wrapping
-// them here would not cover it.
-export { ScrapeWorkflow } from "./ScrapeWorkflow";
 
 export default Sentry.withSentry(
   (env: WorkerEnv) => {

@@ -327,7 +327,28 @@ describe("the job summary", () => {
 });
 
 describe("an empty secrets file", () => {
-  it("is refused rather than uploaded", async () => {
+  it("is refused when the app declares nothing, rather than uploaded", async () => {
+    resetRegistry();
+    declare({
+      source: "platform",
+      server: {
+        PLATFORM_SECRET: define(z.string(), {
+          doc: "Another app's. The sandbox declares nothing.",
+          scope: "environment",
+          secrecy: "secret",
+        }),
+      },
+    });
+
+    // `--secrets-file` preserves what it omits, so an empty one leaves every
+    // previously set secret in place, unexamined. A no-op that looks like a
+    // successful rotation.
+    await expect(compose({ env: { PLATFORM_SECRET: "x" } })).rejects.toThrow(
+      /has no Worker secrets to send/,
+    );
+  });
+
+  it("is sent, and said so, when every key the app declares is optional and unset", async () => {
     resetRegistry();
     declare({
       source: "sandbox",
@@ -340,11 +361,9 @@ describe("an empty secrets file", () => {
       },
     });
 
-    // `--secrets-file` preserves what it omits, so an empty one leaves every
-    // previously set secret in place, unexamined. A no-op that looks like a
-    // successful rotation.
-    await expect(compose({ env: {} })).rejects.toThrow(
-      /has no Worker secrets to send/,
-    );
+    const { result } = await compose({ env: {} });
+    expect(result.keys).toEqual([]);
+    expect(result.omitted).toEqual(["SANDBOX_NOTHING"]);
+    expect(readFileSync(result.file, "utf8").trim()).toBe("{}");
   });
 });

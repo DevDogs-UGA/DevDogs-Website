@@ -25,9 +25,10 @@ specific to this app's schema.
 
 ## Course data
 
-Course and instructor data arrive through the daily registrar scrape, a
-Cloudflare Workflow (`cloudflare/ScrapeWorkflow.ts`), with parsing in
-`src/lib/parsers/` and upserts in `src/lib/sync/`. Schedule generation lives in
+Course and instructor data arrive through the daily registrar scrape, which
+lives in the catalog Worker (`apps/catalog`) and writes the `schedule_builder`
+tables this app reads. `pnpm -F schedule-builder populate:courses` runs it
+against your database. Schedule generation lives in
 `src/lib/generation/`. See
 [Ingestion](../../docs/schedule-builder/guides/ingestion.md).
 

@@ -29,9 +29,8 @@ export default defineConfig({
     alias: {
       // Vite does not read tsconfig `paths` -- `~` is the app's alias
       // everywhere else (tsconfig.json, vitest.config.ts). Without it here,
-      // `cloudflare/ScrapeWorkflow.ts`'s `~/lib/parsers` and
-      // `~/server/db/create` imports fail to bundle (this entry is built as
-      // part of the SAME Vite graph as the app, per wrangler.jsonc's `main:
+      // `cloudflare/worker.ts`'s `~/env` import fails to bundle (this entry is
+      // built as part of the SAME Vite graph as the app, per wrangler.jsonc's `main:
       // "cloudflare/worker.ts"`, not compiled separately by wrangler/esbuild
       // the way the old OpenNext worker.js re-export was).
       "~": path.resolve(import.meta.dirname, "src"),

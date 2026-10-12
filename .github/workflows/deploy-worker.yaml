@@ -87,6 +87,11 @@ on:
         required: false
         type: boolean
         default: false
+      smoke:
+        description: Run the preview and live smoke tests. Off only for a Worker whose route is not live yet (the catalog in production until api.devdogsuga.org is a proxied record); the deploy and the traffic switch still happen.
+        required: false
+        type: boolean
+        default: true
       mode:
         description: "`versions` (upload, preview, switch) or `full` (a classic deploy, for a first deploy or a Durable Object migration)."
         required: false
@@ -421,7 +426,7 @@ jobs:
 
       # --- the preview smoke test, on the production-shaped route ----------
       - name: Smoke test the uploaded version (no traffic yet)
-        if: inputs.mode == 'versions'
+        if: inputs.mode == 'versions' && inputs.smoke
         env:
           API_URL: ${{ vars.API_URL || (vars.PROJECT_REF && format('https://{0}.supabase.co', vars.PROJECT_REF)) || '' }}
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
@@ -476,6 +481,7 @@ jobs:
       # live, rolls back).
       - name: Smoke test what is live
         id: live
+        if: inputs.smoke
         env:
           API_URL: ${{ vars.API_URL || (vars.PROJECT_REF && format('https://{0}.supabase.co', vars.PROJECT_REF)) || '' }}
           SECRET_KEY: ${{ secrets.SECRET_KEY }}

@@ -74,6 +74,6 @@ it falls back to a single process-wide client built from `env.DB_URL`.
 
 Because the proxy needs a request context, code that runs **outside** one — a
 Cloudflare Workflow step, a script — must build its own client with the exported
-`createScheduleBuilderDb(url, max)` instead. The `ScrapeWorkflow` does exactly
-this. Reaching for the `db` proxy from a Workflow step is a runtime failure, not
+`createScheduleBuilderDb(url, max)` instead. The catalog Worker's scrape does the
+same with its own client (`apps/catalog/src/db/client.ts`). Reaching for the `db` proxy from a Workflow step is a runtime failure, not
 a type error, so it is worth knowing before you write one.

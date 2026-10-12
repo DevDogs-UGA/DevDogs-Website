@@ -22,8 +22,9 @@ Plain Vitest, no database involved.
 database the session currently points at — the local stack, a hosted
 development project, or whatever tier you launched devtools under — not only
 your own machine. It covers the parts that only make sense against a real
-Postgres: `reconcileTerm.db-test.ts` (the ingestion pipeline's writes) and
-the generated schema's query validity. Start with a database first:
+Postgres: the generated schema's query validity. (The ingestion pipeline's
+writes moved to the catalog and are tested there, in
+`apps/catalog/test/db/reconcile.db-test.ts`.) Start with a database first:
 
 ```bash
 pnpm devtools supabase start
@@ -59,7 +60,7 @@ on drift.
   (`pnpm --filter @devdogsuga/supabase test:rls`) and `test:db` for
   `schedule-builder`.
 
-See [Ingestion](./ingestion.md) for what
-`reconcileTerm.db-test.ts` actually exercises, and
+See [Ingestion](./ingestion.md) for what the catalog's
+`reconcile.db-test.ts` actually exercises, and
 [Schedule-builder schema](./schema.md) for the
 schema those tests run against.
