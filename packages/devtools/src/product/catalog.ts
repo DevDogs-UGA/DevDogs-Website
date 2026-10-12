@@ -13,6 +13,7 @@ import {
   type CommandOption,
 } from "@devdogsuga/cli-core/catalog";
 import { completionsCommand } from "../completions/catalog.js";
+import { moderationCommand } from "../moderation/catalog.js";
 import { oauthCommand } from "../oauth/catalog.js";
 
 const TARGET_OPTIONS: readonly CommandOption[] = [
@@ -179,6 +180,10 @@ export const productCatalog = createCatalog({
     {
       title: "Database",
       commands: [productDbCommand, productDevDataCommand],
+    },
+    {
+      title: "Report & Block",
+      commands: [moderationCommand],
     },
     {
       title: "The real tools",

@@ -696,7 +696,14 @@ describe("devtools contract tests", () => {
     it("shows the product's commands, not the platform's", async () => {
       const { status, stdout } = await runProduct(["--help"]);
       expect(status).toBe(0);
-      for (const command of ["setup", "db", "dev-data", "doctor", "oauth"]) {
+      for (const command of [
+        "setup",
+        "db",
+        "dev-data",
+        "doctor",
+        "oauth",
+        "moderation",
+      ]) {
         expect(stdout).toMatch(new RegExp(`^ {2}${command}\\s`, "m"));
       }
       expect(stdout).not.toMatch(/^ {2}jobs\s/m);
@@ -751,6 +758,17 @@ describe("devtools contract tests", () => {
       ]);
       expect(status).toBe(0);
       expect(`${stdout}${stderr}`).toContain("declarative sync --no-apply");
+    });
+
+    it("moderation send runs here too (DogPack tests its receiver with it)", async () => {
+      const { status, stdout, stderr } = await runProduct([
+        "moderation",
+        "send",
+        "--help",
+      ]);
+      expect(status).toBe(0);
+      expect(`${stdout}${stderr}`).not.toContain("Unknown command");
+      expect(stdout).toContain("--to");
     });
 
     it("the platform's commands are not available here", async () => {

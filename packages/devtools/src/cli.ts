@@ -135,7 +135,11 @@ export const HANDLERS: Record<string, CommandHandler> = {
 let productHandlers: Record<string, CommandHandler> | undefined;
 function handlersFor(): Record<string, CommandHandler> {
   if (!isProductMode()) return HANDLERS;
-  productHandlers ??= { ...createProductHandlers(), oauth: handleOAuth };
+  productHandlers ??= {
+    ...createProductHandlers(),
+    oauth: handleOAuth,
+    moderation: handleModeration,
+  };
   return productHandlers;
 }
 
