@@ -269,8 +269,8 @@ jobs:
       # repo root, where both apps read it. --no-env: this step CREATES the
       # file tier resolution would insist on reading.
       prepare_command: backstage deploy write-env --no-env --yes
-      upload_command: backstage deploy platform --tier staging --upload
-      full_deploy_command: backstage deploy platform --tier staging
+      upload_command: backstage deploy platform --tier staging --upload --yes
+      full_deploy_command: backstage deploy platform --tier staging --yes
       mode: ${{ vars.WORKER_DEPLOY_MODE || 'versions' }}
       # The docs search index lives in the platform's database, written from
       # the docs the artifact carries (docs/dist); after the switch, so it does
@@ -309,8 +309,8 @@ jobs:
       sentry_project: schedule-builder
       sourcemaps_dir: apps/schedule-builder/dist
       prepare_command: backstage deploy write-env --no-env --yes
-      upload_command: backstage deploy schedule-builder --tier staging --upload
-      full_deploy_command: backstage deploy schedule-builder --tier staging
+      upload_command: backstage deploy schedule-builder --tier staging --upload --yes
+      full_deploy_command: backstage deploy schedule-builder --tier staging --yes
       mode: ${{ vars.WORKER_DEPLOY_MODE || 'versions' }}
       after_switch_command: |
         set -a; . ".env.$TIER"; set +a
@@ -387,8 +387,8 @@ jobs:
       prepare_command: |
         backstage deploy write-env --no-env --yes
         (set -a; . ".env.$TIER"; set +a; backstage deploy avatars --no-env --yes)
-      upload_command: backstage deploy platform --tier production --upload
-      full_deploy_command: backstage deploy platform --tier production
+      upload_command: backstage deploy platform --tier production --upload --yes
+      full_deploy_command: backstage deploy platform --tier production --yes
       mode: ${{ vars.WORKER_DEPLOY_MODE || 'versions' }}
       after_switch_command: |
         set -a; . ".env.$TIER"; set +a
@@ -429,8 +429,8 @@ jobs:
       sentry_project: schedule-builder
       sourcemaps_dir: apps/schedule-builder/dist
       prepare_command: backstage deploy write-env --no-env --yes
-      upload_command: backstage deploy schedule-builder --tier production --upload
-      full_deploy_command: backstage deploy schedule-builder --tier production
+      upload_command: backstage deploy schedule-builder --tier production --upload --yes
+      full_deploy_command: backstage deploy schedule-builder --tier production --yes
       mode: ${{ vars.WORKER_DEPLOY_MODE || 'versions' }}
       after_switch_command: |
         set -a; . ".env.$TIER"; set +a
