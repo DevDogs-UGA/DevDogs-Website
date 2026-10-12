@@ -1253,7 +1253,7 @@ test("settle waits out the 5xx window after a switch and reports it", async () =
     smoke: SMOKE,
     tier: "staging",
     fetchImpl,
-    settle: { ms: 5000, stable: 3, intervalMs: 0 },
+    settle: { ms: 5000, stable: 3, intervalMs: 0, retryDelayMs: 0 },
   });
   assert.equal(checks[0].name, "the live version answers without a 5xx");
   assert.equal(checks[0].ok, true);
@@ -1265,6 +1265,62 @@ test("settle waits out the 5xx window after a switch and reports it", async () =
     checks.every((c) => c.ok),
     JSON.stringify(checks),
   );
+});
+
+test("after settling, a page that answers 5xx is asked once more and the retry is reported", async () => {
+  let probes = 0;
+  const calls = { "/docs": 0 };
+  const fetchImpl = async (url) => {
+    const path = new URL(url).pathname;
+    if (path === "/console")
+      return new Response(null, {
+        status: 307,
+        headers: { location: "/auth" },
+      });
+    probes += 1;
+    // quiet for the settle probes, then /docs has one more 503 and recovers
+    if (path === "/docs" && probes > 3) {
+      calls["/docs"] += 1;
+      return new Response("x", { status: calls["/docs"] === 1 ? 503 : 200 });
+    }
+    return new Response("x", { status: 200 });
+  };
+  const checks = await runSmoke({
+    smoke: SMOKE,
+    tier: "staging",
+    fetchImpl,
+    settle: { ms: 5000, stable: 3, intervalMs: 0, retryDelayMs: 0 },
+  });
+  assert.ok(
+    checks.every((c) => c.ok),
+    JSON.stringify(checks),
+  );
+  const last = checks.at(-1);
+  assert.equal(
+    last.name,
+    "pages that needed one retry after the version settled",
+  );
+  assert.equal(last.detail, "/docs answered 503, then 200");
+  // two 503s in a row still fail
+  let seen = 0;
+  const stuck = await runSmoke({
+    smoke: SMOKE,
+    tier: "staging",
+    fetchImpl: async (url) => {
+      const path = new URL(url).pathname;
+      if (path === "/console")
+        return new Response(null, {
+          status: 307,
+          headers: { location: "/auth" },
+        });
+      seen += 1;
+      return new Response("x", {
+        status: path === "/docs" && seen > 3 ? 503 : 200,
+      });
+    },
+    settle: { ms: 5000, stable: 3, intervalMs: 0, retryDelayMs: 0 },
+  });
+  assert.equal(stuck.find((c) => c.name === "/docs answers 200").ok, false);
 });
 
 test("settle does not forgive a version that keeps answering 5xx", async () => {
@@ -1291,7 +1347,7 @@ test("settle counts a network error as a 5xx and a clean version needs no waitin
     smoke: { ...SMOKE, protectedPath: undefined },
     tier: "staging",
     fetchImpl: flaky,
-    settle: { ms: 5000, stable: 2, intervalMs: 0 },
+    settle: { ms: 5000, stable: 2, intervalMs: 0, retryDelayMs: 0 },
   });
   assert.match(
     first.detail,
@@ -1301,7 +1357,7 @@ test("settle counts a network error as a 5xx and a clean version needs no waitin
     smoke: { ...SMOKE, protectedPath: undefined },
     tier: "staging",
     fetchImpl: async () => new Response("x", { status: 200 }),
-    settle: { ms: 5000, stable: 2, intervalMs: 0 },
+    settle: { ms: 5000, stable: 2, intervalMs: 0, retryDelayMs: 0 },
   });
   assert.equal(clean.detail, "2 answers in a row after no 5xx");
 });

@@ -430,7 +430,7 @@ jobs:
         run: >-
           node "$SCRIPTS/worker-smoke.mjs" --path "$SMOKE_PATH" --tier "$TIER"
           --workers-json "${{ inputs.workers_json }}"
-          --worker-name "$WORKER_NAME" --version-id "$VERSION_ID"
+          --worker-name "$WORKER_NAME" --version-id "$VERSION_ID" --settle 120
           ${{ inputs.authorize && '--authorize' || '' }}
 
       # --- the traffic switch ----------------------------------------------
@@ -468,13 +468,12 @@ jobs:
           fi
 
       # --- what is live ------------------------------------------------------
-      # `--settle 120` first waits for the live version to stop answering 5xx.
-      # For 20 to 40 seconds after a switch a small share of requests to the
-      # platform meet an empty 503 from vinext's build-skew guard (the edge
-      # runs the page cache stage on a different version than the one that took
-      # the request); see worker-smoke.mjs. The wait is a reported check, and a
-      # version that never settles still fails and rolls back. The preview
-      # smoke above has no such wait: it is pinned to one version.
+      # `--settle 120` first waits for the live version to stop answering 5xx
+      # (the preview smoke above waits the same way). For 20 to 40 seconds after
+      # a deployment change a share of requests to the platform meet an empty
+      # 503 from vinext's build-skew guard; see worker-smoke.mjs. The wait is a
+      # reported check, and a version that never settles still fails (and,
+      # live, rolls back).
       - name: Smoke test what is live
         id: live
         env:

@@ -24,17 +24,20 @@
  * Run with no `--version-id` it checks whatever is live (the post-switch
  * check and the scheduled smoke test).
  *
- * `--settle <seconds>` (the post-switch check only) first waits for the live
- * version to stop answering 5xx. vinext's Workers Cache stage answers an empty
+ * `--settle <seconds>` (the preview and the post-switch check) first waits for
+ * the version to stop answering 5xx. vinext's Workers Cache stage answers an empty
  * 503 when it runs on a different build than the one that took the request
  * (build-skew protection), and for roughly 20 to 40 seconds after a traffic
  * switch edge locations disagree about which version is live, so some real
  * requests meet that 503. Measured by switching staging-platform between two
  * versions under a request loop: about one request in ten, on both versions;
- * none on the version-pinned preview; none seen on schedule-builder. The wait
- * ends after `stable` good answers in a row and is itself a reported check, so
- * a switch that needed it says so, and a version that never settles still
- * fails.
+ * none seen on schedule-builder. The version-pinned preview is NOT immune:
+ * the staging run for d76c007d had `/console/permissions` answer 503 on the
+ * pinned version while the deployment was still propagating. The wait ends
+ * after `stable` (20) good answers in a row, 250 ms apart, and is itself a
+ * reported check, so a switch that needed it says so, and a version that never
+ * settles still fails. Once settled, a page that still answers 5xx is asked
+ * one more time; any page that needed that is listed in the last check.
  *
  * Environment (only for --authorize):
  *   API_URL      the Supabase project's API origin.
@@ -89,7 +92,7 @@ export function overrideHeader(workerName, versionId) {
  *   versionId?: string,
  *   fetchImpl?: typeof fetch,
  *   authorize?: { apiUrl: string, secretKey: string } | null,
- *   settle?: { ms: number, stable?: number, intervalMs?: number } | null,
+ *   settle?: { ms: number, stable?: number, intervalMs?: number, retryDelayMs?: number } | null,
  * }} input
  * @returns {Promise<Check[]>}
  */
@@ -115,7 +118,34 @@ export async function runSmoke({
       versionId,
     );
   }
-  const get = (url) => fetchImpl(url, { redirect: "manual", headers });
+  const probe = (url, init = {}) =>
+    fetchImpl(url, { redirect: "manual", headers, ...init });
+  // After the version has settled, a page that still answers 5xx is asked once
+  // more, and the retry is REPORTED (the last check), never silent. Before
+  // settling there is no retry: the settle step is the wait.
+  const retryOnce = Boolean(settle && settle.ms > 0);
+  /** @type {string[]} */
+  const retried = [];
+  const get = async (url, init) => {
+    let first;
+    try {
+      const response = await probe(url, init);
+      if (!retryOnce || response.status < 500) return response;
+      await response.arrayBuffer().catch(() => {});
+      first = String(response.status);
+    } catch (error) {
+      if (!retryOnce) throw error;
+      first = "an error";
+    }
+    await new Promise((resolve) =>
+      setTimeout(resolve, settle?.retryDelayMs ?? 1000),
+    );
+    const response = await probe(url, init);
+    retried.push(
+      `${new URL(url).pathname} answered ${first}, then ${response.status}`,
+    );
+    return response;
+  };
 
   /** @type {Check[]} */
   const checks = [];
@@ -124,7 +154,7 @@ export async function runSmoke({
       ...(smoke.publicPaths ?? []),
       ...(smoke.protectedPath ? [smoke.protectedPath] : []),
     ];
-    checks.push(await settleCheck({ base, paths, get, ...settle }));
+    checks.push(await settleCheck({ base, paths, get: probe, ...settle }));
   }
   for (const path of smoke.publicPaths ?? []) {
     try {
@@ -188,8 +218,24 @@ export async function runSmoke({
   }
   if (authorize)
     checks.push(
-      ...(await authorizeChecks({ base, headers, fetchImpl, ...authorize })),
+      ...(await authorizeChecks({
+        base,
+        headers,
+        // The platform's own pages get the same one retry; the Supabase calls
+        // do not.
+        fetchImpl: (url, init) =>
+          String(url).startsWith(base) && (init?.method ?? "GET") === "GET"
+            ? get(String(url), init)
+            : fetchImpl(url, init),
+        ...authorize,
+      })),
     );
+  if (retried.length)
+    checks.push({
+      name: "pages that needed one retry after the version settled",
+      ok: true,
+      detail: retried.join("; "),
+    });
   return checks;
 }
 
@@ -214,8 +260,8 @@ export async function settleCheck({
   paths,
   get,
   ms,
-  stable = 8,
-  intervalMs = 1000,
+  stable = 20,
+  intervalMs = 250,
 }) {
   const name = "the live version answers without a 5xx";
   const started = Date.now();
