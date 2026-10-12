@@ -10,8 +10,10 @@ name: Database change
 #     `DROP COLUMN`. `db-plan.mjs check` builds a scratch database at the
 #     committed migrations, applies the tree on top, and classifies the SQL the
 #     tree adds;
-#   * a hand-written migration (`supabase/migrations/`): read from the files
-#     the pull request adds or edits.
+#   * a hand-written migration (`supabase/migrations/`) or a seed file
+#     (`supabase/seed/`, run with `include_seed` on staging and production):
+#     read from the files the pull request adds or edits. Seeds are insert
+#     only, so a seed that updates, deletes or drops is destructive too.
 #
 # `destructive-sql` fails unless the pull request carries the `allow-destructive`
 # label. `destructive-gate` fails if that label was applied by anyone who is not
@@ -38,8 +40,12 @@ name: Database change
 on:
   # `labeled` and `unlabeled` re-run the check when a devops member applies the
   # label: the SQL is classified again and the verdict follows the label.
+  # `edited` fires when the base branch is changed (and on a title or body edit):
+  # the diff against the new base is a different change, so the check runs
+  # again, in full. It must not be skipped on a title edit: a skipped job would
+  # report over a failing one of the same name on the same commit.
   pull_request:
-    types: [opened, reopened, synchronize, labeled, unlabeled]
+    types: [opened, reopened, synchronize, labeled, unlabeled, edited]
   merge_group:
   workflow_call:
     inputs:
@@ -96,7 +102,7 @@ jobs:
         id: changed
         run: |
           set -euo pipefail
-          if git diff --quiet "$BASE_SHA...HEAD" -- supabase/schemas supabase/migrations supabase/config.toml; then
+          if git diff --quiet "$BASE_SHA...HEAD" -- supabase/schemas supabase/migrations supabase/seed supabase/roles.sql supabase/config.toml; then
             echo 'changed=false' >> "$GITHUB_OUTPUT"
             echo 'Nothing under supabase/ changed: no SQL to classify.' >> "$GITHUB_STEP_SUMMARY"
           else

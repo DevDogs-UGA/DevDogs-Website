@@ -22,7 +22,8 @@ name: Destructive gate
 # so it still never touches the pull request's code.
 on:
   pull_request_target:
-    types: [opened, reopened, synchronize, labeled, unlabeled]
+    # `edited` covers a changed base branch: the check is re-reported for it.
+    types: [opened, reopened, synchronize, labeled, unlabeled, edited]
   workflow_call:
     inputs:
       shared_ref:

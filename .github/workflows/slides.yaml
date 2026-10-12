@@ -88,6 +88,15 @@ jobs:
       checkout_token_secret: true
       self_approval_gate: true
       require_latest: true
+      # Slides runs only on pushes that touch these paths (the `on.push.paths`
+      # above), so a newer commit elsewhere has no Slides run to deploy the
+      # change: only one that touches them supersedes this candidate.
+      latest_paths: |
+        apps/slides/**
+        packages/sdk/**
+        packages/events/**
+        .gitmodules
+        pnpm-lock.yaml
       build_command: |
         pnpm --filter slides build
         node apps/slides/scripts/strip-redirects.mjs

@@ -17,6 +17,9 @@ import {
   changedMigrations,
   checkPlannerCredential,
   classifyPendingMigrations,
+  classifyPendingSeeds,
+  commandOutput,
+  schemaApplySegments,
   dbPort,
   withEngineDrops,
   main as dbPlanMain,
@@ -35,8 +38,13 @@ import {
   labelState,
   pullFromQueueRef,
 } from "./destructive-label.mjs";
+import { evaluateSuperseded, matchingPaths } from "./superseded.mjs";
 import { q39Checks } from "./q39-checks.mjs";
-import { classifySql, splitStatements } from "./sql-classify.mjs";
+import {
+  classifySql,
+  splitRawStatements,
+  splitStatements,
+} from "./sql-classify.mjs";
 import {
   overrideHeader,
   runSmoke,
@@ -1867,4 +1875,360 @@ test("deploy.yaml's supersede pattern matches the nested production job names an
     "deploy / resolve",
   ])
     assert.ok(!pattern.test(name), name);
+});
+
+/* ---------- review fixes (lane 3f, round 3) ---------- */
+
+test("a DO block that only creates a missing role passes; any other DO block is still opaque", () => {
+  const guarded = `do $$ begin if not exists (select 1 from pg_roles where rolname = 'catalog_reader') then create role "catalog_reader" nologin noinherit; end if; end $$;`;
+  assert.deepEqual(kinds(guarded), []);
+  assert.deepEqual(
+    kinds(
+      "DO $b$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'x') THEN CREATE ROLE x; END IF; END $b$;",
+    ),
+    [],
+  );
+  assert.deepEqual(
+    kinds(
+      `do $$ begin if not exists (select 1 from pg_roles where rolname = 'x') then create role x; delete from platform.roles; end if; end $$;`,
+    ),
+    ["DO block"],
+  );
+  assert.deepEqual(kinds("do $$ begin delete from t; end $$;"), ["DO block"]);
+});
+
+test("an upsert and EXPLAIN ANALYZE of a data change are destructive; plain EXPLAIN and DO NOTHING are not", () => {
+  assert.deepEqual(
+    kinds(
+      "INSERT INTO r SELECT * FROM r ON CONFLICT (id) DO UPDATE SET title = 'x';",
+    ),
+    ["UPSERT (ON CONFLICT DO UPDATE)"],
+  );
+  assert.deepEqual(
+    kinds("INSERT INTO r VALUES (1) ON CONFLICT DO NOTHING;"),
+    [],
+  );
+  assert.deepEqual(kinds("EXPLAIN ANALYZE DELETE FROM r WHERE a = 1;"), [
+    "EXPLAIN ANALYZE of DELETE",
+  ]);
+  assert.deepEqual(kinds("EXPLAIN (ANALYZE, BUFFERS) UPDATE r SET a = 1;"), [
+    "EXPLAIN ANALYZE of UPDATE",
+  ]);
+  assert.deepEqual(kinds("EXPLAIN DELETE FROM r;"), []);
+  assert.deepEqual(kinds("EXPLAIN SELECT 1;"), []);
+});
+
+test("escape strings and identifiers containing a dollar do not hide a later statement", () => {
+  // E'...\'...' keeps the string open past the escaped quote.
+  assert.deepEqual(kinds("select E'it\\'s; drop table x; --'; drop table y;"), [
+    "DROP TABLE",
+  ]);
+  // `a$b$` is an identifier, not the start of a dollar quote that swallows the DROP.
+  assert.deepEqual(kinds("select 1 as a$b$; drop table x; select 2 as c$b$;"), [
+    "DROP TABLE",
+  ]);
+  // A tag with digits is a tag: the body is a body.
+  assert.deepEqual(
+    kinds(
+      "create function f() returns int as $fn1$ select 1; delete from x; $fn1$ language sql;",
+    ),
+    [],
+  );
+});
+
+test("splitRawStatements keeps each statement's own text, and function bodies whole", () => {
+  assert.deepEqual(
+    splitRawStatements(
+      "-- c\nselect 1;\n/* x */ create function f() returns int as $$ select 1; $$ language sql;\nselect 2",
+    ),
+    [
+      "-- c\nselect 1;",
+      "/* x */ create function f() returns int as $$ select 1; $$ language sql;",
+      "select 2",
+    ],
+  );
+});
+
+test("seeds are classified too: a DO block is read, and anything but an insert is destructive", () => {
+  const root = mkdtempSync(join(tmpdir(), "repo-"));
+  mkdirSync(join(root, "supabase", "seed", "roles"), { recursive: true });
+  mkdirSync(join(root, "supabase", "seed", "officers"), { recursive: true });
+  const seeds = {
+    "roles/ok.sql":
+      "insert into platform.roles (id) values (1) on conflict do nothing;",
+    "roles/delete.sql":
+      "delete from platform.roles where title = 'Vice President';",
+    "roles/upsert.sql":
+      "insert into platform.roles (id, title) values (1, 'x') on conflict (id) do update set title = 'x';",
+    "officers/ok.sql":
+      "begin; do $$ declare v uuid; begin insert into auth.users (id) values (v) on conflict do nothing; if not exists (select 1 from t) then insert into t values (1); end if; end $$; commit;",
+    "officers/update.sql":
+      "begin; do $$ begin update platform.profile set bio = 'x'; end $$; commit;",
+    "officers/dynamic.sql": "do $$ begin execute 'truncate t'; end $$;",
+  };
+  for (const [name, sql] of Object.entries(seeds)) {
+    writeFileSync(join(root, "supabase", "seed", name), sql);
+  }
+  const out = classifyPendingSeeds(root, [
+    ...Object.keys(seeds).map((n) => `supabase/seed/${n}`),
+    "supabase/seed/roles/missing.sql",
+  ]);
+  assert.deepEqual(
+    out.map((o) => [o.file.replace("supabase/seed/", ""), o.destructive]),
+    [
+      ["roles/ok.sql", false],
+      ["roles/delete.sql", true],
+      ["roles/upsert.sql", true],
+      ["officers/ok.sql", false],
+      ["officers/update.sql", true],
+      ["officers/dynamic.sql", true],
+      ["roles/missing.sql", true],
+    ],
+  );
+});
+
+test("a destructive seed file is held by the gate like a migration, at plan and at apply", () => {
+  const root = mkdtempSync(join(tmpdir(), "repo-"));
+  mkdirSync(join(root, "supabase", "seed", "roles"), { recursive: true });
+  writeFileSync(
+    join(root, "supabase", "seed", "roles", "probe.sql"),
+    "delete from platform.roles where title = 'Vice President';",
+  );
+  const push = {
+    upToDate: false,
+    migrations: [],
+    seeds: ["supabase/seed/roles/probe.sql"],
+    roles: [],
+  };
+  const url = "postgresql://u:p@db/postgres";
+  const plan = fakeRuntime({ push, env: { DB_URL: url } });
+  const out = join(plan.env.PLAN_DIR, "gh-output");
+  plan.env.GITHUB_OUTPUT = out;
+  assert.equal(
+    dbPlanMain(["migrations-plan", "--include-seed"], plan, { repoRoot: root }),
+    0,
+  );
+  assert.match(readFileSync(out, "utf8"), /destructive=true/);
+  const { hash } = JSON.parse(
+    readFileSync(join(plan.env.PLAN_DIR, "migrations-plan.json"), "utf8"),
+  );
+  const ungated = fakeRuntime({ push, env: { DB_URL: url } });
+  assert.equal(
+    dbPlanMain(
+      ["migrations-apply", "--include-seed", "--expect-hash", hash],
+      ungated,
+      {
+        repoRoot: root,
+      },
+    ),
+    1,
+  );
+  assert.ok(
+    !ungated.calls.some((c) => c.includes("--yes")),
+    "nothing was pushed",
+  );
+  const gated = fakeRuntime({
+    push,
+    env: { DB_URL: url, DESTRUCTIVE_APPROVED: "true" },
+  });
+  assert.equal(
+    dbPlanMain(
+      ["migrations-apply", "--include-seed", "--expect-hash", hash],
+      gated,
+      {
+        repoRoot: root,
+      },
+    ),
+    0,
+  );
+  assert.ok(
+    gated.calls.some((c) => c.includes("--yes")),
+    "the push ran",
+  );
+});
+
+test("the PR check reads the seed files a pull request adds, and the workflow notices them", () => {
+  const { root, git } = gitRepo();
+  mkdirSync(join(root, "supabase", "seed", "roles"), { recursive: true });
+  writeFileSync(join(root, "README"), "x");
+  git("add", "-A");
+  git("commit", "-qm", "base");
+  const base = git("rev-parse", "HEAD");
+  writeFileSync(
+    join(root, "supabase", "seed", "roles", "probe.sql"),
+    "delete from platform.roles;",
+  );
+  git("add", "-A");
+  git("commit", "-qm", "head");
+  const rt = {
+    env: {},
+    log: () => {},
+    run: (cmd, args, opts) => {
+      const r = spawnSync(cmd, args, { cwd: opts?.cwd, encoding: "utf8" });
+      return { status: r.status ?? 1, stdout: r.stdout, stderr: r.stderr };
+    },
+  };
+  const found = changedMigrations(rt, root, base);
+  assert.deepEqual(
+    found.map((f) => [f.file, f.destructive]),
+    [["supabase/seed/roles/probe.sql", true]],
+  );
+  const workflow = readFileSync(
+    new URL("../workflows/database-pr.yaml", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    workflow,
+    /-- supabase\/schemas supabase\/migrations supabase\/seed /,
+  );
+});
+
+test("a schema plan is cut after each run of ADD VALUE, so the new value is committed before it is used", () => {
+  const add = `ALTER TYPE "p"."s" ADD VALUE 'queued' AFTER 'failed';`;
+  const use = `ALTER TABLE "p"."d" ALTER COLUMN "status" SET DEFAULT 'queued'::p."s";`;
+  assert.deepEqual(schemaApplySegments(`${add}\n${use}\n`), [
+    `${add}\n`,
+    `${use}\n`,
+  ]);
+  // Two values in a row share a transaction; later statements start the next one.
+  const add2 = `ALTER TYPE "p"."s" ADD VALUE 'sent';`;
+  assert.deepEqual(schemaApplySegments(`${add}\n${add2}\n${use}\n`), [
+    `${add}\n${add2}\n`,
+    `${use}\n`,
+  ]);
+  // Order is kept, and work before the first ADD VALUE rides with it.
+  const create = `CREATE TABLE "p"."d" ("status" "p"."s");`;
+  assert.deepEqual(schemaApplySegments(`${create}\n${add}\n${use}\n`), [
+    `${create}\n${add}\n`,
+    `${use}\n`,
+  ]);
+  // No ADD VALUE: one transaction, as before. A body mentioning it is not one.
+  const fn = `CREATE FUNCTION f() RETURNS void AS $$ begin alter type x add value 'y'; end $$ LANGUAGE plpgsql;`;
+  assert.deepEqual(schemaApplySegments(`${create}\n${fn}\n`), [
+    `${create}\n${fn}\n`,
+  ]);
+  assert.deepEqual(schemaApplySegments(""), []);
+});
+
+test("a failed command's error carries stdout as well as stderr", () => {
+  const out = commandOutput({
+    stderr: "Connecting to remote database...\n",
+    stdout: '{"error":{"code":"LegacyDbPushMissingRemoteError"}}\n',
+  });
+  assert.match(out, /Connecting to remote database/);
+  assert.match(out, /LegacyDbPushMissingRemoteError/);
+  assert.equal(commandOutput({ stdout: "only out" }), "only out");
+  assert.equal(commandOutput({ stderr: "only err", stdout: "" }), "only err");
+});
+
+test("a candidate is superseded by a newer commit only when that commit has its own run", async () => {
+  const sha = "a".repeat(40);
+  const newer = "b".repeat(40);
+  const patterns = [
+    "apps/slides/**",
+    "packages/sdk/**",
+    ".gitmodules",
+    "pnpm-lock.yaml",
+  ];
+  const compare =
+    (files, status = "ahead", complete = true) =>
+    async () => ({
+      status,
+      files,
+      complete,
+    });
+  // The head itself: fine.
+  assert.equal(
+    (await evaluateSuperseded({ sha, latest: sha })).superseded,
+    false,
+  );
+  // No path filters (a workflow that runs on every push): any newer commit supersedes.
+  assert.equal(
+    (await evaluateSuperseded({ sha, latest: newer })).superseded,
+    true,
+  );
+  // An unrelated newer commit has no Slides run, so the approved candidate deploys.
+  const unrelated = await evaluateSuperseded({
+    sha,
+    latest: newer,
+    patterns,
+    compare: compare(["docs/operations/index.md", "apps/platform/x.ts"]),
+  });
+  assert.equal(unrelated.superseded, false);
+  assert.match(unrelated.message, /no newer run exists/);
+  // A newer commit that touches the deck has its own run: this one is superseded, truthfully.
+  const related = await evaluateSuperseded({
+    sha,
+    latest: newer,
+    patterns,
+    compare: compare(["docs/a.md", "apps/slides/slides.md"]),
+  });
+  assert.equal(related.superseded, true);
+  assert.match(related.message, /apps\/slides\/slides\.md/);
+  // Not a straight line, or too many files to read: refuse rather than guess.
+  assert.equal(
+    (
+      await evaluateSuperseded({
+        sha,
+        latest: newer,
+        patterns,
+        compare: compare([], "diverged"),
+      })
+    ).superseded,
+    true,
+  );
+  assert.equal(
+    (
+      await evaluateSuperseded({
+        sha,
+        latest: newer,
+        patterns,
+        compare: compare([], "ahead", false),
+      })
+    ).superseded,
+    true,
+  );
+});
+
+test("path filters match like GitHub's: ** crosses directories, * does not", () => {
+  const files = [
+    "apps/slides/a/b.md",
+    "apps/slidesx/a.md",
+    "pnpm-lock.yaml",
+    "x/pnpm-lock.yaml",
+    "a/b.ts",
+    "a/c/d.ts",
+  ];
+  assert.deepEqual(matchingPaths(files, ["apps/slides/**"]), [
+    "apps/slides/a/b.md",
+  ]);
+  assert.deepEqual(matchingPaths(files, ["pnpm-lock.yaml"]), [
+    "pnpm-lock.yaml",
+  ]);
+  assert.deepEqual(matchingPaths(files, ["a/*.ts"]), ["a/b.ts"]);
+  assert.deepEqual(matchingPaths(files, ["**/pnpm-lock.yaml"]), [
+    "pnpm-lock.yaml",
+    "x/pnpm-lock.yaml",
+  ]);
+});
+
+test("slides.yaml's latest_paths are exactly its push path filters", () => {
+  const text = readFileSync(
+    new URL("../workflows/slides.yaml", import.meta.url),
+    "utf8",
+  );
+  const list = (block) =>
+    [...block.matchAll(/^\s+-?\s*(\S.*?)\s*$/gm)]
+      .map((m) => m[1])
+      .filter(Boolean);
+  const pushPaths = /^  push:\n(?:.*\n)*?    paths:\n((?:      - .*\n)+)/m.exec(
+    text,
+  );
+  const latestPaths = /latest_paths: \|\n((?:        .*\n)+)/.exec(text);
+  assert.ok(pushPaths && latestPaths, "both lists are present");
+  assert.deepEqual(
+    list(latestPaths[1]).sort(),
+    list(pushPaths[1]).sort(),
+    "a drift would let an unrelated commit strand, or a related one skip, a deploy",
+  );
 });

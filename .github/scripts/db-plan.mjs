@@ -59,7 +59,12 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { isMain } from "./is-main.mjs";
-import { classifySql, renderClassification } from "./sql-classify.mjs";
+import {
+  classifySql,
+  renderClassification,
+  splitRawStatements,
+  splitStatements,
+} from "./sql-classify.mjs";
 
 /** The password of the scratch database `supabase db start` creates. */
 const LOCAL_PASSWORD = "postgres";
@@ -204,6 +209,22 @@ export function redactUrls(text) {
  * }} Runtime
  */
 
+/**
+ * What a failed command said. The Supabase CLI writes progress to stderr and
+ * the error itself (JSON) to stdout, so both are kept: stderr alone shows only
+ * "Connecting to remote database..." and never the reason.
+ *
+ * @param {{ stdout?: string, stderr?: string }} result
+ */
+export function commandOutput(result) {
+  const stderr = (result.stderr ?? "").trim();
+  const stdout = (result.stdout ?? "").trim();
+  return [stderr && stdout ? `${stderr}\n--- stdout ---` : stderr, stdout]
+    .filter(Boolean)
+    .join("\n")
+    .slice(-4000);
+}
+
 /** @returns {Runtime} */
 export function defaultRuntime(env = process.env) {
   return {
@@ -223,7 +244,7 @@ export function defaultRuntime(env = process.env) {
       if (status !== 0 && !opts.allowFail) {
         throw new Error(
           redactUrls(
-            `${cmd} ${args.join(" ")} failed (exit ${status}):\n${(result.stderr || result.stdout).slice(-4000)}`,
+            `${cmd} ${args.join(" ")} failed (exit ${status}):\n${commandOutput(result)}`,
           ),
         );
       }
@@ -540,8 +561,76 @@ export function classifyPendingMigrations(repoRoot, pending) {
 }
 
 /**
- * The hand-written migrations a pull request adds or edits, read for the
- * destructive check. The declarative tree is compared with the committed
+ * Everything a push would run, classified: the pending migrations, and the seed
+ * and roles files (which `--include-seed` runs on the same databases).
+ *
+ * @param {string} repoRoot
+ * @param {{ migrations: string[], seeds: string[], roles: string[] }} plan
+ */
+export function classifyPending(repoRoot, plan) {
+  return [
+    ...classifyPendingMigrations(repoRoot, plan.migrations),
+    ...classifyPendingSeeds(repoRoot, [...plan.seeds, ...plan.roles]),
+  ];
+}
+
+/**
+ * Where a seed or roles file the push listed lives. The CLI names it relative
+ * to the repository (`supabase/seed/roles/x.sql`) or to `supabase/`.
+ *
+ * @param {string} repoRoot
+ * @param {string} entry
+ */
+function seedPath(repoRoot, entry) {
+  return [
+    join(repoRoot, entry),
+    join(repoRoot, "supabase", entry),
+    join(repoRoot, "supabase", "seed", entry),
+  ].find((candidate) => existsSync(candidate));
+}
+
+/**
+ * The seed and roles files a push would run, read for the destructive check.
+ * Seeds are insert only (supabase/seed/README and the convention in each file),
+ * and `include_seed` runs them on staging and production, so they go through the
+ * same gate as a migration; a DO block is read, not distrusted. A file that
+ * cannot be found is reported as destructive: what cannot be read cannot be
+ * trusted.
+ *
+ * @param {string} repoRoot
+ * @param {string[]} pending  Seed or roles files from the push dry run.
+ */
+export function classifyPendingSeeds(repoRoot, pending) {
+  /** @type {Array<{ file: string, destructive: boolean, reasons: import("./sql-classify.mjs").Reason[] }>} */
+  const out = [];
+  for (const entry of pending) {
+    const path = seedPath(repoRoot, entry);
+    if (!path) {
+      out.push({
+        file: entry,
+        destructive: true,
+        reasons: [{ kind: "UNREADABLE (file not found)", statement: entry }],
+      });
+      continue;
+    }
+    const classification = classifySql(readFileSync(path, "utf8"), {
+      inspectDoBlocks: true,
+    });
+    out.push({
+      file: entry,
+      destructive: classification.destructive,
+      reasons: classification.reasons,
+    });
+  }
+  return out;
+}
+
+/** Whether a repository path is a seed or roles file (insert-only SQL). */
+const isSeedPath = (file) => /^supabase\/(?:seed\/|roles\.sql$)/.test(file);
+
+/**
+ * The hand-written migrations and seed files a pull request adds or edits,
+ * read for the destructive check. The declarative tree is compared with the committed
  * migrations, so a destructive statement written as a migration never shows up
  * in that diff: it has to be read from the files themselves.
  *
@@ -559,6 +648,8 @@ export function changedMigrations(rt, repoRoot, base) {
       `${base}...HEAD`,
       "--",
       "supabase/migrations",
+      "supabase/seed",
+      "supabase/roles.sql",
     ],
     { cwd: repoRoot },
   );
@@ -567,7 +658,9 @@ export function changedMigrations(rt, repoRoot, base) {
   for (const file of result.stdout.split("\n").filter(Boolean)) {
     const path = join(repoRoot, file);
     if (!existsSync(path)) continue;
-    const classification = classifySql(readFileSync(path, "utf8"));
+    const classification = classifySql(readFileSync(path, "utf8"), {
+      inspectDoBlocks: isSeedPath(file),
+    });
     out.push({
       file,
       destructive: classification.destructive,
@@ -575,6 +668,35 @@ export function changedMigrations(rt, repoRoot, base) {
     });
   }
   return out;
+}
+
+/**
+ * The transactions a schema plan is applied in. One transaction, normally:
+ * the plan is atomic. But Postgres refuses to USE an enum value in the
+ * transaction that added it ("unsafe use of new value"), and the diff engine
+ * emits `ALTER TYPE ... ADD VALUE` followed by statements that use it (a
+ * default, a policy, a constraint). So the plan is cut right after each run of
+ * ADD VALUE statements: the value is committed before anything below it runs,
+ * and the order of the plan is untouched. A plan with no ADD VALUE is one
+ * segment, exactly as before.
+ *
+ * @param {string} sql
+ * @returns {string[]} Runnable SQL, one entry per transaction.
+ */
+export function schemaApplySegments(sql) {
+  /** @type {string[][]} */
+  const segments = [[]];
+  let afterAddValue = false;
+  for (const raw of splitRawStatements(sql)) {
+    const text = splitStatements(raw)[0] ?? "";
+    const addsValue = /^ALTER\s+TYPE\b.*\bADD\s+VALUE\b/i.test(text);
+    if (afterAddValue && !addsValue) segments.push([]);
+    segments.at(-1)?.push(raw);
+    afterAddValue = addsValue;
+  }
+  return segments
+    .filter((segment) => segment.length > 0)
+    .map((segment) => `${segment.join("\n")}\n`);
 }
 
 /** @returns {{ sql: string, hash: string, schemas: string[], dropStatements: string[], classification: ReturnType<typeof classifySql> }} */
@@ -723,7 +845,7 @@ export function main(
 
   if (command === "migrations-plan") {
     const plan = generateMigrationsPlan(rt, { targetUrl: need(), includeSeed });
-    const classified = classifyPendingMigrations(repoRoot, plan.migrations);
+    const classified = classifyPending(repoRoot, plan);
     const destructive = classified.some((c) => c.destructive);
     const pending =
       plan.migrations.length + plan.seeds.length + plan.roles.length;
@@ -776,7 +898,7 @@ export function main(
       );
       return 1;
     }
-    const classified = classifyPendingMigrations(repoRoot, plan.migrations);
+    const classified = classifyPending(repoRoot, plan);
     if (
       classified.some((c) => c.destructive) &&
       env.DESTRUCTIVE_APPROVED !== "true"
@@ -844,16 +966,31 @@ export function main(
     }
     const file = join(planDir, "schema-apply.sql");
     writeFileSync(file, plan.sql);
-    rt.run("psql", [
-      url,
-      "-v",
-      "ON_ERROR_STOP=1",
-      "--single-transaction",
-      "--quiet",
-      "-f",
-      file,
-    ]);
-    summarize(`### Schema change\n\nApplied plan \`${plan.hash}\`.`, env);
+    const segments = schemaApplySegments(plan.sql);
+    for (const [index, segment] of segments.entries()) {
+      const part =
+        segments.length === 1
+          ? file
+          : join(planDir, `schema-apply-${index + 1}.sql`);
+      if (part !== file) writeFileSync(part, segment);
+      rt.run("psql", [
+        url,
+        "-v",
+        "ON_ERROR_STOP=1",
+        "--single-transaction",
+        "--quiet",
+        "-f",
+        part,
+      ]);
+    }
+    summarize(
+      `### Schema change\n\nApplied plan \`${plan.hash}\`${
+        segments.length > 1
+          ? ` in ${segments.length} transactions (an enum value added by the plan is committed before the statements that use it)`
+          : ""
+      }.`,
+      env,
+    );
     return 0;
   }
 

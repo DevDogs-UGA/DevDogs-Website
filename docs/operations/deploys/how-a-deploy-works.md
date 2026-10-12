@@ -32,7 +32,7 @@ Approving a production job approves **the plan you can read in the run's summary
 
 - The database job writes the SQL and its SHA-256 into the summary. The apply job regenerates the SQL against the real database and refuses, changing nothing, if the hash is different.
 - The approval gate refuses you if you wrote the change or queued it. This is checked by the workflow, not just by GitHub.
-- A candidate that is no longer the head of `main` refuses to deploy. A newer commit has its own run; approve that one.
+- A candidate that is no longer the head of `main` refuses to deploy. A newer commit has its own run; approve that one. The exception is a workflow that runs only on some paths (Slides): a newer commit that does not touch its paths has no run of its own, so the approved candidate still deploys, and only a newer commit that does touch them supersedes it (`latest_paths` in `slides.yaml`, `.github/scripts/superseded.mjs`).
 
 Production asks twice in a normal deploy: once for the database, then once for both Workers together. A plan that drops or rewrites data asks a third time, of `production-destructive` ([Destructive changes](./destructive-changes.md)).
 

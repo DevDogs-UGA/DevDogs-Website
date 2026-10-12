@@ -137,6 +137,15 @@ on:
         required: false
         type: boolean
         default: false
+      latest_paths:
+        description: >-
+          With require_latest: newline-separated path filters (the workflow's own
+          `paths:`). When set, the candidate is superseded only by a newer commit
+          that changes one of them, because only such a commit has a run of its
+          own. Leave empty for a workflow that runs on every push.
+        required: false
+        type: string
+        default: ""
       checkout_submodules:
         description: Check out submodules too (the slides deck reads the workshop repositories).
         required: false
@@ -260,12 +269,11 @@ jobs:
         if: inputs.require_latest
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
+          GH_TOKEN: ${{ github.token }}
+          LATEST_PATHS: ${{ inputs.latest_paths }}
         run: |
           latest=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" "refs/heads/$DEFAULT_BRANCH" | cut -f1)
-          if [ "$latest" != "$GITHUB_SHA" ]; then
-            echo "::error::Candidate $GITHUB_SHA was superseded by $latest. Nothing was changed; the newer commit has its own run."
-            exit 1
-          fi
+          node "$SCRIPTS/superseded.mjs" --repo "$GITHUB_REPOSITORY" --sha "$GITHUB_SHA" --latest "$latest" --paths "$LATEST_PATHS"
       - name: Refuse an unknown mode
         env:
           MODE: ${{ inputs.mode }}
