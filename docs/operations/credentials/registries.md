@@ -17,7 +17,7 @@ section: infrastructure
 
 There is **no long-lived publish token** to rotate. Both registries trust a specific GitHub workflow:
 
-- **npm Trusted Publishing**, per package: the package's settings name the repository, the workflow file (`publish.yaml`) and the environment. The workflow gets a short-lived credential from GitHub for each publish.
+- **npm Trusted Publishing**, per package: the package's settings name the repository and the workflow file `ci.yaml`, with the environment left blank. `ci.yaml` is the workflow that calls `publish.yaml`, and npm checks the calling workflow's filename. The stable and `next` channels publish from different environments, so naming one would refuse the other. The workflow gets a short-lived credential from GitHub for each publish.
 - **pub.dev automated publishing**, per package: the package's admin page names the repository and the tag pattern. Only a tag push from that repository can publish.
 
 The VS Code extension is the exception: the Marketplace uses a personal access token (`VSCE_PAT`) held as a repository secret.

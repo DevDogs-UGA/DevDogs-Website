@@ -462,9 +462,11 @@ jobs:
   # repositories publishing would race on the same npm packages, and this one
   # has no GitHub releases for the versions already out. The Gate sets the
   # repository variable BACKSTAGE_PUBLISHES_STABLE=true. The trusted
-  # publishers on npmjs.com must already name this repository's publish.yaml
-  # (environment field blank) before the first prerelease below, which needs
-  # them too: that is a pre-flight item, not a Gate one.
+  # publishers on npmjs.com must already name this repository and ci.yaml,
+  # not publish.yaml: npm checks the calling workflow's filename when the
+  # publish runs through workflow_call. Leave the environment field blank,
+  # since the two channels publish from different environments. The first
+  # prerelease below needs them too: that is a pre-flight item, not a Gate one.
   publish:
     needs: validate
     if: >-
@@ -492,7 +494,8 @@ jobs:
     # permissions against the caller's before it evaluates any `if:`, so a
     # lower grant here fails the whole run at startup with no jobs at all.
     # The `next` job itself still asks for contents: read, which is what it
-    # gets. One file because npm Trusted Publishing names publish.yaml.
+    # gets. One caller for both channels, because npm Trusted Publishing names
+    # the calling workflow (ci.yaml).
     # scripts/workflow-permissions.test.mjs fails if the two drift apart.
     permissions:
       contents: write
