@@ -36,8 +36,10 @@ export default function VerificationDialog({ open, onOpenChange }: Props) {
           </DialogTitle>
           <DialogDescription className="max-w-lg leading-relaxed text-mauve-400">
             Your profile is still a work in progress. Complete the steps below
-            to appear on the DevDogs community page and unlock full access to
-            club tools and resources.
+            to verify your account.{" "}
+            {ctx.publicProfiles
+              ? "Verified members can choose to appear on the DevDogs community page."
+              : "Verification confirms you are a current UGA student in the club."}
           </DialogDescription>
         </div>
       }

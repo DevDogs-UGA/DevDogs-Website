@@ -115,6 +115,36 @@
       "id": "<no-remote-namespace-development-runs-local-only>",
     },
   ],
+  // Signed moderation deliveries (see server/moderation and
+  // cloudflare/queue.ts). Queues bindings are not inherited, so every
+  // environment repeats them with its own queue names. The queues are created
+  // out-of-band: `wrangler queues create development-moderation-deliveries` and the
+  // same name with `-dlq`.
+  "queues": {
+    "producers": [
+      {
+        "binding": "MODERATION_DELIVERIES",
+        "queue": "development-moderation-deliveries",
+      },
+    ],
+    "consumers": [
+      {
+        "queue": "development-moderation-deliveries",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 10,
+        "dead_letter_queue": "development-moderation-deliveries-dlq",
+      },
+      // The DLQ's consumer marks the delivery failed and raises the alert;
+      // see cloudflare/queue.ts.
+      {
+        "queue": "development-moderation-deliveries-dlq",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+      },
+    ],
+  },
   "send_email": [
     {
       "name": "EMAIL",
@@ -169,6 +199,36 @@
           "id": "7ca9f62ed356489f956cc854a17d7eed",
         },
       ],
+      // Signed moderation deliveries (see server/moderation and
+      // cloudflare/queue.ts). Queues bindings are not inherited, so every
+      // environment repeats them with its own queue names. The queues are created
+      // out-of-band: `wrangler queues create staging-moderation-deliveries` and the
+      // same name with `-dlq`.
+      "queues": {
+        "producers": [
+          {
+            "binding": "MODERATION_DELIVERIES",
+            "queue": "staging-moderation-deliveries",
+          },
+        ],
+        "consumers": [
+          {
+            "queue": "staging-moderation-deliveries",
+            "max_batch_size": 10,
+            "max_batch_timeout": 5,
+            "max_retries": 10,
+            "dead_letter_queue": "staging-moderation-deliveries-dlq",
+          },
+          // The DLQ's consumer marks the delivery failed and raises the alert;
+          // see cloudflare/queue.ts.
+          {
+            "queue": "staging-moderation-deliveries-dlq",
+            "max_batch_size": 10,
+            "max_batch_timeout": 5,
+            "max_retries": 3,
+          },
+        ],
+      },
       "send_email": [
         {
           "name": "EMAIL",
@@ -184,13 +244,9 @@
           "pattern": "staging.devdogsuga.org",
           "custom_domain": true,
         },
-        // The cross-project moderation API (Q19, Q90) is served from the API
-        // hostname, beside the catalog (apps/catalog owns /catalog/v1/*).
-        // api-staging.devdogsuga.org is a proxied record in the zone (the
-        // placeholder `AAAA 100::`), which is what lets a route attach. A
-        // route, not a custom domain: the hostname is shared with the catalog
-        // Worker, and each owns only its path. `.github/scripts/check-routes.mjs`
-        // pins the table.
+        // The moderation API for apps outside this database (DogPack). The
+        // record is a proxied placeholder in the zone, so a zone route is how
+        // /moderation/v1/* reaches this Worker; nothing else on the host does.
         {
           "pattern": "api-staging.devdogsuga.org/moderation/v1/*",
           "zone_name": "devdogsuga.org",
@@ -252,6 +308,36 @@
           "id": "2bb3ae474d974fe99e4f36b3c5aaf896",
         },
       ],
+      // Signed moderation deliveries (see server/moderation and
+      // cloudflare/queue.ts). Queues bindings are not inherited, so every
+      // environment repeats them with its own queue names. The queues are created
+      // out-of-band: `wrangler queues create production-moderation-deliveries` and the
+      // same name with `-dlq`.
+      "queues": {
+        "producers": [
+          {
+            "binding": "MODERATION_DELIVERIES",
+            "queue": "production-moderation-deliveries",
+          },
+        ],
+        "consumers": [
+          {
+            "queue": "production-moderation-deliveries",
+            "max_batch_size": 10,
+            "max_batch_timeout": 5,
+            "max_retries": 10,
+            "dead_letter_queue": "production-moderation-deliveries-dlq",
+          },
+          // The DLQ's consumer marks the delivery failed and raises the alert;
+          // see cloudflare/queue.ts.
+          {
+            "queue": "production-moderation-deliveries-dlq",
+            "max_batch_size": 10,
+            "max_batch_timeout": 5,
+            "max_retries": 3,
+          },
+        ],
+      },
       // Transactional email. Supabase's sender is auth-only (signup
       // confirmation, magic link, password recovery) with no general-purpose
       // send API, so team invitations go through the Workers binding instead.
@@ -282,10 +368,10 @@
           "pattern": "devdogsuga.org",
           "custom_domain": true,
         },
-        // The moderation API on the API hostname. Dormant until the Gate: until
-        // `api.devdogsuga.org` is a proxied record in this zone (it is a DNS-only
-        // record for the Supabase custom domain today) no request reaches the
-        // route, which is also why shipping it early changes nothing.
+        // The moderation API for apps outside this database (DogPack).
+        // api.devdogsuga.org is the Supabase custom domain until the Gate
+        // switches the platform to its vanity subdomain and makes the record
+        // proxied (Q90); until then this route matches nothing.
         {
           "pattern": "api.devdogsuga.org/moderation/v1/*",
           "zone_name": "devdogsuga.org",

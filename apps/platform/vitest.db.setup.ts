@@ -6,7 +6,7 @@ import { env } from "~/env";
 /**
  * Clears the rate-limit ledger before each db-test file.
  *
- * The team actions consume real `platform."rateLimitHits"` budget
+ * The server actions consume real `platform."rateLimitHits"` budget
  * (`server/rateLimit.ts`), and the test files reuse fixed user UUIDs, so a
  * few `pnpm test:db` runs inside one 10-minute window exhaust those users'
  * budgets and later runs fail with rate-limit errors unrelated to what they

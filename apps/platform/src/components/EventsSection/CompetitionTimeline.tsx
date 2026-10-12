@@ -211,7 +211,7 @@ export default function CompetitionTimeline({
       className="group/strip grid grid-cols-8 gap-y-2"
       data-hovering={active !== null}
       role="figure"
-      aria-label="A week of the club: last week's competition is judged on Monday and the next one kicks off the same night, teams build through the week with an open build on Wednesday, and the following Monday judges it and kicks off the next — if there is one."
+      aria-label="A week of the club: last week's competition is judged on Monday and the next one kicks off the same night, everyone builds through the week with an open build on Wednesday, and the following Monday judges it and kicks off the next — if there is one."
     >
       {WEEK.map((day, i) => {
         const isMeeting = i === 0 || i === WEEK.length - 1;

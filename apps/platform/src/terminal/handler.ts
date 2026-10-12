@@ -13,8 +13,8 @@ import { TERMINAL_ROUTES } from "./routes";
  * Serves `/terminal/<path>`, where the Worker entry forwards curl requests
  * (see `cloudflare/worker.ts`). Matches the path, applies the route's gate
  * before any route code runs, and renders whatever comes back through the
- * one layout, including every failure: a miss, a switched-off feature, a
- * browser-only page and a thrown loader all print as terminal pages too.
+ * one layout, including every failure: a miss, a switched-off feature and a
+ * thrown loader all print as terminal pages too.
  */
 
 interface Outcome {
@@ -66,42 +66,15 @@ function notFound(path: string): Outcome {
   };
 }
 
-function underConstruction(path: string): Outcome {
-  return {
-    status: 200,
-    page: noticePage("PARTNERS", path, {
-      tone: "warn",
-      title: "Under construction",
-      text: "This page isn't ready yet. Check back soon.",
-    }),
-  };
-}
-
-function browserPage(path: string, reason: string): Outcome {
-  return {
-    status: 200,
-    page: noticePage("DEVDOGS", path, {
-      tone: "info",
-      title: "Open this one in a browser",
-      text: reason,
-      url: `${SITE}${path}`,
-    }),
-  };
-}
-
 async function resolve(
   route: TerminalRoute,
   context: RouteContext,
 ): Promise<Outcome> {
-  if (route.kind === "browser") return browserPage(context.path, route.reason);
-
   const { gate } = route;
   if (gate.kind === "feature" && !gate.enabled()) {
     switch (gate.whenOff.kind) {
       case "notFound":
         return notFound(context.path);
-      case "underConstruction":
-        return underConstruction(context.path);
       case "redirect":
         return {
           status: 307,
@@ -122,8 +95,6 @@ async function resolve(
       return { status: 200, page: result.page };
     case "notFound":
       return notFound(context.path);
-    case "underConstruction":
-      return underConstruction(context.path);
   }
 }
 

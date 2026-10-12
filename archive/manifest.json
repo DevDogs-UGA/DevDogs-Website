@@ -1,0 +1,37 @@
+{
+  "exportedAt": "2026-10-11T03:02:03.734Z",
+  "source": "production (Supabase project crhqsbngqmwtsplabmhj)",
+  "tables": {
+    "teams": {
+      "rows": 2,
+      "file": "teams.json"
+    },
+    "teamMembers": {
+      "rows": 2,
+      "file": "teams.json",
+      "note": "listed under each team's `members`; a member without a public profile has a null handle"
+    },
+    "teamMembershipRequests": {
+      "rows": 0,
+      "file": null,
+      "note": "transient invitations; recorded as a count only"
+    },
+    "competitions": {
+      "rows": 3,
+      "file": "competitions.json"
+    },
+    "competitionEntries": {
+      "rows": 0,
+      "file": "competitionEntries.json"
+    }
+  },
+  "redactions": [
+    "teams.joinCode (a secret) and teams.createdBy are omitted",
+    "team members are identified by public handle only, and only when they have a public profile"
+  ],
+  "files": {
+    "competitions.json": "ae77c2d162cc2875180ab26045b52a9049b9a1c6a06a77e9db6fdb4f6dec14f0",
+    "competitionEntries.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "teams.json": "3618b5fe65e7b8ecf8a400b59f4ab31ec0d5d7f3d3072b58683bd4fcdc940335"
+  }
+}

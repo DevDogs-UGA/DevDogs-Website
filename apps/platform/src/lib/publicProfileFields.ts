@@ -4,15 +4,13 @@
  * may export only async functions, and the settings UI needs the list too.
  */
 
-/** The master switch and the seven per-field switches. */
+/** The master switch and the five per-field switches. */
 export const PUBLIC_PROFILE_FIELDS = [
   "publicProfile",
   "showName",
   "showAvatar",
   "showBio",
   "showLinks",
-  "showCompetitions",
-  "showContributions",
   "showStars",
 ] as const;
 
@@ -45,16 +43,6 @@ export const PUBLIC_PROFILE_FIELD_OPTIONS: ReadonlyArray<{
     field: "showLinks",
     label: "Links",
     description: "The links you added to your profile.",
-  },
-  {
-    field: "showCompetitions",
-    label: "Competitions",
-    description: "Competitions you entered with a team.",
-  },
-  {
-    field: "showContributions",
-    label: "Contributions",
-    description: "Merged pull requests credited to you through a team.",
   },
   {
     field: "showStars",

@@ -1,3 +1,5 @@
+import ExternalAppsField from "~/components/ExternalAppsField";
+import ModerationDeliveries from "~/components/ModerationDeliveries";
 import PageShell from "~/components/PageShell";
 import ReportListItem from "~/components/ReportListItem";
 import { getModerationPageData } from "~/server/loaders/moderation";
@@ -10,6 +12,9 @@ export default async function ModerationDashboard() {
     openReports: open,
     resolvedReports: resolved,
     appNames,
+    undeliveredDeliveries,
+    externalApps,
+    canRegisterApps,
   } = await getModerationPageData();
 
   return (
@@ -44,6 +49,18 @@ export default async function ModerationDashboard() {
         </ConsoleCard.Content>
       </ConsoleCard.Root>
 
+      {undeliveredDeliveries.length > 0 && (
+        <ConsoleCard.Root id="undelivered">
+          <ConsoleCard.Header title="Undelivered Decisions" />
+          <ConsoleCard.Content>
+            <ModerationDeliveries
+              deliveries={undeliveredDeliveries}
+              linkReports
+            />
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
+      )}
+
       {resolved.length > 0 && (
         <ConsoleCard.Root id="recent-resolved">
           <ConsoleCard.Header title="Recent Resolved" />
@@ -69,6 +86,16 @@ export default async function ModerationDashboard() {
           </ConsoleCard.Content>
         </ConsoleCard.Root>
       )}
+
+      <ConsoleCard.Root id="external-apps">
+        <ConsoleCard.Header title="Apps Outside the Platform" />
+        <ConsoleCard.Content>
+          <ExternalAppsField
+            apps={externalApps}
+            canRegister={canRegisterApps}
+          />
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
     </PageShell>
   );
 }

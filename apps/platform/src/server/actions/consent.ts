@@ -1,11 +1,12 @@
 "use server";
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 import { redirect, unstable_rethrow } from "next/navigation";
 import * as z from "zod";
 import { zfd } from "zod-form-data";
 import { env } from "~/env";
 import { authenticate, expectUserWith } from "~/server/auth";
+import { approveAuthorization } from "~/server/oauth/approveAuthorization";
 import { supabaseAdmin } from "~/supabase/admin";
 import { createSupabaseServerClient } from "~/supabase/server";
 
@@ -18,38 +19,6 @@ const denySchema = zfd.formData({
   authorizationId: zfd.text(),
 });
 
-async function approveAuthorization(
-  // Only uses client.auth.* (schema-independent), so accept any schema.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client: SupabaseClient<any, any, any, any, any>,
-  authorizationId: string,
-): Promise<string> {
-  const { data: authorizationDetails, error: authorizationDetailsError } =
-    await client.auth.oauth.getAuthorizationDetails(authorizationId);
-
-  if (authorizationDetailsError ?? !authorizationDetails) {
-    console.error({ authorizationDetailsError });
-    throw new Error("Failed to approve authorization");
-  }
-
-  if ("redirect_url" in authorizationDetails) {
-    // User has previously approved authorization
-    return authorizationDetails.redirect_url;
-  }
-
-  const { data: authorizationApproval, error: authorizationApprovalError } =
-    await client.auth.oauth.approveAuthorization(authorizationId, {
-      skipBrowserRedirect: true,
-    });
-
-  if (authorizationApprovalError ?? !authorizationApproval.redirect_url) {
-    console.error({ error: authorizationApprovalError });
-    throw new Error("Failed to approve authorization");
-  }
-
-  return authorizationApproval.redirect_url;
-}
-
 export async function approveTestAccountAuthorization(
   _prevState: null | string,
   formData: FormData,
@@ -58,7 +27,8 @@ export async function approveTestAccountAuthorization(
     const { authorizationId, testUserId } =
       await approveAsTestAccountSchema.parseAsync(formData);
 
-    // Verify the signed-in user owns the client this test account belongs to.
+    // Verify the signed-in user owns the client this test account belongs to,
+    // and that it is a development client.
     const user = await expectUserWith({
       testAccounts: {
         limit: 1,
@@ -83,8 +53,16 @@ export async function approveTestAccountAuthorization(
       ),
     );
 
-    if (!user.oauthRegistrations[0]) {
+    const registration = user.oauthRegistrations[0];
+    if (!registration) {
       return "You do not own this OAuth client.";
+    }
+
+    // Only a development client asks its owner to pick a test account. A
+    // production client is approved automatically by `/oauth/consent` and has
+    // no business minting a session for a test account.
+    if (registration.tier !== "development") {
+      return "Only development clients approve as a test account.";
     }
 
     if (!user.testAccounts[0]?.user.email) {

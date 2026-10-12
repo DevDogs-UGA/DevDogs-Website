@@ -111,8 +111,7 @@ export default async function MeetingPage({
   // Every line below is a comparison against now: whether the meeting is on,
   // how far off it is, whether there is a form to point at. `connection()`
   // opts the segment out of prerendering so those are answered for this
-  // request rather than frozen at build time, the same reason the competition
-  // teams page opens with it.
+  // request rather than frozen at build time.
   await connection();
 
   const { slug } = await params;

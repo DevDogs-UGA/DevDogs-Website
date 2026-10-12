@@ -3,7 +3,7 @@ import { db } from "~/server/db";
 import { reflectionDeadline, reflectionWordCount } from "./policy";
 
 export interface ReflectionActivity {
-  activityType: "meeting" | "competition";
+  activityType: "meeting";
   activityId: string;
   label: string;
   endsAt: Date;
@@ -17,7 +17,7 @@ export interface ReflectionActivity {
 
 interface ActivityRow {
   [key: string]: unknown;
-  activityType: "meeting" | "competition";
+  activityType: "meeting";
   activityId: string;
   label: string;
   // Raw SQL values do not inherit a column's Date decoder (see the comment
@@ -57,32 +57,7 @@ export async function getReflectionActivities(
     where a."userId" = ${userId}::uuid
       and m."countsForCredit" and m."deletedAt" is null and m."cancelledAt" is null
 
-    union all
-
-    -- Competition participation, the same rule platform."memberStars" uses
-    -- (see that view's migration comment): held an active membership on the
-    -- entering team at the moment the entry opened. "endsAt" is the
-    -- competition's "closedAt" -- a reflection only makes sense once the
-    -- competition is actually over, which is also why this filters on it
-    -- being set rather than falling back to the display-only "plannedEndAt".
-    -- "select distinct" collapses a member who qualified through more than
-    -- one entry (a team that reopened one) down to the one activity row
-    -- "memberStars" already treats as a single fact.
-    select distinct 'competition'::text as "activityType", c.id as "activityId",
-      c.title as label,
-      c."closedAt" as "endsAt", r.id as "reflectionId", r.content,
-      r."submittedAt"
-    from platform."competitionEntries" ce
-    join platform.competitions c on c.id = ce."competitionId"
-    join platform."teamMembers" tm
-      on tm."teamId" = ce."teamId"
-      and tm."joinedAt" <= ce."openedAt"
-      and (tm."leftAt" is null or tm."leftAt" > ce."openedAt")
-    left join platform.reflections r
-      on r."userId" = tm."userId" and r."competitionId" = c.id
-    where tm."userId" = ${userId}::uuid
-      and c."closedAt" is not null
-    order by "endsAt" desc, "activityType", "activityId"
+    order by "endsAt" desc, "activityId"
   `);
 
   return {

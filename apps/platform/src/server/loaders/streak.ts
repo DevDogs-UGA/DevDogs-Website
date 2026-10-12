@@ -13,16 +13,10 @@ export async function getStreakForUser(userId: string): Promise<StreakSummary> {
       select m."startsAt" from platform.meetings m
       where m."countsForCredit" and m."cancelledAt" is null
         and m."deletedAt" is null
-      union all
-      -- Every mirrored competition is a real, converted issue, so there is
-      -- no "counts toward progress" flag to check -- being real IS counting.
-      -- Kicked off, not judged or closed: the week the opportunity to enter
-      -- appears is the week that requires a star.
-      select "kickedOffAt" as "startsAt" from platform.competitions
     `),
     db.execute<StartRow>(sql`
       select "startsAt" from platform."memberStars"
-      where "userId" = ${userId}::uuid
+      where "userId" = ${userId}::uuid and "activityType" = 'meeting'
     `),
   ]);
   return calculateStreak(

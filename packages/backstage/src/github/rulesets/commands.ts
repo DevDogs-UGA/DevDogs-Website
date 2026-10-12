@@ -9,7 +9,8 @@
  * confirmation unless `--yes`.
  *
  * Never touches a per-team ruleset (`teamRulesetName()`'s `team/<slug>`) —
- * those are `teamSync.ts`'s, not this command's — and never deletes or
+ * those are leftovers of the removed Teams feature (a human deletes them),
+ * not this command's — and never deletes or
  * creates anything outside `desired.ts`'s five names plus the one explicit
  * deletion (`comp-branches`). See `diff.ts`'s header for the full
  * classification.
@@ -225,7 +226,7 @@ export function renderPlan(plan: RulesetPlan): string {
   }
   if (plan.perTeamSkipped.length > 0) {
     lines.push(
-      `  skipped  ${plan.perTeamSkipped.length} per-team ruleset(s), owned by teamSync.ts: ` +
+      `  skipped  ${plan.perTeamSkipped.length} legacy per-team ruleset(s), left for a human to delete: ` +
         plan.perTeamSkipped.join(", "),
     );
   }

@@ -60,6 +60,7 @@
     "@devdogsuga/config": "workspace:*",
     "@devdogsuga/db": "workspace:*",
     "@devdogsuga/env": "workspace:*",
+    "@devdogsuga/sdk": "workspace:*",
     "@devdogsuga/telemetry": "workspace:*",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",

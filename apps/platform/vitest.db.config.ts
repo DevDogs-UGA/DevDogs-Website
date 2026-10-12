@@ -54,14 +54,13 @@ export default defineConfig({
     // Every file here shares ONE real local Postgres, and most files stay
     // safe under file-level parallelism because each only ever touches the
     // specific rows it seeds -- different UUIDs, no shared table scan. A
-    // pass that legitimately reads the WHOLE table (`reconcileTeams`, the
-    // nightly team reconcile) breaks that assumption: run concurrently with
-    // another file, it repairs -- and touches `githubSyncedAt` on -- rows
-    // that file seeded moments before, mid-test. Sequential file execution
-    // is the fix, not scoping `reconcileTeams` down for tests alone; a
+    // pass that legitimately reads the WHOLE table (the Discord role sync's
+    // reconcile) breaks that assumption: run concurrently with another file,
+    // it repairs rows that file seeded moments before, mid-test. Sequential
+    // file execution is the fix, not scoping the job down for tests alone; a
     // handful of fast query-validity files paying for serial execution is
-    // cheaper than a nightly job whose test coverage requires it to lie
-    // about scanning every team.
+    // cheaper than a job whose test coverage requires it to lie about
+    // scanning every row.
     fileParallelism: false,
   },
 });

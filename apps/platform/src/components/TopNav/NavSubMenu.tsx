@@ -16,7 +16,7 @@ import { POPOVER_ROW, POPOVER_ROW_CARET } from "./popoverRow";
  * same mauve card, the same marked two-line rows, so a menu that opens
  * sideways out of the avatar still looks like the one that opens down out of
  * Docs. Its content is hoisted into the sub-viewport its sibling declares, so
- * Competitions and Console are one box that resizes between them rather than
+ * Menus that share a viewport are one box that resizes between them rather than
  * two that swap.
  *
  * The caret points and sits LEFT, which is where the panel lands. The

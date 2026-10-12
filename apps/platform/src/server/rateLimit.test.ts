@@ -19,7 +19,7 @@ describe("consumeRateLimit", () => {
 
     await expect(
       consumeRateLimit({
-        scope: "team:create",
+        scope: "profile:handle",
         subjectId: "user-1",
         limit: 10,
         windowSeconds: 600,
@@ -37,8 +37,8 @@ describe("consumeRateLimit", () => {
 
     await expect(
       consumeRateLimit({
-        scope: "team:invite:team",
-        subjectId: "team-1",
+        scope: "oauth:device",
+        subjectId: "user-2",
         limit: 50,
         windowSeconds: 86400,
       }),
@@ -50,14 +50,14 @@ describe("consumeRateLimit", () => {
     const { consumeRateLimit } = await loadRateLimit();
 
     await consumeRateLimit({
-      scope: "team:invite:user",
+      scope: "profile:links",
       subjectId: "user-1",
       limit: 20,
       windowSeconds: 3600,
     });
     await consumeRateLimit({
-      scope: "team:invite:team",
-      subjectId: "team-1",
+      scope: "oauth:device",
+      subjectId: "user-2",
       limit: 50,
       windowSeconds: 86400,
     });

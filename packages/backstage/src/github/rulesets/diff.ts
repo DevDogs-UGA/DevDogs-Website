@@ -7,8 +7,8 @@
  * re-run against a live org: it only ever writes to a ruleset it can name a
  * reason for touching.
  *
- *   1. A per-team ruleset (`isPerTeamRulesetName`) — owned by
- *      `teamSync.ts` in DevDogsUGA. Never read past its name, never
+ *   1. A per-team ruleset (`isPerTeamRulesetName`) — a leftover
+ *      of the removed Teams feature, for a human to delete. Never read past its name, never
  *      diffed, never appears in any action list. `blast radius` here is
  *      the whole point: a bug that let this reconciler touch a team's
  *      ruleset would silently rewrite that team's own bypass actor.

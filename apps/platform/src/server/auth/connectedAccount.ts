@@ -12,20 +12,6 @@ export function guildNickname(preferredName: string): string | undefined {
   return nick || undefined;
 }
 
-export async function isSuccessfulGitHubInvitation(
-  response: Response,
-): Promise<boolean> {
-  if (response.ok) return true;
-  if (response.status !== 422) return false;
-
-  const detail = (await response.clone().text()).toLowerCase();
-  return (
-    detail.includes("already exists") ||
-    detail.includes("already a part") ||
-    detail.includes("already invited")
-  );
-}
-
 export function withConnectedAccountStatus(
   callbackPath: string,
   level: "error" | "warning",

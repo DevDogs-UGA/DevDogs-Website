@@ -110,7 +110,14 @@ export { stripTierFlag };
  * remember to add here too.
  */
 function isEnvFreeCommand(rest: readonly string[]): boolean {
-  return catalog.findCommand(helpPath(rest))?.envFree === true;
+  // Longest declared prefix: a command can take a positional of its own
+  // (`moderation send <action>`), which is not part of the tree.
+  const path = helpPath(rest);
+  for (let length = path.length; length > 0; length -= 1) {
+    const node = catalog.findCommand(path.slice(0, length));
+    if (node) return node.envFree === true;
+  }
+  return false;
 }
 
 /**

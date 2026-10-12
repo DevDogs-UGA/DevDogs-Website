@@ -29,7 +29,6 @@ export default function robots(): MetadataRoute.Robots {
         "/account", // the viewer's own profile
         "/oauth", // /oauth/consent, mid-authorization-flow only
         "/tools", // /tools/oauth, a member's own test client
-        "/teams", // /teams/requests; expectSession() -> /auth
         "/preview", // /preview/docs: scheduled docs, 404 without canPreviewDocs
 
         // (api) route handlers. None render HTML, and several are guarded by
@@ -39,7 +38,6 @@ export default function robots(): MetadataRoute.Robots {
         "/attendance", // check-in submissions (and public/attendance/*)
         "/auth", // sign-in entry point and OAuth callback
         "/discord", // Discord interaction webhook, signature-verified
-        "/github", // GitHub App webhook, signature-verified
         "/search", // JSON search API; there is no results PAGE to index
         // The navbar's viewer lookup. `$` because Disallow is a prefix match,
         // and a bare "/me" would also hide any public path starting "/me".

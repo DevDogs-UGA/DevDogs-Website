@@ -94,6 +94,10 @@ $$;
 
 </details>
 
+## An app with its own database
+
+A table in the platform's Postgres becomes reportable by gaining a foreign key. An app with its own Supabase project (DogPack) cannot, so it files reports and receives decisions as signed messages instead: see [Apps outside the platform database](./external-apps.md).
+
 ## Why it's like this
 
 <details>

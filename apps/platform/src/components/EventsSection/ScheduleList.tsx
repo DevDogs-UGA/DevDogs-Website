@@ -527,8 +527,8 @@ function ScheduleRow({
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
           <h3 className="font-display text-base leading-tight font-extrabold text-white md:text-lg">
             {/*
-              A stretched link, not a wrapper: the row also carries links to
-              competition pages, and an <a> inside an <a> is invalid markup the
+              A stretched link, not a wrapper: the row can also carry other
+              links, and an <a> inside an <a> is invalid markup the
               browser silently un-nests, which breaks hydration. The pseudo
               element covers the row for the pointer while the accessible name
               stays the meeting's own, and the inner links sit above it.

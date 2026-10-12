@@ -1,0 +1,34 @@
+{
+  "name": "@devdogsuga/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The DevDogs SDK. Lane 3d ships only the `moderation` subpath (Standard Webhooks signing, the message and report schemas, signed samples and the reference receiver); lane 3a owns the package and adds the other subpaths and its publishing.",
+  "license": "BSD-3-Clause",
+  "exports": {
+    "./moderation": {
+      "types": "./src/moderation/index.ts",
+      "default": "./src/moderation/index.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@devdogsuga/config": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

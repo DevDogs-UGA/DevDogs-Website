@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 /**
  * `consumeRateLimit`'s `subjectId` is cast to `::uuid` everywhere else it is
- * called (a real user or team id). The unauthenticated `devtools oauth`
+ * called (a real user id). The unauthenticated `devtools oauth`
  * endpoints -- the loopback connect exchange and both device-code endpoints
  * -- have no identity to key on until after the request has already done the
  * thing being rate-limited (looked up a code, minted a client), so this

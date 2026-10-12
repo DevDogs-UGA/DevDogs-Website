@@ -227,6 +227,7 @@ describe("the first screen", () => {
     ["Background jobs", "jobs"],
     ["Manage local env files", "env"],
     ["Manage platform roles", "roles"],
+    ["Test a Report & Block receiver", "moderation"],
   ] as const;
 
   async function firstScreen(env: Environment = UNKNOWN_ENVIRONMENT) {

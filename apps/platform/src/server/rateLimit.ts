@@ -9,8 +9,7 @@ import { db } from "~/server/db";
  * on rotating-code guesses, checked with no round trip to Postgres. But the
  * binding's `simple` mode only accepts a `period` of 10 or 60 seconds; it
  * cannot express "20 per hour" or "50 per day", which is what
- * `server/actions/teams.ts` needs for its GitHub-calling and email-sending
- * actions. This module is that generalized budget: any (scope, subject,
+ * the profile and OAuth actions need. This module is that generalized budget: any (scope, subject,
  * limit, window) triple, backed by `platform.rateLimitHits`
  * (migration 31) instead of a binding. Both limiters exist because they
  * solve genuinely different shapes of the same problem, not because this is
@@ -19,12 +18,12 @@ import { db } from "~/server/db";
  */
 export interface RateLimitBudget {
   /**
-   * Which budget this checks, e.g. `"team:create"`, `"team:invite:team"`.
+   * Which budget this checks, e.g. `"profile:handle"`.
    * One counter per (scope, subjectId) pair -- the same user hitting two
    * different scopes never shares a counter.
    */
   scope: string;
-  /** The user or team id the budget is metered against. */
+  /** The user id the budget is metered against. */
   subjectId: string;
   /** Hits allowed within the trailing window, inclusive of this attempt. */
   limit: number;
@@ -44,7 +43,7 @@ export interface RateLimitBudget {
  * rather than a separate cron or a TTL column.
  *
  * Callers are expected to check this BEFORE the side effect it is guarding
- * (a GitHub call, an email send), never after: a rejected attempt should
+ * (an email send, an upstream call), never after: a rejected attempt should
  * cost nothing beyond the one row this writes.
  */
 export async function consumeRateLimit(

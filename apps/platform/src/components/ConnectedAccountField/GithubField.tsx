@@ -31,7 +31,7 @@ export default function GithubField({
       linkAction={linkGithubProfile}
       unlinkAction={unlinkGithubProfile}
       unlinkTitle="Unlink GitHub"
-      unlinkDescription="Unlinking your GitHub account will remove you from the DevDogs organization and revoke your access to this year's project repositories. If you have an active OAuth client, it will be deleted, and your existing client ID and secret will be permanently invalidated."
+      unlinkDescription="Unlinking your GitHub account will un-verify your account until you link one again. If you have an active development OAuth client, it will be deleted, and your existing client ID and secret will be permanently invalidated."
       linkLabel="Sign in with GitHub"
       linkIcon={<GithubLogoIcon />}
       notLinkedLabel="GitHub not linked."

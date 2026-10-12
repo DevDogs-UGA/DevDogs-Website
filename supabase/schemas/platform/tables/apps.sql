@@ -1,7 +1,7 @@
 CREATE TABLE "platform"."apps" (
   "id"              uuid                        NOT NULL DEFAULT gen_random_uuid(),
   "slug"            text                        NOT NULL,
-  "schemaName"      text                        NOT NULL,
+  "schemaName"      text,
   "displayName"     text                        NOT NULL,
   "contentResolver" text,
   "contentActioner" text,
@@ -13,6 +13,13 @@ CREATE TABLE "platform"."apps" (
 
 ALTER TABLE "platform"."apps"
   ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "platform"."apps"
+  ADD COLUMN "kind" platform."appKind" NOT NULL DEFAULT 'internal'::platform."appKind";
+
+ALTER TABLE "platform"."apps"
+  ADD CONSTRAINT "apps_kind_shape_check" CHECK ((((kind = 'internal'::platform."appKind") AND ("schemaName" IS
+    NOT NULL)) OR ((kind = 'external'::platform."appKind") AND ("schemaName" IS NULL) AND ("contentResolver" IS NULL) AND ("contentActioner" IS NULL))));
 
 CREATE TRIGGER apps_validate_schema
   BEFORE INSERT OR UPDATE ON platform.apps

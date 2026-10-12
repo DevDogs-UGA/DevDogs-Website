@@ -2,12 +2,15 @@ import { Suspense } from "react";
 import Field from "~/ui/field";
 import OAuthCredentialsField from "~/components/OAuthCredentialsField";
 import OAuthGateDialog from "~/components/OAuthGateDialog";
+import OAuthModerationField from "~/components/OAuthModerationField";
+import OAuthProductionClientsField from "~/components/OAuthProductionClientsField";
 import Input from "~/components/Input";
 import OAuthTestAccountsField from "~/components/OAuthTestAccountsField";
 import PageShell from "~/components/PageShell";
 import { CardSkeleton } from "~/components/Skeletons";
 import { ConsoleCard } from "~/ui/card";
 import { getOAuthPageData } from "~/server/loaders/console";
+import { getOAuthModerationData } from "~/server/loaders/oauthModeration";
 import { resolveIssuer } from "~/server/oauth/issuer";
 
 interface Props {
@@ -15,13 +18,14 @@ interface Props {
 }
 
 async function OAuthData({ searchParams }: Props) {
-  const [data, issuer, { add_redirect_uri: prefillRedirectUri }] =
+  const [data, moderation, issuer, { add_redirect_uri: prefillRedirectUri }] =
     await Promise.all([
       getOAuthPageData(),
-      // Read from discovery rather than written down: Supabase advertises
-      // the project's raw host, not api.devdogsuga.org, and a provider set
-      // to anything else fails its issuer check (TASK-347). If that's ever
-      // fixed, this follows on its own.
+      getOAuthModerationData(),
+      // Read from discovery rather than written down: GoTrue stamps the
+      // issuer it reports on every ID token, and a provider set to anything
+      // else fails its issuer check (TASK-347). It is a `<project>.supabase.co`
+      // host, so this follows the platform project wherever it is reached from.
       resolveIssuer().catch(() => null),
       searchParams,
     ]);
@@ -63,6 +67,33 @@ async function OAuthData({ searchParams }: Props) {
           </Field>
         </ConsoleCard.Content>
       </ConsoleCard.Root>
+
+      <ConsoleCard.Root id="moderation">
+        <ConsoleCard.Header title="Moderation" />
+        <ConsoleCard.Content>
+          <Field
+            id="moderation-clients"
+            label="Report and Block"
+            description="Sign reports from your app's backend, and receive the decisions moderators make. Reports from a development client land in the sandbox below, never in the moderators' queue."
+          >
+            <OAuthModerationField clients={moderation} />
+          </Field>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
+      {data.canManageOAuthApps && (
+        <ConsoleCard.Root id="production-clients">
+          <ConsoleCard.Header title="Production clients" />
+          <ConsoleCard.Content>
+            <Field
+              id="production-client-list"
+              label="First-party clients"
+              description="The credentials a DevDogs app signs its members in with. Approved automatically at sign-in, so only an app's own Supabase callback is accepted. Every change here is recorded in the audit log."
+            >
+              <OAuthProductionClientsField {...data} />
+            </Field>
+          </ConsoleCard.Content>
+        </ConsoleCard.Root>
+      )}
 
       <ConsoleCard.Root id="test-accounts">
         <ConsoleCard.Header title="Test Accounts" />

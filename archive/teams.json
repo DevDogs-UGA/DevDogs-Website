@@ -1,0 +1,32 @@
+[
+  {
+    "id": "92f1b818-29b0-4d52-9792-0adf60d9bbd5",
+    "slug": "b2030",
+    "name": "B2030",
+    "acceptingRequests": true,
+    "githubSyncedAt": "2026-10-11 00:01:52.208+00",
+    "members": [
+      {
+        "role": "lead",
+        "joinedAt": "2026-09-30 23:02:15.59299+00",
+        "leftAt": null,
+        "handle": null
+      }
+    ]
+  },
+  {
+    "id": "a5863e8d-7e92-4f60-bcd0-a0055aca1604",
+    "slug": "test-team",
+    "name": "Test Team",
+    "acceptingRequests": true,
+    "githubSyncedAt": "2026-10-11 00:01:50.311+00",
+    "members": [
+      {
+        "role": "lead",
+        "joinedAt": "2026-09-29 03:26:21.879319+00",
+        "leftAt": null,
+        "handle": "sloanfinger"
+      }
+    ]
+  }
+]

@@ -14,6 +14,7 @@ import { checkCommand } from "./check/catalog.js";
 import { doctorCommand } from "./doctor/catalog.js";
 import { envCommand } from "./env/catalog.js";
 import { jobsCommand } from "./jobs/catalog.js";
+import { moderationCommand } from "./moderation/catalog.js";
 import { rolesCommand } from "./roles/catalog.js";
 import { oauthCommand } from "./oauth/catalog.js";
 import {
@@ -65,7 +66,7 @@ export const GROUPS: readonly CommandGroup[] = [
   },
   {
     title: "Configuration & integrations",
-    commands: [envCommand, rolesCommand],
+    commands: [envCommand, rolesCommand, moderationCommand],
   },
   {
     title: "The real tools",

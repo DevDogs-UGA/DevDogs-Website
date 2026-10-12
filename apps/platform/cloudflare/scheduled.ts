@@ -71,19 +71,11 @@ export const CRON_ROUTES: Record<
   }
 > = {
   "0 0 * * *": {
-    label: "Nightly repair: GitHub reconcile, catalog",
+    label: "Nightly repair: academic program catalog",
     heartbeat: "platform-nightly-repair",
     routes: [
-      // Repairs team membership a failed API call left wrong. Nightly rather
-      // than more often on purpose: every membership change already fires on
-      // the platform event that caused it, so if this pass is doing meaningful
-      // work regularly then something upstream is broken and a tighter cadence
-      // would hide it.
-      "/cron/github-reconcile",
       // Mirrors the UGA Bulletin's program catalog for the account Academics
-      // combobox. Last in the daily group because it deliberately spaces
-      // roughly 42 upstream page requests; a slow or rate-limited Bulletin
-      // must not delay the GitHub repair pass above.
+      // combobox. It deliberately spaces roughly 42 upstream page requests.
       "/cron/academic-programs",
     ],
   },
@@ -96,7 +88,7 @@ export const CRON_ROUTES: Record<
   // deploy-time call itself fails partway.
   "*/15 * * * *": {
     label:
-      "Config reconcile (meetings, workshops), support forum index, Discord role sync, daily job heartbeats",
+      "Config reconcile (meetings, workshops), support forum index, Discord role sync, moderation delivery re-queue, daily job heartbeats",
     monitorSlug: "platform-cron-config-reconcile",
     // Role sync pages through every guild member, so the runtime ceiling is
     // looser than the config pass alone needs.
@@ -111,6 +103,10 @@ export const CRON_ROUTES: Record<
       // Discord. After the passes above, so a slow guild member listing
       // delays none of them.
       "/cron/sync-discord-roles",
+      // Queues any moderation delivery the queue never received or lost track
+      // of, so a decision a moderator made reaches its app eventually. Cheap
+      // when there is nothing to do.
+      "/cron/moderation-deliveries",
       // Fails while a daily job is overdue, which errors this slot's
       // monitor: the daily jobs have none of their own. Last, and cheap.
       "/cron/heartbeats",
