@@ -127,6 +127,16 @@ export async function registerExternalApp(
     if (/moderationClients_clientId_fkey|violates foreign key/.test(cause)) {
       return { ok: false, message: "No OAuth client has that id" };
     }
+    if (cause.includes("moderation:client_deleted")) {
+      return { ok: false, message: "That OAuth client has been deleted" };
+    }
+    if (cause.includes("moderation:client_unregistered")) {
+      return {
+        ok: false,
+        message:
+          "No OAuth client registered through /tools/oauth has that id. Create the production client there first",
+      };
+    }
     if (cause.includes("moderation:development_client")) {
       return {
         ok: false,

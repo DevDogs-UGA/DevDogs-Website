@@ -56,7 +56,7 @@ import { attemptDelivery } from "./delivery";
 import { databaseDeliveryStore, resetForResend } from "./deliveryStore";
 import { markDeadLettered } from "./deadLetter";
 import { requeueStaleDeliveries } from "./queue";
-import { databaseReportApi } from "./store";
+import { databaseReportApi, findClient } from "./store";
 import { deriveClientSecret } from "./secrets";
 import { deleteMembers, insertMember } from "../loaders/publicProfileFixtures";
 
@@ -131,7 +131,17 @@ async function registerApp(
       urlTemplate: "https://dogpack.example.com/s/{ref}",
     },
   ],
+  { registration = true } = {},
 ) {
+  // register_external_app needs a production registration (what /tools/oauth
+  // writes); a test that wants another tier has already made its own.
+  if (registration) {
+    await db.execute(sql`
+      insert into platform."oauthRegistrations" ("clientId", "userId", label, tier)
+      values (${client}::uuid, ${OWNER}::uuid, 'production', 'production')
+      on conflict ("clientId") do nothing
+    `);
+  }
   const [row] = await db.execute<{ id: string }>(sql`
     select "platform".register_external_app(
       ${slug}, ${`App ${slug}`}, ${client}::uuid, ${ENDPOINT}, ${JSON.stringify(types)}::jsonb
@@ -484,6 +494,41 @@ describe("a report round trip through the console", () => {
     expect(queued).toHaveLength(0);
   });
 
+  it("sends nothing to a soft-deleted client even if its registration row survived", async () => {
+    const appId = await registerApp("e3-dogpack", PROD_CLIENT);
+    const filed = await (await appClient(PROD_CLIENT)).fileReport(report());
+    await resolveReport(filed.reportId, "no_action", "no_action", "quarantine");
+    const [delivery] = await deliveriesOf(filed.reportId);
+    expect(await databaseDeliveryStore.load(delivery!.id)).toMatchObject({
+      clientId: PROD_CLIENT,
+    });
+
+    // Migration 61's trigger drops the row when GoTrue soft-deletes the client
+    // (the foreign key stays satisfied: the row is only marked). Put one back, as
+    // a stale write would, and the reads must still refuse it.
+    try {
+      await db.execute(
+        sql`update auth.oauth_clients set deleted_at = now() where id = ${PROD_CLIENT}::uuid`,
+      );
+      const [dropped] = await db.execute<{ n: number }>(
+        sql`select count(*)::int as n from platform."moderationClients" where "clientId" = ${PROD_CLIENT}::uuid`,
+      );
+      expect(dropped!.n).toBe(0);
+      await db.execute(
+        sql`insert into platform."moderationClients" ("clientId", "appId", "endpointUrl") values (${PROD_CLIENT}::uuid, ${appId}::uuid, ${ENDPOINT})`,
+      );
+      expect(await findClient(PROD_CLIENT)).toBeNull();
+      expect(await databaseDeliveryStore.load(delivery!.id)).toMatchObject({
+        clientId: null,
+        endpointUrl: null,
+      });
+    } finally {
+      await db.execute(
+        sql`update auth.oauth_clients set deleted_at = null where id = ${PROD_CLIENT}::uuid`,
+      );
+    }
+  });
+
   it("delivers a global suspension to every external app, and a scoped one to the report's app only", async () => {
     await registerApp("e3-dogpack", PROD_CLIENT);
     await registerApp("e3-second", OTHER_CLIENT);
@@ -802,6 +847,9 @@ describe("OAuth tiers", () => {
       return row!.tier;
     };
     expect(await tier(DEV_CLIENT)).toBe("development");
+    await db.execute(
+      sql`delete from platform."oauthRegistrations" where "clientId" = ${PROD_CLIENT}::uuid`,
+    );
     expect(await tier(PROD_CLIENT)).toBeNull();
   });
 
@@ -815,6 +863,33 @@ describe("OAuth tiers", () => {
       "moderation:development_client",
     );
     await expect(registerApp("e3-dogpack", PROD_CLIENT)).resolves.toBeTruthy();
+  });
+
+  it("will not register a deleted client or one /tools/oauth never made", async () => {
+    // No oauthRegistrations row: the dashboard made it, it has no tier.
+    await db.execute(
+      sql`delete from platform."oauthRegistrations" where "clientId" = ${PROD_CLIENT}::uuid`,
+    );
+    const unregistered = await registerApp("e3-dogpack", PROD_CLIENT, undefined, {
+      registration: false,
+    }).catch((error: unknown) => error);
+    expect(String((unregistered as Error).cause)).toContain(
+      "moderation:client_unregistered",
+    );
+
+    await registration(PROD_CLIENT, "production");
+    await db.execute(
+      sql`update auth.oauth_clients set deleted_at = now() where id = ${PROD_CLIENT}::uuid`,
+    );
+    const deleted = await registerApp("e3-dogpack", PROD_CLIENT).catch(
+      (error: unknown) => error,
+    );
+    expect(String((deleted as Error).cause)).toContain(
+      "moderation:client_deleted",
+    );
+    await db.execute(
+      sql`update auth.oauth_clients set deleted_at = null where id = ${PROD_CLIENT}::uuid`,
+    );
   });
 
   it("refuses a production client that is not registered, where a development client still gets its sandbox", async () => {

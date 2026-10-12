@@ -18,6 +18,8 @@ type Row = {
  * production app's client can be replaced (re-registering the app moves it), and
  * a message that was owed before the swap belongs to the app, so the app's
  * current client wins. A sandbox delivery has no app and uses its own client.
+ * A client GoTrue has soft-deleted receives nothing, even if its registration
+ * row survived (migration 61's trigger removes it, this is the second lock).
  */
 export const databaseDeliveryStore: DeliveryStore = {
   async load(id) {
@@ -29,8 +31,14 @@ export const databaseDeliveryStore: DeliveryStore = {
       from "platform"."moderationDeliveries" d
       left join "platform"."moderationClients" by_app
         on d."appId" is not null and by_app."appId" = d."appId"
+       and not exists (
+         select 1 from "auth"."oauth_clients" c
+         where c."id" = by_app."clientId" and c."deleted_at" is not null)
       left join "platform"."moderationClients" by_client
         on by_client."clientId" = d."clientId"
+       and not exists (
+         select 1 from "auth"."oauth_clients" c
+         where c."id" = by_client."clientId" and c."deleted_at" is not null)
       where d."id" = ${id}::uuid
     `);
     const row = rows[0];

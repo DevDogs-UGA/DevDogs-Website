@@ -22,9 +22,21 @@ begin
     raise exception 'moderation:invalid_request';
   end if;
 
-  if platform.moderation_client_tier(p_client_id) = 'development' then
-    raise exception 'moderation:development_client';
+  -- A client GoTrue has soft-deleted (`deleted_at`) is gone for good, and one
+  -- with no registration row was made outside /tools/oauth and has no tier. Both
+  -- would be registered as a production app they can never prove they are.
+  if exists (
+    select 1 from "auth"."oauth_clients" c
+    where c."id" = p_client_id and c."deleted_at" is not null
+  ) then
+    raise exception 'moderation:client_deleted';
   end if;
+
+  case platform.moderation_client_tier(p_client_id)
+    when 'production' then null;
+    when 'development' then raise exception 'moderation:development_client';
+    else raise exception 'moderation:client_unregistered';
+  end case;
 
   select a."id" into app_id from "platform"."apps" a where a."slug" = p_slug;
   if found then
