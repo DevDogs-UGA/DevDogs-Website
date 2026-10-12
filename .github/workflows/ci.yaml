@@ -470,9 +470,10 @@ jobs:
   # repository variable BACKSTAGE_PUBLISHES_STABLE=true. The trusted
   # publishers on npmjs.com must already name this repository and ci.yaml,
   # not publish.yaml: npm checks the calling workflow's filename when the
-  # publish runs through workflow_call. Leave the environment field blank,
-  # since the two channels publish from different environments. The first
-  # prerelease below needs them too: that is a pre-flight item, not a Gate one.
+  # publish runs through workflow_call. Each package has two, one per
+  # environment: `publishing` (stable) and `publishing-next` (prereleases).
+  # Never a blank environment: that would accept any ci.yaml run on any ref.
+  # The first prerelease below needs them too: that is a pre-flight item, not a Gate one.
   publish:
     needs: validate
     if: >-

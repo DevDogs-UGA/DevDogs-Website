@@ -158,7 +158,7 @@ How it works, in short:
   "generatedTypes": { "repo": "DevDogsUGA/DogPack" }, // where `db types --download` looks
   "oauth": { "redirectUris": ["dev.dogpack://login-callback"] },
   "devData": { "file": "supabase/dev-data.sql" }, // reads current_setting('devtools.member_id')
-  "production": { "projects": ["dogpack"] }, // refs and vanity names devtools must never touch
+  "production": { "projects": ["dogpack", "<project ref>"] }, // BOTH the vanity name and the ref: a Postgres URL only ever carries the ref
   "runHint": "flutter run --dart-define-from-file=.env",
 }
 ```

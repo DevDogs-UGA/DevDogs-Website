@@ -28,6 +28,7 @@ describe("buildDesiredRulesets", () => {
       "main-merge-queue",
       "~ALL",
       "tag-protection",
+      "release-tags",
     ]);
     expect(
       desired.find((rule) => rule.name === "main-integrity"),
@@ -136,6 +137,18 @@ describe("buildDesiredRulesets", () => {
         }
       }
     }
+  });
+});
+
+describe("release tags", () => {
+  it("lets the publish job create @devdogsuga/** tags, which are never moved or deleted", () => {
+    const rules = buildDesiredRulesets(actors);
+    const tags = rules.find((r) => r.name === "tag-protection")!;
+    const release = rules.find((r) => r.name === "release-tags")!;
+    expect(tags.conditions.ref_name.exclude).toEqual(
+      release.conditions.ref_name.include,
+    );
+    expect(release.rules.map((r) => r.type)).toEqual(["update", "deletion"]);
   });
 });
 

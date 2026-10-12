@@ -63,9 +63,11 @@ How that is wired, and what a maintainer must set up once:
   `packages/sdk_dart/pubspec.yaml`, so its first is `0.1.0-next.N`. Nothing pairs them: a product pins each from its
   own registry, and the committed `0.1.0` in `packages/sdk/package.json` is never published as such. What ties
   them is the spec: `check:drift` fails when either generated client differs from `packages/sdk-spec`.
-- npm Trusted Publishing for `@devdogsuga/sdk`, `devtools`, `config` and `backstage` must name this repository and
-  the workflow file `publish.yaml`, with the **environment field left blank**. An environment of `publishing`
-  would refuse the `publishing-next` job, and one of `publishing-next` would refuse the stable job.
+- npm Trusted Publishing for `@devdogsuga/sdk`, `devtools`, `config` and `backstage` takes **two** trusted publishers
+  per package, both naming this repository and the workflow file `ci.yaml` (the caller: npm checks the calling
+  workflow's filename, and `publish.yaml` runs only through `workflow_call`): environment `publishing` for stable
+  releases and environment `publishing-next` for prereleases. Never leave the environment blank: that would accept a
+  publish from any `ci.yaml` run on any ref, bypassing the `publishing` approval and the `main`-only branch policy.
 - pub.dev automated publishing for `devdogsuga_sdk` takes the tag pattern `devdogsuga_sdk-v{{version}}`.
 - The five packages merged into the sdk are deprecated by `node scripts/deprecate-old-packages.mjs --apply`
   (a maintainer, signed in to npm).

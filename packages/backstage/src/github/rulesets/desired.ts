@@ -574,10 +574,22 @@ function buildDevDogsUgaRulesets(actors: RulesetActors): DesiredRuleset[] {
       target: "tag",
       enforcement: "active",
       conditions: {
-        ref_name: { include: ["refs/tags/**"], exclude: [] },
+        ref_name: { include: ["refs/tags/**"], exclude: [RELEASE_TAGS] },
       },
       bypass_actors: [always(actors.adminsTeamId), always(actors.devopsTeamId)],
       rules: [{ type: "creation" }, { type: "update" }, { type: "deletion" }],
+    },
+    // The stable publish job (ci.yaml -> publish.yaml) tags every release it
+    // creates (`<name>@<version>`) with `GITHUB_TOKEN`, and GitHub refuses
+    // GitHub Actions as a bypass actor (422). So release tags may be created
+    // by anyone who can push, but once created never moved or deleted.
+    {
+      name: "release-tags",
+      target: "tag",
+      enforcement: "active",
+      conditions: { ref_name: { include: [RELEASE_TAGS], exclude: [] } },
+      bypass_actors: [always(actors.adminsTeamId)],
+      rules: [{ type: "update" }, { type: "deletion" }],
     },
   ];
 }
