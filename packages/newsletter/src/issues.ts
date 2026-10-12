@@ -65,6 +65,12 @@ const EVENTS = {
   touchgrass1: meeting("2026-10-07"),
   nextflutter2: meeting("2026-10-12"),
   build5: meeting("2026-10-14"),
+  g311interest: meeting("2026-10-14-georgia-311"),
+  g311kickoff: meeting("2026-10-19"),
+  supabase2: meeting("2026-10-26"),
+  bugbash1: meeting("2026-11-04"),
+  demoday: meeting("2026-11-18-demo-day"),
+  touchgrass2: meeting("2026-11-18"),
 };
 
 export const ISSUES: ChangelogIssue[] = [
@@ -146,6 +152,31 @@ export const ISSUES: ChangelogIssue[] = [
     upcoming: [EVENTS.touchgrass1, EVENTS.nextflutter2, EVENTS.build5],
     signoff:
       "FAST and free food tonight at 7 in DLW 110. Come at 6 to DLW 124 to get some building in first.",
+  },
+  {
+    version: "3.1.0",
+    term: "Fall 2026",
+    sendLabel: "Mon · Oct 12",
+    command: "changelog --date 2026-10-12",
+    title: "Meet Merge Monday (DevDogs Changelog v3.1.0)",
+    preview:
+      "Tonight at 6: Georgia 311, then Next.js II and Flutter II side by side. Open a pull request before 8.",
+    tagline: "Ship something every Monday.",
+    intro:
+      "Competition season is over, and every Monday from tonight on is Merge Monday, 6 to 8 in DLW 124. Pick an issue in DogDays or DogPack and open a pull request before you leave. DogDays, our schedule builder, goes to Public Beta on Nov 12, the day Spring registration opens. DogPack is a new Flutter app for finding study sessions in your classes. Members get a pilot build on Nov 12, and every UGA student can get it on Nov 19. Tonight starts at 6 with Georgia 311, a civic hackathon for the City of Mableton that we're running with GDG on Campus. All majors can join, and applications close Thursday. At 6:30 the room splits in half for workshops.",
+    featuredLabel: "happening_tonight",
+    featured: [{ meeting: EVENTS.nextflutter2, cta: "See the schedule" }],
+    upcoming: [
+      EVENTS.build5,
+      EVENTS.g311interest,
+      EVENTS.g311kickoff,
+      EVENTS.supabase2,
+      EVENTS.bugbash1,
+      EVENTS.demoday,
+      EVENTS.touchgrass2,
+    ],
+    signoff:
+      "Doors tonight at 6 in DLW 124. Fork DogDays or DogPack before you come if you can, and we'll pair you with someone for your first PR either way. Can't make it? Apply for Georgia 311 at devdogsuga.org/georgia311 before Thursday.",
   },
 ];
 
