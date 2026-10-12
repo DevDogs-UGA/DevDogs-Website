@@ -10,7 +10,7 @@ const pkg = JSON.parse(
 
 /**
  * Bundles the CLI into a flat `dist/`, inlining `@devdogsuga/cli-core` (the
- * private shared core), `@devdogsuga/telemetry` (which the core imports) and
+ * private shared core), `@devdogsuga/sdk/telemetry` (which the core imports) and
  * `@devdogsuga/sdk` (for `moderation send`), all `workspace:*` devDependencies, and nothing else: every
  * other import stays external and must be declared in this package's
  * `dependencies`/`peerDependencies`. The build fails (`onlyBundle`) if
@@ -28,6 +28,8 @@ const pkg = JSON.parse(
 export default defineConfig({
   entry: {
     launch: "src/launch.ts",
+    // The `with-env` bin: loads a tier's env files around one command.
+    "with-env": "../cli-core/src/env-runtime/cli.ts",
     telemetry: "../cli-core/src/telemetry.ts",
     "peer-redirect-hooks": "../cli-core/src/repo/peer-redirect-hooks.ts",
   },
@@ -45,7 +47,7 @@ export default defineConfig({
   deps: {
     alwaysBundle: [
       /^@devdogsuga\/cli-core(\/|$)/,
-      /^@devdogsuga\/telemetry(\/|$)/,
+      /^@devdogsuga\/sdk\/(telemetry|constants|env\/targets|env\/derivation)$/,
       // The moderation subpath's signing and samples; its one dependency (zod)
       // is already devtools'.
       /^@devdogsuga\/sdk(\/|$)/,

@@ -160,7 +160,7 @@ export async function checkEnv(root: string): Promise<string[]> {
   // `build: true` is read by the credential-free build workflows
   // (`build-artifacts.yaml`), so the set is pinned the same way, and each key
   // must be one `env push` writes as a variable. Skipped against a published
-  // `@devdogsuga/env` that predates the field (a DevDogsUGA checkout, until
+  // `@devdogsuga/sdk/env` that predates the field (a DevDogsUGA checkout, until
   // it bumps), which has no `buildKeys()` to ask.
   //
   // The pin is narrowed to the keys this checkout declares: DevDogsUGA has no

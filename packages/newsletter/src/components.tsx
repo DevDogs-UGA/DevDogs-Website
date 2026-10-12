@@ -28,7 +28,7 @@ import { CampaignEmail } from "./campaign.js";
  * SVG, which is also why og ships its email signature as PNG).
  */
 import { Fragment, type CSSProperties, type ReactNode } from "react";
-import { EVENT_TZ, meetingLocation } from "@devdogsuga/brand/event";
+import { EVENT_TZ, meetingLocation } from "@devdogsuga/sdk/brand/event";
 import type { Meeting } from "@devdogsuga/events";
 
 import { MARK_SIZES, partnerLogoSize, type RenderContext } from "./assets.js";

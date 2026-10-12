@@ -10,7 +10,7 @@
  * bare local timestamp is read in whatever zone the reader is in. Here we name
  * the zone, there the offset.
  *
- * The zone itself is DECLARED in `@devdogsuga/brand/event` and re-exported here,
+ * The zone itself is DECLARED in `@devdogsuga/sdk/brand/event` and re-exported here,
  * so this module stays the one place the app imports it from. It moved because
  * a second renderer needs it: `pnpm devtools images` draws the same event cards
  * to disk for the GDG on Campus platform, and a CLI cannot import a module out
@@ -19,11 +19,11 @@
  *
  * That entry point imports nothing at all — deliberately, because
  * `lib/meetingTitle.ts` imports EVENT_TZ and is safe for a client component.
- * Routing it through `@devdogsuga/brand`'s index instead would put a few hundred
+ * Routing it through `@devdogsuga/sdk/brand`'s index instead would put a few hundred
  * kilobytes of embedded fonts one bundler decision away from the browser.
  */
-export { EVENT_TZ } from "@devdogsuga/brand/event";
-import { EVENT_TZ } from "@devdogsuga/brand/event";
+export { EVENT_TZ } from "@devdogsuga/sdk/brand/event";
+import { EVENT_TZ } from "@devdogsuga/sdk/brand/event";
 
 const DAY_PARTS = new Intl.DateTimeFormat("en-US", {
   timeZone: EVENT_TZ,

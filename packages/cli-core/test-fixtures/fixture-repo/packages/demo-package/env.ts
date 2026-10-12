@@ -10,7 +10,7 @@
  * discovery and module identity" per the contract test.
  */
 import { z } from "zod";
-import { declare, define } from "@devdogsuga/env";
+import { declare, define } from "@devdogsuga/sdk/env";
 
 const DEMO_API_KEY = define(z.string().min(1), {
   doc: "API key for the fixture's demo integration.",

@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/cloudflare";
-import { buildSentryOptions } from "@devdogsuga/telemetry";
+import { buildSentryOptions } from "@devdogsuga/sdk/telemetry";
 
 /** The slice of the environment Sentry's setup reads. */
 export interface SentryEnv {

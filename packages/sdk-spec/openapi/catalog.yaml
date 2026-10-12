@@ -1,0 +1,698 @@
+openapi: 3.1.0
+info:
+  title: DevDogs UGA catalog API
+  version: 1.0.0
+  summary: Read-only UGA course catalog.
+  description: |
+    The registrar's schedule of classes as DevDogs scrapes it every day: terms, subjects, courses and
+    sections. Public and read-only, with no authentication. Every response is JSON.
+
+    **This file is the contract.** `apps/catalog` is written against it and its contract tests fail when the
+    Worker and this file disagree. The SDK generators (`packages/sdk`, `packages/sdk_dart`) read it too.
+
+    ### Limits
+
+    - Per-IP rate limits: 120 requests a minute, 60 a minute on `/search`. Over the limit is `429` with a
+      `Retry-After` header.
+    - `/search` returns at most 50 results, and `/sections` takes at most 15 courses. Asking for more is a
+      `400`, never a silent truncation.
+    - Responses are cached at the edge for a few minutes. A fresh scrape can take that long to show.
+    - Every query runs as a read-only database role with a short statement timeout. A query that times out is a
+      `503`.
+
+    ### Terms
+
+    A term is the registrar's academic period: `YYYYMM`, where `MM` is `02` (Spring), `05` (Summer) or `08`
+    (Fall). `202702` is Spring 2027.
+
+    ### Data credits
+
+    Building coordinates come from the University of Georgia building dataset compiled by ArshadRM for
+    DevDogs' Optimal Schedule Builder.
+  license:
+    name: BSD-3-Clause
+    identifier: BSD-3-Clause
+servers:
+  - url: https://api.devdogsuga.org/catalog/v1
+    description: Production
+  - url: https://api-staging.devdogsuga.org/catalog/v1
+    description: Staging
+tags:
+  - name: Terms
+  - name: Courses
+  - name: Sections
+paths:
+  /terms:
+    get:
+      operationId: listTerms
+      tags: [Terms]
+      summary: Terms with sections on offer
+      description: |
+        Every term that has at least one section that is not cancelled, newest first, with its parts of term.
+        `classesBegin`, `classesEnd` and `dropAddEnds` are the dates of the term's Full Term part (code `1`), or of its
+        longest part when it has none; the other parts carry their own dates.
+      parameters:
+        - $ref: "#/components/parameters/XClient"
+      responses:
+        "200":
+          description: The terms.
+          headers:
+            Cache-Control: { $ref: "#/components/headers/CacheControl" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TermList" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /subjects:
+    get:
+      operationId: listSubjects
+      tags: [Courses]
+      summary: Subjects
+      description: |
+        Every subject, ordered by abbreviation. With `term`, only the subjects that have a course with a section
+        on offer that term, and `courseCount` counts those courses; without it, `courseCount` counts every
+        course the catalog has ever seen in the subject.
+      parameters:
+        - $ref: "#/components/parameters/TermOptional"
+        - $ref: "#/components/parameters/XClient"
+      responses:
+        "200":
+          description: The subjects.
+          headers:
+            Cache-Control: { $ref: "#/components/headers/CacheControl" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubjectList" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /subjects/{abbr}/courses:
+    get:
+      operationId: listSubjectCourses
+      tags: [Courses]
+      summary: Courses in a subject that are offered in a term
+      description: Ordered by course number.
+      parameters:
+        - $ref: "#/components/parameters/SubjectAbbr"
+        - $ref: "#/components/parameters/TermRequired"
+        - $ref: "#/components/parameters/XClient"
+      responses:
+        "200":
+          description: The courses.
+          headers:
+            Cache-Control: { $ref: "#/components/headers/CacheControl" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubjectCourses" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /search:
+    get:
+      operationId: searchCourses
+      tags: [Courses]
+      summary: Search courses offered in a term
+      description: |
+        Full-text search over course codes and titles (Postgres `websearch_to_tsquery`, so quoted phrases, `or`
+        and `-exclusion` work). A code matches with or without its space: `csci1301` and `csci 1301` both find
+        `CSCI1301`. Results are
+        courses with at least one section on offer in the term, exact code matches first.
+      parameters:
+        - $ref: "#/components/parameters/TermRequired"
+        - name: q
+          in: query
+          required: true
+          description: What to look for. 1 to 100 characters after trimming.
+          schema: { type: string, minLength: 1, maxLength: 100 }
+          example: intro to programming
+        - name: limit
+          in: query
+          required: false
+          description: How many results to return, at most 50.
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+        - $ref: "#/components/parameters/XClient"
+      responses:
+        "200":
+          description: The matches.
+          headers:
+            Cache-Control: { $ref: "#/components/headers/CacheControl" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResults" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /courses/{abbr}:
+    get:
+      operationId: getCourse
+      tags: [Courses]
+      summary: One course
+      description: |
+        The course, its Bulletin details when the catalog has them, and every term it has a section on offer.
+        The code is matched without regard to case, spaces or hyphens: `csci%201301` and `csci-1301` find
+        `CSCI1301`.
+      parameters:
+        - $ref: "#/components/parameters/CourseAbbr"
+        - name: term
+          in: query
+          required: false
+          description: When given, `sectionCount` counts that term's sections.
+          schema: { $ref: "#/components/schemas/TermCode" }
+        - $ref: "#/components/parameters/XClient"
+      responses:
+        "200":
+          description: The course.
+          headers:
+            Cache-Control: { $ref: "#/components/headers/CacheControl" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CourseDetail" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /course-exists:
+    get:
+      operationId: courseExists
+      tags: [Courses]
+      summary: Whether a course exists
+      description: |
+        A cheap check for imports and links. Always `200`: `exists` is false for a code the catalog has never
+        seen. With `term`, `offered` says whether the course has a section on offer that term.
+      parameters:
+        - name: abbr
+          in: query
+          required: true
+          description: The course code, for example `CSCI1301`. Case, spaces and hyphens do not matter.
+          schema: { type: string, minLength: 1, maxLength: 20 }
+        - name: term
+          in: query
+          required: false
+          schema: { $ref: "#/components/schemas/TermCode" }
+        - $ref: "#/components/parameters/XClient"
+      responses:
+        "200":
+          description: The answer.
+          headers:
+            Cache-Control: { $ref: "#/components/headers/CacheControl" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CourseExists" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  /sections:
+    get:
+      operationId: listSections
+      tags: [Sections]
+      summary: Sections of several courses in a term
+      description: |
+        Every section of the given courses in the term, cancelled ones included (check `cancelled`), each with
+        its meetings. Name the courses by code (`courses`), by id (`courseIds`), or both; together they may not
+        exceed 15. A code the catalog does not know is skipped, not an error.
+      parameters:
+        - $ref: "#/components/parameters/TermRequired"
+        - name: courses
+          in: query
+          required: false
+          description: Course codes, comma-separated, for example `CSCI1301,MATH2250`.
+          schema: { type: string, maxLength: 400 }
+          example: CSCI1301,MATH2250
+        - name: courseIds
+          in: query
+          required: false
+          description: Course ids from `CourseSummary.courseId`, comma-separated.
+          schema: { type: string, maxLength: 200 }
+          example: "101,2044"
+        - $ref: "#/components/parameters/XClient"
+      responses:
+        "200":
+          description: The sections.
+          headers:
+            Cache-Control: { $ref: "#/components/headers/CacheControl" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SectionList" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+components:
+  parameters:
+    XClient:
+      name: X-Client
+      in: header
+      required: false
+      description: |
+        Who is calling, for example `dogdays/1.4` or `dogpack/0.3`. Used for usage numbers only: it changes no
+        response and is never required. A malformed value is ignored.
+      schema: { type: string, pattern: "^[A-Za-z0-9._/-]{1,64}$" }
+    TermRequired:
+      name: term
+      in: query
+      required: true
+      schema: { $ref: "#/components/schemas/TermCode" }
+    TermOptional:
+      name: term
+      in: query
+      required: false
+      schema: { $ref: "#/components/schemas/TermCode" }
+    SubjectAbbr:
+      name: abbr
+      in: path
+      required: true
+      description: The subject abbreviation, for example `CSCI`. Case does not matter.
+      schema: { type: string, minLength: 1, maxLength: 4 }
+    CourseAbbr:
+      name: abbr
+      in: path
+      required: true
+      description: The course code, for example `CSCI1301` or `CSCI%201301`.
+      schema: { type: string, minLength: 1, maxLength: 20 }
+  headers:
+    CacheControl:
+      description: Always `public` with a `max-age` and `s-maxage`.
+      schema: { type: string }
+  responses:
+    InvalidRequest:
+      description: A parameter is missing, malformed or over a cap. `error.code` says which.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: No such subject or course.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: Too many requests from this address. Wait `Retry-After` seconds.
+      headers:
+        Retry-After:
+          description: Seconds to wait.
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unavailable:
+      description: The database is busy or did not answer in time. Retry shortly.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                - invalid_parameter
+                - missing_parameter
+                - too_many_courses
+                - not_found
+                - rate_limited
+                - method_not_allowed
+                - unavailable
+                - internal
+            message: { type: string }
+    TermCode:
+      type: integer
+      description: The registrar's academic period, `YYYYMM` with `MM` of 02, 05 or 08.
+      minimum: 200002
+      maximum: 299908
+      example: 202702
+    Date:
+      type: string
+      format: date
+      pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+    Time:
+      type: string
+      description: Local time, `HH:MM:SS`.
+      pattern: "^\\d{2}:\\d{2}:\\d{2}$"
+    PartOfTerm:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - description
+        - classesBegin
+        - dropAddEnds
+        - censusDate
+        - withdrawalDeadline
+        - classesEnd
+        - finalsEnd
+      properties:
+        code: { type: string, description: "The registrar's code, for example `1` for the full term." }
+        description: { type: string }
+        classesBegin: { $ref: "#/components/schemas/Date" }
+        dropAddEnds: { $ref: "#/components/schemas/Date" }
+        censusDate: { $ref: "#/components/schemas/Date" }
+        withdrawalDeadline: { $ref: "#/components/schemas/Date" }
+        classesEnd: { $ref: "#/components/schemas/Date" }
+        finalsEnd:
+          oneOf:
+            - { $ref: "#/components/schemas/Date" }
+            - { type: "null" }
+    Term:
+      type: object
+      additionalProperties: false
+      required:
+        - academicPeriod
+        - description
+        - classesBegin
+        - classesEnd
+        - dropAddEnds
+        - partsOfTerm
+      properties:
+        academicPeriod: { $ref: "#/components/schemas/TermCode" }
+        description: { type: string, example: Spring 2027 }
+        classesBegin:
+          description: First day of classes in the term's Full Term part (code `1`, else its longest part), or null if it has none.
+          oneOf:
+            - { $ref: "#/components/schemas/Date" }
+            - { type: "null" }
+        classesEnd:
+          oneOf:
+            - { $ref: "#/components/schemas/Date" }
+            - { type: "null" }
+        dropAddEnds:
+          description: Last day to add or drop in the term's Full Term part (code `1`, else its longest part), or null if it has none.
+          oneOf:
+            - { $ref: "#/components/schemas/Date" }
+            - { type: "null" }
+        partsOfTerm:
+          type: array
+          items: { $ref: "#/components/schemas/PartOfTerm" }
+    TermList:
+      type: object
+      additionalProperties: false
+      required: [terms]
+      properties:
+        terms:
+          type: array
+          items: { $ref: "#/components/schemas/Term" }
+    Subject:
+      type: object
+      additionalProperties: false
+      required: [abbr, description, courseCount]
+      properties:
+        abbr: { type: string, example: CSCI }
+        description: { type: string, example: Computer Science }
+        courseCount: { type: integer, minimum: 0 }
+    SubjectList:
+      type: object
+      additionalProperties: false
+      required: [term, subjects]
+      properties:
+        term:
+          oneOf:
+            - { $ref: "#/components/schemas/TermCode" }
+            - { type: "null" }
+        subjects:
+          type: array
+          items: { $ref: "#/components/schemas/Subject" }
+    CourseSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - courseId
+        - abbr
+        - courseNumber
+        - title
+        - subject
+        - minCreditHours
+        - maxCreditHours
+        - honors
+        - sectionCount
+      properties:
+        courseId: { type: integer }
+        abbr: { type: string, example: CSCI1301 }
+        courseNumber: { type: string, example: "1301" }
+        title: { type: string }
+        subject: { type: string, description: The subject abbreviation., example: CSCI }
+        minCreditHours: { type: number }
+        maxCreditHours: { type: number }
+        honors: { type: boolean }
+        sectionCount:
+          type: integer
+          minimum: 0
+          description: Sections of this course that are not cancelled, in the term asked for.
+    SubjectCourses:
+      type: object
+      additionalProperties: false
+      required: [term, subject, courses]
+      properties:
+        term: { $ref: "#/components/schemas/TermCode" }
+        subject:
+          type: object
+          additionalProperties: false
+          required: [abbr, description]
+          properties:
+            abbr: { type: string }
+            description: { type: string }
+        courses:
+          type: array
+          items: { $ref: "#/components/schemas/CourseSummary" }
+    SearchResults:
+      type: object
+      additionalProperties: false
+      required: [term, query, limit, results]
+      properties:
+        term: { $ref: "#/components/schemas/TermCode" }
+        query: { type: string, description: "The query as the server read it, trimmed." }
+        limit: { type: integer, minimum: 1, maximum: 50 }
+        results:
+          type: array
+          maxItems: 50
+          items: { $ref: "#/components/schemas/CourseSummary" }
+    CourseBulletinDetails:
+      type: object
+      additionalProperties: false
+      required:
+        - description
+        - gradingSystem
+        - semesterOffered
+        - corequisite
+        - equivalentCourses
+        - prerequisites
+        - lastFetched
+      properties:
+        description:
+          oneOf: [{ type: string }, { type: "null" }]
+        gradingSystem:
+          oneOf: [{ type: string }, { type: "null" }]
+        semesterOffered:
+          oneOf: [{ type: string }, { type: "null" }]
+        corequisite:
+          oneOf: [{ type: string }, { type: "null" }]
+        equivalentCourses:
+          oneOf: [{ type: string }, { type: "null" }]
+        prerequisites:
+          description: The Bulletin's prerequisite structure as scraped; null when the Bulletin has none.
+        lastFetched: { type: string, format: date-time }
+    CourseDetail:
+      type: object
+      additionalProperties: false
+      required: [course, details, offeredIn, sectionCount]
+      properties:
+        course:
+          type: object
+          additionalProperties: false
+          required:
+            - courseId
+            - abbr
+            - courseNumber
+            - title
+            - abbrTitle
+            - subject
+            - college
+            - department
+            - minCreditHours
+            - maxCreditHours
+            - minBillingCreditHours
+            - honors
+          properties:
+            courseId: { type: integer }
+            abbr: { type: string }
+            courseNumber: { type: string }
+            title: { type: string }
+            abbrTitle: { type: string }
+            subject:
+              type: object
+              additionalProperties: false
+              required: [abbr, description]
+              properties:
+                abbr: { type: string }
+                description: { type: string }
+            college: { type: string }
+            department:
+              oneOf: [{ type: string }, { type: "null" }]
+            minCreditHours: { type: number }
+            maxCreditHours: { type: number }
+            minBillingCreditHours: { type: number }
+            honors: { type: boolean }
+        details:
+          oneOf:
+            - { $ref: "#/components/schemas/CourseBulletinDetails" }
+            - { type: "null" }
+        offeredIn:
+          type: array
+          description: Terms with at least one section on offer, newest first.
+          items: { $ref: "#/components/schemas/TermCode" }
+        sectionCount:
+          description: Sections not cancelled in the `term` asked for; null when no `term` was given.
+          oneOf: [{ type: integer, minimum: 0 }, { type: "null" }]
+    CourseExists:
+      type: object
+      additionalProperties: false
+      required: [abbr, term, exists, offered]
+      properties:
+        abbr: { type: string, description: "The code as the catalog spells it; the input, normalized, when unknown." }
+        term:
+          oneOf:
+            - { $ref: "#/components/schemas/TermCode" }
+            - { type: "null" }
+        exists: { type: boolean }
+        offered:
+          description: Whether a section is on offer in `term`; null when no `term` was given.
+          oneOf: [{ type: boolean }, { type: "null" }]
+    Building:
+      type: object
+      additionalProperties: false
+      required: [code, description, address, lat, lon]
+      properties:
+        code:
+          type: string
+          description: The registrar's building number without leading zeros, for example `24`.
+        description:
+          oneOf: [{ type: string }, { type: "null" }]
+        address:
+          oneOf: [{ type: string }, { type: "null" }]
+        lat:
+          description: Null until the building is in the coordinates dataset.
+          oneOf: [{ type: number, minimum: -90, maximum: 90 }, { type: "null" }]
+        lon:
+          oneOf: [{ type: number, minimum: -180, maximum: 180 }, { type: "null" }]
+    Meeting:
+      type: object
+      additionalProperties: false
+      required:
+        - days
+        - startDate
+        - endDate
+        - startTime
+        - endTime
+        - building
+        - room
+        - locationStatus
+      properties:
+        days:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+        startDate:
+          oneOf: [{ $ref: "#/components/schemas/Date" }, { type: "null" }]
+        endDate:
+          oneOf: [{ $ref: "#/components/schemas/Date" }, { type: "null" }]
+        startTime:
+          oneOf: [{ $ref: "#/components/schemas/Time" }, { type: "null" }]
+        endTime:
+          oneOf: [{ $ref: "#/components/schemas/Time" }, { type: "null" }]
+        building:
+          oneOf: [{ $ref: "#/components/schemas/Building" }, { type: "null" }]
+        room:
+          oneOf: [{ type: string }, { type: "null" }]
+        locationStatus:
+          type: string
+          description: |
+            `TBA` when the registrar lists no location, `NCRR` for no room required (online or arranged), and
+            `RESERVED` for a real room.
+          enum: [TBA, NCRR, RESERVED]
+    Section:
+      type: object
+      additionalProperties: false
+      required:
+        - crn
+        - courseId
+        - courseAbbr
+        - courseNumber
+        - courseTitle
+        - creditHours
+        - campus
+        - professor
+        - seatsAvailable
+        - actualEnrollment
+        - maximumEnrollment
+        - cancelled
+        - lastSeenAt
+        - academicPeriod
+        - dateRange
+        - meetings
+      properties:
+        crn: { type: integer }
+        courseId: { type: integer }
+        courseAbbr: { type: string }
+        courseNumber: { type: string }
+        courseTitle: { type: string }
+        creditHours:
+          type: object
+          additionalProperties: false
+          required: [min, max]
+          properties:
+            min: { type: number }
+            max: { type: number }
+        campus:
+          type: object
+          additionalProperties: false
+          required: [id, abbr, description]
+          properties:
+            id: { type: integer }
+            abbr: { type: string }
+            description: { type: string }
+        professor:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name: { type: string }
+            - { type: "null" }
+        seatsAvailable: { type: integer }
+        actualEnrollment: { type: integer }
+        maximumEnrollment: { type: integer }
+        cancelled: { type: boolean }
+        lastSeenAt:
+          type: string
+          format: date-time
+          description: When the last scrape saw the section in the registrar's feed.
+        academicPeriod: { $ref: "#/components/schemas/TermCode" }
+        dateRange:
+          description: The section's part of term, first to last day of classes.
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [start, end]
+              properties:
+                start: { $ref: "#/components/schemas/Date" }
+                end: { $ref: "#/components/schemas/Date" }
+            - { type: "null" }
+        meetings:
+          type: array
+          items: { $ref: "#/components/schemas/Meeting" }
+    SectionList:
+      type: object
+      additionalProperties: false
+      required: [term, sections]
+      properties:
+        term: { $ref: "#/components/schemas/TermCode" }
+        sections:
+          type: array
+          items: { $ref: "#/components/schemas/Section" }

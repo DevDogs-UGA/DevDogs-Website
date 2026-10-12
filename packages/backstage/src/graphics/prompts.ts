@@ -1,5 +1,5 @@
 import { autocompleteMultiselect, multiselect } from "@clack/prompts";
-import type { Format } from "@devdogsuga/brand";
+import type { Format } from "@devdogsuga/sdk/brand";
 import { isNonInteractive } from "@devdogsuga/cli-core/mode";
 import { unwrap, UsageError } from "@devdogsuga/cli-core/ui";
 import type { Graphic } from "./registry.js";

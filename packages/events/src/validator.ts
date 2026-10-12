@@ -119,7 +119,7 @@ function checkWorkshopTitles(
   }
 }
 
-/** The club's timezone. Duplicated from `@devdogsuga/brand`'s `EVENT_TZ`,
+/** The club's timezone. Duplicated from `@devdogsuga/sdk/brand`'s `EVENT_TZ`,
  * which this package cannot import without a dependency cycle. */
 const CLUB_TIME_ZONE = "America/New_York";
 

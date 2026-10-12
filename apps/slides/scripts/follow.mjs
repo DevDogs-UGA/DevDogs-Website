@@ -66,7 +66,7 @@ const [track, repoArg] = process.argv.slice(2);
 if (track !== "web" && track !== "mobile")
   fail("name the track: web or mobile.");
 
-// The deck imports @devdogsuga/brand and @devdogsuga/events, which resolve
+// The deck imports @devdogsuga/sdk/brand and @devdogsuga/events, which resolve
 // to their built dist/. A fresh checkout hasn't built them yet.
 function buildWorkspaceDeps() {
   const pkg = JSON.parse(readFileSync(join(appDir, "package.json"), "utf8"));

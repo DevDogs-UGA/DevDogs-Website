@@ -1,11 +1,11 @@
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
-  TARGETS,
   narrowedKeys,
   neverStoreKeys,
   variableKeys,
-} from "@devdogsuga/env";
+} from "@devdogsuga/sdk/env";
+import { TARGETS } from "@devdogsuga/sdk/env/targets";
 import {
   resetEnvSyncCacheForTests,
   resetPeerCacheForTests,

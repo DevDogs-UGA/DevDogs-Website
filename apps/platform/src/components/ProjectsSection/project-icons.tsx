@@ -1,8 +1,12 @@
-import { DOGDAYS_MARK, DOGPACK_MARK, markBody } from "@devdogsuga/brand/marks";
+import {
+  DOGDAYS_MARK,
+  DOGPACK_MARK,
+  markBody,
+} from "@devdogsuga/sdk/brand/marks";
 import type { ProjectIconName } from "~/config/projects";
 
 /**
- * The DevDogs apps' marks, drawn by `@devdogsuga/brand/marks` (the one copy of
+ * The DevDogs apps' marks, drawn by `@devdogsuga/sdk/brand/marks` (the one copy of
  * their geometry; the OG cards and icons draw the same data), matched to Alan Sans at the bold
  * weight the cards set their titles in: strokes ~0.15em thick (the font's
  * 700-weight stems measure 0.163em, its bars 0.14em), round-capped terminals

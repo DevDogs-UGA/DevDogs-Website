@@ -62,3 +62,21 @@ export async function fetchIssuer(baseUrl: string): Promise<string> {
 
   return issuer;
 }
+
+/**
+ * `fetchIssuer` against each base in turn, returning the first that answers.
+ * Only when every base fails does it throw, naming all of them.
+ */
+export async function fetchIssuerFromAny(
+  baseUrls: readonly string[],
+): Promise<{ issuer: string; baseUrl: string }> {
+  const failures: string[] = [];
+  for (const baseUrl of baseUrls) {
+    try {
+      return { issuer: await fetchIssuer(baseUrl), baseUrl };
+    } catch (err) {
+      failures.push(err instanceof Error ? err.message : String(err));
+    }
+  }
+  throw new DiscoveryError(failures.join("\n"));
+}

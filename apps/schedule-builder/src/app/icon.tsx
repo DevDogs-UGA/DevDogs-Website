@@ -1,5 +1,5 @@
-import { AppIcon } from "@devdogsuga/brand";
-import { imageResponse } from "@devdogsuga/brand/next";
+import { AppIcon } from "@devdogsuga/sdk/brand";
+import { imageResponse } from "@devdogsuga/sdk/brand/next";
 
 /**
  * The favicon, generated rather than committed.

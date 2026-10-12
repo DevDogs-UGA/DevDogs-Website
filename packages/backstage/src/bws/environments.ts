@@ -2,8 +2,8 @@
  * The targets whose values live in Bitwarden, and what backs each.
  *
  * ⚠️ DERIVED, NOT DECLARED. The vault targets and each one's project name come
- * from the one target table in `@devdogsuga/env`
- * (Backstage's `packages/env/src/targets.ts`); only the prose summaries are added here.
+ * from the one target table in `@devdogsuga/sdk/env`
+ * (`packages/cli-core/src/env-runtime/targets.ts`); only the prose summaries are added here.
  * This file used to declare its own `preflight | staging | production` enum
  * beside that package's `development | staging | production` one, both behind
  * a flag spelled `--env`, and the two agreeing on the words `staging` and
@@ -50,7 +50,7 @@
  * path, and `${{ secrets.* }}` is masked in workflow logs automatically, which
  * a value pulled at run time is not unless somebody remembers `::add-mask::`.
  */
-import type { EnvTarget, VaultTarget } from "@devdogsuga/env";
+import type { EnvTarget, VaultTarget } from "@devdogsuga/sdk/env/targets";
 import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
 
 export type { VaultTarget };
@@ -97,7 +97,7 @@ let cachedSpecs: Record<VaultTarget, EnvironmentSpec> | undefined;
 /**
  * Was a module-level constant, computed eagerly at import time. Now lazy:
  * `VAULT_TARGETS`/`projectFor`/`isGuarded` come from the repo-resolved
- * `@devdogsuga/env` (see `repo/peers.ts`), which is not available until
+ * `@devdogsuga/sdk/env` (see `repo/peers.ts`), which is not available until
  * SOMETHING has awaited `loadEnv()` — every real caller already does, via
  * `env/discovery.ts`'s `loadRegistry()` or `pick.ts`'s own `loadEnv()` call.
  * Caching keeps repeat reads (env commands call this per target) cheap.
@@ -170,7 +170,7 @@ export function assertVaultTarget(
 // The hand-maintained arrays that used to live here (NEVER_STORE_KEYS,
 // NEVER_SECRET_KEYS, APPLY_ONLY_KEYS) are now DERIVED from the declarations in
 // each app's env manifest: `neverStoreKeys()`, `neverSecretKeys()`,
-// `applyOnlyKeys()` and `storableKeys()` from `@devdogsuga/env`, populated by
+// `applyOnlyKeys()` and `storableKeys()` from `@devdogsuga/sdk/env`, populated by
 // devtools' `env/discovery.ts` (`loadRegistry()`). The arrays were correct;
 // what they could not do is STAY correct, because nothing connected them to the
 // schemas they described. A key added to an `env.ts` and not here was pushed to
@@ -182,6 +182,6 @@ export function assertVaultTarget(
 //     the box it opens): its `define()` doc in `packages/devtools/env.ts`;
 //   * why apply-tier is a GITHUB routing rule and not a Bitwarden one (the
 //     production BWS project deliberately holds the apply credential): the
-//     `EnvTier` doc in Backstage's `packages/env/src/meta.ts`;
+//     `EnvTier` doc in `packages/sdk/src/env/meta.ts`;
 //   * why the apply credential stays out of staging/preflight: `ignoredFor()`
 //     in `../env/selection.ts`.

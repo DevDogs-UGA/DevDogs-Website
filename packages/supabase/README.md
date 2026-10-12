@@ -6,14 +6,14 @@ schema against them.
 
 The client factories that used to live here (`createBrowserClient`,
 `createServerClient`, `createAdminClient`) moved to
-[`@devdogsuga/db`](https://github.com/DevDogsUGA/Backstage/tree/main/packages/db)'s
+[`@devdogsuga/sdk/db`](https://github.com/DevDogsUGA/DevDogsUGA/tree/main/packages/sdk/src/db)'s
 `client`/`server` subpaths — they are generic framework code, not this repo's
 data, and now ship from Backstage alongside the rest of the shared packages.
 Import them from there and supply this package's `Database` type as the
 generic argument:
 
 ```ts
-import { createServerClient } from "@devdogsuga/db/client";
+import { createServerClient } from "@devdogsuga/sdk/db/client";
 import { SCHEMAS } from "@devdogsuga/supabase";
 import type { Database } from "@devdogsuga/supabase/types";
 

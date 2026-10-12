@@ -283,6 +283,7 @@ export async function addDeploymentBranchPolicy(
   r: Repo,
   name: string,
   pattern: string,
+  type: "branch" | "tag" = "branch",
 ): Promise<void> {
   await writeJson(
     "POST",
@@ -290,7 +291,7 @@ export async function addDeploymentBranchPolicy(
       r,
       `/environments/${encodeURIComponent(name)}/deployment-branch-policies`,
     ),
-    { name: pattern },
+    { name: pattern, type },
   );
 }
 

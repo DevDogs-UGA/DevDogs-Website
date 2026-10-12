@@ -26,7 +26,7 @@
  * |                                                        | `envMirrors` (see below)       |
  *
  * **Env files.** Each repo's apps read env files at THEIR repo root through
- * `@devdogsuga/env` (`with-env` walks up for `pnpm-workspace.yaml`): the
+ * `@devdogsuga/sdk/env` (`with-env` walks up for `pnpm-workspace.yaml`): the
  * platform and the Backstage CLIs at Backstage's root, schedule-builder inside
  * `devdogsuga/` at that checkout's root. So in a Backstage layout the primary
  * file is `<root>/.env.<tier>`, and the commands that write a file nothing else

@@ -8,7 +8,7 @@
  * Every export here is memoized per module (one dynamic `import()` per
  * process, not per call) — this is what makes the module-identity guarantee
  * in FINDINGS experiment 3 hold: every devtools call site that needs
- * `@devdogsuga/env`'s registry gets the exact same module instance the
+ * `@devdogsuga/sdk/env`'s registry gets the exact same module instance the
  * repo's own manifests populated via `declare()`/`define()`, because both
  * resolve to the identical absolute file path and Node's ESM cache is keyed
  * by resolved URL.
@@ -104,7 +104,7 @@ export function repoPeerUrl(specifier: string): string | undefined {
 
 /**
  * Like `repoPeerUrl`, but for any specifier a package of the repo you are in
- * can resolve, subpaths included (`@devdogsuga/env/nextjs`), without having
+ * can resolve, subpaths included (`@devdogsuga/sdk/env`), without having
  * loaded it. Undefined outside a real repo or when nothing depends on it.
  */
 export function resolveRepoPeerUrl(specifier: string): string | undefined {
@@ -122,18 +122,25 @@ export function resolveRepoPeerUrl(specifier: string): string | undefined {
   }
 }
 
-// ── @devdogsuga/env ─────────────────────────────────────────────────────────
-// Import types only from the bare specifier (erased at build; @devdogsuga/env
-// is a Backstage devDependency purely for these types). Runtime values always
-// come through the loaders below.
-import type * as EnvModule from "@devdogsuga/env";
-import type * as EnvLoadModule from "@devdogsuga/env/load";
-import type * as EnvSessionModule from "@devdogsuga/env/session";
+// ── @devdogsuga/sdk/env ─────────────────────────────────────────────────────
+// The registry (`declare()`/`define()` and what reads it back) must be the
+// repo's own copy of `@devdogsuga/sdk/env`: the manifests fill it as they are
+// imported, and only the instance they imported has the entries. Import types
+// only from the bare specifier (erased at build; the sdk is a devDependency
+// purely for these types). Runtime values always come through the loaders
+// below. The target table and derivations ride along in the same module
+// (stateless, so `env-runtime/` bundles its own copies by subpath too).
+//
+// The env-file loader and session policy, though, are tooling, bundled into
+// each CLI (`../env-runtime/`), and need nothing from the repo.
+import type * as EnvModule from "@devdogsuga/sdk/env";
+import type * as EnvLoadModule from "../env-runtime/load.js";
+import type * as EnvSessionModule from "../env-runtime/session.js";
 
 let resolvedEnvModule: typeof EnvModule | undefined;
 
 export function loadEnv(): Promise<typeof EnvModule> {
-  return loadPeer<typeof EnvModule>("@devdogsuga/env").then((mod) => {
+  return loadPeer<typeof EnvModule>("@devdogsuga/sdk/env").then((mod) => {
     resolvedEnvModule = mod;
     return mod;
   });
@@ -163,17 +170,19 @@ export function resetEnvSyncCacheForTests(): void {
   resolvedEnvModule = undefined;
 }
 
+/** The env loader (`loadEnvironment` and the tier/file selection). Bundled. */
 export function loadEnvLoad(): Promise<typeof EnvLoadModule> {
-  return loadPeer<typeof EnvLoadModule>("@devdogsuga/env/load");
+  return import("../env-runtime/load.js");
 }
 
+/** The session policy (tier resolution, `enterEnvironment`). Bundled. */
 export function loadEnvSession(): Promise<typeof EnvSessionModule> {
-  return loadPeer<typeof EnvSessionModule>("@devdogsuga/env/session");
+  return import("../env-runtime/session.js");
 }
 
-// ── @devdogsuga/db ───────────────────────────────────────────────────────────
-import type * as DbTypegenModule from "@devdogsuga/db/typegen";
+// ── @devdogsuga/sdk/db ───────────────────────────────────────────────────────────
+import type * as DbTypegenModule from "@devdogsuga/sdk/db/typegen";
 
 export function loadDbTypegen(): Promise<typeof DbTypegenModule> {
-  return loadPeer<typeof DbTypegenModule>("@devdogsuga/db/typegen");
+  return loadPeer<typeof DbTypegenModule>("@devdogsuga/sdk/db/typegen");
 }

@@ -1,5 +1,5 @@
-import { AppIcon, THEME } from "@devdogsuga/brand";
-import { imageResponse } from "@devdogsuga/brand/next";
+import { AppIcon, THEME } from "@devdogsuga/sdk/brand";
+import { imageResponse } from "@devdogsuga/sdk/brand/next";
 
 /**
  * The iOS home-screen tile.

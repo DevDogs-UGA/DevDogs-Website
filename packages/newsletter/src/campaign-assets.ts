@@ -1,4 +1,4 @@
-import { LOCKUP_ON_DARK } from "@devdogsuga/brand";
+import { LOCKUP_ON_DARK } from "@devdogsuga/sdk/brand";
 import { GDGC, GDGC_DARK } from "./theme.js";
 
 const LIGHT_SVGS: Record<"header" | "chapter" | "devdogs" | "civic", string> = {

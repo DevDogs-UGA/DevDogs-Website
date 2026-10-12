@@ -1,5 +1,5 @@
 import { SITE } from "@devdogsuga/newsletter";
-import { EVENT_SEGMENT_VISUALS } from "@devdogsuga/brand/event";
+import { EVENT_SEGMENT_VISUALS } from "@devdogsuga/sdk/brand/event";
 import {
   BUILDING_ADDRESS,
   BUILDING_FULL_NAME,

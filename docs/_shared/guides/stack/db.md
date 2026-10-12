@@ -10,17 +10,17 @@ mount: [schedule-builder, platform, toolkit]
 
 `drizzle-orm` and `drizzle-kit` 1.0.0-rc.4, on the `postgres` (postgres-js) driver 3.4.9, used for server-side SQL in both Next apps. The one thing to understand before touching it: **Drizzle does not own the schema here.** SQL migrations under `supabase/migrations` do. Read this before adding a table; [Drizzle's docs](https://orm.drizzle.team) cover the query builder itself.
 
-`@devdogsuga/db`'s `/server` subpath is the shared client factory both apps build on — one relevant export, merged with the Supabase client factories in the Backstage cutover. `createDb(url, relations)` builds the postgres-js connection and wraps it in Drizzle:
+`@devdogsuga/sdk/db`'s `/server` subpath is the shared client factory both apps build on — one relevant export, merged with the Supabase client factories in the Backstage cutover. `createDb(url, relations)` builds the postgres-js connection and wraps it in Drizzle:
 
 ```ts
-import { createDb } from "@devdogsuga/db/server";
+import { createDb } from "@devdogsuga/sdk/db/server";
 import { env } from "~/env";
 import { relations } from "./relations";
 
 export const db = createDb(env.DB_URL, relations);
 ```
 
-Each app passes **its own** generated `relations`, because the two apps introspect different Postgres schemas and their generated modules are not interchangeable. `drizzle-orm` and `postgres` are peer dependencies — `@devdogsuga/db` brings neither version with it, so an app pins them. The full surface is documented in [`@devdogsuga/db`](https://github.com/DevDogsUGA/Backstage/tree/main/packages/db) — it ships from Backstage now, so there is no local `reference/api` page for it (the same as `config`, `env`, and the rest of the Backstage-sourced packages).
+Each app passes **its own** generated `relations`, because the two apps introspect different Postgres schemas and their generated modules are not interchangeable. `drizzle-orm` and `postgres` are peer dependencies — `@devdogsuga/sdk/db` brings neither version with it, so an app pins them. The full surface is documented in [`@devdogsuga/sdk/db`](https://github.com/DevDogsUGA/DevDogsUGA/tree/main/packages/sdk/DB.md), with no `reference/api` page of its own (the same as `config`, `env`, and the rest of the SDK's subpaths).
 
 Both packages are pinned to an exact version rather than a range, because the `latest` dist-tag still points at 0.45.x and a range would silently downgrade them.
 
@@ -34,7 +34,7 @@ Both apps follow the same workflow: SQL migrations own the schema, and `pnpm -F 
 
 ## The connection settings are not optional
 
-`@devdogsuga/db`'s `/server` subpath exports one `createDb(url, relations)` factory so these can only be configured one way:
+`@devdogsuga/sdk/db`'s `/server` subpath exports one `createDb(url, relations)` factory so these can only be configured one way:
 
 - **`prepare: false`** — the apps connect through Supabase's transaction-mode pooler, which hands a different backend to each transaction and so cannot keep a named prepared statement alive between them.
 - **Connections are cached on `globalThis`, keyed by URL.** An unkeyed slot would let a second caller inherit the first caller's connection, including its database. Caching defaults on outside production, where the module graph is built once anyway.

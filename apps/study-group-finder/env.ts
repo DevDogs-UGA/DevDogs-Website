@@ -16,7 +16,7 @@
  * codegen that genuinely needs a secret goes in the separate `tooling`
  * manifest, which ships nothing.
  */
-import { declare, define } from "@devdogsuga/env";
+import { declare, define } from "@devdogsuga/sdk/env";
 import { z } from "zod";
 
 /**

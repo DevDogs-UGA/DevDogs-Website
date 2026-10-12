@@ -20,7 +20,11 @@
  * server-rendered `dangerouslySetInnerHTML` of anything a user wrote would
  * break that, so don't add one.
  */
-import { CSP_HEADER, generateNonce, serializeCsp } from "@devdogsuga/headers";
+import {
+  CSP_HEADER,
+  generateNonce,
+  serializeCsp,
+} from "@devdogsuga/sdk/headers";
 import { platformSecurityHeaders } from "~/lib/securityHeaders";
 
 function isHtml(response: Response): boolean {

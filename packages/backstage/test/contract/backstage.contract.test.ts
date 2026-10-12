@@ -22,10 +22,10 @@
  * tarballs), so it is `pnpm test:contract`, not part of `pnpm test`.
  *
  * PREREQUISITE: `pnpm --filter @devdogsuga/backstage build` (and the same for
- * `@devdogsuga/telemetry`, `@devdogsuga/env`, `@devdogsuga/brand`,
- * `@devdogsuga/events` and `@devdogsuga/newsletter`). This packs what is on
- * disk, and overrides every `@devdogsuga/*` dependency with its local tarball
- * so a published older version cannot stand in for the one under test.
+ * `@devdogsuga/sdk`, `@devdogsuga/events` and `@devdogsuga/newsletter`, which
+ * the bundle inlines). This packs what is on disk, and overrides the
+ * `@devdogsuga/sdk` dependency with its local tarball so a published older
+ * version cannot stand in for the one under test.
  */
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import {
@@ -103,9 +103,7 @@ describe("backstage contract tests", () => {
   beforeAll(
     () => {
       requireBuilt(PACKAGE_ROOT, "launch.js");
-      requireBuilt(join(WORKSPACE_ROOT, "packages", "telemetry"), "index.js");
-      requireBuilt(join(WORKSPACE_ROOT, "packages", "env"), "index.js");
-      for (const name of ["brand", "events", "newsletter"]) {
+      for (const name of ["sdk", "events", "newsletter"]) {
         requireBuilt(join(WORKSPACE_ROOT, "packages", name), "index.js");
       }
 
@@ -114,31 +112,13 @@ describe("backstage contract tests", () => {
       mkdirSync(packDir, { recursive: true });
 
       const backstageTgz = packPackage(PACKAGE_ROOT, packDir);
-      const telemetryTgz = packPackage(
-        join(WORKSPACE_ROOT, "packages", "telemetry"),
+      const sdkTgz = packPackage(
+        join(WORKSPACE_ROOT, "packages", "sdk"),
         packDir,
       );
-      const envTgz = packPackage(
-        join(WORKSPACE_ROOT, "packages", "env"),
-        packDir,
-      );
-      const brandTgz = packPackage(
-        join(WORKSPACE_ROOT, "packages", "brand"),
-        packDir,
-      );
-      const eventsTgz = packPackage(
-        join(WORKSPACE_ROOT, "packages", "events"),
-        packDir,
-      );
-      const newsletterTgz = packPackage(
-        join(WORKSPACE_ROOT, "packages", "newsletter"),
-        packDir,
-      );
-      // What the officer tools (`graphics`, `qr`, `newsletter`) read.
-      const libraryOverrides =
-        `  "@devdogsuga/brand": "file:${brandTgz}"\n` +
-        `  "@devdogsuga/events": "file:${eventsTgz}"\n` +
-        `  "@devdogsuga/newsletter": "file:${newsletterTgz}"\n`;
+      // What the officer tools (`graphics`, `qr`, `newsletter`) read: the
+      // sdk's brand subpath. `events` and `newsletter` ride inside the bundle.
+      const libraryOverrides = `  "@devdogsuga/sdk": "file:${sdkTgz}"\n`;
 
       // ── dlx: the tarball alone, outside any repo, install scripts off ────
       dlxDir = join(tmpRoot, "dlx");
@@ -153,14 +133,15 @@ describe("backstage contract tests", () => {
       );
       writeFileSync(
         join(dlxDir, "pnpm-workspace.yaml"),
-        `overrides:\n  "@devdogsuga/telemetry": "file:${telemetryTgz}"\n` +
-          libraryOverrides,
+        `overrides:\n` + libraryOverrides,
       );
       install(dlxDir, ["--ignore-scripts"]);
-      if (existsSync(join(dlxDir, "node_modules", "@devdogsuga", "env"))) {
-        throw new Error(
-          "The dlx directory installed @devdogsuga/env, so it no longer models pnpm dlx.",
-        );
+      for (const bundled of ["events", "newsletter", "cli-core"]) {
+        if (existsSync(join(dlxDir, "node_modules", "@devdogsuga", bundled))) {
+          throw new Error(
+            `The dlx directory installed @devdogsuga/${bundled}, which the bundle should have inlined.`,
+          );
+        }
       }
       dlxBin = join(dlxDir, "node_modules", ".bin", "backstage");
       if (!existsSync(dlxBin)) throw new Error(`${dlxBin} was not created.`);
@@ -185,8 +166,6 @@ describe("backstage contract tests", () => {
       writeFileSync(
         workspaceYamlPath,
         `${readFileSync(workspaceYamlPath, "utf8")}\noverrides:\n` +
-          `  "@devdogsuga/telemetry": "file:${telemetryTgz}"\n` +
-          `  "@devdogsuga/env": "file:${envTgz}"\n` +
           libraryOverrides +
           `allowBuilds:\n  core-js: false\n  esbuild: true\n`,
       );

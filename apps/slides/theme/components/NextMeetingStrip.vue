@@ -11,7 +11,7 @@
 // black-border, block-shadow look, but keeping the same shape: eyebrow
 // over name over time/location, in a date-led row.
 import { computed } from 'vue'
-import { EVENT_KIND_VISUALS, EVENT_SEGMENT_VISUALS } from '@devdogsuga/brand/event'
+import { EVENT_KIND_VISUALS, EVENT_SEGMENT_VISUALS } from '@devdogsuga/sdk/brand/event'
 import type { DeckMeeting } from '../vite/meetings'
 
 const props = withDefaults(defineProps<{

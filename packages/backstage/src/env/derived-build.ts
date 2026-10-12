@@ -46,7 +46,7 @@ export function derivedBuildValues(
   const values = new Map<string, string>();
   const unresolved: string[] = [];
   const env = getEnvSync();
-  // A checkout whose `@devdogsuga/env` predates the derivation helpers, or
+  // A checkout whose `@devdogsuga/sdk/env` predates the derivation helpers, or
   // `build: true`, has nothing to expand (same tolerance as `buildOnly()`).
   if (
     typeof env.expandReferences !== "function" ||
@@ -69,7 +69,7 @@ export function derivedBuildValues(
     });
 
   // The manifest's formula for a key the file leaves out. `derivationOf` is
-  // as new as `build: true`, so an older `@devdogsuga/env` has none.
+  // as new as `build: true`, so an older `@devdogsuga/sdk/env` has none.
   const declared = (key: string): string | undefined => {
     if (typeof env.derivationOf !== "function") return undefined;
     for (const entry of env.variables().get(key) ?? []) {

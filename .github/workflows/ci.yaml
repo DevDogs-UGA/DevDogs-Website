@@ -144,6 +144,13 @@ jobs:
         run: pnpm format:check
       - name: Script names follow the vocabulary
         run: pnpm check:scripts
+      # The SDKs are generated from packages/sdk-spec (OpenAPI, the moderation
+      # JSON Schema, brand tokens, constants): packages/sdk's catalog, platform
+      # and constants modules and all of packages/sdk_dart/lib/src/generated.
+      # Regenerated in memory and byte-compared; an edit to the spec or to a
+      # zod schema or palette value that was not regenerated fails here.
+      - name: SDKs match their specs
+        run: pnpm --filter @devdogsuga/sdk-spec run check:drift
       # `supabase/migrations/` is one flat directory; a new file timestamped
       # before the newest one already on the base branch would apply out of
       # the order its author tested it in the next time someone runs
@@ -359,6 +366,29 @@ jobs:
           flutter analyze
           flutter test
 
+  # The Dart SDK (packages/sdk_dart, published to pub.dev as devdogsuga_sdk):
+  # analysis, its tests, and a publish dry run, which checks the package would
+  # be accepted (pubspec, license, size, no stray files). Its generated half is
+  # checked by `validate` ("SDKs match their specs"); this job is the Dart side.
+  dart-sdk:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # Not subosito/flutter-action; see the `flutter` job.
+      - name: Install Flutter (stable)
+        run: |
+          git clone --depth 1 --branch stable https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Analyze, test and dry-run the publish
+        working-directory: packages/sdk_dart
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+          dart pub publish --dry-run
+
   # The patches in patches/ and the scripts that audit them. No install: the
   # scripts have no dependencies and Node (from .nvmrc) strips their types
   # itself, so they run with `node` directly (a `pnpm run` here would first try
@@ -383,6 +413,15 @@ jobs:
       # /moderation/v1/* to the platform Worker (Q22, Q90).
       - name: API route table
         run: node .github/scripts/check-routes.mjs
+      # Prerelease publishing (scripts/publish-next.mjs): the version rule, the
+      # plan, and the checks before anything reaches npm; and the Dart SDK's
+      # tag names.
+      - name: Prerelease publishing script tests
+        run: node --test scripts/publish-next.test.mjs scripts/dart-next-tag.test.mjs
+      # Every workflow that calls a reusable one grants at least what each of
+      # its jobs requests (a shortfall is a startup_failure on the push).
+      - name: Reusable-workflow permissions
+        run: node --test scripts/workflow-permissions.test.mjs
       # patches/patches.json against pnpm-workspace.yaml's patchedDependencies
       # and the files in patches/ (a mismatch fails here), then each patch's
       # upstream PRs/issues and the npm release that carries the fix. The
@@ -422,8 +461,10 @@ jobs:
   # a push here asks nobody to approve a `publishing` deployment yet: both
   # repositories publishing would race on the same npm packages, and this one
   # has no GitHub releases for the versions already out. The Gate sets the
-  # repository variable BACKSTAGE_PUBLISHES_STABLE=true (after the trusted
-  # publishers on npmjs.com name this repository's publish workflow).
+  # repository variable BACKSTAGE_PUBLISHES_STABLE=true. The trusted
+  # publishers on npmjs.com must already name this repository's publish.yaml
+  # (environment field blank) before the first prerelease below, which needs
+  # them too: that is a pre-flight item, not a Gate one.
   publish:
     needs: validate
     if: >-
@@ -433,6 +474,32 @@ jobs:
       contents: write
       id-token: write
     uses: ./.github/workflows/publish.yaml
+
+  # Prereleases of the four public packages (sdk, devtools, config, backstage)
+  # go to npm's `next` dist-tag from every green push to `main`, through the
+  # reviewer-less `publishing-next` environment: nobody approves a prerelease,
+  # and `latest` is never touched. Products pin these until the stable bump
+  # lands. Set the repository variable BACKSTAGE_PUBLISHES_NEXT=false to stop.
+  # npm prereleases ride the push to main (Q88); only the Dart SDK publishes by
+  # tag push (publish-dart.yaml).
+  publish-next:
+    needs: validate
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main'
+      && vars.BACKSTAGE_PUBLISHES_NEXT != 'false'
+    # The grant is a ceiling for every job in publish.yaml, including the
+    # stable `publish` job this channel skips: GitHub checks each nested job's
+    # permissions against the caller's before it evaluates any `if:`, so a
+    # lower grant here fails the whole run at startup with no jobs at all.
+    # The `next` job itself still asks for contents: read, which is what it
+    # gets. One file because npm Trusted Publishing names publish.yaml.
+    # scripts/workflow-permissions.test.mjs fails if the two drift apart.
+    permissions:
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/publish.yaml
+    with:
+      channel: next
 
   # The merge queue's candidate commit is built here, once per tier, and the
   # push to `main` that follows deploys these exact artifacts instead of
@@ -464,7 +531,7 @@ jobs:
   # Backstage until the Gate, and both deploying would race on the same
   # Workers and database, so neither variable is a default.
   deploy:
-    needs: [validate, database, flutter, toolchain]
+    needs: [validate, database, flutter, dart-sdk, toolchain]
     # `flutter` is skipped when nothing it depends on changed.
     if: >-
       !cancelled()
@@ -473,6 +540,7 @@ jobs:
       && needs.validate.result == 'success'
       && needs.database.result == 'success'
       && needs.toolchain.result == 'success'
+      && needs.dart-sdk.result == 'success'
       && (needs.flutter.result == 'success' || needs.flutter.result == 'skipped')
     permissions:
       contents: read

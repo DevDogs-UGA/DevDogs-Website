@@ -21,7 +21,7 @@
     "populate:courses": "tsx scripts/scrape-local.ts"
   },
   "dependencies": {
-    "@devdogsuga/telemetry": "workspace:*",
+    "@devdogsuga/sdk": "workspace:*",
     "@sentry/cloudflare": "catalog:",
     "cheerio": "^1.2.0",
     "date-fns": "catalog:",
@@ -32,7 +32,6 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260820.1",
     "@devdogsuga/config": "workspace:*",
-    "@devdogsuga/env": "workspace:*",
     "@types/node": "catalog:",
     "@types/papaparse": "catalog:",
     "@vitest/coverage-v8": "catalog:",

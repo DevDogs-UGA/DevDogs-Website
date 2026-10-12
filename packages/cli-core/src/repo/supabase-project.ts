@@ -54,7 +54,7 @@ export function containerPrefix(projectId: string | null): string {
 
 /**
  * The local stack's API port, published by its Kong container. Mirrors
- * `@devdogsuga/env/load`'s `LOCAL_STACK_PORT`, which this module cannot import
+ * `env-runtime/load`'s `LOCAL_STACK_PORT`, which this module cannot import
  * statically (that package is an optional peer, loaded on demand).
  */
 export const STACK_API_PORT = 54321;

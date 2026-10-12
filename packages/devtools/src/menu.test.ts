@@ -157,7 +157,7 @@ describe("reach", () => {
         (node?.subcommands ?? []).length === 0 && node?.surface !== "cli-only"
       );
     });
-    expect(leaves.length).toBeGreaterThan(20);
+    expect(leaves.length).toBeGreaterThan(15);
 
     for (const path of leaves) {
       const node = findCommand(path)!;
@@ -254,7 +254,7 @@ describe("the first screen", () => {
 
   it("draws no alias, deprecated or CLI-only command", async () => {
     const hints = (await firstScreen()).map((entry) => entry.hint ?? "");
-    for (const name of ["cron", "workflows", "run", "preset", "check"]) {
+    for (const name of ["cron", "workflows", "preset", "check"]) {
       expect(
         hints.some((hint) => hint.startsWith(`${name} · `)),
         name,

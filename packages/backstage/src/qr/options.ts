@@ -2,7 +2,7 @@
  * The QR command's flags, one per field of the shared request schema.
  *
  * `/console/qr` and `backstage qr` both read their options from
- * `qrRequestSchema` in `@devdogsuga/brand/qr`. The table here is typed as a
+ * `qrRequestSchema` in `@devdogsuga/sdk/brand/qr`. The table here is typed as a
  * record over the schema's own keys, so a field added to the schema fails to
  * compile until it has a flag, and `options.test.ts` checks the same thing at
  * runtime. That is what stops a new option reaching one front end and not the
@@ -13,7 +13,7 @@
  * presets, formats) are spelled out here, and `options.test.ts` checks each
  * against the schema's own constants.
  */
-import type { QrRequest } from "@devdogsuga/brand/qr";
+import type { QrRequest } from "@devdogsuga/sdk/brand/qr";
 import type { CommandOption } from "@devdogsuga/cli-core/catalog";
 
 export type QrRequestKey = keyof QrRequest;

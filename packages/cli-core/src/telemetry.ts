@@ -1,6 +1,6 @@
 /**
  * devtools' own Sentry wiring — the CLI is a consumer of
- * `@devdogsuga/telemetry` like `apps/platform` and `apps/schedule-builder`,
+ * `@devdogsuga/sdk/telemetry` like `apps/platform` and `apps/schedule-builder`,
  * but on `@sentry/node` rather than a framework SDK: a CLI
  * process starts, runs one command, and exits, with none of a server's
  * request lifecycle for a framework integration to hook into.
@@ -8,7 +8,7 @@
  * ## Reporting is on by default
  *
  * Every other `*_SENTRY_DSN` in this org is optional-and-empty until
- * configured (see `@devdogsuga/telemetry`'s no-op-without-DSN contract), and
+ * configured (see `@devdogsuga/sdk/telemetry`'s no-op-without-DSN contract), and
  * so is this one — empty means `buildSentryOptions` returns `undefined` and
  * `Sentry.init` never runs — but the DEFAULT here is reporting ON once a DSN
  * exists, unlike a feature a contributor opts into. `DEVTOOLS_TELEMETRY=0` is
@@ -28,7 +28,7 @@
  */
 import { readFileSync } from "node:fs";
 import * as Sentry from "@sentry/node";
-import { buildSentryOptions } from "@devdogsuga/telemetry";
+import { buildSentryOptions } from "@devdogsuga/sdk/telemetry";
 import { cliName } from "./cli-name.js";
 import { noteError } from "./failure-log.js";
 import { isNonInteractive } from "./mode.js";
@@ -81,7 +81,7 @@ function sent(id: string): void {
  * `'ci'` whenever the run is non-interactive (no TTY, or `CI=true`, which the
  * runner sets itself before any workflow-authored env), `'local'` on a
  * contributor's terminal.
- * One of `@devdogsuga/telemetry`'s `ENVIRONMENTS`.
+ * One of `@devdogsuga/sdk/telemetry`'s `ENVIRONMENTS`.
  */
 export function devtoolsEnvironment(): "ci" | "local" {
   return isNonInteractive() ? "ci" : "local";

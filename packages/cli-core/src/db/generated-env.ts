@@ -8,7 +8,7 @@
  * except `.env.generated` (the connection block `startLocalStack`,
  * the CLI's `db/stack.ts`, writes) only ever lands in the workspace that actually ran
  * it. Left alone, this checkout sees port 54321 listening with the file
- * missing, and `@devdogsuga/env/load`'s `selectEnvFiles` either warns (an
+ * missing, and `env-runtime/load`'s `selectEnvFiles` either warns (an
  * unqualified session) or throws `LocalStackOfflineError` (an explicit
  * `development:local` one) — both of which used to mean the contributor
  * ran `supabase status -o env > .env.generated` by hand.
@@ -32,8 +32,8 @@
 import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { DeployEnvironment } from "@devdogsuga/env";
-import type { DevDatabase } from "@devdogsuga/env/load";
+import type { DeployEnvironment } from "@devdogsuga/sdk/env/targets";
+import type { DevDatabase } from "../env-runtime/load.js";
 import { supabaseCapture } from "./run.js";
 import { devdogsugaRootOrNull, resolveLayout } from "../repo/layout.js";
 import {
@@ -44,9 +44,9 @@ import {
   readProjectId,
 } from "../repo/supabase-project.js";
 
-/** The file this module writes and checks — see `@devdogsuga/env/load`'s
+/** The file this module writes and checks — see `env-runtime/load`'s
  *  `GENERATED_FILE`, duplicated as a literal rather than imported so this
- *  module never has to load the `@devdogsuga/env` peer just for one
+ *  module never has to load the `@devdogsuga/sdk/env` peer just for one
  *  constant. Keep in sync if that constant's value ever changes. */
 const GENERATED_FILE = ".env.generated";
 
@@ -144,7 +144,7 @@ export async function ensureGeneratedEnvFile(
  * The production wiring for `EnsureGeneratedEnvDeps`, shared by
  * `../env-entry.ts` (via `realEnvEntryDeps`) and `../stack.ts`'s `db
  * status`. `probeLocalStack` is passed in rather than resolved here because
- * both callers already hold the loaded `@devdogsuga/env/load` peer their
+ * both callers already hold the loaded `env-runtime/load` peer their
  * own dispatch needs anyway — resolving it again here would mean two
  * different copies of the same optional peer in play.
  */

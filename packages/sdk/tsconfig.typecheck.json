@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    // `noEmit` still writes the .tsbuildinfo, and with `rootDir: "."` its
+    // default location derives from the inherited `outDir`, INSIDE `dist`,
+    // which `files: ["dist"]` then ships. Park it next to this config.
+    "tsBuildInfoFile": "./tsconfig.typecheck.tsbuildinfo"
+  },
+  "include": ["src", "scripts", "test-stubs", "vitest.config.ts"],
+  // These suites were never typechecked before the merge (their packages
+  // excluded tests from `tsc`), and carry `@ts-expect-error` cases written
+  // against the looser per-package settings. Typechecking them is a separate
+  // cleanup; brand and db always did.
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/env/**/*.test.ts",
+    "src/telemetry/**/*.test.ts",
+    "src/headers/**/*.test.ts"
+  ]
+}

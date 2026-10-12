@@ -4,7 +4,7 @@
  */
 import { chmod, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import type { EnvTarget } from "@devdogsuga/env";
+import type { EnvTarget } from "@devdogsuga/sdk/env/targets";
 import { getEnvSync } from "../repo/peers.js";
 import { findRepoRoot } from "../repo/root.js";
 import { EnvDocument } from "./document.js";

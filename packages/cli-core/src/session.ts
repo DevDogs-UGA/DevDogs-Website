@@ -2,11 +2,11 @@
  * Pieces of tier resolution both launchers use.
  */
 import { select } from "@clack/prompts";
-import type * as EnvSessionModule from "@devdogsuga/env/session";
+import type * as EnvSessionModule from "./env-runtime/session.js";
 import type {
   SessionTierResolution,
   TierChoice,
-} from "@devdogsuga/env/session";
+} from "./env-runtime/session.js";
 import { nonEmpty } from "./db/connection.js";
 import { unwrap } from "./ui.js";
 

@@ -29,7 +29,7 @@ the `validate` job every TypeScript package goes through —
 Node packages are. The `flutter` job:
 
 1. **Checks whether it's affected** — this app, or `@devdogsuga/config`,
-   `@devdogsuga/env`, or `@devdogsuga/supabase` (its actual resolved
+   `@devdogsuga/sdk/env`, or `@devdogsuga/supabase` (its actual resolved
    dependency graph). No relevant change, no run.
 2. Installs Flutter (`subosito/flutter-action`, `stable` channel).
 3. Runs `flutter pub get`, `flutter analyze`, `flutter test`, from

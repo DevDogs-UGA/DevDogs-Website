@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { z } from "zod";
 import { describe, expect, it, vi } from "vitest";
-import type { EnvEntry } from "@devdogsuga/env";
+import type { EnvEntry } from "@devdogsuga/sdk/env";
 import { scopedProcessEnv, withWranglerEnv } from "./local-env.js";
 
 /** The fields `withWranglerEnv` reads are `key`, `source`, and `meta`; the rest

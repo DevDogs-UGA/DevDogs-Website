@@ -1,4 +1,4 @@
-import { createEnv } from "@devdogsuga/env/nextjs";
+import { createEnv } from "@devdogsuga/sdk/env";
 import { z } from "zod";
 
 import {
@@ -6,7 +6,7 @@ import {
   declare,
   define,
   resolveEnvironment,
-} from "@devdogsuga/env";
+} from "@devdogsuga/sdk/env";
 
 /**
  * Which deployment this build is for, resolved ONCE, while the schemas below
@@ -36,7 +36,7 @@ function switchEnvironment<T, R>(opt: { local: T; deployed: R }) {
 
 /**
  * Server-side variables. Every schema goes through `define()`, which records
- * the variable's scope, secrecy and routing into the `@devdogsuga/env`
+ * the variable's scope, secrecy and routing into the `@devdogsuga/sdk/env`
  * registry. The tooling derives `.env.example` and the `env push` key lists
  * from those records, so an entry here is the whole paper trail a variable
  * gets.
@@ -92,7 +92,7 @@ const server = {
       secrecy: "secret",
     },
   ),
-  // Sentry ingest DSN for the "platform" project (see @devdogsuga/telemetry).
+  // Sentry ingest DSN for the "platform" project (see @devdogsuga/sdk/telemetry).
   // Optional and empty by default, deliberately: the org is not onboarded in
   // every environment yet, and `buildSentryOptions` treats a falsy DSN as
   // "skip Sentry.init entirely" -- no init, no network calls, no console
@@ -108,7 +108,7 @@ const server = {
   PLATFORM_SENTRY_DSN: define(z.string().url().optional(), {
     doc:
       "Sentry ingest DSN for this app's Sentry project (see " +
-      "@devdogsuga/telemetry). Optional -- empty skips Sentry.init " +
+      "@devdogsuga/sdk/telemetry). Optional -- empty skips Sentry.init " +
       "entirely, which is the state before the org is onboarded and the " +
       "state of local development. Reaches the Worker like every other " +
       "environment variable.",
@@ -431,7 +431,7 @@ const client = {
 };
 
 /**
- * Registers this app's manifest with `@devdogsuga/env`, alongside `createEnv`
+ * Registers this app's manifest with `@devdogsuga/sdk/env`, alongside `createEnv`
  * rather than instead of it. @t3-oss keeps doing the real runtime work (the
  * client/server split and the proxy that throws when server config is read in
  * a browser bundle); `declare()` makes the variables *visible* to the tooling

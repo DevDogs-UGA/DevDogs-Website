@@ -5,7 +5,7 @@ import {
   generateNonce,
   serializeCsp,
   type SecurityHeadersInput,
-} from "@devdogsuga/headers";
+} from "@devdogsuga/sdk/headers";
 import { updateSession } from "~/supabase/middleware";
 import { env } from "~/env";
 import { scheduleBuilderCsp } from "~/config/csp";
@@ -26,7 +26,7 @@ const PUBLIC_PATHS = [
   "/distance-page",
 ];
 
-// Authoritative header application -- see @devdogsuga/headers'
+// Authoritative header application -- see @devdogsuga/sdk/headers'
 // `applySecurityHeaders` doc comment for why middleware, not just
 // next.config.ts's `headers()`: that mechanism drops these headers on `/`
 // specifically (reproduced against a real `vinext build` + `wrangler dev`
@@ -54,7 +54,7 @@ function withSecurityHeaders(
 
 export async function middleware(request: NextRequest) {
   // Minted once per request and written onto the *request* headers below --
-  // see `@devdogsuga/headers`' README.
+  // see `@devdogsuga/sdk/headers`' README.
   // vinext (like Next) reads the nonce for scripts/styles it emits itself
   // (bootstrap module, __NEXT_DATA__, font preloads) off the request's
   // Content-Security-Policy(-Report-Only) header, not the response's.

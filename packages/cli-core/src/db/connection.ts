@@ -41,8 +41,8 @@
  * still matter to someone driving the bare `supabase` CLI by hand, so
  * removing it is a separate decision from this refactor.
  */
-import type { DeployEnvironment } from "@devdogsuga/env";
-import type { DevDatabase } from "@devdogsuga/env/load";
+import type { DeployEnvironment } from "@devdogsuga/sdk/env/targets";
+import type { DevDatabase } from "../env-runtime/load.js";
 import { loadEnv, loadEnvLoad } from "../repo/peers.js";
 
 /**

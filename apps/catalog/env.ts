@@ -18,7 +18,7 @@
  * the string itself. `DB_URL` appears in `CatalogEnv` for local development
  * only, where `scripts/local-env.ts` finds it.
  */
-import { declare, define } from "@devdogsuga/env";
+import { declare, define } from "@devdogsuga/sdk/env";
 import { z } from "zod";
 
 declare({
@@ -30,7 +30,7 @@ declare({
     PLATFORM_SENTRY_DSN: define(z.string().url().optional(), {
       doc:
         "Sentry ingest DSN for this app's Sentry project (see " +
-        "@devdogsuga/telemetry). Optional -- empty skips Sentry.init " +
+        "@devdogsuga/sdk/telemetry). Optional -- empty skips Sentry.init " +
         "entirely, which is the state before the org is onboarded and the " +
         "state of local development. Reaches the Worker like every other " +
         "environment variable.",

@@ -1,0 +1,55 @@
+name: Publish devdogsuga_sdk
+description: >-
+  Stamps packages/sdk_dart/pubspec.yaml with the version in the pushed tag,
+  runs its checks, and publishes it to pub.dev with the run's OIDC identity.
+  The calling job needs `id-token: write` and an environment pub.dev accepts.
+
+runs:
+  using: composite
+  steps:
+    # Not subosito/flutter-action or dart-lang/setup-dart: both call actions by
+    # tag, and the org requires every action pinned to a commit SHA. A shallow
+    # clone of Flutter's stable branch is the same SDK, uncached.
+    - name: Install Flutter (stable)
+      shell: bash
+      run: |
+        git clone --depth 1 --branch stable https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+        echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+    - name: Stamp the version from the tag
+      shell: bash
+      working-directory: packages/sdk_dart
+      run: |
+        version="${GITHUB_REF_NAME#devdogsuga_sdk-v}"
+        if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-next\.[0-9]+)?$ ]]; then
+          echo "::error::'$GITHUB_REF_NAME' does not name a version."
+          exit 1
+        fi
+        sed -i -E "s/^version: .*/version: $version/" pubspec.yaml
+        grep -n '^version:' pubspec.yaml
+    - name: Check
+      shell: bash
+      working-directory: packages/sdk_dart
+      run: |
+        flutter pub get
+        flutter analyze
+        flutter test
+    # pub.dev's automated publishing: exchange the job's OIDC token (audience
+    # pub.dev) for a pub credential, the way dart-lang/setup-dart does.
+    - name: Create the pub.dev credential
+      shell: bash
+      run: |
+        token=$(curl --retry 5 --retry-connrefused -sLS \
+          "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=https://pub.dev" \
+          -H "User-Agent: actions/oidc-client" \
+          -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" | jq -r '.value')
+        if [ -z "$token" ] || [ "$token" = "null" ]; then
+          echo "::error::No OIDC token: the job needs 'id-token: write'."
+          exit 1
+        fi
+        echo "::add-mask::$token"
+        echo "PUB_TOKEN=$token" >> "$GITHUB_ENV"
+        dart pub token add https://pub.dev --env-var PUB_TOKEN
+    - name: Publish
+      shell: bash
+      working-directory: packages/sdk_dart
+      run: dart pub publish --force

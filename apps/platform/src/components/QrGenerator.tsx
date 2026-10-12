@@ -40,7 +40,7 @@ import {
   type QrFormat,
   type QrShape,
   type QrTheme,
-} from "@devdogsuga/brand/qr";
+} from "@devdogsuga/sdk/brand/qr";
 import { ZodError } from "zod";
 
 const DISCORD_LOGO_PATHS = {

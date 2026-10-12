@@ -42,7 +42,7 @@ import { derivedBuildValues } from "./derived-build.js";
 import { catalog } from "../catalog.js";
 import { resolveVaultTarget } from "../bws/pick.js";
 import { confirm, log, note } from "@clack/prompts";
-import type { EnvTarget } from "@devdogsuga/env";
+import type { EnvTarget } from "@devdogsuga/sdk/env/targets";
 import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
 import {
   createSecret,

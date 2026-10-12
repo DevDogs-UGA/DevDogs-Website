@@ -19,7 +19,7 @@ below that need no secrets (`graphics`, `qr`, `github`, `newsletter`, `creds`),
 `import`, `export` and
 anything run with `--no-env` never look for one; a command that reads a checkout says
 "run this from inside a DevDogsUGA clone" and exits 1. The DevDogsUGA libraries
-it reads (`@devdogsuga/env`, `@devdogsuga/db`) are optional peers, resolved
+it reads (`@devdogsuga/sdk/env`, `@devdogsuga/sdk/db`) are optional peers, resolved
 through the checkout by the commands that need them.
 
 ```bash
@@ -73,7 +73,7 @@ name `devdogs-monorepo` or `backstage`; the layout code is
 | `deploy prune-monitors --tier <t> [--app]`         | Deletes the app's Sentry Crons monitors it no longer declares (production only).       |
 | `env pull\|push\|audit --target <t>`               | One env file per target, synced to Bitwarden and GitHub. `audit` lists orphans.        |
 | `planner status\|create\|reset-password\|drop`     | The `migration_planner` role the preflight tier holds.                                 |
-| `graphics [graphic…]`                              | Club images from `@devdogsuga/brand`: `brand/*`, `app/*`, `event/*`.                   |
+| `graphics [graphic…]`                              | Club images from `@devdogsuga/sdk/brand`: `brand/*`, `app/*`, `event/*`.               |
 | `qr <text>`                                        | QR codes with every option of `/console/qr`.                                           |
 | `github rulesets\|settings`                        | Diff (and with `--apply` write) GitHub config, through `gh`.                           |
 | `newsletter render\|draft\|send <series> <issue…>` | Changelog or GDGC issues as files, mailbox drafts, or a send.                          |
@@ -112,11 +112,11 @@ None of these reads an env file or needs a checkout, so the launcher skips env
 entry for them (`envFree` in the command tree).
 
 - **`graphics`** renders the brand, app and event images with
-  `@devdogsuga/brand/render`, reading meetings from the published
+  `@devdogsuga/sdk/brand/render`, reading meetings from the published
   `@devdogsuga/events`. Files go to `--out` or the current directory, flat, as
   `<name>-<format>.png`. There is no `page/*` group (the platform renders page
   cards per request) and no `--default-out`.
-- **`qr`** takes its options from `qrRequestSchema` in `@devdogsuga/brand/qr`,
+- **`qr`** takes its options from `qrRequestSchema` in `@devdogsuga/sdk/brand/qr`,
   the same schema `/console/qr` parses, so a new option reaches both. Every
   schema field has a flag (`qr/options.ts` is typed over the schema, and a test
   checks it): content, `--size`, `--margin`, `--color`, `--background`,

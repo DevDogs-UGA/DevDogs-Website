@@ -144,7 +144,7 @@ apps/study-group-finder/tool/*.docs.json
 # serves, so they stay out of the tree.
 .images/
 
-# Brand images derived from `@devdogsuga/brand` by schedule-builder's `codegen`
+# Brand images derived from `@devdogsuga/sdk/brand` by schedule-builder's `codegen`
 # (`scripts/brand-assets.ts`). Nothing here is a source file, so committing them
 # stored a second copy of artwork the package already has, and one that went
 # stale silently. (The platform's own brand exports went with it to Backstage.)
@@ -165,16 +165,16 @@ apps/schedule-builder/public/icons/
 !packages/cli-core/test-fixtures/fixture-repo/packages/demo-source/dist/
 !packages/cli-core/test-fixtures/fixture-repo/packages/demo-source/dist/index.js
 
-# @devdogsuga/brand: derived by `pnpm codegen` from artwork/ and Phosphor.
-packages/brand/src/generated/assets.ts
-packages/brand/src/generated/icons.ts
-packages/brand/palette.css
+# @devdogsuga/sdk/brand: derived by `pnpm codegen` from artwork/ and Phosphor.
+packages/sdk/src/brand/generated/assets.ts
+packages/sdk/src/brand/generated/icons.ts
+packages/sdk/palette.css
 
 # packages/email's own .gitignore, plus its preview output.
 packages/email/src/generated/
 email-previews/
 
-# Brand images derived from @devdogsuga/brand by the platform's `codegen`
+# Brand images derived from @devdogsuga/sdk/brand by the platform's `codegen`
 # (scripts/brand-images.ts). The email signatures and platform-192 are deployed
 # assets regenerated into public/ before `vinext build`; the rest are exports.
 apps/platform/public/brand/banners/

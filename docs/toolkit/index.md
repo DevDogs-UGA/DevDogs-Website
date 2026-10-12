@@ -22,11 +22,11 @@ Schema-per-app is an organizational boundary, not a security one — see [Supaba
 
 | …do this                             | …use this                                                                                                                                                              |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Read a variable, or add a new one    | [**`@devdogsuga/env`**](./guides/env/index.md) — one declaration per variable                                                                                          |
+| Read a variable, or add a new one    | [**`@devdogsuga/sdk/env`**](./guides/env/index.md) — one declaration per variable                                                                                      |
 | Find the command for a chore         | [**`@devdogsuga/devtools`**](./guides/devtools.md) — the contributor CLI                                                                                               |
 | Boot, migrate or reset a database    | [**Running the database**](./guides/devtools-db.md) — `devtools supabase …`, `apply-migrations`, `restart-stack`                                                       |
-| Talk to Postgres from an app         | [**`@devdogsuga/db`**](../_shared/guides/stack/db.md) — the shared postgres-js + Drizzle client factory                                                                |
-| Reach Supabase, or write an RLS test | [**`@devdogsuga/db`** + `@devdogsuga/supabase`](../_shared/guides/stack/supabase.md) — client factories, types, RLS suite                                              |
+| Talk to Postgres from an app         | [**`@devdogsuga/sdk/db`**](../_shared/guides/stack/db.md) — the shared postgres-js + Drizzle client factory                                                            |
+| Reach Supabase, or write an RLS test | [**`@devdogsuga/sdk/db`** + `@devdogsuga/supabase`](../_shared/guides/stack/supabase.md) — client factories, types, RLS suite                                          |
 | Author a meeting or a workshop       | [**`@devdogsuga/events`**](../platform/infrastructure/events.md) — a PR against Backstage's data                                                                       |
 | Send an email                        | [**`@devdogsuga/email`**](./guides/email.md) — react-email, compiled to typed HTML (in Backstage)                                                                      |
 | Change how docs are built            | [**`@devdogsuga/docs-kit`**](./guides/docs-kit.md) — compiles markdown, generates reference                                                                            |
@@ -63,7 +63,7 @@ Four of the catalog's ranges are held back deliberately: ESLint stays on 9.x (`e
 An [API reference](./reference/api/supabase.md) page exists for each
 `packages/*` workspace member with a public surface — `supabase` today —
 generated from that package's source on every build, so it never drifts from
-what the code exports. `@devdogsuga/env` is Backstage-published tooling
+what the code exports. `@devdogsuga/sdk/env` is Backstage-published tooling
 rather than a `packages/*` workspace member, so it is documented by hand in
 [Env](./guides/env/index.md) instead. The same goes for the two CLIs:
 [devtools](./guides/devtools.md) is the contributor CLI, and

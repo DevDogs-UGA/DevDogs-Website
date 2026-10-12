@@ -14,7 +14,11 @@ const packages = runnablePackages([
     name: "@devdogsuga/devtools",
     scripts: { build: "tsdown", test: "vitest run", lint: "eslint ." },
   },
-  { dir: "packages/brand", name: "@devdogsuga/brand", scripts: { test: "v" } },
+  {
+    dir: "packages/brand",
+    name: "@devdogsuga/sdk/brand",
+    scripts: { test: "v" },
+  },
   { dir: "packages/empty", name: "@devdogsuga/empty", scripts: {} },
   { dir: "apps/nameless", scripts: { dev: "d" } },
 ]);
@@ -24,7 +28,7 @@ describe("runnablePackages", () => {
     expect(packages.map((pkg) => pkg.name)).toEqual([
       "backstage",
       "@devdogsuga/devtools",
-      "@devdogsuga/brand",
+      "@devdogsuga/sdk/brand",
     ]);
   });
 });
@@ -51,7 +55,7 @@ describe("packagesWith", () => {
 
 describe("findPackage", () => {
   it("matches the exact name, the directory, or an unambiguous short name", () => {
-    expect(findPackage(packages, "@devdogsuga/brand")?.dir).toBe(
+    expect(findPackage(packages, "@devdogsuga/sdk/brand")?.dir).toBe(
       "packages/brand",
     );
     expect(findPackage(packages, "packages/devtools")?.name).toBe(

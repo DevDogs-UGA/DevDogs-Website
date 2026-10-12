@@ -11,12 +11,12 @@ import type * as RepoPeers from "@devdogsuga/cli-core/repo/peers";
  * "remote-trigger env" tests near the bottom of this file: `discoverWranglerConfigs`
  * so the Workflow picker sees one controlled app instead of walking `apps/*`
  * on disk, `runWithStderr` so no `pnpm exec wrangler` ever actually spawns,
- * and `@devdogsuga/env/load` so a deployed tier's credentials come from a
+ * and `env-runtime/load` so a deployed tier's credentials come from a
  * fixture rather than a real `.env.staging`. Every other test in this file
  * exercises a pure helper directly and needs none of this.
  *
  * Mocks `../repo/peers.js`'s `loadEnvLoad()` rather than the bare
- * `@devdogsuga/env/load` specifier: devtools now resolves that module
+ * `env-runtime/load` specifier: devtools now resolves that module
  * dynamically FROM the target repo (see `repo/peers.ts`), so the bare
  * specifier is never imported by the code under test anymore.
  */

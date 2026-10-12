@@ -36,8 +36,8 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@devdogsuga/brand": "workspace:*",
     "@devdogsuga/events": "workspace:*",
+    "@devdogsuga/sdk": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:"
   },

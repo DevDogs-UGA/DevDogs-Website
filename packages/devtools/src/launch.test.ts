@@ -8,7 +8,7 @@
  * (`availableTiers`), mutates `process.env` (`enterEnvironment`), or exits
  * the process outright on refusal — none of which belongs in a unit test.
  * `resolveSessionTier` itself already carries the policy coverage, in
- * `@devdogsuga/env`'s own `session.test.ts`; this file is only about argv
+ * `@devdogsuga/sdk/env`'s own `session.test.ts`; this file is only about argv
  * surgery and the one branch of `launch()` that is safe to exercise without
  * either of those.
  */
@@ -24,8 +24,8 @@ const enterEnvironment = vi.fn(async (..._args: unknown[]) => ({
 }));
 class MissingEnvFileError extends Error {}
 class LocalStackOfflineError extends Error {}
-// Mocks `../repo/peers.js` rather than the bare `@devdogsuga/env/session`
-// and `@devdogsuga/env/load` specifiers: devtools resolves both dynamically
+// Mocks `../repo/peers.js` rather than the bare `env-runtime/session`
+// and `env-runtime/load` specifiers: devtools resolves both dynamically
 // FROM the target repo now (see `repo/peers.ts`).
 vi.mock("@devdogsuga/cli-core/repo/peers", () => ({
   loadEnvSession: async () => ({

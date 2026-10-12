@@ -18,8 +18,7 @@
  * default `pnpm test` — see package.json.
  *
  * PREREQUISITE: `pnpm --filter @devdogsuga/devtools build` (and the same for
- * `@devdogsuga/telemetry` and `@devdogsuga/env`) must already have produced
- * `dist/` for each — this suite packs whatever is currently on disk, it does
+ * `@devdogsuga/sdk`) must already have produced `dist/` for each — this suite packs whatever is currently on disk, it does
  * not build. CI's `ci.yaml`/`publish.yaml` both run the build step first;
  * see this repo's root README or those workflow files for the exact order.
  */
@@ -91,20 +90,15 @@ describe("devtools contract tests", () => {
   beforeAll(
     () => {
       requireBuilt(DEVTOOLS_ROOT, "launch.js");
-      requireBuilt(join(BACKSTAGE_ROOT, "packages", "telemetry"), "index.js");
-      requireBuilt(join(BACKSTAGE_ROOT, "packages", "env"), "index.js");
+      requireBuilt(join(BACKSTAGE_ROOT, "packages", "sdk"), "index.js");
 
       tmpRoot = mkdtempSync(join(tmpdir(), "devtools-contract-"));
       packDir = join(tmpRoot, "packs");
       mkdirSync(packDir, { recursive: true });
 
       const devtoolsTgz = packPackage(DEVTOOLS_ROOT, packDir);
-      const telemetryTgz = packPackage(
-        join(BACKSTAGE_ROOT, "packages", "telemetry"),
-        packDir,
-      );
-      const envTgz = packPackage(
-        join(BACKSTAGE_ROOT, "packages", "env"),
+      const sdkTgz = packPackage(
+        join(BACKSTAGE_ROOT, "packages", "sdk"),
         packDir,
       );
 
@@ -137,8 +131,7 @@ describe("devtools contract tests", () => {
       writeFileSync(
         workspaceYamlPath,
         `${workspaceYaml}\noverrides:\n` +
-          `  "@devdogsuga/telemetry": "file:${telemetryTgz}"\n` +
-          `  "@devdogsuga/env": "file:${envTgz}"\n` +
+          `  "@devdogsuga/sdk": "file:${sdkTgz}"\n` +
           `allowBuilds:\n` +
           `  core-js: false\n` +
           `  esbuild: true\n`,
@@ -165,9 +158,9 @@ describe("devtools contract tests", () => {
 
       // A second install of the same tarball OUTSIDE the fixture, the shape
       // `pnpm dlx` gives a real run: devtools alone in its own directory, with
-      // no `@devdogsuga/env` installed next to it (an optional peer nothing
-      // here depends on). The fixture install above cannot catch a bare peer
-      // import from devtools' own files, because the fixture supplies the peer.
+      // no `@devdogsuga/sdk` installed next to it (the repo's own dependency,
+      // never devtools'). The fixture install above cannot catch a bare import
+      // of it from devtools' own files, because the fixture supplies it.
       const dlxDir = join(tmpRoot, "dlx");
       mkdirSync(dlxDir);
       writeFileSync(
@@ -180,11 +173,7 @@ describe("devtools contract tests", () => {
       );
       writeFileSync(
         join(dlxDir, "pnpm-workspace.yaml"),
-        `overrides:\n` +
-          `  "@devdogsuga/telemetry": "file:${telemetryTgz}"\n` +
-          `allowBuilds:\n` +
-          `  core-js: false\n` +
-          `  esbuild: true\n`,
+        `allowBuilds:\n` + `  core-js: false\n` + `  esbuild: true\n`,
       );
       const dlxInstall = spawnSync(
         "pnpm",
@@ -201,9 +190,9 @@ describe("devtools contract tests", () => {
             `${dlxInstall.stdout}\n${dlxInstall.stderr}`,
         );
       }
-      if (existsSync(join(dlxDir, "node_modules", "@devdogsuga", "env"))) {
+      if (existsSync(join(dlxDir, "node_modules", "@devdogsuga", "sdk"))) {
         throw new Error(
-          "The dlx directory installed @devdogsuga/env, so it no longer models pnpm dlx.",
+          "The dlx directory installed @devdogsuga/sdk, so it no longer models pnpm dlx.",
         );
       }
       dlxBin = join(dlxDir, "node_modules", ".bin", "devtools");
@@ -336,7 +325,7 @@ describe("devtools contract tests", () => {
   });
 
   it("env example loads devtools' own manifest from a dlx-shaped install", async () => {
-    // Regression: devtools' `env.ts` imports `@devdogsuga/env` by bare
+    // Regression: devtools' `env.ts` imports `@devdogsuga/sdk/env` by bare
     // specifier, which does not resolve next to a dlx copy; every env
     // command failed with "The env manifest at .../env.ts failed to import".
     const { status, stdout, stderr } = await run(
@@ -445,7 +434,7 @@ describe("devtools contract tests", () => {
     }
     // The aliases kept for DevDogsUGA's main say what replaces them.
     expect(byPath.has("db start")).toBe(false);
-    expect(byPath.get("run")?.deprecated).toContain("pnpm -r run");
+    expect(byPath.has("run")).toBe(false);
     // Hidden from the wizard, but still a supported command.
     expect(byPath.get("completions")?.surface).toBe("cli-only");
     // Gone.
@@ -588,15 +577,16 @@ describe("devtools contract tests", () => {
     );
   });
 
-  // ── the deprecated run alias ───────────────────────────────────────────────
+  // ── the removed run alias (TASK-404) ───────────────────────────────────────
 
-  it("run names its replacement before it runs", async () => {
-    const { stderr } = await run(
+  it("run names its replacement and fails", async () => {
+    const { status, stderr } = await run(
       ["run", "no-such-task", "--all", "--tier", "development"],
       { env: { CI: "true", DEVTOOLS_TELEMETRY: "0" } },
     );
-    expect(stderr).toContain("devtools run is deprecated.");
-    expect(stderr).toContain("pnpm -r run no-such-task");
+    expect(status).toBe(1);
+    expect(stderr).toContain("`run` is gone");
+    expect(stderr).toContain("pnpm -r run <task>");
   });
 
   // ── --dry-run, the failure log and the script picker ───────────────────────
@@ -662,5 +652,111 @@ describe("devtools contract tests", () => {
     );
     expect(status).toBe(1);
     expect(stderr).toContain('has no script "no-such-script"');
+  });
+
+  // ── a product repository (devtools.config.json), the way DogPack runs it:
+  //    the packed CLI alone, in a directory with no workspace and no sdk ─────
+
+  describe("a product repository", () => {
+    let productDir: string;
+
+    const CONFIG = {
+      product: "contract",
+      name: "Contract",
+      supabase: { version: "2.117.0", schemas: ["contract"] },
+      types: { kind: "typescript", out: "lib/database.types.ts" },
+    };
+
+    beforeAll(() => {
+      productDir = join(tmpRoot, "product");
+      mkdirSync(join(productDir, "supabase", "schemas", "contract"), {
+        recursive: true,
+      });
+      writeFileSync(
+        join(productDir, "devtools.config.json"),
+        JSON.stringify(CONFIG),
+      );
+      writeFileSync(
+        join(productDir, "supabase", "schemas", "contract", "schema.sql"),
+        "create schema if not exists contract;\n",
+      );
+      writeFileSync(
+        join(productDir, ".env.example"),
+        "SUPABASE_URL=\nSUPABASE_PUBLISHABLE_KEY=\n",
+      );
+    });
+
+    const runProduct = (args: string[]) =>
+      run(args, {
+        bin: dlxBin,
+        cwd: productDir,
+        env: { CI: "true" },
+      });
+
+    it("shows the product's commands, not the platform's", async () => {
+      const { status, stdout } = await runProduct(["--help"]);
+      expect(status).toBe(0);
+      for (const command of ["setup", "db", "dev-data", "doctor", "oauth"]) {
+        expect(stdout).toMatch(new RegExp(`^ {2}${command}\\s`, "m"));
+      }
+      expect(stdout).not.toMatch(/^ {2}jobs\s/m);
+      expect(stdout).not.toMatch(/^ {2}wrangler\s/m);
+    });
+
+    it("lists db's subcommands", async () => {
+      const { status, stdout } = await runProduct(["db", "--help"]);
+      expect(status).toBe(0);
+      for (const sub of ["sync", "types", "hash"]) {
+        expect(stdout).toContain(sub);
+      }
+    });
+
+    it("db hash prints only the schema hash on stdout, the same twice", async () => {
+      const first = await runProduct(["db", "hash"]);
+      const second = await runProduct(["db", "hash"]);
+      expect(first.status).toBe(0);
+      expect(first.stdout.trim()).toMatch(/^[0-9a-f]{64}$/);
+      expect(second.stdout).toBe(first.stdout);
+      expect(first.stderr).toContain("generator supabase@2.117.0");
+    });
+
+    it("db hash changes when a schema file does", async () => {
+      const before = (await runProduct(["db", "hash"])).stdout;
+      writeFileSync(
+        join(productDir, "supabase", "schemas", "contract", "t.sql"),
+        "create table contract.t (id int);\n",
+      );
+      const after = (await runProduct(["db", "hash"])).stdout;
+      expect(after).not.toBe(before);
+    });
+
+    it("check env-example passes a public manifest and fails a secret one", async () => {
+      const ok = await runProduct(["check", "env-example"]);
+      expect(ok.status).toBe(0);
+
+      writeFileSync(
+        join(productDir, ".env.example"),
+        "SUPABASE_URL=\nSUPABASE_SECRET_KEY=sb_secret_x\n",
+      );
+      const bad = await runProduct(["check", "env-example"]);
+      expect(bad.status).toBe(1);
+      expect(`${bad.stdout}${bad.stderr}`).toContain("SUPABASE_SECRET_KEY");
+    });
+
+    it("db sync --dry-run names the Supabase CLI calls and runs nothing", async () => {
+      const { status, stdout, stderr } = await runProduct([
+        "db",
+        "sync",
+        "--dry-run",
+      ]);
+      expect(status).toBe(0);
+      expect(`${stdout}${stderr}`).toContain("declarative sync --no-apply");
+    });
+
+    it("the platform's commands are not available here", async () => {
+      const { status, stderr, stdout } = await runProduct(["jobs", "list"]);
+      expect(status).toBe(1);
+      expect(`${stdout}${stderr}`).toContain("Unknown command: jobs");
+    });
   });
 });

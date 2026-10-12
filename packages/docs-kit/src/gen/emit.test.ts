@@ -358,13 +358,13 @@ describe("renderSymbol", () => {
         name: "declare",
         kind: "function",
         importStyle: "named",
-        importPath: "@devdogsuga/env",
+        importPath: "@devdogsuga/sdk/env",
         tags: ["public"],
       }),
       options,
     );
 
-    expect(page).toContain('import { declare } from "@devdogsuga/env";');
+    expect(page).toContain('import { declare } from "@devdogsuga/sdk/env";');
   });
 
   it("renders a Dart symbol as Dart, fence and import alike", () => {

@@ -119,7 +119,7 @@ export const supabaseCapture = (...args: string[]) =>
 /**
  * Generate and write Database types from the session's database.
  *
- * Delegates to `@devdogsuga/db/typegen`'s `generateDatabaseTypes`, which runs
+ * Delegates to `@devdogsuga/sdk/db/typegen`'s `generateDatabaseTypes`, which runs
  * `pnpm exec supabase gen types --db-url <dbUrl>` (always `--db-url` — the
  * session's own connection string, never the supabase CLI's
  * `--local`/`--linked` modes, whose defaults can disagree with what this

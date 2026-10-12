@@ -19,6 +19,7 @@
     "@devdogsuga/docs-kit": "workspace:*"
   },
   "devDependencies": {
-    "@devdogsuga/env": "workspace:*"
+    "@devdogsuga/devtools": "workspace:*",
+    "@devdogsuga/sdk": "workspace:*"
   }
 }

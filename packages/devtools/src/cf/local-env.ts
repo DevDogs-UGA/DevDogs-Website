@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { EnvEntry } from "@devdogsuga/env";
+import type { EnvEntry } from "@devdogsuga/sdk/env";
 import { loadEnv } from "@devdogsuga/cli-core/repo/peers";
 import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
 

@@ -1,6 +1,6 @@
 {
   // Repo-wide base for the packages and apps that extend it directly
-  // (packages/db, packages/env, packages/events, packages/telemetry,
+  // (packages/sdk, packages/events,
   // packages/supabase, supabase/, and the apps' cloudflare/ programs). The
   // actual compiler options live in packages/config/tsconfig/base.json,
   // which ships with the published @devdogsuga/config package and can't

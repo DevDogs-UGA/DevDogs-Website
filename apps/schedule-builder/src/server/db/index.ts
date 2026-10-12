@@ -1,4 +1,4 @@
-import { createDb } from "@devdogsuga/db/server";
+import { createDb } from "@devdogsuga/sdk/db/server";
 import { env as workerEnv } from "cloudflare:workers";
 import { cacheForRequest } from "vinext/cache";
 import { after } from "next/server";

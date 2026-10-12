@@ -12,7 +12,7 @@ on:
   pull_request:
     paths:
       - apps/slides/**
-      - packages/brand/**
+      - packages/sdk/**
       - packages/events/**
       - .gitmodules
       - pnpm-lock.yaml
@@ -20,7 +20,7 @@ on:
     branches: [main]
     paths:
       - apps/slides/**
-      - packages/brand/**
+      - packages/sdk/**
       - packages/events/**
       - .gitmodules
       - pnpm-lock.yaml

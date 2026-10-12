@@ -2,7 +2,7 @@
  * The shared `--tier` resolver for the handful of commands that pick a
  * deploy tier of their OWN, separate from the session-wide tier
  * `src/launch.ts` already resolved and entered before this CLI ever runs
- * (see that file's header, and `@devdogsuga/env/session`, which is where
+ * (see that file's header, and `env-runtime/session`, which is where
  * `availableTiers` and the session-wide policy now live — this module used
  * to carry its own copy of both, one of two the wizard's tier question also
  * used to keep before it moved into `launch.ts`).
@@ -21,7 +21,7 @@
  * if `--tier development` had been typed.
  */
 import { select } from "@clack/prompts";
-import type { DeployEnvironment } from "@devdogsuga/env";
+import type { DeployEnvironment } from "@devdogsuga/sdk/env/targets";
 import { loadEnv, loadEnvSession } from "./repo/peers.js";
 import { findRepoRoot } from "./repo/root.js";
 import { unwrap } from "./ui.js";

@@ -2,13 +2,13 @@ import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { GDGC_UGA_LIGHT } from "@devdogsuga/brand";
+import { GDGC_UGA_LIGHT } from "@devdogsuga/sdk/brand";
 
 /**
  * Writes the logos the home page links to (`/brand/*.svg`) into `public/`.
  *
  * They used to be committed copies of artwork that also lives in
- * `@devdogsuga/brand`, which is how the two drifted. Now `codegen` copies them
+ * `@devdogsuga/sdk/brand`, which is how the two drifted. Now `codegen` copies them
  * from the package, so a re-exported logo reaches this app on the next
  * install and there is one place to change it. The directory is gitignored.
  *
@@ -20,7 +20,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const out = join(root, "public", "brand");
 const artwork = join(
   dirname(
-    createRequire(import.meta.url).resolve("@devdogsuga/brand/package.json"),
+    createRequire(import.meta.url).resolve("@devdogsuga/sdk/package.json"),
   ),
   "artwork",
 );

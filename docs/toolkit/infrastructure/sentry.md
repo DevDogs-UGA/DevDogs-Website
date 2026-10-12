@@ -7,7 +7,7 @@ section: infrastructure
 
 # Sentry
 
-Each app reports to its own Sentry project, and devtools reports to a third. Every setting below is optional: with no DSN, `@devdogsuga/telemetry` skips `Sentry.init` entirely, and with no auth token, deploys skip the release step with a warning. That is the state of local development.
+Each app reports to its own Sentry project, and devtools reports to a third. Every setting below is optional: with no DSN, `@devdogsuga/sdk/telemetry` skips `Sentry.init` entirely, and with no auth token, deploys skip the release step with a warning. That is the state of local development.
 
 ## Projects
 

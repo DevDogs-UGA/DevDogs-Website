@@ -12,7 +12,7 @@
  * output.
  */
 import { z } from "zod";
-import { declare, define } from "@devdogsuga/env";
+import { declare, define } from "@devdogsuga/sdk/env";
 
 declare({
   source: "demo-registry",

@@ -1,4 +1,4 @@
-import { EVENT_TZ } from "@devdogsuga/brand/event";
+import { EVENT_TZ } from "@devdogsuga/sdk/brand/event";
 
 /** Explicit minutes, an en dash, and a shared meridiem when possible. */
 export function timeRange(startsAt: Date, endsAt: Date): string {

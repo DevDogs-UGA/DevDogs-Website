@@ -13,7 +13,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   MissingEnvFileError,
   type LoadedEnvironment,
-} from "@devdogsuga/env/load";
+} from "@devdogsuga/cli-core/env-runtime/load";
 import { resolveLocalToolingEnv } from "./local-env.js";
 
 describe("resolveLocalToolingEnv", () => {

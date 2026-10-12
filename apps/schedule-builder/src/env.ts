@@ -1,4 +1,4 @@
-import { createEnv } from "@devdogsuga/env/nextjs";
+import { createEnv } from "@devdogsuga/sdk/env";
 import * as z from "zod";
 
 import {
@@ -6,7 +6,7 @@ import {
   declare,
   define,
   resolveEnvironment,
-} from "@devdogsuga/env";
+} from "@devdogsuga/sdk/env";
 
 /**
  * Which deployment this build is for, resolved ONCE, while the schemas below
@@ -37,7 +37,7 @@ function switchEnvironment<T, R>(opt: { local: T; deployed: R }) {
 
 /**
  * Server-side variables. Every schema goes through `define()`, which records
- * scope and secrecy into the `@devdogsuga/env` registry. `.env.example` and
+ * scope and secrecy into the `@devdogsuga/sdk/env` registry. `.env.example` and
  * the `env push` routing are derived from these declarations. Keys shared
  * with the platform app (the Supabase connection block, CRON_SECRET) are
  * deliberately declared in BOTH manifests with the same metadata: the
@@ -90,7 +90,7 @@ const server = {
     },
   ),
   // Sentry ingest DSN for the "schedule-builder" project (see
-  // @devdogsuga/telemetry). Optional and empty by default, deliberately: the
+  // @devdogsuga/sdk/telemetry). Optional and empty by default, deliberately: the
   // org is not onboarded in every environment yet, and `buildSentryOptions`
   // treats a falsy DSN as "skip Sentry.init entirely" -- no init, no network
   // calls, no console noise. A DSN is not a secret (it identifies a project,
@@ -105,7 +105,7 @@ const server = {
   SCHEDULE_BUILDER_SENTRY_DSN: define(z.string().url().optional(), {
     doc:
       "Sentry ingest DSN for this app's Sentry project (see " +
-      "@devdogsuga/telemetry). Optional -- empty skips Sentry.init " +
+      "@devdogsuga/sdk/telemetry). Optional -- empty skips Sentry.init " +
       "entirely, which is the state before the org is onboarded and the " +
       "state of local development. Reaches the Worker like every other " +
       "environment variable.",
@@ -336,7 +336,7 @@ const client = {
 };
 
 /**
- * Registers this app's manifest with `@devdogsuga/env`, alongside
+ * Registers this app's manifest with `@devdogsuga/sdk/env`, alongside
  * `createEnv`, not instead of it: @t3-oss keeps the runtime behaviour,
  * `declare()` makes the variables visible to the tooling that derives
  * `.env.example` and the secrets routing, and it throws on any schema that

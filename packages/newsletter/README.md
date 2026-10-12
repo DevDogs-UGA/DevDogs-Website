@@ -169,7 +169,7 @@ and SMTP submission for their Graph calls and delete the borrowed ID.
 ## The lockup
 
 The masthead's mascot + wordmark lockup is `LOCKUP_ON_DARK` from
-`@devdogsuga/brand`, built there from `artwork/devdogs-logo-dark.svg`. Change
+`@devdogsuga/sdk/brand`, built there from `artwork/devdogs-logo-dark.svg`. Change
 the artwork in brand, not here.
 
 [API reference](https://devdogsuga.org/docs/toolkit/reference/api/newsletter)

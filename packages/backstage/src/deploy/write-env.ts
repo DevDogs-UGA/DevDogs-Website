@@ -97,7 +97,7 @@
  */
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { EnvEntry } from "@devdogsuga/env";
+import type { EnvEntry } from "@devdogsuga/sdk/env";
 import { assertRegistryLoaded } from "@devdogsuga/cli-core/env/discovery";
 import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";
 import { resolveLayout } from "@devdogsuga/cli-core/repo/layout";
@@ -178,7 +178,7 @@ function readContext(
 /**
  * The value the registry itself supplies, or `null` when it supplies none.
  *
- * The derivation half is `derivationOf()` in `@devdogsuga/env` rather than a
+ * The derivation half is `derivationOf()` in `@devdogsuga/sdk/env` rather than a
  * test written here, because `env init --target` has to make the identical
  * call: the file a person fills in by hand and the file this command composes
  * on a runner are the same file, and a second opinion about which `example`

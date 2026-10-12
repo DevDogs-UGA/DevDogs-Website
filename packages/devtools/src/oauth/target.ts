@@ -30,7 +30,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "dotenv";
-import type { DeployEnvironment } from "@devdogsuga/env";
+import type { DeployEnvironment } from "@devdogsuga/sdk/env/targets";
 import { detectLocalSupabase, type LocalSupabaseConfig } from "./db.js";
 
 export type TargetKind = "local" | "hosted";
@@ -98,7 +98,7 @@ export interface RepoHostedTargetDeps {
   ) => Promise<DeployEnvironment | null>;
   /**
    * Loads the chosen tier's env into `process.env` (or `env`, when given) —
-   * `@devdogsuga/env/session`'s `enterEnvironment`, called with
+   * `env-runtime/session`'s `enterEnvironment`, called with
    * `override: true`: the launcher already entered `development` for this
    * envFree command (see `launch.ts`), and a DELIBERATE, later choice of a
    * different tier here must win over that earlier one, not lose to it.

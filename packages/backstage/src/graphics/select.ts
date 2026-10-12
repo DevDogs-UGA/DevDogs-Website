@@ -1,4 +1,4 @@
-import { FORMATS, type Format } from "@devdogsuga/brand";
+import { FORMATS, type Format } from "@devdogsuga/sdk/brand";
 import type { Graphic } from "./registry.js";
 
 /**

@@ -48,7 +48,7 @@ import {
 } from "@devdogsuga/cli-core/telemetry";
 import { errorMessage, explain } from "@devdogsuga/cli-core/ui";
 import { ownVersion } from "@devdogsuga/cli-core/version";
-import { catalog } from "./catalog.js";
+import { activeCatalog, isProductMode } from "./active.js";
 import { handleCheck } from "./check/commands.js";
 import { handleCompletions } from "./completions/commands.js";
 import { handleDoctor } from "./doctor/commands.js";
@@ -64,9 +64,9 @@ import {
   handlePushConfig,
   handleRestartStack,
 } from "./preset/commands.js";
-import { runTask } from "./run/commands.js";
 import { handleScript } from "./script/commands.js";
 import { handleSetup } from "./setup/commands.js";
+import { createProductHandlers } from "./product/commands.js";
 
 // ── Dispatch ─────────────────────────────────────────────────────────────────
 
@@ -81,12 +81,6 @@ const CONTRIBUTOR_HANDLERS: Record<string, CommandHandler> = {
   setup: handleSetup,
   completions: handleCompletions,
   check: handleCheck,
-  // Reached only from the wizard. A typed `run` is handled in `main()` before
-  // `intro()`. It exits with its child's status, so it never returns and
-  // `outro()` is never reached. That is right: by the time a menu walk gets
-  // here the banner is already on screen, above the menu it introduced,
-  // rather than wedged between this CLI and pnpm's output.
-  run: runTask,
   oauth: handleOAuth,
   script: handleScript,
   jobs: handleJobs,
@@ -133,6 +127,19 @@ export const HANDLERS: Record<string, CommandHandler> = {
 };
 
 /**
+ * What a product repository (one with a `devtools.config.json`) runs instead:
+ * its own `setup`, `db`, `dev-data`, `doctor`, `check` and pinned `supabase`,
+ * and the same `oauth` wizard. Built on first use so the platform's startup
+ * does not pay for it.
+ */
+let productHandlers: Record<string, CommandHandler> | undefined;
+function handlersFor(): Record<string, CommandHandler> {
+  if (!isProductMode()) return HANDLERS;
+  productHandlers ??= { ...createProductHandlers(), oauth: handleOAuth };
+  return productHandlers;
+}
+
+/**
  * Names retired in favour of a new one, refused with the new name rather than
  * falling into "Unknown command": they are in this repo's own docs, scripts
  * and shell histories, so a bare "unknown" would leave the rename to be
@@ -148,6 +155,13 @@ const RETIRED: Record<
     hoisted?: readonly string[];
   }
 > = {
+  run: {
+    message: "`run` is gone (TASK-404).",
+    hints: [
+      "every package: pnpm -r run <task>",
+      "one app:       pnpm -F <app> <task>",
+    ],
+  },
   secrets: {
     message: "`secrets` is now `backstage env`.",
     hints: ["In a Backstage clone: pnpm backstage env <pull|push|audit>"],
@@ -230,8 +244,9 @@ const RETIRED: Record<
 async function dispatch(argv: string[]): Promise<string | null> {
   const [first, ...rest] = argv;
   if (!first) return DONE;
+  const catalog = activeCatalog();
 
-  const handler = HANDLERS[first];
+  const handler = handlersFor()[first];
   if (handler) {
     // A command that has not said how it treats `--dry-run` may spawn or
     // write, so it is stopped here and its command line printed instead.
@@ -242,7 +257,7 @@ async function dispatch(argv: string[]): Promise<string | null> {
     return handler(rest);
   }
 
-  const retired = RETIRED[first];
+  const retired = isProductMode() ? undefined : RETIRED[first];
   if (retired) {
     const [sub] = rest;
     const hoisted = sub !== undefined && retired.hoisted?.includes(sub);
@@ -277,6 +292,7 @@ async function dispatch(argv: string[]): Promise<string | null> {
  * guard at the bottom of this file, for a direct `tsx src/cli.ts` run.
  */
 export async function main(typed: string[]): Promise<void> {
+  const catalog = activeCatalog();
   // An alias becomes the command it stands for before anything reads argv, so
   // help, dispatch, the wizard's resume and the "run it directly next time"
   // line all see one name: `cron run` is `jobs run --kind sync` from here on.
@@ -292,7 +308,13 @@ export async function main(typed: string[]): Promise<void> {
   // The real tools: `devtools supabase --help` is the
   // Supabase CLI's help. Before `intro()` too, so no banner lands above (or
   // an outro after) another tool's output.
-  if (isPassthroughTool(argv[0])) {
+  // In a product the only real tool is the Supabase CLI at the product's pin;
+  // like the platform's passthroughs it runs before `intro()`.
+  if (isProductMode() && argv[0] === "supabase") {
+    await handlersFor()["supabase"]!(argv.slice(1));
+    return;
+  }
+  if (!isProductMode() && isPassthroughTool(argv[0])) {
     await handlePassthrough(argv[0], argv.slice(1));
     return;
   }
@@ -355,19 +377,6 @@ export async function main(typed: string[]): Promise<void> {
   const startPath = process.stdin.isTTY
     ? bareGroupStartPath(catalog, argv)
     : null;
-
-  // Also before `intro()`, for the neighbouring reason: this one hands stdout
-  // to pnpm, and through it to a Next dev server or a Flutter run that owns
-  // the terminal until Ctrl-C. A banner above that output would be this CLI
-  // announcing itself over somebody else's, and the `outro()` below would
-  // print "Done." after a dev server was interrupted. `runTask` exits with
-  // the child's own status and never comes back. `!startPath` excludes the one
-  // case that is not this: a bare `run` at a terminal, which the block above
-  // already resolved to its own subcommand screen rather than a task to run.
-  if (!startPath && argv[0] === "run") {
-    await runTask(argv.slice(1));
-    return;
-  }
 
   // No banner without a terminal: a log, a pipe or a CI step wants plain
   // lines (see `@devdogsuga/cli-core/mode`).

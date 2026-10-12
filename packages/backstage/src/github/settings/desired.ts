@@ -30,6 +30,13 @@ export interface DesiredEnvironmentPolicy {
    */
   allowedBranches: readonly string[];
   /**
+   * Deployment-tag-policy patterns (GitHub stores them as `type: tag`
+   * policies). A job triggered by a tag push has a tag ref, and a branch
+   * policy never admits one: pub.dev's automated publishing only accepts a
+   * tag-push run, so `publishing-next` allows the Dart package's tags.
+   */
+  allowedTags?: readonly string[];
+  /**
    * Whether `--apply` may CREATE this environment when it does not exist.
    * Off for DevDogsUGA (its environment is reported only, as always).
    * When on, the environment is created with its branch policies AND — the
@@ -138,7 +145,8 @@ const BACKSTAGE_ENVIRONMENTS: readonly DesiredEnvironmentPolicy[] = [
 /**
  * DevDogsUGA after the fold-back: it carries what Backstage carried (the
  * deploy, build and publishing environments) plus `publishing-next`, the
- * reviewer-less environment prereleases publish from (`main` only), plus the
+ * reviewer-less environment prereleases publish from (`main` only, plus the
+ * Dart SDK's release tags, which the workflow checks are on `main`), plus the
  * two destructive-gate environments (Q10): `production-destructive` and
  * `staging-destructive`. They hold NO secrets; they are only a second approval
  * (a `devops` member other than the author, self-review blocked) that a deploy
@@ -158,7 +166,13 @@ const DESTRUCTIVE_GATE = (name: string): DesiredEnvironmentPolicy => ({
 
 const DEVDOGSUGA_ENVIRONMENTS: readonly DesiredEnvironmentPolicy[] = [
   ...BACKSTAGE_ENVIRONMENTS,
-  { ...plain("publishing-next"), createIfMissing: true },
+  {
+    ...plain("publishing-next"),
+    // `devdogsuga_sdk-v<version>` tag pushes publish the Dart SDK to pub.dev
+    // (`publish-dart.yaml`), which only runs for a tag ref.
+    allowedTags: ["devdogsuga_sdk-v*"],
+    createIfMissing: true,
+  },
   DESTRUCTIVE_GATE("production-destructive"),
   DESTRUCTIVE_GATE("staging-destructive"),
 ];

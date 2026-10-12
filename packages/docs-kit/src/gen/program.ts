@@ -28,13 +28,13 @@ export interface AliasRule {
 export interface Target {
   /** The `docs/` project this target's pages are written under. */
   docsProject: string;
-  /** Repo-relative root: `apps/platform`, `packages/env`. */
+  /** Repo-relative root: `apps/platform`, `packages/sdk`. */
   dir: string;
   /** Absolute path to that root. */
   absDir: string;
   /** Absolute path to `src/`. */
   srcDir: string;
-  /** `package.json`'s name: `platform`, `@devdogsuga/env`. */
+  /** `package.json`'s name: `platform`, `@devdogsuga/sdk/env`. */
   packageName: string;
   kind: "app" | "package";
   /** Absolute path to the target's own `tsconfig.json`. */
@@ -178,7 +178,7 @@ export function createProgram(target: Target): ts.Program {
 
 /**
  * What a reader types to import from this file: `~/ui/button` for an app,
- * `@devdogsuga/env` (or a declared subpath) for a package.
+ * `@devdogsuga/sdk/env` (or a declared subpath) for a package.
  */
 export function importPathFor(target: Target, absFile: string): string {
   const file = toPosix(absFile);

@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
-import { declare, define } from "@devdogsuga/env";
+import { declare, define } from "@devdogsuga/sdk/env";
 import { z } from "zod";
 import { derivedBuildValues } from "./derived-build.js";
 

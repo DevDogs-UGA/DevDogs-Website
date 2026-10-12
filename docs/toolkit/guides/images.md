@@ -7,7 +7,7 @@ section: guides
 
 # Images
 
-`backstage graphics` renders the templates from `@devdogsuga/brand`. It
+`backstage graphics` renders the templates from `@devdogsuga/sdk/brand`. It
 needs no env file and no credentials. It is part of the officer CLI, so it runs
 from a [Backstage](https://github.com/DevDogsUGA/Backstage) clone (see [devtools](./devtools.md#what-lives-elsewhere)):
 

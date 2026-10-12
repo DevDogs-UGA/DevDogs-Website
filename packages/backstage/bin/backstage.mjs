@@ -5,7 +5,7 @@
  * Ships built JS (tsdown bundles `src/` and the private
  * `@devdogsuga/cli-core` into a flat `dist/`) and runs it with plain `node`.
  * It starts anywhere, a DevDogsUGA checkout or not: the DevDogsUGA packages it
- * reads (`@devdogsuga/env`, `@devdogsuga/db`) are optional peers, resolved
+ * reads (`@devdogsuga/sdk/env`, `@devdogsuga/sdk/db`) are optional peers, resolved
  * through the checkout only by the commands that need one.
  */
 // Relative specifiers, not joined paths: `import()` takes URLs, and a Windows

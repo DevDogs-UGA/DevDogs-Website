@@ -37,9 +37,11 @@ and an absolute `/docs/…` URL or an extensionless link is itself an error) and
 `pnpm run <script>` that does not match a real command or script. Opt a fenced
 sample out with a `nocheck` fence-info word (` ```sh nocheck `).
 
-The two CLIs' command lists come from running `pnpm devtools --help --json` and
-`pnpm backstage --help --json` from the repo root, so the docs are checked
-against the latest publish. If a list cannot be loaded the build fails; there
+The two CLIs' command lists come from running `--help --json`. devtools runs
+from this workspace's own build (`packages/devtools`, built before the docs
+because the docs depend on it), falling back to `pnpm devtools`; backstage
+runs as `pnpm backstage` from the repo root, so it is checked against the
+latest publish. If a list cannot be loaded the build fails; there
 is no silent skip. To check against a build that is not published yet, set
 `DOCS_KIT_DEVTOOLS_CMD` / `DOCS_KIT_BACKSTAGE_CMD` to the command that runs it
 (`DOCS_KIT_DEVTOOLS_CMD="node /path/to/devtools.mjs"`).

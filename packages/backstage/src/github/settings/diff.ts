@@ -227,7 +227,11 @@ export function planSettings(
       checks.push({
         key: `environments.${env.name}`,
         description: `Environment "${env.name}"`,
-        desired: `branches=[${env.allowedBranches.join(", ")}], reviewers=${
+        desired: `branches=[${env.allowedBranches.join(", ")}]${
+          env.allowedTags?.length
+            ? `, tags=[${env.allowedTags.join(", ")}]`
+            : ""
+        }, reviewers=${
           env.requireReviewers
             ? `required (${(env.reviewerTeams ?? []).join(", ") || "none named"}${env.preventSelfReview ? ", self-review prevented" : ""})`
             : "none"
@@ -240,19 +244,31 @@ export function planSettings(
       continue;
     }
 
-    const liveBranches = snapshot.branchPolicies.map((p) => p.name);
+    const liveBranches = snapshot.branchPolicies
+      .filter((p) => p.type !== "tag")
+      .map((p) => p.name);
+    const liveTags = snapshot.branchPolicies
+      .filter((p) => p.type === "tag")
+      .map((p) => p.name);
+    const wantedTags = env.allowedTags ?? [];
     const branchesMatch =
       snapshot.environment.deployment_branch_policy?.custom_branch_policies ===
         true &&
       snapshot.environment.deployment_branch_policy?.protected_branches ===
         false &&
-      sameSet(liveBranches, env.allowedBranches);
+      sameSet(liveBranches, env.allowedBranches) &&
+      sameSet(liveTags, wantedTags);
+    const describe = (branches: readonly string[], tags: readonly string[]) =>
+      [
+        ...[...branches].sort(),
+        ...[...tags].sort().map((tag) => `tag:${tag}`),
+      ].join(", ");
     checks.push({
       key: `environments.${env.name}.branch_policy`,
       description: `Environment "${env.name}" deployment branch policy`,
-      desired: [...env.allowedBranches].sort().join(", "),
+      desired: describe(env.allowedBranches, wantedTags),
       live: snapshot.environment.deployment_branch_policy
-        ? [...liveBranches].sort().join(", ") ||
+        ? describe(liveBranches, liveTags) ||
           "(no branch restriction — all branches allowed)"
         : "(no deployment branch policy configured)",
       status: branchesMatch ? "ok" : "drift",

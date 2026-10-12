@@ -50,7 +50,7 @@ vi.mock("../bws/client.js", () => ({
 import { setSecret, setVariable } from "../gh/client.js";
 import { pushToGithub } from "./commands.js";
 import { loadRegistry } from "@devdogsuga/cli-core/env/discovery";
-import { declare, define } from "@devdogsuga/env";
+import { declare, define } from "@devdogsuga/sdk/env";
 import { z } from "zod";
 
 beforeAll(async () => {

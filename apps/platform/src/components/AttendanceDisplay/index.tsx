@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowsOutIcon, WarningIcon } from "@phosphor-icons/react/ssr";
-import { QR_DEFAULTS, renderQrSvg } from "@devdogsuga/brand/qr";
+import { QR_DEFAULTS, renderQrSvg } from "@devdogsuga/sdk/brand/qr";
 import TitleCard, { titleCardWash, type TitleCardMeeting } from "./TitleCard";
 import { useAttendanceCodes } from "./useAttendanceCodes";
 

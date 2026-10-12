@@ -1,7 +1,7 @@
 import {
   EVENT_KIND_VISUALS,
   EVENT_SEGMENT_VISUALS,
-} from "@devdogsuga/brand/event";
+} from "@devdogsuga/sdk/brand/event";
 import { KIND, PALETTE, UGA } from "@devdogsuga/newsletter";
 
 /**
@@ -9,7 +9,7 @@ import { KIND, PALETTE, UGA } from "@devdogsuga/newsletter";
  *
  * Text tones come from the Changelog's palette, because the Changelog is
  * already the club's terminal voice and these pages are its siblings. Event
- * colours come from `@devdogsuga/brand/event`, the same source the site's
+ * colours come from `@devdogsuga/sdk/brand/event`, the same source the site's
  * calendar chips and the email's chips read, so a build session is sky here
  * too. Nothing paints a background except a chip: a terminal's own ground is
  * whatever the reader chose, and these all read on dark and light alike.

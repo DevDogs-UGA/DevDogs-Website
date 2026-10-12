@@ -59,10 +59,9 @@ describe("--help --json", () => {
     const byPath = new Map(doc.commands.map((c) => [c.path, c]));
     expect(byPath.get("check migrations")?.surface).toBe("cli-only");
     expect(byPath.get("completions")?.surface).toBe("cli-only");
-    expect(byPath.get("run")?.deprecated).toContain("pnpm -r run");
+    expect(byPath.has("run")).toBe(false);
     expect(byPath.has("db types")).toBe(false);
     expect(byPath.get("restart-stack")?.surface).toBe("interactive");
-    expect(byPath.get("run")?.surface).toBe("cli-only");
     // Aliases ride on their command, so a docs check holds pages to `jobs`.
     expect(byPath.get("jobs")?.aliases).toEqual(["cron", "workflows"]);
     expect(byPath.has("cron run")).toBe(false);
@@ -112,7 +111,6 @@ describe("--dry-run", () => {
       ["supabase"],
       ["apply-migrations"],
       ["restart-stack"],
-      ["run", "build"],
       ["roles", "list"],
     ]) {
       expect(dryRunKind(catalog, path), path.join(" ")).toBeDefined();
@@ -154,6 +152,13 @@ describe("retired names", () => {
 
   afterEach(() => {
     process.exitCode = undefined;
+  });
+
+  it("points `run` at pnpm (TASK-404)", async () => {
+    const printed = await refusal(["run", "build"]);
+    expect(printed).toContain("`run` is gone");
+    expect(printed).toContain("pnpm -r run <task>");
+    expect(process.exitCode).toBe(1);
   });
 
   it("points `preset <name>` at the command it became", async () => {

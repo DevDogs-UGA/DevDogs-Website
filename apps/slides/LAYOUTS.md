@@ -63,7 +63,7 @@ transparent)` so it always matches the slide's own accent, plus a
 - **Chrome**: the DevDogs mark + wordmark, top-left, and the GDG on
   Campus mark + "Google Developer Groups" / "On Campus · University of
   Georgia" footer, bottom-right — both straight from the workspace
-  `@devdogsuga/brand` package (never redrawn). Turn it off on a
+  `@devdogsuga/sdk/brand` package (never redrawn). Turn it off on a
   particular slide with `chrome: false`.
 - **The corner chip**, if you set a `chip` frontmatter key (e.g. `chip:
 WORKSHOP`) — an accent-filled pill, dark caps text (white fails contrast on every accent), top-right. Uses

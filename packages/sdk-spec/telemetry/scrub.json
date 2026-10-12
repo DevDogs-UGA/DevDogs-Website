@@ -1,0 +1,35 @@
+{
+  "$comment": "Generated from @devdogsuga/sdk/telemetry (SCRUB_RULES). Do not edit by hand.",
+  "rules": [
+    {
+      "name": "windowsPath",
+      "pattern": "[A-Za-z]:\\\\(?:[^\\s\"'()<>]+\\\\)*([^\\s\"'()<>]+)",
+      "flags": "g",
+      "replacement": "$1"
+    },
+    {
+      "name": "posixPath",
+      "pattern": "(?<=^|[\\s\"'(<])\\/(?:[^\\s\"'()<>:]+\\/)+([^\\s\"'()<>:]+)",
+      "flags": "g",
+      "replacement": "$1"
+    },
+    {
+      "name": "email",
+      "pattern": "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}",
+      "flags": "g",
+      "replacement": "[redacted-email]"
+    },
+    {
+      "name": "envAssignment",
+      "pattern": "\\b([A-Z][A-Z0-9_]{2,}(?:_KEY|_TOKEN|_SECRET|_PASSWORD)\\w*)=[^\\s\"'`)]+",
+      "flags": "g",
+      "replacement": "$1=[redacted]"
+    },
+    {
+      "name": "bearerToken",
+      "pattern": "\\b[Bb]earer\\s+[A-Za-z0-9._-]+",
+      "flags": "g",
+      "replacement": "Bearer [redacted]"
+    }
+  ]
+}

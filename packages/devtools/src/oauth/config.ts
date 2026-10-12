@@ -2,6 +2,18 @@
 export const DEFAULT_API_URL = "https://api.devdogsuga.org";
 
 /**
+ * Every host the platform's auth server has answered on, in the order to try.
+ * The platform's project moves from its custom domain to the vanity name
+ * `devdogsuga.supabase.co` at a deploy gate (Q90), and `api.devdogsuga.org`
+ * then becomes a Worker-routed host with no `/auth/v1`; discovery tries each,
+ * so one build of devtools works on both sides of the move.
+ */
+export const DEFAULT_API_URLS: readonly string[] = [
+  DEFAULT_API_URL,
+  "https://devdogsuga.supabase.co",
+];
+
+/**
  * DevDogs website — human-facing links, and (since TASK-351) the origin
  * that serves the one-click connect flow's `/tools/oauth/connect` and
  * `/tools/oauth/connect/exchange` endpoints. Overridable via `--platform-url`

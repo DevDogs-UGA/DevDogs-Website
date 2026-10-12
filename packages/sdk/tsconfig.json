@@ -1,8 +1,27 @@
 {
+  // The repo base, NOT `../config/tsconfig/lib.json` (nodenext). The db
+  // subpath needs Bundler resolution: under nodenext tsc resolves
+  // `@supabase/supabase-js` through its CJS entry and bakes that path into the
+  // emitted declarations, so the consumer's `SupabaseClient` and ours become
+  // distinct classes and every client handed across the boundary fails to
+  // assign ("property 'supabaseUrl' is protected but type ... is not a class
+  // derived from ..."). Every relative import in src/ carries `.js`, which is
+  // what the emitted ESM needs under either resolution.
+  //
+  // The brand templates are JSX but nothing here ever mounts: Satori consumes
+  // the plain {type, props} objects the automatic runtime produces.
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": "src",
+    "declaration": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2025", "DOM"],
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "vitest.config.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src"],
+  // Tests are typechecked (tsconfig.typecheck.json includes them) but never
+  // emitted.
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.test.tsx"]
 }

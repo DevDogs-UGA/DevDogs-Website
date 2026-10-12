@@ -1,5 +1,5 @@
-import { APPS, OG_SIZE, PageCard } from "@devdogsuga/brand";
-import { imageResponse } from "@devdogsuga/brand/next";
+import { APPS, OG_SIZE, PageCard } from "@devdogsuga/sdk/brand";
+import { imageResponse } from "@devdogsuga/sdk/brand/next";
 
 /**
  * The card a DogDays link unfurls as.

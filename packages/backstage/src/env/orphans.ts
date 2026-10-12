@@ -56,7 +56,7 @@
  * names.
  */
 import { execFileSync } from "node:child_process";
-import type { EnvEntry } from "@devdogsuga/env";
+import type { EnvEntry } from "@devdogsuga/sdk/env";
 import { assertRegistryLoaded } from "@devdogsuga/cli-core/env/discovery";
 import { listWorkerSecrets, workerApps } from "./cloudflare.js";
 import { getEnvSync } from "@devdogsuga/cli-core/repo/peers";

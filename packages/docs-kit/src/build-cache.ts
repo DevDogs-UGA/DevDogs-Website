@@ -40,7 +40,7 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { cliOverrides } from "./cli-catalog.js";
+import { cliOverrides, workspaceDevtoolsIdentity } from "./cli-catalog.js";
 import { sourceFilesUnder } from "./gen/scope.js";
 import { discoverWorkspacePackages, findWorkspaceRoot } from "./workspace.js";
 
@@ -135,7 +135,7 @@ export function openBuildCache(contentRoot: string): BuildCache {
   const { devtools, backstage } = cliOverrides();
   const signature = computeSignature(
     entries,
-    `${compilerIdentity()}|${devtools}|${backstage}`,
+    `${compilerIdentity()}|${devtools}|${backstage}|${workspaceDevtoolsIdentity(repoRoot)}`,
   );
 
   const outputsExist =

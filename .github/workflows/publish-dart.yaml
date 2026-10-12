@@ -1,0 +1,72 @@
+name: Publish the Dart SDK
+
+# `devdogsuga_sdk` (packages/sdk_dart) is published to pub.dev by pushing a tag,
+# which is the only trigger pub.dev's automated publishing accepts: its OIDC
+# check requires the run's ref to be a tag matching the pattern configured on
+# the package's Admin page (`devdogsuga_sdk-v{{version}}`), and, here, the
+# `publishing-next` environment for prereleases.
+#
+#   git tag devdogsuga_sdk-v0.1.0-next.4 <sha on main> && git push origin devdogsuga_sdk-v0.1.0-next.4
+#   (`node scripts/dart-next-tag.mjs` prints the next name)
+#
+# A tag cannot be pushed by another workflow with the default token (GitHub
+# does not start a workflow from a GITHUB_TOKEN push), so a person, or an agent
+# with its own credentials, pushes it.
+#
+# The tag names the version: the job writes it into pubspec.yaml before it
+# publishes, so the committed version (0.1.0) never has to move. A tag whose
+# commit is not on `main` is refused, so a prerelease is always a `main` build.
+#
+# Stable releases (`devdogsuga_sdk-vX.Y.Z`, no prerelease suffix) are behind the
+# `publishing` environment's approval and stay off until the Gate sets
+# BACKSTAGE_PUBLISHES_STABLE=true and adds the tag pattern to that environment.
+on:
+  push:
+    tags:
+      - "devdogsuga_sdk-v[0-9]+.[0-9]+.[0-9]+-next.[0-9]+"
+      - "devdogsuga_sdk-v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: read
+
+jobs:
+  prerelease:
+    if: contains(github.ref_name, '-next.')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: publishing-next
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: The tagged commit is on main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main \
+            || { echo "::error::$GITHUB_REF_NAME is not on main; prereleases are main builds only."; exit 1; }
+      - name: Publish
+        uses: ./.github/actions/publish-dart
+
+  stable:
+    if: >-
+      !contains(github.ref_name, '-next.') && vars.BACKSTAGE_PUBLISHES_STABLE == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: publishing
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: The tagged commit is on main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main \
+            || { echo "::error::$GITHUB_REF_NAME is not on main."; exit 1; }
+      - name: Publish
+        uses: ./.github/actions/publish-dart

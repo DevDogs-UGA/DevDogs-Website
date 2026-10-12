@@ -1,4 +1,4 @@
-import { PALETTE } from "@devdogsuga/brand";
+import { PALETTE } from "@devdogsuga/sdk/brand";
 
 /**
  * Email design tokens.
@@ -12,7 +12,7 @@ import { PALETTE } from "@devdogsuga/brand";
  * would be honoured by only some clients while the rest invert the light one
  * into something nobody designed. These colors read correctly under both.
  *
- * The neutrals are `@devdogsuga/brand`'s flat-hex palette (`PALETTE`, the same
+ * The neutrals are `@devdogsuga/sdk/brand`'s flat-hex palette (`PALETTE`, the same
  * values the OG cards and the site's `--brand-*` variables carry) rather than
  * a second set of greys: ink is mauve-900, the lightest steps do the borders
  * and canvas. Only the accent is the email's own, the club's UGA red, which

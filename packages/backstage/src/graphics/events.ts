@@ -2,7 +2,7 @@ import {
   EVENT_SEGMENT_VISUALS,
   meetingCardDetail,
   meetingLocation,
-} from "@devdogsuga/brand/event";
+} from "@devdogsuga/sdk/brand/event";
 import { getClubConfig, type Meeting, type Workshop } from "@devdogsuga/events";
 import type { EventGraphicSource } from "./registry.js";
 

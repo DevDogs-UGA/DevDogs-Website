@@ -1,4 +1,4 @@
-import type { SecurityHeadersInput } from "@devdogsuga/headers";
+import type { SecurityHeadersInput } from "@devdogsuga/sdk/headers";
 import { env } from "~/env";
 import { platformCsp } from "~/lib/csp";
 

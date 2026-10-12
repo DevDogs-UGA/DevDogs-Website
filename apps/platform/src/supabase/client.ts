@@ -1,4 +1,4 @@
-import { createBrowserClient } from "@devdogsuga/db/client";
+import { createBrowserClient } from "@devdogsuga/sdk/db/client";
 import type { Database } from "@devdogsuga/supabase";
 import { env } from "~/env";
 import { APP_SCHEMA } from "./schema";
@@ -10,7 +10,7 @@ import { APP_SCHEMA } from "./schema";
  * Repeated calls return one instance, because `@supabase/ssr` caches a single
  * browser client: one module-level slot, first call wins, arguments never
  * compared. Every call here passes the same `APP_SCHEMA`, so that cache is
- * harmless; see `@devdogsuga/db/client` for why it would not be otherwise.
+ * harmless; see `@devdogsuga/sdk/db/client` for why it would not be otherwise.
  */
 export function createClient() {
   return createBrowserClient<Database, typeof APP_SCHEMA>({
