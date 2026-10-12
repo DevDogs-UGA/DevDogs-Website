@@ -149,6 +149,9 @@ describe("release tags", () => {
       release.conditions.ref_name.include,
     );
     expect(release.rules.map((r) => r.type)).toEqual(["update", "deletion"]);
+    expect(release.conditions.ref_name.include).toContain(
+      "refs/tags/workshops-vscode@*",
+    );
   });
 });
 

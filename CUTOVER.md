@@ -1,5 +1,10 @@
 # Wave-3 cutover checklist
 
+> **Historical (Backstage era).** Superseded for trusted publishing: each npm package
+> has exactly two trusted publishers on `DevDogsUGA/DevDogsUGA`, workflow `ci.yaml`,
+> environments `publishing` and `publishing-next`. Never a blank environment (that
+> would let any workflow run publish). See docs/operations/credentials/registries.md.
+
 Consolidated at the end of Wave 1, from the divergences the migration actually
 created. Wave 1 copied eight packages out of `DevDogsUGA` into this repo; it
 changed **nothing** in `DevDogsUGA`, which is still the live source of truth.

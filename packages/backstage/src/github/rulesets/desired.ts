@@ -244,7 +244,13 @@ export function hasMergeQueueRule(ruleset: DesiredRuleset): boolean {
  * - no Renovate bypass: its install on Backstage is not readable from here.
  * - no `team/**` rulesets (a DevDogsUGA concern).
  */
-const RELEASE_TAGS = "refs/tags/@devdogsuga/**";
+// npm releases (`@devdogsuga/<pkg>@x.y.z`) and the extension's
+// (`workshops-vscode@x.y.z`, scripts/publish-workshops-vscode.mjs): both are
+// pushed by the publish job with GITHUB_TOKEN.
+const RELEASE_TAGS = [
+  "refs/tags/@devdogsuga/**",
+  "refs/tags/workshops-vscode@*",
+];
 
 function buildBackstageRulesets(actors: RulesetActors): DesiredRuleset[] {
   const deployBranch = "refs/heads/deploy/devdogsuga";
@@ -395,7 +401,7 @@ function buildBackstageRulesets(actors: RulesetActors): DesiredRuleset[] {
       target: "tag",
       enforcement: "active",
       conditions: {
-        ref_name: { include: ["refs/tags/**"], exclude: [RELEASE_TAGS] },
+        ref_name: { include: ["refs/tags/**"], exclude: RELEASE_TAGS },
       },
       bypass_actors: [always(actors.adminsTeamId), always(actors.devopsTeamId)],
       rules: [{ type: "creation" }, { type: "update" }, { type: "deletion" }],
@@ -408,7 +414,7 @@ function buildBackstageRulesets(actors: RulesetActors): DesiredRuleset[] {
       name: "release-tags",
       target: "tag",
       enforcement: "active",
-      conditions: { ref_name: { include: [RELEASE_TAGS], exclude: [] } },
+      conditions: { ref_name: { include: RELEASE_TAGS, exclude: [] } },
       bypass_actors: [always(actors.adminsTeamId)],
       rules: [{ type: "update" }, { type: "deletion" }],
     },
@@ -574,7 +580,7 @@ function buildDevDogsUgaRulesets(actors: RulesetActors): DesiredRuleset[] {
       target: "tag",
       enforcement: "active",
       conditions: {
-        ref_name: { include: ["refs/tags/**"], exclude: [RELEASE_TAGS] },
+        ref_name: { include: ["refs/tags/**"], exclude: RELEASE_TAGS },
       },
       bypass_actors: [always(actors.adminsTeamId), always(actors.devopsTeamId)],
       rules: [{ type: "creation" }, { type: "update" }, { type: "deletion" }],
@@ -587,7 +593,7 @@ function buildDevDogsUgaRulesets(actors: RulesetActors): DesiredRuleset[] {
       name: "release-tags",
       target: "tag",
       enforcement: "active",
-      conditions: { ref_name: { include: [RELEASE_TAGS], exclude: [] } },
+      conditions: { ref_name: { include: RELEASE_TAGS, exclude: [] } },
       bypass_actors: [always(actors.adminsTeamId)],
       rules: [{ type: "update" }, { type: "deletion" }],
     },
