@@ -1255,7 +1255,7 @@ test("settle waits out the 5xx window after a switch and reports it", async () =
     fetchImpl,
     settle: { ms: 5000, stable: 3, intervalMs: 0, retryDelayMs: 0 },
   });
-  assert.equal(checks[0].name, "the live version answers without a 5xx");
+  assert.equal(checks[0].name, "the version answers without a 5xx");
   assert.equal(checks[0].ok, true);
   assert.match(
     checks[0].detail,

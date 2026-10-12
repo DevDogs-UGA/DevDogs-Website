@@ -263,7 +263,7 @@ export async function settleCheck({
   stable = 20,
   intervalMs = 250,
 }) {
-  const name = "the live version answers without a 5xx";
+  const name = "the version answers without a 5xx";
   const started = Date.now();
   /** @type {Record<string, number>} */
   const bad = {};
