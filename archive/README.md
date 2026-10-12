@@ -39,13 +39,19 @@ shared drive before the machine is retired.
 # SELECT, checked for write keywords before it is sent)
 node scripts/archive-teams-and-competitions.ts
 
-# Verify the files against the manifest, and the manifest against production
-node scripts/archive-teams-and-competitions.ts --check
+# Verify the files against the manifest, and both against production: row
+# counts AND the rows themselves (a rename, a member's leftAt, a toggled
+# acceptingRequests or a closed competition keep the counts equal and still
+# fail). Add --private-out to check the unredacted copy as well. It prints
+# which rows and fields differ, never their values.
+node scripts/archive-teams-and-competitions.ts --check --private-out ~/.devdogs-secrets/archive-2026-10
 ```
 
 Production keeps taking writes to these tables until the Teams code is gone
 from production, so the archive goes stale until then. Before the drop
-migration runs, run `--check`; if it reports any difference, run the export
+migration runs, run `--check` (with `--private-out`, so the only copy of the
+join codes and user ids is checked too; `githubSyncedAt` is ignored, since the
+reconcile moves it on every run); if it reports any difference, run the export
 again (with `--private-out`), commit `archive/`, and only then apply the drop.
 The drop must never run against an archive `--check` rejects.
 

@@ -9,7 +9,9 @@
  *   --private-out <dir>   also write the unredacted rows here, OUTSIDE the
  *                         repository (join codes, creator and member user ids)
  *   --check               verify archive/ against the manifest and, while the
- *                         tables still exist, against the live row counts
+ *                         tables still exist, against production: the row
+ *                         counts AND the rows themselves (with --private-out,
+ *                         the unredacted copy too). Any difference exits 1.
  *
  * Reads production through the Management API's read-only query endpoint with
  * the Supabase CLI's access token (`SUPABASE_ACCESS_TOKEN`, or
@@ -159,19 +161,22 @@ interface Manifest {
   files: Record<string, string>;
 }
 
-async function exportArchive(options: Options): Promise<void> {
-  const counts = await liveCounts(options.projectRef);
-  if (!counts)
-    throw new Error("The tables are already gone; nothing to export.");
+interface PublicRows {
+  competitions: Row[];
+  entries: Row[];
+  teamsWithMembers: Array<Row & { members: Row[] }>;
+}
 
+/** The rows the public archive holds, read from production right now. */
+async function readPublicRows(projectRef: string): Promise<PublicRows> {
   const competitions = await query(
-    options.projectRef,
+    projectRef,
     `select id, slug, title, brief, repo, "issueNumber", "issueNodeId", url,
             "kickedOffAt", "plannedEndAt", "closedAt", "githubSyncedAt"
      from platform.competitions order by "kickedOffAt", slug`,
   );
   const entries = await query(
-    options.projectRef,
+    projectRef,
     `select ce.id, c.slug as "competitionSlug", ce."competitionId",
             t.slug as "teamSlug", ce."teamId", ce."prNumber", ce."prNodeId",
             ce.url, ce."openedAt", ce."mergedAt", ce."closedAt"
@@ -181,12 +186,12 @@ async function exportArchive(options: Options): Promise<void> {
      order by ce."openedAt", ce."prNumber"`,
   );
   const teams = await query(
-    options.projectRef,
+    projectRef,
     `select id, slug, name, "acceptingRequests", "githubSyncedAt"
      from platform.teams order by slug`,
   );
   const members = await query(
-    options.projectRef,
+    projectRef,
     `select tm."teamId", tm.role, tm."joinedAt", tm."leftAt", pp.handle
      from platform."teamMembers" tm
      left join platform."publicProfiles" pp on pp."userId" = tm."userId"
@@ -201,6 +206,32 @@ async function exportArchive(options: Options): Promise<void> {
       .map(({ teamId: _teamId, ...member }) => member),
   }));
 
+  return { competitions, entries, teamsWithMembers };
+}
+
+/** The unredacted tables, as `--private-out` writes them. */
+const PRIVATE_QUERIES = [
+  ["teams", `select * from platform.teams order by slug`],
+  ["teamMembers", `select * from platform."teamMembers" order by id`],
+  [
+    "teamMembershipRequests",
+    `select * from platform."teamMembershipRequests" order by id`,
+  ],
+  ["competitions", `select * from platform.competitions order by slug`],
+  [
+    "competitionEntries",
+    `select * from platform."competitionEntries" order by id`,
+  ],
+] as const;
+
+async function exportArchive(options: Options): Promise<void> {
+  const counts = await liveCounts(options.projectRef);
+  if (!counts)
+    throw new Error("The tables are already gone; nothing to export.");
+
+  const { competitions, entries, teamsWithMembers } = await readPublicRows(
+    options.projectRef,
+  );
   const memberRows = teamsWithMembers.reduce(
     (total, team) => total + team.members.length,
     0,
@@ -208,7 +239,7 @@ async function exportArchive(options: Options): Promise<void> {
   if (
     competitions.length !== counts.competitions ||
     entries.length !== counts.competitionEntries ||
-    teams.length !== counts.teams ||
+    teamsWithMembers.length !== counts.teams ||
     memberRows !== counts.teamMembers
   ) {
     throw new Error(
@@ -217,7 +248,7 @@ async function exportArchive(options: Options): Promise<void> {
         exported: {
           competitions: competitions.length,
           competitionEntries: entries.length,
-          teams: teams.length,
+          teams: teamsWithMembers.length,
           teamMembers: memberRows,
         },
       })}`,
@@ -269,19 +300,7 @@ async function exportArchive(options: Options): Promise<void> {
   if (options.privateOut) {
     const privateOut = resolve(options.privateOut);
     mkdirSync(privateOut, { recursive: true, mode: 0o700 });
-    for (const [table, statement] of [
-      ["teams", `select * from platform.teams order by slug`],
-      ["teamMembers", `select * from platform."teamMembers" order by id`],
-      [
-        "teamMembershipRequests",
-        `select * from platform."teamMembershipRequests" order by id`,
-      ],
-      ["competitions", `select * from platform.competitions order by slug`],
-      [
-        "competitionEntries",
-        `select * from platform."competitionEntries" order by id`,
-      ],
-    ] as const) {
+    for (const [table, statement] of PRIVATE_QUERIES) {
       writeFileSync(
         join(privateOut, `${table}.json`),
         json(await query(options.projectRef, statement)),
@@ -296,7 +315,83 @@ async function exportArchive(options: Options): Promise<void> {
   console.log(`Archived to ${out}:`, counts);
 }
 
-/** `--check`: the files match the manifest, and the manifest matches prod. */
+/**
+ * `githubSyncedAt` moves every time production's GitHub reconcile runs, which
+ * says nothing about the data being archived, so a check that counted it would
+ * fail on a clock tick. Everything else counts.
+ */
+const IGNORED_FIELDS = new Set(["githubSyncedAt"]);
+
+function comparable(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(comparable);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([key]) => !IGNORED_FIELDS.has(key))
+        .map(([key, inner]) => [key, comparable(inner)]),
+    );
+  }
+  return value;
+}
+
+const same = (a: unknown, b: unknown) =>
+  JSON.stringify(comparable(a)) === JSON.stringify(comparable(b));
+
+const label = (row: Row) => String(row.slug ?? row.id ?? "(no id)");
+
+/**
+ * Differences between an archived file's rows and production's, one line each:
+ * rows production gained or lost, and rows whose fields changed (which fields,
+ * never the values, so the output stays free of anything private). Counts alone
+ * miss renames, `leftAt` changes, toggles and closed competitions.
+ */
+export function describeDrift(
+  file: string,
+  archived: readonly Row[],
+  live: readonly Row[],
+): string[] {
+  const problems: string[] = [];
+  const byId = (rows: readonly Row[]) =>
+    new Map(rows.map((row) => [String(row.id), row]));
+  const before = byId(archived);
+  const after = byId(live);
+  for (const [id, row] of after) {
+    if (!before.has(id)) {
+      problems.push(
+        `${file}: production has a row the archive lacks (${label(row)})`,
+      );
+    }
+  }
+  for (const [id, row] of before) {
+    const now = after.get(id);
+    if (!now) {
+      problems.push(
+        `${file}: the archive has a row production no longer has (${label(row)})`,
+      );
+      continue;
+    }
+    const fields = [...new Set([...Object.keys(row), ...Object.keys(now)])]
+      .filter((field) => !IGNORED_FIELDS.has(field))
+      .filter((field) => !same(row[field], now[field]));
+    if (fields.length > 0) {
+      problems.push(
+        `${file}: ${label(row)} changed in production (${fields.join(", ")})`,
+      );
+    }
+  }
+  if (
+    problems.length === 0 &&
+    !same(
+      archived.map((row) => row.id),
+      live.map((row) => row.id),
+    )
+  ) {
+    problems.push(`${file}: the rows are the same but their order differs`);
+  }
+  return problems;
+}
+
+/** `--check`: the files match the manifest, and the manifest and the files match prod. */
 async function checkArchive(options: Options): Promise<void> {
   const out = resolve(options.out);
   const manifest = JSON.parse(
@@ -336,6 +431,41 @@ async function checkArchive(options: Options): Promise<void> {
         );
       }
     }
+    // Equal counts do not mean equal rows: production still renames teams,
+    // sets `leftAt`, toggles `acceptingRequests` and closes competitions.
+    const rows = await readPublicRows(options.projectRef);
+    problems.push(
+      ...describeDrift("teams.json", teams, rows.teamsWithMembers),
+      ...describeDrift(
+        "competitions.json",
+        read("competitions.json"),
+        rows.competitions,
+      ),
+      ...describeDrift(
+        "competitionEntries.json",
+        read("competitionEntries.json"),
+        rows.entries,
+      ),
+    );
+    if (options.privateOut) {
+      // The unredacted copy is the only record of join codes and user ids
+      // after the drop, so it must match production too.
+      const privateOut = resolve(options.privateOut);
+      for (const [table, statement] of PRIVATE_QUERIES) {
+        const file = join(privateOut, `${table}.json`);
+        if (!existsSync(file)) {
+          problems.push(`${table}.json: missing from ${privateOut}`);
+          continue;
+        }
+        problems.push(
+          ...describeDrift(
+            `private ${table}.json`,
+            JSON.parse(readFileSync(file, "utf8")) as Row[],
+            await query(options.projectRef, statement),
+          ),
+        );
+      }
+    }
   } else {
     console.log("The tables are gone from production; checked the files only.");
   }
@@ -344,8 +474,14 @@ async function checkArchive(options: Options): Promise<void> {
     console.error(problems.join("\n"));
     process.exit(1);
   }
-  console.log("Archive matches its manifest", live ? "and production." : ".");
+  console.log(
+    live
+      ? "Archive matches its manifest and production (counts and rows)."
+      : "Archive matches its manifest.",
+  );
 }
 
-const options = parseArgs(process.argv.slice(2));
-await (options.check ? checkArchive(options) : exportArchive(options));
+if (import.meta.main) {
+  const options = parseArgs(process.argv.slice(2));
+  await (options.check ? checkArchive(options) : exportArchive(options));
+}
