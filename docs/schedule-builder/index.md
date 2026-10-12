@@ -12,9 +12,9 @@ UGA student's semester against real registrar data.
 > [!TIP]
 > Just getting started? Start at
 > [Getting started](../_shared/getting-started/prerequisites.md) instead of this
-> page. Working the **schedule-builder competition**? The brief is a GitHub
-> issue, not a doc — see every open
-> [competition issue](https://github.com/DevDogsUGA/DevDogsUGA/issues?q=is%3Aissue+label%3Acompetition).
+> page. Picking up a task? The work is tracked as GitHub issues in the
+> [DogDays repository](https://github.com/DevDogsUGA/DogDays/issues), not in a
+> doc.
 
 ## Architecture
 

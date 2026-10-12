@@ -80,9 +80,8 @@ const BEATS: Beat[] = [
     body: (
       <>
         Every workshop is self-contained, and none assumes you were here last
-        week. Then, once you have the tools, we kick off the competition: split
-        up into teams and build the best implementation of that week&rsquo;s
-        feature.
+        week. Then, once you have the tools, we kick off the week&rsquo;s
+        challenge: build the best implementation of that week&rsquo;s feature.
       </>
     ),
     segments: ["workshop", "kickoff"],
@@ -98,9 +97,9 @@ const BEATS: Beat[] = [
     title: "Build Session",
     body: (
       <>
-        Catch up on workshop materials, meet up with your teammates for
-        hackathons, get unblocked with support from focus leads and club
-        officers, or just come hang out and get work done!
+        Catch up on workshop materials, meet up with friends for hackathons, get
+        unblocked with support from focus leads and club officers, or just come
+        hang out and get work done!
       </>
     ),
     // No segment: a build session is AUTHORED on the meeting rather than
@@ -117,8 +116,8 @@ const BEATS: Beat[] = [
     title: "Build It",
     body: (
       <>
-        Up to four per team, wherever and whenever. Open a pull request before
-        Monday.
+        On your own or with friends, wherever and whenever. Open a pull request
+        before Monday.
       </>
     ),
     segments: [],
@@ -131,9 +130,8 @@ const BEATS: Beat[] = [
     title: "Judging, then It All Starts Again",
     body: (
       <>
-        Teams demo in front of the club, officers and members vote on the best
-        implementation, and the winning pull request merges. Then, a new
-        workshop kicks off the next one.
+        Builders demo in front of the club, and officers and members vote on the
+        best implementation. Then, a new workshop kicks off the next one.
       </>
     ),
     segments: ["judging"],

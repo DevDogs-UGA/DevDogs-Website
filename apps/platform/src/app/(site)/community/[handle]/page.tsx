@@ -19,8 +19,8 @@ import { publicProfilesEnabled } from "~/server/features";
  * Cached HTML: nothing here reads the request, so the page is the same for
  * every visitor and re-renders at most once a minute. `setHandle` and the
  * visibility actions revalidate `profilePath(handle)` so a change shows at
- * once. Not pre-rendered with `generateStaticParams`; like the competition
- * pages, handles are database rows, rendered on first request.
+ * once. Not pre-rendered with `generateStaticParams`; handles are database
+ * rows, rendered on first request.
  *
  * Every miss is `notFound()` from one place: no `@`, no such handle, a hidden
  * profile, an unverified or quarantined member. They are one answer, so the

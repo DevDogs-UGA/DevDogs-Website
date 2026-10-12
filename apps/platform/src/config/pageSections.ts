@@ -93,7 +93,7 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
           id: "github",
           label: "GitHub",
           description:
-            "Linking GitHub adds you to the DevDogs organization and grants access to this year's project repositories.",
+            "Linking GitHub is part of verifying your account and is needed to create an OAuth client for testing DevDogs sign-in. You contribute from your own fork, so it does not add you to the DevDogs organization.",
         },
         {
           id: "discord",
@@ -158,6 +158,18 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
           label: "Client ID",
           description:
             "Copy these into your project's environment variables to enable DevDogs sign-in locally.",
+        },
+      ],
+    },
+    {
+      id: "moderation",
+      label: "Moderation",
+      fields: [
+        {
+          id: "moderation-clients",
+          label: "Report and Block",
+          description:
+            "Sign reports from your app's backend, and receive the decisions moderators make. Reports from a development client land in the sandbox below, never in the moderators' queue.",
         },
       ],
     },

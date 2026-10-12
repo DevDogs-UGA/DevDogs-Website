@@ -15,7 +15,7 @@
  * crashed. A crash also raises its own Sentry issue at the time; this is what
  * catches a run that never started.
  *
- * Twenty-six hours is a day plus room for a slow run: the nightly repair
+ * Twenty-six hours is a day plus room for a slow run: the Bulletin sync
  * spaces ~42 upstream requests, and the scrape has taken over twenty minutes.
  *
  * The names are the monitor slugs the jobs used to check in to. A job added
@@ -23,16 +23,14 @@
  * overdue before it has had a chance to run.
  */
 export const JOB_HEARTBEATS = {
-  // `cloudflare/scheduled.ts`'s "0 0 * * *" group, recorded by the dispatcher
-  // once every route in it succeeds.
-  "platform-nightly-repair": { maxAgeHours: 26 },
   // The catalog Worker's `ScrapeWorkflow` (schedule-builder's until the scrape
   // moved), at 14:05 UTC, recorded by its last step over the shared database
   // connection. The name is the old monitor slug and stays.
   "schedule-builder-scrape": { maxAgeHours: 26 },
   // The catalog Worker's `ProgramsWorkflow`, the UGA Bulletin program sync, at
-  // 14:35 UTC. It ran as the last route of "platform-nightly-repair" until it
-  // moved with the scrape; migration 58 seeds this row.
+  // 14:35 UTC. It ran in the platform's nightly-repair cron group (since
+  // retired; its `platform-nightly-repair` row stays in the table, ignored)
+  // until it moved with the scrape; migration 58 seeds this row.
   "catalog-academic-programs": { maxAgeHours: 26 },
 } as const satisfies Record<string, { maxAgeHours: number }>;
 

@@ -17,12 +17,7 @@ import {
 } from "@phosphor-icons/react/ssr";
 import Avatar from "~/components/AvatarField/Avatar";
 import * as icons from "~/config/icons";
-import {
-  COMPETITION_GROUP,
-  CONSOLE_GROUP,
-  type ConsoleItem,
-  type NavItem,
-} from "~/config/nav";
+import { CONSOLE_GROUP, type ConsoleItem, type NavItem } from "~/config/nav";
 import signOut from "~/server/actions/signOut";
 import NavMenuTrigger from "./NavMenuTrigger";
 import NavSubMenu from "./NavSubMenu";
@@ -223,7 +218,6 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
                   onPointerEnter={keepOpen}
                   onPointerLeave={closeSoon}
                 >
-                  <NavSubMenu {...COMPETITION_GROUP} panelRef={subPanelRef} />
                   <NavSubMenu
                     {...CONSOLE_GROUP}
                     items={consoleItems}

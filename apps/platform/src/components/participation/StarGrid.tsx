@@ -2,13 +2,13 @@ import { formatEventDate } from "~/lib/eventTime";
 import type { StarCell } from "~/server/loaders/stars";
 import EmptyState from "./EmptyState";
 
-/** A compact passport of the member's earned meeting and competition stars. */
+/** A compact passport of the member's earned meeting stars. */
 export default function StarGrid({ cells }: { cells: StarCell[] }) {
   if (cells.length === 0) {
     return (
       <EmptyState
         title="No participation recorded yet"
-        body="Stars appear here after an eligible meeting attendance or competition participation is recorded."
+        body="Stars appear here after an eligible meeting attendance is recorded."
       />
     );
   }
@@ -17,13 +17,13 @@ export default function StarGrid({ cells }: { cells: StarCell[] }) {
     <ol className="grid gap-3 sm:grid-cols-2">
       {cells.map((cell) => (
         <li
-          key={`${cell.activityType}:${cell.activityId}`}
+          key={cell.meetingId}
           className="rounded-lg border border-white/10 bg-white/5 p-4"
         >
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs tracking-wide text-mauve-400 uppercase">
-                {cell.activityType === "meeting" ? "Meeting" : "Competition"}
+                Meeting
               </p>
               <h3 className="font-semibold text-white">{cell.label}</h3>
               <time
@@ -36,11 +36,9 @@ export default function StarGrid({ cells }: { cells: StarCell[] }) {
             <span
               className="text-2xl text-amber-300"
               role="img"
-              aria-label={
-                cell.won ? "Star earned; competition won" : "Star earned"
-              }
+              aria-label="Star earned"
             >
-              {cell.won ? "♛" : "★"}
+              ★
             </span>
           </div>
         </li>

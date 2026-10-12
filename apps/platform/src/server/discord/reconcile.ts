@@ -11,8 +11,12 @@ import { asBot } from "./api";
 import { decimalToHex, hexToDecimal } from "./permissions";
 import {
   applyMembershipPlan,
+  chunk,
+  createRecordBatcher,
+  groupByRole,
   pairKey,
   planMembershipSync,
+  type RecordBatches,
 } from "./membershipSync";
 import { loadDiscordUserIds, pushMemberRoleChange } from "./memberSync";
 import { fetchGuildRoles } from "./roleSync";
@@ -210,42 +214,58 @@ export async function reconcileMembership(): Promise<{
     snapshot: new Set(snapshotRows.map((r) => pairKey(r.userId, r.roleId))),
   });
 
-  return applyMembershipPlan(plan, {
+  // The pushes to Discord happen one by one, as they must, but what they
+  // leave behind in the database is written in bulk afterwards. A failed bulk
+  // write leaves the snapshot stale, which the next run plans again: a push to
+  // Discord is idempotent.
+  const batcher = createRecordBatcher();
+  const result = await applyMembershipPlan(plan, {
     pushMemberRoleChange,
-    async record({ userId, roleId }, change) {
-      if (change.platform === "add") {
-        await db
-          .insert(userRoles)
-          .values({ userId, roleId })
-          .onConflictDoNothing();
-      } else if (change.platform === "remove") {
-        await db
-          .delete(userRoles)
-          .where(
-            and(eq(userRoles.userId, userId), eq(userRoles.roleId, roleId)),
-          );
-      }
-      if (change.snapshot) {
-        await db
-          .insert(discordRoleMemberships)
-          .values({ userId, roleId })
-          .onConflictDoUpdate({
-            target: [
-              discordRoleMemberships.userId,
-              discordRoleMemberships.roleId,
-            ],
-            set: { syncedAt: sql`now()` },
-          });
-      } else {
-        await db
-          .delete(discordRoleMemberships)
-          .where(
-            and(
-              eq(discordRoleMemberships.userId, userId),
-              eq(discordRoleMemberships.roleId, roleId),
-            ),
-          );
-      }
-    },
+    record: batcher.record,
   });
+  await writeBatches(batcher.batches());
+  return result;
+}
+
+/** Rows per bulk statement, well under Postgres' 65535 bound parameters. */
+const WRITE_CHUNK = 500;
+
+/**
+ * Writes what `reconcileMembership` decided: a few statements per kind of
+ * change rather than one per (user, role) pair.
+ */
+export async function writeBatches(batches: RecordBatches): Promise<void> {
+  for (const rows of chunk(batches.platformAdds, WRITE_CHUNK)) {
+    await db.insert(userRoles).values(rows).onConflictDoNothing();
+  }
+  for (const [roleId, userIds] of groupByRole(batches.platformRemoves)) {
+    for (const ids of chunk(userIds, WRITE_CHUNK)) {
+      await db
+        .delete(userRoles)
+        .where(
+          and(eq(userRoles.roleId, roleId), inArray(userRoles.userId, ids)),
+        );
+    }
+  }
+  for (const rows of chunk(batches.snapshotUpserts, WRITE_CHUNK)) {
+    await db
+      .insert(discordRoleMemberships)
+      .values(rows)
+      .onConflictDoUpdate({
+        target: [discordRoleMemberships.userId, discordRoleMemberships.roleId],
+        set: { syncedAt: sql`now()` },
+      });
+  }
+  for (const [roleId, userIds] of groupByRole(batches.snapshotDeletes)) {
+    for (const ids of chunk(userIds, WRITE_CHUNK)) {
+      await db
+        .delete(discordRoleMemberships)
+        .where(
+          and(
+            eq(discordRoleMemberships.roleId, roleId),
+            inArray(discordRoleMemberships.userId, ids),
+          ),
+        );
+    }
+  }
 }

@@ -10,12 +10,12 @@ import { CRON_ROUTES, scheduled } from "./scheduled";
  * The dispatcher was silently wrong. Every entry was written as
  * `/api/cron/...`, but the handlers live under `src/app/(api)/`, and
  * parentheses make a route group: the segment does not appear in the URL. So
- * `/api/cron/github-reconcile` returned 404 while `/cron/github-reconcile`
+ * `/api/cron/config-reconcile` returned 404 while `/cron/config-reconcile`
  * served 200, and had done since the Vercel-to-Cloudflare move that carried
  * the paths over from `vercel.json` unchanged.
  *
  * The dispatcher swallows non-2xx responses, so the crons failed quietly: no
- * config reconcile, no GitHub reconcile. Typechecking cannot see it, because
+ * config reconcile, no role sync. Typechecking cannot see it, because
  * a path is just a string. Mapping the string back to a file is the only
  * check that would have.
  */
@@ -64,13 +64,14 @@ describe("cron dispatcher", () => {
   });
 
   it("continues dispatching sibling routes, then reports failures", async () => {
-    const paths = CRON_ROUTES["0 0 * * *"]?.routes ?? [];
+    // The group with the most routes, because the point is that a failure in
+    // one of them does not starve the ones after it.
+    const paths = CRON_ROUTES["*/15 * * * *"]?.routes ?? [];
+    expect(paths.length).toBeGreaterThan(1);
     const fetchMock = vi.fn(async (input: string | URL | Request) =>
       Promise.resolve(
         new Response(null, {
-          status: readRequestUrl(input).endsWith("/cron/github-reconcile")
-            ? 503
-            : 200,
+          status: readRequestUrl(input).endsWith("/cron/support") ? 503 : 200,
         }),
       ),
     );
@@ -81,13 +82,13 @@ describe("cron dispatcher", () => {
 
     await expect(
       scheduled(
-        { cron: "0 0 * * *" },
+        { cron: "*/15 * * * *" },
         {
           BASE_URL: "https://example.test",
           CRON_SECRET: "secret",
         },
       ),
-    ).rejects.toThrow("/cron/github-reconcile: HTTP 503");
+    ).rejects.toThrow("/cron/support: HTTP 503");
 
     expect(fetchMock).toHaveBeenCalledTimes(paths.length);
     expect(
@@ -95,33 +96,49 @@ describe("cron dispatcher", () => {
     ).toEqual(paths.map((path) => `https://example.test${path}`));
     expect(errorSpy).toHaveBeenCalledWith(
       "cron_dispatch_failed",
-      expect.objectContaining({ cron: "0 0 * * *" }),
+      expect.objectContaining({ cron: "*/15 * * * *" }),
     );
   });
 
+  it("has no daily group left (the nightly repair was retired)", () => {
+    expect(Object.keys(CRON_ROUTES)).toEqual(["*/15 * * * *"]);
+  });
+
   it("records the group's heartbeat once every route succeeded", async () => {
-    const paths = CRON_ROUTES["0 0 * * *"]?.routes ?? [];
-    const fetchMock = vi.fn(
-      async (_input: string | URL | Request, _init?: RequestInit) =>
-        Promise.resolve(new Response(null, { status: 200 })),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    // No group declares a heartbeat today (the daily jobs report from the
+    // catalog Worker), so the mechanism is exercised with a temporary group.
+    const cron = "5 4 * * *";
+    CRON_ROUTES[cron] = {
+      label: "test group",
+      heartbeat: "schedule-builder-scrape",
+      routes: ["/cron/heartbeats"],
+    };
+    try {
+      const paths = CRON_ROUTES[cron].routes;
+      const fetchMock = vi.fn(
+        async (_input: string | URL | Request, _init?: RequestInit) =>
+          Promise.resolve(new Response(null, { status: 200 })),
+      );
+      vi.stubGlobal("fetch", fetchMock);
 
-    await scheduled(
-      { cron: "0 0 * * *" },
-      { BASE_URL: "https://example.test", CRON_SECRET: "secret" },
-    );
+      await scheduled(
+        { cron },
+        { BASE_URL: "https://example.test", CRON_SECRET: "secret" },
+      );
 
-    expect(fetchMock).toHaveBeenCalledTimes(paths.length + 1);
-    const [input, init] = fetchMock.mock.calls.at(-1) ?? [];
-    expect(readRequestUrl(input ?? "")).toBe(
-      "https://example.test/cron/heartbeats",
-    );
-    expect(init?.method).toBe("POST");
-    expect(init?.headers).toMatchObject({ Authorization: "Bearer secret" });
-    expect(JSON.parse(String(init?.body))).toEqual({
-      job: "platform-nightly-repair",
-    });
+      expect(fetchMock).toHaveBeenCalledTimes(paths.length + 1);
+      const [input, init] = fetchMock.mock.calls.at(-1) ?? [];
+      expect(readRequestUrl(input ?? "")).toBe(
+        "https://example.test/cron/heartbeats",
+      );
+      expect(init?.method).toBe("POST");
+      expect(init?.headers).toMatchObject({ Authorization: "Bearer secret" });
+      expect(JSON.parse(String(init?.body))).toEqual({
+        job: "schedule-builder-scrape",
+      });
+    } finally {
+      delete CRON_ROUTES[cron];
+    }
   });
 
   it("checks the daily jobs' heartbeats from the monitored group", () => {

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Field from "~/ui/field";
 import OAuthCredentialsField from "~/components/OAuthCredentialsField";
 import OAuthGateDialog from "~/components/OAuthGateDialog";
+import OAuthModerationField from "~/components/OAuthModerationField";
 import OAuthProductionClientsField from "~/components/OAuthProductionClientsField";
 import Input from "~/components/Input";
 import OAuthTestAccountsField from "~/components/OAuthTestAccountsField";
@@ -9,6 +10,7 @@ import PageShell from "~/components/PageShell";
 import { CardSkeleton } from "~/components/Skeletons";
 import { ConsoleCard } from "~/ui/card";
 import { getOAuthPageData } from "~/server/loaders/console";
+import { getOAuthModerationData } from "~/server/loaders/oauthModeration";
 import { resolveIssuer } from "~/server/oauth/issuer";
 
 interface Props {
@@ -16,9 +18,10 @@ interface Props {
 }
 
 async function OAuthData({ searchParams }: Props) {
-  const [data, issuer, { add_redirect_uri: prefillRedirectUri }] =
+  const [data, moderation, issuer, { add_redirect_uri: prefillRedirectUri }] =
     await Promise.all([
       getOAuthPageData(),
+      getOAuthModerationData(),
       // Read from discovery rather than written down: GoTrue stamps the
       // issuer it reports on every ID token, and a provider set to anything
       // else fails its issuer check (TASK-347). It is a `<project>.supabase.co`
@@ -65,6 +68,18 @@ async function OAuthData({ searchParams }: Props) {
         </ConsoleCard.Content>
       </ConsoleCard.Root>
 
+      <ConsoleCard.Root id="moderation">
+        <ConsoleCard.Header title="Moderation" />
+        <ConsoleCard.Content>
+          <Field
+            id="moderation-clients"
+            label="Report and Block"
+            description="Sign reports from your app's backend, and receive the decisions moderators make. Reports from a development client land in the sandbox below, never in the moderators' queue."
+          >
+            <OAuthModerationField clients={moderation} />
+          </Field>
+        </ConsoleCard.Content>
+      </ConsoleCard.Root>
       {data.canManageOAuthApps && (
         <ConsoleCard.Root id="production-clients">
           <ConsoleCard.Header title="Production clients" />

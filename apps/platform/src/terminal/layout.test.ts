@@ -147,7 +147,6 @@ async function render(
   params: Record<string, string> = {},
   search = "",
 ) {
-  if (route.kind !== "terminal") throw new Error("not a terminal route");
   const result = await route.render({
     params,
     search: new URLSearchParams(search),
@@ -170,7 +169,6 @@ describe("database-free routes", () => {
   });
 
   it("misses an unknown version", async () => {
-    if (changelogIssue.kind !== "terminal") throw new Error();
     const result = await changelogIssue.render({
       params: { version: "0.0.0" },
       search: new URLSearchParams(),

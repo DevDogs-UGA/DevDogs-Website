@@ -1,8 +1,7 @@
 /**
  * Whether public member profiles are on: `/community/@<handle>`, the
- * `/community` directory, `/community/competitions`, the Public Profile
- * settings on /account and in the verification dialog, and the team invite
- * picker's member search.
+ * `/community` directory, and the Public Profile settings on /account and in
+ * the verification dialog.
  *
  * Off in production while the feature is still being iterated on; local and
  * staging builds keep it. Production's `/community` goes back to redirecting
@@ -18,15 +17,5 @@
  * `publicProfiles` view while this is off.
  */
 export function publicProfilesEnabled(): boolean {
-  return process.env.DEPLOY_ENV !== "production";
-}
-
-/**
- * Whether `/partners` shows its real content. Off in production while the
- * page is under construction; today both branches render the placeholder, so
- * this exists to give the eventual page (and the terminal's twin of it) one
- * switch to flip rather than an inline environment check each.
- */
-export function partnersPageEnabled(): boolean {
   return process.env.DEPLOY_ENV !== "production";
 }

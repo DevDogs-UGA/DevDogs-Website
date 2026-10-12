@@ -241,9 +241,6 @@ export interface MeetingWorkshop {
 /**
  * The workshops that ran at one meeting.
  *
- * No competition join here or below: a workshop does not open one; see the
- * competitions migration's header for the current shape.
- *
  * Ordered by title rather than an authored sort order. Title is what
  * officers actually name a session by, and it is the one thing every
  * workshop always has.

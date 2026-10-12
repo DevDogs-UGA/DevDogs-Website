@@ -30,10 +30,10 @@ describe("overdueJobs", () => {
 
   it("reports a job with no row at all", () => {
     const rows = allAt(hoursAgo(1)).filter(
-      (row) => row.job !== "platform-nightly-repair",
+      (row) => row.job !== "catalog-academic-programs",
     );
     expect(overdueJobs(rows, NOW)).toEqual([
-      { job: "platform-nightly-repair", lastSucceededAt: null },
+      { job: "catalog-academic-programs", lastSucceededAt: null },
     ]);
   });
 
@@ -41,6 +41,7 @@ describe("overdueJobs", () => {
     const rows = [
       ...allAt(hoursAgo(1)),
       { job: "retired-job", succeededAt: hoursAgo(1000) },
+      { job: "platform-nightly-repair", succeededAt: hoursAgo(1000) },
     ];
     expect(overdueJobs(rows, NOW)).toEqual([]);
   });
@@ -48,7 +49,8 @@ describe("overdueJobs", () => {
 
 describe("isHeartbeatJob", () => {
   it("accepts listed jobs only", () => {
-    expect(isHeartbeatJob("platform-nightly-repair")).toBe(true);
+    expect(isHeartbeatJob("schedule-builder-scrape")).toBe(true);
+    expect(isHeartbeatJob("platform-nightly-repair")).toBe(false);
     expect(isHeartbeatJob("toString")).toBe(false);
     expect(isHeartbeatJob(undefined)).toBe(false);
   });

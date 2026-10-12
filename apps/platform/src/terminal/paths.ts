@@ -1,13 +1,17 @@
 /**
- * Every site path the terminal answers for, and the page file each one
+ * Every site path that has a terminal twin, and the page file each one
  * mirrors.
  *
+ * Twins are opt-in. Public content pages (home, events, docs, the newsletters,
+ * the changelog, profiles) have one; every other page gets the generic
+ * response `cloudflare/terminal.ts` builds from the page's own `<title>`, with
+ * its URL and a pointer to the browser, so a new page needs no entry here.
+ *
  * Kept free of imports because the Worker entry reads it: deciding whether a
- * curl request gets the terminal costs a regex test, not a module graph.
+ * curl request gets a twin costs a regex test, not a module graph.
  * `routes.ts` has to define a route for every pattern here (its record is
- * typed against `TerminalPattern`), and `routes.test.ts` checks the other
- * direction: every `page.tsx` in the app resolves to some entry, so a new page
- * can't ship without a decision about what curl sees.
+ * typed against `TerminalPattern`), and `routes.test.ts` checks that each
+ * entry names a page that exists and gates like it.
  *
  * Each entry carries its own regex rather than a compiled pattern because the
  * parameter shapes differ in ways that matter: a version has dots, and an
@@ -20,8 +24,7 @@ export interface TerminalPathEntry {
   regex: RegExp;
   /**
    * The page this path mirrors, relative to `src/app`, for the gate-parity
-   * test. Null for terminal-only paths (`/help`) and for wildcards that
-   * stand in for a whole subtree of browser-only pages.
+   * test. Null for terminal-only paths (`/help`).
    */
   page: string | null;
 }
@@ -71,36 +74,14 @@ export const TERMINAL_PATHS = [
   },
 
   {
-    pattern: "/competitions/:slug",
-    regex: new RegExp(`^/competitions/(?<slug>${SLUG})/?$`),
-    page: "(site)/competitions/[slug]/page.tsx",
-  },
-  {
-    pattern: "/competitions/:slug/results",
-    regex: new RegExp(`^/competitions/(?<slug>${SLUG})/results/?$`),
-    page: "(site)/competitions/[slug]/results/page.tsx",
-  },
-
-  {
     pattern: "/community",
     regex: /^\/community\/?$/,
     page: "(site)/community/page.tsx",
   },
   {
-    pattern: "/community/competitions",
-    regex: /^\/community\/competitions\/?$/,
-    page: "(site)/community/competitions/page.tsx",
-  },
-  {
     pattern: "/community/:handle",
     regex: /^\/community\/(?<handle>(?:@|%40)[^/]+)\/?$/,
     page: "(site)/community/[handle]/page.tsx",
-  },
-
-  {
-    pattern: "/partners",
-    regex: /^\/partners\/?$/,
-    page: "(site)/partners/page.tsx",
   },
 
   { pattern: "/docs", regex: /^\/docs\/?$/, page: "(site)/docs/page.tsx" },
@@ -120,54 +101,6 @@ export const TERMINAL_PATHS = [
     pattern: "/help/:threadId",
     regex: /^\/help\/(?<threadId>\d+)\/?$/,
     page: "(site)/help/[threadId]/page.tsx",
-  },
-
-  // Pages a terminal can't stand in for. Each gets a notice pointing at the
-  // browser rather than a screenful of HTML.
-  {
-    pattern: "/legal/privacy",
-    regex: /^\/legal\/privacy\/?$/,
-    page: "(site)/legal/privacy/page.tsx",
-  },
-  {
-    pattern: "/legal/terms",
-    regex: /^\/legal\/terms\/?$/,
-    page: "(site)/legal/terms/page.tsx",
-  },
-  {
-    pattern: "/account",
-    regex: /^\/account\/?$/,
-    page: "(site)/account/page.tsx",
-  },
-  {
-    pattern: "/attendance",
-    regex: /^\/attendance\/?$/,
-    page: "(site)/attendance/page.tsx",
-  },
-  { pattern: "/teams", regex: /^\/teams\/?$/, page: "(site)/teams/page.tsx" },
-  {
-    pattern: "/teams/requests",
-    regex: /^\/teams\/requests\/?$/,
-    page: "(site)/teams/requests/page.tsx",
-  },
-  {
-    pattern: "/teams/:team",
-    regex: new RegExp(`^/teams/(?<team>${SLUG})/?$`),
-    page: "(site)/teams/[team]/page.tsx",
-  },
-  { pattern: "/console/*", regex: /^\/console(?:\/[^.]*)?$/, page: null },
-  // Pages only: the OAuth device and exchange endpoints under these paths
-  // are route handlers the devtools CLI calls, and must pass through.
-  {
-    pattern: "/tools/oauth",
-    regex: /^\/tools\/oauth(?:\/(?:device|connect))?\/?$/,
-    page: null,
-  },
-  { pattern: "/preview/*", regex: /^\/preview(?:\/[^.]*)?$/, page: null },
-  {
-    pattern: "/oauth/consent",
-    regex: /^\/oauth\/consent\/?$/,
-    page: "(auth)/oauth/consent/page.tsx",
   },
 ] as const satisfies readonly TerminalPathEntry[];
 

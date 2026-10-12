@@ -19,6 +19,14 @@ export const OAUTH_AUDIT_ACTIONS = [
   "oauth_client.secret_rotated",
   "oauth_client.redirect_uri_added",
   "oauth_client.redirect_uri_removed",
+  // Registering a client as a moderation app, rotating its signing secret and
+  // changing its endpoint. The secret is derived per client, not stored, but
+  // rotating it cuts off the app's reports until it is updated, so it is
+  // recorded like the OAuth secret; the endpoint decides where a decision about
+  // a member is sent.
+  "oauth_client.moderation_registered",
+  "oauth_client.moderation_secret_rotated",
+  "oauth_client.moderation_endpoint_changed",
 ] as const;
 
 export type OAuthAuditAction = (typeof OAUTH_AUDIT_ACTIONS)[number];

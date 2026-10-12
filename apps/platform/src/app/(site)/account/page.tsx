@@ -25,7 +25,6 @@ import { publicProfilesEnabled } from "~/server/features";
 import { getProfilePageData } from "~/server/loaders/console";
 import { getHandleOptions } from "~/server/loaders/publicProfiles";
 import Callout from "~/ui/callout";
-import { env } from "~/env";
 
 /**
  * One person's own profile. Nothing here is the same page for two visitors,
@@ -129,7 +128,7 @@ async function AccountContent({
           <Field
             id="github"
             label="GitHub"
-            description="Linking GitHub adds you to the DevDogs organization and grants access to this year's project repositories."
+            description="Linking GitHub is part of verifying your account and is needed to create an OAuth client for testing DevDogs sign-in. You contribute from your own fork, so it does not add you to the DevDogs organization."
           >
             <GithubField {...data} />
           </Field>
@@ -167,8 +166,6 @@ async function AccountContent({
                     showAvatar: data.profile.showAvatar,
                     showBio: data.profile.showBio,
                     showLinks: data.profile.showLinks,
-                    showCompetitions: data.profile.showCompetitions,
-                    showContributions: data.profile.showContributions,
                     showStars: data.profile.showStars,
                   },
                 }}
@@ -295,24 +292,11 @@ function ConnectedAccountStatus({
         : provider === "linkedin_oidc"
           ? "LinkedIn"
           : "That account";
-  if (code === "github_invitation_pending") {
-    const invitationUrl = `https://github.com/orgs/${env.GITHUB_ORG}/invitation`;
-    return (
-      <Callout tone="info">
-        GitHub is linked. To finish joining the {env.GITHUB_ORG} organization,{" "}
-        <a href={invitationUrl} className="underline">
-          accept your invitation on GitHub
-        </a>
-        .
-      </Callout>
-    );
-  }
-
   const message =
     code === "identity_already_exists"
       ? `${providerName} profile is already linked to a DevDogs account. If it does not appear below, sign in to the other account and unlink it first, or contact an officer for help.`
       : code === "external_side_effect_failed"
-        ? `${providerName} was linked, but its organization or server membership could not be updated. Your connected account is safe; an officer can retry the membership update.`
+        ? `${providerName} was linked, but its server membership could not be updated. Your connected account is safe; an officer can retry the membership update.`
         : `${providerName} could not be linked. Please try again or contact an officer if the problem continues.`;
 
   return (

@@ -1,8 +1,6 @@
 import { INVOLVEMENT_NETWORK_ROSTER_URL } from "~/config/nav";
-import { formatEventDate } from "~/lib/eventTime";
 import { handleFromSegment, profilePath } from "~/lib/profilePath";
 import { publicProfilesEnabled } from "~/server/features";
-import { getCompetitionArchive } from "~/server/loaders/competitionArchive";
 import { getCurrentOfficers } from "~/server/loaders/officers";
 import {
   getPublicHandlesByUserId,
@@ -12,12 +10,11 @@ import {
 } from "~/server/loaders/publicProfiles";
 import type { Block, Entry, Field } from "../blocks";
 import { gatedBy, NOT_FOUND, page, terminal } from "../define";
-import { ACCENT } from "../theme";
 
 /**
  * The community paths, behind the same `publicProfilesEnabled` switch as
  * their pages and switched off the same way: `/community` redirects to the
- * Involvement Network roster, the archive and profiles 404.
+ * Involvement Network roster and profiles 404.
  */
 
 export const communityDirectory = terminal(
@@ -72,64 +69,6 @@ export const communityDirectory = terminal(
         },
         { type: "heading", text: "members" },
         { type: "entries", items: directory, empty: "No public profiles yet." },
-        {
-          type: "commands",
-          items: [
-            {
-              path: "/community/competitions",
-              description:
-                "Every competition, who won it, and who built the entries.",
-            },
-          ],
-        },
-      ],
-    });
-  },
-);
-
-export const competitionArchive = terminal(
-  gatedBy(publicProfilesEnabled, { kind: "notFound" }),
-  async () => {
-    const competitions = await getCompetitionArchive();
-    const items: Entry[] = competitions.map((competition) => {
-      const contributors = competition.contributors.map((c) => `@${c.handle}`);
-      if (competition.privateContributorCount > 0) {
-        contributors.push(`+${competition.privateContributorCount} more`);
-      }
-      return {
-        label: competition.title,
-        meta: competition.closedAt
-          ? `${formatEventDate(competition.kickedOffAt)} – ${formatEventDate(competition.closedAt)}`
-          : `since ${formatEventDate(competition.kickedOffAt)}`,
-        current: competition.closedAt === null,
-        chip:
-          competition.closedAt === null
-            ? { label: "open", color: ACCENT.amber }
-            : undefined,
-        headline: competition.winner
-          ? `Won by ${competition.winner.teamName}`
-          : undefined,
-        text: [
-          competition.briefExcerpt,
-          contributors.length ? `Built by ${contributors.join(", ")}` : null,
-        ]
-          .filter(Boolean)
-          .join(" "),
-        path: `/competitions/${encodeURIComponent(competition.slug)}`,
-      };
-    });
-    return page({
-      banner: "COMPETITIONS",
-      accent: "emerald",
-      aside: ["the archive"],
-      status: `${competitions.length} competitions`,
-      command: "competition --archive",
-      body: [
-        {
-          type: "text",
-          text: "Every DevDogs competition, who won it, and the members who built the entries.",
-        },
-        { type: "entries", items, empty: "No competitions yet." },
       ],
     });
   },
@@ -175,42 +114,7 @@ export const communityProfile = terminal(
           type: "fields",
           rows: [
             { label: "meetings", value: String(activity.stars.meetingStars) },
-            {
-              label: "competitions",
-              value: String(activity.stars.competitionStars),
-            },
-            { label: "wins", value: String(activity.stars.wins) },
           ],
-        },
-      );
-    }
-    if (activity.competitions?.length) {
-      body.push(
-        { type: "heading", text: "competitions" },
-        {
-          type: "entries",
-          items: activity.competitions.map((entry) => ({
-            label: entry.competitionTitle,
-            meta: entry.teamName,
-            current: entry.won,
-            chip: entry.won
-              ? { label: "Winner", color: ACCENT.emerald }
-              : undefined,
-            path: `/competitions/${encodeURIComponent(entry.competitionSlug)}`,
-          })),
-          empty: "",
-        },
-      );
-    }
-    if (activity.contributions?.length) {
-      body.push(
-        { type: "heading", text: "contributions" },
-        {
-          type: "links",
-          items: activity.contributions.map((pr) => ({
-            label: `#${pr.prNumber} ${pr.competitionTitle}`,
-            url: pr.url,
-          })),
         },
       );
     }

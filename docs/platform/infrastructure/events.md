@@ -16,9 +16,7 @@ pull request against `packages/events/src/data/meetings.json` there, and
 Backstage's own CI (`pnpm -F @devdogsuga/events check:events`) blocks the merge
 if it does not parse or fails a publishability rule. There is no runtime
 refusal path — Airtable's per-field sync-status refusals are gone along with
-the rest of that integration. Competitions never went through Airtable at
-all; they are a GitHub Projects mirror — see
-[Competitions](../guides/meetings-and-teams/competitions.md).
+the rest of that integration.
 
 ## The shape
 

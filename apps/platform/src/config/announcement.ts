@@ -53,17 +53,11 @@ export const ANNOUNCEMENT_STORAGE_KEY = "devdogs:announcementDismissed";
 
 /**
  * Route prefixes the notice stays off. Everything under `(site)` carries it
- * except these: the signed-in console, account, and team pages, where a
+ * except these: the signed-in console and account pages, where a
  * club-wide notice is noise stacked on top of a working tool. `/oauth` is a
  * third-party consent screen, and nothing of ours belongs in that frame.
  */
-const NON_PUBLIC_PREFIXES = [
-  "/account",
-  "/console",
-  "/oauth",
-  "/teams",
-  "/tools",
-];
+const NON_PUBLIC_PREFIXES = ["/account", "/console", "/oauth", "/tools"];
 
 /**
  * The live notice, or `null` for none.

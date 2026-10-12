@@ -70,22 +70,12 @@ export const CRON_ROUTES: Record<
     heartbeat?: HeartbeatJob;
   }
 > = {
-  "0 0 * * *": {
-    label: "Nightly repair: GitHub reconcile",
-    heartbeat: "platform-nightly-repair",
-    routes: [
-      // Repairs team membership a failed API call left wrong. Nightly rather
-      // than more often on purpose: every membership change already fires on
-      // the platform event that caused it, so if this pass is doing meaningful
-      // work regularly then something upstream is broken and a tighter cadence
-      // would hide it.
-      //
-      // The UGA Bulletin program sync used to be the second route here; it
-      // moved to the catalog Worker's ProgramsWorkflow (TASK-469) and reports
-      // through its own heartbeat, "catalog-academic-programs".
-      "/cron/github-reconcile",
-    ],
-  },
+  // There is no daily group any more. The "0 0 * * *" group ran the GitHub
+  // reconcile (deleted with Teams and competitions) and the UGA Bulletin
+  // program sync (moved to the catalog Worker's ProgramsWorkflow, TASK-469,
+  // which reports through the "catalog-academic-programs" heartbeat). A job
+  // that needs a nightly slot adds the group, its cron trigger in
+  // wrangler.jsonc, and a heartbeat row in a migration together.
   // Fifteen minutes is the WORST case now: `.github/workflows/deploy-app.yaml`
   // also calls this route directly, right after each platform deploy, so a
   // promoted config normally lands the moment that deploy finishes (see
@@ -95,7 +85,7 @@ export const CRON_ROUTES: Record<
   // deploy-time call itself fails partway.
   "*/15 * * * *": {
     label:
-      "Config reconcile (meetings, workshops), support forum index, Discord role sync, daily job heartbeats",
+      "Config reconcile (meetings, workshops), support forum index, Discord role sync, moderation delivery re-queue, daily job heartbeats",
     monitorSlug: "platform-cron-config-reconcile",
     // Role sync pages through every guild member, so the runtime ceiling is
     // looser than the config pass alone needs.
@@ -110,6 +100,10 @@ export const CRON_ROUTES: Record<
       // Discord. After the passes above, so a slow guild member listing
       // delays none of them.
       "/cron/sync-discord-roles",
+      // Queues any moderation delivery the queue never received or lost track
+      // of, so a decision a moderator made reaches its app eventually. Cheap
+      // when there is nothing to do.
+      "/cron/moderation-deliveries",
       // Fails while a daily job is overdue, which errors this slot's
       // monitor: the daily jobs have none of their own. Last, and cheap.
       "/cron/heartbeats",

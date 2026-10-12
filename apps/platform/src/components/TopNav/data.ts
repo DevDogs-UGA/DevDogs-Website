@@ -8,7 +8,8 @@ import {
 } from "~/server/actions/permissions";
 import { expectUserWith } from "~/server/auth";
 import type { profiles } from "~/server/db/schema";
-import { githubLoginFor } from "~/server/github/teamSync";
+import { githubLoginFor } from "~/server/auth/githubLogin";
+import { publicProfilesEnabled } from "~/server/features";
 import {
   getInvolvementFullName,
   getVerificationStatus,
@@ -53,6 +54,7 @@ export const getNavUser = cache(async (): Promise<NavUser | null> => {
           verificationStatus: verificationStatus.verificationStatus,
           isVerified: verificationStatus.isVerified,
           involvementFullName: getInvolvementFullName(user.profile),
+          publicProfiles: publicProfilesEnabled(),
         }
       : null,
     githubLogin,

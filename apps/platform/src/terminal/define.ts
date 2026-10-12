@@ -15,16 +15,10 @@ export interface RouteContext {
 }
 
 export type RouteResult =
-  | { kind: "page"; page: TerminalPage }
-  | { kind: "notFound" }
-  /** The page's placeholder, for a section that has no content yet. */
-  | { kind: "underConstruction" };
+  { kind: "page"; page: TerminalPage } | { kind: "notFound" };
 
 /** What a switched-off gate does, matching what the page does when it's off. */
-export type GateOff =
-  | { kind: "notFound" }
-  | { kind: "redirect"; url: string }
-  | { kind: "underConstruction" };
+export type GateOff = { kind: "notFound" } | { kind: "redirect"; url: string };
 
 export type Gate =
   | { kind: "public" }
@@ -39,17 +33,10 @@ export type Gate =
       whenOff: GateOff;
     };
 
-export type TerminalRoute =
-  | {
-      kind: "terminal";
-      gate: Gate;
-      render: (context: RouteContext) => Promise<RouteResult> | RouteResult;
-    }
-  | {
-      /** A page that can't be a terminal page: it gets a pointer to the browser. */
-      kind: "browser";
-      reason: string;
-    };
+export interface TerminalRoute {
+  gate: Gate;
+  render: (context: RouteContext) => Promise<RouteResult> | RouteResult;
+}
 
 export const PUBLIC: Gate = { kind: "public" };
 
@@ -61,11 +48,7 @@ export function terminal(
   gate: Gate,
   render: (context: RouteContext) => Promise<RouteResult> | RouteResult,
 ): TerminalRoute {
-  return { kind: "terminal", gate, render };
-}
-
-export function browserOnly(reason: string): TerminalRoute {
-  return { kind: "browser", reason };
+  return { gate, render };
 }
 
 export function page(page: TerminalPage): RouteResult {

@@ -127,10 +127,10 @@ export const DOCS_PROJECT_LABELS: Record<
 };
 
 /**
- * The docs landing page's own layout (contract item 4: "Which team are you
- * on?"). Large front-door cards for the two competition apps a new
+ * The docs landing page's own layout (contract item 4: "Which project are
+ * you working on?"). Large front-door cards for the two product apps a new
  * contributor is actually choosing between; a smaller row underneath for the
- * two projects everyone eventually touches regardless of team.
+ * two projects everyone eventually touches regardless of which they pick.
  */
 export const DOCS_LANDING_LARGE: readonly string[] = [
   "schedule-builder",

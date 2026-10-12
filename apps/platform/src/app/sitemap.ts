@@ -3,7 +3,6 @@ import { GDGC_ISSUES, ISSUES } from "@devdogsuga/newsletter";
 import { env } from "~/env";
 import { docsHref } from "~/lib/docsSlug";
 import { getDocsPagePaths, getDocsProjects } from "~/server/docs/queries";
-import { getCompetitionSlugs } from "~/server/loaders/competitions";
 import { getMeetingSlugs } from "~/server/loaders/meetings";
 
 /**
@@ -16,7 +15,7 @@ import { getMeetingSlugs } from "~/server/loaders/meetings";
  *     every LIVE docs page (scheduled ones are left out until their time), which `@devdogsuga/docs` compiles into the bundle at
  *     build time (see `server/docs/queries.ts`). In-memory walks over
  *     constants that cannot throw and cannot be slow.
- *   - Everything that needs a query: meetings and competitions.
+ *   - Everything that needs a query: meetings.
  *
  * The second half is wrapped so a database that is down, unreachable, or not
  * configured costs the sitemap those URLs and nothing else. That matters more
@@ -27,8 +26,8 @@ import { getMeetingSlugs } from "~/server/loaders/meetings";
  * treats as an error for the whole file rather than for the entries it could
  * not fetch.
  *
- * Nothing carries `lastModified`. `meetings` reconciles from config and
- * `competitions` mirrors GitHub, and neither has an `updatedAt` column; docs
+ * Nothing carries `lastModified`. `meetings` reconciles from config and has
+ * no `updatedAt` column; docs
  * pages carry no date through the build either, and a `<lastmod>` derived
  * from something else (a meeting's `endsAt`,
  * the time the sitemap happened to render) is a claim about revision history
@@ -51,9 +50,7 @@ const url = (path: string) => `${BASE}${path}`;
 /**
  * The routes that exist whatever the database says.
  *
- * `/partners` currently renders the under-construction placeholder. It is still
- * listed because a sitemap names URLs, not the state of what is behind them
- * today. `/community` is absent because it redirects to the Involvement Network
+ * `/community` is absent because it redirects to the Involvement Network
  * roster in production. Every route here is reachable without a session.
  */
 const STATIC_ROUTES: MetadataRoute.Sitemap = [
@@ -124,63 +121,23 @@ async function docsRoutes(): Promise<MetadataRoute.Sitemap> {
 /**
  * The database-backed half, or as much of it as answered.
  *
- * The two reads are independent, so they are settled separately rather than
- * awaited together: a competitions query that fails should not also cost the
- * sitemap every meeting. `Promise.allSettled` is what makes that true while
- * still issuing both at once.
- *
- * Both failures are logged rather than swallowed. A sitemap that shrank to its
+ * A failure is logged rather than swallowed. A sitemap that shrank to its
  * static half is indistinguishable from one that is correct, and the symptom
  * arrives weeks later with nothing to read: pages falling out of the index.
  */
 async function databaseRoutes(): Promise<MetadataRoute.Sitemap> {
-  const [meetings, competitions] = await Promise.allSettled([
-    getMeetingSlugs(),
-    getCompetitionSlugs(),
-  ]);
-
-  const routes: MetadataRoute.Sitemap = [];
-
-  if (meetings.status === "fulfilled") {
-    for (const slug of meetings.value) {
-      routes.push({
-        // A meeting page is written once and then only corrected, so `monthly`
-        // is closer to the truth than the `weekly` the schedule itself gets.
-        url: url(`/events/${encodeURIComponent(slug)}`),
-        changeFrequency: "monthly",
-        priority: 0.5,
-      });
-    }
-  } else {
-    console.error("[sitemap] meeting enumeration failed", meetings.reason);
+  try {
+    return (await getMeetingSlugs()).map((slug) => ({
+      // A meeting page is written once and then only corrected, so `monthly`
+      // is closer to the truth than the `weekly` the schedule itself gets.
+      url: url(`/events/${encodeURIComponent(slug)}`),
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
+    }));
+  } catch (error) {
+    console.error("[sitemap] meeting enumeration failed", error);
+    return [];
   }
-
-  if (competitions.status === "fulfilled") {
-    for (const slug of competitions.value) {
-      const encoded = encodeURIComponent(slug);
-      routes.push({
-        // The competition's own page: title, brief and dates. Revisited while
-        // it is open, so `weekly` rather than the results page's `yearly`.
-        url: url(`/competitions/${encoded}`),
-        changeFrequency: "weekly",
-        priority: 0.5,
-      });
-      routes.push({
-        // Results are final once a winner is recorded; the page exists to be
-        // linked back to rather than revisited.
-        url: url(`/competitions/${encoded}/results`),
-        changeFrequency: "yearly",
-        priority: 0.5,
-      });
-    }
-  } else {
-    console.error(
-      "[sitemap] competition enumeration failed",
-      competitions.reason,
-    );
-  }
-
-  return routes;
 }
 
 /**

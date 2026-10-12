@@ -2,10 +2,11 @@
  * Ambient shim for `cloudflare:workers`, scoped to the Next/DOM-lib program
  * ONLY.
  *
- * Four files under `src` import `env` from `cloudflare:workers` this way:
+ * Five files under `src` import `env` from `cloudflare:workers` this way:
  * `~/server/db/index.ts` (HYPERDRIVE), `~/server/email/send.ts` (EMAIL),
  * `~/server/attendance/rateLimit.ts` (ATTENDANCE_RATE_LIMITER), and
- * `~/server/deployment.ts` (CF_VERSION_METADATA, SENTRY_RELEASE). This program never
+ * `~/server/deployment.ts` (CF_VERSION_METADATA, SENTRY_RELEASE), and
+ * `~/server/moderation/queue.ts` (MODERATION_DELIVERIES). This program never
  * reaches into `cloudflare/tsconfig.json`'s Workers-runtime program (its
  * `include` is rooted at `cloudflare/` and nothing there imports back into
  * `src/server/db`), so
@@ -34,6 +35,9 @@ declare module "cloudflare:workers" {
     };
     ATTENDANCE_RATE_LIMITER?: {
       limit(options: { key: string }): Promise<{ success: boolean }>;
+    };
+    MODERATION_DELIVERIES?: {
+      sendBatch(messages: { body: { deliveryId: string } }[]): Promise<unknown>;
     };
     CF_VERSION_METADATA?: { id: string; tag: string; timestamp: string };
     SENTRY_RELEASE?: string;
