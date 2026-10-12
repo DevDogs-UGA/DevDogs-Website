@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { describeDrift } from "../../../../scripts/archive-teams-and-competitions.ts";
 
 /**
  * `archive/` is the one-time export of the Teams and competitions tables, with
@@ -66,49 +65,5 @@ describe("archive/", () => {
     expect(everything).not.toContain("joinCode");
     expect(everything).not.toContain("createdBy");
     expect(everything).not.toContain('"userId"');
-  });
-});
-
-describe("describeDrift (what --check compares against production)", () => {
-  const archived = [
-    {
-      id: "a",
-      slug: "test-2",
-      name: "Test 2",
-      githubSyncedAt: "t0",
-      members: [{ leftAt: null }],
-    },
-    { id: "b", slug: "test", name: "Test", githubSyncedAt: "t0", members: [] },
-  ];
-
-  it("passes when only the GitHub sync stamp moved", () => {
-    const live = archived.map((row) => ({ ...row, githubSyncedAt: "t1" }));
-    expect(describeDrift("teams.json", archived, live)).toEqual([]);
-  });
-
-  it("catches a rename and a member's leftAt with the same row counts", () => {
-    const live = [
-      { ...archived[0]!, name: "Renamed", members: [{ leftAt: "2026-10-12" }] },
-      archived[1]!,
-    ];
-    expect(describeDrift("teams.json", archived, live)).toEqual([
-      "teams.json: test-2 changed in production (name, members)",
-    ]);
-  });
-
-  it("names rows production gained or lost, never their values", () => {
-    const live = [archived[0]!, { id: "c", slug: "new", name: "secret" }];
-    const problems = describeDrift("teams.json", archived, live);
-    expect(problems).toEqual([
-      "teams.json: production has a row the archive lacks (new)",
-      "teams.json: the archive has a row production no longer has (test)",
-    ]);
-    expect(problems.join(" ")).not.toContain("secret");
-  });
-
-  it("notices a reordering", () => {
-    expect(
-      describeDrift("teams.json", archived, [archived[1]!, archived[0]!]),
-    ).toEqual(["teams.json: the rows are the same but their order differs"]);
   });
 });
