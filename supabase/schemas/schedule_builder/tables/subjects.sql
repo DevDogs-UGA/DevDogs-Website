@@ -1,7 +1,6 @@
 CREATE TABLE "schedule_builder"."subjects" (
   "id"          integer              NOT NULL DEFAULT nextval('schedule_builder.subjects_id_seq'::regclass),
   "abbr"        character varying(4) NOT NULL,
-  "description" character varying    NOT NULL,
   CONSTRAINT "subjects_abbr_key" UNIQUE (abbr),
   CONSTRAINT "subjects_pkey" PRIMARY KEY (id)
 );
