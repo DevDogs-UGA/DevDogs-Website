@@ -23,6 +23,11 @@ import { approveAuthorization } from "../src/server/oauth/approveAuthorization";
  *   - exchange the code and refresh it, and require every access token to have
  *     role `oauth_identity` and the client's `client_id`, to be refused by
  *     PostgREST on the platform schema, and to still work at userinfo;
+ *   - require every bearer a client holds (both access tokens and the ID token,
+ *     which GoTrue also accepts at /auth/v1/user and the token hook never sees)
+ *     to be unable to set a password on the member: the write fails and a
+ *     password sign-in with the attempted password gets no session (migration
+ *     61);
  *   - as a control, require a first-party session to read the platform schema.
  *
  * With BASE_URL it also drives the real consent page with the session cookie:
@@ -115,12 +120,15 @@ async function makeAccount(role: string): Promise<TestAccount> {
   };
 }
 
-function sessionCookie(account: TestAccount): string {
+function sessionCookie(
+  account: TestAccount,
+  tokens: { access_token: string; refresh_token: string } = account.session,
+): string {
   const name = `sb-${new URL(API_URL).hostname.split(".")[0]}-auth-token`;
   const encoded = `base64-${Buffer.from(
     JSON.stringify({
-      access_token: account.session.access_token,
-      refresh_token: account.session.refresh_token,
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
       token_type: "bearer",
       expires_in: 3600,
       expires_at: Math.floor(Date.now() / 1000) + 3600,
@@ -214,9 +222,43 @@ async function tokenRequest(client: Client, params: Record<string, string>) {
     body: (await response.json()) as {
       access_token?: string;
       refresh_token?: string;
+      id_token?: string;
       error?: string;
     },
   };
+}
+
+/**
+ * A bearer a client holds must not be able to take the account over through
+ * GoTrue's user endpoint: setting a password would let it sign in as the member
+ * with a first-party session. (Linking an identity is guarded in the database
+ * too, and covered by `tokenGuards.db-test.ts`: completing a link needs a
+ * provider's consent screen.)
+ */
+async function checkCannotSetPassword(
+  label: string,
+  token: string,
+  account: TestAccount,
+) {
+  const password = `Verify-${randomBytes(12).toString("base64url")}`;
+  const response = await fetch(`${API_URL}/auth/v1/user`, {
+    method: "PUT",
+    headers: {
+      apikey: PUBLISHABLE_KEY,
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ password }),
+  });
+  const signIn = await anon.auth.signInWithPassword({
+    email: account.email,
+    password,
+  });
+  step(
+    `${label}: cannot set a password on the member`,
+    response.status >= 400 && signIn.data.session === null,
+    { status: response.status, signedIn: signIn.data.session !== null },
+  );
 }
 
 async function checkToken(
@@ -224,6 +266,7 @@ async function checkToken(
   token: string,
   client: Client,
   userId: string,
+  account: TestAccount,
 ) {
   const claims = jwtPayload(token);
   step(
@@ -241,6 +284,7 @@ async function checkToken(
       sub: claims.sub,
     },
   );
+  await checkCannotSetPassword(label, token, account);
   const data = await fetch(`${API_URL}/rest/v1/profile?select=userId&limit=1`, {
     headers: {
       apikey: PUBLISHABLE_KEY,
@@ -335,7 +379,39 @@ async function runFlow(options: {
     exchanged.body.access_token!,
     client,
     signer.id,
+    signer,
   );
+  if (exchanged.body.id_token) {
+    await checkCannotSetPassword(
+      `${label} (ID token)`,
+      exchanged.body.id_token,
+      signer,
+    );
+  }
+  if (BASE_URL) {
+    // The platform reads the member out of the session cookie. A client's
+    // tokens in that cookie must not sign anyone in.
+    const bearers: [string, string | undefined][] = [
+      ["access token", exchanged.body.access_token],
+      ["ID token", exchanged.body.id_token],
+    ];
+    for (const [name, token] of bearers) {
+      if (!token) continue;
+      const page = await accountPage(
+        sessionCookie(signer, {
+          access_token: token,
+          refresh_token: exchanged.body.refresh_token ?? "unused",
+        }),
+      );
+      step(
+        `${label}: the ${name} in the session cookie does not sign in to the platform`,
+        page.status >= 300 &&
+          page.status < 400 &&
+          (page.location ?? "").includes("/auth"),
+        page,
+      );
+    }
+  }
 
   if (exchanged.body.refresh_token) {
     const refreshed = await tokenRequest(client, {
@@ -356,6 +432,7 @@ async function runFlow(options: {
         refreshed.body.access_token!,
         client,
         signer.id,
+        signer,
       );
     }
   }
@@ -373,6 +450,21 @@ async function consentPage(authorizationId: string | null, cookie?: string) {
       "user-agent": "Mozilla/5.0 (verify-oauth-tiers)",
       accept: "text/html",
       ...(cookie ? { cookie } : {}),
+    },
+  });
+  return {
+    status: response.status,
+    location: response.headers.get("location"),
+  };
+}
+
+async function accountPage(cookie: string) {
+  const response = await fetch(`${BASE_URL}/account`, {
+    redirect: "manual",
+    headers: {
+      "user-agent": "Mozilla/5.0 (verify-oauth-tiers)",
+      accept: "text/html",
+      cookie,
     },
   });
   return {

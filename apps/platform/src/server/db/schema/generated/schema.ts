@@ -221,6 +221,14 @@ export const externalContentTypesInPlatform = platform.table.withRLS("externalCo
 	primaryKey({ columns: [table.appId, table.contentType], name: "externalContentTypes_pkey"}),
 check("externalContentTypes_contentType_check", sql`("contentType" ~ '^[a-z][a-z0-9_]{0,62}$'::text)`),]);
 
+export const identityLinkIntentsInPlatform = platform.table.withRLS("identityLinkIntents", {
+	userId: uuid().notNull().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	provider: text().notNull(),
+	expiresAt: timestamp({ withTimezone: true }).notNull(),
+}, (table) => [
+	primaryKey({ columns: [table.userId, table.provider], name: "identityLinkIntents_pkey"}),
+]);
+
 export const jobHeartbeatsInPlatform = platform.table.withRLS("jobHeartbeats", {
 	job: text().primaryKey(),
 	succeededAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
@@ -996,6 +1004,7 @@ export { exportAuditInPlatform as exportAudit };
 export { externalContentTypesInPlatform as externalContentTypes };
 export { filerActionInPlatform as filerAction };
 export { graduationSemesterInPlatform as graduationSemester };
+export { identityLinkIntentsInPlatform as identityLinkIntents };
 export { jobHeartbeatsInPlatform as jobHeartbeats };
 export { leaderboardProfilesInPlatform as leaderboardProfiles };
 export { meetingsInPlatform as meetings };

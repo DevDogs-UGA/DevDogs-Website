@@ -43,6 +43,14 @@ Unlinking GitHub on `/account` deletes the member's development clients (they ar
 
 A client's tokens are limited by the `custom_access_token` hook (`platform.restrict_oauth_tokens`), which only downgrades. Whatever the tier, and whoever signed in, a token that carries an OAuth client gets `role = oauth_identity`, which has no database privileges, on the first code exchange and on every refresh. The userinfo endpoint answers it; the same token sent to the platform's REST, Storage or RPC endpoints is refused with `permission denied`. A token with no client (the platform's own sign-in) passes through untouched.
 
+A downgraded token is not an inert one. GoTrue authenticates a bearer for its own `/auth/v1/user` endpoints by signature and `sub`, so an OAuth client's access token, and the ID token it receives with it (which the hook never sees and which carries no role), could rewrite the member's record, set a password, or start linking an identity. Three guards close that, none of them in the hook:
+
+- **The platform's session check** (`expectSession`) accepts only a token with role `authenticated` and no `client_id`. A client's token in the session cookie signs nobody in.
+- **No passwords.** A database trigger on `auth.users` refuses any change of `encrypted_password` to a non-empty value. OAuth is the only way into a deployed project; local test personas are created with their password, which is an insert.
+- **Identity links the platform started.** A second identity is added to an account only if the platform recorded a link intent for that member and provider (`platform."identityLinkIntents"`, written from a first-party session just before `linkIdentity`, good for fifteen minutes and one link), or if the identity's verified email is the account's own (GoTrue's automatic linking). The first identity of an account is always allowed.
+
+What a client's token can still do at `/auth/v1/user` is write `user_metadata`, which any member can already do to themselves, and sign the member out of every session. Do not trust `user_metadata` for anything that matters.
+
 Who may sign in to which client is the consent page's job, not the hook's. One gap is accepted: GoTrue's own consent endpoint accepts any signed-in session, so a member with a script could approve someone else's _development_ client as themselves. All they get is the downgraded identity token.
 
 ## The issuer

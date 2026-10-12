@@ -10,6 +10,7 @@ import {
   vi,
 } from "vitest";
 import { db } from "~/server/db";
+import { findClient } from "~/server/moderation/store";
 import { createOauthClientAndRegister } from "~/server/oauth/registerClient";
 import { supabaseAdmin } from "~/supabase/admin";
 
@@ -101,6 +102,9 @@ async function liveClientCount(name: string): Promise<number> {
 async function cleanup() {
   await db.execute(
     sql`delete from auth.oauth_clients where client_name like ${`${PREFIX}%`}`,
+  );
+  await db.execute(
+    sql`delete from platform.apps where slug like ${`${PREFIX}%`}`,
   );
   await db.execute(
     sql`delete from platform."userRoles" where "roleId" = ${IDS.role}::uuid`,
@@ -456,6 +460,107 @@ describe("deleting a production client", () => {
     expect(await registration(development)).toBeNull();
     expect(await liveClientCount(`${PREFIX}-del-dev`)).toBe(0);
     expect(await auditRows(development)).toHaveLength(0);
+  });
+});
+
+describe("deleting a production client that is a registered moderation app", () => {
+  const ENDPOINT = "https://receiver.example.com/moderation";
+
+  async function production(label: string, callbackUri: string) {
+    signInAs(IDS.officer);
+    return (
+      await act({
+        intent: "create-client",
+        tier: "production",
+        label: `${PREFIX}-${label}`,
+        callbackUri,
+      })
+    ).clientId!;
+  }
+
+  async function register(slug: string, clientId: string) {
+    await db.execute(sql`
+      select platform.register_external_app(
+        ${`${PREFIX}-${slug}`}, ${`Moderation ${slug}`}, ${clientId}::uuid,
+        ${ENDPOINT},
+        ${JSON.stringify([{ contentType: "session", label: "Session" }])}::jsonb)
+    `);
+  }
+
+  async function moderationRow(clientId: string) {
+    const rows = await db.execute<{ slug: string | null; endpoint: string }>(
+      sql`select a.slug, m."endpointUrl" as endpoint
+          from platform."moderationClients" m
+          left join platform.apps a on a.id = m."appId"
+          where m."clientId" = ${clientId}::uuid`,
+    );
+    return rows[0] ?? null;
+  }
+
+  it("hands the registration to the replacement, and the deleted client is unknown", async () => {
+    const deleted = await production("mod-a", DOGDAYS);
+    const replacement = await production("mod-b", DOGPACK);
+    await register("app-a", deleted);
+    expect(await findClient(deleted)).not.toBeNull();
+    expect(await findClient(replacement)).toBeNull();
+
+    signInAs(IDS.officer);
+    await act({
+      intent: "revoke-client",
+      clientId: deleted,
+      replacementClientId: replacement,
+    });
+
+    expect(await moderationRow(deleted)).toBeNull();
+    expect(await moderationRow(replacement)).toEqual({
+      slug: `${PREFIX}-app-a`,
+      endpoint: ENDPOINT,
+    });
+    expect(await findClient(deleted)).toBeNull();
+    expect(await findClient(replacement)).toMatchObject({
+      clientId: replacement,
+    });
+    const entry = (await auditRows(deleted)).find(
+      (row) => row.action === "oauth_client.deleted",
+    );
+    expect(entry?.metadata).toMatchObject({ moderation: "transferred" });
+  });
+
+  it("keeps a replacement's own registration and drops the deleted client's", async () => {
+    const deleted = await production("mod-c", DOGDAYS);
+    const replacement = await production("mod-d", DOGPACK);
+    await register("app-c", deleted);
+    await register("app-d", replacement);
+
+    signInAs(IDS.officer);
+    await act({
+      intent: "revoke-client",
+      clientId: deleted,
+      replacementClientId: replacement,
+    });
+
+    expect(await moderationRow(deleted)).toBeNull();
+    expect(await moderationRow(replacement)).toMatchObject({
+      slug: `${PREFIX}-app-d`,
+    });
+    const entry = (await auditRows(deleted)).find(
+      (row) => row.action === "oauth_client.deleted",
+    );
+    expect(entry?.metadata).toMatchObject({ moderation: "dropped" });
+  });
+
+  it("drops the registration of any soft-deleted client, whoever deleted it", async () => {
+    const client = await production("mod-e", DOGDAYS);
+    await register("app-e", client);
+    expect(await moderationRow(client)).not.toBeNull();
+
+    // What GoTrue's delete does: it sets deleted_at and removes nothing.
+    await db.execute(
+      sql`update auth.oauth_clients set deleted_at = now() where id = ${client}::uuid`,
+    );
+
+    expect(await moderationRow(client)).toBeNull();
+    expect(await findClient(client)).toBeNull();
   });
 });
 

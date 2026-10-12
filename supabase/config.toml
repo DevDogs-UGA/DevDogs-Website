@@ -129,9 +129,13 @@ enabled = true
 uri = "pg-functions://postgres/platform/require_uga_signup_email"
 
 # Tokens issued to "Sign in with DevDogs" clients, of either tier, are re-roled
-# to `oauth_identity` (no data access): an identity and nothing else. Who may
-# sign in to a client is decided at consent, not here. Every other token passes
-# through unchanged. See 20261011130000_57_platform_oauth_tiers.sql.
+# to `oauth_identity` (no data access through PostgREST). Who may sign in to a
+# client is decided at consent, not here. Every other token passes through
+# unchanged. See 20261011130000_57_platform_oauth_tiers.sql.
+#
+# That does not stop GoTrue itself from honouring such a token (or the client's
+# ID token, which no hook sees) at /auth/v1/user; the password and identity-link
+# guards in 20261012130000_61_platform_oauth_token_guards.sql do.
 [auth.hook.custom_access_token]
 enabled = true
 uri = "pg-functions://postgres/platform/restrict_oauth_tokens"

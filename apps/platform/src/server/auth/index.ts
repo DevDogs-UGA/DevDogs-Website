@@ -5,6 +5,8 @@ import * as github from "./providers/github";
 import * as google from "./providers/google";
 import * as linkedin from "./providers/linkedin";
 import { redirect } from "next/navigation";
+import { isFirstPartyClaims } from "./firstParty";
+import { recordLinkIntent } from "./linkIntent";
 
 /**
  * Starts the OAuth flow with a specified provider.
@@ -16,7 +18,9 @@ export async function authenticate(
   callbackPath: string,
 ): Promise<never> {
   if (provider !== "google") {
-    await expectSession().catch(() => redirect("/auth"));
+    const userId = await expectSession().catch(() => redirect("/auth"));
+    // GoTrue will add the identity only for a link this site started.
+    await recordLinkIntent(userId, provider);
   }
 
   switch (provider) {
@@ -61,15 +65,16 @@ export async function expectUserWith<
 }
 
 /**
- * Asserts that a valid Supabase session exists.
- * Throws if the user is not signed in.
+ * Asserts that a valid first-party Supabase session exists.
+ * Throws if the user is not signed in, or if the cookie holds a token GoTrue
+ * issued to an OAuth client rather than a session (see `isFirstPartyClaims`).
  * @returns The id of the signed-in user.
  */
 export async function expectSession() {
   const supabase = await createSupabaseServerClient();
   const session = await supabase.auth.getClaims();
 
-  if (!session.data) {
+  if (!session.data || !isFirstPartyClaims(session.data.claims)) {
     throw new Error("Session expected but not found.");
   }
 

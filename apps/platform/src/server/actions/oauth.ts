@@ -5,6 +5,7 @@ import { authenticate, expectUserWith } from "../auth";
 import { db } from "../db";
 import {
   auditEvents,
+  moderationClients,
   oauthRegistrations,
   oauthTestAccounts,
 } from "../db/schema";
@@ -270,6 +271,19 @@ export default async function oauthAction(
             );
           }
 
+          // The deleted client's moderation registration (the external app it
+          // reports for and where decisions go) passes to the replacement.
+          // Read here without locking the row: GoTrue's soft delete, below,
+          // fires a trigger that drops it in GoTrue's own transaction, and a
+          // lock held by this one would make the two wait on each other.
+          const [registered] = await tx
+            .select({
+              appId: moderationClients.appId,
+              endpointUrl: moderationClients.endpointUrl,
+            })
+            .from(moderationClients)
+            .where(eq(moderationClients.clientId, clientId));
+
           // Supabase first: if it fails the transaction rolls back and the
           // registration is still here, so the delete can be retried instead
           // of leaving a live client with no owner.
@@ -277,6 +291,24 @@ export default async function oauthAction(
           await tx
             .delete(oauthRegistrations)
             .where(eq(oauthRegistrations.clientId, clientId));
+
+          let moderation = "none";
+          if (registered) {
+            // The replacement keeps a registration of its own if it has one;
+            // otherwise it takes over this one. Its signing secret is derived
+            // from its own id, so the app needs the new secret from
+            // /tools/oauth either way.
+            const inserted = await tx
+              .insert(moderationClients)
+              .values({
+                clientId: replacement.clientId,
+                appId: registered.appId,
+                endpointUrl: registered.endpointUrl,
+              })
+              .onConflictDoNothing()
+              .returning({ clientId: moderationClients.clientId });
+            moderation = inserted.length > 0 ? "transferred" : "dropped";
+          }
           await tx.insert(auditEvents).values(
             oauthAuditEvent({
               actorUserId: user.id,
@@ -286,6 +318,7 @@ export default async function oauthAction(
                 label: registration.label,
                 replacementClientId: replacement.clientId,
                 replacementLabel: replacement.label,
+                moderation,
               },
             }),
           );

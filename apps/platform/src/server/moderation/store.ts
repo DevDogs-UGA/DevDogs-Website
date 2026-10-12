@@ -1,8 +1,9 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import type { ReportRequest } from "@devdogsuga/sdk/moderation";
 import { env } from "~/env";
 import { db } from "~/server/db";
 import { moderationClients, reportReasons } from "~/server/db/schema";
+import { oauthClientsInAuth } from "~/supabase/drizzle/schema";
 import type { ClientRecord, ReportApiDeps } from "./api";
 
 /** The report API's dependencies, backed by the platform database. */
@@ -15,6 +16,11 @@ export function databaseReportApi(): ReportApiDeps {
   };
 }
 
+/**
+ * The registration for a client, or null. A client GoTrue has deleted is
+ * unknown even if a row is left behind (GoTrue soft-deletes, so the foreign
+ * key's cascade never runs; migration 61 also drops the row when it happens).
+ */
 export async function findClient(
   clientId: string,
 ): Promise<ClientRecord | null> {
@@ -25,7 +31,16 @@ export async function findClient(
       appId: moderationClients.appId,
     })
     .from(moderationClients)
-    .where(eq(moderationClients.clientId, clientId));
+    .innerJoin(
+      oauthClientsInAuth,
+      eq(oauthClientsInAuth.id, moderationClients.clientId),
+    )
+    .where(
+      and(
+        eq(moderationClients.clientId, clientId),
+        isNull(oauthClientsInAuth.deletedAt),
+      ),
+    );
   if (!row) return null;
   const tierRows = await db.execute<{ tier: string | null }>(
     sql`select "platform".moderation_client_tier(${clientId}::uuid) as tier`,
