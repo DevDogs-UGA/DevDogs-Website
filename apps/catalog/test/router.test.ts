@@ -310,6 +310,44 @@ describe("the edge cache", () => {
     expect(reads).toHaveLength(3);
   });
 
+  it("keeps repeated parameters apart by the value the handler reads", async () => {
+    const q = ["term"];
+    const a = cacheKeyFor(new URL(`${BASE}/subjects?term=1&term=2`), q);
+    const b = cacheKeyFor(new URL(`${BASE}/subjects?term=2&term=1`), q);
+    expect(a.url).not.toBe(b.url);
+    expect(a.url).toBe(cacheKeyFor(new URL(`${BASE}/subjects?term=1`), q).url);
+  });
+
+  it("tells browsers the short lifetime on a cache hit too, 404s included", async () => {
+    const { ApiError } = await import("~/api/errors");
+    const missing = (async () => {
+      throw new ApiError(404, "not_found", "No course NOPE0000.");
+    }) as unknown as ApiDeps["read"];
+    for (const [path, read, status] of [
+      ["/terms", undefined, 200],
+      ["/courses/NOPE0000", missing, 404],
+    ] as const) {
+      const cache = memoryCache();
+      const { deps } = setup({ cache, ...(read ? { read } : {}) });
+      const first = await get(path, deps);
+      expect(first.response.status).toBe(status);
+      // Simulate an edge that rewrote the stored copy's browser lifetime.
+      for (const [k, v] of cache.store) {
+        const h = new Headers(v.headers);
+        h.set("Cache-Control", "public, max-age=14400, s-maxage=60");
+        cache.store.set(
+          k,
+          new Response(v.body, { status: v.status, headers: h }),
+        );
+      }
+      const hit = await get(path, deps);
+      expect(hit.response.status).toBe(status);
+      expect(hit.response.headers.get("Cache-Control")).toMatch(
+        /^public, max-age=60, s-maxage=\d+$/,
+      );
+    }
+  });
+
   it("marks answers cacheable by browsers and the edge", async () => {
     const { deps } = setup();
     const { response } = await get("/terms", deps);

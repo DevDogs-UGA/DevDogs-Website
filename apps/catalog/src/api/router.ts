@@ -191,14 +191,30 @@ const CACHEABLE = `public, max-age=${BROWSER_CACHE_SECONDS}, s-maxage=${EDGE_CAC
  * the edge cache into the database.
  */
 export function cacheKeyFor(url: URL, query: readonly string[]): Request {
-  const params = [...url.searchParams]
-    .filter(([name]) => query.includes(name))
-    .sort(([a, av], [b, bv]) =>
-      a === b ? av.localeCompare(bv) : a.localeCompare(b),
-    );
+  // One value per parameter, the first, because that is all a handler reads
+  // (`searchParams.get`): `?term=a&term=b` and `?term=b&term=a` differ.
   const key = new URL(url.origin + url.pathname);
-  for (const [name, value] of params) key.searchParams.append(name, value);
+  for (const name of [...query].sort()) {
+    const value = url.searchParams.get(name);
+    if (value !== null) key.searchParams.append(name, value);
+  }
   return new Request(key.toString(), { method: "GET" });
+}
+
+/**
+ * A cached answer for the browser: the edge may rewrite the stored copy's
+ * Cache-Control (a zone's Browser Cache TTL), so the hit path states the
+ * browser lifetime again, keeping the edge lifetime as stored.
+ */
+function forBrowser(cached: Response): Response {
+  const headers = new Headers(cached.headers);
+  const stored = headers.get("Cache-Control") ?? "";
+  const edge = /s-maxage=(\d+)/.exec(stored)?.[1] ?? String(EDGE_CACHE_SECONDS);
+  headers.set(
+    "Cache-Control",
+    `public, max-age=${BROWSER_CACHE_SECONDS}, s-maxage=${edge}`,
+  );
+  return new Response(cached.body, { status: cached.status, headers });
 }
 
 /**
@@ -293,7 +309,7 @@ export async function handleApiRequest(
     const key = cacheKeyFor(url, matched.route.query);
     const cached = await deps.cache?.match(key);
     if (cached) {
-      return finish(withHeadHandling(request, cached), "hit");
+      return finish(withHeadHandling(request, forBrowser(cached)), "hit");
     }
 
     let response: Response;

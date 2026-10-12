@@ -8,7 +8,7 @@ name: Smoke
 #   3. The access-token hook downgrades a client's token (a staging database
 #      check, in a transaction that is rolled back).
 #
-# Plus the public pages of both Workers on every tier (worker-smoke.mjs, reading
+# Plus the public pages of the Workers (the catalog too, from apps/catalog/smoke.json) on every tier (worker-smoke.mjs, reading
 # workers.json), which is what a Sentry uptime monitor would otherwise do.
 # Sentry's plan here allows one uptime monitor, spent on the apex, so this is
 # the alerting for everything else: a failing run opens (or comments on) one
@@ -58,6 +58,7 @@ jobs:
           for path in apps/platform apps/schedule-builder; do
             node .github/scripts/worker-smoke.mjs --path "$path" --tier staging
           done
+          node .github/scripts/worker-smoke.mjs --path apps/catalog --tier staging --workers-json apps/catalog/smoke.json
 
   production:
     runs-on: ubuntu-latest
@@ -78,6 +79,10 @@ jobs:
           for path in apps/platform apps/schedule-builder; do
             node .github/scripts/worker-smoke.mjs --path "$path" --tier production
           done
+          # api.devdogsuga.org reaches the catalog only once the zone routes it (Q90).
+          if [ "${{ vars.CATALOG_PRODUCTION_ROUTED }}" = true ]; then
+            node .github/scripts/worker-smoke.mjs --path apps/catalog --tier production --workers-json apps/catalog/smoke.json
+          fi
 
   report:
     needs: [staging, production]

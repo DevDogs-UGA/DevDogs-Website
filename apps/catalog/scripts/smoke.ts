@@ -80,7 +80,7 @@ export async function smoke(
       if (response.headers.get("access-control-allow-origin") !== "*")
         return "no CORS header";
       if (
-        !/^public, max-age=\d+, s-maxage=\d+$/.test(
+        !/^public, max-age=60, s-maxage=\d+$/.test(
           response.headers.get("cache-control") ?? "",
         )
       )

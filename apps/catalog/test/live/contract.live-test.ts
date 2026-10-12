@@ -55,7 +55,7 @@ describe.skipIf(BASE === "")("the deployed catalog", () => {
     expect(response.headers.get("content-type")).toContain("application/json");
     expect(response.headers.get("access-control-allow-origin")).toBe("*");
     expect(response.headers.get("cache-control")).toMatch(
-      /^public, max-age=\d+, s-maxage=\d+$/,
+      /^public, max-age=60, s-maxage=\d+$/,
     );
     term = periods[0];
     // The newest term the registrar has published has drop/add dates.
