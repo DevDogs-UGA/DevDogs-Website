@@ -8,8 +8,11 @@
  * Docker, with no platform in the loop. `send` is one message, `samples` is the
  * conformance sequence (applied, duplicate, stale, ...).
  *
- * Both are `envFree`: nothing here reads an env file, a database or a tier. The
- * target is a URL and the secret is a flag or `PLATFORM_MODERATION_SECRET`.
+ * Both are `envFree` and `noEnv`: nothing here reads an env file, a database or a
+ * tier, so they also run from `pnpm dlx` outside a checkout (entering the
+ * development tier would look for the monorepo root above the package and
+ * fail there). The target is a URL and the secret is a flag or the shell's
+ * `PLATFORM_MODERATION_SECRET`.
  */
 import {
   type CommandNode,
@@ -42,6 +45,7 @@ export const moderationCommand: CommandNode = {
       summary: "Send one signed moderation action to a receiver.",
       hint: "like a moderator's decision, without the platform",
       envFree: true,
+      noEnv: true,
       options: [
         TO,
         SECRET,
@@ -79,6 +83,7 @@ export const moderationCommand: CommandNode = {
       summary: "Send the conformance sequence and check each answer.",
       hint: "pass or fail",
       envFree: true,
+      noEnv: true,
       options: [TO, SECRET],
     },
   ],

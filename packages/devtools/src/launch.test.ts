@@ -223,6 +223,21 @@ describe("launch", () => {
     },
   );
 
+  it.each([
+    ["samples", ["moderation", "samples", "--to", "http://127.0.0.1:9/x"]],
+    ["send", ["moderation", "send", "content.hide", "--replay"]],
+  ])(
+    "moderation %s names development and loads no env file — it runs from pnpm dlx, outside any checkout",
+    async (_name, argv) => {
+      const { launch } = await import("./launch.js");
+      await launch(argv);
+      expect(resolveSessionTier).not.toHaveBeenCalled();
+      expect(enterEnvironment).not.toHaveBeenCalled();
+      expect(process.env.DEPLOY_ENV).toBe("development");
+      expect(main).toHaveBeenCalledWith(argv);
+    },
+  );
+
   describe("DEVTOOLS_SHELL_KEYS marker", () => {
     const MARKER = "DEVTOOLS_SHELL_KEYS";
     let hadMarker: boolean;

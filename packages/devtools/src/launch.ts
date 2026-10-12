@@ -97,6 +97,18 @@ import { bail, errorMessage } from "@devdogsuga/cli-core/ui";
 
 export { stripTierFlag };
 
+/** The catalog node `rest` dispatches to. */
+function declaredCommand(rest: readonly string[]) {
+  // Longest declared prefix: a command can take a positional of its own
+  // (`moderation send <action>`), which is not part of the tree.
+  const path = helpPath(rest);
+  for (let length = path.length; length > 0; length -= 1) {
+    const node = catalog.findCommand(path.slice(0, length));
+    if (node) return node;
+  }
+  return undefined;
+}
+
 /**
  * Whether the command `rest` dispatches to is declared `envFree` in
  * the command catalog — the leading run of non-flag tokens is the
@@ -112,14 +124,7 @@ export { stripTierFlag };
  * remember to add here too.
  */
 function isEnvFreeCommand(rest: readonly string[]): boolean {
-  // Longest declared prefix: a command can take a positional of its own
-  // (`moderation send <action>`), which is not part of the tree.
-  const path = helpPath(rest);
-  for (let length = path.length; length > 0; length -= 1) {
-    const node = catalog.findCommand(path.slice(0, length));
-    if (node) return node.envFree === true;
-  }
-  return false;
+  return declaredCommand(rest)?.envFree === true;
 }
 
 /**
@@ -129,7 +134,7 @@ function isEnvFreeCommand(rest: readonly string[]): boolean {
  * runner that has no `.env` at all.
  */
 function skipsEnvEntry(rest: readonly string[]): boolean {
-  return catalog.findCommand(helpPath(rest))?.noEnv === true;
+  return declaredCommand(rest)?.noEnv === true;
 }
 
 /** The offer's stack start (`env-entry.ts` holds the TTY prompt, this holds
