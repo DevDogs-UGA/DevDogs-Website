@@ -188,8 +188,13 @@ describe("checkWorkers", () => {
 
   it("flags a deploy.yaml with no Worker deploy at all", () => {
     repo(["platform", "schedule-builder"]);
-    write(".github/workflows/deploy.yaml", "jobs:\n  resolve:\n    steps: []\n");
-    expect(checkWorkers(root)).toEqual(["deploy.yaml has no staging Worker deploy."]);
+    write(
+      ".github/workflows/deploy.yaml",
+      "jobs:\n  resolve:\n    steps: []\n",
+    );
+    expect(checkWorkers(root)).toEqual([
+      "deploy.yaml has no staging Worker deploy.",
+    ]);
   });
 
   it("flags a deploy matrix that drifted", () => {

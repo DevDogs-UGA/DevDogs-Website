@@ -158,13 +158,13 @@ jobs:
       # workers.json against the wrangler.jsonc files and the deploy matrix.
       - name: workers.json agrees with the Workers
         run: node packages/devtools/bin/devtools.mjs check workers
-      # The same vocabulary as `check:scripts` above, plus its exceptions
-      # being live (devdogs.scriptExceptions in the root package.json).
       # The building coordinates dataset (apps/catalog/data/buildings): every
       # id exists, every point is inside its campus's box, no id twice, and
       # every file is bundled into the Worker. Prints the coverage figure.
       - name: Catalog building data is valid
         run: pnpm --filter catalog run check:buildings
+      # The same vocabulary as `check:scripts` above, plus its exceptions
+      # being live (devdogs.scriptExceptions in the root package.json).
       - name: Package scripts use the shared vocabulary
         run: node packages/devtools/bin/devtools.mjs check scripts
       # Every env variable is declared in a manifest, and the registry agrees.
