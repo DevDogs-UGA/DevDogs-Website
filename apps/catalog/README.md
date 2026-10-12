@@ -100,16 +100,24 @@ Supabase project. The one optional Worker secret is `PLATFORM_SENTRY_DSN`
 (the catalog reports to the platform's Sentry project, tagged `worker:catalog`);
 `SENTRY_RELEASE` is passed as a `--var`.
 
-The pipeline deploys it: `.github/workflows/deploy.yaml` has a `catalog` leg in
-the staging matrix and a `backstage deploy catalog --tier production` step that
-runs **before** the platform and schedule-builder (this commit's platform and
-schedule-builder no longer run the scrape or the Bulletin sync, so the catalog's
-Workflows must exist first). `devtools check workers` fails CI if `workers.json`
-and the workflow disagree. After each deploy `pnpm -F catalog test:smoke` asks
-the deployed Worker what an empty database answers too (200 JSON, a 400 for a
-malformed term, a 405 for a write). The production smoke step is gated by the
-repository variable `CATALOG_PRODUCTION_ROUTED=true`, which is set when
-`api.devdogsuga.org` is proxied in the zone.
+The pipeline deploys it, through the shared `deploy-worker.yaml` like the other
+Workers: `.github/workflows/deploy.yaml` has a `staging-catalog` job and a
+`production-catalog` job that runs **before** the platform and schedule-builder
+(this commit's platform and schedule-builder no longer run the scrape or the
+Bulletin sync, so the catalog's Workflows must exist first; both wait on it).
+`devtools check workers` fails CI if `workers.json` and those calls disagree.
+The smoke test is `smoke.json` (`/terms` answers 200, a malformed term 400)
+against the pinned version and then what is live, and after the switch
+`pnpm -F catalog test:smoke` asks the deployed Worker for the headers too (CORS,
+cache, a 405 for a write). Both pass on an empty database. The production smoke
+is gated by the repository variable `CATALOG_PRODUCTION_ROUTED=true`, which is set
+when `api.devdogsuga.org` is proxied in the zone; until then the Worker deploys
+and switches without it.
+
+A Worker that does not exist yet has no serving version to preview beside, so its
+first deploy needs `mode: full`: set the repository variable
+`CATALOG_DEPLOY_MODE` to `full` for that run (staging and production each have
+a first deploy), and delete it afterwards so the next deploys preview first.
 
 By hand, for a rehearsal or a fix:
 
