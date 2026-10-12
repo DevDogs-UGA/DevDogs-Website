@@ -1191,7 +1191,12 @@ test("smoke fails on a broken page and on an unprotected protected page", async 
     if (path === "/console") return new Response("secret", { status: 200 });
     return new Response("ok", { status: 200 });
   };
-  const checks = await runSmoke({ smoke: SMOKE, tier: "staging", fetchImpl });
+  const checks = await runSmoke({
+    smoke: SMOKE,
+    tier: "staging",
+    fetchImpl,
+    retryDelayMs: 0,
+  });
   assert.deepEqual(
     checks.map((c) => c.ok),
     [true, false, false],
@@ -1204,6 +1209,34 @@ test("smoke fails on a broken page and on an unprotected protected page", async 
     runSmoke({ smoke: SMOKE, tier: "staging", versionId: "v", fetchImpl }),
     /needs --worker-name/,
   );
+});
+
+test("smoke retries a page that answers 5xx once right after a switch, but not a page that stays broken", async () => {
+  const calls = { "/": 0, "/docs": 0 };
+  const fetchImpl = async (url) => {
+    const path = new URL(url).pathname;
+    if (path === "/console")
+      return new Response(null, {
+        status: 307,
+        headers: { location: "/auth" },
+      });
+    calls[path]++;
+    if (path === "/")
+      return new Response("warming", { status: calls["/"] === 1 ? 503 : 200 });
+    return new Response("boom", { status: 500 });
+  };
+  const checks = await runSmoke({
+    smoke: SMOKE,
+    tier: "staging",
+    fetchImpl,
+    retryDelayMs: 0,
+  });
+  assert.deepEqual(
+    checks.map((c) => c.ok),
+    [true, false, true],
+  );
+  assert.equal(calls["/"], 2);
+  assert.equal(calls["/docs"], 3);
 });
 
 test("expected statuses prove a Worker that answers something other than 200", async () => {

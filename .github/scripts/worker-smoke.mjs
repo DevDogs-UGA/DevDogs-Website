@@ -61,6 +61,8 @@ export function overrideHeader(workerName, versionId) {
  *   versionId?: string,
  *   fetchImpl?: typeof fetch,
  *   authorize?: { apiUrl: string, secretKey: string } | null,
+ *   retries?: number,
+ *   retryDelayMs?: number,
  * }} input
  * @returns {Promise<Check[]>}
  */
@@ -71,6 +73,8 @@ export async function runSmoke({
   versionId,
   fetchImpl = fetch,
   authorize = null,
+  retries = 2,
+  retryDelayMs = 3000,
 }) {
   const host = smoke.hosts?.[tier];
   if (!host)
@@ -85,7 +89,25 @@ export async function runSmoke({
       versionId,
     );
   }
-  const get = (url) => fetchImpl(url, { redirect: "manual", headers });
+  // A request that lands on a Worker version a second after the traffic switch
+  // can meet a 5xx while the new version warms up (seen on the first staging
+  // run: `/` answered 503 once, every other path 200, and the next request
+  // was fine). A page is retried a couple of times on a 5xx or a network
+  // error; a version that is really broken answers 5xx every time and still
+  // fails.
+  const get = async (url) => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const response = await fetchImpl(url, { redirect: "manual", headers });
+        if (response.status < 500 || attempt >= retries) return response;
+        await response.arrayBuffer().catch(() => {});
+      } catch (error) {
+        if (attempt >= retries) throw error;
+      }
+      if (retryDelayMs > 0)
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    }
+  };
 
   /** @type {Check[]} */
   const checks = [];
