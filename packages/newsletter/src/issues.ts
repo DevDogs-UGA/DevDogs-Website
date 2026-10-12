@@ -163,7 +163,7 @@ export const ISSUES: ChangelogIssue[] = [
       "Tonight at 6: Georgia 311, then Next.js II and Flutter II side by side. Open a pull request before 8.",
     tagline: "Ship something every Monday.",
     intro:
-      "Competition season is over, and every Monday from tonight on is Merge Monday, 6 to 8 in DLW 124. Pick an issue in DogDays or DogPack and open a pull request before you leave. DogDays, our schedule builder, goes to Public Beta on Nov 12, the day Spring registration opens. DogPack is a new Flutter app for finding study sessions in your classes. Members get a pilot build on Nov 12, and every UGA student can get it on Nov 19. Tonight starts at 6 with Georgia 311, a civic hackathon for the City of Mableton that we're running with GDG on Campus. All majors can join, and applications close Thursday. At 6:30 the room splits in half for workshops.",
+      "Competition season is over, and every Monday from tonight on is Merge Monday, 6 to 8 in DLW 124. Pick an issue in DogDays or DogPack and open a pull request before you leave. DogDays, our schedule builder, goes to Public Beta on Nov 12, the day Spring registration opens. DogPack is a new Flutter app for finding study sessions in your classes. Members get a pilot build on Nov 12, and every UGA student can get it on Nov 19. Tonight starts at 6 with Georgia 311, a civic hackathon for the City of Mableton that we're running with GDG on Campus. All majors can join, and applications close Thursday.",
     featuredLabel: "happening_tonight",
     featured: [{ meeting: EVENTS.nextflutter2, cta: "See the schedule" }],
     upcoming: [

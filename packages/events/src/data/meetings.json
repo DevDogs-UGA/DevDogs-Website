@@ -322,7 +322,7 @@
     {
       "slug": "2026-10-26",
       "title": "Merge Monday: Supabase II",
-      "summary": "A Supabase II workshop from 6:15 to 7 on changing the database in our apps. Merge Monday runs around it until 8.",
+      "summary": "A Supabase II workshop on changing the database in our apps, with Merge Monday around it until 8.",
       "kind": "Build Session",
       "building": "DLW",
       "location": "124",
