@@ -14,11 +14,16 @@ description: >-
 # `...` selects the package and everything it depends on, built in dependency
 # order. `@devdogsuga/cli-core` is bundled into the CLI by tsdown, not built on
 # its own.
+#
+# `@devdogsuga/devtools` is built too: its `with-env` bin (the wrapper the
+# docs package's `populate:search` and the apps' scripts run through) loads
+# `dist/with-env.js`, and a deploy command that runs a workspace script after
+# the switch (the staging platform's search index) fails without it.
 runs:
   using: composite
   steps:
     - name: Build the Backstage CLI
-      run: pnpm --filter '@devdogsuga/backstage...' --if-present run build
+      run: pnpm --filter '@devdogsuga/backstage...' --filter '@devdogsuga/devtools...' --if-present run build
       shell: bash
     - name: Put `backstage` on PATH
       run: |
