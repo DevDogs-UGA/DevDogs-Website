@@ -16,7 +16,65 @@ export interface RulesetActors {
   deployPrAppId?: number;
 }
 
-export type RulesetRepo = "DevDogsUGA" | "Backstage";
+export type RulesetRepo = "DevDogsUGA" | "Backstage" | "DogDays" | "DogPack";
+
+/** The product repositories (Q40): no platform App, no `team/**` branches. */
+export const PRODUCT_REPOS = ["DogDays", "DogPack"] as const;
+export type ProductRepo = (typeof PRODUCT_REPOS)[number];
+
+export function isProductRepo(repo: string): repo is ProductRepo {
+  return (PRODUCT_REPOS as readonly string[]).includes(repo);
+}
+
+/** The Actions app's id on the `required_status_checks` rule. */
+const ACTIONS_APP = 15368;
+
+/**
+ * The checks the destructive gate adds (database-pr.yaml and
+ * destructive-gate.yaml): required on every repository that has a database.
+ * A pull request that drops data cannot merge without a devops member's label,
+ * and a label from anyone else fails `destructive-gate`.
+ */
+export const DESTRUCTIVE_GATE_CHECKS = [
+  "destructive-sql",
+  "destructive-gate",
+] as const;
+
+/**
+ * The destructive gate as a product repository reports it. A product calls
+ * database-pr.yaml and destructive-gate.yaml as reusable workflows, and a
+ * called workflow's job reports as `<caller job> / <called job>`, so the bare
+ * `destructive-sql` and `destructive-gate` can never appear there. Both caller
+ * jobs are named `destructive-gate` (docs/operations/repositories/product-ci.md
+ * has the two workflow files): the pull-request workflow's caller reports
+ * `destructive-gate / destructive-gate` (from destructive-gate.yaml) and the
+ * merge queue's caller reports `destructive-gate / destructive-sql` and, on the
+ * queue only, `destructive-gate / destructive-gate` (from database-pr.yaml), so
+ * the same two required names are satisfied on a pull request and on the queue.
+ */
+export const PRODUCT_DESTRUCTIVE_GATE_CHECKS = [
+  "destructive-gate / destructive-sql",
+  "destructive-gate / destructive-gate",
+] as const;
+
+/**
+ * Required status checks per product repository. The product repositories'
+ * CI (stage 4) must name its jobs to match; a check that no workflow reports
+ * would hold every pull request forever, which is why `backstage github
+ * rulesets` refuses to apply a merge-queue rule before the repository's CI
+ * has a `merge_group` trigger.
+ */
+export const PRODUCT_REQUIRED_CHECKS: Readonly<
+  Record<ProductRepo, readonly string[]>
+> = {
+  DogDays: ["validate", "database", ...PRODUCT_DESTRUCTIVE_GATE_CHECKS],
+  DogPack: [
+    "validate",
+    "flutter",
+    "database",
+    ...PRODUCT_DESTRUCTIVE_GATE_CHECKS,
+  ],
+};
 
 /** Earlier live names which occupy the same managed slot. */
 export const LEGACY_NAME_ALIASES: Readonly<Record<string, readonly string[]>> =
@@ -53,9 +111,97 @@ export function buildDesiredRulesets(
   actors: RulesetActors,
   repo: RulesetRepo = "DevDogsUGA",
 ): DesiredRuleset[] {
+  if (isProductRepo(repo)) return buildProductRulesets(actors, repo);
   return repo === "Backstage"
     ? buildBackstageRulesets(actors)
     : buildDevDogsUgaRulesets(actors);
+}
+
+/**
+ * The product repositories' rulesets (Q11, Q40, TASK-334, TASK-342): signed
+ * commits, a merge queue, squash only, and the destructive gate. Smaller than
+ * DevDogsUGA's on purpose.
+ *
+ * - `main-integrity` has no bypass actor, so nobody can delete `main`,
+ *   force-push it, or push an unsigned commit to it. An owner who pushes
+ *   directly needs a signing key (the runbook says how).
+ * - `main-reviews`: pull requests only, one approving review from a code
+ *   owner, squash merges only. Renovate may open its own pull requests past
+ *   the review count (never push), admins always bypass.
+ * - `main-ci`: the checks in PRODUCT_REQUIRED_CHECKS.
+ * - `main-merge-queue`: queue-only, so admins can still push directly past it.
+ * - No tag rulesets: the publish workflows tag releases with `GITHUB_TOKEN`,
+ *   which GitHub refuses as a bypass actor.
+ */
+function buildProductRulesets(
+  actors: RulesetActors,
+  repo: ProductRepo,
+): DesiredRuleset[] {
+  return [
+    {
+      name: "main-integrity",
+      target: "branch",
+      enforcement: "active",
+      conditions: main,
+      bypass_actors: [],
+      rules: [
+        { type: "deletion" },
+        { type: "non_fast_forward" },
+        { type: "required_signatures" },
+      ],
+    },
+    {
+      name: "main-reviews",
+      target: "branch",
+      enforcement: "active",
+      conditions: main,
+      bypass_actors: [
+        ...(actors.renovateAppId === undefined
+          ? []
+          : [
+              {
+                actor_id: actors.renovateAppId,
+                actor_type: "Integration" as const,
+                bypass_mode: "pull_request" as const,
+              },
+            ]),
+        always(actors.adminsTeamId),
+      ],
+      rules: [
+        {
+          type: "pull_request",
+          parameters: {
+            allowed_merge_methods: ["squash"],
+            dismiss_stale_reviews_on_push: false,
+            require_code_owner_review: true,
+            require_last_push_approval: true,
+            required_approving_review_count: 1,
+            required_review_thread_resolution: true,
+          },
+        },
+      ],
+    },
+    {
+      name: "main-ci",
+      target: "branch",
+      enforcement: "active",
+      conditions: main,
+      bypass_actors: [always(actors.adminsTeamId)],
+      rules: [
+        {
+          type: "required_status_checks",
+          parameters: {
+            do_not_enforce_on_create: false,
+            strict_required_status_checks_policy: false,
+            required_status_checks: PRODUCT_REQUIRED_CHECKS[repo].map(
+              (context) => ({ context, integration_id: ACTIONS_APP }),
+            ),
+          },
+        },
+      ],
+    },
+    mainMergeQueueRuleset(actors),
+  ];
 }
 
 /**
@@ -295,7 +441,13 @@ function buildDevDogsUgaRulesets(actors: RulesetActors): DesiredRuleset[] {
       enforcement: "active",
       conditions: main,
       bypass_actors: [],
-      rules: [{ type: "deletion" }, { type: "non_fast_forward" }],
+      // Signed commits (Q40): no bypass, so an owner who pushes directly needs
+      // a signing key. The merge queue's squash commits are signed by GitHub.
+      rules: [
+        { type: "deletion" },
+        { type: "non_fast_forward" },
+        { type: "required_signatures" },
+      ],
     },
     {
       name: "main-updates",
@@ -370,8 +522,14 @@ function buildDevDogsUgaRulesets(actors: RulesetActors): DesiredRuleset[] {
             required_status_checks: [
               { context: "validate", integration_id: 15368 },
               { context: "database", integration_id: 15368 },
-              { context: "format", integration_id: 15368 },
+              // `format` is a step of `validate`, not a job of its own; the
+              // catalog/patch drift check (`toolchain`) is a job.
+              { context: "toolchain", integration_id: 15368 },
               { context: "flutter", integration_id: 15368 },
+              ...DESTRUCTIVE_GATE_CHECKS.map((context) => ({
+                context,
+                integration_id: ACTIONS_APP,
+              })),
             ],
           },
         },

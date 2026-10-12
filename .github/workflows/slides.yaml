@@ -55,3 +55,39 @@ jobs:
           pnpm --filter slides tag-steps --check
       - name: Build the slides app and its workspace deps
         run: pnpm -r --filter 'slides...' --if-present run build
+
+  # The hosted deck and live relay (slides-sync / slides-relay.devdogsuga.org),
+  # through the shared deploy-worker.yaml like the other Workers: upload a
+  # version, smoke test it on the relay host (no Cloudflare Access there, so the
+  # check can reach the Worker: `/follow` must answer 426, and `/` must be
+  # refused by the Worker's own Access check), switch traffic. It used to be
+  # `pnpm run deploy` by hand.
+  #
+  # Production only (the deck has no staging tier), so it waits for the
+  # `production` approval and, like the other production jobs, is off until the
+  # repository variable BACKSTAGE_DEPLOYS_PRODUCTION is `true`.
+  deploy:
+    needs: build
+    if: >-
+      github.event_name == 'push'
+      && vars.BACKSTAGE_DEPLOYS_PRODUCTION == 'true'
+    uses: ./.github/workflows/deploy-worker.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+      actions: read
+    with:
+      environment: production
+      tier: production
+      use_wrangler_env: false
+      worker_dir: apps/slides
+      worker_name: devdogs-slides
+      smoke_path: apps/slides
+      workers_json: apps/slides/smoke.json
+      checkout_submodules: true
+      checkout_token_secret: true
+      self_approval_gate: true
+      require_latest: true
+      build_command: |
+        pnpm --filter slides build
+        node apps/slides/scripts/strip-redirects.mjs

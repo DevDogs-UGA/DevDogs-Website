@@ -1,0 +1,163 @@
+name: Database change
+
+# The pull request side of the destructive gate (Q10, Q11).
+#
+# A change to the database is destructive when it drops or rewrites data (see
+# .github/scripts/sql-classify.mjs). Two places can introduce one:
+#
+#   * the declarative schema tree (`supabase/schemas/`): removing a column from
+#     a file there makes the diff from the migrations to the tree contain
+#     `DROP COLUMN`. `db-plan.mjs check` builds a scratch database at the
+#     committed migrations, applies the tree on top, and classifies the SQL the
+#     tree adds;
+#   * a hand-written migration (`supabase/migrations/`): read from the files
+#     the pull request adds or edits.
+#
+# `destructive-sql` fails unless the pull request carries the `allow-destructive`
+# label. `destructive-gate` fails if that label was applied by anyone who is not
+# a `devops` member (the label is read from the PR timeline, so who applied it
+# is on record). The `pull_request_target` half of the gate, which can also
+# REMOVE a label a non-devops user applied, lives in destructive-gate.yaml; the
+# merge queue has no such event, so the same check runs here on `merge_group`,
+# and a queued pull request is re-checked on the exact commit the queue built.
+#
+# Both are required checks on `main` (the `main-ci` ruleset). They run on every
+# pull request and queue entry, unconditionally: a required check that is
+# skipped by a path filter never reports, and the pull request waits forever.
+# The expensive part (the scratch database) is skipped inside the job when
+# nothing under `supabase/` changed.
+#
+# No secrets are involved: the scratch database is local, and the label is read
+# with the job's own read-only token.
+#
+# Shared (Q15, Q11): DogDays and DogPack call this file too, from a workflow of
+# their own that runs on `pull_request` and `merge_group`, pinned by commit SHA
+# with `shared_ref` set to the same SHA so the scripts come from there. It needs
+# nothing from the caller's checkout but `supabase/`: the CLI is installed from
+# npm, not from the caller's lockfile.
+on:
+  # `labeled` and `unlabeled` re-run the check when a devops member applies the
+  # label: the SQL is classified again and the verdict follows the label.
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+  merge_group:
+  workflow_call:
+    inputs:
+      shared_ref:
+        description: >-
+          A commit of DevDogsUGA/DevDogsUGA to take the scripts from. Leave empty
+          when DevDogsUGA runs this; product repositories pass the SHA they
+          pinned this workflow at.
+        required: false
+        type: string
+        default: ""
+      supabase_version:
+        description: The Supabase CLI to install. Keep equal to the repository's own pin.
+        required: false
+        type: string
+        # renovate: datasource=npm depName=supabase
+        default: 2.117.0
+
+concurrency:
+  group: database-pr-${{ github.event_name == 'merge_group' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'merge_group' }}
+
+permissions:
+  contents: read
+
+jobs:
+  destructive-sql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    env:
+      BASE_SHA: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || github.event.pull_request.base.sha }}
+      # The fallback is for the `pull_request` and `merge_group` runs of this
+      # repository, where `inputs` is empty; Renovate bumps it with the default.
+      # renovate: datasource=npm depName=supabase
+      SUPABASE_VERSION: ${{ inputs.supabase_version || '2.117.0' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: Locate the shared scripts
+        run: echo "SCRIPTS=$GITHUB_WORKSPACE/${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
+      - name: Did the database change?
+        id: changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet "$BASE_SHA...HEAD" -- supabase/schemas supabase/migrations supabase/config.toml; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            echo 'Nothing under supabase/ changed: no SQL to classify.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install the Supabase CLI
+        if: steps.changed.outputs.changed == 'true'
+        run: npm install --global "supabase@$SUPABASE_VERSION" && supabase --version
+      - name: Classify the SQL this change adds
+        id: plan
+        if: steps.changed.outputs.changed == 'true'
+        env:
+          PLAN_DIR: ${{ runner.temp }}/db-check
+        run: node "$SCRIPTS/db-plan.mjs" check --base "$BASE_SHA"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: steps.changed.outputs.changed == 'true'
+        with:
+          name: db-check
+          path: ${{ runner.temp }}/db-check
+          retention-days: 30
+      - name: The allow-destructive label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DESTRUCTIVE: ${{ steps.plan.outputs.destructive || 'false' }}
+          PR: ${{ github.event.pull_request.number }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+          # A push makes any label stale (destructive-gate.yaml removes it, and
+          # that removal starts no run): the label is not trusted on `synchronize`.
+          ACTION: ${{ github.event.action }}
+        run: |
+          set -euo pipefail
+          if [ -n "$PR" ]; then target=(--pr "$PR"); else target=(--ref "$QUEUE_REF"); fi
+          if [ "$ACTION" = synchronize ]; then target+=(--ignore-label); fi
+          node "$SCRIPTS/destructive-label.mjs" need --repo "$GITHUB_REPOSITORY" "${target[@]}" --destructive "$DESTRUCTIVE" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  # On the merge queue only: pull_request_target does not fire for it, but the
+  # required check must report there too (destructive-gate.yaml has the other
+  # half).
+  destructive-gate:
+    if: github.event_name == 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: Who applied the allow-destructive label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+          SCRIPTS: ${{ github.workspace }}/${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}
+        # `shell: bash` is `bash -eo pipefail`: without it the pipe to tee
+        # would hide a failing check.
+        shell: bash
+        run: node "$SCRIPTS/destructive-label.mjs" gate --repo "$GITHUB_REPOSITORY" --ref "$QUEUE_REF" | tee -a "$GITHUB_STEP_SUMMARY"

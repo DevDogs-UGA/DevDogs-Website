@@ -1,0 +1,82 @@
+name: Destructive gate
+
+# Who may apply the `allow-destructive` label (Q10). Runs on `pull_request_target`
+# so its token can edit the pull request, which also means it must NEVER check
+# out or run the pull request's code: the one script it runs comes from the
+# base branch, and it reads only the PR number the event gives it.
+#
+# What it does:
+#   * the label is on the pull request and its applier is not a `devops` member:
+#     the check fails and the label is removed, so a stray label cannot sit
+#     there looking approved;
+#   * the pull request gets a new push (`synchronize`): the label is removed,
+#     because it was applied to SQL a devops member read, and the SQL has
+#     changed since. A devops member re-applies it after reading the new diff.
+#
+# The merge queue has no `pull_request_target`, so database-pr.yaml runs the
+# same check there under the same name, `destructive-gate`.
+#
+# Shared like database-pr.yaml: a product repository calls it from a
+# `pull_request_target` workflow of its own, pinned by commit SHA, with
+# `shared_ref` set to that SHA. A called workflow runs in the caller's context,
+# so it still never touches the pull request's code.
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+  workflow_call:
+    inputs:
+      shared_ref:
+        description: >-
+          A commit of DevDogsUGA/DevDogsUGA to take the script from. Leave empty
+          when DevDogsUGA runs this.
+        required: false
+        type: string
+        default: ""
+
+# A push (`synchronize`) clears a stale label, so its run is never cancelled by
+# the label, unlabel or reopen events that can follow it closely: those share a
+# second group.
+concurrency:
+  group: destructive-gate-${{ github.event.pull_request.number }}-${{ github.event.action == 'synchronize' && 'push' || 'label' }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  destructive-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      # The base branch's copy of the script. No `ref:`: this event checks out
+      # the base, not the pull request.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: A new push clears the label
+        if: github.event.action == 'synchronize'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gh api --method DELETE "repos/$GITHUB_REPOSITORY/issues/$PR/labels/allow-destructive" > /dev/null 2>&1 \
+            && echo "Removed allow-destructive: the pull request changed after it was applied." >> "$GITHUB_STEP_SUMMARY" \
+            || true
+      - name: Who applied the allow-destructive label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          SCRIPTS: ${{ github.workspace }}/${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}
+        # `shell: bash` is `bash -eo pipefail`: without it the pipe to tee
+        # would hide a failing check.
+        shell: bash
+        run: node "$SCRIPTS/destructive-label.mjs" gate --repo "$GITHUB_REPOSITORY" --pr "$PR" --remove-rejected | tee -a "$GITHUB_STEP_SUMMARY"

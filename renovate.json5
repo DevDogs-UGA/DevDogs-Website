@@ -1,37 +1,24 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  // Scoped to `@devdogsuga/*` only: the first rule turns every dependency
-  // off, the second turns the Backstage packages back on. A top-level
-  // `"enabled": false` would disable Renovate for the whole repository, not
-  // just its dependencies (https://docs.renovatebot.com/key-concepts/scoping/).
-  // Managing anything else is a deliberate second change.
-  extends: ["config:recommended"],
-  labels: ["dependencies"],
+  // DevDogsUGA uses the club's shared preset (renovate/default.json, Q33), the
+  // same one DogDays and DogPack extend. What it does: npm, pub, Actions
+  // digests and the Supabase CLI pin; one grouped PR a weekend; patch and minor
+  // automerge through the merge queue; majors wait for the officer;
+  // vulnerability alerts replace Dependabot security updates.
+  extends: ["github>DevDogsUGA/DevDogsUGA//renovate/default"],
+  // ROLLOUT SWITCH. Renovate is turned on for the whole repository as a
+  // deliberate step (Workflow 2 housekeeping, runbook "Renovate"), not by the
+  // merge that adds the preset: until then only the club's own packages are
+  // managed, exactly as before. To turn the preset on, delete the first rule
+  // below (the one that disables everything) and this comment.
   packageRules: [
     {
       matchPackageNames: ["*"],
       enabled: false,
     },
     {
-      description: "Any `@devdogsuga/*` dependency still consumed from npm rather than the workspace (the club's own packages live in packages/ now and link with `workspace:*`). One publish can touch several of these at once, so they land as one PR, not one each.",
-      matchPackageNames: ["/^@devdogsuga\\//"],
+      matchPackageNames: ["/^@devdogsuga\\//", "devdogsuga_sdk"],
       enabled: true,
-      groupName: "Backstage @devdogsuga packages",
-      groupSlug: "devdogsuga-backstage",
-      // No release-age gate: these are this org's own packages, built and
-      // tested in this repo's CI before publish, so a delay only slows the fix.
-      minimumReleaseAge: null,
-      // `bump` rewrites an exact pin to the new exact version and raises a `^`
-      // floor even for an in-range release, so every publish reaches the
-      // consumer as a PR. `replace` would skip in-range releases entirely.
-      rangeStrategy: "bump",
-      // Merged by GitHub auto-merge once CI is green. The Renovate app is a
-      // `pull_request` bypass actor on the `main` ruleset, which also skips
-      // that ruleset's squash-only rule, so the strategy is pinned here. The
-      // required checks live in the separate `main-ci` ruleset, which Renovate
-      // does not bypass, so auto-merge still waits for them.
-      automerge: true,
-      automergeStrategy: "squash",
     },
   ],
 }

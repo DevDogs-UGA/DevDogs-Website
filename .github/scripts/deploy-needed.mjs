@@ -8,10 +8,15 @@
  * out rather than skip. "Last deployed" is read from this workflow's own runs
  * on `main`, newest first:
  *
- *   staging     every `deploy / staging-deploy (…)` job succeeded
- *   production  `deploy / production` succeeded AND its deploy steps ran (the
- *               job also succeeds, deploying nothing, when its freshness check
- *               finds the candidate superseded)
+ *   staging     the `staging-platform` and `staging-schedule-builder` calls of
+ *               deploy-worker.yaml both succeeded (the jobs of a called
+ *               workflow are named `<caller job> / <job>`)
+ *   production  the `production-platform` and `production-schedule-builder`
+ *               calls both succeeded AND their traffic switch ran
+ *
+ * Runs from before the shared workflows (jobs named `staging-deploy (…)` and
+ * `production`) are still read, so the first run after the change does not
+ * redeploy a commit the old flow had already shipped.
  *
  * ⚠️ Fails OPEN. No previous deploy found, a diff git cannot compute, any API
  * error: the tier deploys. Skipping is the optimisation; a missed deploy is
@@ -63,6 +68,12 @@ const INERT_FILES = new Set([
   // composite actions, which stay shipped because they shape the build.
   ".github/workflows/ci.yaml",
   ".github/workflows/deploy.yaml",
+  ".github/workflows/deploy-database.yaml",
+  ".github/workflows/deploy-worker.yaml",
+  ".github/workflows/database-pr.yaml",
+  ".github/workflows/destructive-gate.yaml",
+  ".github/workflows/smoke.yaml",
+  "renovate/default.json",
   ".github/CODEOWNERS",
   ".github/workflows/slides.yaml",
   ".github/workflows/workshops-vscode.yaml",
@@ -85,17 +96,53 @@ export function isInert(path) {
   );
 }
 
-/** Steps that only run when the production job actually deploys. */
-const PRODUCTION_DEPLOY_STEPS = [
+/** Steps of the pre-shared-workflow production job that only run when it deploys. */
+const LEGACY_PRODUCTION_DEPLOY_STEPS = [
   "Deploy and verify platform",
   "Deploy and verify schedule-builder",
 ];
+
+/** The step of deploy-worker.yaml that gives the new version traffic. */
+const SWITCH_STEP = "Switch traffic to the new version";
+
+/** The step a `mode: full` deploy (no preview, no switch) deploys with. */
+const FULL_STEP = "Deploy (classic, no preview)";
+
+/** The Workers a tier ships, as the caller jobs in deploy.yaml name them. */
+const WORKER_CALLS = {
+  staging: ["staging-platform", "staging-schedule-builder"],
+  production: ["production-platform", "production-schedule-builder"],
+};
+
+/**
+ * @param {any[]} jobs
+ * @param {string} call  A caller job id in deploy.yaml.
+ */
+function callSucceeded(jobs, call) {
+  const job = jobs.find((j) => j.name === `deploy / ${call} / deploy`);
+  if (!job || job.conclusion !== "success") return false;
+  return (job.steps ?? []).some(
+    (/** @type {any} */ step) =>
+      (step.name === SWITCH_STEP || step.name === FULL_STEP) &&
+      step.conclusion === "success",
+  );
+}
 
 /**
  * @param {any[]} jobs  One run's jobs.
  * @param {string} tier
  */
 export function runDeployed(jobs, tier) {
+  const calls = WORKER_CALLS[/** @type {"staging" | "production"} */ (tier)];
+  if (calls?.every((call) => callSucceeded(jobs, call))) return true;
+  return legacyRunDeployed(jobs, tier);
+}
+
+/**
+ * @param {any[]} jobs
+ * @param {string} tier
+ */
+function legacyRunDeployed(jobs, tier) {
   if (tier === "staging") {
     const deploys = jobs.filter((job) =>
       String(job.name).startsWith("deploy / staging-deploy"),
@@ -106,7 +153,7 @@ export function runDeployed(jobs, tier) {
   }
   const job = jobs.find((j) => j.name === "deploy / production");
   if (!job || job.conclusion !== "success") return false;
-  return PRODUCTION_DEPLOY_STEPS.every((name) =>
+  return LEGACY_PRODUCTION_DEPLOY_STEPS.every((name) =>
     (job.steps ?? []).some(
       (/** @type {any} */ step) =>
         step.name === name && step.conclusion === "success",

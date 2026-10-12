@@ -30,6 +30,8 @@ import {
 import {
   buildDesiredRulesets,
   isPerTeamRulesetName,
+  isProductRepo,
+  PRODUCT_REPOS,
   type RulesetActors,
 } from "./desired.js";
 import {
@@ -38,7 +40,7 @@ import {
   type MergeQueueGate,
 } from "./gates.js";
 import { planHasChanges, planRulesets, type RulesetPlan } from "./diff.js";
-import type { LiveRuleset } from "./types.js";
+import type { DesiredRuleset, LiveRuleset, Rule } from "./types.js";
 import { unwrap } from "@devdogsuga/cli-core/ui";
 
 const DEFAULT_ORG = "DevDogsUGA";
@@ -104,6 +106,71 @@ function renderRuleLine(rule: { type: string }): string {
   return rule.type;
 }
 
+/**
+ * One line per rule, with the parameters a reviewer cares about spelled out,
+ * so a changed status check or merge method shows up in a dry run's diff.
+ */
+export function describeRule(rule: Rule): string {
+  switch (rule.type) {
+    case "required_status_checks":
+      return `required_status_checks [${rule.parameters.required_status_checks
+        .map((c) => c.context)
+        .sort()
+        .join(", ")}]`;
+    case "pull_request":
+      return `pull_request (merge: ${[...rule.parameters.allowed_merge_methods].sort().join("/")}, approvals: ${rule.parameters.required_approving_review_count}, code owners: ${rule.parameters.require_code_owner_review})`;
+    case "merge_queue":
+      return `merge_queue (${rule.parameters.merge_method}, up to ${rule.parameters.max_entries_to_merge})`;
+    default:
+      return rule.type;
+  }
+}
+
+function describeActor(a: {
+  actor_id: number;
+  actor_type: string;
+  bypass_mode: string;
+}): string {
+  return `${a.actor_type}#${a.actor_id} (${a.bypass_mode})`;
+}
+
+/** Added and removed lines between two sets of strings, `+ x` / `- y`. */
+function setDiff(label: string, before: string[], after: string[]): string[] {
+  const out: string[] = [];
+  for (const line of after)
+    if (!before.includes(line)) out.push(`    + ${label} ${line}`);
+  for (const line of before)
+    if (!after.includes(line)) out.push(`    - ${label} ${line}`);
+  return out;
+}
+
+/** What an update changes, from the live ruleset to the desired one. */
+export function renderChange(live: LiveRuleset, desired: DesiredRuleset) {
+  return [
+    ...setDiff(
+      "rule  ",
+      live.rules.map(describeRule),
+      desired.rules.map(describeRule),
+    ),
+    ...setDiff(
+      "bypass",
+      live.bypass_actors.map(describeActor),
+      desired.bypass_actors.map(describeActor),
+    ),
+    ...setDiff(
+      "ref   ",
+      [
+        ...live.conditions.ref_name.include.map((x) => `include ${x}`),
+        ...live.conditions.ref_name.exclude.map((x) => `exclude ${x}`),
+      ],
+      [
+        ...desired.conditions.ref_name.include.map((x) => `include ${x}`),
+        ...desired.conditions.ref_name.exclude.map((x) => `exclude ${x}`),
+      ],
+    ),
+  ];
+}
+
 function renderDesired(desired: {
   name: string;
   rules: readonly { type: string }[];
@@ -140,7 +207,16 @@ export function renderPlan(plan: RulesetPlan): string {
     lines.push(
       `~ update   "${update.desired.name}"${renameNote} [id ${update.id}]`,
     );
-    lines.push(...renderDesired(update.desired));
+    if (update.live) {
+      const change = renderChange(update.live, update.desired);
+      lines.push(
+        ...(change.length > 0
+          ? change
+          : ["    (only the name or a default differs)"]),
+      );
+    } else {
+      lines.push(...renderDesired(update.desired));
+    }
   }
   for (const del of plan.deletes) {
     lines.push(`- delete   "${del.name}" [id ${del.id}]`);
@@ -185,16 +261,52 @@ async function confirmApply(yes: boolean): Promise<boolean> {
   );
 }
 
+/** The repositories `--repo all` covers: the three that keep a ruleset set after the fold-back. */
+export const ALL_REPOS = ["DevDogsUGA", ...PRODUCT_REPOS] as const;
+
+/** A repository that does not exist yet reads as a 404 from `gh api`. */
+function isMissingRepo(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return /\b404\b|Not Found/.test(message);
+}
+
+/**
+ * `--repo all`: the dry-run diff for every repository in one go. Read-only by
+ * construction: applying to three repositories at once is not something to do
+ * with one flag.
+ */
+async function runAll(argv: readonly string[], opts: RulesetsOptions) {
+  if (opts.apply) {
+    process.stderr.write(
+      "backstage github rulesets: --repo all is a dry run only; apply one repository at a time.\n",
+    );
+    return 1;
+  }
+  let worst = 0;
+  for (const repo of ALL_REPOS) {
+    console.log(`\n=== ${opts.org}/${repo} ===`);
+    const rest: string[] = [];
+    for (let i = 0; i < argv.length; i++) {
+      if (argv[i] === "--repo") i++;
+      else rest.push(argv[i]!);
+    }
+    worst = Math.max(worst, await runGithubRulesets([...rest, "--repo", repo]));
+  }
+  return worst;
+}
+
 export async function runGithubRulesets(
   argv: readonly string[],
 ): Promise<number> {
   const opts = parseOptions(argv);
+  if (opts.repo === "all") return runAll(argv, opts);
   const r: Repo = { owner: opts.org, repo: opts.repo };
 
   const backstage = opts.repo === "Backstage";
-  if (!backstage && opts.repo !== "DevDogsUGA") {
+  const product = isProductRepo(opts.repo);
+  if (!backstage && !product && opts.repo !== "DevDogsUGA") {
     process.stderr.write(
-      `backstage github rulesets: no desired rulesets for repo "${opts.repo}" (managed: DevDogsUGA, Backstage).\n`,
+      `backstage github rulesets: no desired rulesets for repo "${opts.repo}" (managed: DevDogsUGA, Backstage, ${PRODUCT_REPOS.join(", ")}, or "all").\n`,
     );
     return 1;
   }
@@ -208,8 +320,9 @@ export async function runGithubRulesets(
       resolveTeamId(opts.org, DEFAULT_DEVOPS_SLUG),
       resolveTeamId(opts.org, "focus-leads"),
       resolveTeamId(opts.org, DEFAULT_ADMINS_SLUG),
-      // Backstage has no `team/**` rulesets, so no platform App bypass.
-      backstage ? undefined : resolveAppId(opts.org, opts.appSlug),
+      // Backstage and the product repositories have no `team/**` rulesets, so
+      // no platform App bypass.
+      backstage || product ? undefined : resolveAppId(opts.org, opts.appSlug),
     ]);
   } catch (err) {
     process.stderr.write(
@@ -261,11 +374,38 @@ export async function runGithubRulesets(
   };
   const desired = buildDesiredRulesets(
     actors,
-    backstage ? "Backstage" : "DevDogsUGA",
+    backstage
+      ? "Backstage"
+      : isProductRepo(opts.repo)
+        ? opts.repo
+        : "DevDogsUGA",
   );
 
-  // Both repos carry a merge queue now (DevDogsUGA joined in TASK-478 Phase 3),
-  // so both are gated on their own CI having a `merge_group` trigger.
+  // A repository that is not created yet (DogDays and DogPack before stage 4)
+  // has no live rulesets: the plan is every ruleset as a create, which is the
+  // diff Sloan reads before the repository exists. Applying is refused.
+  let summaries: Awaited<ReturnType<typeof listRulesets>> = [];
+  let details = new Map<number, LiveRuleset>();
+  let missing = false;
+  try {
+    summaries = await listRulesets(r);
+    details = await fetchDetails(r, summaries);
+  } catch (err) {
+    if (product && isMissingRepo(err)) {
+      missing = true;
+      notes.push(
+        `${opts.org}/${opts.repo} does not exist yet: every ruleset below is a create, and --apply is refused until the repository exists.`,
+      );
+    } else {
+      process.stderr.write(
+        `backstage github rulesets: ${err instanceof Error ? err.message : String(err)}\n`,
+      );
+      return 1;
+    }
+  }
+
+  // Every repo with a merge queue is gated on its own CI having a
+  // `merge_group` trigger.
   let gate: MergeQueueGate;
   try {
     const ci = await getFileContent(r, CI_WORKFLOW_PATH);
@@ -283,21 +423,11 @@ export async function runGithubRulesets(
     };
   }
 
-  let summaries;
-  let details;
-  try {
-    summaries = await listRulesets(r);
-    details = await fetchDetails(r, summaries);
-  } catch (err) {
-    process.stderr.write(
-      `backstage github rulesets: ${err instanceof Error ? err.message : String(err)}\n`,
-    );
-    return 1;
-  }
-
   const plan = applyGates(
     planRulesets(summaries, details, actors, desired),
-    gate,
+    // A missing repository has no CI to read; the queue is not withheld, the
+    // whole apply is.
+    missing ? null : gate,
     notes,
   );
 
@@ -315,6 +445,13 @@ export async function runGithubRulesets(
   }
 
   if (!planHasChanges(plan)) return 0;
+
+  if (missing) {
+    process.stderr.write(
+      `backstage github rulesets: ${opts.org}/${opts.repo} does not exist; nothing was applied.\n`,
+    );
+    return 1;
+  }
 
   if (!(await confirmApply(opts.yes))) return 1;
 

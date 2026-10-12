@@ -93,10 +93,30 @@ being deployed (`.github/actions/backstage-cli`), not fetched with `pnpm dlx`.
 merge_group CI run:  validate -> build (staging, production)  ->  artifacts <tier>-<sha>
 push to main:        supersede
                      resolve (finds the merge_group run) -> build (only if none)
-                     staging-preflight -> staging-migrate -> staging-deploy (platform | schedule-builder)
-                     production-plan ----------------------------------------------+
-                     production (approval gate, then the sequence below) <----------+
+                     staging-preflight -> staging-database -> staging-avatars
+                                       -> staging-platform | staging-schedule-builder
+                     production-database (plan, approval, apply)
+                                       -> production-platform | production-schedule-builder
 ```
+
+The database and each Worker deploy through two shared, reusable workflows
+(Q15) that the product repositories call too, pinned by commit SHA:
+
+- **`deploy-database.yaml`.** Hand-written migrations, then the declarative
+  diff, then `supabase config push` (and, for a product, registering
+  `custom:devdogsuga`). Every apply is planned first and hash-checked: the plan
+  job writes the SQL and its SHA-256 into the run summary, and the apply job
+  regenerates the SQL against the real database and refuses if it is not the
+  approved one. A plan that drops or rewrites data needs a second approval of
+  `production-destructive` (staging: `staging-destructive`), and the pull
+  request had to carry the `allow-destructive` label from a `devops` member
+  (`database-pr.yaml`, `destructive-gate.yaml`).
+- **`deploy-worker.yaml`.** `wrangler versions upload`, the new version added to
+  the deployment at 0%, a smoke test of that version through the version
+  override header (the platform's includes the OAuth authorize and consent
+  checks), the traffic switch, routes and crons, and a smoke test of what is
+  live, with an automatic rollback if that fails. The slides deck deploys
+  through it too (`slides.yaml`).
 
 - **Artifacts come from the merge queue.** `ci.yaml` builds both tiers on
   `merge_group` (`build-artifacts.yaml`); the queue fast-forwards `main` to that
@@ -105,18 +125,19 @@ push to main:        supersede
   `RELEASE_SHA256SUMS`. A push the queue never built builds in its own run.
   Builds run in the credential-free `staging-build` / `production-build`
   environments.
-- **Staging** runs on every deploy: preflight, migrations and new seeds, avatars,
-  then both Workers (write-env, Sentry release, deploy, docs index and config
-  reconcile for the platform, smoke test).
-- **Production** is the `production` environment (devops reviewers, 45 minutes,
-  one at a time). Its first step refuses an approver who authored the PR that
-  produced the commit or put it in the merge queue
-  (`.github/scripts/approval-gate.mjs`; a push with no PR is covered by the
-  environment's own prevent-self-review). Then: refuse a commit that is no longer
-  `main`, verify the artifacts, write-env, re-plan and migrate with seeds,
-  avatars, `supabase config push`, the platform (Sentry release, deploy, docs
-  index, reconcile, smoke, monitor prune), schedule-builder (the same), and an env
-  audit.
+- **Staging** runs on every deploy: preflight, the database (migrations, the
+  schema diff, new seeds, the config push), avatars, then both Workers (write-env,
+  Sentry release, version upload and smoke test, docs index and config reconcile
+  for the platform, the live smoke test).
+- **Production** is the `production` environment (devops reviewers). Each
+  approved job opens by refusing an approver who authored the PR that produced
+  the commit or put it in the merge queue (`.github/scripts/approval-gate.mjs`;
+  a push with no PR is covered by the environment's own prevent-self-review) and
+  by refusing a commit that is no longer `main`. The database job is approved
+  first; the two Workers run in parallel behind one approval.
+- **Runbooks.** Rollback, a failed migration, the destructive gate, the table
+  drops, the vanity-subdomain switch, credentials and incidents are in
+  `docs/operations/`.
 - **Sentry releases.** Both Workers' release is the commit SHA.
 - **Caches.** The pnpm store (setup-workspace) and the Supabase images (the
   `types` and `database` jobs). The compiled docs are not cached: docs-kit's

@@ -364,6 +364,66 @@ test("runDeployed: a superseded production job deployed nothing", () => {
   assert.equal(runDeployed([superseded], "production"), false);
 });
 
+test("runDeployed: a mode: full Worker deploy (no switch step) counts once its classic deploy step succeeded", () => {
+  const full = (name, step = "success") =>
+    job(`deploy / ${name} / deploy`, "success", [
+      { name: "Switch traffic to the new version", conclusion: "skipped" },
+      { name: "Deploy (classic, no preview)", conclusion: step },
+    ]);
+  assert.equal(
+    runDeployed(
+      [full("staging-platform"), full("staging-schedule-builder")],
+      "staging",
+    ),
+    true,
+  );
+  assert.equal(
+    runDeployed(
+      [full("staging-platform"), full("staging-schedule-builder", "skipped")],
+      "staging",
+    ),
+    false,
+  );
+});
+
+test("runDeployed: the shared Worker workflow counts only after its traffic switch", () => {
+  const call = (name, conclusion = "success", switched = true) =>
+    job(`deploy / ${name} / deploy`, conclusion, [
+      {
+        name: "Switch traffic to the new version",
+        conclusion: switched ? "success" : "skipped",
+      },
+    ]);
+  const staging = [call("staging-platform"), call("staging-schedule-builder")];
+  assert.equal(runDeployed(staging, "staging"), true);
+  assert.equal(
+    runDeployed(
+      [call("staging-platform"), call("staging-schedule-builder", "failure")],
+      "staging",
+    ),
+    false,
+  );
+  // Succeeded without switching (a superseded candidate refused before the upload): nothing shipped.
+  assert.equal(
+    runDeployed(
+      [
+        call("production-platform", "success", false),
+        call("production-schedule-builder"),
+      ],
+      "production",
+    ),
+    false,
+  );
+  assert.equal(
+    runDeployed(
+      [call("production-platform"), call("production-schedule-builder")],
+      "production",
+    ),
+    true,
+  );
+  assert.equal(runDeployed([call("staging-platform")], "staging"), false);
+});
+
 test("lastDeployed skips this run's own SHA and failed deploys", async () => {
   const B = "b".repeat(40);
   const C = "c".repeat(40);

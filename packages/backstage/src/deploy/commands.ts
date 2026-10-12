@@ -110,7 +110,7 @@ export function requireTier(rest: readonly string[]): Tier {
 }
 
 /**
- * `deploy <app> --tier <staging|production>`
+ * `deploy <app> --tier <staging|production> [--upload]`
  *
  * Orchestrates the full deploy for one app:
  *   1. the Cloudflare token check
@@ -134,7 +134,16 @@ export async function runAppDeploy(app: string, rest: string[]): Promise<void> {
   // Wrangler cross-checks it against the environment the build was tagged
   // with and errors loudly on a mismatch, rather than silently deploying the
   // wrong tier.
-  const deployArgs = ["exec", "wrangler", "deploy", "-e", tier];
+  //
+  // `--upload` is the first half of the shared `deploy-worker.yaml`: the same
+  // secrets and release var, but `wrangler versions upload`, which creates a
+  // version and gives it NO traffic. The workflow smoke tests that version and
+  // only then switches traffic to it. It reads the new version's id from the
+  // file `WRANGLER_OUTPUT_FILE_PATH` names (`.github/scripts/wrangler-version.mjs`).
+  const upload = rest.includes("--upload");
+  const deployArgs = upload
+    ? ["exec", "wrangler", "versions", "upload", "-e", tier]
+    : ["exec", "wrangler", "deploy", "-e", tier];
   // See apps/*/cloudflare/worker.ts's `WorkerEnv` doc: `SENTRY_RELEASE` is the
   // deploy's git SHA, minted fresh by CI every run rather than a value the
   // vault holds, so it reaches the Worker as a `--var` here rather than
@@ -149,7 +158,9 @@ export async function runAppDeploy(app: string, rest: string[]): Promise<void> {
       `backstage deploy ${app} --tier ${tier} --dry-run`,
       "  Check CLOUDFLARE_API_TOKEN",
       `  Write ${app}'s Worker secrets file from its manifest`,
-      `  Deploy ${app} (${tier})`,
+      upload
+        ? `  Upload ${app} (${tier}) as a new version with no traffic`
+        : `  Deploy ${app} (${tier})`,
     ]);
     return;
   }

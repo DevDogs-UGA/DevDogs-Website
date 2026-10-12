@@ -1,0 +1,15 @@
+[
+  {
+    "path": "apps/slides",
+    "smoke": {
+      "hosts": {
+        "production": "slides-relay.devdogsuga.org"
+      },
+      "publicPaths": [],
+      "expectedStatuses": {
+        "/follow": 426,
+        "/": 403
+      }
+    }
+  }
+]

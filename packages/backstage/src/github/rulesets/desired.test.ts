@@ -34,7 +34,11 @@ describe("buildDesiredRulesets", () => {
       desired.find((rule) => rule.name === "main-integrity"),
     ).toMatchObject({
       bypass_actors: [],
-      rules: [{ type: "deletion" }, { type: "non_fast_forward" }],
+      rules: [
+        { type: "deletion" },
+        { type: "non_fast_forward" },
+        { type: "required_signatures" },
+      ],
     });
   });
 
@@ -93,8 +97,10 @@ describe("buildDesiredRulesets", () => {
         required_status_checks: [
           { context: "validate" },
           { context: "database" },
-          { context: "format" },
+          { context: "toolchain" },
           { context: "flutter" },
+          { context: "destructive-sql" },
+          { context: "destructive-gate" },
         ],
       },
     });
@@ -251,11 +257,21 @@ describe("buildDesiredRulesets for Backstage", () => {
 
   it("matches DevDogsUGA's main-integrity, main-updates and main-reviews", () => {
     const dd = buildDesiredRulesets(actors);
-    for (const name of ["main-integrity", "main-updates"]) {
-      expect(without.find((r) => r.name === name)).toEqual(
-        dd.find((r) => r.name === name),
-      );
-    }
+    expect(without.find((r) => r.name === "main-updates")).toEqual(
+      dd.find((r) => r.name === "main-updates"),
+    );
+    // Backstage is archived by the fold-back, so it never gained signed
+    // commits: the one difference from DevDogsUGA's `main-integrity`.
+    const integrity = (rules: typeof dd) =>
+      rules
+        .find((r) => r.name === "main-integrity")!
+        .rules.map((rule) => rule.type);
+    expect(integrity(without)).toEqual(["deletion", "non_fast_forward"]);
+    expect(integrity(dd)).toEqual([
+      "deletion",
+      "non_fast_forward",
+      "required_signatures",
+    ]);
     expect(without.find((r) => r.name === "main-reviews")).toEqual(
       dd.find((r) => r.name === "main-reviews"),
     );
@@ -307,5 +323,88 @@ describe("merge queue gate", () => {
     expect(plan.creates.map((c) => c.desired.name)).toContain(
       "main-merge-queue",
     );
+  });
+});
+
+describe("buildDesiredRulesets for the product repositories", () => {
+  const productActors = {
+    devopsTeamId: 9002,
+    focusLeadsTeamId: 9004,
+    adminsTeamId: 9001,
+    renovateAppId: 2740,
+  };
+  const checksOf = (repo: "DogDays" | "DogPack") =>
+    (
+      buildDesiredRulesets(productActors, repo).find(
+        (r) => r.name === "main-ci",
+      )!.rules[0] as {
+        parameters: { required_status_checks: { context: string }[] };
+      }
+    ).parameters.required_status_checks.map((c) => c.context);
+
+  for (const repo of ["DogDays", "DogPack"] as const) {
+    describe(repo, () => {
+      const desired = buildDesiredRulesets(productActors, repo);
+      const named = (name: string) => desired.find((r) => r.name === name)!;
+
+      it("needs no platform App", () => {
+        expect(desired.map((r) => r.name)).toEqual([
+          "main-integrity",
+          "main-reviews",
+          "main-ci",
+          "main-merge-queue",
+        ]);
+      });
+
+      it("requires signed commits with no bypass at all", () => {
+        expect(named("main-integrity")).toMatchObject({
+          bypass_actors: [],
+          rules: [
+            { type: "deletion" },
+            { type: "non_fast_forward" },
+            { type: "required_signatures" },
+          ],
+        });
+      });
+
+      it("merges by squash only, with a code-owner review", () => {
+        expect(named("main-reviews").rules[0]).toMatchObject({
+          type: "pull_request",
+          parameters: {
+            allowed_merge_methods: ["squash"],
+            require_code_owner_review: true,
+            required_approving_review_count: 1,
+          },
+        });
+        expect(named("main-reviews").bypass_actors).toContainEqual({
+          actor_id: 2740,
+          actor_type: "Integration",
+          bypass_mode: "pull_request",
+        });
+      });
+
+      it("queues with squash and requires the destructive gate", () => {
+        expect(named("main-merge-queue").rules[0]).toMatchObject({
+          type: "merge_queue",
+          parameters: { merge_method: "SQUASH" },
+        });
+        expect(checksOf(repo)).toEqual(
+          expect.arrayContaining([
+            "validate",
+            "destructive-gate / destructive-sql",
+            "destructive-gate / destructive-gate",
+          ]),
+        );
+        // A called workflow's job reports as "<caller job> / <job>": the bare
+        // names can never be satisfied by a product repository.
+        expect(checksOf(repo)).not.toContain("destructive-sql");
+        expect(checksOf(repo)).not.toContain("destructive-gate");
+      });
+    });
+  }
+
+  it("DogPack also requires its Flutter job, DogDays does not", () => {
+    expect(checksOf("DogPack")).toContain("flutter");
+    expect(checksOf("DogDays")).not.toContain("flutter");
   });
 });

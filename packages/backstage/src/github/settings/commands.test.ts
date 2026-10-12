@@ -67,8 +67,12 @@ const api = vi.hoisted(() => ({
   })),
   getEnvironment: vi.fn(
     async (_r: unknown, name: string) =>
-      baseEnvironment(name, name === "production" || name === "publishing")
-        .environment,
+      baseEnvironment(
+        name,
+        name === "production" ||
+          name === "publishing" ||
+          name.endsWith("-destructive"),
+      ).environment,
   ),
   getDeploymentBranchPolicies: vi.fn(
     async (_r: unknown, name: string) =>

@@ -1,6 +1,8 @@
 // The hosted deck and live relay at slides-sync.devdogsuga.org (see
-// worker/index.ts and LAYOUTS.md, "Presenting"). Deployed by hand from this
-// app with `pnpm run deploy`, which builds the deck first.
+// worker/index.ts and LAYOUTS.md, "Presenting"). Deployed from CI by the
+// shared deploy-worker.yaml (slides.yaml's `deploy` job: upload a version, smoke
+// test it, switch traffic). `pnpm run deploy` builds the deck and deploys from a
+// laptop, for an emergency only; it skips the smoke test.
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "devdogs-slides",

@@ -1,0 +1,109 @@
+name: Smoke
+
+# The Q39 checks, on a timer: automated checks that need no login and guard
+# sign-in, the thing every product depends on.
+#
+#   1. The authorize endpoint redirects to the platform's consent page.
+#   2. The consent page 404s without an `authorization_id`.
+#   3. The access-token hook downgrades a client's token (a staging database
+#      check, in a transaction that is rolled back).
+#
+# Plus the public pages of both Workers on every tier (worker-smoke.mjs, reading
+# workers.json), which is what a Sentry uptime monitor would otherwise do.
+# Sentry's plan here allows one uptime monitor, spent on the apex, so this is
+# the alerting for everything else: a failing run opens (or comments on) one
+# `smoke-failure` issue, and GitHub emails the people watching the repository.
+#
+# What may run where. Staging is ours to poke: check 1 registers and deletes a
+# throwaway OAuth client, and check 3 writes inside a rolled-back transaction.
+# PRODUCTION GETS READS ONLY: the discovery document must advertise an authorize
+# endpoint and the consent page must 404. Registering a client or touching the
+# database in production happens only inside an approved deploy, never on a
+# timer. The production job runs in `production-build`, which holds public
+# variables only (no secret, no reviewer), because a scheduled job cannot wait
+# for an approval.
+#
+# The same checks run before every traffic switch (deploy-worker.yaml).
+on:
+  schedule:
+    - cron: "11 */6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: smoke
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - name: Q39 checks (staging)
+        env:
+          API_URL: ${{ vars.API_URL || (vars.PROJECT_REF && format('https://{0}.supabase.co', vars.PROJECT_REF)) || '' }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DB_URL: ${{ secrets.DB_URL }}
+        run: node .github/scripts/q39-checks.mjs --tier staging
+      - name: Public pages (staging)
+        run: |
+          set -euo pipefail
+          for path in apps/platform apps/schedule-builder; do
+            node .github/scripts/worker-smoke.mjs --path "$path" --tier staging
+          done
+
+  production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production-build
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - name: Q39 checks (production, read-only)
+        env:
+          API_URL: ${{ vars.API_URL }}
+        run: node .github/scripts/q39-checks.mjs --tier production
+      - name: Public pages (production)
+        run: |
+          set -euo pipefail
+          for path in apps/platform apps/schedule-builder; do
+            node .github/scripts/worker-smoke.mjs --path "$path" --tier production
+          done
+
+  report:
+    needs: [staging, production]
+    if: always() && (needs.staging.result == 'failure' || needs.production.result == 'failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Open or update the smoke-failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STAGING: ${{ needs.staging.result }}
+          PRODUCTION: ${{ needs.production.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          body="Staging: $STAGING. Production: $PRODUCTION. Run: $RUN_URL"
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --label smoke-failure --state open --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Still failing. $body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --label smoke-failure \
+              --title "The scheduled smoke checks are failing" \
+              --body "The Q39 checks or a public page failed. $body
+
+          See the runbook: docs/operations (sign-in down during registration)."
+          fi

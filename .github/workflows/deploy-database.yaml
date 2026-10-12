@@ -1,0 +1,397 @@
+name: Deploy database
+
+# The shared database deploy: one building block, called with `workflow_call`
+# by this repository's deploy.yaml and, pinned by commit SHA, by DogDays' and
+# DogPack's (Q15). Each caller keeps its own environments, approvals and
+# secrets; what is shared is the sequence and the guarantees.
+#
+#   plan hand-written migrations
+#     -> apply them (only if some are pending; destructive ones behind the gate)
+#   plan the declarative diff        <- always computed AFTER the step above
+#     -> destructive gate (only if the SQL is destructive)
+#     -> apply the diff, push the Supabase config, register the DevDogs sign-in
+#
+# Every apply is hash-checked. The plan job writes the SQL and its SHA-256 into
+# the job summary, where the approver reads it; the apply job regenerates the
+# SQL against the target, and refuses (changing nothing) if it is not the SQL
+# that was approved. Generated SQL is never committed (Q9): it is always
+# computed against the database it is about to run on.
+#
+# The destructive gate (Q10). A plan that drops or rewrites data (see
+# .github/scripts/sql-classify.mjs) is never applied by the ordinary approval.
+# It first needs a deployment of the `destructive_environment` approved, an
+# environment whose reviewers are `devops` members with self-review blocked.
+# That environment carries no secrets: it is only the gate, and the apply that
+# follows is still in `environment`.
+#
+# Credentials. `plan_environment` holds a READ-ONLY database credential (the
+# migration_planner role) as DB_URL, so planning can run before anything is
+# approved. `environment` holds the deploy-tier DB_URL, SUPABASE_ACCESS_TOKEN
+# and whatever else the config needs, and its reviewers approve the apply.
+#
+# What the callers need to provide, in `environment`:
+#   secrets   DB_URL, SUPABASE_ACCESS_TOKEN, and every env() secret that
+#             supabase/config.toml names; for a product project also
+#             SECRET_KEY, DEVDOGS_OAUTH_CLIENT_ID, DEVDOGS_OAUTH_CLIENT_SECRET
+#   variables PROJECT_REF, and optionally API_URL, DEVDOGS_OAUTH_BASE_URL
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: The GitHub environment that approves and runs the apply (deploy-tier DB_URL, SUPABASE_ACCESS_TOKEN).
+        required: true
+        type: string
+      plan_environment:
+        description: The environment holding the read-only planner DB_URL. Defaults to `environment` (staging has one credential).
+        required: false
+        type: string
+        default: ""
+      destructive_environment:
+        description: The environment that must approve a destructive plan (e.g. production-destructive). Empty means destructive plans are refused outright.
+        required: false
+        type: string
+        default: ""
+      include_seed:
+        description: Also plan and apply new seed files (insert-only, recorded by hash).
+        required: false
+        type: boolean
+        default: false
+      apply_config:
+        description: Run `supabase config push` after the schema.
+        required: false
+        type: boolean
+        default: true
+      register_provider:
+        description: Register custom:devdogsuga on the project from DEVDOGS_OAUTH_* secrets (product projects).
+        required: false
+        type: boolean
+        default: false
+      require_read_only_planner:
+        description: Before planning, refuse a plan_environment DB_URL that is not the read-only migration_planner role. Set it whenever plan_environment is a separate, pre-approval credential.
+        required: false
+        type: boolean
+        default: false
+      self_approval_gate:
+        description: Refuse an approver who wrote or queued the change (approval-gate.mjs), on every approved job.
+        required: false
+        type: boolean
+        default: false
+      require_latest:
+        description: Refuse (before anything changes) when the commit is no longer the head of the default branch, so a late approval cannot apply an old candidate.
+        required: false
+        type: boolean
+        default: false
+      supabase_version:
+        description: The Supabase CLI to install. Keep equal to the repository's own pin.
+        required: false
+        type: string
+        # renovate: datasource=npm depName=supabase
+        default: 2.117.0
+      shared_ref:
+        description: >-
+          A commit of DevDogsUGA/DevDogsUGA to take the scripts from. Leave empty
+          when DevDogsUGA calls this (its own .github/scripts is used); product
+          repositories pass the SHA they pinned this workflow at.
+        required: false
+        type: string
+        default: ""
+    outputs:
+      schema_applied:
+        description: "`true` when a declarative diff was applied."
+        value: ${{ jobs.apply.outputs.schema_applied }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-database-${{ github.repository }}-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  SUPABASE_VERSION: ${{ inputs.supabase_version }}
+  SUPABASE_BIN: supabase
+
+jobs:
+  # 1. Hand-written migrations (and new seeds): what the target has not recorded.
+  plan-migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.plan_environment || inputs.environment }}
+    outputs:
+      pending: ${{ steps.plan.outputs.pending }}
+      hash: ${{ steps.plan.outputs.hash }}
+      destructive: ${{ steps.plan.outputs.destructive }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: Locate the shared scripts
+        run: echo "SCRIPTS=${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
+      - name: Install the Supabase CLI
+        run: npm install --global "supabase@$SUPABASE_VERSION" && supabase --version
+      - name: Verify the planner credential is read-only
+        if: inputs.require_read_only_planner
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/db-plan.mjs" planner-check
+      - name: Plan the hand-written migrations
+        id: plan
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/db-plan.mjs" migrations-plan ${{ inputs.include_seed && '--include-seed' || '' }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: plan-migrations
+          path: ${{ runner.temp }}/db-plan
+          retention-days: 90
+
+  # Destructive hand-written migrations are approved here first.
+  gate-migrations:
+    needs: plan-migrations
+    if: needs.plan-migrations.outputs.destructive == 'true' && inputs.destructive_environment != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.destructive_environment }}
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: Refuse an approver who wrote or queued this change
+        if: inputs.self_approval_gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          node "${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}/approval-gate.mjs"
+          --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
+          --environment "${{ inputs.destructive_environment }}"
+      - run: echo "A devops member approved applying the destructive migrations in this plan." >> "$GITHUB_STEP_SUMMARY"
+
+  apply-migrations:
+    needs: [plan-migrations, gate-migrations]
+    if: >-
+      always()
+      && needs.plan-migrations.result == 'success'
+      && needs.plan-migrations.outputs.pending != '0'
+      && (needs.gate-migrations.result == 'success' || needs.gate-migrations.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: Locate the shared scripts
+        run: echo "SCRIPTS=${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
+      - name: Refuse an approved candidate that is no longer the head
+        if: inputs.require_latest
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
+        run: |
+          latest=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" "refs/heads/$DEFAULT_BRANCH" | cut -f1)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::error::Candidate $GITHUB_SHA was superseded by $latest. Nothing was changed; the newer commit has its own run."
+            exit 1
+          fi
+      - name: Refuse an approver who wrote or queued this change
+        if: inputs.self_approval_gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          node "$SCRIPTS/approval-gate.mjs"
+          --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
+          --environment "${{ inputs.environment }}"
+      - name: Install the Supabase CLI
+        run: npm install --global "supabase@$SUPABASE_VERSION" && supabase --version
+      - name: Apply the hand-written migrations
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+          DESTRUCTIVE_APPROVED: ${{ needs.gate-migrations.result == 'success' }}
+        run: >-
+          node "$SCRIPTS/db-plan.mjs" migrations-apply
+          --expect-hash "${{ needs.plan-migrations.outputs.hash }}"
+          ${{ inputs.include_seed && '--include-seed' || '' }}
+
+  # 2. The declarative diff, computed after the migrations are in. `apply-
+  # migrations` is skipped when nothing is pending (go on) and also when the
+  # destructive approval was rejected (stop): only the first lets the schema
+  # diff be planned, because a diff computed against a target that is missing
+  # a rejected migration would be applied on its own approval.
+  plan-schema:
+    needs: [plan-migrations, apply-migrations]
+    if: >-
+      always()
+      && needs.plan-migrations.result == 'success'
+      && (needs.apply-migrations.result == 'success'
+          || (needs.apply-migrations.result == 'skipped' && needs.plan-migrations.outputs.pending == '0'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: ${{ inputs.plan_environment || inputs.environment }}
+    outputs:
+      empty: ${{ steps.plan.outputs.empty }}
+      hash: ${{ steps.plan.outputs.hash }}
+      destructive: ${{ steps.plan.outputs.destructive }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: Locate the shared scripts
+        run: echo "SCRIPTS=${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
+      - name: Install the Supabase CLI
+        run: npm install --global "supabase@$SUPABASE_VERSION" && supabase --version
+      - name: Verify the planner credential is read-only
+        if: inputs.require_read_only_planner
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/db-plan.mjs" planner-check
+      - name: Plan the declarative diff
+        id: plan
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/db-plan.mjs" schema-plan
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: plan-schema
+          path: ${{ runner.temp }}/db-plan
+          retention-days: 90
+
+  gate-schema:
+    needs: plan-schema
+    if: needs.plan-schema.outputs.destructive == 'true' && inputs.destructive_environment != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.destructive_environment }}
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: Refuse an approver who wrote or queued this change
+        if: inputs.self_approval_gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          node "${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}/approval-gate.mjs"
+          --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
+          --environment "${{ inputs.destructive_environment }}"
+      - run: echo "A devops member approved applying the destructive SQL in plan ${{ needs.plan-schema.outputs.hash }}." >> "$GITHUB_STEP_SUMMARY"
+
+  apply:
+    needs: [plan-schema, gate-schema]
+    if: >-
+      always()
+      && needs.plan-schema.result == 'success'
+      && (needs.gate-schema.result == 'success' || needs.gate-schema.result == 'skipped')
+      && (needs.plan-schema.outputs.empty != 'true' || inputs.apply_config || inputs.register_provider)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    outputs:
+      schema_applied: ${{ steps.schema.outputs.applied }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: Locate the shared scripts
+        run: echo "SCRIPTS=${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
+      # FIRST, before anything changes: whoever approved this deployment is
+      # neither the author of the change nor the person who queued it.
+      - name: Refuse an approved candidate that is no longer the head
+        if: inputs.require_latest
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
+        run: |
+          latest=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" "refs/heads/$DEFAULT_BRANCH" | cut -f1)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::error::Candidate $GITHUB_SHA was superseded by $latest. Nothing was changed; the newer commit has its own run."
+            exit 1
+          fi
+      - name: Refuse an approver who wrote or queued this change
+        if: inputs.self_approval_gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          node "$SCRIPTS/approval-gate.mjs"
+          --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
+          --environment "${{ inputs.environment }}"
+      - name: Install the Supabase CLI
+        run: npm install --global "supabase@$SUPABASE_VERSION" && supabase --version
+      - name: Apply the declarative diff
+        id: schema
+        if: needs.plan-schema.outputs.empty != 'true'
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+          DESTRUCTIVE_APPROVED: ${{ needs.gate-schema.result == 'success' }}
+        run: |
+          node "$SCRIPTS/db-plan.mjs" schema-apply --expect-hash "${{ needs.plan-schema.outputs.hash }}"
+          echo "applied=true" >> "$GITHUB_OUTPUT"
+      # A target with no Management API token (staging, until one is added)
+      # cannot take a config push. That is said out loud rather than skipped
+      # quietly, and it does not fail the deploy: the schema is already in.
+      - name: Supabase configuration skipped (no SUPABASE_ACCESS_TOKEN)
+        if: inputs.apply_config && env.SUPABASE_ACCESS_TOKEN == ''
+        run: echo "::warning::The ${{ inputs.environment }} environment has no SUPABASE_ACCESS_TOKEN secret, so supabase/config.toml was NOT pushed to the project (auth settings, redirect URLs, hooks)."
+      - name: Push the Supabase configuration
+        if: inputs.apply_config && env.SUPABASE_ACCESS_TOKEN != ''
+        env:
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+          VARS_JSON: ${{ toJSON(vars) }}
+        run: node "$SCRIPTS/config-push.mjs" push
+      - name: Register the DevDogs sign-in provider
+        if: inputs.register_provider
+        env:
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+          VARS_JSON: ${{ toJSON(vars) }}
+        run: node "$SCRIPTS/config-push.mjs" register

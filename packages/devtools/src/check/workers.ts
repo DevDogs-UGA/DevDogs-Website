@@ -90,10 +90,12 @@ export function deployMatrixApps(yamlText: string): string[][] {
 
 /**
  * Apps with a `wrangler.jsonc` that are deliberately NOT in `workers.json`:
- * `workers.json` is the managed set (deploy matrix, smoke tests, env registry,
- * secret orphan sweep), and these are deployed by hand and have none of that.
- * `apps/slides` is the hosted workshop deck, shipped with `pnpm run deploy`
- * from its own directory (its `wrangler.jsonc` says so).
+ * `workers.json` is the managed set (deploy matrix, env registry, secret orphan
+ * sweep), and these have none of that. `apps/slides` is the hosted workshop
+ * deck. It deploys through the same shared `deploy-worker.yaml` as the others
+ * (called from slides.yaml, behind the `production` approval), with its smoke
+ * test in `apps/slides/smoke.json` because it has no staging tier and no env
+ * manifest.
  */
 export const HAND_DEPLOYED_APPS: readonly string[] = ["apps/slides"];
 

@@ -138,13 +138,29 @@ const BACKSTAGE_ENVIRONMENTS: readonly DesiredEnvironmentPolicy[] = [
 /**
  * DevDogsUGA after the fold-back: it carries what Backstage carried (the
  * deploy, build and publishing environments) plus `publishing-next`, the
- * reviewer-less environment prereleases publish from (`main` only). The
- * `deploy-pr` environment went with the deploy-PR App. Created on `--apply`
- * when missing, like Backstage's.
+ * reviewer-less environment prereleases publish from (`main` only), plus the
+ * two destructive-gate environments (Q10): `production-destructive` and
+ * `staging-destructive`. They hold NO secrets; they are only a second approval
+ * (a `devops` member other than the author, self-review blocked) that a deploy
+ * job requests when its database plan drops or rewrites data
+ * (`deploy-database.yaml`'s `destructive_environment`). The `deploy-pr`
+ * environment went with the deploy-PR App. Created on `--apply` when missing,
+ * like Backstage's.
  */
+const DESTRUCTIVE_GATE = (name: string): DesiredEnvironmentPolicy => ({
+  name,
+  allowedBranches: ["main"],
+  requireReviewers: true,
+  preventSelfReview: true,
+  createIfMissing: true,
+  reviewerTeams: ["devops"],
+});
+
 const DEVDOGSUGA_ENVIRONMENTS: readonly DesiredEnvironmentPolicy[] = [
   ...BACKSTAGE_ENVIRONMENTS,
   { ...plain("publishing-next"), createIfMissing: true },
+  DESTRUCTIVE_GATE("production-destructive"),
+  DESTRUCTIVE_GATE("staging-destructive"),
 ];
 
 function baseSettings(
