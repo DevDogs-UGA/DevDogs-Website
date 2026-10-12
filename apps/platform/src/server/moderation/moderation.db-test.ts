@@ -870,9 +870,14 @@ describe("OAuth tiers", () => {
     await db.execute(
       sql`delete from platform."oauthRegistrations" where "clientId" = ${PROD_CLIENT}::uuid`,
     );
-    const unregistered = await registerApp("e3-dogpack", PROD_CLIENT, undefined, {
-      registration: false,
-    }).catch((error: unknown) => error);
+    const unregistered = await registerApp(
+      "e3-dogpack",
+      PROD_CLIENT,
+      undefined,
+      {
+        registration: false,
+      },
+    ).catch((error: unknown) => error);
     expect(String((unregistered as Error).cause)).toContain(
       "moderation:client_unregistered",
     );
