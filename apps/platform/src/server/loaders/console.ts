@@ -24,8 +24,8 @@ export type AssignedRole = {
   roleColor: string | null;
 };
 
-export const getProfilePageData = cache(async () => {
-  const user = await expectUserWith({
+const loadProfilePageUser = () =>
+  expectUserWith({
     profile: {
       with: {
         links: { orderBy: (t, { asc }) => asc(t.sortOrder) },
@@ -39,6 +39,24 @@ export const getProfilePageData = cache(async () => {
     discordIdentity: { columns: { identityData: true } },
     linkedinIdentity: { columns: { identityData: true } },
   }).catch(() => redirect("/auth"));
+
+export const getProfilePageData = cache(async () => {
+  let user = await loadProfilePageUser();
+
+  // Sign-in creates the profile row (`createUser`). A session without one (a
+  // minted test session, or a sign-in that died between the auth user and the
+  // profile insert) would crash every field below, so make the row the same
+  // way sign-in does and read again.
+  if (!user.profile) {
+    await db
+      .insert(profiles)
+      .values({
+        userId: user.id,
+        preferredName: user.email?.split("@")[0] ?? "DevDogs member",
+      })
+      .onConflictDoNothing();
+    user = await loadProfilePageUser();
+  }
 
   const [, assignedRoleRows, verification, availableAcademicPrograms] =
     await Promise.all([

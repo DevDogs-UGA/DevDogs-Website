@@ -26,7 +26,7 @@ archive page showed:
 The unredacted rows (`teams.json`, `teamMembers.json`,
 `teamMembershipRequests.json`, `competitions.json`, `competitionEntries.json`)
 were written outside the repository, for officers: on the machine that ran the
-export, in `~/.devdogs-secrets/archive-2026-10/` (exported 2026-10-11). That is
+export, in `~/.devdogs-secrets/archive-2026-10/` (re-exported 2026-10-12, after production gained one team, one member and two membership requests; the earlier 2026-10-11 export is superseded). That is
 the only copy. An officer who wants it kept should move it to the officers'
 shared drive before the machine is retired.
 
@@ -42,6 +42,12 @@ node scripts/archive-teams-and-competitions.ts
 # Verify the files against the manifest, and the manifest against production
 node scripts/archive-teams-and-competitions.ts --check
 ```
+
+Production keeps taking writes to these tables until the Teams code is gone
+from production, so the archive goes stale until then. Before the drop
+migration runs, run `--check`; if it reports any difference, run the export
+again (with `--private-out`), commit `archive/`, and only then apply the drop.
+The drop must never run against an archive `--check` rejects.
 
 Once the tables are dropped, `--check` verifies the files against the manifest
 only. `apps/platform/src/lib/archive.test.ts` runs that part in CI.

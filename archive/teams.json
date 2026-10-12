@@ -4,7 +4,7 @@
     "slug": "b2030",
     "name": "B2030",
     "acceptingRequests": true,
-    "githubSyncedAt": "2026-10-11 00:01:52.208+00",
+    "githubSyncedAt": "2026-10-12 00:01:50.589+00",
     "members": [
       {
         "role": "lead",
@@ -15,11 +15,26 @@
     ]
   },
   {
+    "id": "a6b7fc03-6166-435c-9851-77ea6b3a51c8",
+    "slug": "test-2",
+    "name": "Test 2",
+    "acceptingRequests": true,
+    "githubSyncedAt": "2026-10-12 02:33:02.428+00",
+    "members": [
+      {
+        "role": "lead",
+        "joinedAt": "2026-10-12 02:31:59.254049+00",
+        "leftAt": "2026-10-12 02:33:01.004+00",
+        "handle": "jackharrington"
+      }
+    ]
+  },
+  {
     "id": "a5863e8d-7e92-4f60-bcd0-a0055aca1604",
     "slug": "test-team",
     "name": "Test Team",
     "acceptingRequests": true,
-    "githubSyncedAt": "2026-10-11 00:01:50.311+00",
+    "githubSyncedAt": "2026-10-12 00:01:48.664+00",
     "members": [
       {
         "role": "lead",
