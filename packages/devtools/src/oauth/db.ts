@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { parse } from "dotenv";
 import { layoutAt } from "@devdogsuga/cli-core/repo/layout";
 import { discoverRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { loadProductConfig } from "../product/config.js";
 import { PROVIDER_SCOPES } from "./config.js";
 
 export type LocalSupabaseConfig = {
@@ -18,16 +19,27 @@ function runStatus(argv: string[], cwd: string): string {
   });
 }
 
+/** The Supabase CLI version a product repo pins, or null outside one. */
+function productPin(cwd: string): string | null {
+  try {
+    return loadProductConfig(cwd).supabase.version;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Runs `supabase status -o env` in `cwd` and extracts the local API URL and
  * service role key. Throws a descriptive error if Supabase isn't running or
  * the CLI isn't installed.
  *
- * Two invocations are tried, because this wizard runs in two different worlds:
- * a sibling project, where the Supabase CLI is normally installed globally, and
- * this monorepo, where it is a workspace devDependency and not on PATH at all.
- * A global install wins, since `pnpm exec` in a non-pnpm project would fail for
- * reasons that have nothing to do with Supabase.
+ * Up to three invocations are tried, because this wizard runs in three worlds:
+ * a sibling project, where the Supabase CLI is normally installed globally;
+ * this monorepo, where it is a workspace devDependency and not on PATH at all;
+ * and a product repo (`devtools.config.json`), where `devtools setup` ran the
+ * pinned CLI through `npx` and a new member has none installed. A global install
+ * wins, since `pnpm exec` in a non-pnpm project would fail for reasons that have
+ * nothing to do with Supabase.
  */
 export function detectLocalSupabase(cwd: string): LocalSupabaseConfig {
   // In a Backstage checkout the stack's `supabase/` project is DevDogsUGA's.
@@ -38,28 +50,37 @@ export function detectLocalSupabase(cwd: string): LocalSupabaseConfig {
       cwd = layout.devdogsugaRoot;
     }
   }
-  let output: string;
-  try {
-    output = runStatus(["supabase", "status", "-o", "env"], cwd);
-  } catch (first) {
+  const status = ["status", "-o", "env"];
+  const attempts = [
+    ["supabase", ...status],
+    ["pnpm", "exec", "supabase", ...status],
+  ];
+  const pin = productPin(cwd);
+  if (pin !== null)
+    attempts.push(["npx", "--yes", `supabase@${pin}`, ...status]);
+
+  let output: string | undefined;
+  let first: unknown;
+  for (const argv of attempts) {
     try {
-      output = runStatus(
-        ["pnpm", "exec", "supabase", "status", "-o", "env"],
-        cwd,
-      );
-    } catch {
-      // The first failure is the one worth reporting: it is the one that says
-      // "not installed" rather than "pnpm could not find a workspace".
-      if ((first as NodeJS.ErrnoException).code === "ENOENT") {
-        throw new Error(
-          "supabase CLI not found — install it from https://supabase.com/docs/guides/cli",
-        );
-      }
-      const stderr = ((first as { stderr?: string }).stderr ?? "").trim();
+      output = runStatus(argv, cwd);
+      break;
+    } catch (error) {
+      first ??= error;
+    }
+  }
+  if (output === undefined) {
+    // The first failure is the one worth reporting: it is the one that says
+    // "not installed" rather than "pnpm could not find a workspace".
+    if ((first as NodeJS.ErrnoException).code === "ENOENT") {
       throw new Error(
-        stderr || (first instanceof Error ? first.message : String(first)),
+        "supabase CLI not found — install it from https://supabase.com/docs/guides/cli",
       );
     }
+    const stderr = ((first as { stderr?: string }).stderr ?? "").trim();
+    throw new Error(
+      stderr || (first instanceof Error ? first.message : String(first)),
+    );
   }
 
   const env = parse(output);
