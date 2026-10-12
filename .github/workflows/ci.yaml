@@ -399,6 +399,10 @@ jobs:
       # tag names.
       - name: Prerelease publishing script tests
         run: node --test scripts/publish-next.test.mjs scripts/dart-next-tag.test.mjs
+      # Every workflow that calls a reusable one grants at least what each of
+      # its jobs requests (a shortfall is a startup_failure on the push).
+      - name: Reusable-workflow permissions
+        run: node --test scripts/workflow-permissions.test.mjs
       # patches/patches.json against pnpm-workspace.yaml's patchedDependencies
       # and the files in patches/ (a mismatch fails here), then each patch's
       # upstream PRs/issues and the npm release that carries the fix. The
@@ -464,8 +468,15 @@ jobs:
     if: >-
       github.event_name == 'push' && github.ref == 'refs/heads/main'
       && vars.BACKSTAGE_PUBLISHES_NEXT != 'false'
+    # The grant is a ceiling for every job in publish.yaml, including the
+    # stable `publish` job this channel skips: GitHub checks each nested job's
+    # permissions against the caller's before it evaluates any `if:`, so a
+    # lower grant here fails the whole run at startup with no jobs at all.
+    # The `next` job itself still asks for contents: read, which is what it
+    # gets. One file because npm Trusted Publishing names publish.yaml.
+    # scripts/workflow-permissions.test.mjs fails if the two drift apart.
     permissions:
-      contents: read
+      contents: write
       id-token: write
     uses: ./.github/workflows/publish.yaml
     with:
