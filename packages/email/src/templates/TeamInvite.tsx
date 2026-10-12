@@ -10,9 +10,12 @@ import { Layout } from "../components/Layout.js";
  * days means missing it. So invitations are email, not only a badge in the
  * UI.
  *
- * No `competitionName`: teams are persistent now, not scoped to one
- * competition (see `server/actions/teams.ts`'s module doc), so an invitation
- * is to the TEAM, not to a competition roster.
+ * No `competitionName`: an invitation is to the TEAM, not to a competition
+ * roster.
+ *
+ * Nothing in the platform sends this any more: the Teams feature was removed
+ * (lane 3e). The template stays as a worked example of the package's render
+ * contract (its tests, docs and `pnpm devtools emails` previews use it).
  *
  * Nothing below branches on props. See `scripts/compile`: the compiler renders
  * with a Proxy that returns a sentinel for every access, so a conditional

@@ -9,10 +9,12 @@ import { Layout } from "../components/Layout.js";
  * one with a `direction` prop: the compile step bakes a single render, so a
  * conditional would ship one branch to both audiences.
  *
- * No `competitionName`, for the same reason TeamInvite has none: teams are
- * persistent now, not scoped to one competition (see
- * `server/actions/teams.ts`'s module doc), so a request to join is to the
- * TEAM, not to a competition roster.
+ * No `competitionName`, for the same reason TeamInvite has none: a request
+ * to join is to the TEAM, not to a competition roster.
+ *
+ * Nothing in the platform sends this any more: the Teams feature was removed
+ * (lane 3e). The template stays as a worked example of the package's render
+ * contract (its tests, docs and `pnpm devtools emails` previews use it).
  */
 export type Props = {
   leadName: string;
