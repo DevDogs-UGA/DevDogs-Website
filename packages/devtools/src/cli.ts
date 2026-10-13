@@ -47,7 +47,7 @@ import {
   initDevtoolsTelemetry,
 } from "@devdogsuga/cli-core/telemetry";
 import { errorMessage, explain } from "@devdogsuga/cli-core/ui";
-import { ownVersion } from "@devdogsuga/cli-core/version";
+import { isVersionRequest, ownVersion } from "@devdogsuga/cli-core/version";
 import { activeCatalog, isProductMode } from "./active.js";
 import { handleCheck } from "./check/commands.js";
 import { handleCompletions } from "./completions/commands.js";
@@ -355,7 +355,7 @@ export async function main(typed: string[]): Promise<void> {
 
   // Clean stdout, same reasoning as `completions` above: mostly useful for
   // confirming which build actually ran.
-  if (argv[0] === "version") {
+  if (isVersionRequest(argv)) {
     process.stdout.write(`${ownVersion()}\n`);
     return;
   }
@@ -381,6 +381,14 @@ export async function main(typed: string[]): Promise<void> {
   const startPath = process.stdin.isTTY
     ? bareGroupStartPath(catalog, argv)
     : null;
+
+  // A bare `devtools` with nobody to answer a menu (a pipe, a log, CI) prints
+  // the command list and stops, rather than opening a wizard that cannot be
+  // answered. In a product repository that is the product's list.
+  if (argv.length === 0 && isNonInteractive()) {
+    console.log(renderHelp(catalog));
+    return;
+  }
 
   // No banner without a terminal: a log, a pipe or a CI step wants plain
   // lines (see `@devdogsuga/cli-core/mode`).

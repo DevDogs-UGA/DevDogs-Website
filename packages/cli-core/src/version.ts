@@ -37,3 +37,8 @@ export function ownVersion(): string {
   };
   return typeof pkg.version === "string" ? pkg.version : "0.0.0";
 }
+
+/** `devtools version`, `devtools --version`, `devtools -V`: answered anywhere. */
+export function isVersionRequest(argv: readonly string[]): boolean {
+  return argv[0] === "version" || argv[0] === "--version" || argv[0] === "-V";
+}

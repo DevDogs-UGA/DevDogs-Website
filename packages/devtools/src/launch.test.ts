@@ -13,7 +13,8 @@
  * either of those.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { stripTierFlag } from "./launch.js";
+import { outsideRepoMessage, stripTierFlag } from "./launch.js";
+import { isVersionRequest } from "@devdogsuga/cli-core/version";
 import type * as RepoRoot from "@devdogsuga/cli-core/repo/root";
 
 const resolveSessionTier = vi.fn<(...args: unknown[]) => unknown>();
@@ -570,5 +571,28 @@ describe("launch", () => {
         expect(result).toBeNull();
       });
     });
+  });
+});
+
+describe("version requests", () => {
+  it("treats version, --version and -V as one request", () => {
+    expect(isVersionRequest(["version"])).toBe(true);
+    expect(isVersionRequest(["--version"])).toBe(true);
+    expect(isVersionRequest(["-V"])).toBe(true);
+    expect(isVersionRequest(["db", "--version"])).toBe(false);
+    expect(isVersionRequest([])).toBe(false);
+  });
+});
+
+describe("outsideRepoMessage", () => {
+  it("names the command and what to do, in one sentence", () => {
+    const message = outsideRepoMessage(["db", "status", "--json"]);
+    expect(message).toContain("`devtools db status`");
+    expect(message).toContain("devtools.config.json");
+    expect(message).not.toContain("\n");
+  });
+
+  it("names devtools itself for a bare run", () => {
+    expect(outsideRepoMessage([])).toMatch(/^`devtools` needs/);
   });
 });

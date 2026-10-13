@@ -53,6 +53,7 @@ import type { DevDatabase } from "@devdogsuga/cli-core/env-runtime/load";
 import type * as EnvLoadModule from "@devdogsuga/cli-core/env-runtime/load";
 import type * as EnvSessionModule from "@devdogsuga/cli-core/env-runtime/session";
 import type { SessionTierResolution } from "@devdogsuga/cli-core/env-runtime/session";
+import { setEnvironmentRoot } from "@devdogsuga/cli-core/environment";
 import { helpPath } from "@devdogsuga/cli-core/help";
 import { catalog } from "./catalog.js";
 import { setProductMode } from "./active.js";
@@ -92,6 +93,7 @@ import {
   initDevtoolsTelemetry,
   lastSentryEventId,
 } from "@devdogsuga/cli-core/telemetry";
+import { isVersionRequest } from "@devdogsuga/cli-core/version";
 import { ignoreClosedPipes } from "@devdogsuga/cli-core/pipes";
 import { bail, errorMessage } from "@devdogsuga/cli-core/ui";
 
@@ -137,6 +139,23 @@ function skipsEnvEntry(rest: readonly string[]): boolean {
   return declaredCommand(rest)?.noEnv === true;
 }
 
+/**
+ * The one clear sentence for a command that needs a checkout when run from
+ * somewhere that is neither a DevDogsUGA clone nor a product repository.
+ * Printed and exited on directly, so it is never a stack trace or a Sentry
+ * event: the person only needs to change directory.
+ */
+export function outsideRepoMessage(rest: readonly string[]): string {
+  const path = helpPath(rest);
+  const name =
+    path.length > 0 ? `\`devtools ${path.join(" ")}\`` : "`devtools`";
+  return (
+    `${name} needs a DevDogsUGA clone or a product repository (one with a ` +
+    "devtools.config.json, like DogDays or DogPack), and this directory is neither. " +
+    "`devtools --help` and `devtools --version` work anywhere."
+  );
+}
+
 /** The offer's stack start (`env-entry.ts` holds the TTY prompt, this holds
  * the lifecycle command), imported lazily like the rest of the commands. */
 async function startStack(): Promise<{ code: number; lines: string[] }> {
@@ -156,7 +175,10 @@ async function dispatch(argv: string[]): Promise<void> {
   try {
     await main(argv);
   } catch (err) {
-    process.stderr.write(`devtools: ${errorMessage(err)}\n`);
+    // A checkout-only command run from the wrong directory: say which one.
+    process.stderr.write(
+      `devtools: ${err instanceof RepoNotFoundError ? outsideRepoMessage(argv) : errorMessage(err)}\n`,
+    );
     // Report BEFORE exiting — see `captureDevtoolsError`'s header.
     await captureDevtoolsError(err);
     process.exit(1);
@@ -259,8 +281,10 @@ export async function launch(argv: readonly string[]): Promise<void> {
   // A repository with a `devtools.config.json` is a product (DogDays,
   // DogPack): its commands need no tier, no env registry and no workspace, so
   // none of the resolution below applies. See `product/config.ts`.
-  if (findProductRoot() !== null) {
+  const productRoot = findProductRoot();
+  if (productRoot !== null) {
     setProductMode(true);
+    setEnvironmentRoot(productRoot);
     process.env.DEPLOY_ENV = "development";
     await dispatch(rest);
     return;
@@ -295,10 +319,28 @@ export async function launch(argv: readonly string[]): Promise<void> {
   }
 
   // `version` prints one line and reads nothing; asking about production first
-  // would be absurd.
-  if (rest[0] === "version") {
+  // would be absurd. `--version` and `-V` are the same request, and like
+  // `--help` they answer from anywhere, checkout or not.
+  if (isVersionRequest(rest)) {
     await dispatch(rest);
     return;
+  }
+
+  // Outside every checkout, a command that reads the tree or an env file has
+  // nothing to read. The ones that read no env (`noEnv` such as `moderation`,
+  // `envFree` such as `oauth`) and the ones that exist to create the
+  // checkout's state (`setup`, `completions`) run anyway, with no environment
+  // entered; every other one is refused in one sentence naming it, before
+  // anything tries to enter an environment and fails on the missing workspace.
+  if (
+    discoverRepoRoot() === null &&
+    rest[0] !== "setup" &&
+    rest[0] !== "completions" &&
+    !skipsEnvEntry(rest) &&
+    !isEnvFreeCommand(rest)
+  ) {
+    process.stderr.write(`devtools: ${outsideRepoMessage(rest)}\n`);
+    process.exit(1);
   }
 
   const envLoad = await loadEnvLoad();
@@ -356,10 +398,8 @@ export async function launch(argv: readonly string[]): Promise<void> {
     tier = "development";
   } else if (discoverRepoRoot() === null) {
     // Every command past this point needs a real repo to resolve a tier
-    // against (`findRepoRoot()` below would throw `RepoNotFoundError`
-    // anyway) — surfaced here as the same clean, expected refusal every
-    // other repo-dependent command gives, rather than an uncaught throw
-    // with a stack trace pointing at internal module paths.
+    // against. The check above already refuses this case with a sentence
+    // naming the command; this stays as the backstop for it.
     process.stderr.write(`devtools: ${new RepoNotFoundError().message}\n`);
     process.exit(1);
   } else {
@@ -447,7 +487,11 @@ export async function launch(argv: readonly string[]): Promise<void> {
   const run = (): Promise<void> =>
     gated(tier, rest, () => dispatch(rest), undefined);
 
-  if (noEnv || skipsEnvEntry(rest)) {
+  if (
+    noEnv ||
+    skipsEnvEntry(rest) ||
+    (isEnvFreeCommand(rest) && discoverRepoRoot() === null)
+  ) {
     // The caller's environment is the environment: name the session, load
     // nothing.
     process.env.DEPLOY_ENV = tier;

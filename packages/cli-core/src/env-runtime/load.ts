@@ -455,6 +455,14 @@ export async function probeLocalStack(
  * worse failure than a rejected promise.
  */
 async function findRepoRoot(): Promise<string> {
+  // The checkout the command is run from comes first. The walk from this
+  // module's own directory below only finds a workspace when devtools runs
+  // from source inside one; a published copy (`npx`, `pnpm dlx`) lives in a
+  // cache directory with no workspace above it, so it failed on every run.
+  const { discoverRepoRoot, RepoNotFoundError } =
+    await import("../repo/root.js");
+  const fromCwd = discoverRepoRoot();
+  if (fromCwd !== null) return fromCwd;
   const { existsSync } = await import("node:fs");
   const { dirname, join, resolve } = await import("node:path");
   const { fileURLToPath } = await import("node:url");
@@ -463,10 +471,9 @@ async function findRepoRoot(): Promise<string> {
     if (existsSync(join(dir, "pnpm-workspace.yaml"))) return dir;
     const parent = dirname(dir);
     if (parent === dir) {
-      throw new Error(
-        "loadEnvironment: could not locate the monorepo root " +
-          "(no pnpm-workspace.yaml found above this package).",
-      );
+      // The user's mistake (wrong directory), not a bug: the same expected
+      // error every other repo lookup throws, which is never reported.
+      throw new RepoNotFoundError();
     }
     dir = parent;
   }

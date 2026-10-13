@@ -6,13 +6,17 @@
  * that mentions `"unknown"` guards that. The failure mode to avoid is a tool
  * that hides the command you were looking for because a subprocess timed out.
  */
-import { describe, expect, it } from "vitest";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
 import type { Condition } from "./catalog.js";
 import {
   describeEnvironment,
   holds,
   isOffered,
   probeEnvironment,
+  setEnvironmentRoot,
   UNKNOWN_ENVIRONMENT,
   type Environment,
   type Known,
@@ -129,5 +133,33 @@ describe("probeEnvironment", () => {
     );
 
     expect(env).toMatchObject({ docker: "yes", stack: "yes" });
+  });
+});
+
+describe("probeEnvironment in a product repository", () => {
+  afterEach(() => setEnvironmentRoot(null));
+
+  it("reads .env from the product root instead of requiring a DevDogsUGA clone", () => {
+    const root = mkdtempSync(join(tmpdir(), "devtools-product-env-"));
+    setEnvironmentRoot(root);
+    expect(probeEnvironment(() => null).envFile).toBe("no");
+    writeFileSync(join(root, ".env"), "A=1\n");
+    expect(probeEnvironment(() => null).envFile).toBe("yes");
+  });
+
+  it("finds the stack by the product's own project id", () => {
+    const root = mkdtempSync(join(tmpdir(), "devtools-product-stack-"));
+    mkdirSync(join(root, "supabase"));
+    writeFileSync(
+      join(root, "supabase", "config.toml"),
+      'project_id = "dogpack"\n',
+    );
+    setEnvironmentRoot(root);
+    const up = (_file: string, args: string[]) =>
+      args[0] === "info" ? "ok" : "supabase_db_dogpack\n";
+    expect(probeEnvironment(up).stack).toBe("yes");
+    const other = (_file: string, args: string[]) =>
+      args[0] === "info" ? "ok" : "supabase_db_dogdays\n";
+    expect(probeEnvironment(other).stack).toBe("no");
   });
 });

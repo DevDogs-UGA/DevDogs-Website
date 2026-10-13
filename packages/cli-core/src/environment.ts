@@ -19,7 +19,7 @@
  * adapted at all, because the command it hides is the one you were looking
  * for.
  */
-import { execFileSync } from "node:child_process";
+import { execSync } from "./spawn.js";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Condition } from "./catalog.js";
@@ -27,7 +27,7 @@ import {
   devdogsugaRootOrNull,
   resolveLayout,
 } from "@devdogsuga/cli-core/repo/layout";
-import { findRepoRoot } from "@devdogsuga/cli-core/repo/root";
+import { discoverRepoRoot, findRepoRoot } from "@devdogsuga/cli-core/repo/root";
 import {
   containerPrefix,
   readProjectId,
@@ -74,6 +74,38 @@ export const UNKNOWN_ENVIRONMENT: Environment = {
 // ── Probes ───────────────────────────────────────────────────────────────────
 
 /**
+ * A product repository's root (DogDays, DogPack), set by the launcher in
+ * product mode. The probes below read `.env` and `supabase/config.toml` from
+ * "the checkout", which in a product is not a DevDogsUGA clone; without this
+ * the menu in a product repo died on `RepoNotFoundError` before drawing.
+ */
+let productRoot: string | null = null;
+
+export function setEnvironmentRoot(root: string | null): void {
+  productRoot = root;
+}
+
+/**
+ * Where the probes look. Never throws: a menu that cannot find a checkout
+ * should still draw, with the machine's facts marked unknown or "no".
+ */
+function probeRoot(): string {
+  return productRoot ?? discoverRepoRoot() ?? process.cwd();
+}
+
+/** The directory holding `supabase/config.toml`, or null when there is none. */
+function probeSupabaseRoot(): string | null {
+  if (productRoot !== null) {
+    return existsSync(join(productRoot, "supabase", "config.toml"))
+      ? productRoot
+      : null;
+  }
+  return discoverRepoRoot() === null
+    ? null
+    : devdogsugaRootOrNull(resolveLayout());
+}
+
+/**
  * Every probe is bounded, silent, and total.
  *
  * `timeout` because a Docker daemon that is starting up (or a VM that has just
@@ -83,9 +115,8 @@ export const UNKNOWN_ENVIRONMENT: Environment = {
  */
 function run(file: string, args: string[]): string | null {
   try {
-    return execFileSync(file, args, {
-      cwd: findRepoRoot(),
-      encoding: "utf8",
+    return execSync(file, args, {
+      cwd: probeRoot(),
       stdio: ["ignore", "pipe", "ignore"],
       timeout: 3000,
     });
@@ -112,9 +143,7 @@ function run(file: string, args: string[]): string | null {
 export function probeEnvironment(
   execute: (file: string, args: string[]) => string | null = run,
 ): Environment {
-  const envFile: Known = existsSync(join(findRepoRoot(), ".env"))
-    ? "yes"
-    : "no";
+  const envFile: Known = existsSync(join(probeRoot(), ".env")) ? "yes" : "no";
 
   // `docker info` rather than `docker version`: version answers from the
   // client alone, so it reports success against a daemon that is not running.
@@ -130,7 +159,7 @@ export function probeEnvironment(
 
   // The project id lives in DevDogsUGA's supabase/config.toml, which a
   // Backstage checkout without `devdogsuga/` simply does not have.
-  const supabaseRoot = devdogsugaRootOrNull(resolveLayout());
+  const supabaseRoot = probeSupabaseRoot();
   const prefix = containerPrefix(
     supabaseRoot === null ? null : readProjectId(supabaseRoot),
   );
