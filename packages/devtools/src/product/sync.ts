@@ -34,6 +34,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import type { Product } from "./config.js";
+import type { SqlSession } from "./dev-data.js";
 import type { Runner } from "./exec.js";
 import { cliLine, type SupabaseCli } from "./supabase-cli.js";
 import type { DbTarget } from "./target.js";
@@ -56,6 +57,12 @@ export interface SyncOptions {
   /** Print what would run and change nothing. */
   dryRun?: boolean;
   log?: (line: string) => void;
+  /**
+   * Opens a connection to the target, so sync can check what the database
+   * really has (its migration ledger and the product's schemas) instead of
+   * trusting the local `supabase/migrations/` record alone. Omitted: no check.
+   */
+  open?: (dbUrl: string) => SqlSession;
 }
 
 export interface SyncResult {
@@ -147,6 +154,8 @@ export async function dbSync(
     }
   }
 
+  await reconcileRecord(product, cli, target, run, options, log);
+
   const before = new Set(migrationFiles(migrationsDir));
   let generated = await run(cli.command, generateArgs, { cwd: product.root });
   // The shadow database runs in a container the CLI pulls and starts on first
@@ -203,6 +212,96 @@ export async function dbSync(
     );
   }
   return { migration, applied: true, destructive };
+}
+
+/** `20261011120000` from `20261011120000_devtools_sync.sql`. */
+function versionOf(file: string): string {
+  return file.split("_")[0] ?? file;
+}
+
+/**
+ * Makes the local record agree with the database. The declarative diff only
+ * compares `supabase/schemas` with `supabase/migrations`, so a database that
+ * lost its contents behind the record's back (a hosted project reset from the
+ * dashboard, a checkout switched from the local stack to a hosted project)
+ * would read as "already matches". This asks the target:
+ *
+ *   - a migration in the record that is not in the database's ledger was never
+ *     applied there: it is dropped from the record, so the diff re-creates it;
+ *   - a configured schema that does not exist means the ledger is stale too:
+ *     its entries are reverted and the whole record dropped, so the diff
+ *     writes the full schema again.
+ *
+ * Nothing is reset or dropped in the database; only ledger rows of schemas
+ * that are already gone are removed. A database that cannot be reached is
+ * left to the apply step to report.
+ */
+async function reconcileRecord(
+  product: Product,
+  cli: SupabaseCli,
+  target: DbTarget,
+  run: Runner,
+  options: SyncOptions,
+  log: (line: string) => void,
+): Promise<void> {
+  if (!options.open) return;
+  const { migrationsDir } = product.paths;
+  const files = migrationFiles(migrationsDir);
+  let ledger: string[] | null;
+  let missing: string[];
+  let session: SqlSession | undefined;
+  try {
+    session = options.open(target.dbUrl);
+    ledger = await session.appliedMigrations();
+    missing = await session.missingSchemas(product.config.supabase.schemas);
+  } catch (err) {
+    log(
+      `Could not check what the database has applied (${(err as Error).message}); trusting the local record.`,
+    );
+    return;
+  } finally {
+    await session?.close().catch(() => undefined);
+  }
+
+  if (missing.length > 0) {
+    const stale = ledger ?? [];
+    log(
+      `The database is missing ${missing.length === 1 ? "schema" : "schemas"} ${missing.join(", ")}, so the record of applied migrations is out of date; rebuilding it from supabase/schemas.`,
+    );
+    if (stale.length > 0) {
+      const reverted = await run(
+        cli.command,
+        [
+          ...cli.prefix,
+          "migration",
+          "repair",
+          "--status",
+          "reverted",
+          "--db-url",
+          target.dbUrl,
+          ...stale,
+        ],
+        { cwd: product.root },
+      );
+      if (reverted.code !== 0) {
+        throw new SyncError(
+          "The database lost its schema but its migration history still lists migrations as applied, and clearing that history failed.",
+          reverted.stderr || reverted.stdout,
+        );
+      }
+    }
+    for (const file of files) rmSync(join(migrationsDir, file));
+    return;
+  }
+
+  const applied = new Set(ledger ?? []);
+  const unapplied = files.filter((file) => !applied.has(versionOf(file)));
+  if (unapplied.length > 0) {
+    log(
+      `${unapplied.length} migration${unapplied.length === 1 ? "" : "s"} in the local record ${unapplied.length === 1 ? "is" : "are"} not in this database's history (it was reset, or this checkout switched databases); re-applying ${unapplied.length === 1 ? "it" : "them"}.`,
+    );
+    for (const file of unapplied) rmSync(join(migrationsDir, file));
+  }
 }
 
 function isContainerFailure(result: {

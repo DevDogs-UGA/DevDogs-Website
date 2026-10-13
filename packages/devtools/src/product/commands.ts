@@ -246,6 +246,7 @@ async function runSync(
     confirmDestructive: deps.interactive() ? confirmDestructive : undefined,
     dryRun,
     log: (line) => log.info(line),
+    open: deps.openSql,
   });
 
   if (rest.includes("--rebuild") && !dryRun) {
@@ -749,6 +750,7 @@ async function runSetup(
     yes: hasYes(rest),
     confirmDestructive: deps.interactive() ? confirmDestructive : undefined,
     log: (line) => log.info(line),
+    open: deps.openSql,
   });
   log.success(
     result.migration

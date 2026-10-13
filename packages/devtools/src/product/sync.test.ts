@@ -8,6 +8,7 @@ import {
   forgetMigrations,
   SyncError,
 } from "./sync.js";
+import type { SqlSession } from "./dev-data.js";
 import type { DbTarget } from "./target.js";
 
 const LOCAL: DbTarget = {
@@ -270,6 +271,148 @@ describe("dbSync", () => {
     await expect(
       dbSync(lonely, CLI, LOCAL, run, { yes: false }),
     ).rejects.toBeInstanceOf(SyncError);
+  });
+});
+
+/** A database as sync sees it: its ledger (null: none) and which schemas exist. */
+function database(ledger: string[] | null, schemas: string[]) {
+  const session: SqlSession = {
+    members: () => Promise.resolve([]),
+    memberByRef: () => Promise.resolve(null),
+    appliedMigrations: () => Promise.resolve(ledger),
+    missingSchemas: (wanted) =>
+      Promise.resolve(wanted.filter((name) => !schemas.includes(name))),
+    runAs: () => Promise.resolve(),
+    close: () => Promise.resolve(),
+  };
+  return (dbUrl: string) => {
+    void dbUrl;
+    return session;
+  };
+}
+
+describe("dbSync against what the database really has", () => {
+  const FIRST = "20261001000000_devtools_sync.sql";
+  const withRecord = () =>
+    makeProduct({ files: { [`supabase/migrations/${FIRST}`]: CREATE } });
+
+  it("trusts the record when the ledger and schemas agree with it", async () => {
+    const product = withRecord();
+    const { run, calls } = runnerThatGenerates(product.root, null);
+    const result = await dbSync(product, CLI, HOSTED, run, {
+      yes: false,
+      open: database(["20261001000000"], ["dogpack"]),
+    });
+    expect(result.migration).toBeNull();
+    expect(calls.map((c) => c.args[0])).toEqual(["db"]);
+    expect(existsSync(join(product.paths.migrationsDir, FIRST))).toBe(true);
+  });
+
+  it("re-applies the whole schema to a hosted project reset from the dashboard", async () => {
+    const product = withRecord();
+    const logs: string[] = [];
+    const { run, calls } = recordingRunner(({ args }) => {
+      if (args.includes("declarative")) {
+        // The record is gone by now, so the diff writes the full schema.
+        expect(readdirSync(product.paths.migrationsDir)).toEqual([]);
+        writeFiles(product.root, {
+          "supabase/migrations/20261011120000_devtools_sync.sql": CREATE,
+        });
+      }
+      return undefined;
+    });
+    const result = await dbSync(product, CLI, HOSTED, run, {
+      yes: false,
+      log: (line) => logs.push(line),
+      // A reset project: no ledger table, no schema.
+      open: database(null, []),
+    });
+    expect(result.applied).toBe(true);
+    expect(result.migration).toBe("20261011120000_devtools_sync.sql");
+    expect(calls.map((c) => c.args.slice(0, 2).join(" "))).toEqual([
+      "db schema",
+      "db push",
+    ]);
+    expect(logs.join("\n")).toMatch(/missing schema dogpack/);
+  });
+
+  it("clears a stale ledger before re-applying when the schema is gone but the ledger is not", async () => {
+    const product = withRecord();
+    const { run, calls } = recordingRunner(({ args }) => {
+      if (args.includes("declarative")) {
+        writeFiles(product.root, {
+          "supabase/migrations/20261011120000_devtools_sync.sql": CREATE,
+        });
+      }
+      return undefined;
+    });
+    await dbSync(product, CLI, LOCAL, run, {
+      yes: false,
+      open: database(["20261001000000"], []),
+    });
+    expect(calls[0]?.args).toEqual([
+      "migration",
+      "repair",
+      "--status",
+      "reverted",
+      "--db-url",
+      LOCAL.dbUrl,
+      "20261001000000",
+    ]);
+    expect(calls[1]?.args).toContain("declarative");
+    expect(calls[2]?.args).toEqual(["migration", "up", "--local"]);
+  });
+
+  it("re-applies a migration missing from the ledger when a checkout switches from local to hosted", async () => {
+    const product = makeProduct({
+      files: {
+        [`supabase/migrations/${FIRST}`]: CREATE,
+        "supabase/migrations/20261005000000_devtools_sync.sql": CREATE,
+      },
+    });
+    const { run } = recordingRunner(({ args }) => {
+      if (args.includes("declarative")) {
+        // Only the migration the project has stays in the record.
+        expect(readdirSync(product.paths.migrationsDir)).toEqual([FIRST]);
+        writeFiles(product.root, {
+          "supabase/migrations/20261011120000_devtools_sync.sql": CREATE,
+        });
+      }
+      return undefined;
+    });
+    const result = await dbSync(product, CLI, HOSTED, run, {
+      yes: false,
+      open: database(["20261001000000"], ["dogpack"]),
+    });
+    expect(result.applied).toBe(true);
+  });
+
+  it("fails clearly when the stale ledger cannot be cleared", async () => {
+    const product = withRecord();
+    const { run } = recordingRunner(({ args }) =>
+      args[1] === "repair" ? { code: 1, stderr: "denied" } : undefined,
+    );
+    await expect(
+      dbSync(product, CLI, HOSTED, run, {
+        yes: false,
+        open: database(["20261001000000"], []),
+      }),
+    ).rejects.toThrow(/clearing that history failed/);
+  });
+
+  it("carries on with the local record when the database cannot be asked", async () => {
+    const product = withRecord();
+    const { run } = runnerThatGenerates(product.root, null);
+    const logs: string[] = [];
+    const result = await dbSync(product, CLI, HOSTED, run, {
+      yes: false,
+      log: (line) => logs.push(line),
+      open: () => {
+        throw new Error("connection refused");
+      },
+    });
+    expect(result.migration).toBeNull();
+    expect(logs.join("\n")).toMatch(/Could not check/);
   });
 });
 
