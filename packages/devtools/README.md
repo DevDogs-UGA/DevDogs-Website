@@ -127,7 +127,14 @@ How it works, in short:
   needs `--yes`. It then regenerates the types (and leaves them alone when nothing changed and they are current).
   On a hosted project, a machine with no record (a second laptop, a deleted `supabase/migrations/`) first
   restores it from the project's own history table (`migration fetch --db-url`), so the diff is not taken
-  against an empty database.
+  against an empty database. The record belongs to one database (`.devtools/record.json` notes which, and which
+  files it has applied): another target's record is set aside and that database's own history is fetched, and a
+  migration written but never applied is pending, not applied; it is applied on the next sync, with the `--yes`
+  question for drops.
+- **What a member changed.** A column that looks renamed (missing here, an extra of the same type beside it) is
+  refused, not recreated empty. A difference in privileges on something that exists is applied as a GRANT of what
+  `supabase/schemas` grants and reported; privileges beyond that are not taken away. Functions are named with
+  their argument types, and a missing overload is recreated beside the member's own.
 - **Types are never committed.** `db types` writes them to the path in the config, which is git-ignored.
   The schema hash covers the sorted schema paths, their LF-normalised contents and the generator version (the
   pinned CLI, or supadart); CI uploads a `<product>-types-<hash>.tgz` asset to a rolling `generated-types`

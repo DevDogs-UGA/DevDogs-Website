@@ -81,6 +81,8 @@ export interface SqlSession {
    * missing function from a changed one.
    */
   existingObjects(schemas: readonly string[]): Promise<Set<string>>;
+  /** Column types in `schemas`, keyed `schema.table.column`, as Postgres spells them (`format_type`). */
+  columnTypes(schemas: readonly string[]): Promise<Map<string, string>>;
   /** Runs `sql` as is, in one transaction. */
   exec(sql: string): Promise<void>;
   runAs(memberId: string, sql: string): Promise<void>;
@@ -139,11 +141,17 @@ export function postgresSession(dbUrl: string): SqlSession {
     async existingObjects(schemas) {
       const list = [...schemas];
       const found = new Set<string>();
-      const functions = await sql<{ s: string; n: string }[]>`
-        select n.nspname as s, p.proname as n from pg_proc p
+      const functions = await sql<{ s: string; n: string; sig: string }[]>`
+        select n.nspname as s, p.proname as n,
+               oidvectortypes(p.proargtypes) as sig
+        from pg_proc p
         join pg_namespace n on n.oid = p.pronamespace
-        where n.nspname = any(${list})`;
-      for (const r of functions) found.add(`function:${r.s}.${r.n}`);
+        where n.nspname = any(${list}) and p.prokind in ('f', 'p')`;
+      for (const r of functions) {
+        found.add(`function:${r.s}.${r.n}`);
+        // Which overload: functions of one name differ by argument types.
+        found.add(`signature:${r.s}.${r.n}(${r.sig})`);
+      }
       const views = await sql<{ s: string; n: string }[]>`
         select n.nspname as s, c.relname as n from pg_class c
         join pg_namespace n on n.oid = c.relnamespace
@@ -156,6 +164,19 @@ export function postgresSession(dbUrl: string): SqlSession {
         where n.nspname = any(${list}) and not g.tgisinternal`;
       for (const r of triggers) found.add(`trigger:${r.s}.${r.t}:${r.n}`);
       return found;
+    },
+    async columnTypes(schemas) {
+      const rows = await sql<
+        { s: string; t: string; c: string; type: string }[]
+      >`
+        select n.nspname as s, c.relname as t, a.attname as c,
+               format_type(a.atttypid, a.atttypmod) as type
+        from pg_attribute a
+        join pg_class c on c.oid = a.attrelid
+        join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = any(${[...schemas]}) and c.relkind in ('r', 'p', 'f')
+          and a.attnum > 0 and not a.attisdropped`;
+      return new Map(rows.map((r) => [`${r.s}.${r.t}.${r.c}`, r.type]));
     },
     async exec(text) {
       await sql.begin(async (tx) => {

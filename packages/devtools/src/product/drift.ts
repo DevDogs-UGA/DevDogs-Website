@@ -149,25 +149,163 @@ function shown(name: string): string {
     .join(".");
 }
 
+// ── function signatures ─────────────────────────────────────────────────────
+
+const TYPE_ALIASES: Record<string, string> = {
+  int: "integer",
+  int4: "integer",
+  int8: "bigint",
+  int2: "smallint",
+  bool: "boolean",
+  float8: "double precision",
+  float4: "real",
+  varchar: "character varying",
+  bpchar: "character",
+  timestamptz: "timestamp with time zone",
+  timetz: "time with time zone",
+  decimal: "numeric",
+};
+
+/** `Int4[ ]`, `pg_catalog.text`, `"text"` -> a comparable spelling. */
+export function normalizeType(type: string): string {
+  let t = type.trim().replace(/\s+/g, " ").toLowerCase();
+  const array = /(\s*\[\d*\])+$/.exec(t)?.[0] ?? "";
+  t = t.slice(0, t.length - array.length);
+  t = t.replace(/^pg_catalog\./, "").replace(/"/g, "");
+  t = t.replace(/\s*\(.*\)$/, (m) => m.replace(/\s+/g, ""));
+  const base = /^([a-z0-9_ ]+?)(\(.*\))?$/.exec(t);
+  const head = base?.[1]?.trim() ?? t;
+  const tail = base?.[2] ?? "";
+  return `${TYPE_ALIASES[head] ?? head}${tail}${array.replace(/\s/g, "")}`;
+}
+
+/** The text inside the first balanced parentheses of `text`, or null. */
+function balanced(text: string): string | null {
+  const start = text.indexOf("(");
+  if (start === -1) return null;
+  let depth = 0;
+  let quote: string | null = null;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i]!;
+    if (quote) {
+      if (ch === quote) quote = null;
+    } else if (ch === "'" || ch === '"') quote = ch;
+    else if (ch === "(") depth++;
+    else if (ch === ")" && --depth === 0) return text.slice(start + 1, i);
+  }
+  return null;
+}
+
+const MULTIWORD_HEADS = new Set([
+  "double",
+  "timestamp",
+  "time",
+  "character",
+  "bit",
+  "national",
+  "interval",
+]);
+
+/**
+ * The argument types of a function's parameter list, as the database spells
+ * them: `a int, OUT b text, c text DEFAULT 'x'` -> `(integer, text)`.
+ */
+export function signatureOf(argList: string): string {
+  const types: string[] = [];
+  for (let arg of splitTopLevel(argList)) {
+    if (/^(OUT|TABLE)\b/i.test(arg)) continue;
+    arg = arg.replace(/^(?:IN\s+OUT|INOUT|IN|VARIADIC)\s+/i, "");
+    const dflt = /\s+DEFAULT\s|\s*=\s*/i.exec(arg);
+    if (dflt) arg = arg.slice(0, dflt.index);
+    arg = arg.trim();
+    const named = new RegExp(`^(${IDENT})\\s+(.+)$`, "s").exec(arg);
+    let type = arg;
+    if (named) {
+      const head = named[1]!.toLowerCase();
+      const second = named[2]!.split(/[\s(]/)[0]!.toLowerCase();
+      const wholeType =
+        MULTIWORD_HEADS.has(head) &&
+        (/^(precision|with|without|varying)$/.test(second) ||
+          named[2]!.startsWith("("));
+      if (!wholeType) type = named[2]!;
+    }
+    types.push(normalizeType(type));
+  }
+  return `(${types.join(", ")})`;
+}
+
+/** Normalizes the `function:s.n(types)` spelling the database reports. */
+function normalizeKeySignature(types: string): string {
+  return signatureOf(types);
+}
+
 // ── classification ──────────────────────────────────────────────────────────
 
 interface Drop {
   key: string;
   finding: Finding;
+  /** A dropped column: its table (`schema.table`) and name. */
+  column?: { table: string; name: string };
 }
 
-/** A GRANT (`finding` null) or REVOKE, in the order the diff has them. */
+/** A GRANT or REVOKE, in the order the diff has them. */
 interface Privilege {
   sql: string;
-  /** What a REVOKE is on, `schema.name`; null for a GRANT. */
-  target: string | null;
-  finding: Finding | null;
+  revoke: boolean;
+  /** What it is on, `schema.table`, `schema.table.column` or `schema.fn(types)`. Empty when unreadable. */
+  targets: string[];
+  /** The table or function itself, `schema.table` or `schema.fn(types)`; empty when unreadable. */
+  base: string;
+  /** The table or function the privileges are on, for a person; null when unreadable. */
+  object: string | null;
+  /** Who loses the privileges (a REVOKE). */
+  from: string;
+}
+
+/** Reads what a GRANT or REVOKE is on. */
+function privilegeOf(text: string, revoke: boolean): Privilege {
+  const on = new RegExp(
+    String.raw`\bON\s+(?:(TABLE|SEQUENCE|FUNCTION|PROCEDURE|SCHEMA|TYPE|DOMAIN)\s+)?(${QNAME})(\s*\(.*\))?\s+(?:FROM|TO)\s+(.+)$`,
+    "is",
+  ).exec(text);
+  const base = {
+    sql: text,
+    revoke,
+    targets: [],
+    base: "",
+    object: null,
+    from: "",
+  };
+  if (!on) return base;
+  const kind = (on[1] ?? "").toUpperCase();
+  const name = on[2]!;
+  const isFunction = kind === "FUNCTION" || kind === "PROCEDURE";
+  const sig = isFunction ? signatureOf(balanced(on[3] ?? "") ?? "") : "";
+  const object = `${qualified(name)}${sig}`;
+  const columns = isFunction
+    ? []
+    : [...text.slice(0, on.index).matchAll(/\(([^)]*)\)/g)].flatMap((m) =>
+        m[1]!
+          .split(",")
+          .map((c) => parts(c)[0])
+          .filter((c): c is string => Boolean(c)),
+      );
+  return {
+    ...base,
+    base: object,
+    targets:
+      columns.length > 0 ? columns.map((c) => `${object}.${c}`) : [object],
+    object: `privileges on ${isFunction ? "function " : ""}${shown(name)}${sig}`,
+    from: on[4]!.replace(/"/g, ""),
+  };
 }
 
 interface Create {
   key: string;
   sql: string;
   label: string;
+  /** An added column: its table (`schema.table`), name and normalized type. */
+  column?: { table: string; name: string; type: string };
 }
 
 const CREATE_KINDS: Record<string, string> = {
@@ -190,14 +328,24 @@ const WORD = (word: string) => new RegExp(`^${word}\\b`, "i");
  * database has (for `CREATE OR REPLACE`, which reads the same whether the
  * object is missing or merely different).
  */
-export function classifyDiff(sql: string, existing: Existing): Drift {
+export function classifyDiff(
+  sql: string,
+  existing: Existing,
+  columnTypes: ReadonlyMap<string, string> = new Map(),
+): Drift {
+  // `signature:schema.fn(types)` entries say which overloads exist.
+  const signatures = new Set<string>();
+  for (const key of existing) {
+    const m = /^signature:(.*?)\((.*)\)$/.exec(key);
+    if (m) signatures.add(`${m[1]}${normalizeKeySignature(m[2]!)}`);
+  }
+
   const creates: Create[] = [];
   const drops: Drop[] = [];
   const conflicts = new Map<string, Set<string>>();
   const extras: Finding[] = [];
   const preamble: string[] = [];
   const privileges: Privilege[] = [];
-  let sawRevoke = false;
 
   const conflict = (object: string, why: string) => {
     const set = conflicts.get(object) ?? new Set<string>();
@@ -212,26 +360,9 @@ export function classifyDiff(sql: string, existing: Existing): Drift {
       preamble.push(statement);
       continue;
     }
-    if (WORD("GRANT").test(text)) {
-      privileges.push({ sql: statement, target: null, finding: null });
-      continue;
-    }
-    if (WORD("REVOKE").test(text)) {
-      sawRevoke = true;
-      const on = new RegExp(
-        String.raw`\bON\s+(?:(?:TABLE|SEQUENCE|FUNCTION|SCHEMA|TYPE|DOMAIN)\s+)?(${QNAME})(?:\s*\([^)]*\))?\s+FROM\s+(.+)$`,
-        "i",
-      ).exec(text);
-      privileges.push({
-        sql: statement,
-        target: on ? qualified(on[1]!) : "",
-        finding: {
-          object: on ? `privileges on ${shown(on[1]!)}` : "privileges",
-          detail: on
-            ? `granted to ${on[2]!.replace(/"/g, "")} beyond (or instead of) what supabase/schemas grants`
-            : "differ from what supabase/schemas grants",
-        },
-      });
+    if (WORD("GRANT").test(text) || WORD("REVOKE").test(text)) {
+      const p = privilegeOf(text, WORD("REVOKE").test(text));
+      privileges.push({ ...p, sql: statement });
       continue;
     }
 
@@ -259,12 +390,23 @@ export function classifyDiff(sql: string, existing: Existing): Drift {
         const noun = kindWord === "POLICY" ? "policy" : "trigger";
         key = `${noun}:${table}:${parts(name).at(-1)}`;
         label = `${noun} ${shown(name)} on ${on ? shown(on[1]!) : "?"}`;
+      } else if (kindWord === "FUNCTION" || kindWord === "PROCEDURE") {
+        const sig = signatureOf(balanced(rest) ?? "");
+        key = `function:${qualified(name)}${sig}`;
+        label = `function ${shown(name)}${sig}`;
       } else {
         const kind = CREATE_KINDS[kindWord] ?? kindWord.toLowerCase();
         key = `${kind}:${qualified(name)}`;
         label = `${kind} ${shown(name)}`;
       }
-      if (replace && existing.has(key)) {
+      // For a function, the signature says whether this one exists; another
+      // overload of the same name is a different function.
+      const exists = key.startsWith("function:")
+        ? signatures.has(key.slice("function:".length)) ||
+          // No signature information (an older session): go by name.
+          (signatures.size === 0 && existing.has(`function:${qualified(name)}`))
+        : existing.has(key);
+      if (replace && exists) {
         conflict(label, "its definition differs from supabase/schemas");
       } else {
         creates.push({ key, sql: statement, label });
@@ -295,6 +437,15 @@ export function classifyDiff(sql: string, existing: Existing): Drift {
           key: `${noun}:${on ? qualified(on[1]!) : "?"}:${parts(name).at(-1)}`,
           finding: {
             object: `${noun} ${shown(name)} on ${on ? shown(on[1]!) : "?"}`,
+            detail: "not in supabase/schemas",
+          },
+        });
+      } else if (kindWord === "FUNCTION" || kindWord === "PROCEDURE") {
+        const sig = signatureOf(balanced(rest) ?? "");
+        drops.push({
+          key: `function:${qualified(name)}${sig}`,
+          finding: {
+            object: `function ${shown(name)}${sig}`,
             detail: "not in supabase/schemas",
           },
         });
@@ -347,11 +498,39 @@ export function classifyDiff(sql: string, existing: Existing): Drift {
     );
   }
 
+  // A column the record has next to a column of the same type the record does
+  // not: far more likely a rename than a drop and an add. Recreating the
+  // column would leave an empty one (or one holding its default) beside the
+  // member's data, so the sync refuses and says so.
+  const renamedCreates = new Set<Create>();
+  const renamedDrops = new Set<Drop>();
+  for (const c of creates) {
+    if (!c.column) continue;
+    const from = drops.find((d) => {
+      if (!d.column || renamedDrops.has(d)) return false;
+      if (d.column.table !== c.column!.table) return false;
+      const type = columnTypes.get(`${d.column.table}.${d.column.name}`);
+      return type !== undefined && normalizeType(type) === c.column!.type;
+    });
+    if (!from) continue;
+    renamedCreates.add(c);
+    renamedDrops.add(from);
+    conflict(
+      c.label,
+      `supabase/schemas has it, and your database has ${from.finding.object} of the same type (${c.column.type}); that looks like a rename, so devtools will not add an empty column beside it. If you renamed it on purpose, rename it in supabase/schemas too; otherwise rename it back`,
+    );
+  }
+  const skipped = new Set(
+    [...renamedCreates].map((c) => c.key.slice("column:".length)),
+  );
+  const liveCreates = creates.filter((c) => !renamedCreates.has(c));
+  const liveDrops = drops.filter((d) => !renamedDrops.has(d));
+
   // A DROP and a CREATE of the same thing is one object defined two ways.
-  const created = new Set(creates.map((c) => c.key));
-  const dropped = new Set(drops.map((d) => d.key));
-  const restoring = creates.filter((c) => !dropped.has(c.key));
-  for (const d of drops) {
+  const created = new Set(liveCreates.map((c) => c.key));
+  const dropped = new Set(liveDrops.map((d) => d.key));
+  const restoring = liveCreates.filter((c) => !dropped.has(c.key));
+  for (const d of liveDrops) {
     if (created.has(d.key)) {
       conflict(
         d.finding.object,
@@ -368,33 +547,44 @@ export function classifyDiff(sql: string, existing: Existing): Drift {
   const newNames = new Set(
     restoring
       .map((c) => c.key)
-      .filter(
-        (key) => !/^(index|policy|trigger|column|constraint|rls)/.test(key),
-      )
+      .filter((key) => !/^(index|policy|trigger|constraint|rls)/.test(key))
       .map((key) => key.slice(key.indexOf(":") + 1)),
   );
   const tail: string[] = [];
-  let grants = 0;
+  // Existing things that get privileges granted again. pg-delta writes a
+  // difference in privileges as REVOKE ALL followed by the GRANTs the record
+  // has, in either direction, so the GRANT is applied (it only adds) and said
+  // so; the REVOKE is not, and it cannot tell us what else the member granted.
+  const regranted = new Set<string>();
+  const revokes: Privilege[] = [];
   for (const p of privileges) {
-    if (p.target === null) {
-      tail.push(p.sql);
-      grants++;
-    } else if (newNames.has(p.target)) {
-      tail.push(p.sql);
-    } else if (p.finding) {
-      extras.push(p.finding);
+    // Privileges on a column that is not being recreated (a likely rename).
+    if (p.targets.length > 0 && p.targets.every((t) => skipped.has(t))) {
+      continue;
     }
+    const isNew =
+      p.targets.length > 0 &&
+      (newNames.has(p.base) || p.targets.every((t) => newNames.has(t)));
+    if (isNew) tail.push(p.sql);
+    else if (!p.revoke) {
+      tail.push(p.sql);
+      regranted.add(p.object ?? "privileges");
+    } else revokes.push(p);
+  }
+  for (const p of revokes) {
+    if (p.object && regranted.has(p.object)) continue;
+    extras.push({
+      object: p.object ?? "privileges",
+      detail: p.object
+        ? `granted to ${p.from} beyond (or instead of) what supabase/schemas grants`
+        : "differ from what supabase/schemas grants",
+    });
   }
 
   const restore: string[] = [];
-  const restored = restoring.map((c) => c.label);
-  if (restoring.length > 0 || grants > 0) {
+  const restored = [...restoring.map((c) => c.label), ...regranted];
+  if (restoring.length > 0 || tail.length > 0) {
     restore.push(...preamble, ...restoring.map((c) => c.sql), ...tail);
-  }
-  // Grants only add privileges and are safe to repeat. When nothing was
-  // revoked, a GRANT in the diff means the database lacks it.
-  if (restoring.length === 0 && grants > 0 && !sawRevoke) {
-    restored.push("privileges");
   }
 
   return {
@@ -436,10 +626,19 @@ function classifyTableAction(
       "i",
     ).exec(action))
   ) {
+    const afterName = action.slice(m[0].length).trim();
+    const typeText = afterName.split(
+      /\s+(?:DEFAULT|NOT\s+NULL|NULL|GENERATED|CONSTRAINT|REFERENCES|CHECK|COLLATE|UNIQUE|PRIMARY)\b/i,
+    )[0]!;
     ctx.creates.push({
       key: `column:${t}.${parts(m[1]!)[0]}`,
       sql,
       label: `column ${shown(table)}.${shown(m[1]!)}`,
+      column: {
+        table: t,
+        name: parts(m[1]!)[0]!,
+        type: normalizeType(typeText),
+      },
     });
   } else if (
     (m = new RegExp(String.raw`^ADD\s+CONSTRAINT\s+(${IDENT})`, "i").exec(
@@ -463,6 +662,7 @@ function classifyTableAction(
         object: `column ${shown(table)}.${shown(m[1]!)}`,
         detail: "not in supabase/schemas",
       },
+      column: { table: t, name: parts(m[1]!)[0]! },
     });
   } else if (
     (m = new RegExp(

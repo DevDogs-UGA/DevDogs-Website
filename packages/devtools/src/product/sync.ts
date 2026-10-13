@@ -50,9 +50,11 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  renameSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { Product } from "./config.js";
 import type { Runner } from "./exec.js";
 import { cliLine, type SupabaseCli } from "./supabase-cli.js";
@@ -128,6 +130,102 @@ const NOTHING: Pick<SyncResult, "restored" | "extras" | "compared"> = {
   extras: [],
   compared: false,
 };
+
+// ── what this target has applied ────────────────────────────────────────────
+
+/**
+ * `supabase/migrations/` is a record of what ONE database has had applied, so
+ * devtools notes whose it is and which of its files that database has applied
+ * (`.devtools/record.json`, git-ignored). Without it, a generated migration
+ * that was never applied (a sync interrupted before `migration up`) or a folder
+ * written for the local stack and then used against a hosted project would be
+ * read as already applied, and its drops as a member's extras.
+ */
+interface AppliedRecord {
+  /** `local`, or `hosted:<project ref>`. */
+  target: string;
+  /** Versions of the migration files this target has applied. */
+  applied: string[];
+}
+
+function recordFile(product: Product): string {
+  return join(product.root, ".devtools", "record.json");
+}
+
+function pendingDir(product: Product): string {
+  return join(product.root, ".devtools", "pending");
+}
+
+function readRecord(product: Product): AppliedRecord | null {
+  try {
+    const raw = JSON.parse(
+      readFileSync(recordFile(product), "utf8"),
+    ) as Partial<AppliedRecord>;
+    return typeof raw.target === "string" && Array.isArray(raw.applied)
+      ? { target: raw.target, applied: raw.applied.map(String) }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeRecord(
+  product: Product,
+  target: DbTarget,
+  files: readonly string[],
+): void {
+  mkdirSync(dirname(recordFile(product)), { recursive: true });
+  const record: AppliedRecord = {
+    target: targetKey(target),
+    applied: files.map(versionOf),
+  };
+  writeFileSync(recordFile(product), JSON.stringify(record, null, 2) + "\n");
+}
+
+/** `local`, or `hosted:<project ref>` (never the password). */
+export function targetKey(target: DbTarget): string {
+  if (target.kind === "local") return "local";
+  try {
+    const url = new URL(target.dbUrl);
+    const user = decodeURIComponent(url.username);
+    const ref = user.includes(".") ? user.split(".").slice(1).join(".") : "";
+    return `hosted:${ref || url.hostname}`;
+  } catch {
+    return "hosted";
+  }
+}
+
+/** The migrations the target has applied (null: no history table); throws if it cannot be reached. */
+async function probe(
+  open: (dbUrl: string) => SqlSession,
+  target: DbTarget,
+  redact: (text: string) => string,
+): Promise<string[] | null> {
+  let session: SqlSession | undefined;
+  try {
+    session = open(target.dbUrl);
+    return await session.appliedMigrations();
+  } catch (err) {
+    throw new SyncError(
+      "Could not connect to the database to compare it with supabase/schemas, so nothing was changed, and the database was not checked against supabase/schemas. Fix the connection (is the database running, is the password right?) and run `devtools db sync` again.",
+      redact((err as Error).message),
+    );
+  } finally {
+    await session?.close().catch(() => undefined);
+  }
+}
+
+/** Puts back migrations a sync that was killed had set aside. */
+function restorePending(product: Product): void {
+  const dir = pendingDir(product);
+  if (!existsSync(dir)) return;
+  mkdirSync(product.paths.migrationsDir, { recursive: true });
+  for (const file of readdirSync(dir)) {
+    const back = join(product.paths.migrationsDir, file);
+    if (existsSync(back)) rmSync(join(dir, file));
+    else renameSync(join(dir, file), back);
+  }
+}
 
 /** `20261011120000` from `20261011120000_devtools_sync.sql`. */
 function versionOf(file: string): string {
@@ -261,20 +359,24 @@ async function reconcileLive(
   log: (line: string) => void,
   warn: (line: string) => void,
   redact: (text: string) => string,
-): Promise<Pick<SyncResult, "restored" | "extras" | "compared">> {
+): Promise<
+  Pick<SyncResult, "restored" | "extras" | "compared"> & { pending: string[] }
+> {
   const files = migrationFiles(product.paths.migrationsDir);
   // No record: the first migration creates everything, so there is nothing to
   // compare yet (and nothing to claim).
-  if (!options.open || files.length === 0) return NOTHING;
+  if (!options.open || files.length === 0) return { ...NOTHING, pending: [] };
 
   const { schemas } = product.config.supabase;
   let session: SqlSession | undefined;
   let ledger: string[] | null;
   let existing: Set<string>;
+  let columnTypes: Map<string, string>;
   try {
     session = options.open(target.dbUrl);
     ledger = await session.appliedMigrations();
     existing = await session.existingObjects(schemas);
+    columnTypes = await session.columnTypes(schemas);
   } catch (err) {
     await session?.close().catch(() => undefined);
     throw new SyncError(
@@ -283,9 +385,34 @@ async function reconcileLive(
     );
   }
 
+  // Which files has THIS database applied: its own ledger, plus what devtools
+  // noted it applied (a ledger that was lost is rewritten from that). A file
+  // neither lists is pending: a pulled change that has not been applied yet.
+  // It is compared against nothing, and applied below like any new migration.
+  const record = readRecord(product);
+  const noted = record?.target === targetKey(target) ? record.applied : null;
+  const known = new Set([...(ledger ?? []), ...(noted ?? [])]);
+  // A folder from before records existed, in a database whose ledger is gone:
+  // the best available reading is that all of it was applied.
+  const everythingApplied = ledger === null && noted === null;
+  const isApplied = (file: string) =>
+    everythingApplied || known.has(versionOf(file));
+  const appliedFiles = files.filter(isApplied);
+  const pending = files.filter((file) => !isApplied(file));
+  if (appliedFiles.length === 0) {
+    await session.close().catch(() => undefined);
+    return { ...NOTHING, pending };
+  }
+
+  // Set the pending files aside so the diff is against what was applied.
+  const aside = pendingDir(product);
+  if (pending.length > 0) mkdirSync(aside, { recursive: true });
+  for (const file of pending) {
+    renameSync(join(product.paths.migrationsDir, file), join(aside, file));
+  }
   try {
     const sql = await liveDiff(product, cli, target, run, log, redact);
-    const drift = classifyDiff(sql, existing);
+    const drift = classifyDiff(sql, existing, columnTypes);
 
     if (drift.extras.length > 0 && !options.strict) {
       warn(
@@ -312,7 +439,11 @@ async function reconcileLive(
     if (drift.restore.length > 0) {
       if (drift.restored.length > 0) {
         log(
-          `Your database is missing ${summarize(drift.restored)}; creating ${drift.restored.length === 1 ? "it" : "them"} again from supabase/schemas. Nothing that already exists is changed.`,
+          `Your database is missing ${summarize(drift.restored)}; creating ${drift.restored.length === 1 ? "it" : "them"} again from supabase/schemas. Nothing that already exists is changed.${
+            drift.restored.some((label) => label.startsWith("privileges on"))
+              ? " For the privileges, what supabase/schemas grants was granted again; privileges beyond that were not taken away."
+              : ""
+          }`,
         );
       }
       try {
@@ -332,10 +463,10 @@ async function reconcileLive(
     // The database now holds everything the record describes; say so in the
     // ledger, or `migration up` would run the whole record again. A missing
     // ledger is rewritten from the record, never read as "start over".
-    const known = new Set(ledger ?? []);
-    const unlisted = files
+    const listed = new Set(ledger ?? []);
+    const unlisted = appliedFiles
       .map(versionOf)
-      .filter((version) => !known.has(version));
+      .filter((version) => !listed.has(version));
     if (unlisted.length > 0) {
       if (ledger === null) {
         log(
@@ -367,8 +498,15 @@ async function reconcileLive(
       restored: drift.restored,
       extras: drift.extras,
       compared: true,
+      pending,
     };
   } finally {
+    for (const file of pending) {
+      const from = join(aside, file);
+      if (existsSync(from)) {
+        renameSync(from, join(product.paths.migrationsDir, file));
+      }
+    }
     await session.close().catch(() => undefined);
   }
 }
@@ -405,15 +543,24 @@ export async function dbSync(
     ...cli.prefix,
     "migration",
     "fetch",
-    "--db-url",
-    target.dbUrl,
+    ...(target.kind === "local" ? ["--local"] : ["--db-url", target.dbUrl]),
   ];
-  const needsRecord =
-    target.kind === "hosted" && migrationFiles(migrationsDir).length === 0;
+  // The record on disk belongs to one database. Another target's migrations
+  // say nothing about this one, so they are not used as its history.
+  const key = targetKey(target);
+  const owner = readRecord(product)?.target;
+  const foreign =
+    owner !== undefined &&
+    owner !== key &&
+    migrationFiles(migrationsDir).length > 0;
+  let needsRecord =
+    (migrationFiles(migrationsDir).length === 0 &&
+      (target.kind === "hosted" || (owner !== undefined && owner !== key))) ||
+    foreign;
   if (options.dryRun) {
     if (needsRecord) {
       log(
-        `Would run: ${cliLine(cli, ["migration", "fetch", "--db-url", "<DB_URL>"])} (this machine has no record of what the project has had applied)`,
+        `Would run: ${cliLine(cli, target.kind === "local" ? ["migration", "fetch", "--local"] : ["migration", "fetch", "--db-url", "<DB_URL>"])} (this machine has no record of what ${target.kind === "local" ? "the local stack" : "the project"} has had applied)`,
       );
     }
     if (options.open) {
@@ -433,19 +580,44 @@ export async function dbSync(
     return { migration: null, applied: false, destructive: [], ...NOTHING };
   }
 
+  restorePending(product);
+  // The local stack with no record on this machine: if it has been migrated
+  // before (a deleted folder, or another target's record that was set aside),
+  // its history is restored; a fresh stack has none and starts from the schema.
+  if (
+    !needsRecord &&
+    target.kind === "local" &&
+    options.open &&
+    migrationFiles(migrationsDir).length === 0
+  ) {
+    needsRecord =
+      ((await probe(options.open, target, redact)) ?? []).length > 0;
+  }
+  if (foreign) {
+    log(
+      `supabase/migrations holds the record of another database (${owner}); this sync is for ${key}, so that record is set aside and this database's own history is used.`,
+    );
+    forgetMigrations(product);
+  }
   if (needsRecord) {
     // A brand-new project has no history table yet, and fetch fails: nothing
     // to restore, so the full schema is the right first migration.
     const fetched = await run(cli.command, fetchArgs, { cwd: product.root });
+    // Nothing to fetch is normal for a new project; an unreachable database
+    // is not, and must not be mistaken for it.
+    if (fetched.code !== 0 && options.open) {
+      await probe(options.open, target, redact);
+    }
     const restoredFiles = migrationFiles(migrationsDir).length;
     if (fetched.code === 0 && restoredFiles > 0) {
       log(
-        `Restored ${restoredFiles} applied migration${restoredFiles === 1 ? "" : "s"} from the project's history.`,
+        `Restored ${restoredFiles} applied migration${restoredFiles === 1 ? "" : "s"} from ${target.kind === "local" ? "the local stack's" : "the project's"} history.`,
       );
+      writeRecord(product, target, migrationFiles(migrationsDir));
     }
   }
 
-  const live = await reconcileLive(
+  const { pending, ...live } = await reconcileLive(
     product,
     cli,
     target,
@@ -475,7 +647,10 @@ export async function dbSync(
     );
   }
   const created = migrationFiles(migrationsDir).filter((f) => !before.has(f));
-  if (created.length === 0) {
+  // Pending files (written by an earlier sync that never applied them) go
+  // through the same path as a new one, including the question about drops.
+  const toApply = [...pending, ...created].sort();
+  if (toApply.length === 0) {
     // Only a comparison that ran, and found nothing missing or conflicting,
     // may say the database matches. Extras are allowed; they were listed.
     if (live.compared && !restoredSomething) {
@@ -486,6 +661,7 @@ export async function dbSync(
           : `The database matches supabase/schemas, with ${n} extra thing${n === 1 ? "" : "s"} listed above that it does not define.`,
       );
     }
+    writeRecord(product, target, migrationFiles(migrationsDir));
     return {
       migration: null,
       applied: restoredSomething,
@@ -493,8 +669,10 @@ export async function dbSync(
       ...live,
     };
   }
-  const migration = created[created.length - 1]!;
-  const sql = readFileSync(join(migrationsDir, migration), "utf8");
+  const migration = toApply[toApply.length - 1]!;
+  const sql = toApply
+    .map((file) => readFileSync(join(migrationsDir, file), "utf8"))
+    .join("\n");
   const destructive = destructiveStatements(sql);
 
   if (destructive.length > 0 && !options.yes) {
@@ -502,7 +680,8 @@ export async function dbSync(
       ? await options.confirmDestructive(sql, destructive)
       : false;
     if (!approved) {
-      // Leave no half-state: the unapplied file would be diffed against next time.
+      // Leave no half-state: an unapplied generated file would be diffed
+      // against next time. Pending files stay; they were not generated now.
       for (const file of created) rmSync(join(migrationsDir, file));
       throw new SyncError(
         `The change drops data in your development database (${destructive.length} statement${destructive.length === 1 ? "" : "s"}). Re-run with --yes to allow it.`,
@@ -511,7 +690,7 @@ export async function dbSync(
     }
   }
 
-  log(`Applying ${migration}`);
+  log(`Applying ${toApply.join(", ")}`);
   const applyArgs =
     target.kind === "local"
       ? [...cli.prefix, "migration", "up", "--local"]
@@ -526,6 +705,7 @@ export async function dbSync(
       redact(applied.stderr || applied.stdout),
     );
   }
+  writeRecord(product, target, migrationFiles(migrationsDir));
   return { migration, applied: true, destructive, ...live };
 }
 
@@ -540,5 +720,7 @@ function isContainerFailure(result: {
 export function forgetMigrations(product: Product): string[] {
   const files = migrationFiles(product.paths.migrationsDir);
   for (const file of files) rmSync(join(product.paths.migrationsDir, file));
+  rmSync(recordFile(product), { force: true });
+  rmSync(pendingDir(product), { recursive: true, force: true });
   return files;
 }
