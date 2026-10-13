@@ -32,7 +32,7 @@ import { buildSentryOptions } from "@devdogsuga/sdk/telemetry";
 import { cliName } from "./cli-name.js";
 import { noteError } from "./failure-log.js";
 import { isNonInteractive } from "./mode.js";
-import { discoverRepoRoot, RepoNotFoundError } from "./repo/root.js";
+import { discoverRepoRoot } from "./repo/root.js";
 import { ownVersion } from "./version.js";
 
 /** The DSN baked into this build, or "" if there is none (a source run under
@@ -112,7 +112,9 @@ export function hasRealCaller(inRepo: boolean, isTTY: boolean): boolean {
 
 /**
  * A failure the person caused and can fix without anyone's help: the wrong
- * directory, a bad flag, a database that has not been set up. These are
+ * directory, a bad flag, a database that has not been set up. A `RepoNotFoundError` is
+ * not on this list by class: only the dispatcher marks the genuine
+ * outside-a-checkout case `expected` (`markOutsideCheckout`). These are
  * printed and exit non-zero but are not bugs, so they are never sent to Sentry
  * (the failure log still records them). Matched by name as well as class so
  * that `UsageError` (`ui.ts`, which imports this module) and the product
@@ -120,7 +122,6 @@ export function hasRealCaller(inRepo: boolean, isTTY: boolean): boolean {
  * opts in by setting `expected = true`.
  */
 export function isExpectedFailure(err: unknown): boolean {
-  if (err instanceof RepoNotFoundError) return true;
   if (!(err instanceof Error)) return false;
   return (
     err.name === "UsageError" ||

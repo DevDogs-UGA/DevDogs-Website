@@ -8,7 +8,7 @@ const sentry = vi.hoisted(() => ({
 }));
 vi.mock("@sentry/node", () => sentry);
 
-import { RepoNotFoundError } from "./repo/root.js";
+import { markOutsideCheckout, RepoNotFoundError } from "./repo/root.js";
 import {
   captureDevtoolsError,
   hasRealCaller,
@@ -77,11 +77,27 @@ describe("reporting a caught failure", () => {
     expect(sentry.captureException).not.toHaveBeenCalled();
   });
 
-  it("keeps a wrong-directory error out of Sentry, in both report paths", async () => {
-    reportDevtoolsError(new RepoNotFoundError());
-    await captureDevtoolsError(new RepoNotFoundError());
+  it("keeps a wrong-directory error out of Sentry once it is marked expected, in both report paths", async () => {
+    const outside = Object.assign(new RepoNotFoundError(), { expected: true });
+    reportDevtoolsError(outside);
+    await captureDevtoolsError(outside);
     expect(sentry.captureException).not.toHaveBeenCalled();
     expect(sentry.flush).not.toHaveBeenCalled();
+  });
+
+  it("still reports an unmarked RepoNotFoundError, which is an internal bug", async () => {
+    const internal = new RepoNotFoundError();
+    expect(isExpectedFailure(internal)).toBe(false);
+    await captureDevtoolsError(internal);
+    expect(sentry.captureException).toHaveBeenCalledWith(internal);
+  });
+
+  it("reports a RepoNotFoundError raised inside a checkout, after the dispatcher declines to mark it", async () => {
+    const internal = new RepoNotFoundError();
+    // This repository's own checkout is above the test's working directory.
+    expect(markOutsideCheckout(internal)).toBe(false);
+    await captureDevtoolsError(internal);
+    expect(sentry.captureException).toHaveBeenCalledWith(internal);
   });
 
   it("keeps any error that declares itself expected out of Sentry", async () => {

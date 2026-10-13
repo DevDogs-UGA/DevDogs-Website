@@ -86,6 +86,7 @@ import {
   discoverRepoRoot,
   findRepoRoot,
   RepoNotFoundError,
+  markOutsideCheckout,
 } from "@devdogsuga/cli-core/repo/root";
 import { loadEnvLoad, loadEnvSession } from "@devdogsuga/cli-core/repo/peers";
 import {
@@ -176,8 +177,9 @@ async function dispatch(argv: string[]): Promise<void> {
     await main(argv);
   } catch (err) {
     // A checkout-only command run from the wrong directory: say which one.
+    const outside = markOutsideCheckout(err);
     process.stderr.write(
-      `devtools: ${err instanceof RepoNotFoundError ? outsideRepoMessage(argv) : errorMessage(err)}\n`,
+      `devtools: ${outside ? outsideRepoMessage(argv) : errorMessage(err)}\n`,
     );
     // Report BEFORE exiting — see `captureDevtoolsError`'s header.
     await captureDevtoolsError(err);

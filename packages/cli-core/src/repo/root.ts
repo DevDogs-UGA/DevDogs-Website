@@ -96,6 +96,27 @@ export function findRepoRoot(): string {
   return cachedRoot;
 }
 
+/**
+ * Whether `err` is the user running a checkout-requiring command with no
+ * DevDogsUGA checkout above the working directory, and if so marks it
+ * `expected` so telemetry drops it. A `RepoNotFoundError` raised while a
+ * checkout does exist (a `findRepoRoot()` call that should not have needed
+ * one, as in DEVTOOLS-D) is a bug and stays reportable.
+ */
+export function markOutsideCheckout(
+  err: unknown,
+  startDir: string = process.cwd(),
+): boolean {
+  if (
+    !(err instanceof RepoNotFoundError) ||
+    discoverRepoRoot(startDir) !== null
+  ) {
+    return false;
+  }
+  Object.assign(err, { expected: true });
+  return true;
+}
+
 /** Test-only: clears the memoized root so a test can point `process.cwd()` elsewhere. */
 export function resetRepoRootCacheForTests(): void {
   cachedRoot = undefined;

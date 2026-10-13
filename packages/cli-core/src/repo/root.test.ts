@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   discoverRepoRoot,
   findRepoRoot,
+  markOutsideCheckout,
+  RepoNotFoundError,
   resetRepoRootCacheForTests,
 } from "./root.js";
 
@@ -111,5 +113,24 @@ describe("findRepoRoot", () => {
   it("honors DEVTOOLS_TEST_REPO_ROOT without touching the filesystem", () => {
     process.env.DEVTOOLS_TEST_REPO_ROOT = "/fake/devdogs-monorepo";
     expect(findRepoRoot()).toBe("/fake/devdogs-monorepo");
+  });
+});
+
+describe("markOutsideCheckout", () => {
+  it("marks a RepoNotFoundError expected when no checkout is above the directory", () => {
+    const err = new RepoNotFoundError();
+    expect(markOutsideCheckout(err, dir)).toBe(true);
+    expect((err as Error & { expected?: unknown }).expected).toBe(true);
+  });
+
+  it("leaves a RepoNotFoundError raised inside a checkout unmarked: that is a bug", () => {
+    writeRepoMarker(dir);
+    const err = new RepoNotFoundError();
+    expect(markOutsideCheckout(err, dir)).toBe(false);
+    expect((err as Error & { expected?: unknown }).expected).toBeUndefined();
+  });
+
+  it("ignores errors that are not RepoNotFoundError", () => {
+    expect(markOutsideCheckout(new Error("x"), dir)).toBe(false);
   });
 });
