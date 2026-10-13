@@ -221,6 +221,38 @@ jobs:
         run: |
           pnpm --filter platform run types:cf:check
 
+  # Whether a change can affect devtools on Windows: decides if `windows`
+  # runs. The Windows job is the slowest and flakiest one here and gates both
+  # publishes, so it runs only for a change to devtools, cli-core, the
+  # lockfile, the Node pin or this file. Always succeeds; `windows` is skipped
+  # (not failed) when nothing relevant changed, and the publishes accept that.
+  # An unknown base (a first push, a rewritten branch) runs it.
+  windows-changes:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.changed.outputs.run }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Did devtools or cli-core change?
+        id: changed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ -z "$BASE_SHA" ] || ! git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo 'No usable base commit: running the Windows job.' >> "$GITHUB_STEP_SUMMARY"
+          elif git diff --quiet "$BASE_SHA...HEAD" -- packages/devtools packages/cli-core pnpm-lock.yaml pnpm-workspace.yaml .nvmrc .github/workflows/ci.yaml; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo 'Nothing devtools or cli-core depend on changed: skipping the Windows job.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
   # The contributor CLI on Windows, where its members run it. Linux CI cannot
   # see the failures that sent DEVTOOLS-B to Sentry: `npx`, `pnpm` and
   # `supabase` are .cmd shims there, which Node cannot spawn by name. Installs
@@ -230,7 +262,8 @@ jobs:
   # including a command that starts `npx`. Gates both publishes below: a
   # prerelease that cannot start on Windows should not reach `next`.
   windows:
-    if: github.event_name != 'schedule'
+    needs: windows-changes
+    if: github.event_name != 'schedule' && needs.windows-changes.outputs.run == 'true'
     runs-on: windows-latest
     timeout-minutes: 25
     steps:
@@ -454,9 +487,15 @@ jobs:
   # Never a blank environment: that would accept any ci.yaml run on any ref.
   # The first prerelease below needs them too: that is a pre-flight item, not a Gate one.
   publish:
-    needs: [validate, windows]
+    needs: [validate, windows-changes, windows]
+    # `windows` is skipped when devtools did not change. A skipped need would
+    # skip this job too, so the status functions are explicit: it must
+    # succeed or be skipped, and a failed or cancelled run still blocks.
     if: >-
-      github.event_name == 'push' && github.ref == 'refs/heads/main'
+      !cancelled() && needs.validate.result == 'success'
+      && needs.windows-changes.result == 'success'
+      && contains(fromJSON('["success","skipped"]'), needs.windows.result)
+      && github.event_name == 'push' && github.ref == 'refs/heads/main'
       && vars.BACKSTAGE_PUBLISHES_STABLE == 'true'
     permissions:
       contents: write
@@ -471,9 +510,15 @@ jobs:
   # npm prereleases ride the push to main (Q88); only the Dart SDK publishes by
   # tag push (publish-dart.yaml).
   publish-next:
-    needs: [validate, windows]
+    needs: [validate, windows-changes, windows]
+    # `windows` is skipped when devtools did not change. A skipped need would
+    # skip this job too, so the status functions are explicit: it must
+    # succeed or be skipped, and a failed or cancelled run still blocks.
     if: >-
-      github.event_name == 'push' && github.ref == 'refs/heads/main'
+      !cancelled() && needs.validate.result == 'success'
+      && needs.windows-changes.result == 'success'
+      && contains(fromJSON('["success","skipped"]'), needs.windows.result)
+      && github.event_name == 'push' && github.ref == 'refs/heads/main'
       && vars.BACKSTAGE_PUBLISHES_NEXT != 'false'
     # The grant is a ceiling for every job in publish.yaml, including the
     # stable `publish` job this channel skips: GitHub checks each nested job's
