@@ -237,7 +237,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-      - name: Did devtools or cli-core change?
+      - name: Did devtools, cli-core or a workspace package they depend on change?
         id: changed
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
@@ -246,7 +246,7 @@ jobs:
           if [ -z "$BASE_SHA" ] || ! git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
             echo "run=true" >> "$GITHUB_OUTPUT"
             echo 'No usable base commit: running the Windows job.' >> "$GITHUB_STEP_SUMMARY"
-          elif git diff --quiet "$BASE_SHA...HEAD" -- packages/devtools packages/cli-core pnpm-lock.yaml pnpm-workspace.yaml .nvmrc .github/workflows/ci.yaml; then
+          elif git diff --quiet "$BASE_SHA...HEAD" -- $(node scripts/workspace-closure.mjs @devdogsuga/devtools @devdogsuga/cli-core) scripts/workspace-closure.mjs pnpm-lock.yaml pnpm-workspace.yaml .nvmrc .github/workflows/ci.yaml; then
             echo "run=false" >> "$GITHUB_OUTPUT"
             echo 'Nothing devtools or cli-core depend on changed: skipping the Windows job.' >> "$GITHUB_STEP_SUMMARY"
           else
@@ -435,7 +435,7 @@ jobs:
       # plan, and the checks before anything reaches npm; and the Dart SDK's
       # tag names.
       - name: Prerelease publishing script tests
-        run: node --test scripts/publish-next.test.mjs scripts/dart-next-tag.test.mjs
+        run: node --test scripts/publish-next.test.mjs scripts/dart-next-tag.test.mjs scripts/workspace-closure.test.mjs
       # Every workflow that calls a reusable one grants at least what each of
       # its jobs requests (a shortfall is a startup_failure on the push).
       - name: Reusable-workflow permissions
