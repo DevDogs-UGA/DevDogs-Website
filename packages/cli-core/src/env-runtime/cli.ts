@@ -45,7 +45,7 @@
  *
  * Neither mode spawns a platform shell, so this works on Windows and POSIX.
  */
-import { spawn } from "node:child_process";
+import { spawnProcess } from "../spawn.js";
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
@@ -289,11 +289,10 @@ if (
   }
   if (start) {
     const code = await new Promise<number>((done) => {
-      spawn("pnpm", ["devtools", "db", "start"], {
+      spawnProcess("pnpm", ["devtools", "db", "start"], {
         cwd: root,
         env: { ...process.env, DEPLOY_ENV: "development", DEV_DB: "local" },
         stdio: "inherit",
-        shell: process.platform === "win32",
       })
         .on("error", () => done(1))
         .on("exit", (exitCode) => done(exitCode ?? 1));
@@ -530,7 +529,7 @@ if (opts.worker !== undefined) {
 // dotenvx is used below only as the .cmd-safe process launcher on Windows,
 // not as a second loader.
 
-const child = spawn(
+const child = spawnProcess(
   windows ? process.execPath : args[0]!,
   windows
     ? [

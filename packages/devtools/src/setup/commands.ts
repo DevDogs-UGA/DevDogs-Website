@@ -15,7 +15,7 @@
  */
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { execSync } from "@devdogsuga/cli-core/spawn";
 import { join } from "node:path";
 import {
   confirm,
@@ -39,9 +39,8 @@ import { unwrap } from "@devdogsuga/cli-core/ui";
 
 function has(cmd: string, args: string[] = ["--version"]): string | null {
   try {
-    return execFileSync(cmd, args, {
+    return execSync(cmd, args, {
       stdio: ["ignore", "pipe", "ignore"],
-      encoding: "utf8",
     }).trim();
   } catch {
     return null;

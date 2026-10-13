@@ -44,6 +44,7 @@
     "@resvg/resvg-js": "^2.6.2",
     "@sentry/node": "catalog:",
     "@supabase/supabase-js": "catalog:",
+    "cross-spawn": "^7.0.6",
     "dotenv": "^17.4.2",
     "postgres": "catalog:",
     "react": "catalog:",

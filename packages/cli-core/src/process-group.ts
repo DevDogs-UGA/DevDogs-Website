@@ -15,7 +15,7 @@
  * signal we forwarded; a child that exits on its own is left to have cleaned
  * up after itself, so a tool that deliberately leaves a daemon running keeps it.
  */
-import { spawn } from "node:child_process";
+import { spawnProcess } from "./spawn.js";
 import { isDryRun } from "./dry-run.js";
 import { noteRan } from "./failure-log.js";
 
@@ -65,7 +65,7 @@ export function runInGroup(
     return Promise.resolve({ code: 0, signal: null });
   }
   return new Promise((resolve) => {
-    const child = spawn(command, [...args], {
+    const child = spawnProcess(command, args, {
       stdio: opts.stdio ?? "inherit",
       cwd: opts.cwd,
       env: opts.env,

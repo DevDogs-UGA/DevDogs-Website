@@ -3,7 +3,7 @@
  * half a request is about): config-derived discovery, manual triggering and a
  * local runtime for Cloudflare Workflows.
  */
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawnProcess, type ChildProcess } from "@devdogsuga/cli-core/spawn";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createServer } from "node:net";
@@ -432,7 +432,7 @@ async function startTemporaryWrangler(
   // from source. A bare `wrangler dev` against its pre-build wrangler.jsonc
   // cannot bundle it at all (see `cf/build.ts`). The plugin takes no env file,
   // so the scoped env rides the child's own environment instead.
-  const child = spawn("pnpm", vinextDevArgs(app, port), {
+  const child = spawnProcess("pnpm", vinextDevArgs(app, port), {
     cwd: appWorkspaceRoot(app),
     stdio: "inherit",
     detached: process.platform !== "win32",

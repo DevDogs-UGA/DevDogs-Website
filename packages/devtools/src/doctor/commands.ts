@@ -21,7 +21,7 @@
  */
 import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { flagValue } from "@devdogsuga/cli-core/args";
-import { execFileSync } from "node:child_process";
+import { execSync } from "@devdogsuga/cli-core/spawn";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { log, note } from "@clack/prompts";
@@ -234,9 +234,8 @@ export { validateSessionPoolerUrl };
 
 function has(cmd: string, args: string[]): string | null {
   try {
-    return execFileSync(cmd, args, {
+    return execSync(cmd, args, {
       stdio: ["ignore", "pipe", "ignore"],
-      encoding: "utf8",
     }).trim();
   } catch {
     return null;

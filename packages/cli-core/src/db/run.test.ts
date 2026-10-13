@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type * as NodeChildProcess from "node:child_process";
+import type * as Spawn from "../spawn.js";
 
 /**
  * `run()`'s missing-binary handling and `seedBuckets()`'s exact argv, both
  * silent-failure-shaped: a spawn `error` event with no listener crashes the
  * whole process instead of returning a code, and a wrong flag combination
  * for the remote branch is a CLI rejection that only ever shows up against a
- * real hosted project. `node:child_process` is faked at the module boundary
+ * real hosted project. `spawn.ts` (the one place a program starts) is faked at the module boundary
  * so both are observable without actually shelling out to pnpm or supabase.
  */
 const fake = vi.hoisted(() => {
@@ -42,9 +42,9 @@ const fake = vi.hoisted(() => {
   return { state, spawn };
 });
 
-vi.mock("node:child_process", async (importOriginal) => {
-  const actual = await importOriginal<typeof NodeChildProcess>();
-  return { ...actual, spawn: fake.spawn };
+vi.mock("../spawn.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof Spawn>();
+  return { ...actual, spawnProcess: fake.spawn };
 });
 
 const { dbPush, run, seedBuckets } = await import("./run.js");

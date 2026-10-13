@@ -8,15 +8,12 @@
  * installed. From a Backstage checkout that is `<root>/devdogsuga`, so it needs
  * its own `pnpm install` there before any of these work.
  */
-import { execFile, spawn as nodeSpawn } from "node:child_process";
 import { join } from "node:path";
-import { promisify } from "node:util";
+import { exec, spawnProcess } from "../spawn.js";
 import { reportRan, runInGroup } from "../process-group.js";
 import { resolveLayout } from "../repo/layout.js";
 import { findRepoRoot } from "../repo/root.js";
 import { loadDbTypegen } from "../repo/peers.js";
-
-const runFile = promisify(execFile);
 
 /** Where `supabase/` lives, and so the cwd of every supabase CLI call. */
 export function supabaseRoot(): string {
@@ -75,14 +72,14 @@ export function runWithStderr(
   cwd: string = findRepoRoot(),
 ): Promise<RunWithStderrResult> {
   return new Promise((resolve) => {
-    const child = nodeSpawn("pnpm", args, {
+    const child = spawnProcess("pnpm", args, {
       stdio: ["inherit", "inherit", "pipe"],
       cwd,
       ...(env ? { env } : {}),
     });
     let stderr = "";
-    child.stderr.setEncoding("utf8");
-    child.stderr.on("data", (chunk: string) => {
+    child.stderr?.setEncoding("utf8");
+    child.stderr?.on("data", (chunk: string) => {
       stderr += chunk;
       process.stderr.write(chunk);
     });
@@ -101,10 +98,7 @@ export async function capture(
   args: string[],
   cwd: string = findRepoRoot(),
 ): Promise<string> {
-  const { stdout } = await runFile("pnpm", args, {
-    cwd,
-    encoding: "utf8",
-  });
+  const { stdout } = await exec("pnpm", args, { cwd });
   return stdout;
 }
 
@@ -182,10 +176,8 @@ export async function dbPushDryRun(
   if (opts.includeSeed) args.push("--include-seed");
   args.push("--dry-run");
   try {
-    const { stdout, stderr } = await runFile("pnpm", args, {
+    const { stdout, stderr } = await exec("pnpm", args, {
       cwd: supabaseRoot(),
-      encoding: "utf8",
-      maxBuffer: 32 * 1024 * 1024,
     });
     return `${stdout}${stderr}`;
   } catch (err) {

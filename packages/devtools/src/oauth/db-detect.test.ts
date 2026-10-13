@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const execFileSync = vi.fn();
-vi.mock("node:child_process", () => ({ execFileSync }));
+vi.mock("@devdogsuga/cli-core/spawn", () => ({ execSync: execFileSync }));
 
 const { detectLocalSupabase } = await import("./db.js");
 

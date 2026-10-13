@@ -12,7 +12,7 @@
  * editing `config.toml` (a new secret or port), so the file counts as stale
  * when `config.toml` is newer than it.
  */
-import { execFile } from "node:child_process";
+import { exec } from "../spawn.js";
 import { existsSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { GENERATED_FILE } from "./load.js";
@@ -31,14 +31,15 @@ export type EnsureGeneratedResult =
   | { action: "failed"; reason: string };
 
 function supabaseStatus(root: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    execFile(
-      "supabase",
-      ["status", "-o", "env"],
-      { cwd: root, shell: process.platform === "win32", timeout: 30_000 },
-      (err, stdout) => (err ? reject(new Error(err.message)) : resolve(stdout)),
-    );
-  });
+  return exec("supabase", ["status", "-o", "env"], {
+    cwd: root,
+    timeout: 30_000,
+  }).then(
+    ({ stdout }) => stdout,
+    (err: Error) => {
+      throw new Error(err.message);
+    },
+  );
 }
 
 /**

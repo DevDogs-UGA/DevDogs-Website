@@ -11,7 +11,7 @@
  * rename). One project-id reader and one container-name parser, so both
  * questions agree on what "this project" means.
  */
-import { execFileSync } from "node:child_process";
+import { execSync } from "../spawn.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -61,8 +61,7 @@ export const STACK_API_PORT = 54321;
 
 function defaultExec(file: string, args: string[]): string | null {
   try {
-    return execFileSync(file, args, {
-      encoding: "utf8",
+    return execSync(file, args, {
       stdio: ["ignore", "pipe", "ignore"],
       timeout: 3000,
     });

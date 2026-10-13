@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawnProcess } from "@devdogsuga/cli-core/spawn";
 
 export interface RunResult {
   code: number;
@@ -22,7 +22,7 @@ export type Runner = (
 
 export const spawnRunner: Runner = (command, args, options) =>
   new Promise((resolve, reject) => {
-    const child = spawn(command, [...args], {
+    const child = spawnProcess(command, args, {
       cwd: options.cwd,
       env: { ...process.env, ...options.env },
       stdio: options.inherit ? "inherit" : ["ignore", "pipe", "pipe"],

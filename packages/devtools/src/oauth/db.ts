@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { execFileSync } from "node:child_process";
+import { execSync } from "@devdogsuga/cli-core/spawn";
 import { parse } from "dotenv";
 import { layoutAt } from "@devdogsuga/cli-core/repo/layout";
 import { discoverRepoRoot } from "@devdogsuga/cli-core/repo/root";
@@ -12,9 +12,8 @@ export type LocalSupabaseConfig = {
 };
 
 function runStatus(argv: string[], cwd: string): string {
-  return execFileSync(argv[0]!, argv.slice(1), {
+  return execSync(argv[0]!, argv.slice(1), {
     cwd,
-    encoding: "utf-8",
     stdio: ["pipe", "pipe", "pipe"],
   });
 }

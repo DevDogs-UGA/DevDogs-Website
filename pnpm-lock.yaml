@@ -740,6 +740,9 @@ importers:
       '@supabase/supabase-js':
         specifier: 'catalog:'
         version: 2.116.0(@opentelemetry/api@1.9.1)
+      cross-spawn:
+        specifier: ^7.0.6
+        version: 7.0.6
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -828,6 +831,9 @@ importers:
       commander:
         specifier: ^14.0.3
         version: 14.0.3
+      cross-spawn:
+        specifier: ^7.0.6
+        version: 7.0.6
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -841,6 +847,9 @@ importers:
       '@devdogsuga/config':
         specifier: workspace:*
         version: link:../config
+      '@types/cross-spawn':
+        specifier: ^6.0.6
+        version: 6.0.6
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.2
@@ -905,6 +914,9 @@ importers:
       commander:
         specifier: ^14.0.3
         version: 14.0.3
+      cross-spawn:
+        specifier: ^7.0.6
+        version: 7.0.6
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -930,6 +942,9 @@ importers:
       '@devdogsuga/sdk':
         specifier: workspace:*
         version: link:../sdk
+      '@types/cross-spawn':
+        specifier: ^6.0.6
+        version: 6.0.6
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.2
@@ -5157,6 +5172,9 @@ packages:
 
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
+
+  '@types/cross-spawn@6.0.6':
+    resolution: {integrity: sha512-fXRhhUkG4H3TQk5dBhQ7m/JDdSNHKwR2BBia62lhwEIq9xGiQKLxd6LymNhn47SjXhsUEPmxi+PKw2OkW4LLjA==}
 
   '@types/d3-array@3.2.2':
     resolution: {integrity: sha512-hOLWVbm7uRza0BYXpIIW5pxfrKe0W+D5lrFiAEYR+pb6w3N2SwSMaJbXdUfSEv+dT4MfHBLtn5js0LAWaO6otw==}
@@ -15661,6 +15679,10 @@ snapshots:
     dependencies:
       '@types/deep-eql': 4.0.2
       assertion-error: 2.0.1
+
+  '@types/cross-spawn@6.0.6':
+    dependencies:
+      '@types/node': 26.6.2
 
   '@types/d3-array@3.2.2': {}
 
