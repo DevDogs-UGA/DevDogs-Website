@@ -32,9 +32,18 @@ export class DevDataError extends Error {
   }
 }
 
-/** A Postgres SQLSTATE: five characters, digits and capitals. Connection errors (`ECONNREFUSED`) are not. */
-function isSqlState(code: unknown): code is string {
-  return typeof code === "string" && /^[0-9A-Z]{5}$/.test(code);
+/**
+ * Whether `err` is the product's own SQL being wrong: a Postgres error whose
+ * SQLSTATE class is a cardinality violation (21), data exception (22),
+ * integrity constraint violation (23) or syntax error or access rule
+ * violation (42). Everything else is not the file's fault and reports as a
+ * normal failure: a refused or dropped connection (class 08 and
+ * `ECONNREFUSED`), an operator shutdown (57, `admin_shutdown`), a server out
+ * of resources (53), a transaction that was rolled back (40), and so on.
+ */
+export function isSqlFileError(err: unknown): boolean {
+  const code = (err as { code?: unknown } | null)?.code;
+  return typeof code === "string" && /^(21|22|23|42)[0-9A-Z]{3}$/.test(code);
 }
 
 /**
@@ -66,6 +75,8 @@ export interface SqlSession {
   appliedMigrations(): Promise<string[] | null>;
   /** Which of `schemas` do not exist in this database. */
   missingSchemas(schemas: readonly string[]): Promise<string[]>;
+  /** Runs `sql` as is, in one transaction. */
+  exec(sql: string): Promise<void>;
   runAs(memberId: string, sql: string): Promise<void>;
   close(): Promise<void>;
 }
@@ -118,6 +129,11 @@ export function postgresSession(dbUrl: string): SqlSession {
         select nspname from pg_namespace where nspname = any(${[...schemas]})`;
       const present = new Set(rows.map((r) => r.nspname));
       return schemas.filter((name) => !present.has(name));
+    },
+    async exec(text) {
+      await sql.begin(async (tx) => {
+        await tx.unsafe(text);
+      });
     },
     async runAs(memberId, text) {
       await sql.begin(async (tx) => {
@@ -202,11 +218,14 @@ async function seed(
     );
     return null;
   }
+  // Only the file's own execution is wrapped: the lookups above and the
+  // connection they use are not the product's SQL, so their failures are not
+  // blamed on it.
   try {
     await session.runAs(member.id, text);
   } catch (err) {
     // The file is the product's own SQL: say what Postgres said and where.
-    if (!isSqlState((err as { code?: unknown } | null)?.code)) throw err;
+    if (!isSqlFileError(err)) throw err;
     const line = errorLine(err, text);
     throw new DevDataError(
       `${file}${line === null ? "" : `:${line}`}: ${(err as Error).message}. ` +

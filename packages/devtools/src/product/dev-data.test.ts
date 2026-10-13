@@ -39,6 +39,7 @@ function fakeSession(
         members.find((m) => m.id === ref || m.email === ref) ?? null,
       ),
     ),
+    exec: () => Promise.resolve(),
     runAs: (memberId, sql) => {
       ran.push({ memberId, sql });
       return Promise.resolve();
@@ -204,6 +205,49 @@ describe("an error from the product's own dev-data.sql", () => {
     await expect(
       runDevData(makeProduct(), LOCAL, () => session, { provider: "p" }),
     ).rejects.not.toBeInstanceOf(DevDataError);
+  });
+});
+
+describe("which database errors are blamed on the product's SQL", () => {
+  const withCode = (code: string) => Object.assign(new Error("boom"), { code });
+
+  it.each(["42601", "42P01", "22P02", "23505", "21000"])(
+    "%s (syntax, data, integrity, cardinality) is expected",
+    async (code) => {
+      const { session } = fakeSession();
+      session.runAs = () => Promise.reject(withCode(code));
+      await expect(
+        runDevData(makeProduct(), LOCAL, () => session, { provider: "p" }),
+      ).rejects.toMatchObject({ expected: true });
+    },
+  );
+
+  it.each([
+    "08006", // connection failure
+    "08001",
+    "57P01", // admin shutdown
+    "57014", // query canceled
+    "53300", // too many connections
+    "40001", // serialization failure
+    "28P01", // invalid password
+    "ECONNRESET",
+  ])("%s reports normally", async (code) => {
+    const { session } = fakeSession();
+    session.runAs = () => Promise.reject(withCode(code));
+    const failure = runDevData(makeProduct(), LOCAL, () => session, {
+      provider: "p",
+    });
+    await expect(failure).rejects.not.toBeInstanceOf(DevDataError);
+    await expect(failure).rejects.toThrow("boom");
+  });
+
+  it("an error before the file runs (finding the member) is not blamed on it", async () => {
+    const { session } = fakeSession();
+    session.members = () => Promise.reject(withCode("42P01"));
+    const failure = runDevData(makeProduct(), LOCAL, () => session, {
+      provider: "p",
+    });
+    await expect(failure).rejects.not.toBeInstanceOf(DevDataError);
   });
 });
 
