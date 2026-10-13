@@ -30,6 +30,16 @@ export class DevDataError extends Error {
   }
 }
 
+/**
+ * Whether `err` is Postgres saying a table or schema does not exist
+ * (SQLSTATE 42P01 undefined_table, 3F000 invalid_schema_name): the database
+ * has not had the product's schema applied yet.
+ */
+export function isMissingSchemaError(err: unknown): boolean {
+  const code = (err as { code?: unknown } | null)?.code;
+  return code === "42P01" || code === "3F000";
+}
+
 export interface Member {
   id: string;
   email: string | null;
@@ -121,26 +131,44 @@ export async function runDevData(
 
   const session = open(target.dbUrl);
   try {
-    const member = options.member
-      ? await session.memberByRef(options.member)
-      : ((await session.members(options.provider))[0] ?? null);
-    if (!member) {
+    return await seed(session, devData.file, text, options, log);
+  } catch (err) {
+    if (isMissingSchemaError(err)) {
       throw new DevDataError(
-        options.member
-          ? `No user matches ${options.member} in this database.`
-          : `Nobody has signed in with DevDogs on this database yet. Start the app, sign in, then run this again (or name someone with --member).`,
+        `This database does not have ${product.config.name}'s tables yet (${(err as Error).message}). ` +
+          "Run `devtools setup` first, or `devtools db sync` if you have already set up.",
       );
     }
-    log(`Seeding as ${member.email ?? member.id} (${member.id})`);
-    if (options.dryRun) {
-      log(
-        `Would run ${devData.file} (${text.split("\n").length} lines) in one transaction.`,
-      );
-      return null;
-    }
-    await session.runAs(member.id, text);
-    return { member, file: devData.file };
+    throw err;
   } finally {
     await session.close();
   }
+}
+
+async function seed(
+  session: SqlSession,
+  file: string,
+  text: string,
+  options: DevDataOptions,
+  log: (line: string) => void,
+): Promise<{ member: Member; file: string } | null> {
+  const member = options.member
+    ? await session.memberByRef(options.member)
+    : ((await session.members(options.provider))[0] ?? null);
+  if (!member) {
+    throw new DevDataError(
+      options.member
+        ? `No user matches ${options.member} in this database.`
+        : `Nobody has signed in with DevDogs on this database yet. Start the app, sign in, then run this again (or name someone with --member).`,
+    );
+  }
+  log(`Seeding as ${member.email ?? member.id} (${member.id})`);
+  if (options.dryRun) {
+    log(
+      `Would run ${file} (${text.split("\n").length} lines) in one transaction.`,
+    );
+    return null;
+  }
+  await session.runAs(member.id, text);
+  return { member, file };
 }

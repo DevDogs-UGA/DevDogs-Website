@@ -32,7 +32,7 @@ import { buildSentryOptions } from "@devdogsuga/sdk/telemetry";
 import { cliName } from "./cli-name.js";
 import { noteError } from "./failure-log.js";
 import { isNonInteractive } from "./mode.js";
-import { discoverRepoRoot } from "./repo/root.js";
+import { discoverRepoRoot, RepoNotFoundError } from "./repo/root.js";
 import { ownVersion } from "./version.js";
 
 /** The DSN baked into this build, or "" if there is none (a source run under
@@ -111,6 +111,24 @@ export function hasRealCaller(inRepo: boolean, isTTY: boolean): boolean {
 }
 
 /**
+ * A failure the person caused and can fix without anyone's help: the wrong
+ * directory, a bad flag, a database that has not been set up. These are
+ * printed and exit non-zero but are not bugs, so they are never sent to Sentry
+ * (the failure log still records them). Matched by name as well as class so
+ * that `UsageError` (`ui.ts`, which imports this module) and the product
+ * commands' known errors need no import cycle; a command's own error class
+ * opts in by setting `expected = true`.
+ */
+export function isExpectedFailure(err: unknown): boolean {
+  if (err instanceof RepoNotFoundError) return true;
+  if (!(err instanceof Error)) return false;
+  return (
+    err.name === "UsageError" ||
+    (err as Error & { expected?: unknown }).expected === true
+  );
+}
+
+/**
  * Initializes `@sentry/node` for this CLI process. Safe to call more than
  * once (idempotent) and safe to call with no DSN configured (no-ops via
  * `buildSentryOptions`, see its header).
@@ -156,7 +174,7 @@ export function initDevtoolsTelemetry(command: string): void {
  */
 export async function captureDevtoolsError(err: unknown): Promise<void> {
   noteError(err);
-  if (!devtoolsTelemetryEnabled()) return;
+  if (!devtoolsTelemetryEnabled() || isExpectedFailure(err)) return;
   sent(Sentry.captureException(err));
   await Sentry.flush(2000);
 }
@@ -170,7 +188,7 @@ export async function captureDevtoolsError(err: unknown): Promise<void> {
  */
 export function reportDevtoolsError(err: unknown): void {
   noteError(err);
-  if (!devtoolsTelemetryEnabled()) return;
+  if (!devtoolsTelemetryEnabled() || isExpectedFailure(err)) return;
   sent(Sentry.captureException(err));
 }
 

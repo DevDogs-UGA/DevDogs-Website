@@ -8,8 +8,11 @@ const sentry = vi.hoisted(() => ({
 }));
 vi.mock("@sentry/node", () => sentry);
 
+import { RepoNotFoundError } from "./repo/root.js";
 import {
+  captureDevtoolsError,
   hasRealCaller,
+  isExpectedFailure,
   lastSentryEventId,
   reportDevtoolsError,
   reportDevtoolsFailure,
@@ -72,6 +75,22 @@ describe("reporting a caught failure", () => {
       new UsageError("Nothing called nope."),
     );
     expect(sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  it("keeps a wrong-directory error out of Sentry, in both report paths", async () => {
+    reportDevtoolsError(new RepoNotFoundError());
+    await captureDevtoolsError(new RepoNotFoundError());
+    expect(sentry.captureException).not.toHaveBeenCalled();
+    expect(sentry.flush).not.toHaveBeenCalled();
+  });
+
+  it("keeps any error that declares itself expected out of Sentry", async () => {
+    const expected = Object.assign(new Error("run setup first"), {
+      expected: true,
+    });
+    await captureDevtoolsError(expected);
+    expect(sentry.captureException).not.toHaveBeenCalled();
+    expect(isExpectedFailure(new Error("a real bug"))).toBe(false);
   });
 
   it("captures a non-zero exit as an error-level message", () => {

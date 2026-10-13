@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   DevDataError,
+  isMissingSchemaError,
   runDevData,
   type Member,
   type SqlSession,
@@ -134,5 +135,42 @@ describe("runDevData", () => {
         provider: "p",
       }),
     ).rejects.toThrow(/has no dev data/);
+  });
+});
+
+describe("a database without the schema", () => {
+  const missing = (code: string) =>
+    Object.assign(new Error('relation "dogpack.sessions" does not exist'), {
+      code,
+    });
+
+  it("recognises undefined_table and invalid_schema_name", () => {
+    expect(isMissingSchemaError(missing("42P01"))).toBe(true);
+    expect(isMissingSchemaError(missing("3F000"))).toBe(true);
+    expect(isMissingSchemaError(missing("23505"))).toBe(false);
+    expect(isMissingSchemaError(new Error("nope"))).toBe(false);
+    expect(isMissingSchemaError(null)).toBe(false);
+  });
+
+  it("turns a missing table into a DevDataError that says what to run", async () => {
+    const product = makeProduct();
+    const { session, wasClosed } = fakeSession();
+    session.runAs = () => Promise.reject(missing("42P01"));
+    const failure = runDevData(product, LOCAL, () => session, {
+      provider: "p",
+    });
+    await expect(failure).rejects.toBeInstanceOf(DevDataError);
+    await expect(failure).rejects.toThrow(/devtools setup/);
+    await expect(failure).rejects.toThrow(/devtools db sync/);
+    expect(wasClosed()).toBe(true);
+  });
+
+  it("leaves other database errors alone", async () => {
+    const product = makeProduct();
+    const { session } = fakeSession();
+    session.runAs = () => Promise.reject(missing("23505"));
+    await expect(
+      runDevData(product, LOCAL, () => session, { provider: "p" }),
+    ).rejects.not.toBeInstanceOf(DevDataError);
   });
 });
