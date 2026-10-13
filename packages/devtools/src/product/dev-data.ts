@@ -24,20 +24,29 @@ import type { Product } from "./config.js";
 import { assertNotProduction, type DbTarget, TargetError } from "./target.js";
 
 export class DevDataError extends Error {
+  /** A failure the contributor or the product's SQL caused, not a devtools bug: never sent to Sentry. */
+  readonly expected = true;
   constructor(message: string) {
     super(message);
     this.name = "DevDataError";
   }
 }
 
+/** A Postgres SQLSTATE: five characters, digits and capitals. Connection errors (`ECONNREFUSED`) are not. */
+function isSqlState(code: unknown): code is string {
+  return typeof code === "string" && /^[0-9A-Z]{5}$/.test(code);
+}
+
 /**
- * Whether `err` is Postgres saying a table or schema does not exist
- * (SQLSTATE 42P01 undefined_table, 3F000 invalid_schema_name): the database
- * has not had the product's schema applied yet.
+ * The line of `text` a Postgres error points at, from the error's 1-based
+ * character `position`, or null when it carries none.
  */
-export function isMissingSchemaError(err: unknown): boolean {
-  const code = (err as { code?: unknown } | null)?.code;
-  return code === "42P01" || code === "3F000";
+export function errorLine(err: unknown, text: string): number | null {
+  const raw = (err as { position?: unknown } | null)?.position;
+  const position = typeof raw === "string" ? Number(raw) : raw;
+  if (typeof position !== "number" || !Number.isInteger(position)) return null;
+  if (position < 1 || position > text.length + 1) return null;
+  return text.slice(0, position - 1).split("\n").length;
 }
 
 export interface Member {
@@ -50,6 +59,13 @@ export interface Member {
 export interface SqlSession {
   members(provider: string): Promise<Member[]>;
   memberByRef(ref: string): Promise<Member | null>;
+  /**
+   * Versions in the target's `supabase_migrations.schema_migrations` ledger,
+   * or null when the database has no ledger at all (never migrated, or reset).
+   */
+  appliedMigrations(): Promise<string[] | null>;
+  /** Which of `schemas` do not exist in this database. */
+  missingSchemas(schemas: readonly string[]): Promise<string[]>;
   runAs(memberId: string, sql: string): Promise<void>;
   close(): Promise<void>;
 }
@@ -88,6 +104,20 @@ export function postgresSession(dbUrl: string): SqlSession {
             lastSignInAt: row.last_sign_in_at?.toISOString() ?? null,
           }
         : null;
+    },
+    async appliedMigrations() {
+      const [table] = await sql<{ present: string | null }[]>`
+        select to_regclass('supabase_migrations.schema_migrations')::text as present`;
+      if (!table?.present) return null;
+      const rows = await sql<{ version: string }[]>`
+        select version from supabase_migrations.schema_migrations`;
+      return rows.map((r) => r.version);
+    },
+    async missingSchemas(schemas) {
+      const rows = await sql<{ nspname: string }[]>`
+        select nspname from pg_namespace where nspname = any(${[...schemas]})`;
+      const present = new Set(rows.map((r) => r.nspname));
+      return schemas.filter((name) => !present.has(name));
     },
     async runAs(memberId, text) {
       await sql.begin(async (tx) => {
@@ -131,15 +161,18 @@ export async function runDevData(
 
   const session = open(target.dbUrl);
   try {
-    return await seed(session, devData.file, text, options, log);
-  } catch (err) {
-    if (isMissingSchemaError(err)) {
+    // Checked before any statement of the file runs, so "the schema is not
+    // here yet" can never be confused with a mistake in the product's SQL.
+    const missing = await session.missingSchemas(
+      product.config.supabase.schemas,
+    );
+    if (missing.length > 0) {
       throw new DevDataError(
-        `This database does not have ${product.config.name}'s tables yet (${(err as Error).message}). ` +
+        `This database does not have ${product.config.name}'s ${missing.length === 1 ? "schema" : "schemas"} yet (missing: ${missing.join(", ")}). ` +
           "Run `devtools setup` first, or `devtools db sync` if you have already set up.",
       );
     }
-    throw err;
+    return await seed(session, devData.file, text, options, log);
   } finally {
     await session.close();
   }
@@ -169,6 +202,16 @@ async function seed(
     );
     return null;
   }
-  await session.runAs(member.id, text);
+  try {
+    await session.runAs(member.id, text);
+  } catch (err) {
+    // The file is the product's own SQL: say what Postgres said and where.
+    if (!isSqlState((err as { code?: unknown } | null)?.code)) throw err;
+    const line = errorLine(err, text);
+    throw new DevDataError(
+      `${file}${line === null ? "" : `:${line}`}: ${(err as Error).message}. ` +
+        "This is a problem in the product's dev-data SQL, not in devtools; nothing was seeded (the file runs in one transaction).",
+    );
+  }
   return { member, file };
 }

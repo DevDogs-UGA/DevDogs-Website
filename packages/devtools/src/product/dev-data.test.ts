@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   DevDataError,
-  isMissingSchemaError,
+  errorLine,
   runDevData,
   type Member,
   type SqlSession,
@@ -23,12 +23,17 @@ const MEMBER: Member = {
   lastSignInAt: null,
 };
 
-function fakeSession(members: Member[] = [MEMBER]) {
+function fakeSession(
+  members: Member[] = [MEMBER],
+  missingSchemas: string[] = [],
+) {
   const ran: { memberId: string; sql: string }[] = [];
   let closed = false;
   const members_ = vi.fn().mockResolvedValue(members);
   const session: SqlSession = {
     members: members_,
+    appliedMigrations: () => Promise.resolve([]),
+    missingSchemas: vi.fn().mockResolvedValue(missingSchemas),
     memberByRef: vi.fn((ref: string) =>
       Promise.resolve(
         members.find((m) => m.id === ref || m.email === ref) ?? null,
@@ -139,38 +144,74 @@ describe("runDevData", () => {
 });
 
 describe("a database without the schema", () => {
-  const missing = (code: string) =>
-    Object.assign(new Error('relation "dogpack.sessions" does not exist'), {
+  it("is caught before the file runs, naming the missing schema and what to run", async () => {
+    const { session, ran, wasClosed } = fakeSession([MEMBER], ["dogpack"]);
+    const failure = runDevData(makeProduct(), LOCAL, () => session, {
+      provider: "p",
+    });
+    await expect(failure).rejects.toBeInstanceOf(DevDataError);
+    await expect(failure).rejects.toThrow(/missing: dogpack/);
+    await expect(failure).rejects.toThrow(/devtools setup/);
+    await expect(failure).rejects.toThrow(/devtools db sync/);
+    expect(ran).toEqual([]);
+    expect(wasClosed()).toBe(true);
+  });
+});
+
+describe("an error from the product's own dev-data.sql", () => {
+  const sqlError = (code: string, position?: string) =>
+    Object.assign(new Error('relation "dogpack.sesions" does not exist'), {
       code,
+      position,
     });
 
-  it("recognises undefined_table and invalid_schema_name", () => {
-    expect(isMissingSchemaError(missing("42P01"))).toBe(true);
-    expect(isMissingSchemaError(missing("3F000"))).toBe(true);
-    expect(isMissingSchemaError(missing("23505"))).toBe(false);
-    expect(isMissingSchemaError(new Error("nope"))).toBe(false);
-    expect(isMissingSchemaError(null)).toBe(false);
-  });
-
-  it("turns a missing table into a DevDataError that says what to run", async () => {
-    const product = makeProduct();
+  it("is an expected DevDataError with the Postgres message, file and line, even for 42P01", async () => {
+    const product = makeProduct({
+      files: {
+        "supabase/dev-data.sql":
+          "select 1;\nselect 2;\ninsert into dogpack.sesions values (1);\n",
+      },
+    });
     const { session, wasClosed } = fakeSession();
-    session.runAs = () => Promise.reject(missing("42P01"));
+    // Position 22 is on the third line.
+    session.runAs = () => Promise.reject(sqlError("42P01", "22"));
     const failure = runDevData(product, LOCAL, () => session, {
       provider: "p",
     });
     await expect(failure).rejects.toBeInstanceOf(DevDataError);
-    await expect(failure).rejects.toThrow(/devtools setup/);
-    await expect(failure).rejects.toThrow(/devtools db sync/);
+    await expect(failure).rejects.toThrow(
+      /supabase\/dev-data\.sql:3: relation "dogpack\.sesions" does not exist/,
+    );
+    await expect(failure).rejects.not.toThrow(/devtools setup/);
+    await expect(failure).rejects.toMatchObject({ expected: true });
     expect(wasClosed()).toBe(true);
   });
 
-  it("leaves other database errors alone", async () => {
-    const product = makeProduct();
+  it("names the file alone when Postgres gives no position", async () => {
     const { session } = fakeSession();
-    session.runAs = () => Promise.reject(missing("23505"));
+    session.runAs = () => Promise.reject(sqlError("23505"));
     await expect(
-      runDevData(product, LOCAL, () => session, { provider: "p" }),
+      runDevData(makeProduct(), LOCAL, () => session, { provider: "p" }),
+    ).rejects.toThrow(/^supabase\/dev-data\.sql: /);
+  });
+
+  it("leaves a connection failure alone, since that is not the file's fault", async () => {
+    const { session } = fakeSession();
+    session.runAs = () =>
+      Promise.reject(
+        Object.assign(new Error("refused"), { code: "ECONNREFUSED" }),
+      );
+    await expect(
+      runDevData(makeProduct(), LOCAL, () => session, { provider: "p" }),
     ).rejects.not.toBeInstanceOf(DevDataError);
+  });
+});
+
+describe("errorLine", () => {
+  it("counts lines up to the 1-based position", () => {
+    expect(errorLine({ position: "1" }, "a\nb")).toBe(1);
+    expect(errorLine({ position: "3" }, "a\nb")).toBe(2);
+    expect(errorLine({}, "a")).toBeNull();
+    expect(errorLine({ position: "99" }, "a")).toBeNull();
   });
 });
