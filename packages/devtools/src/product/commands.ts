@@ -246,7 +246,6 @@ async function runSync(
     confirmDestructive: deps.interactive() ? confirmDestructive : undefined,
     dryRun,
     log: (line) => log.info(line),
-    open: deps.openSql,
   });
 
   if (rest.includes("--rebuild") && !dryRun) {
@@ -280,7 +279,7 @@ export async function regenerateAfterSync(
     log.info(`Would regenerate ${product.config.types.out}.`);
     return;
   }
-  if (!result.applied && typesAreCurrent(product)) return;
+  if (!result.migration && typesAreCurrent(product)) return;
   try {
     await generateTypes(product, cli, target, deps.run, (line) =>
       log.info(line),
@@ -360,7 +359,7 @@ export function createProductHandlers(
       switch (sub) {
         case "sync": {
           const { result, cli, target } = await runSync(product, deps, flags);
-          if (result.applied) {
+          if (result.migration) {
             log.success("Your database now matches supabase/schemas.");
           }
           await regenerateAfterSync(product, cli, target, result, deps);
@@ -750,10 +749,9 @@ async function runSetup(
     yes: hasYes(rest),
     confirmDestructive: deps.interactive() ? confirmDestructive : undefined,
     log: (line) => log.info(line),
-    open: deps.openSql,
   });
   log.success(
-    result.applied
+    result.migration
       ? "Applied supabase/schemas to your database."
       : "Your database already matched supabase/schemas.",
   );
