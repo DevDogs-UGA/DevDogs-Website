@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   ensureHostedAuthSettings,
@@ -123,7 +124,7 @@ describe("resolveSupabaseCli", () => {
     const { run, calls } = recordingRunner(() => ({ stdout: "2.117.0\n" }));
     const cli = await resolveSupabaseCli("/repo", "2.117.0", run, () => true);
     expect(cli).toEqual({
-      command: "/repo/node_modules/.bin/supabase",
+      command: join("/repo", "node_modules", ".bin", "supabase"),
       prefix: [],
       source: "repo",
     });

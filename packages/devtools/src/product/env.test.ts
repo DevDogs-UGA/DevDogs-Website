@@ -60,12 +60,15 @@ describe("upsertEnvFile", () => {
     });
   });
 
-  it("writes the file readable by its owner only", () => {
-    const product = makeProduct();
-    const file = join(product.root, ".env.tooling");
-    upsertEnvFile(file, { SECRET_KEY: "k" });
-    expect(statSync(file).mode & 0o077).toBe(0);
-  });
+  it.skipIf(process.platform === "win32")(
+    "writes the file readable by its owner only",
+    () => {
+      const product = makeProduct();
+      const file = join(product.root, ".env.tooling");
+      upsertEnvFile(file, { SECRET_KEY: "k" });
+      expect(statSync(file).mode & 0o077).toBe(0);
+    },
+  );
 });
 
 describe("findSecrets", () => {

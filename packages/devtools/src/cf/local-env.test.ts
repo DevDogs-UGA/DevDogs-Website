@@ -110,22 +110,26 @@ describe("withWranglerEnv", () => {
     expect(rendered).toBe("PRESENT='here'\n");
   });
 
-  it("writes the file at mode 0600 and the callback's return value passes through", async () => {
-    const entries = [entry("KEY", "sandbox")];
-    const env = { KEY: "value" };
+  // Windows has no POSIX file modes; the callback value passes through there too.
+  it.skipIf(process.platform === "win32")(
+    "writes the file at mode 0600 and the callback's return value passes through",
+    async () => {
+      const entries = [entry("KEY", "sandbox")];
+      const env = { KEY: "value" };
 
-    const result = await withWranglerEnv(
-      "sandbox",
-      async (path) => {
-        const mode = statSync(path).mode & 0o777;
-        expect(mode).toBe(0o600);
-        return 42;
-      },
-      { env, entries },
-    );
+      const result = await withWranglerEnv(
+        "sandbox",
+        async (path) => {
+          const mode = statSync(path).mode & 0o777;
+          expect(mode).toBe(0o600);
+          return 42;
+        },
+        { env, entries },
+      );
 
-    expect(result).toBe(42);
-  });
+      expect(result).toBe(42);
+    },
+  );
 
   it("removes the directory after the callback resolves", async () => {
     let capturedPath = "";
