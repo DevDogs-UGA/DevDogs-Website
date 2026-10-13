@@ -363,7 +363,20 @@ describe("devtools contract tests", () => {
       },
     );
     expect(status).not.toBe(0);
-    expect(stderr).toContain("run this from inside a DevDogsUGA clone");
+    expect(stderr).toContain(
+      "`devtools jobs list` needs a DevDogsUGA clone or a product repository",
+    );
+    // A sentence, not a crash: no stack and no workspace-walk error.
+    expect(stderr).not.toContain("    at ");
+    expect(stderr).not.toContain("monorepo root");
+  });
+
+  it("answers --version and --help outside any checkout", async () => {
+    const version = await run(["--version"], { cwd: tmpdir() });
+    expect(version.status).toBe(0);
+    expect(version.stdout.trim()).toMatch(/^\d+\.\d+\.\d+/);
+    const help = await run(["--help"], { cwd: tmpdir() });
+    expect(help.status).toBe(0);
   });
 
   it("refuses to guess a tier when nobody can answer", async () => {
@@ -708,6 +721,20 @@ describe("devtools contract tests", () => {
       }
       expect(stdout).not.toMatch(/^ {2}jobs\s/m);
       expect(stdout).not.toMatch(/^ {2}wrangler\s/m);
+    });
+
+    it("a bare devtools with no terminal lists the product's commands", async () => {
+      const { status, stdout, stderr } = await runProduct([]);
+      expect(status).toBe(0);
+      expect(stdout).toMatch(/^ {2}setup\s/m);
+      expect(`${stdout}${stderr}`).not.toContain("RepoNotFoundError");
+      expect(`${stdout}${stderr}`).not.toContain("DevDogsUGA clone");
+    });
+
+    it("answers --version", async () => {
+      const { status, stdout } = await runProduct(["--version"]);
+      expect(status).toBe(0);
+      expect(stdout.trim()).toMatch(/^\d+\.\d+\.\d+/);
     });
 
     it("lists db's subcommands", async () => {

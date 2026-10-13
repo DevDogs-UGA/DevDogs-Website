@@ -221,6 +221,43 @@ jobs:
         run: |
           pnpm --filter platform run types:cf:check
 
+  # The contributor CLI on Windows, where its members run it. Linux CI cannot
+  # see the failures that sent DEVTOOLS-B to Sentry: `npx`, `pnpm` and
+  # `supabase` are .cmd shims there, which Node cannot spawn by name. Installs
+  # only what devtools and cli-core need (not the apps), runs their unit
+  # tests, then smoke-runs the built bin from a minimal product repository and
+  # from an empty directory with no terminal (scripts/smoke-product.mjs),
+  # including a command that starts `npx`. Gates both publishes below: a
+  # prerelease that cannot start on Windows should not reach `next`.
+  windows:
+    if: github.event_name != 'schedule'
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+        shell: bash
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install devtools and cli-core
+        run: pnpm install --frozen-lockfile --filter '@devdogsuga/devtools...' --filter '@devdogsuga/cli-core...'
+        shell: bash
+      - name: Build devtools
+        run: pnpm --filter '@devdogsuga/devtools...' --if-present run build
+        shell: bash
+      - name: cli-core unit tests
+        run: pnpm --filter @devdogsuga/cli-core run test
+        shell: bash
+      - name: devtools unit tests
+        run: pnpm --filter @devdogsuga/devtools run test
+        shell: bash
+      - name: Smoke-run the built CLI in a product fixture
+        run: node packages/devtools/scripts/smoke-product.mjs
+        shell: bash
+
   # Everything that needs a real Postgres: the RLS suite, the platform's query
   # tests, and the production build with the env schema enforced.
   #
@@ -414,7 +451,7 @@ jobs:
   # Never a blank environment: that would accept any ci.yaml run on any ref.
   # The first prerelease below needs them too: that is a pre-flight item, not a Gate one.
   publish:
-    needs: validate
+    needs: [validate, windows]
     if: >-
       github.event_name == 'push' && github.ref == 'refs/heads/main'
       && vars.BACKSTAGE_PUBLISHES_STABLE == 'true'
@@ -431,7 +468,7 @@ jobs:
   # npm prereleases ride the push to main (Q88); only the Dart SDK publishes by
   # tag push (publish-dart.yaml).
   publish-next:
-    needs: validate
+    needs: [validate, windows]
     if: >-
       github.event_name == 'push' && github.ref == 'refs/heads/main'
       && vars.BACKSTAGE_PUBLISHES_NEXT != 'false'

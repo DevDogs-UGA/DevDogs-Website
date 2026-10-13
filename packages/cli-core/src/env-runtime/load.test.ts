@@ -9,6 +9,7 @@ import {
   GENERATED_FILE,
   HYPERDRIVE_LOCAL_CONNECTION_ENV,
   loadEnvironment,
+  locateRepoRoot,
   LocalStackOfflineError,
   MissingEnvFileError,
   parseRawAssignments,
@@ -841,5 +842,26 @@ describe("parseRawAssignments", () => {
       raw: "https://$PROJECT_REF.supabase.co",
       literal: false,
     });
+  });
+});
+
+describe("locateRepoRoot", () => {
+  it("starts from the directory the command runs in, not from this module", async () => {
+    // A published copy lives in an npx/dlx cache with no workspace above it, so
+    // the walk from its own directory finds nothing; the checkout is where the
+    // person is standing.
+    const root = mkdtempSync(join(tmpdir(), "devtools-locate-"));
+    writeFileSync(join(root, "pnpm-workspace.yaml"), "packages: []\n");
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({ name: "devdogs-monorepo" }),
+    );
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(root);
+    try {
+      await expect(locateRepoRoot()).resolves.toBe(root);
+    } finally {
+      cwd.mockRestore();
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

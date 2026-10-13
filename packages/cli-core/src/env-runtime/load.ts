@@ -454,7 +454,7 @@ export async function probeLocalStack(
  * exiting the whole process out from under an unrelated caller would be a far
  * worse failure than a rejected promise.
  */
-async function findRepoRoot(): Promise<string> {
+export async function locateRepoRoot(): Promise<string> {
   // The checkout the command is run from comes first. The walk from this
   // module's own directory below only finds a workspace when devtools runs
   // from source inside one; a published copy (`npx`, `pnpm dlx`) lives in a
@@ -579,7 +579,7 @@ export async function loadEnvironment(
   },
 ): Promise<LoadedEnvironment> {
   const override = options?.override ?? false;
-  const root = context?.root ?? (await findRepoRoot());
+  const root = context?.root ?? (await locateRepoRoot());
 
   let exists = context?.exists;
   if (!exists) {
