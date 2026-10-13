@@ -415,7 +415,7 @@ async function reconcileLive(
         `devtools cannot tell whether ${drops.length === 1 ? "this migration" : "these migrations"} ran in your database: it has no migration history table and this folder has no record of what was applied. ${drops.length === 1 ? "It drops" : "They drop"} something, so devtools will not guess and nothing was changed or marked applied.`,
         `${drops.join("\n")}\n${
           target.kind === "local"
-            ? "Run `devtools db sync --rebuild` (it wipes your development database), then `devtools dev-data`; or delete supabase/migrations and run `devtools db sync` again."
+            ? "Run `devtools db sync --rebuild` (it wipes your development database), then `devtools dev-data`."
             : "Delete supabase/migrations and run `devtools db sync` again, or reset the project from its dashboard (Database > Settings)."
         }`,
       );
@@ -514,7 +514,7 @@ async function reconcileLive(
       if (repaired.code !== 0) {
         throw new SyncError(
           "Could not record the applied migrations in the database's history.",
-          redact(repaired.stderr || repaired.stdout),
+          redact(outputOf(repaired)),
         );
       }
     }
@@ -667,7 +667,7 @@ export async function dbSync(
     if (fetched.code !== 0 && (ledger0 ?? []).length > 0) {
       throw new SyncError(
         "Could not restore this database's migration history from the database itself, so nothing was changed.",
-        redact(fetched.stderr || fetched.stdout),
+        redact(outputOf(fetched)),
       );
     }
     const restoredFiles = migrationFiles(migrationsDir).length;
@@ -705,7 +705,7 @@ export async function dbSync(
       isContainerFailure(generated)
         ? "Could not diff the schema: Docker is needed for the shadow database. Start Docker and try again."
         : "Could not diff the schema against what this database has had applied.",
-      redact(generated.stderr || generated.stdout),
+      redact(outputOf(generated)),
     );
   }
   const created = migrationFiles(migrationsDir).filter((f) => !before.has(f));
@@ -762,7 +762,7 @@ export async function dbSync(
     // The record now lists a migration the database does not have. Remove it
     // so the next sync diffs from what is true.
     for (const file of created) rmSync(join(migrationsDir, file));
-    const why = redact(applied.stderr || applied.stdout);
+    const why = redact(outputOf(applied));
     throw new SyncError(
       /migration versions not found|history does not match/i.test(why)
         ? "The change did not apply: the database's migration history and supabase/migrations disagree. The error below is the database's own."
@@ -772,6 +772,13 @@ export async function dbSync(
   }
   writeRecord(product, target, migrationFiles(migrationsDir));
   return { migration, applied: true, destructive, ...live };
+}
+
+/** Both streams: the CLI prints progress on stderr and its error on stdout (or the other way round). */
+function outputOf(result: { stderr: string; stdout: string }): string {
+  return [result.stderr.trim(), result.stdout.trim()]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function isContainerFailure(result: {

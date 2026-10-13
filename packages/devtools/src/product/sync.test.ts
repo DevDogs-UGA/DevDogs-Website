@@ -1102,3 +1102,30 @@ describe("dbSync, an unreachable database", () => {
     ]);
   });
 });
+
+describe("dbSync, a failed apply", () => {
+  it("shows the CLI's error even when it also printed progress on the other stream", async () => {
+    const product = makeProduct();
+    const { run } = recordingRunner(({ args }) => {
+      if (args.includes("declarative")) {
+        writeFiles(product.root, {
+          "supabase/migrations/20261011120000_devtools_sync.sql": CREATE,
+        });
+        return { stdout: "" };
+      }
+      if (args[0] === "migration") {
+        return {
+          code: 1,
+          stderr: "Connecting to local database...",
+          stdout: '{"error":{"message":"relation already exists"}}',
+        };
+      }
+      return undefined;
+    });
+    const error = await dbSync(product, CLI, LOCAL, run, {
+      yes: true,
+    }).catch((err: unknown) => err as SyncError);
+    expect(error.output).toContain("Connecting to local database...");
+    expect(error.output).toContain("relation already exists");
+  });
+});
