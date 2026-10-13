@@ -26,7 +26,7 @@ void main() {
     );
     expect(
       const MissingEnvException(['A']).toString(),
-      contains('devtools@next setup'),
+      contains('pnpm devtools setup'),
     );
   });
 
