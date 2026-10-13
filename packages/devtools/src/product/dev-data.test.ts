@@ -35,6 +35,7 @@ function fakeSession(
     appliedMigrations: () => Promise.resolve([]),
     existingObjects: () => Promise.resolve(new Set<string>()),
     columnTypes: () => Promise.resolve(new Map<string, string>()),
+    privileges: () => Promise.resolve(new Map()),
     missingSchemas: vi.fn().mockResolvedValue(missingSchemas),
     memberByRef: vi.fn((ref: string) =>
       Promise.resolve(

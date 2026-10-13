@@ -248,6 +248,13 @@ interface Drop {
   column?: { table: string; name: string };
 }
 
+/** A privilege on a table, a column of it, a function, a schema, ... */
+interface PrivUnit {
+  priv: string;
+  /** Set for a column-level privilege. */
+  column?: string;
+}
+
 /** A GRANT or REVOKE, in the order the diff has them. */
 interface Privilege {
   sql: string;
@@ -260,7 +267,46 @@ interface Privilege {
   object: string | null;
   /** Who loses the privileges (a REVOKE). */
   from: string;
+  /** TABLE, SEQUENCE, FUNCTION, SCHEMA, ... (TABLE when the statement does not say). */
+  kind: string;
+  /** What the statement grants or revokes, upper case; `ALL` stands for every privilege. */
+  units: PrivUnit[];
+  /** Who it is granted to or revoked from, as written (`raw`) and as the database names them. */
+  grantees: { raw: string; name: string }[];
+  /** `ON TABLE "s"."t"`, to write the statement again with other privileges. */
+  onText: string;
+  /** ` WITH GRANT OPTION`, or nothing. */
+  option: string;
 }
+
+/**
+ * What the live database grants: `schema.table`, `schema.table.column`,
+ * `schema.fn(types)` or a schema name -> grantee (`public` for PUBLIC) ->
+ * privileges, upper case.
+ */
+export type LivePrivileges = ReadonlyMap<
+  string,
+  ReadonlyMap<string, ReadonlySet<string>>
+>;
+
+const ALL_PRIVILEGES: Record<string, string[]> = {
+  TABLE: [
+    "SELECT",
+    "INSERT",
+    "UPDATE",
+    "DELETE",
+    "TRUNCATE",
+    "REFERENCES",
+    "TRIGGER",
+  ],
+  COLUMN: ["SELECT", "INSERT", "UPDATE", "REFERENCES"],
+  SEQUENCE: ["USAGE", "SELECT", "UPDATE"],
+  FUNCTION: ["EXECUTE"],
+  PROCEDURE: ["EXECUTE"],
+  SCHEMA: ["USAGE", "CREATE"],
+  TYPE: ["USAGE"],
+  DOMAIN: ["USAGE"],
+};
 
 /** Reads what a GRANT or REVOKE is on. */
 function privilegeOf(text: string, revoke: boolean): Privilege {
@@ -268,13 +314,18 @@ function privilegeOf(text: string, revoke: boolean): Privilege {
     String.raw`\bON\s+(?:(TABLE|SEQUENCE|FUNCTION|PROCEDURE|SCHEMA|TYPE|DOMAIN)\s+)?(${QNAME})(\s*\(.*\))?\s+(?:FROM|TO)\s+(.+)$`,
     "is",
   ).exec(text);
-  const base = {
+  const base: Privilege = {
     sql: text,
     revoke,
     targets: [],
     base: "",
     object: null,
     from: "",
+    kind: "TABLE",
+    units: [],
+    grantees: [],
+    onText: "",
+    option: "",
   };
   if (!on) return base;
   const kind = (on[1] ?? "").toUpperCase();
@@ -282,21 +333,51 @@ function privilegeOf(text: string, revoke: boolean): Privilege {
   const isFunction = kind === "FUNCTION" || kind === "PROCEDURE";
   const sig = isFunction ? signatureOf(balanced(on[3] ?? "") ?? "") : "";
   const object = `${qualified(name)}${sig}`;
-  const columns = isFunction
-    ? []
-    : [...text.slice(0, on.index).matchAll(/\(([^)]*)\)/g)].flatMap((m) =>
-        m[1]!
-          .split(",")
-          .map((c) => parts(c)[0])
-          .filter((c): c is string => Boolean(c)),
-      );
+  const head = text
+    .slice(0, on.index)
+    .replace(/^(?:GRANT|REVOKE)\s+(?:GRANT\s+OPTION\s+FOR\s+)?/i, "");
+  const units: PrivUnit[] = [];
+  for (const entry of splitTopLevel(head)) {
+    const word = entry
+      .replace(/\(.*\)/s, "")
+      .trim()
+      .toUpperCase()
+      .replace(/^ALL\s+PRIVILEGES$/, "ALL");
+    const cols = /\(([^)]*)\)/.exec(entry)?.[1];
+    if (cols && !isFunction) {
+      for (const c of cols.split(",")) {
+        const column = parts(c)[0];
+        if (column) units.push({ priv: word, column });
+      }
+    } else if (word) units.push({ priv: word });
+  }
+  const columns = units.flatMap((u) => (u.column ? [u.column] : []));
+  const tail = on[4]!;
+  const option = /\bWITH\s+GRANT\s+OPTION\b/i.test(tail)
+    ? " WITH GRANT OPTION"
+    : "";
+  const who = tail
+    .replace(/\s+WITH\s+GRANT\s+OPTION\b/i, "")
+    .replace(/\s+(?:CASCADE|RESTRICT)\s*$/i, "")
+    .replace(/\s+GRANTED\s+BY\s+.+$/i, "");
   return {
     ...base,
     base: object,
     targets:
       columns.length > 0 ? columns.map((c) => `${object}.${c}`) : [object],
     object: `privileges on ${isFunction ? "function " : ""}${shown(name)}${sig}`,
-    from: on[4]!.replace(/"/g, ""),
+    from: tail.replace(/"/g, ""),
+    kind: kind || "TABLE",
+    units,
+    grantees: splitTopLevel(who).map((raw) => {
+      const name = raw.replace(/^GROUP\s+/i, "").trim();
+      return {
+        raw: name,
+        name: /^public$/i.test(name) ? "public" : (parts(name)[0] ?? name),
+      };
+    }),
+    onText: `ON ${kind ? kind + " " : ""}${name}${on[3] ?? ""}`,
+    option,
   };
 }
 
@@ -332,6 +413,7 @@ export function classifyDiff(
   sql: string,
   existing: Existing,
   columnTypes: ReadonlyMap<string, string> = new Map(),
+  livePrivileges?: LivePrivileges,
 ): Drift {
   // `signature:schema.fn(types)` entries say which overloads exist.
   const signatures = new Set<string>();
@@ -343,6 +425,9 @@ export function classifyDiff(
   const creates: Create[] = [];
   const drops: Drop[] = [];
   const conflicts = new Map<string, Set<string>>();
+  // Keys of objects already listed as conflicting (a function whose body
+  // differs); a DROP of the same one in the diff is not a separate extra.
+  const conflicted = new Set<string>();
   const extras: Finding[] = [];
   const preamble: string[] = [];
   const privileges: Privilege[] = [];
@@ -407,6 +492,7 @@ export function classifyDiff(
           (signatures.size === 0 && existing.has(`function:${qualified(name)}`))
         : existing.has(key);
       if (replace && exists) {
+        conflicted.add(key);
         conflict(label, "its definition differs from supabase/schemas");
       } else {
         creates.push({ key, sql: statement, label });
@@ -531,6 +617,7 @@ export function classifyDiff(
   const dropped = new Set(liveDrops.map((d) => d.key));
   const restoring = liveCreates.filter((c) => !dropped.has(c.key));
   for (const d of liveDrops) {
+    if (conflicted.has(d.key)) continue;
     if (created.has(d.key)) {
       conflict(
         d.finding.object,
@@ -551,12 +638,30 @@ export function classifyDiff(
       .map((key) => key.slice(key.indexOf(":") + 1)),
   );
   const tail: string[] = [];
-  // Existing things that get privileges granted again. pg-delta writes a
-  // difference in privileges as REVOKE ALL followed by the GRANTs the record
-  // has, in either direction, so the GRANT is applied (it only adds) and said
-  // so; the REVOKE is not, and it cannot tell us what else the member granted.
+  // Privileges on things that exist. pg-delta writes a difference as REVOKE ALL
+  // followed by the GRANTs the record has, which says nothing about WHICH
+  // privileges differ, so the statements are not trusted: what the schema
+  // grants (the GRANTs) is compared with what the database grants. What the
+  // database lacks is granted again (GRANT only adds); what it has beyond that
+  // is a member's and is listed, never revoked.
   const regranted = new Set<string>();
-  const revokes: Privilege[] = [];
+  const grants = new Map<string, Set<string>>();
+  const revokes = new Map<
+    string,
+    { p: Privilege; grantee: string; target: string; privs: Set<string> }
+  >();
+  const grantOf = (target: string, grantee: string) => {
+    const key = `${target}|${grantee}`;
+    const set = grants.get(key) ?? new Set<string>();
+    grants.set(key, set);
+    return set;
+  };
+  const expand = (p: Privilege, u: PrivUnit): string[] =>
+    u.priv === "ALL"
+      ? (ALL_PRIVILEGES[u.column ? "COLUMN" : p.kind] ?? [])
+      : [u.priv];
+  const granting: { p: Privilege; grantee: Privilege["grantees"][number] }[] =
+    [];
   for (const p of privileges) {
     // Privileges on a column that is not being recreated (a likely rename).
     if (p.targets.length > 0 && p.targets.every((t) => skipped.has(t))) {
@@ -565,19 +670,106 @@ export function classifyDiff(
     const isNew =
       p.targets.length > 0 &&
       (newNames.has(p.base) || p.targets.every((t) => newNames.has(t)));
-    if (isNew) tail.push(p.sql);
-    else if (!p.revoke) {
+    if (isNew) {
       tail.push(p.sql);
-      regranted.add(p.object ?? "privileges");
-    } else revokes.push(p);
+      continue;
+    }
+    if (!p.object || p.grantees.length === 0 || p.units.length === 0) {
+      // Not readable (a role grant, ...): a GRANT only adds, a REVOKE is not run.
+      if (!p.revoke) {
+        tail.push(p.sql);
+        regranted.add(p.object ?? "privileges");
+      } else {
+        extras.push({
+          object: p.object ?? "privileges",
+          detail: "differ from what supabase/schemas grants",
+        });
+      }
+      continue;
+    }
+    for (const grantee of p.grantees) {
+      for (const u of p.units) {
+        const target = u.column ? `${p.base}.${u.column}` : p.base;
+        if (p.revoke) {
+          const key = `${target}|${grantee.name}`;
+          const entry = revokes.get(key) ?? {
+            p,
+            grantee: grantee.name,
+            target,
+            privs: new Set<string>(),
+          };
+          for (const priv of u.priv === "ALL" ? ["ALL"] : [u.priv]) {
+            entry.privs.add(priv);
+          }
+          revokes.set(key, entry);
+        } else {
+          for (const priv of expand(p, u))
+            grantOf(target, grantee.name).add(priv);
+        }
+      }
+      if (!p.revoke) granting.push({ p, grantee });
+    }
   }
-  for (const p of revokes) {
-    if (p.object && regranted.has(p.object)) continue;
+  const liveOf = (target: string, grantee: string) =>
+    livePrivileges
+      ? (livePrivileges.get(target)?.get(grantee) ?? new Set<string>())
+      : null;
+  // What is missing: granted by the schema, not by the database.
+  const written = new Set<string>();
+  for (const { p, grantee } of granting) {
+    const byPriv: string[] = [];
+    const byColumn: string[] = [];
+    for (const u of p.units) {
+      const target = u.column ? `${p.base}.${u.column}` : p.base;
+      const live = liveOf(target, grantee.name);
+      for (const priv of expand(p, u)) {
+        if (live?.has(priv)) continue;
+        if (u.column) byColumn.push(`${priv} ("${u.column}")`);
+        else byPriv.push(u.priv === "ALL" ? priv : u.priv);
+      }
+    }
+    const missing = [...new Set(byPriv)];
+    const statements = [
+      ...(missing.length > 0
+        ? [
+            `GRANT ${missing.join(", ")} ${p.onText} TO ${grantee.raw}${p.option}`,
+          ]
+        : []),
+      ...[...new Set(byColumn)].map(
+        (c) => `GRANT ${c} ${p.onText} TO ${grantee.raw}${p.option}`,
+      ),
+    ];
+    for (const statement of statements) {
+      if (written.has(statement)) continue;
+      written.add(statement);
+      tail.push(statement);
+      regranted.add(p.object!);
+    }
+  }
+  // What is extra: revoked by the diff, and held by the database.
+  for (const { p, grantee, target, privs } of revokes.values()) {
+    const granted = grants.get(`${target}|${grantee}`) ?? new Set<string>();
+    const live = liveOf(target, grantee);
+    if (live === null) {
+      // Without the database's privileges, a REVOKE the schema does not
+      // grant back is taken to be a privilege beyond the schema.
+      if (granted.size > 0) continue;
+      extras.push({
+        object: p.object!,
+        detail: `granted to ${grantee} beyond (or instead of) what supabase/schemas grants`,
+      });
+      continue;
+    }
+    const revoked = privs.has("ALL") ? [...live] : [...privs];
+    const beyond = revoked.filter(
+      (priv) => live.has(priv) && !granted.has(priv),
+    );
+    if (beyond.length === 0) continue;
+    const column =
+      target === p.base ? "" : ` (column "${target.slice(p.base.length + 1)}")`;
     extras.push({
-      object: p.object ?? "privileges",
-      detail: p.object
-        ? `granted to ${p.from} beyond (or instead of) what supabase/schemas grants`
-        : "differ from what supabase/schemas grants",
+      object: p.object!,
+      detail: `${beyond.sort().join(", ")}${column} granted to ${grantee} beyond what supabase/schemas grants`,
     });
   }
 

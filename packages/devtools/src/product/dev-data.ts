@@ -21,6 +21,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import postgres from "postgres";
 import type { Product } from "./config.js";
+import { signatureOf, type LivePrivileges } from "./drift.js";
 import { assertNotProduction, type DbTarget, TargetError } from "./target.js";
 
 export class DevDataError extends Error {
@@ -83,6 +84,13 @@ export interface SqlSession {
   existingObjects(schemas: readonly string[]): Promise<Set<string>>;
   /** Column types in `schemas`, keyed `schema.table.column`, as Postgres spells them (`format_type`). */
   columnTypes(schemas: readonly string[]): Promise<Map<string, string>>;
+  /**
+   * What each role can do with the tables, sequences, functions and schemas
+   * (and columns) in `schemas`: `schema.table`, `schema.table.column`,
+   * `schema.fn(types)` or a schema name -> role (`public` for PUBLIC) ->
+   * privileges, upper case. Read from the ACLs, defaults included.
+   */
+  privileges(schemas: readonly string[]): Promise<LivePrivileges>;
   /** Runs `sql` as is, in one transaction. */
   exec(sql: string): Promise<void>;
   runAs(memberId: string, sql: string): Promise<void>;
@@ -177,6 +185,64 @@ export function postgresSession(dbUrl: string): SqlSession {
         where n.nspname = any(${[...schemas]}) and c.relkind in ('r', 'p', 'f')
           and a.attnum > 0 and not a.attisdropped`;
       return new Map(rows.map((r) => [`${r.s}.${r.t}.${r.c}`, r.type]));
+    },
+    async privileges(schemas) {
+      const list = [...schemas];
+      const out = new Map<string, Map<string, Set<string>>>();
+      const add = (key: string, role: string | null, priv: string) => {
+        const roles = out.get(key) ?? new Map<string, Set<string>>();
+        out.set(key, roles);
+        const name = role ?? "public";
+        const set = roles.get(name) ?? new Set<string>();
+        roles.set(name, set);
+        set.add(priv);
+      };
+      type Row = { key: string; role: string | null; priv: string };
+      const relations = await sql<Row[]>`
+        select n.nspname || '.' || c.relname as key, r.rolname as role,
+               a.privilege_type as priv
+        from pg_class c
+        join pg_namespace n on n.oid = c.relnamespace
+        cross join lateral aclexplode(coalesce(c.relacl, acldefault(
+          case when c.relkind = 'S' then 's'::"char" else 'r'::"char" end,
+          c.relowner))) a
+        left join pg_roles r on r.oid = a.grantee
+        where n.nspname = any(${list})
+          and c.relkind in ('r', 'p', 'v', 'm', 'f', 'S')`;
+      for (const r of relations) add(r.key, r.role, r.priv);
+      const columns = await sql<Row[]>`
+        select n.nspname || '.' || c.relname || '.' || t.attname as key,
+               r.rolname as role, a.privilege_type as priv
+        from pg_attribute t
+        join pg_class c on c.oid = t.attrelid
+        join pg_namespace n on n.oid = c.relnamespace
+        cross join lateral aclexplode(t.attacl) a
+        left join pg_roles r on r.oid = a.grantee
+        where n.nspname = any(${list}) and t.attacl is not null
+          and t.attnum > 0 and not t.attisdropped`;
+      for (const r of columns) add(r.key, r.role, r.priv);
+      const functions = await sql<(Row & { args: string })[]>`
+        select n.nspname || '.' || p.proname as key, r.rolname as role,
+               a.privilege_type as priv,
+               pg_get_function_identity_arguments(p.oid) as args
+        from pg_proc p
+        join pg_namespace n on n.oid = p.pronamespace
+        cross join lateral aclexplode(coalesce(p.proacl,
+          acldefault('f'::"char", p.proowner))) a
+        left join pg_roles r on r.oid = a.grantee
+        where n.nspname = any(${list}) and p.prokind in ('f', 'p')`;
+      for (const r of functions) {
+        add(`${r.key}${signatureOf(r.args)}`, r.role, r.priv);
+      }
+      const schemaRows = await sql<Row[]>`
+        select n.nspname as key, r.rolname as role, a.privilege_type as priv
+        from pg_namespace n
+        cross join lateral aclexplode(coalesce(n.nspacl,
+          acldefault('n'::"char", n.nspowner))) a
+        left join pg_roles r on r.oid = a.grantee
+        where n.nspname = any(${list})`;
+      for (const r of schemaRows) add(r.key, r.role, r.priv);
+      return out;
     },
     async exec(text) {
       await sql.begin(async (tx) => {

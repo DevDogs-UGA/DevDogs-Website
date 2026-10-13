@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { SqlSession } from "./dev-data.js";
+import type { LivePrivileges } from "./drift.js";
 import * as real from "./drift.fixtures.js";
 import { CLI, makeProduct, recordingRunner, writeFiles } from "./fixtures.js";
 import {
@@ -331,6 +332,7 @@ function fakeSession(
     ledger?: string[] | null;
     existing?: string[];
     columnTypes?: Map<string, string>;
+    privileges?: LivePrivileges;
     failOn?: "appliedMigrations" | "exec";
   } = {},
 ) {
@@ -346,6 +348,7 @@ function fakeSession(
           ),
     existingObjects: () => Promise.resolve(new Set(options.existing ?? [])),
     columnTypes: () => Promise.resolve(options.columnTypes ?? new Map()),
+    privileges: () => Promise.resolve(options.privileges ?? new Map()),
     exec: (sql: string) => {
       if (options.failOn === "exec") return Promise.reject(new Error("boom"));
       executed.push(sql);
@@ -877,7 +880,7 @@ describe("dbSync, what the member changed", () => {
     expect(error).toBeInstanceOf(SyncError);
     expect(error.message).toContain("Could not connect");
     expect(`${error.message}${error.output}`).not.toContain("pw@");
-    expect(calls.map((c) => c.args[1])).toEqual(["fetch"]);
+    expect(calls).toEqual([]);
   });
 
   it("restores the local stack's history when its folder is empty but the stack was migrated before", async () => {
@@ -910,5 +913,192 @@ describe("dbSync, what the member changed", () => {
       open: () => fakeSession({ ledger: null }).session,
     });
     expect(calls.some((c) => c.args[1] === "fetch")).toBe(false);
+  });
+});
+
+describe("dbSync, privileges a member granted", () => {
+  const DIFF =
+    'REVOKE ALL ON TABLE "dogpack"."sessions" FROM "authenticated";\n\nGRANT DELETE, SELECT ON TABLE "dogpack"."sessions" TO "authenticated";\n';
+  const privileges = (...privs: string[]): LivePrivileges =>
+    new Map([
+      ["dogpack.sessions", new Map([["authenticated", new Set(privs)]])],
+    ]);
+
+  it("keeps the member's TRUNCATE, and a second sync is a stable no-op", async () => {
+    const product = makeProduct({ files: RECORD });
+    const { session, executed } = fakeSession({
+      privileges: privileges("DELETE", "SELECT", "TRUNCATE"),
+    });
+    for (let round = 0; round < 2; round++) {
+      const { run, calls } = liveRunner(DIFF);
+      const lines: string[] = [];
+      const warnings: string[] = [];
+      const result = await dbSync(product, CLI, LOCAL, run, {
+        yes: false,
+        open: () => session,
+        log: (line) => lines.push(line),
+        warn: (line) => warnings.push(line),
+      });
+      expect(result.applied).toBe(false);
+      expect(result.restored).toEqual([]);
+      expect(result.extras.map((e) => e.detail)).toEqual([
+        "TRUNCATE granted to authenticated beyond what supabase/schemas grants",
+      ]);
+      expect(lines.join("\n")).not.toMatch(/creating|missing|now matches/);
+      expect(warnings.join("\n")).toContain("TRUNCATE");
+      expect(calls.some((c) => c.args[1] === "repair")).toBe(false);
+    }
+    expect(executed).toEqual([]);
+  });
+
+  it("fails --strict on it", async () => {
+    const product = makeProduct({ files: RECORD });
+    const { run } = liveRunner(DIFF);
+    const error = await dbSync(product, CLI, LOCAL, run, {
+      yes: false,
+      strict: true,
+      open: () =>
+        fakeSession({ privileges: privileges("DELETE", "SELECT", "TRUNCATE") })
+          .session,
+    }).catch((err: unknown) => err as SyncError);
+    expect(error).toBeInstanceOf(SyncError);
+    expect(error.output).toContain("TRUNCATE");
+  });
+
+  it("grants again just the privilege the schema defines and the database lacks", async () => {
+    const product = makeProduct({ files: RECORD });
+    const { run } = liveRunner(DIFF);
+    const { session, executed } = fakeSession({
+      privileges: privileges("SELECT"),
+    });
+    const result = await dbSync(product, CLI, LOCAL, run, {
+      yes: false,
+      open: () => session,
+    });
+    expect(executed).toEqual([
+      'GRANT DELETE ON TABLE "dogpack"."sessions" TO "authenticated";',
+    ]);
+    expect(result.applied).toBe(true);
+  });
+});
+
+describe("dbSync, migrations of unknown origin", () => {
+  it("uses a hosted project's own history instead of files written for the local stack", async () => {
+    // A checkout from before records, synced against the local stack first.
+    const product = makeProduct({ files: RECORD });
+    const { run, calls } = recordingRunner(({ args }) => {
+      if (args[1] === "fetch") {
+        writeFiles(product.root, {
+          "supabase/migrations/20260901000000_hosted.sql": CREATE,
+        });
+        return { stdout: "fetched" };
+      }
+      if (args[1] === "diff") return { stdout: JSON.stringify({ diff: "" }) };
+      if (args.includes("declarative")) return { stdout: "No schema changes" };
+      return undefined;
+    });
+    await dbSync(product, CLI, HOSTED, run, {
+      yes: false,
+      open: () => fakeSession({ ledger: ["20260901000000"] }).session,
+    });
+    expect(calls[0]?.args).toEqual([
+      "migration",
+      "fetch",
+      "--db-url",
+      HOSTED.dbUrl,
+    ]);
+    expect(readdirSync(product.paths.migrationsDir)).toEqual([
+      "20260901000000_hosted.sql",
+    ]);
+    expect(calls.some((c) => c.args[1] === "push")).toBe(false);
+    const record = JSON.parse(
+      readFileSync(join(product.root, ".devtools", "record.json"), "utf8"),
+    ) as { target: string; applied: string[] };
+    expect(record).toEqual({
+      target: "hosted:zzzzzzzzzzzzzzzzzzzz",
+      applied: ["20260901000000"],
+    });
+  });
+
+  it("shows the real error when the project's history cannot be fetched", async () => {
+    const product = makeProduct({ files: RECORD });
+    const { run } = recordingRunner(({ args }) =>
+      args[1] === "fetch"
+        ? { code: 1, stderr: "Remote migration versions not found" }
+        : undefined,
+    );
+    const error = await dbSync(product, CLI, HOSTED, run, {
+      yes: false,
+      open: () => fakeSession({ ledger: ["20260901000000"] }).session,
+    }).catch((err: unknown) => err as SyncError);
+    expect(error).toBeInstanceOf(SyncError);
+    expect(error.output).toContain("Remote migration versions not found");
+    expect(`${error.message}${error.output}`).not.toContain("--rebuild");
+  });
+
+  it("treats files as unknown for a hosted project with no history table", async () => {
+    const product = makeProduct({ files: RECORD });
+    const { run, calls } = recordingRunner(({ args }) =>
+      args[1] === "fetch" ? { code: 1, stderr: "no history" } : undefined,
+    );
+    await dbSync(product, CLI, HOSTED, run, {
+      yes: false,
+      open: () => fakeSession({ ledger: null }).session,
+    }).catch(() => undefined);
+    expect(calls[0]?.args[1]).toBe("fetch");
+    expect(calls.some((c) => c.args[1] === "repair")).toBe(false);
+  });
+});
+
+describe("dbSync, no record and no ledger", () => {
+  const PENDING = "supabase/migrations/20261011120000_devtools_sync.sql";
+
+  it("refuses a pending DROP COLUMN instead of reading it as the member's extra", async () => {
+    const product = makeProduct({
+      files: {
+        ...RECORD,
+        [PENDING]: "alter table dogpack.sessions drop column pinned;\n",
+      },
+    });
+    const { run, calls } = liveRunner("");
+    const { session, executed } = fakeSession({ ledger: null });
+    const error = await dbSync(product, CLI, LOCAL, run, {
+      yes: true,
+      open: () => session,
+    }).catch((err: unknown) => err as SyncError);
+    expect(error).toBeInstanceOf(SyncError);
+    expect(error.message).toContain("cannot tell whether");
+    expect(error.output).toContain("20261011120000_devtools_sync.sql");
+    expect(calls).toEqual([]);
+    expect(executed).toEqual([]);
+    expect(readdirSync(product.paths.migrationsDir)).toHaveLength(2);
+    expect(existsSync(join(product.root, ".devtools", "record.json"))).toBe(
+      false,
+    );
+  });
+});
+
+describe("dbSync, an unreachable database", () => {
+  it("leaves the local record and files exactly as they were", async () => {
+    const product = makeProduct({ files: RECORD });
+    const first = liveRunner("");
+    await dbSync(product, CLI, LOCAL, first.run, {
+      yes: false,
+      open: () => fakeSession().session,
+    });
+    const recordPath = join(product.root, ".devtools", "record.json");
+    const before = readFileSync(recordPath, "utf8");
+    const { run, calls } = liveRunner("");
+    const error = await dbSync(product, CLI, HOSTED, run, {
+      yes: false,
+      open: () => fakeSession({ failOn: "appliedMigrations" }).session,
+    }).catch((err: unknown) => err as SyncError);
+    expect(error).toBeInstanceOf(SyncError);
+    expect(error.message).toContain("nothing was changed");
+    expect(calls).toEqual([]);
+    expect(readFileSync(recordPath, "utf8")).toBe(before);
+    expect(readdirSync(product.paths.migrationsDir)).toEqual([
+      "20261001000000_first.sql",
+    ]);
   });
 });

@@ -366,3 +366,86 @@ describe("classifyDiff, mixed damage", () => {
     });
   });
 });
+
+describe("classifyDiff, privileges compared with the live database", () => {
+  const diff =
+    'REVOKE ALL ON TABLE "dogdays"."userPreferences" FROM "authenticated";\n\nGRANT DELETE, SELECT ON TABLE "dogdays"."userPreferences" TO "authenticated";\n';
+  const live = (...privs: string[]) =>
+    new Map([
+      ["dogdays.userPreferences", new Map([["authenticated", new Set(privs)]])],
+    ]);
+
+  it("lists a privilege a member granted as an extra, revokes nothing and grants nothing", () => {
+    const drift = classifyDiff(
+      diff,
+      NONE,
+      new Map(),
+      live("DELETE", "SELECT", "TRUNCATE"),
+    );
+    expect(drift.restore).toEqual([]);
+    expect(drift.restored).toEqual([]);
+    expect(drift.extras).toEqual([
+      {
+        object: 'privileges on "dogdays"."userPreferences"',
+        detail:
+          "TRUNCATE granted to authenticated beyond what supabase/schemas grants",
+      },
+    ]);
+  });
+
+  it("grants only the privilege the schema defines and the database lacks", () => {
+    const drift = classifyDiff(diff, NONE, new Map(), live("SELECT"));
+    expect(drift.restore).toEqual([
+      'GRANT DELETE ON TABLE "dogdays"."userPreferences" TO "authenticated"',
+    ]);
+    expect(drift.restored).toEqual([
+      'privileges on "dogdays"."userPreferences"',
+    ]);
+    expect(drift.extras).toEqual([]);
+  });
+
+  it("does both at once, and never writes a REVOKE", () => {
+    const drift = classifyDiff(
+      diff,
+      NONE,
+      new Map(),
+      live("SELECT", "TRUNCATE"),
+    );
+    expect(drift.restore).toHaveLength(1);
+    expect(drift.restore.join()).not.toMatch(/REVOKE/);
+    expect(drift.extras).toHaveLength(1);
+  });
+
+  it("finds nothing when the database has exactly what the schema grants", () => {
+    const drift = classifyDiff(diff, NONE, new Map(), live("DELETE", "SELECT"));
+    expect(drift).toMatchObject({ restore: [], restored: [], extras: [] });
+  });
+
+  it("reads a column-level privilege from the column's own grants", () => {
+    const sql =
+      'REVOKE ALL ("inputCampus") ON TABLE "dogdays"."userPlanDrafts" FROM "authenticated";\n\nGRANT INSERT ("inputCampus"), UPDATE ("inputCampus") ON TABLE "dogdays"."userPlanDrafts" TO "authenticated";\n';
+    const liveColumns = new Map([
+      [
+        "dogdays.userPlanDrafts.inputCampus",
+        new Map([["authenticated", new Set(["INSERT", "UPDATE", "SELECT"])]]),
+      ],
+    ]);
+    const drift = classifyDiff(sql, NONE, new Map(), liveColumns);
+    expect(drift.restore).toEqual([]);
+    expect(drift.extras[0]?.detail).toContain("SELECT");
+  });
+});
+
+describe("classifyDiff, a function whose body changed", () => {
+  it("is listed once, as a conflict with its signature, even when the diff also drops it", () => {
+    const body = real.functionBody.slice(
+      real.functionBody.indexOf("CREATE OR REPLACE"),
+    );
+    const sql = `DROP FUNCTION "dogdays"."claim_legacy_data"();\n\n${body}`;
+    const drift = classifyDiff(sql, WITH_FUNCTION);
+    expect(drift.extras).toEqual([]);
+    expect(drift.conflicts.map((c) => c.object)).toEqual([
+      'function "dogdays"."claim_legacy_data"()',
+    ]);
+  });
+});

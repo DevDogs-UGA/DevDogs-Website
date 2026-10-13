@@ -59,7 +59,7 @@ import type { Product } from "./config.js";
 import type { Runner } from "./exec.js";
 import { cliLine, type SupabaseCli } from "./supabase-cli.js";
 import type { SqlSession } from "./dev-data.js";
-import { classifyDiff, type Finding } from "./drift.js";
+import { classifyDiff, type Finding, type LivePrivileges } from "./drift.js";
 import type { DbTarget } from "./target.js";
 
 export class SyncError extends Error {
@@ -372,11 +372,13 @@ async function reconcileLive(
   let ledger: string[] | null;
   let existing: Set<string>;
   let columnTypes: Map<string, string>;
+  let privileges: LivePrivileges;
   try {
     session = options.open(target.dbUrl);
     ledger = await session.appliedMigrations();
     existing = await session.existingObjects(schemas);
     columnTypes = await session.columnTypes(schemas);
+    privileges = await session.privileges(schemas);
   } catch (err) {
     await session?.close().catch(() => undefined);
     throw new SyncError(
@@ -397,6 +399,28 @@ async function reconcileLive(
   const everythingApplied = ledger === null && noted === null;
   const isApplied = (file: string) =>
     everythingApplied || known.has(versionOf(file));
+  if (everythingApplied) {
+    // No record of what ran and no ledger to say: a file with a DROP in it
+    // could be a pulled change that never ran, which would be read as the
+    // member's extra and then marked applied. Not guessed at.
+    const drops = files.filter(
+      (file) =>
+        destructiveStatements(
+          readFileSync(join(product.paths.migrationsDir, file), "utf8"),
+        ).length > 0,
+    );
+    if (drops.length > 0) {
+      await session.close().catch(() => undefined);
+      throw new SyncError(
+        `devtools cannot tell whether ${drops.length === 1 ? "this migration" : "these migrations"} ran in your database: it has no migration history table and this folder has no record of what was applied. ${drops.length === 1 ? "It drops" : "They drop"} something, so devtools will not guess and nothing was changed or marked applied.`,
+        `${drops.join("\n")}\n${
+          target.kind === "local"
+            ? "Run `devtools db sync --rebuild` (it wipes your development database), then `devtools dev-data`; or delete supabase/migrations and run `devtools db sync` again."
+            : "Delete supabase/migrations and run `devtools db sync` again, or reset the project from its dashboard (Database > Settings)."
+        }`,
+      );
+    }
+  }
   const appliedFiles = files.filter(isApplied);
   const pending = files.filter((file) => !isApplied(file));
   if (appliedFiles.length === 0) {
@@ -412,7 +436,7 @@ async function reconcileLive(
   }
   try {
     const sql = await liveDiff(product, cli, target, run, log, redact);
-    const drift = classifyDiff(sql, existing, columnTypes);
+    const drift = classifyDiff(sql, existing, columnTypes, privileges);
 
     if (drift.extras.length > 0 && !options.strict) {
       warn(
@@ -527,6 +551,13 @@ export async function dbSync(
       `${product.config.supabase.dir}/schemas does not exist; there is nothing to sync.`,
     );
   }
+  // Before any local state changes (a record set aside, files restored or
+  // forgotten), make sure the database can be reached at all: an unreachable
+  // one must leave this machine exactly as it was.
+  const ledger0 =
+    !options.dryRun && options.open
+      ? await probe(options.open, target, redact)
+      : undefined;
   mkdirSync(migrationsDir, { recursive: true });
 
   const generateArgs = [
@@ -587,11 +618,38 @@ export async function dbSync(
   if (
     !needsRecord &&
     target.kind === "local" &&
-    options.open &&
+    ledger0 !== undefined &&
     migrationFiles(migrationsDir).length === 0
   ) {
-    needsRecord =
-      ((await probe(options.open, target, redact)) ?? []).length > 0;
+    needsRecord = (ledger0 ?? []).length > 0;
+  }
+  // Files with no record of whose they are (a checkout from before records,
+  // used against more than one database): if this database's ledger does not
+  // list them, they were written for another one. They say nothing about this
+  // database, so its own history is fetched instead of trusting them.
+  let unknownFiles = false;
+  if (
+    !foreign &&
+    owner === undefined &&
+    ledger0 !== undefined &&
+    migrationFiles(migrationsDir).length > 0
+  ) {
+    const listed = new Set(ledger0 ?? []);
+    // None of them in its ledger (or it has no ledger, for a project): they
+    // were not applied here. Some of them listed: a pulled change, pending.
+    unknownFiles =
+      ledger0 === null
+        ? target.kind === "hosted"
+        : !migrationFiles(migrationsDir).some((file) =>
+            listed.has(versionOf(file)),
+          );
+    if (unknownFiles) {
+      log(
+        `supabase/migrations has migrations that ${key === "local" ? "the local stack" : "this project"} has not applied and no record of whose they are (they were probably written for another database); they are set aside and this database's own history is used.`,
+      );
+      forgetMigrations(product);
+      needsRecord = true;
+    }
   }
   if (foreign) {
     log(
@@ -603,10 +661,14 @@ export async function dbSync(
     // A brand-new project has no history table yet, and fetch fails: nothing
     // to restore, so the full schema is the right first migration.
     const fetched = await run(cli.command, fetchArgs, { cwd: product.root });
-    // Nothing to fetch is normal for a new project; an unreachable database
-    // is not, and must not be mistaken for it.
-    if (fetched.code !== 0 && options.open) {
-      await probe(options.open, target, redact);
+    // Nothing to fetch is normal for a new project (no ledger, or an empty
+    // one); a database that has a history it cannot hand over is not, and
+    // its real error is shown rather than advice to start over.
+    if (fetched.code !== 0 && (ledger0 ?? []).length > 0) {
+      throw new SyncError(
+        "Could not restore this database's migration history from the database itself, so nothing was changed.",
+        redact(fetched.stderr || fetched.stdout),
+      );
     }
     const restoredFiles = migrationFiles(migrationsDir).length;
     if (fetched.code === 0 && restoredFiles > 0) {
@@ -700,9 +762,12 @@ export async function dbSync(
     // The record now lists a migration the database does not have. Remove it
     // so the next sync diffs from what is true.
     for (const file of created) rmSync(join(migrationsDir, file));
+    const why = redact(applied.stderr || applied.stdout);
     throw new SyncError(
-      "The change did not apply. Your schema files may not be valid SQL, or the database has drifted from what devtools recorded (`devtools db sync --rebuild` starts over).",
-      redact(applied.stderr || applied.stdout),
+      /migration versions not found|history does not match/i.test(why)
+        ? "The change did not apply: the database's migration history and supabase/migrations disagree. The error below is the database's own."
+        : "The change did not apply. Your schema files may not be valid SQL, or the database has drifted from what devtools recorded (`devtools db sync --rebuild` starts over).",
+      why,
     );
   }
   writeRecord(product, target, migrationFiles(migrationsDir));
