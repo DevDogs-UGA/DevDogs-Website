@@ -70,10 +70,10 @@ run("product: bare devtools, no terminal", product, [], {
   includes: ["setup", "dev-data"],
   excludes: NO_CRASH,
 });
-// Starts `npx` (a .cmd shim on Windows) to fetch and run the Supabase CLI at
-// the product's pin.
+// Starts `pnpm dlx` (pnpm is a .cmd shim on Windows) to fetch and run the
+// Supabase CLI at the product's pin.
 run(
-  "product: supabase --version spawns npx",
+  "product: supabase --version spawns pnpm dlx",
   product,
   ["supabase", "--version"],
   {

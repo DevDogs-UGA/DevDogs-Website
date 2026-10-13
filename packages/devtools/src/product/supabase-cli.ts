@@ -6,7 +6,9 @@
  *
  *   1. `node_modules/.bin/supabase` in the repo, when its version is the pin;
  *   2. a `supabase` on PATH whose version is the pin;
- *   3. `npx --yes supabase@<pin>`, which downloads and caches the right one.
+ *   3. `pnpm dlx supabase@<pin>`, which downloads and caches the right one.
+ *      Members are expected to have pnpm (both product repos pin it);
+ *   4. `npx --yes supabase@<pin>`, only when pnpm is not on PATH.
  *
  * The pin is also part of the generated-types hash, so a contributor on a
  * different CLI would generate different types than CI; matching it is not
@@ -18,10 +20,10 @@ import { commandLine, type Runner } from "./exec.js";
 
 export interface SupabaseCli {
   command: string;
-  /** Arguments that come before the caller's (`["--yes", "supabase@2.117.0"]` for npx). */
+  /** Arguments that come before the caller's (`["dlx", "supabase@2.117.0"]` for pnpm dlx). */
   prefix: readonly string[];
   /** How it was found, for messages. */
-  source: "repo" | "path" | "npx";
+  source: "repo" | "path" | "pnpm" | "npx";
 }
 
 export function cliLine(cli: SupabaseCli, args: readonly string[]): string {
@@ -53,6 +55,18 @@ export async function resolveSupabaseCli(
     } catch {
       // Not installed there; try the next place.
     }
+  }
+  try {
+    const result = await run("pnpm", ["--version"], { cwd: root });
+    if (result.code === 0) {
+      return {
+        command: "pnpm",
+        prefix: ["dlx", `supabase@${pin}`],
+        source: "pnpm",
+      };
+    }
+  } catch {
+    // No pnpm on PATH; npx is the last resort.
   }
   return {
     command: "npx",

@@ -36,7 +36,7 @@ function productPin(cwd: string): string | null {
  * a sibling project, where the Supabase CLI is normally installed globally;
  * this monorepo, where it is a workspace devDependency and not on PATH at all;
  * and a product repo (`devtools.config.json`), where `devtools setup` ran the
- * pinned CLI through `npx` and a new member has none installed. A global install
+ * pinned CLI through `pnpm dlx` and a new member has none installed. A global install
  * wins, since `pnpm exec` in a non-pnpm project would fail for reasons that have
  * nothing to do with Supabase.
  */
@@ -55,17 +55,27 @@ export function detectLocalSupabase(cwd: string): LocalSupabaseConfig {
     ["pnpm", "exec", "supabase", ...status],
   ];
   const pin = productPin(cwd);
-  if (pin !== null)
+  if (pin !== null) {
+    attempts.push(["pnpm", "dlx", `supabase@${pin}`, ...status]);
+    // Tried only when pnpm is not on PATH (see the loop below).
     attempts.push(["npx", "--yes", `supabase@${pin}`, ...status]);
+  }
 
   let output: string | undefined;
   let first: unknown;
+  let pnpmMissing = false;
   for (const argv of attempts) {
+    if (argv[0] === "npx" && !pnpmMissing) continue;
     try {
       output = runStatus(argv, cwd);
       break;
     } catch (error) {
       first ??= error;
+      if (
+        argv[0] === "pnpm" &&
+        (error as NodeJS.ErrnoException).code === "ENOENT"
+      )
+        pnpmMissing = true;
     }
   }
   if (output === undefined) {

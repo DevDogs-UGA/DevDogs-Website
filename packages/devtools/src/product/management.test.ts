@@ -131,13 +131,13 @@ describe("resolveSupabaseCli", () => {
     expect(calls).toHaveLength(1);
   });
 
-  it("skips a binary at the wrong version and falls back to npx at the pin", async () => {
+  it("skips a binary at the wrong version and falls back to pnpm dlx at the pin", async () => {
     const { run } = recordingRunner(() => ({ stdout: "2.120.0\n" }));
     const cli = await resolveSupabaseCli("/repo", "2.117.0", run, () => true);
     expect(cli).toEqual({
-      command: "npx",
-      prefix: ["--yes", "supabase@2.117.0"],
-      source: "npx",
+      command: "pnpm",
+      prefix: ["dlx", "supabase@2.117.0"],
+      source: "pnpm",
     });
   });
 
@@ -147,10 +147,14 @@ describe("resolveSupabaseCli", () => {
     expect(cli.source).toBe("path");
   });
 
-  it("falls back to npx when nothing is installed", async () => {
+  it("falls back to npx only when pnpm is not on PATH either", async () => {
     const run = () => Promise.reject(new Error("ENOENT"));
     const cli = await resolveSupabaseCli("/repo", "2.117.0", run, () => false);
-    expect(cli.source).toBe("npx");
+    expect(cli).toEqual({
+      command: "npx",
+      prefix: ["--yes", "supabase@2.117.0"],
+      source: "npx",
+    });
     expect(CLI.source).toBe("path");
   });
 });

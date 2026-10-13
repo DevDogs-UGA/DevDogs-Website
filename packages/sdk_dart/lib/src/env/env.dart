@@ -15,7 +15,7 @@ class MissingEnvException implements Exception {
 
   @override
   String toString() =>
-      'Missing environment: ${keys.join(', ')}. Run `npx @devdogsuga/devtools@next setup`, then start the app with `flutter run --dart-define-from-file=.env`.';
+      'Missing environment: ${keys.join(', ')}. Run `pnpm devtools setup`, then start the app with `flutter run --dart-define-from-file=.env`.';
 }
 
 /// The app's public configuration, read from `--dart-define` values.

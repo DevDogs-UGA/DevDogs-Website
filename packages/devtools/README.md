@@ -97,11 +97,14 @@ name `devdogs-monorepo` or `backstage`; the layout code is
 
 A repository with a `devtools.config.json` at its root is a **product** (DogDays, DogPack): devtools
 reads the file and serves a smaller command set that needs no tiers, no env registry and no workspace.
-DogPack has no `package.json`, so it runs the published CLI directly:
+Both products carry a `package.json` whose `devtools` script is a `pnpm dlx` run of the published CLI, so
+inside a checkout:
 
 ```sh
-npx @devdogsuga/devtools@next setup
+pnpm devtools setup
 ```
+
+Anywhere else, the one-off form is `pnpm dlx @devdogsuga/devtools@next setup`.
 
 | Command                                 | What it does                                                                                                                                                               |
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -136,7 +139,7 @@ How it works, in short:
   `oauth` (the tooling file) check that they are git-ignored and add them to the repo's `.gitignore`
   when they are not (Flutter's default ignore file leaves them out).
 - **The pinned CLI.** devtools finds `supabase` in `node_modules/.bin` or on PATH when its version is the
-  pin, and otherwise runs `npx --yes supabase@<pin>`.
+  pin, and otherwise runs `pnpm dlx supabase@<pin>` (`npx --yes supabase@<pin>` only when pnpm is not on PATH).
 - **A hosted project** needs custom OAuth providers turned on and the app's return addresses allowed.
   `setup` does both through the Management API when `SUPABASE_ACCESS_TOKEN` is set, and prints the two
   dashboard steps when it is not.

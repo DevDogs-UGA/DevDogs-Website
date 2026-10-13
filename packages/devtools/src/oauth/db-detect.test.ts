@@ -42,7 +42,7 @@ describe("detectLocalSupabase — finding the CLI", () => {
     expect(execFileSync.mock.calls[0]![0]).toBe("supabase");
   });
 
-  it("falls back to the product's pinned CLI through npx when none is installed", () => {
+  it("falls back to the product's pinned CLI through pnpm dlx when none is installed", () => {
     const root = productRepo();
     execFileSync
       .mockImplementationOnce(() => {
@@ -53,10 +53,47 @@ describe("detectLocalSupabase — finding the CLI", () => {
       })
       .mockReturnValueOnce(STATUS);
     expect(detectLocalSupabase(root).apiUrl).toBe("http://127.0.0.1:54321");
+    expect(execFileSync).toHaveBeenCalledTimes(3);
     expect(execFileSync.mock.calls[2]!.slice(0, 2)).toEqual([
+      "pnpm",
+      ["dlx", "supabase@2.117.0", "status", "-o", "env"],
+    ]);
+  });
+
+  it("uses npx at the pin only when pnpm is not on PATH", () => {
+    const root = productRepo();
+    execFileSync
+      .mockImplementationOnce(() => {
+        throw notFound();
+      })
+      .mockImplementationOnce(() => {
+        throw notFound();
+      })
+      .mockImplementationOnce(() => {
+        throw notFound();
+      })
+      .mockReturnValueOnce(STATUS);
+    expect(detectLocalSupabase(root).apiUrl).toBe("http://127.0.0.1:54321");
+    expect(execFileSync.mock.calls[3]!.slice(0, 2)).toEqual([
       "npx",
       ["--yes", "supabase@2.117.0", "status", "-o", "env"],
     ]);
+  });
+
+  it("does not fall through to npx when pnpm ran and failed", () => {
+    const root = productRepo();
+    execFileSync
+      .mockImplementationOnce(() => {
+        throw notFound();
+      })
+      .mockImplementationOnce(() => {
+        throw new Error("pnpm: no workspace");
+      })
+      .mockImplementationOnce(() => {
+        throw new Error("offline");
+      });
+    expect(() => detectLocalSupabase(root)).toThrow(/supabase CLI not found/);
+    expect(execFileSync).toHaveBeenCalledTimes(3);
   });
 
   it("says the CLI is missing outside a product repo when nothing works", () => {

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": false,
   "type": "module",
-  "description": "Contributor CLI for DevDogs repositories (the platform monorepo, DogDays, DogPack): the real tools with the session's tier filled in, `setup`, `db sync`, `db types`, `dev-data`, a menu over them, the checks CI runs, and the `with-env` launcher. Ships built JS; run via `pnpm dlx @devdogsuga/devtools` or `npx @devdogsuga/devtools` (or the `devtools` bin once installed) from inside a clone.",
+  "description": "Contributor CLI for DevDogs repositories (the platform monorepo, DogDays, DogPack): the real tools with the session's tier filled in, `setup`, `db sync`, `db types`, `dev-data`, a menu over them, the checks CI runs, and the `with-env` launcher. Ships built JS; run via `pnpm devtools` in a product repo, `pnpm dlx @devdogsuga/devtools` (or the `devtools` bin once installed) from inside a clone.",
   "license": "BSD-3-Clause",
   "repository": {
     "type": "git",

@@ -478,9 +478,9 @@ async function runDoctor(product: Product, deps: ProductDeps): Promise<string> {
   );
 
   const cli = await cliFor(product, deps);
-  if (cli.source === "npx") {
+  if (cli.source === "pnpm" || cli.source === "npx") {
     info(
-      `The pinned Supabase CLI is fetched with npx on first use (${cliLine(cli, ["--version"])}).`,
+      `The pinned Supabase CLI is fetched with ${cli.command} on first use (${cliLine(cli, ["--version"])}).`,
     );
   } else {
     ok(`Supabase CLI ${product.config.supabase.version} (${cli.source})`);
