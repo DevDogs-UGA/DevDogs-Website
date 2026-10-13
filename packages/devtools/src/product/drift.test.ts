@@ -82,9 +82,9 @@ describe("classifyDiff, MISSING", () => {
 
   it("re-grants a privilege the database lost and never revokes", () => {
     const drift = classifyDiff(real.grantRevoked, NONE);
-    expect(drift.restore.some((s) => s.startsWith("GRANT DELETE, SELECT"))).toBe(
-      true,
-    );
+    expect(
+      drift.restore.some((s) => s.startsWith("GRANT DELETE, SELECT")),
+    ).toBe(true);
     assertOnlyAdditive(drift.restore);
     expect(drift.restore.some((s) => s.startsWith("REVOKE"))).toBe(false);
     expect(drift.extras.map((e) => e.object)).toContain(
