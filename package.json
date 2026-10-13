@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "devtools": "pnpm --config.ignore-scripts=true dlx @devdogsuga/devtools@next",
-    "backstage": "pnpm --config.ignore-scripts=true dlx @devdogsuga/backstage",
+    "backstage": "pnpm --config.ignore-scripts=true dlx @devdogsuga/backstage@next",
     "dev": "echo 'Start one app: pnpm -F <app> dev, or cd apps/<app> && pnpm dev (apps: platform, catalog, slides)'",
     "build": "pnpm -r --filter '!slides' --if-present run build",
     "build:slides": "pnpm --filter slides build",
