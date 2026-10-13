@@ -96,7 +96,9 @@ describe("renderFailureLog", () => {
 describe("failureLogDir", () => {
   it("honours DEVTOOLS_LOG_DIR, then XDG_STATE_HOME", () => {
     expect(failureLogDir({ DEVTOOLS_LOG_DIR: "/x" })).toBe("/x");
-    expect(failureLogDir({ XDG_STATE_HOME: "/s" })).toBe("/s/devdogs/logs");
+    expect(failureLogDir({ XDG_STATE_HOME: "/s" })).toBe(
+      join("/s", "devdogs", "logs"),
+    );
   });
 });
 

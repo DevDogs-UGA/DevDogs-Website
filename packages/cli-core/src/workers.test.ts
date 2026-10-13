@@ -59,9 +59,9 @@ describe("workerEntries by layout", () => {
   it("reads Backstage's workers.json, schedule-builder included", async () => {
     const workers = await inside("backstage-repo");
     expect(workers.workerApps()).toEqual(["platform", "schedule-builder"]);
-    expect(workers.workerAppDir("apps/schedule-builder")).toContain(
-      "backstage-repo/devdogsuga/apps/schedule-builder",
-    );
+    expect(
+      workers.workerAppDir("apps/schedule-builder").replaceAll("\\", "/"),
+    ).toContain("backstage-repo/devdogsuga/apps/schedule-builder");
   });
 
   it("treats a DevDogsUGA without workers.json as managing no Workers", async () => {

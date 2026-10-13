@@ -249,12 +249,15 @@ jobs:
         run: pnpm --filter '@devdogsuga/devtools...' --if-present run build
         shell: bash
       - name: cli-core unit tests
+        if: ${{ !cancelled() }}
         run: pnpm --filter @devdogsuga/cli-core run test
         shell: bash
       - name: devtools unit tests
+        if: ${{ !cancelled() }}
         run: pnpm --filter @devdogsuga/devtools run test
         shell: bash
       - name: Smoke-run the built CLI in a product fixture
+        if: ${{ !cancelled() }}
         run: node packages/devtools/scripts/smoke-product.mjs
         shell: bash
 

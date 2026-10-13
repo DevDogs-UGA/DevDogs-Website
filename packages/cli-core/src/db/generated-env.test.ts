@@ -5,6 +5,7 @@
  * filesystem, TCP socket, Docker daemon, or Supabase CLI. Every dependency
  * is injected; see `EnsureGeneratedEnvDeps`.
  */
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   ensureGeneratedEnvFile,
@@ -106,7 +107,7 @@ describe("ensureGeneratedEnvFile", () => {
       line: "devtools: wrote .env.generated from the running local stack",
     });
     expect(spies.write).toHaveBeenCalledWith(
-      "/repo/.env.generated",
+      join("/repo", ".env.generated"),
       "API_URL=http://127.0.0.1:54321\n",
     );
   });
@@ -188,8 +189,8 @@ describe("ensureGeneratedEnvFile", () => {
     const { deps, spies } = fakeDeps({ mirrorRoots: ["/repo/devdogsuga"] });
     await ensureGeneratedEnvFile("development", undefined, deps);
     expect(spies.write.mock.calls.map((call: unknown[]) => call[0])).toEqual([
-      "/repo/.env.generated",
-      "/repo/devdogsuga/.env.generated",
+      join("/repo", ".env.generated"),
+      join("/repo", "devdogsuga", ".env.generated"),
     ]);
   });
 });

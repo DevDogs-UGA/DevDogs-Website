@@ -20,7 +20,7 @@ function enter(name: string): void {
 function scanned(): string[] {
   return manifestPaths()
     .slice(0, -1)
-    .map((path) => relative(fixtures, path));
+    .map((path) => relative(fixtures, path).replaceAll("\\", "/"));
 }
 
 beforeEach(() => {

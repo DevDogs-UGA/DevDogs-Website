@@ -40,7 +40,9 @@ const run = promisify(execFile);
  * confusing assertion failure on an empty stderr.
  */
 const PACKAGE_ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
-const TSX = join(PACKAGE_ROOT, "node_modules", ".bin", "tsx");
+// tsx's own entry run by node, not its `.bin` shim: on Windows that shim is a
+// `.cmd` file, which `execFile` cannot start by name.
+const TSX_CLI = join(PACKAGE_ROOT, "node_modules", "tsx", "dist", "cli.mjs");
 const CLI = join(PACKAGE_ROOT, "src", "env-runtime", "cli.ts");
 
 /** The synthetic root: all three deploy tiers present, so the ambiguity path
@@ -79,8 +81,8 @@ async function withEnv(
 ): Promise<Result> {
   try {
     const { stdout, stderr } = await run(
-      TSX,
-      ["--conditions=devdogs-source", CLI, ...args],
+      process.execPath,
+      [TSX_CLI, "--conditions=devdogs-source", CLI, ...args],
       {
         cwd: PACKAGE_ROOT,
         // PATH and HOME only — see the header. In particular, no ambient
@@ -88,6 +90,16 @@ async function withEnv(
         env: {
           PATH: process.env.PATH ?? "",
           HOME: process.env.HOME ?? "",
+          // Windows needs these to start a process and find a temp directory.
+          ...(process.platform === "win32"
+            ? {
+                SystemRoot: process.env.SystemRoot ?? "",
+                USERPROFILE: process.env.USERPROFILE ?? "",
+                TEMP: process.env.TEMP ?? "",
+                TMP: process.env.TMP ?? "",
+                PATHEXT: process.env.PATHEXT ?? "",
+              }
+            : {}),
           WITH_ENV_ROOT_FOR_TESTS: fixtureRoot,
           ...env,
         },

@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import {
   existsSync,
   mkdirSync,
@@ -24,10 +25,9 @@ import { discoverWranglerConfigs, parseWrangler } from "./discovery.js";
  * checkout.
  */
 
-const FIXTURE_ROOT = new URL(
-  "../../../cli-core/test-fixtures/fixture-repo/",
-  import.meta.url,
-).pathname;
+const FIXTURE_ROOT = fileURLToPath(
+  new URL("../../../cli-core/test-fixtures/fixture-repo/", import.meta.url),
+);
 
 describe("parseWrangler", () => {
   it("accepts JSONC without stripping // from URL strings", () => {

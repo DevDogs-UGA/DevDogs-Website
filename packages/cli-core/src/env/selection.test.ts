@@ -51,10 +51,9 @@ import { keysRoutedTo, selectForPush } from "./selection.js";
  * throughout: in the store it belongs to, and NOT in the other one.
  */
 
-const FIXTURE_ROOT = new URL(
-  "../../test-fixtures/fixture-repo/",
-  import.meta.url,
-).pathname;
+const FIXTURE_ROOT = fileURLToPath(
+  new URL("../../test-fixtures/fixture-repo/", import.meta.url),
+);
 const previousRoot = process.env.DEVTOOLS_TEST_REPO_ROOT;
 
 beforeAll(async () => {

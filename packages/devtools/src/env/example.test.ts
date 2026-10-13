@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 /**
  * What `env init --target <vault target>` is allowed to write.
  *
@@ -61,10 +62,9 @@ import {
 } from "./example.js";
 
 const DATE = "2026-08-16";
-const FIXTURE_ROOT = new URL(
-  "../../../cli-core/test-fixtures/fixture-repo/",
-  import.meta.url,
-).pathname;
+const FIXTURE_ROOT = fileURLToPath(
+  new URL("../../../cli-core/test-fixtures/fixture-repo/", import.meta.url),
+);
 const previousRoot = process.env.DEVTOOLS_TEST_REPO_ROOT;
 
 beforeAll(async () => {
