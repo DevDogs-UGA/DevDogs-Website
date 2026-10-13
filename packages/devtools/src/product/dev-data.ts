@@ -75,6 +75,12 @@ export interface SqlSession {
   appliedMigrations(): Promise<string[] | null>;
   /** Which of `schemas` do not exist in this database. */
   missingSchemas(schemas: readonly string[]): Promise<string[]>;
+  /**
+   * Functions, views and triggers in `schemas`, keyed `function:schema.name`,
+   * `view:schema.name`, `trigger:schema.table:name`. Lets a diff tell a
+   * missing function from a changed one.
+   */
+  existingObjects(schemas: readonly string[]): Promise<Set<string>>;
   /** Runs `sql` as is, in one transaction. */
   exec(sql: string): Promise<void>;
   runAs(memberId: string, sql: string): Promise<void>;
@@ -129,6 +135,27 @@ export function postgresSession(dbUrl: string): SqlSession {
         select nspname from pg_namespace where nspname = any(${[...schemas]})`;
       const present = new Set(rows.map((r) => r.nspname));
       return schemas.filter((name) => !present.has(name));
+    },
+    async existingObjects(schemas) {
+      const list = [...schemas];
+      const found = new Set<string>();
+      const functions = await sql<{ s: string; n: string }[]>`
+        select n.nspname as s, p.proname as n from pg_proc p
+        join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = any(${list})`;
+      for (const r of functions) found.add(`function:${r.s}.${r.n}`);
+      const views = await sql<{ s: string; n: string }[]>`
+        select n.nspname as s, c.relname as n from pg_class c
+        join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = any(${list}) and c.relkind in ('v', 'm')`;
+      for (const r of views) found.add(`view:${r.s}.${r.n}`);
+      const triggers = await sql<{ s: string; t: string; n: string }[]>`
+        select n.nspname as s, c.relname as t, g.tgname as n from pg_trigger g
+        join pg_class c on c.oid = g.tgrelid
+        join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = any(${list}) and not g.tgisinternal`;
+      for (const r of triggers) found.add(`trigger:${r.s}.${r.t}:${r.n}`);
+      return found;
     },
     async exec(text) {
       await sql.begin(async (tx) => {

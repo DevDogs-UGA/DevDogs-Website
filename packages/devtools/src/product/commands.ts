@@ -245,7 +245,10 @@ async function runSync(
     yes: hasYes(rest),
     confirmDestructive: deps.interactive() ? confirmDestructive : undefined,
     dryRun,
+    strict: rest.includes("--strict"),
     log: (line) => log.info(line),
+    warn: (line) => log.warn(line),
+    open: deps.openSql,
   });
 
   if (rest.includes("--rebuild") && !dryRun) {
@@ -279,7 +282,7 @@ export async function regenerateAfterSync(
     log.info(`Would regenerate ${product.config.types.out}.`);
     return;
   }
-  if (!result.migration && typesAreCurrent(product)) return;
+  if (!result.applied && typesAreCurrent(product)) return;
   try {
     await generateTypes(product, cli, target, deps.run, (line) =>
       log.info(line),
@@ -359,8 +362,12 @@ export function createProductHandlers(
       switch (sub) {
         case "sync": {
           const { result, cli, target } = await runSync(product, deps, flags);
-          if (result.migration) {
-            log.success("Your database now matches supabase/schemas.");
+          if (result.applied) {
+            log.success(
+              result.extras.length > 0
+                ? `Your database now matches supabase/schemas, apart from the ${result.extras.length} extra thing${result.extras.length === 1 ? "" : "s"} listed above.`
+                : "Your database now matches supabase/schemas.",
+            );
           }
           await regenerateAfterSync(product, cli, target, result, deps);
           return DONE;
@@ -749,12 +756,14 @@ async function runSetup(
     yes: hasYes(rest),
     confirmDestructive: deps.interactive() ? confirmDestructive : undefined,
     log: (line) => log.info(line),
+    warn: (line) => log.warn(line),
+    open: deps.openSql,
   });
-  log.success(
-    result.migration
-      ? "Applied supabase/schemas to your database."
-      : "Your database already matched supabase/schemas.",
-  );
+  if (result.applied) {
+    log.success("Applied supabase/schemas to your database.");
+  } else if (result.compared) {
+    log.success("Your database already matched supabase/schemas.");
+  }
 
   if (target.kind === "local") await waitForRest(target, deps, product);
 

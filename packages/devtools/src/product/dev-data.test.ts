@@ -33,6 +33,7 @@ function fakeSession(
   const session: SqlSession = {
     members: members_,
     appliedMigrations: () => Promise.resolve([]),
+    existingObjects: () => Promise.resolve(new Set<string>()),
     missingSchemas: vi.fn().mockResolvedValue(missingSchemas),
     memberByRef: vi.fn((ref: string) =>
       Promise.resolve(

@@ -70,7 +70,7 @@ export const productDbCommand: CommandNode = {
       name: "sync",
       title: "Apply the schema to my database",
       summary:
-        "Diff supabase/schemas against what your database has had applied, and apply the difference.",
+        "Compare your database with supabase/schemas: recreate what it is missing, apply schema changes you pulled, warn about extras, and refuse to alter what is defined differently.",
       envFree: true,
       dryRun: "handled",
       options: [
@@ -79,6 +79,11 @@ export const productDbCommand: CommandNode = {
           flag: "--rebuild",
           summary:
             "Reset the local database and start over from the schema, then register sign in again.",
+        },
+        {
+          flag: "--strict",
+          summary:
+            "Fail (changing nothing) when the database has things supabase/schemas does not define, instead of warning.",
         },
         {
           flag: "--yes",
