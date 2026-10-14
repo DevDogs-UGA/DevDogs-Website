@@ -364,6 +364,7 @@ jobs:
             # why (a token scope, an account lookup), never hide it.
             echo "::warning::wrangler deployments status failed (exit $status), so the serving version is unknown. wrangler said: $(tr '\n' ' ' < "$RUNNER_TEMP/previous.err" | cut -c1-600) $(tr '\n' ' ' < "$RUNNER_TEMP/previous.json" | cut -c1-300)"
           else
+            echo "::warning::wrangler deployments status exited 0 but named no version. stdout: $(tr '\n' ' ' < "$RUNNER_TEMP/previous.json" | cut -c1-500) stderr: $(tr '\n' ' ' < "$RUNNER_TEMP/previous.err" | cut -c1-300)"
             echo "::notice::No version is serving $WORKER_NAME yet (a first deploy), so there is nothing to roll back to."
           fi
 
