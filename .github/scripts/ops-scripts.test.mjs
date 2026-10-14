@@ -2238,3 +2238,63 @@ test("slides.yaml's latest_paths are exactly its push path filters", () => {
     "a drift would let an unrelated commit strand, or a related one skip, a deploy",
   );
 });
+
+test("a destructive migration, seed and roles file the producers name differently on each side are still covered", async () => {
+  const { uncovered, deployReasons, pullRequestReasons } =
+    await import("./destructive-approval.mjs");
+  const { root, git } = gitRepo();
+  writeFileSync(join(root, "README"), "x");
+  git("add", "-A");
+  git("commit", "-qm", "base");
+  const base = git("rev-parse", "HEAD");
+  mkdirSync(join(root, "supabase", "migrations"), { recursive: true });
+  mkdirSync(join(root, "supabase", "seed", "roles"), { recursive: true });
+  writeFileSync(
+    join(root, "supabase", "migrations", "20261010000000_b.sql"),
+    "DROP TABLE tmp_import;",
+  );
+  writeFileSync(
+    join(root, "supabase", "seed", "roles", "x.sql"),
+    "delete from platform.roles;",
+  );
+  writeFileSync(join(root, "supabase", "roles.sql"), "delete from platform.r;");
+  git("add", "-A");
+  git("commit", "-qm", "head");
+  const rt = {
+    env: {},
+    log: () => {},
+    run: (cmd, args, opts) => {
+      const r = spawnSync(cmd, args, { cwd: opts?.cwd, encoding: "utf8" });
+      return { status: r.status ?? 1, stdout: r.stdout, stderr: r.stderr };
+    },
+  };
+  const write = (dir, name, classified) => {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, name), JSON.stringify({ classified }));
+    return dir;
+  };
+  const prDir = write(
+    join(root, "pr"),
+    "migrations-change.json",
+    changedMigrations(rt, root, base),
+  );
+  const deployDir = write(join(root, "deploy"), "migrations-plan.json", [
+    ...classifyPendingMigrations(root, ["20261010000000_b.sql"]),
+    ...classifyPendingSeeds(root, ["seed/roles/x.sql", "roles.sql"]),
+  ]);
+  const deploy = deployReasons(deployDir);
+  assert.equal(deploy.length, 3);
+  assert.deepEqual(uncovered(deploy, pullRequestReasons(prDir)), []);
+  // A different file with the same statement is still not covered.
+  const other = write(join(root, "deploy2"), "migrations-plan.json", [
+    {
+      file: "20261111000000_c.sql",
+      destructive: true,
+      reasons: [{ kind: "DROP TABLE", statement: "DROP TABLE tmp_import" }],
+    },
+  ]);
+  assert.equal(
+    uncovered(deployReasons(other), pullRequestReasons(prDir)).length,
+    1,
+  );
+});

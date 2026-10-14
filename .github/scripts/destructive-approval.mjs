@@ -53,6 +53,16 @@ import { isMain } from "./is-main.mjs";
 const squash = (statement) => String(statement).replace(/\s+/g, " ").trim();
 
 /**
+ * The file's own name. The deploy names a migration by its bare file name
+ * (`20261010000000_b.sql`) and a seed as the CLI lists it (repo-relative or
+ * relative to `supabase/`), while the pull request's check names the repo path
+ * (`supabase/migrations/20261010000000_b.sql`); both sides reduce to the name.
+ *
+ * @param {string} source
+ */
+const fileName = (source) => String(source).split(/[\\/]/).pop() ?? "";
+
+/**
  * What an approval is keyed to. A migration or seed statement is keyed to its
  * SOURCE FILE as well as its text, so a pull request that approved
  * `DROP TABLE tmp` in one migration cannot cover the same text in another
@@ -63,7 +73,7 @@ const squash = (statement) => String(statement).replace(/\s+/g, " ").trim();
  * @param {{ source?: string, kind: string, statement: string }} reason
  */
 export const reasonKey = (reason) =>
-  `${reason.source && reason.source !== "schema" ? reason.source : ""}\u0000${reason.kind}\u0000${squash(reason.statement)}`;
+  `${reason.source && reason.source !== "schema" ? fileName(reason.source) : ""}\u0000${reason.kind}\u0000${squash(reason.statement)}`;
 
 /**
  * @param {string} path
