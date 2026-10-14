@@ -227,6 +227,25 @@ function restorePending(product: Product): void {
   }
 }
 
+/** A CLI timestamp (`20261011120000`, UTC) for a moment. */
+function stamp(date: Date): string {
+  return date.toISOString().replace(/\D/g, "").slice(0, 14);
+}
+
+/**
+ * The Supabase CLI refuses a history with a migration dated later than the
+ * clock (it reports `LegacyMigrationMissingRemoteError`, or a history
+ * mismatch), and says nothing about the date. Names the files and the clock
+ * when that is the cause (WSL clock drift is a common one), else undefined.
+ * Nothing is half-applied when it happens; fixing the clock is enough.
+ */
+function futureDatedHint(dir: string, now: Date): string | undefined {
+  const clock = stamp(now);
+  const future = migrationFiles(dir).filter((f) => versionOf(f) > clock);
+  if (future.length === 0) return undefined;
+  return `${future.length === 1 ? "A migration is" : `${future.length} migrations are`} dated later than this machine's clock (${clock} UTC): ${future.join(", ")}. The Supabase CLI refuses a history that runs ahead of the clock. Check the clock (on WSL, \`sudo hwclock -s\` fixes drift) or rename the file to an earlier version, then sync again. Nothing was changed.`;
+}
+
 /** `20261011120000` from `20261011120000_devtools_sync.sql`. */
 function versionOf(file: string): string {
   return file.split("_")[0] ?? file;
@@ -613,7 +632,7 @@ export async function dbSync(
 
   restorePending(product);
   // The local stack with no record on this machine: if it has been migrated
-  // before (a deleted folder, or another target's record that was set aside),
+  // before (a deleted folder, or another target's record that was deleted),
   // its history is restored; a fresh stack has none and starts from the schema.
   if (
     !needsRecord &&
@@ -645,7 +664,7 @@ export async function dbSync(
           );
     if (unknownFiles) {
       log(
-        `supabase/migrations has migrations that ${key === "local" ? "the local stack" : "this project"} has not applied and no record of whose they are (they were probably written for another database); they are set aside and this database's own history is used.`,
+        `supabase/migrations has migrations that ${key === "local" ? "the local stack" : "this project"} has not applied and no record of whose they are (they were probably written for another database); they are deleted and this database's own history is used.`,
       );
       forgetMigrations(product);
       needsRecord = true;
@@ -653,7 +672,7 @@ export async function dbSync(
   }
   if (foreign) {
     log(
-      `supabase/migrations holds the record of another database (${owner}); this sync is for ${key}, so that record is set aside and this database's own history is used.`,
+      `supabase/migrations holds the record of another database (${owner}); this sync is for ${key}, so that record is deleted and this database's own history is used.`,
     );
     forgetMigrations(product);
   }
@@ -665,6 +684,8 @@ export async function dbSync(
     // one); a database that has a history it cannot hand over is not, and
     // its real error is shown rather than advice to start over.
     if (fetched.code !== 0 && (ledger0 ?? []).length > 0) {
+      const future = futureDatedHint(migrationsDir, new Date());
+      if (future) throw new SyncError(future, redact(outputOf(fetched)));
       throw new SyncError(
         "Could not restore this database's migration history from the database itself, so nothing was changed.",
         redact(outputOf(fetched)),
@@ -701,6 +722,8 @@ export async function dbSync(
     generated = await run(cli.command, generateArgs, { cwd: product.root });
   }
   if (generated.code !== 0) {
+    const future = futureDatedHint(migrationsDir, new Date());
+    if (future) throw new SyncError(future, redact(outputOf(generated)));
     throw new SyncError(
       isContainerFailure(generated)
         ? "Could not diff the schema: Docker is needed for the shadow database. Start Docker and try again."
@@ -763,6 +786,13 @@ export async function dbSync(
     // so the next sync diffs from what is true.
     for (const file of created) rmSync(join(migrationsDir, file));
     const why = redact(outputOf(applied));
+    const future = futureDatedHint(migrationsDir, new Date());
+    if (
+      future &&
+      /LegacyMigrationMissingRemote|migration versions|history/i.test(why)
+    ) {
+      throw new SyncError(future, why);
+    }
     throw new SyncError(
       /migration versions not found|history does not match/i.test(why)
         ? "The change did not apply: the database's migration history and supabase/migrations disagree. The error below is the database's own."

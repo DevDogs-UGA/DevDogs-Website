@@ -33,7 +33,7 @@ const CREATE = "create table dogpack.sessions (id uuid primary key);\n";
 function runnerThatGenerates(
   productRoot: string,
   sql: string | null,
-  apply: { code: number } = { code: 0 },
+  apply: { code: number; stderr?: string } = { code: 0 },
 ) {
   return recordingRunner(({ args }) => {
     if (args.includes("declarative")) {
@@ -1034,6 +1034,59 @@ describe("dbSync, migrations of unknown origin", () => {
     expect(error).toBeInstanceOf(SyncError);
     expect(error.output).toContain("Remote migration versions not found");
     expect(`${error.message}${error.output}`).not.toContain("--rebuild");
+  });
+
+  it("explains a migration dated later than the clock when the CLI refuses the history", async () => {
+    const product = makeProduct({
+      files: { "supabase/migrations/20991231000000_ahead.sql": CREATE },
+    });
+    const { run } = runnerThatGenerates(product.root, CREATE, {
+      code: 1,
+      stderr: "LegacyMigrationMissingRemoteError",
+    });
+    const error = await dbSync(product, CLI, LOCAL, run, {
+      yes: false,
+    }).catch((err: unknown) => err as SyncError);
+    expect(error).toBeInstanceOf(SyncError);
+    expect(error.message).toContain("dated later than this machine's clock");
+    expect(error.message).toContain("20991231000000_ahead.sql");
+    expect(error.output).toContain("LegacyMigrationMissingRemoteError");
+  });
+
+  it("keeps a pre-record checkout's migrations when the hosted project's ledger lists them", async () => {
+    const product = makeProduct({ files: RECORD });
+    const { run, calls } = recordingRunner(({ args }) =>
+      args.includes("declarative")
+        ? { stdout: "No schema changes" }
+        : undefined,
+    );
+    const lines: string[] = [];
+    await dbSync(product, CLI, HOSTED, run, {
+      yes: false,
+      open: () => fakeSession({ ledger: ["20261001000000"] }).session,
+      log: (line) => lines.push(line),
+    }).catch(() => undefined);
+    expect(lines.join("\n")).not.toContain("they are deleted");
+    expect(calls.some((c) => c.args[1] === "fetch")).toBe(false);
+    expect(readdirSync(product.paths.migrationsDir)).toEqual([
+      "20261001000000_first.sql",
+    ]);
+  });
+
+  it("says unknown-origin migrations are deleted, not set aside", async () => {
+    const product = makeProduct({ files: RECORD });
+    const { run } = recordingRunner(({ args }) =>
+      args[1] === "fetch" ? { code: 1, stderr: "no history" } : undefined,
+    );
+    const lines: string[] = [];
+    await dbSync(product, CLI, HOSTED, run, {
+      yes: false,
+      open: () => fakeSession({ ledger: null }).session,
+      log: (line) => lines.push(line),
+    }).catch(() => undefined);
+    const text = lines.join("\n");
+    expect(text).toContain("they are deleted");
+    expect(text).not.toContain("set aside");
   });
 
   it("treats files as unknown for a hosted project with no history table", async () => {

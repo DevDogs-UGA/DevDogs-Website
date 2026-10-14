@@ -293,6 +293,48 @@ describe("classifyDiff, CONFLICTING", () => {
     ]);
   });
 
+  it("reports a retyped column as a type conflict only, not also a changed default", () => {
+    const drift = classifyDiff(
+      'ALTER TABLE "dogdays"."t"\n  ALTER COLUMN "c" TYPE bigint;\n\nALTER TABLE "dogdays"."t"\n  ALTER COLUMN "c" SET DEFAULT 0;',
+      NONE,
+    );
+    expect(drift.conflicts).toEqual([
+      {
+        object: 'column "dogdays"."t"."c"',
+        detail: "its type differs from supabase/schemas",
+      },
+    ]);
+  });
+
+  it("still reports a changed default when the type is unchanged", () => {
+    const drift = classifyDiff(
+      'ALTER TABLE "dogdays"."t"\n  ALTER COLUMN "c" SET DEFAULT 0;',
+      NONE,
+    );
+    expect(drift.conflicts.map((c) => c.detail)).toEqual([
+      "its default differs from supabase/schemas",
+    ]);
+  });
+
+  it("runs the expected non-CREATE statements: SET, ENABLE ROW LEVEL SECURITY, ADD VALUE, REVOKE on a new object", () => {
+    const drift = classifyDiff(
+      [
+        "SET check_function_bodies = false;",
+        'CREATE TABLE "dogdays"."n" (id int);',
+        'ALTER TABLE "dogdays"."n" ENABLE ROW LEVEL SECURITY;',
+        'REVOKE ALL ON TABLE "dogdays"."n" FROM "anon";',
+        'GRANT SELECT ON TABLE "dogdays"."n" TO "anon";',
+        'ALTER TYPE "dogdays"."kind" ADD VALUE \'x\';',
+      ].join("\n"),
+      new Set(["type:dogdays.kind"]),
+    );
+    expect(drift.conflicts).toEqual([]);
+    const sql = drift.restore.join("\n");
+    expect(sql).toMatch(/^SET check_function_bodies/);
+    expect(sql).toContain("ENABLE ROW LEVEL SECURITY");
+    expect(sql).toContain("ADD VALUE");
+  });
+
   it("refuses a function whose body differs but not one the database lacks", () => {
     const changed = classifyDiff(real.functionBody, WITH_FUNCTION);
     expect(changed.conflicts.map((c) => c.object)).toContain(

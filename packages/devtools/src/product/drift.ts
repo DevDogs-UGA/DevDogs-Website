@@ -16,6 +16,17 @@
  *     a `DROP INDEX` followed by `CREATE INDEX` of the same name, a function
  *     whose body differs, ...). Reported; the sync refuses.
  *
+ * Besides CREATE, ADD and GRANT, a repair can legitimately run these, and they
+ * are expected rather than a sign of a misread diff:
+ *   - `SET ...` (the diff's preamble, such as `SET check_function_bodies`),
+ *     run first so the creates behave as they did when written.
+ *   - `REVOKE` on an object created in the same sync (pg-delta writes a new
+ *     object's privileges as REVOKE ALL then GRANT). A REVOKE on anything that
+ *     already existed is never run; it is listed as an extra.
+ *   - `ALTER TABLE ... ENABLE|FORCE ROW LEVEL SECURITY`, which only turns a
+ *     protection on for a table whose policies the record defines.
+ *   - `ALTER TYPE ... ADD VALUE`, which adds an enum label and removes none.
+ *
  * Anything unrecognized is CONFLICTING: the only safe reading of a statement
  * devtools does not understand is "do not run it".
  */
@@ -785,9 +796,23 @@ export function classifyDiff(
     extras: dedupe(extras),
     conflicts: [...conflicts].map(([object, why]) => ({
       object,
-      detail: [...why].join("; "),
+      detail: [...withoutDefaultOfRetyped(why)].join("; "),
     })),
   };
+}
+
+/**
+ * pg-delta follows a column's type change with a `SET DEFAULT` for the new
+ * type. The default is a consequence, not a second difference, so a retyped
+ * column is reported as a type conflict only.
+ */
+function withoutDefaultOfRetyped(why: Set<string>): Set<string> {
+  const type = "its type differs from supabase/schemas";
+  const dflt = "its default differs from supabase/schemas";
+  if (!why.has(type)) return why;
+  const rest = new Set(why);
+  rest.delete(dflt);
+  return rest;
 }
 
 function dedupe(findings: Finding[]): Finding[] {
