@@ -11,10 +11,6 @@ Deploys to Cloudflare Workers through vinext, on its own zone, from the officers
 production and `staging.dogdays.dev` in staging, both declared as
 `custom_domain` routes in `wrangler.jsonc`.
 
-`SCHEDULE_BUILDER_URL` has to be kept in step with those by hand — nothing
-cross-checks the two. A mismatch is not a build failure; it's an OAuth
-callback that silently goes to the wrong place.
-
 In-app branding is **DogDays** throughout (mark and copy from
 `@devdogsuga/sdk/brand`), with its own light/dark zinc-and-red design driven
 by system `prefers-color-scheme` — not the platform's design language.

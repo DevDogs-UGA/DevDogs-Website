@@ -785,7 +785,7 @@ test("an unset env() is dropped from a list, a switched-off section, and refused
     'site_url = "env(BASE_URL)"',
     "additional_redirect_urls = [",
     '  "env(BASE_URL_CALLBACK)",',
-    '  "env(STUDY_GROUP_FINDER_URL_CALLBACK)",',
+    '  "env(UNSET_URL_CALLBACK)",',
     '  "dev.dogpack://login-callback",',
     "]",
     "[auth.external.linkedin_oidc]",
@@ -804,9 +804,9 @@ test("an unset env() is dropped from a list, a switched-off section, and refused
   assert.deepEqual(result.missing, []);
   assert.deepEqual(result.dropped.sort(), [
     "LINKEDIN_CLIENT_ID",
-    "STUDY_GROUP_FINDER_URL_CALLBACK",
+    "UNSET_URL_CALLBACK",
   ]);
-  assert.doesNotMatch(result.toml, /STUDY_GROUP_FINDER|LINKEDIN_CLIENT_ID/);
+  assert.doesNotMatch(result.toml, /UNSET_URL|LINKEDIN_CLIENT_ID/);
   assert.match(result.toml, /dev\.dogpack:\/\/login-callback/);
   assert.match(
     result.toml,
@@ -869,19 +869,14 @@ test("the callback variables are derived from their URL, as supabase/env.ts decl
   const lookup = lookupFrom({
     VARS_JSON: JSON.stringify({
       BASE_URL: "https://devdogsuga.org/",
-      SCHEDULE_BUILDER_URL: "https://dogdays.dev",
     }),
   });
   assert.equal(
     lookup("BASE_URL_CALLBACK"),
     "https://devdogsuga.org/auth/callback",
   );
-  assert.equal(
-    lookup("SCHEDULE_BUILDER_URL_CALLBACK"),
-    "https://dogdays.dev/auth/callback",
-  );
   // No URL, no callback: the entry is dropped from the allowlist, not sent as text.
-  assert.equal(lookup("STUDY_GROUP_FINDER_URL_CALLBACK"), undefined);
+  assert.equal(lookup("UNSET_URL_CALLBACK"), undefined);
   // A stored value wins over the derivation.
   assert.equal(
     lookupFrom({
@@ -899,11 +894,7 @@ test("the derivation matches the registry's own formulas", () => {
     join(import.meta.dirname, "..", "..", "supabase", "env.ts"),
     "utf8",
   );
-  for (const name of [
-    "BASE_URL",
-    "SCHEDULE_BUILDER_URL",
-    "STUDY_GROUP_FINDER_URL",
-  ]) {
+  for (const name of ["BASE_URL"]) {
     assert.ok(
       manifest.includes(`example: "$${name}/auth/callback"`),
       `supabase/env.ts no longer derives ${name}_CALLBACK as $${name}/auth/callback`,

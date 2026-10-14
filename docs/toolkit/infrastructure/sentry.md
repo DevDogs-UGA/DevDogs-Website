@@ -25,12 +25,10 @@ The project slugs are not free to choose. The deploy workflow uploads each app's
 
 A DSN only lets someone send events to a project, so none of these is a secret.
 
-| Variable                                  | Declared in                            |
-| ----------------------------------------- | -------------------------------------- |
-| `PLATFORM_SENTRY_DSN`                     | `apps/platform/src/env.ts` (Backstage) |
-| `NEXT_PUBLIC_PLATFORM_SENTRY_DSN`         | `apps/platform/src/env.ts` (Backstage) |
-| `SCHEDULE_BUILDER_SENTRY_DSN`             | `apps/schedule-builder/src/env.ts`     |
-| `NEXT_PUBLIC_SCHEDULE_BUILDER_SENTRY_DSN` | `apps/schedule-builder/src/env.ts`     |
+| Variable                          | Declared in                            |
+| --------------------------------- | -------------------------------------- |
+| `PLATFORM_SENTRY_DSN`             | `apps/platform/src/env.ts` (Backstage) |
+| `NEXT_PUBLIC_PLATFORM_SENTRY_DSN` | `apps/platform/src/env.ts` (Backstage) |
 
 Each name carries its app because a deploy environment holds one value per name: a shared `SENTRY_DSN` would send every app's events to one project. Each `NEXT_PUBLIC_` variable is derived from its server-side partner (`NEXT_PUBLIC_PLATFORM_SENTRY_DSN="$PLATFORM_SENTRY_DSN"`), so you never set it by hand. It is inlined into the browser bundle at build time.
 

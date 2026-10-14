@@ -171,7 +171,6 @@ export async function checkEnv(root: string): Promise<string[]> {
       "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
       "PLATFORM_SENTRY_DSN",
       "PUBLISHABLE_KEY",
-      "SCHEDULE_BUILDER_SENTRY_DSN",
     ].filter((key) => registry.has(key));
     if (JSON.stringify(build) !== JSON.stringify(expectedBuild)) {
       problems.push(
@@ -211,9 +210,9 @@ export async function checkEnv(root: string): Promise<string[]> {
       );
     }
   }
-  if (routed < 40) {
+  if (routed < 35) {
     problems.push(
-      `Only ${routed} environment-scoped keys were routed (expected 40 or more).`,
+      `Only ${routed} environment-scoped keys were routed (expected 35 or more).`,
     );
   }
 
@@ -229,9 +228,9 @@ export async function checkEnv(root: string): Promise<string[]> {
       }
     }
   }
-  if (variableSet.size < 20) {
+  if (variableSet.size < 15) {
     problems.push(
-      `Only ${variableSet.size} keys are in variableKeys() (expected 20 or more).`,
+      `Only ${variableSet.size} keys are in variableKeys() (expected 15 or more).`,
     );
   }
   for (const key of ["NEXT_PUBLIC_AVATARS_BUCKET", "DEV_VPN_HOST"]) {
