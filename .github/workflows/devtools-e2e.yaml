@@ -1,0 +1,200 @@
+name: Devtools E2E
+
+# Does a change to devtools still set up a new project, end to end? This packs
+# the change's devtools (`pnpm pack`, the same tarball shape npm gets), then
+# does what the product docs tell a member to do in a fresh checkout of DogDays
+# and DogPack `main`, with the packed CLI in place of `@devdogsuga/devtools@next`:
+# .github/scripts/e2e-setup.sh in each product repository.
+#
+#   ubuntu-latest    the full run: `devtools setup` against a local Docker
+#                    Supabase stack, then what a member does next (DogDays:
+#                    typecheck, tests, the first page, a course search;
+#                    DogPack: flutter analyze, flutter test, dev-data).
+#   windows-latest   everything that needs no Docker (GitHub's Windows runners
+#                    cannot run Supabase's Linux images): --version, bare
+#                    `devtools` with no terminal, `doctor`, `db types
+#                    --download`, and resolving and spawning the pinned
+#                    Supabase CLI. Builds on ci.yaml's `windows` job, which
+#                    smoke-runs the bin in a fixture; this runs it in the real
+#                    products.
+#   macOS            not run.
+#
+# The products run the same script nightly against the published `@next`
+# (their e2e-setup.yaml); this is the check that runs before a change reaches it.
+#
+# Credential-free, like ci.yaml, so a fork's pull request runs it.
+#
+# "Sign in with DevDogs" (OAuth) waits for a test OAuth client; see the
+# `oauth` job at the bottom.
+#
+# To watch it fail, run it by hand with `sabotage` set: the runner breaks its
+# own copy of the build (scripts/e2e-sabotage.mjs) after building and before
+# packing. Nothing is committed and `main` is untouched.
+on:
+  pull_request:
+    paths:
+      - packages/devtools/**
+      - packages/cli-core/**
+      - .github/workflows/devtools-e2e.yaml
+  push:
+    branches: [main]
+    paths:
+      - packages/devtools/**
+      - packages/cli-core/**
+      - .github/workflows/devtools-e2e.yaml
+  workflow_dispatch:
+    inputs:
+      sabotage:
+        description: Break the packed build on purpose, to prove this check turns red (none leaves it intact)
+        type: choice
+        default: none
+        options:
+          - none
+          - supabase-start
+          - doctor-config
+
+concurrency:
+  group: devtools-e2e-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install devtools and cli-core
+        run: pnpm install --frozen-lockfile --filter '@devdogsuga/devtools...' --filter '@devdogsuga/cli-core...'
+      - name: Build devtools
+        run: pnpm --filter '@devdogsuga/devtools...' --if-present run build
+      - name: Break the build on purpose (manual runs only)
+        if: github.event_name == 'workflow_dispatch' && inputs.sabotage != 'none'
+        run: node packages/devtools/scripts/e2e-sabotage.mjs "$MODE"
+        env:
+          MODE: ${{ inputs.sabotage }}
+      - name: Pack devtools
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pack"
+          pnpm --filter @devdogsuga/devtools pack --pack-destination "$RUNNER_TEMP/pack"
+          mv "$RUNNER_TEMP"/pack/*.tgz "$RUNNER_TEMP/pack/devtools.tgz"
+          tar -tzf "$RUNNER_TEMP/pack/devtools.tgz" | head -20
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: devtools-tarball
+          path: ${{ runner.temp }}/pack/devtools.tgz
+          retention-days: 3
+
+  ubuntu:
+    needs: pack
+    name: ubuntu (${{ matrix.product }}, local Docker stack)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        product: [DogDays, DogPack]
+    steps:
+      # The product's own main, at the workspace root, so its setup actions and
+      # the script that runs its docs' steps are the ones it ships.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: DevDogsUGA/${{ matrix.product }}
+          ref: main
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: devtools-tarball
+          path: ${{ runner.temp }}/devtools
+      - uses: ./.github/actions/setup-devtools
+      - uses: ./.github/actions/setup-flutter
+        if: matrix.product == 'DogPack'
+      - name: Set up ${{ matrix.product }} as the docs say, with the packed devtools
+        env:
+          DEVTOOLS_TARBALL: ${{ runner.temp }}/devtools/devtools.tgz
+          DEVTOOLS_TELEMETRY: "0"
+        run: bash .github/scripts/e2e-setup.sh
+
+  windows:
+    needs: pack
+    name: windows (${{ matrix.product }}, no Docker)
+    runs-on: windows-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        product: [DogDays, DogPack]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: DevDogsUGA/${{ matrix.product }}
+          ref: main
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: devtools-tarball
+          path: ${{ runner.temp }}/devtools
+      # This repository's scripts, beside the product.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: devdogsuga
+          sparse-checkout: .github/scripts
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Run the checks that need no Docker
+        env:
+          DEVTOOLS_TARBALL: ${{ runner.temp }}/devtools/devtools.tgz
+          DEVTOOLS_TELEMETRY: "0"
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bash devdogsuga/.github/scripts/e2e-windows.sh
+
+  # Waits for the test OAuth client (a Sloan step; see the products'
+  # e2e-setup.yaml for the secret names). Skipped until the secrets exist, and
+  # never on a pull request (a fork cannot read them). When it turns on it runs
+  # the products' e2e-setup.sh with the client's id and secret, so `devtools
+  # setup` registers `custom:devdogsuga` on the local stack with no browser.
+  # The scripted sign-in itself is written with the client.
+  oauth:
+    needs: pack
+    if: github.event_name != 'pull_request' && vars.E2E_OAUTH_ENABLED == 'true'
+    name: oauth (${{ matrix.product }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        product: [DogDays, DogPack]
+    env:
+      DEVDOGS_OAUTH_CLIENT_ID: ${{ secrets.E2E_OAUTH_CLIENT_ID }}
+      DEVDOGS_OAUTH_CLIENT_SECRET: ${{ secrets.E2E_OAUTH_CLIENT_SECRET }}
+      DEVDOGS_OAUTH_BASE_URL: ${{ vars.E2E_OAUTH_BASE_URL }}
+      DEVTOOLS_TELEMETRY: "0"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: DevDogsUGA/${{ matrix.product }}
+          ref: main
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: devtools-tarball
+          path: ${{ runner.temp }}/devtools
+      - uses: ./.github/actions/setup-devtools
+      - uses: ./.github/actions/setup-flutter
+        if: matrix.product == 'DogPack'
+      - name: Set up ${{ matrix.product }} with the packed devtools and the test OAuth client
+        env:
+          DEVTOOLS_TARBALL: ${{ runner.temp }}/devtools/devtools.tgz
+        run: bash .github/scripts/e2e-setup.sh
