@@ -37,7 +37,8 @@ than run unattended.
 ## Product repositories
 
 `--repo dogdays` or `--repo dogpack` points the same three commands at a
-product repository instead of this one:
+product repository instead of this one. Run them from a DevDogsUGA checkout as
+`pnpm backstage env … --repo …` (the frozen Backstage repository does not have `--repo`):
 
 ```bash
 backstage env pull  --repo dogdays --target staging
