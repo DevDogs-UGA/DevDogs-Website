@@ -225,7 +225,7 @@ describe("product targets", () => {
     it.skipIf(!dir || !existsSync(dir ?? ""))(
       `${product}'s public keys cover every vars name its CI reads`,
       () => {
-        const root = join(dir as string, ".github");
+        const root = join(dir!, ".github");
         const read: string[] = [];
         const walk = (d: string) => {
           for (const entry of readdirSync(d)) {
@@ -238,11 +238,11 @@ describe("product targets", () => {
         const text = read.join("\n");
         const names = new Set<string>();
         for (const m of text.matchAll(/\bvars\.([A-Z][A-Z0-9_]*)/g)) {
-          names.add(m[1] as string);
+          names.add(m[1]!);
         }
         // worker-build.sh reads the vars JSON with get/need calls.
         for (const m of text.matchAll(/\b(?:get|need) ([A-Z][A-Z0-9_]*)\b/g)) {
-          names.add(m[1] as string);
+          names.add(m[1]!);
         }
         // Feature switches, not environment configuration.
         const switches = (n: string) => /^DOG[A-Z]+_/.test(n);
