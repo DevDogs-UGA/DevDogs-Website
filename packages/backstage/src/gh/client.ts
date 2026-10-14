@@ -70,6 +70,15 @@ function warnOnEnvTokenOverride(): void {
   );
 }
 
+/**
+ * `-R owner/name` when a command targets a repository other than the one the
+ * working directory belongs to (a product's, for `env --repo`), nothing
+ * otherwise, so every existing call keeps its exact argv.
+ */
+function repoArgs(repo: string | undefined): string[] {
+  return repo === undefined ? [] : ["-R", repo];
+}
+
 export interface GhSecret {
   name: string;
   updatedAt: string;
@@ -142,12 +151,23 @@ function describe(err: unknown): string {
 }
 
 /** Environment secret names and when each last changed. Never values. */
-export async function listSecrets(environment: string): Promise<GhSecret[]> {
+export async function listSecrets(
+  environment: string,
+  repo?: string,
+): Promise<GhSecret[]> {
   warnOnEnvTokenOverride();
   try {
     const { stdout } = await run(
       "gh",
-      ["secret", "list", "--env", environment, "--json", "name,updatedAt"],
+      [
+        "secret",
+        "list",
+        "--env",
+        environment,
+        "--json",
+        "name,updatedAt",
+        ...repoArgs(repo),
+      ],
       { maxBuffer: MAX_BUFFER, shell: false },
     );
     return stdout.trim() === "" ? [] : (JSON.parse(stdout) as GhSecret[]);
@@ -172,13 +192,18 @@ export async function setSecret(
   environment: string,
   name: string,
   value: string,
+  repo?: string,
 ): Promise<void> {
   warnOnEnvTokenOverride();
   await new Promise<void>((resolve, reject) => {
-    const child = spawn("gh", ["secret", "set", name, "--env", environment], {
-      stdio: ["pipe", "ignore", "pipe"],
-      shell: false,
-    });
+    const child = spawn(
+      "gh",
+      ["secret", "set", name, "--env", environment, ...repoArgs(repo)],
+      {
+        stdio: ["pipe", "ignore", "pipe"],
+        shell: false,
+      },
+    );
 
     let stderr = "";
     child.stderr.on("data", (c: Buffer) => (stderr += c.toString()));
@@ -224,6 +249,7 @@ export async function deleteSecret(
  */
 export async function listVariables(
   environment: string,
+  repo?: string,
 ): Promise<GhVariable[]> {
   warnOnEnvTokenOverride();
   try {
@@ -236,6 +262,7 @@ export async function listVariables(
         environment,
         "--json",
         "name,value,updatedAt",
+        ...repoArgs(repo),
       ],
       { maxBuffer: MAX_BUFFER, shell: false },
     );
@@ -259,13 +286,18 @@ export async function setVariable(
   environment: string,
   name: string,
   value: string,
+  repo?: string,
 ): Promise<void> {
   warnOnEnvTokenOverride();
   await new Promise<void>((resolve, reject) => {
-    const child = spawn("gh", ["variable", "set", name, "--env", environment], {
-      stdio: ["pipe", "ignore", "pipe"],
-      shell: false,
-    });
+    const child = spawn(
+      "gh",
+      ["variable", "set", name, "--env", environment, ...repoArgs(repo)],
+      {
+        stdio: ["pipe", "ignore", "pipe"],
+        shell: false,
+      },
+    );
 
     let stderr = "";
     child.stderr.on("data", (c: Buffer) => (stderr += c.toString()));
@@ -333,14 +365,14 @@ export interface GhRepositoryVariable {
  * the scope nothing here writes to and therefore the scope nothing here would
  * otherwise notice.
  */
-export async function listRepositoryVariables(): Promise<
-  GhRepositoryVariable[]
-> {
+export async function listRepositoryVariables(
+  repo?: string,
+): Promise<GhRepositoryVariable[]> {
   warnOnEnvTokenOverride();
   try {
     const { stdout } = await run(
       "gh",
-      ["variable", "list", "--json", "name,updatedAt"],
+      ["variable", "list", "--json", "name,updatedAt", ...repoArgs(repo)],
       { maxBuffer: MAX_BUFFER, shell: false },
     );
     return stdout.trim() === ""

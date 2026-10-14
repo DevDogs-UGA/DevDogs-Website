@@ -38,6 +38,8 @@ For a secret a Worker reads (an API key, a client secret):
 
 For a credential only the pipeline reads (the Cloudflare token, the Supabase management token, database URLs) skip step 4: change the GitHub environment secret and re-run the failed or next workflow.
 
+A product's credentials follow the same routine with `--repo`: `backstage env push --repo dogdays --target production` writes the `dogdays-production` project and then DogDays' own `production` GitHub environment, and `backstage env audit --repo dogdays --target production` compares the file, Bitwarden and GitHub. Use it instead of `gh secret set` once the product's Bitwarden projects exist (see [the commands](../../toolkit/guides/env/commands.md#product-repositories)).
+
 `pnpm backstage env audit --target production` lists what a Worker holds that nothing declares any more: run it after a rotation, and prune what it reports.
 
 ## When you suspect a leak

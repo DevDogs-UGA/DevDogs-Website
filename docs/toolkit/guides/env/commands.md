@@ -34,6 +34,38 @@ implies — an override for odd jobs, not the way to choose a target. `--yes`
 skips the confirmations, and `push --target production --yes` is refused rather
 than run unattended.
 
+## Product repositories
+
+`--repo dogdays` or `--repo dogpack` points the same three commands at a
+product repository instead of this one:
+
+```bash
+backstage env pull  --repo dogdays --target staging
+backstage env push  --repo dogdays --target staging
+backstage env audit --repo dogdays --target staging
+```
+
+Everything is derived from the target, as for the platform:
+
+| Fact               | Product value                                                                  |
+| ------------------ | ------------------------------------------------------------------------------ |
+| File               | `.env.<target>` at the root of the **product's** checkout                      |
+| Bitwarden project  | `<product>-<target>` (`dogdays-staging`, `dogpack-production`)                 |
+| GitHub environment | the target's name (`preflight`, `staging`, `production`) in the product's repo |
+
+The checkout is found from the current directory when you are inside it, then
+beside this clone; `--checkout <dir>` names it. A product has no env manifests,
+so the product's public keys (listed per product in `packages/sdk/src/env/targets.ts`)
+go to GitHub as variables and **every other key is a secret**. `audit` compares
+the file, Bitwarden and the one GitHub environment; it does not look at
+Cloudflare, and `--prune` does not apply. `push --target production` asks and is
+refused with `--yes`, as on the platform.
+
+A product's Bitwarden projects must exist before the commands work (creating one
+needs the Secrets Manager token). The first time, put the values from the
+hand-made Bitwarden item into `.env.<target>` in the checkout, one `KEY=value`
+line each, and run `push`.
+
 You need `gh auth login` with the `repo` scope and admin on the repository, and
 a Secrets Manager access token — which the tool finds, or asks for once and
 offers to save.

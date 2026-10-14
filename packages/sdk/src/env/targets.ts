@@ -209,6 +209,103 @@ export function holdsOnlyNarrowedKeys(target: EnvTarget): boolean {
   return !TARGETS[target].deployEnv;
 }
 
+// ── Product targets ──────────────────────────────────────────────────────────
+//
+// `backstage env <pull|push|audit> --repo <product> --target <target>` points
+// the same three commands at a PRODUCT repository (DogDays, DogPack) instead
+// of DevDogsUGA's own files. A product target is NOT a fifth row in `TARGETS`:
+// it is one of the vault targets above, read through a product, and every fact
+// about it is derived from that row:
+//
+//   | Fact                | Product value                                    |
+//   |---------------------|--------------------------------------------------|
+//   | file                | `fileFor(target)`, inside the PRODUCT's checkout |
+//   | Bitwarden project   | `<product>-<projectFor(target)>`                 |
+//   | GitHub repository   | the product's `repo`                             |
+//   | GitHub environment  | the target's own name                            |
+//
+// ⚠️ SINGLE MAPPING, KEPT. The file name and the vault project name are still
+// made in exactly one place each (`fileFor()` and `projectFor()` above); the
+// product functions below only wrap them. Do not hand-write
+// `".env.staging"` or `"dogdays-staging"` anywhere else: a second copy is how
+// the two-enum bug this file's header describes got made.
+//
+// The GitHub environment is the target's name because both product repos name
+// their environments `preflight`, `staging` and `production`, and a table that
+// only ever repeated its own key would be a second place to get wrong.
+//
+// Names only, as with `TargetSpec.project`: creating a project needs a Secrets
+// Manager token a person holds, and nothing here creates one.
+
+export interface ProductSpec {
+  /** `owner/name`, handed to `gh -R`. */
+  repo: string;
+  /** The checkout's directory name, looked for beside the DevDogsUGA clone. */
+  checkout: string;
+  /**
+   * The PUBLIC per-environment keys, pushed to GitHub as variables.
+   *
+   * An allowlist, on purpose and unlike the platform (which derives it from
+   * `define()` declarations a product repo does not have). Everything else in
+   * a product's file is a SECRET, so a key missing from this list fails safe:
+   * it is sealed and write-only rather than published in plaintext to anyone
+   * who can read the repository's Actions config.
+   */
+  variables: readonly string[];
+}
+
+export const PRODUCTS = {
+  dogdays: {
+    repo: "DevDogsUGA/DogDays",
+    checkout: "DogDays",
+    variables: [
+      "API_URL",
+      "BASE_URL",
+      "CATALOG_URL",
+      "PLATFORM_API_URL",
+      "PROJECT_REF",
+      "PUBLISHABLE_KEY",
+    ],
+  },
+  dogpack: {
+    repo: "DevDogsUGA/DogPack",
+    checkout: "DogPack",
+    variables: [
+      "API_URL",
+      "DEVDOGS_OAUTH_BASE_URL",
+      "PLATFORM_API_URL",
+      "PROJECT_REF",
+      "PUBLISHABLE_KEY",
+    ],
+  },
+} as const satisfies Record<string, ProductSpec>;
+
+export type Product = keyof typeof PRODUCTS;
+
+export const PRODUCT_NAMES = Object.keys(PRODUCTS) as readonly Product[];
+
+export function isProduct(value: string): value is Product {
+  return (PRODUCT_NAMES as readonly string[]).includes(value);
+}
+
+/** The env file a product target reads and writes, in the product's checkout. */
+export function productFileFor(_product: Product, target: VaultTarget): string {
+  return fileFor(target);
+}
+
+/** The Bitwarden project backing a product target, e.g. `dogdays-staging`. */
+export function productProjectFor(
+  product: Product,
+  target: VaultTarget,
+): string {
+  return `${product}-${TARGETS[target].project}`;
+}
+
+/** The product's GitHub environment for a target. */
+export function productGithubEnvironment(target: VaultTarget): string {
+  return target;
+}
+
 export class UnknownEnvironmentError extends Error {
   constructor(readonly value: string) {
     super(

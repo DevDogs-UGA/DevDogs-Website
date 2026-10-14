@@ -24,6 +24,22 @@ const ENV_FILE: CommandOption = {
   summary: "Read and write this file instead of the target's own.",
 };
 
+const PRODUCT_REPO: CommandOption = {
+  flag: "--repo",
+  value: "<product>",
+  summary:
+    "Work on a product repo instead of DevDogsUGA: dogdays or dogpack. " +
+    "Its file sits in the product checkout, its Bitwarden project is " +
+    "<product>-<target>, and push goes to that repo's GitHub environment.",
+};
+
+const PRODUCT_CHECKOUT: CommandOption = {
+  flag: "--checkout",
+  value: "<dir>",
+  summary:
+    "With --repo: the product checkout. Found beside this clone when absent.",
+};
+
 const ACCESS_TOKEN: CommandOption = {
   flag: "--access-token",
   value: "<token>",
@@ -38,12 +54,26 @@ export const envCommand: CommandNode = {
     {
       name: "pull",
       summary: "Bitwarden → the target's file, in place.",
-      options: [VAULT_TARGET, ENV_FILE, YES, ACCESS_TOKEN],
+      options: [
+        VAULT_TARGET,
+        PRODUCT_REPO,
+        PRODUCT_CHECKOUT,
+        ENV_FILE,
+        YES,
+        ACCESS_TOKEN,
+      ],
     },
     {
       name: "push",
       summary: "The target's file → Bitwarden and GitHub.",
-      options: [VAULT_TARGET, ENV_FILE, YES, ACCESS_TOKEN],
+      options: [
+        VAULT_TARGET,
+        PRODUCT_REPO,
+        PRODUCT_CHECKOUT,
+        ENV_FILE,
+        YES,
+        ACCESS_TOKEN,
+      ],
     },
     {
       name: "audit",
@@ -53,6 +83,8 @@ export const envCommand: CommandNode = {
       hint: "reads only, unless --prune",
       options: [
         VAULT_TARGET,
+        PRODUCT_REPO,
+        PRODUCT_CHECKOUT,
         ENV_FILE,
         YES,
         ACCESS_TOKEN,

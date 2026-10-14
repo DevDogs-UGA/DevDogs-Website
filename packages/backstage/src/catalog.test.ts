@@ -229,6 +229,9 @@ describe("prompts", () => {
       "--email-column",
       "--name-column",
       "--replace",
+      // `env --repo <product>`: where the product checkout is, when it is not
+      // beside this clone.
+      "--checkout",
     ]);
     const unasked = new Set<string>();
     for (const path of allPaths()) {

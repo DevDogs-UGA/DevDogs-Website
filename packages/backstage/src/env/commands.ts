@@ -40,6 +40,13 @@ import { DONE, type CommandHandler } from "@devdogsuga/cli-core/dispatch";
 import { recordResolved } from "@devdogsuga/cli-core/invocation";
 import { derivedBuildValues } from "./derived-build.js";
 import { catalog } from "../catalog.js";
+import {
+  resolveProduct,
+  resolveProductTarget,
+  runProductAudit,
+  runProductPull,
+  runProductPush,
+} from "./product.js";
 import { resolveVaultTarget } from "../bws/pick.js";
 import { confirm, log, note } from "@clack/prompts";
 import type { EnvTarget } from "@devdogsuga/sdk/env/targets";
@@ -947,6 +954,14 @@ async function runEnvCommand(rest: string[]): Promise<void> {
     return;
   }
 
+  // `--repo <product>` points the same commands at a product repository. It
+  // needs no registry (a product has no manifests), so it branches off first.
+  const repoFlag = flagValue(rest, "--repo");
+  if (repoFlag !== undefined) {
+    await runProductEnvCommand(sub, repoFlag, rest);
+    return;
+  }
+
   // Every subcommand reads the registry, which fills only when the env
   // manifests are imported. Loaded HERE, lazily, rather than at CLI start.
   await loadRegistry();
@@ -998,6 +1013,63 @@ async function runEnvCommand(rest: string[]): Promise<void> {
       "The access token is read from --access-token, then BWS_ACCESS_TOKEN,",
       "then your Bitwarden vault, and finally by asking.",
       "`gh auth status` shows whether the GitHub CLI is signed in.",
+    ]);
+    process.exitCode = 1;
+  }
+}
+
+/** `env <pull|push|audit> --repo <product> --target <target>`; see `product.ts`. */
+async function runProductEnvCommand(
+  sub: string,
+  repoFlag: string,
+  rest: string[],
+): Promise<void> {
+  const product = resolveProduct(repoFlag);
+  if (!product) {
+    process.exitCode = 1;
+    return;
+  }
+  if (rest.includes("--prune")) {
+    log.error(
+      "--prune belongs to the platform's `env audit`; products have no Workers here.",
+    );
+    process.exitCode = 1;
+    return;
+  }
+  const target = await resolveProductTarget(
+    flagValue(rest, "--target"),
+    sub === "pull"
+      ? `Which ${product} target should I pull into its env file?`
+      : sub === "push"
+        ? `Which ${product} target should I push its env file to?`
+        : `Which ${product} target should I audit?`,
+  );
+  if (!target) {
+    process.exitCode = 1;
+    return;
+  }
+  if (flagValue(rest, "--target") === undefined) {
+    recordResolved("--target", target);
+  }
+  setExplicitAccessToken(flagValue(rest, "--access-token"));
+
+  const options = {
+    product,
+    target,
+    file: flagValue(rest, "--file"),
+    checkout: flagValue(rest, "--checkout"),
+    yes: rest.includes("--yes"),
+  };
+  try {
+    if (sub === "pull") await runProductPull(options);
+    else if (sub === "push") await runProductPush(options);
+    else await runProductAudit(options);
+  } catch (err) {
+    explainError("The env command failed.", err, [
+      "The access token is read from --access-token, then BWS_ACCESS_TOKEN,",
+      "then your Bitwarden vault, and finally by asking.",
+      "`gh auth status` shows whether the GitHub CLI is signed in.",
+      `A missing project is created by hand in Secrets Manager: ${product}-<target>.`,
     ]);
     process.exitCode = 1;
   }

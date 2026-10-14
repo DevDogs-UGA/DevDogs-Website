@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   DEPLOY_ENVIRONMENTS,
+  PRODUCTS,
+  PRODUCT_NAMES,
+  isProduct,
+  productFileFor,
+  productGithubEnvironment,
+  productProjectFor,
   ENV_TARGETS,
   TARGETS,
   VAULT_TARGETS,
@@ -149,5 +155,42 @@ describe("the target table", () => {
       expect(typeof spec.deployEnv).toBe("boolean");
       expect(typeof spec.guarded).toBe("boolean");
     }
+  });
+});
+
+describe("product targets", () => {
+  it("derives every product fact from the one vault-target row", () => {
+    for (const product of PRODUCT_NAMES) {
+      for (const target of VAULT_TARGETS) {
+        expect(productFileFor(product, target)).toBe(fileFor(target));
+        expect(productProjectFor(product, target)).toBe(
+          `${product}-${projectFor(target)}`,
+        );
+        expect(productGithubEnvironment(target)).toBe(target);
+      }
+    }
+  });
+
+  it("names projects by product and target, and never the platform's", () => {
+    expect(productProjectFor("dogdays", "staging")).toBe("dogdays-staging");
+    expect(productProjectFor("dogpack", "production")).toBe(
+      "dogpack-production",
+    );
+    for (const product of PRODUCT_NAMES) {
+      for (const target of VAULT_TARGETS) {
+        expect(productProjectFor(product, target)).not.toBe(projectFor(target));
+      }
+    }
+  });
+
+  it("recognises products and refuses anything else", () => {
+    expect(isProduct("dogdays")).toBe(true);
+    expect(isProduct("dogpack")).toBe(true);
+    expect(isProduct("platform")).toBe(false);
+  });
+
+  it("points each product at its own repository", () => {
+    expect(PRODUCTS.dogdays.repo).toBe("DevDogsUGA/DogDays");
+    expect(PRODUCTS.dogpack.repo).toBe("DevDogsUGA/DogPack");
   });
 });
