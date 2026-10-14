@@ -87,7 +87,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/pack"
           pnpm --filter @devdogsuga/devtools pack --pack-destination "$RUNNER_TEMP/pack"
           mv "$RUNNER_TEMP"/pack/*.tgz "$RUNNER_TEMP/pack/devtools.tgz"
-          tar -tzf "$RUNNER_TEMP/pack/devtools.tgz" | head -20
+          tar -tzf "$RUNNER_TEMP/pack/devtools.tgz" | wc -l
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: devtools-tarball
