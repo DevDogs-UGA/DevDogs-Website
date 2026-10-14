@@ -1431,7 +1431,9 @@ test("the active version survives pnpm's own stdout lines before the JSON", () =
     2,
   );
   assert.equal(
-    activeVersion(`Already up to date\nDone in 423ms using pnpm v11.8.0\n${body}\n`),
+    activeVersion(
+      `Already up to date\nDone in 423ms using pnpm v11.8.0\n${body}\n`,
+    ),
     "v1",
   );
   assert.equal(activeVersion("Done in 1ms\nnot json"), undefined);
