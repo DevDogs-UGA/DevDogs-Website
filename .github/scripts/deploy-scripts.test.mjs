@@ -507,30 +507,74 @@ const labeled = (login) => [
   { event: "labeled", label: { name: "allow-destructive" }, actor: { login } },
 ];
 
+const OLD = "b".repeat(40);
+const pull = (number, mergeSha, extra = {}) => ({
+  number,
+  merge_commit_sha: mergeSha,
+  merged_at: "2026-10-01T00:00:00Z",
+  head: { sha: `head${number}` },
+  ...extra,
+});
+
+/**
+ * @param {object} o
+ * @param pulls  Merged PRs by number, each with the label timeline and permission.
+ * @param runs   { merge_group: [...], pull_request: [...] } run lists by event.
+ */
 function destructiveApi({
-  label = labeled("devops-person"),
+  labelled = [5],
+  pulls = { 5: pull(5, SHA) },
+  timelines = { 5: labeled("devops-person") },
   permission = "maintain",
-  runs = [{ id: 7, head_sha: SHA }],
+  runs = { merge_group: [{ id: 7, head_sha: SHA }], pull_request: [] },
   artifacts = [{ name: "db-check" }],
-  pulls,
+  window = [SHA],
+  producing = [],
 } = {}) {
-  return fakeApi({
-    [`/repos/${REPO}/commits/${SHA}/pulls`]: pulls ?? [
-      {
-        number: 5,
-        merge_commit_sha: SHA,
-        merged_at: "2026-10-01T00:00:00Z",
-        user: { login: "author" },
-      },
-    ],
-    [`/repos/${REPO}/issues/5/timeline`]: label,
+  const base = fakeApi({
+    [`/repos/${REPO}/commits`]: window.map((sha) => ({ sha })),
+    [`/repos/${REPO}/issues`]: labelled.map((number) => ({
+      number,
+      pull_request: {},
+    })),
+    [`/repos/${REPO}/commits/${SHA}/pulls`]: producing,
+    ...Object.fromEntries(
+      Object.entries(pulls).map(([n, p]) => [`/repos/${REPO}/pulls/${n}`, p]),
+    ),
+    ...Object.fromEntries(
+      Object.entries(timelines).map(([n, t]) => [
+        `/repos/${REPO}/issues/${n}/timeline`,
+        t,
+      ]),
+    ),
     [`/repos/${REPO}/collaborators/devops-person/permission`]: {
       role_name: permission,
     },
-    [`/repos/${REPO}/actions/runs`]: { workflow_runs: runs },
     [`/repos/${REPO}/actions/runs/7/artifacts`]: { artifacts },
+    [`/repos/${REPO}/actions/runs/8/artifacts`]: { artifacts },
   });
+  return async (path) => {
+    if (path.startsWith(`/repos/${REPO}/actions/runs?`)) {
+      const event = /event=(\w+)/.exec(path)[1];
+      const headSha = /head_sha=(\w+)/.exec(path)[1];
+      return {
+        workflow_runs: (runs[event] ?? []).filter(
+          (r) => r.head_sha === headSha,
+        ),
+      };
+    }
+    return base(path);
+  };
 }
+
+const evalWith = (api, schemaReasons, shown) =>
+  evaluateDestructive({
+    api,
+    repo: REPO,
+    sha: SHA,
+    planDir: planDirWith({ schemaReasons }),
+    download: () => checkDirWith(shown),
+  });
 
 test("a plan with nothing destructive needs no pull request approval", async () => {
   const result = await evaluateDestructive({
@@ -544,73 +588,95 @@ test("a plan with nothing destructive needs no pull request approval", async () 
 });
 
 test("a destructive plan the pull request approved and showed passes", async () => {
-  const result = await evaluateDestructive({
-    api: destructiveApi(),
-    repo: REPO,
-    sha: SHA,
-    planDir: planDirWith({ schemaReasons: [dropColumn] }),
-    download: () => checkDirWith([dropColumn]),
-  });
+  const result = await evalWith(destructiveApi(), [dropColumn], [dropColumn]);
   assert.equal(result.pass, true, result.failures.join("\n"));
   assert.equal(result.approval.pr, 5);
 });
 
 test("a destructive plan from a direct push is refused", async () => {
-  const result = await evaluateDestructive({
-    api: destructiveApi({ pulls: [] }),
-    repo: REPO,
-    sha: SHA,
-    planDir: planDirWith({ schemaReasons: [dropColumn] }),
-    download: () => assert.fail("no download expected"),
-  });
+  const result = await evalWith(
+    destructiveApi({ labelled: [], pulls: {}, window: [SHA] }),
+    [dropColumn],
+    [dropColumn],
+  );
   assert.equal(result.pass, false);
   assert.match(result.failures[0], /direct push/);
 });
 
 test("a destructive plan without the label, or with one from a non-devops user, is refused", async () => {
-  const none = await evaluateDestructive({
-    api: destructiveApi({ label: [] }),
-    repo: REPO,
-    sha: SHA,
-    planDir: planDirWith({ schemaReasons: [dropColumn] }),
-    download: () => assert.fail("no download expected"),
-  });
+  const none = await evalWith(
+    destructiveApi({ timelines: { 5: [] } }),
+    [dropColumn],
+    [dropColumn],
+  );
   assert.equal(none.pass, false);
-  const member = await evaluateDestructive({
-    api: destructiveApi({ permission: "write" }),
-    repo: REPO,
-    sha: SHA,
-    planDir: planDirWith({ schemaReasons: [dropColumn] }),
-    download: () => assert.fail("no download expected"),
-  });
+  assert.match(none.failures[0], /does not carry/);
+  const member = await evalWith(
+    destructiveApi({ permission: "write" }),
+    [dropColumn],
+    [dropColumn],
+  );
   assert.equal(member.pass, false);
   assert.match(member.failures[0], /not a devops member/);
 });
 
 test("a destructive statement the pull request never showed is refused", async () => {
   const extra = { kind: "DROP TABLE", statement: "DROP TABLE   old" };
-  const result = await evaluateDestructive({
-    api: destructiveApi(),
-    repo: REPO,
-    sha: SHA,
-    planDir: planDirWith({ schemaReasons: [dropColumn, extra] }),
-    download: () => checkDirWith([dropColumn]),
-  });
+  const result = await evalWith(
+    destructiveApi(),
+    [dropColumn, extra],
+    [dropColumn],
+  );
   assert.equal(result.pass, false);
   assert.match(result.failures[0], /DROP TABLE old/);
   assert.doesNotMatch(result.failures[0], /DROP COLUMN/);
 });
 
 test("a labelled destructive plan with no kept db-check artifact is refused", async () => {
-  const result = await evaluateDestructive({
-    api: destructiveApi({ artifacts: [{ name: "other" }] }),
-    repo: REPO,
-    sha: SHA,
-    planDir: planDirWith({ schemaReasons: [dropColumn] }),
-    download: () => assert.fail("no download expected"),
-  });
+  const result = await evalWith(
+    destructiveApi({ artifacts: [{ name: "other" }] }),
+    [dropColumn],
+    [dropColumn],
+  );
   assert.equal(result.pass, false);
   assert.match(result.failures[0], /db-check/);
+});
+
+test("an older approved pull request still covers its statement after a newer commit superseded it", async () => {
+  // PR 5 (destructive, labelled) merged at OLD; PR 6 (not labelled) merged at
+  // SHA and its plan carries PR 5's still-pending statement.
+  const api = destructiveApi({
+    labelled: [5],
+    pulls: { 5: pull(5, OLD), 6: pull(6, SHA) },
+    timelines: { 5: labeled("devops-person"), 6: [] },
+    runs: { merge_group: [{ id: 7, head_sha: OLD }], pull_request: [] },
+    window: [SHA, OLD],
+    producing: [pull(6, SHA)],
+  });
+  const result = await evalWith(api, [dropColumn], [dropColumn]);
+  assert.equal(result.pass, true, result.failures.join("\n"));
+  assert.deepEqual(
+    result.approval.prs.map((p) => p.pr),
+    [5],
+  );
+});
+
+test("an approval older than the commit window does not count", async () => {
+  const api = destructiveApi({
+    pulls: { 5: pull(5, OLD) },
+    window: [SHA],
+    runs: { merge_group: [{ id: 7, head_sha: OLD }], pull_request: [] },
+  });
+  const result = await evalWith(api, [dropColumn], [dropColumn]);
+  assert.equal(result.pass, false);
+});
+
+test("without a merge queue the pull request run on its head commit supplies the db-check", async () => {
+  const api = destructiveApi({
+    runs: { merge_group: [], pull_request: [{ id: 8, head_sha: "head5" }] },
+  });
+  const result = await evalWith(api, [dropColumn], [dropColumn]);
+  assert.equal(result.pass, true, result.failures.join("\n"));
 });
 
 test("deploy reasons read both plans; uncovered ignores whitespace", () => {
@@ -664,7 +730,7 @@ test("the approval summary lists destructive statements before everything else",
     [...order].sort((a, b) => a - b),
     order,
   );
-  assert.match(text, /allow-destructive` applied by @devops-person/);
+  assert.match(text, /allow-destructive` by @devops-person/);
   assert.match(text, /not known yet/);
 });
 
@@ -695,6 +761,7 @@ test("the scope skips the config push and unchanged Workers, and fails open", ()
     catalog: true,
   });
   assert.deepEqual(scopeOf(["supabase/seed/officers.sql"]).config, true);
+  assert.equal(scopeOf(["supabase/config-push.stamp"]).config, true);
   // Inert files change neither Worker.
   assert.deepEqual(scopeOf([".github/scripts/db-plan.mjs"]), {
     config: false,

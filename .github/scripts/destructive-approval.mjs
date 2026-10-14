@@ -1,6 +1,6 @@
 /**
- * The deploy-time half of the destructive gate: refuse a destructive plan the
- * pull request did not approve.
+ * The deploy-time half of the destructive gate: refuse a destructive plan no
+ * pull request approved.
  *
  * A change that drops or rewrites data is approved ON THE PULL REQUEST: a
  * `devops` member reads the SQL and applies the `allow-destructive` label
@@ -8,14 +8,17 @@
  * deploy asks nobody a second time. It only checks that the approval is real
  * and that it covers what is about to run:
  *
- *   1. a merged pull request produced this commit, and carries the label,
- *      applied by a devops member (a direct push by an admin bypass has no
- *      pull request, so a destructive plan from one is refused);
- *   2. every destructive statement in the deploy's own plan (computed against
- *      the real database) also appears in the plan the pull request showed:
- *      the `db-check` artifact of the merge queue run for this commit. A
- *      statement only the deploy sees means the database changed since the
- *      review, so the review does not cover it.
+ *   every destructive statement in the deploy's own plan (computed against
+ *   the real database) must appear in the plan of a merged pull request that
+ *   carries the label from a devops member: the `db-check` artifact of its
+ *   merge queue run, or (a repository with no merge queue) of its last
+ *   pull_request run. The pull requests searched are those merged in the last
+ *   WINDOW commits up to this one, not only the one that produced this commit:
+ *   a newer commit supersedes an older candidate whose destructive migration is
+ *   still pending, and the older pull request holds that approval. A direct
+ *   push by an admin bypass has no pull request, so a destructive plan from one
+ *   is refused. A statement no approved pull request showed means the database
+ *   changed since the review, so the review does not cover it.
  *
  * Nothing destructive in the plan: passes without asking anything.
  *
@@ -126,66 +129,111 @@ export function uncovered(deploy, shown) {
   return deploy.filter((reason) => !known.has(reasonKey(reason)));
 }
 
+/** How many commits back from the deployed one a covering pull request may sit. */
+export const WINDOW = 100;
+
 /**
- * The merged pull request whose `allow-destructive` label a devops member
- * applied.
+ * Pull requests that could have approved a statement now pending: the merged
+ * pull requests that carry `allow-destructive`, whose merge commit is among the
+ * last WINDOW commits before (and including) `sha`.
+ *
+ * Not only the pull request that produced `sha`: a newer commit can supersede
+ * an older candidate whose destructive migration is still pending, and the
+ * newer commit's plan then contains the older statements. Their approval lives
+ * on the older pull request.
  *
  * @param {{ api: (path: string) => Promise<any>, repo: string, sha: string }} options
- * @returns {Promise<{ pr?: number, actor?: string, problems: string[] }>}
+ * @returns {Promise<Array<{ number: number, mergeSha: string, headSha: string }>>}
  */
-export async function findApproval({ api, repo, sha }) {
-  const pulls = producingPulls(
+export async function candidatePulls({ api, repo, sha }) {
+  const commits = await api(
+    `/repos/${repo}/commits?sha=${sha}&per_page=${WINDOW}`,
+  );
+  const window = new Set((commits ?? []).map((/** @type {any} */ c) => c.sha));
+  window.add(sha);
+  const labelled = await api(
+    `/repos/${repo}/issues?labels=allow-destructive&state=closed&sort=updated&direction=desc&per_page=100`,
+  );
+  /** @type {Map<number, { number: number, mergeSha: string, headSha: string }>} */
+  const found = new Map();
+  /** @param {any} pull */
+  const consider = (pull) => {
+    if (!pull?.merged_at || !pull.merge_commit_sha) return;
+    if (!window.has(pull.merge_commit_sha)) return;
+    found.set(pull.number, {
+      number: pull.number,
+      mergeSha: pull.merge_commit_sha,
+      headSha: pull.head?.sha ?? "",
+    });
+  };
+  for (const issue of labelled ?? []) {
+    if (!issue.pull_request) continue;
+    consider(await api(`/repos/${repo}/pulls/${issue.number}`));
+  }
+  // The pull request GitHub associates with the commit itself (a rebase merge
+  // can land under another SHA, and the labelled-issue list is capped).
+  for (const pull of producingPulls(
     await apiAll(api, `/repos/${repo}/commits/${sha}/pulls`),
     sha,
-  );
-  if (pulls.length === 0) {
-    return {
-      problems: [
-        `No merged pull request produced ${sha} (a direct push), so nothing ` +
-          `approved this destructive plan.`,
-      ],
-    };
-  }
-  /** @type {string[]} */
-  const problems = [];
-  for (const pull of pulls) {
-    const timeline = await apiAll(
-      api,
-      `/repos/${repo}/issues/${pull.number}/timeline`,
-    );
-    const state = labelState(timeline);
-    if (!state.present) {
-      problems.push(`#${pull.number} does not carry allow-destructive.`);
-    } else if (!state.actor || !(await isDevops(api, repo, state.actor))) {
-      problems.push(
-        `#${pull.number} carries allow-destructive from ${state.actor ?? "an unknown user"}, who is not a devops member.`,
-      );
-    } else {
-      return { pr: pull.number, actor: state.actor, problems: [] };
+  )) {
+    if (!found.has(pull.number)) {
+      consider(await api(`/repos/${repo}/pulls/${pull.number}`));
     }
   }
-  return { problems };
+  return [...found.values()];
 }
 
 /**
- * The merge queue run that checked this commit and kept its `db-check`
- * artifact: its id, or "".
+ * Whether the pull request carries `allow-destructive` applied by a devops
+ * member.
  *
- * @param {{ api: (path: string) => Promise<any>, repo: string, sha: string }} options
+ * @param {{ api: (path: string) => Promise<any>, repo: string, number: number }} options
+ * @returns {Promise<{ actor?: string, problem?: string }>}
  */
-export async function findCheckRun({ api, repo, sha }) {
-  const runs = await api(
-    `/repos/${repo}/actions/runs?event=merge_group&head_sha=${sha}&per_page=30`,
+export async function approvalOf({ api, repo, number }) {
+  const timeline = await apiAll(
+    api,
+    `/repos/${repo}/issues/${number}/timeline`,
   );
-  for (const run of runs.workflow_runs ?? []) {
-    if (run.head_sha !== sha) continue;
-    const listing = await api(
-      `/repos/${repo}/actions/runs/${run.id}/artifacts?per_page=100`,
+  const state = labelState(timeline);
+  if (!state.present)
+    return { problem: `#${number} does not carry allow-destructive.` };
+  if (!state.actor || !(await isDevops(api, repo, state.actor))) {
+    return {
+      problem: `#${number} carries allow-destructive from ${state.actor ?? "an unknown user"}, who is not a devops member.`,
+    };
+  }
+  return { actor: state.actor };
+}
+
+/**
+ * The run that checked the pull request and kept its `db-check` artifact: the
+ * merge queue run of its merge commit, else (a repository with no merge queue)
+ * the last `pull_request` run on its head commit, which is the plan the
+ * reviewer read when applying the label. Its id, or "".
+ *
+ * @param {{ api: (path: string) => Promise<any>, repo: string, mergeSha: string, headSha: string }} options
+ */
+export async function findCheckRun({ api, repo, mergeSha, headSha }) {
+  const attempts = [
+    ["merge_group", mergeSha],
+    ["pull_request", headSha],
+  ];
+  for (const [event, sha] of attempts) {
+    if (!sha) continue;
+    const runs = await api(
+      `/repos/${repo}/actions/runs?event=${event}&head_sha=${sha}&per_page=30`,
     );
-    const found = (listing.artifacts ?? []).some(
-      (/** @type {any} */ a) => a.name === "db-check" && !a.expired,
-    );
-    if (found) return String(run.id);
+    for (const run of runs.workflow_runs ?? []) {
+      if (run.head_sha !== sha) continue;
+      const listing = await api(
+        `/repos/${repo}/actions/runs/${run.id}/artifacts?per_page=100`,
+      );
+      const found = (listing.artifacts ?? []).some(
+        (/** @type {any} */ a) => a.name === "db-check" && !a.expired,
+      );
+      if (found) return String(run.id);
+    }
   }
   return "";
 }
@@ -198,7 +246,7 @@ export async function findCheckRun({ api, repo, sha }) {
  *   planDir: string,
  *   download: (runId: string) => string,
  * }} options  `download` fetches the db-check artifact and returns its directory.
- * @returns {Promise<{ pass: boolean, notes: string[], failures: string[], approval?: { pr: number, actor: string, statements: number } }>}
+ * @returns {Promise<{ pass: boolean, notes: string[], failures: string[], approval?: { pr: number, actor: string, statements: number, prs: Array<{ pr: number, actor: string }> } }>}
  */
 export async function evaluate({ api, repo, sha, planDir, download }) {
   const deploy = deployReasons(planDir);
@@ -211,47 +259,71 @@ export async function evaluate({ api, repo, sha, planDir, download }) {
   }
   const fix =
     "Nothing was changed. Open a pull request that carries the change, have a devops member read its db-check summary and apply allow-destructive, and merge it.";
-  const found = await findApproval({ api, repo, sha });
-  if (found.pr === undefined || found.actor === undefined) {
-    return {
-      pass: false,
-      notes: [],
-      failures: [
-        `The plan is destructive (${deploy.length} statement(s)) and the pull request did not approve it. ${found.problems.join(" ")} ${fix}`,
-      ],
-    };
+  /** @type {string[]} */
+  const problems = [];
+  /** @type {Array<{ pr: number, actor: string }>} */
+  const approvers = [];
+  /** @type {Reason[]} */
+  let shown = [];
+  for (const pull of await candidatePulls({ api, repo, sha })) {
+    const verdict = await approvalOf({ api, repo, number: pull.number });
+    if (!verdict.actor) {
+      problems.push(verdict.problem ?? `#${pull.number} is not approved.`);
+      continue;
+    }
+    const runId = await findCheckRun({ api, repo, ...pull });
+    if (!runId) {
+      problems.push(
+        `#${pull.number} is approved but no run kept a db-check artifact for it (merge queue run of ${pull.mergeSha.slice(0, 7)} or pull request run of ${pull.headSha.slice(0, 7)}), so its plan cannot be compared.`,
+      );
+      continue;
+    }
+    shown = [...shown, ...pullRequestReasons(download(runId))];
+    approvers.push({ pr: pull.number, actor: verdict.actor });
   }
-  const runId = await findCheckRun({ api, repo, sha });
-  if (!runId) {
-    return {
-      pass: false,
-      notes: [],
-      failures: [
-        `The plan is destructive and #${found.pr} is labelled, but no merge queue run kept a db-check artifact for ${sha}, so the plan cannot be compared with what #${found.pr} showed. ${fix}`,
-      ],
-    };
-  }
-  const missing = uncovered(deploy, pullRequestReasons(download(runId)));
+  const missing = uncovered(deploy, shown);
   if (missing.length > 0) {
     return {
       pass: false,
       notes: [],
       failures: [
-        `The plan differs from what #${found.pr} showed its reviewer: ${missing.length} destructive statement(s) are new (the database changed since the review):\n` +
+        `The plan is destructive and no approved pull request showed ${missing.length} of its ${deploy.length} destructive statement(s):\n` +
           missing
             .map((r) => `  - ${r.source}: ${r.kind}: ${squash(r.statement)}`)
             .join("\n") +
+          (problems.length ? `\n${problems.join(" ")}` : "") +
+          (approvers.length === 0
+            ? "\nNo merged pull request among the last " +
+              `${WINDOW} commits carries a devops member's allow-destructive (a direct push has none).`
+            : "\nThe database may have changed since the review.") +
           `\n${fix}`,
       ],
+    };
+  }
+  const first = approvers[0];
+  if (!first) {
+    return {
+      pass: false,
+      notes: [],
+      failures: [`No approving pull request. ${fix}`],
     };
   }
   return {
     pass: true,
     notes: [
-      `The destructive plan (${deploy.length} statement(s)) was approved on #${found.pr}: allow-destructive applied by @${found.actor}, and it matches the plan that pull request showed.`,
+      `The destructive plan (${deploy.length} statement(s)) was approved on ${approvers
+        .map((a) => `#${a.pr} (allow-destructive by @${a.actor})`)
+        .join(
+          ", ",
+        )}, and every statement appears in a plan those pull requests showed.`,
     ],
     failures: [],
-    approval: { pr: found.pr, actor: found.actor, statements: deploy.length },
+    approval: {
+      pr: first.pr,
+      actor: first.actor,
+      statements: deploy.length,
+      prs: approvers,
+    },
   };
 }
 

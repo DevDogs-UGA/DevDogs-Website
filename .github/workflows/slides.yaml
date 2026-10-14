@@ -66,11 +66,74 @@ jobs:
   # Production only (the deck has no staging tier), so it waits for the
   # `production` approval and, like the other production jobs, is off until the
   # repository variable BACKSTAGE_DEPLOYS_PRODUCTION is `true`.
+  #
+  # With ONE_APPROVAL=true `production` has no reviewers, so the deck asks the
+  # same way the rest of production does: `production-approval` (the pause, in
+  # the reviewed `production-approval` environment), then `deploy-approved`,
+  # which is this same call plus `approval_environment`. Without the variable,
+  # `deploy` asks through `production` as it always has. The two never both run.
+  production-approval:
+    needs: build
+    if: >-
+      github.event_name == 'push'
+      && vars.BACKSTAGE_DEPLOYS_PRODUCTION == 'true'
+      && vars.ONE_APPROVAL == 'true'
+    uses: ./.github/workflows/approve-production.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    with:
+      approval_environment: production-approval
+      notes: |
+        - Slides Worker (`devdogs-slides`): deploys the workshop deck; upload, smoke test, switch traffic.
+      # The Worker job refuses a superseded candidate by its latest_paths below.
+      require_latest: false
+
+  deploy-approved:
+    needs: [build, production-approval]
+    if: >-
+      !cancelled()
+      && github.event_name == 'push'
+      && vars.BACKSTAGE_DEPLOYS_PRODUCTION == 'true'
+      && vars.ONE_APPROVAL == 'true'
+      && needs.build.result == 'success'
+      && needs.production-approval.result == 'success'
+    uses: ./.github/workflows/deploy-worker.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+      actions: read
+    with:
+      environment: production
+      approval_environment: production-approval
+      tier: production
+      use_wrangler_env: false
+      worker_dir: apps/slides
+      worker_name: devdogs-slides
+      smoke_path: apps/slides
+      workers_json: apps/slides/smoke.json
+      checkout_submodules: true
+      checkout_token_secret: true
+      self_approval_gate: true
+      require_latest: true
+      latest_paths: |
+        apps/slides/**
+        packages/sdk/**
+        packages/events/**
+        .gitmodules
+        pnpm-lock.yaml
+      build_command: |
+        pnpm --filter slides build
+        node apps/slides/scripts/strip-redirects.mjs
+
   deploy:
     needs: build
     if: >-
       github.event_name == 'push'
       && vars.BACKSTAGE_DEPLOYS_PRODUCTION == 'true'
+      && vars.ONE_APPROVAL != 'true'
     uses: ./.github/workflows/deploy-worker.yaml
     secrets: inherit
     permissions:

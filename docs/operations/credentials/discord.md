@@ -27,7 +27,7 @@ A webhook URL is a secret: anyone with it can post as the webhook.
 ## Rotating
 
 - **The bot token:** in the application's _Bot_ page, reset the token, put the new value in Bitwarden, push and deploy. The old token stops working the moment you reset, so do it with a deploy ready.
-- **The client secret:** reset on the _OAuth2_ page, put it in Bitwarden, push and deploy (the deploy's `config push` hands it to Supabase), test a Discord sign-in.
+- **The client secret:** reset on the _OAuth2_ page, put it in Bitwarden, push, edit `supabase/config-push.stamp` and deploy (the deploy only pushes the config when `config.toml`, a seed or that stamp changed; its `config push` hands the secret to Supabase), test a Discord sign-in.
 - **A webhook:** delete it in the channel's settings, create a new one, replace the secret.
 
 ## Recovery

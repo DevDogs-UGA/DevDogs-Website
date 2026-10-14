@@ -26,7 +26,7 @@ const readText = (path) =>
  *   migrations?: any,
  *   schema?: any,
  *   schemaSql?: string,
- *   approval?: { pr: number, actor: string } | undefined,
+ *   approval?: { pr: number, actor: string, prs?: Array<{ pr: number, actor: string }> } | undefined,
  *   notes?: string,
  * }} input
  */
@@ -69,7 +69,7 @@ export function renderApprovalSummary({
     out.push("### DESTRUCTIVE statements", "");
     out.push(
       approval
-        ? `Approved on the pull request: [#${approval.pr}](https://github.com/${repo}/pull/${approval.pr}), \`allow-destructive\` applied by @${approval.actor}. The statements below match the plan that pull request showed.`
+        ? `Approved on the pull request${(approval.prs ?? [approval]).length > 1 ? "s" : ""}: ${(approval.prs ?? [approval]).map((a) => `[#${a.pr}](https://github.com/${repo}/pull/${a.pr}) (\`allow-destructive\` by @${a.actor})`).join(", ")}. The statements below match the plans those pull requests showed.`
         : "No pull request approval is on record for these.",
       "",
     );

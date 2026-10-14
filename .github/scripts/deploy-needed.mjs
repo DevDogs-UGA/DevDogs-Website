@@ -198,7 +198,10 @@ export function deployable(changed) {
  * tier's last deploy. Everything fails open (`true`): skipping is the
  * optimisation, a missed deploy the failure.
  *
- *   config    `supabase config push`: only when config.toml or a seed changed.
+ *   config    `supabase config push`: only when config.toml, roles.sql or a seed
+ *             changed, or supabase/config-push.stamp was edited (config.toml
+ *             reads sign-in secrets from the GitHub environment, so a rotated
+ *             secret reaches Supabase only through a push; the stamp forces one).
  *   platform  the platform Worker: unless every shipped change is the
  *             catalog's own directory.
  *   catalog   the catalog Worker: unless every shipped change is the
@@ -215,6 +218,7 @@ export function scopeOf(changed) {
       (path) =>
         path === "supabase/config.toml" ||
         path === "supabase/roles.sql" ||
+        path === "supabase/config-push.stamp" ||
         path.startsWith("supabase/seed/"),
     ),
     platform: shipped.some((path) => !path.startsWith("apps/catalog/")),

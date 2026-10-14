@@ -23,7 +23,7 @@ The Maps key is **public by design** - it ships in the page. Its protection is t
 
 ## Rotating
 
-- **The OAuth client secret:** add a new secret on the client's page, put it in Bitwarden, push, deploy, test a Google sign-in, then delete the old secret. The client has two redirect URIs per project (the Supabase callback); keep them in step with [the vanity-subdomain switch](../deploys/vanity-subdomain-switch.md).
+- **The OAuth client secret:** add a new secret on the client's page, put it in Bitwarden, push, edit `supabase/config-push.stamp` and deploy (the config is pushed only when `config.toml`, a seed or the stamp changed), test a Google sign-in, then delete the old secret. The client has two redirect URIs per project (the Supabase callback); keep them in step with [the vanity-subdomain switch](../deploys/vanity-subdomain-switch.md).
 - **The Maps key:** create a new key with the same restrictions, change the variable and the example, deploy, then delete the old key. A key that leaked is harmless if the referrer restriction held; check that first.
 
 ## Recovery

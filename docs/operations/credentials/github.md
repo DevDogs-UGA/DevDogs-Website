@@ -25,7 +25,7 @@ The platform no longer holds a GitHub App: teams and competitions left the platf
 
 ## Rotating
 
-- **The OAuth client secret:** generate a second secret in the OAuth app, put it in Bitwarden as `GH_CLIENT_SECRET`, push, run the deploy (its `config push` sends the secret to Supabase), sign in with GitHub to test, then delete the old secret.
+- **The OAuth client secret:** generate a second secret in the OAuth app, put it in Bitwarden as `GH_CLIENT_SECRET`, push, then edit `supabase/config-push.stamp` and deploy (the deploy only pushes the config when `config.toml`, a seed or that stamp changed; its `config push` sends the secret to Supabase), sign in with GitHub to test, then delete the old secret.
 - **`WORKSHOPS_READ_TOKEN`:** create a new fine-grained token with _Contents: read_ on the workshop repositories and this one, replace the repository secret, re-run the slides workflow, then revoke the old token. Whoever created the old one must revoke it from their own account.
 - **A personal account leaving:** remove them from the organization, then check for tokens, Apps and secrets they created (Settings, Developer settings are per-account and invisible to the rest of us).
 

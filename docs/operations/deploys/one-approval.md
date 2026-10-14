@@ -22,7 +22,7 @@ GitHub asks for approval again at every job that names an environment with requi
 | A reviewer-less twin of `production` (`production-deploy`) holding copies of the secrets | Works, but environment secrets cannot be read back, so Sloan would have to re-push every production secret and variable with `backstage env push`, for three repositories, and keep two copies in step.                                       |
 | **Move the pause to its own environment and make `production` reviewer-less**            | **Chosen.** A new `production-approval` environment holds the reviewers and no secrets. `production` keeps its secrets and loses its reviewers. No secret is copied.                                                                          |
 
-The cost of the chosen design is that `production` is no longer a gate by itself: any job on `main` that names it gets the production secrets. The environment keeps its branch rule (`main` only), `main` is protected (pull requests, the merge queue, required checks), and every production job in these workflows `needs` the approval job. Treat a change to a deploy workflow as a change to production access, and review it so.
+The cost of the chosen design is that `production` is no longer a gate by itself: any job on `main` that names it gets the production secrets. The environment keeps its branch rule (`main` only), `main` is protected (pull requests, the merge queue, required checks), and every production job in these workflows `needs` the approval job (including the Slides deck: `slides.yaml` has the same flag-gated `production-approval` and `deploy-approved` pair). Treat a change to a deploy workflow as a change to production access, and review it so.
 
 ## The shape
 
@@ -43,9 +43,17 @@ When migrations are pending, the schema diff does not exist yet at approval time
 ## Things that changed whatever the variable says
 
 - **No destructive environments.** `production-destructive` and `staging-destructive` are no longer used. See [Destructive changes](./destructive-changes.md): the deploy refuses a destructive plan that no pull request approved.
-- **The config push is skipped** when neither `supabase/config.toml` nor a seed changed since the tier's last deploy (DevDogsUGA). DogDays and DogPack keep their own `config.toml` rule.
+- **The config push is skipped** when none of `supabase/config.toml`, `supabase/roles.sql`, a seed or `supabase/config-push.stamp` changed since the tier's last deploy (DevDogsUGA). `config.toml` reads the sign-in client secrets and `BASE_URL*` from the GitHub environment, so a rotated secret only reaches Supabase through a push: **after you change one of those values, edit `supabase/config-push.stamp` (any edit) in the commit that you deploy.** The credential runbooks say so. DogDays and DogPack keep their own rule: a `config.toml` change, or the `config` input of a manual run of their deploy workflow.
 - **Unchanged Workers are skipped** (DevDogsUGA): the platform when every shipped change since the tier's last deploy is under `apps/catalog/`, the catalog when every one is under `apps/platform/` or `docs/`. A skipped Worker shows as an `unchanged` job and counts as current for the next deploy's comparison. Anything else, or anything the comparison cannot work out, deploys both.
 - Plan and apply artifacts are named per environment (`plan-schema-production`), so staging and production in one run no longer collide.
+
+## Slides
+
+`slides.yaml` deploys the workshop deck to production through `deploy-worker.yaml`, outside `deploy.yaml`. With the flag on it runs `production-approval` (its own pause, same environment) and then `deploy-approved`; with the flag off, `deploy` asks through `production` as before. So the Slides deploy gets one approval of its own, separate from the platform deploy's, because it runs from a different workflow. Without this, switching step 3 on would make the self-approval gate fail every Slides deploy (no approval on record) or let a direct push through unreviewed.
+
+## Destructive SQL needs a pull request approval, wherever it deploys
+
+The deploy now refuses a destructive plan nobody approved on a pull request (see [Destructive changes](./destructive-changes.md)). The pull request's `db-check` plan is found from the merge queue run, else from the pull request's own run, so DogDays (no merge queue) and DogPack (no rulesets) work today. The check also assumes `destructive-sql` and `destructive-gate` are required on `main` (Gate step 6).
 
 ## Switching it on
 
