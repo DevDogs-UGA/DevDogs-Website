@@ -18,6 +18,9 @@ name: Approve production
 # secrets stay in the deploy environment, which must have no required
 # reviewers when this flow is on (docs/operations/deploys/one-approval.md).
 #
+# Both jobs first check the default branch has a required-review ruleset and
+# fail loudly when it has none.
+#
 # A rejected approval fails `approve`, the jobs that need it are skipped, and the
 # run has changed nothing: planning only read.
 on:
@@ -77,6 +80,14 @@ jobs:
           sparse-checkout: .github/scripts
       - name: Locate the shared scripts
         run: echo "SCRIPTS=${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
+      # The one-approval path trusts `main` instead of the `production`
+      # environment's reviewers, so it refuses a repository whose main has no
+      # required-review ruleset. Fails closed (an unreadable answer refuses too).
+      - name: Refuse a default branch without required review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
+        run: node "$SCRIPTS/main-protection.mjs" --repo "$GITHUB_REPOSITORY" --branch "$DEFAULT_BRANCH"
       - name: Download the plans
         if: inputs.plan_environment_name != ''
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -113,6 +124,14 @@ jobs:
           sparse-checkout: .github/scripts
       - name: Locate the shared scripts
         run: echo "SCRIPTS=${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
+      # The one-approval path trusts `main` instead of the `production`
+      # environment's reviewers, so it refuses a repository whose main has no
+      # required-review ruleset. Fails closed (an unreadable answer refuses too).
+      - name: Refuse a default branch without required review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
+        run: node "$SCRIPTS/main-protection.mjs" --repo "$GITHUB_REPOSITORY" --branch "$DEFAULT_BRANCH"
       # FIRST, before anything changes: whoever approved this deployment is
       # neither the author of the change nor the person who queued it.
       - name: Refuse an approver who wrote or queued this change

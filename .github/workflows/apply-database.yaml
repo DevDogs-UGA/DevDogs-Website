@@ -173,7 +173,7 @@ jobs:
   apply:
     needs: apply-migrations
     if: >-
-      always()
+      !cancelled()
       && (needs.apply-migrations.result == 'success' || needs.apply-migrations.result == 'skipped')
       && (inputs.schema_empty != 'true' || inputs.apply_config || inputs.register_provider)
     runs-on: ubuntu-latest

@@ -9,8 +9,9 @@
  * and that it covers what is about to run:
  *
  *   every destructive statement in the deploy's own plan (computed against
- *   the real database) must appear in the plan of a merged pull request that
- *   carries the label from a devops member: the `db-check` artifact of its
+ *   the real database) must appear, in the same migration or seed file (the
+ *   schema diff has no file), in the plan of a merged pull request that carries
+ *   the label from a devops member: the `db-check` artifact of its
  *   merge queue run, or (a repository with no merge queue) of its last
  *   pull_request run. The pull requests searched are those merged in the last
  *   WINDOW commits up to this one, not only the one that produced this commit:
@@ -51,9 +52,18 @@ import { isMain } from "./is-main.mjs";
 /** @param {string} statement */
 const squash = (statement) => String(statement).replace(/\s+/g, " ").trim();
 
-/** @param {{ kind: string, statement: string }} reason */
+/**
+ * What an approval is keyed to. A migration or seed statement is keyed to its
+ * SOURCE FILE as well as its text, so a pull request that approved
+ * `DROP TABLE tmp` in one migration cannot cover the same text in another
+ * migration added later: the pull request must have introduced that file. The
+ * schema diff has no file (it is computed against the database), so it is keyed
+ * by statement alone.
+ *
+ * @param {{ source?: string, kind: string, statement: string }} reason
+ */
 export const reasonKey = (reason) =>
-  `${reason.kind}\u0000${squash(reason.statement)}`;
+  `${reason.source && reason.source !== "schema" ? reason.source : ""}\u0000${reason.kind}\u0000${squash(reason.statement)}`;
 
 /**
  * @param {string} path

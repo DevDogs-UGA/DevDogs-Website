@@ -236,7 +236,7 @@ jobs:
   plan-schema:
     needs: [plan-migrations, apply-migrations]
     if: >-
-      always()
+      !cancelled()
       && needs.plan-migrations.result == 'success'
       && (needs.apply-migrations.result == 'success'
           || (needs.apply-migrations.result == 'skipped' && needs.plan-migrations.outputs.pending == '0'))
@@ -291,11 +291,13 @@ jobs:
 
   apply:
     needs: plan-schema
-    # always(): without a status function GitHub also skips this job when an
+    # !cancelled(): without a status function GitHub also skips this job when an
     # earlier job in the chain (apply-migrations, with nothing pending) was
-    # skipped, which would silently skip the schema and the config push.
+    # skipped, which would silently skip the schema and the config push. Not
+    # always(): that also runs after the run was cancelled, and an apply must
+    # never start then.
     if: >-
-      always()
+      !cancelled()
       && needs.plan-schema.result == 'success'
       && (needs.plan-schema.outputs.empty != 'true' || inputs.apply_config || inputs.register_provider)
     runs-on: ubuntu-latest

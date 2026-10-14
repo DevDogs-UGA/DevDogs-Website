@@ -476,7 +476,11 @@ const dropColumn = {
   statement: "ALTER TABLE a DROP COLUMN b",
 };
 
-function planDirWith({ schemaReasons = [], migrationReasons = [] } = {}) {
+function planDirWith({
+  schemaReasons = [],
+  migrationReasons = [],
+  migrationFile = "20260101_x.sql",
+} = {}) {
   const dir = mkdtempSync(join(tmpdir(), "plan-"));
   writeFileSync(
     join(dir, "schema-plan.json"),
@@ -486,16 +490,20 @@ function planDirWith({ schemaReasons = [], migrationReasons = [] } = {}) {
     join(dir, "migrations-plan.json"),
     JSON.stringify({
       classified: migrationReasons.length
-        ? [{ file: "20260101_x.sql", reasons: migrationReasons }]
+        ? [{ file: migrationFile, reasons: migrationReasons }]
         : [],
     }),
   );
   return dir;
 }
 
-function checkDirWith(schemaReasons) {
+function checkDirWith(schemaReasons, migrations = []) {
   const dir = mkdtempSync(join(tmpdir(), "check-"));
   mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    join(dir, "migrations-change.json"),
+    JSON.stringify({ classified: migrations }),
+  );
   writeFileSync(
     join(dir, "schema-change.json"),
     JSON.stringify({ classification: { reasons: schemaReasons } }),
@@ -661,6 +669,56 @@ test("an older approved pull request still covers its statement after a newer co
   );
 });
 
+const dropTmp = { kind: "DROP TABLE", statement: "DROP TABLE tmp_import" };
+
+test("an old approval for a statement in one migration does not cover the same text in a new migration", async () => {
+  // PR 5 (approved, devops) showed DROP TABLE tmp_import in 20260901_a.sql and
+  // deployed long ago. PR 6 (no label) adds 20261010_b.sql with the same text.
+  // The key includes the file, so PR 5 covers nothing of PR 6's.
+  const api = destructiveApi({
+    pulls: { 5: pull(5, OLD), 6: pull(6, SHA) },
+    timelines: { 5: labeled("devops-person"), 6: [] },
+    runs: { merge_group: [{ id: 7, head_sha: OLD }], pull_request: [] },
+    window: [SHA, OLD],
+    producing: [pull(6, SHA)],
+  });
+  const result = await evaluateDestructive({
+    api,
+    repo: REPO,
+    sha: SHA,
+    planDir: planDirWith({
+      migrationReasons: [dropTmp],
+      migrationFile: "20261010_b.sql",
+    }),
+    download: () =>
+      checkDirWith(
+        [],
+        [{ file: "20260901_a.sql", destructive: true, reasons: [dropTmp] }],
+      ),
+  });
+  assert.equal(result.pass, false);
+  assert.match(result.failures[0], /20261010_b\.sql/);
+  assert.match(result.failures[0], /DROP TABLE tmp_import/);
+});
+
+test("the pull request that introduced the migration file covers it", async () => {
+  const result = await evaluateDestructive({
+    api: destructiveApi(),
+    repo: REPO,
+    sha: SHA,
+    planDir: planDirWith({
+      migrationReasons: [dropTmp],
+      migrationFile: "20261010_b.sql",
+    }),
+    download: () =>
+      checkDirWith(
+        [],
+        [{ file: "20261010_b.sql", destructive: true, reasons: [dropTmp] }],
+      ),
+  });
+  assert.equal(result.pass, true, result.failures.join("\n"));
+});
+
 test("an approval older than the commit window does not count", async () => {
   const api = destructiveApi({
     pulls: { 5: pull(5, OLD) },
@@ -689,7 +747,7 @@ test("deploy reasons read both plans; uncovered ignores whitespace", () => {
     uncovered(
       [
         {
-          source: "s",
+          source: "schema",
           kind: "DROP COLUMN",
           statement: "ALTER TABLE a\n DROP COLUMN b",
         },
@@ -780,4 +838,165 @@ test("a Worker skipped as unchanged counts as current for the last-deploy lookup
   ];
   assert.equal(runDeployed(jobs, "production"), true);
   assert.equal(runDeployed(jobs.slice(0, 1), "production"), false);
+});
+
+import { checkProtection, judgeRules } from "./main-protection.mjs";
+
+test("the one-approval path needs a ruleset requiring an approving review on the default branch", async () => {
+  assert.equal(judgeRules([]).ok, false);
+  assert.equal(judgeRules(undefined).ok, false);
+  assert.equal(
+    judgeRules([{ type: "deletion" }, { type: "non_fast_forward" }]).ok,
+    false,
+  );
+  const noReview = judgeRules([
+    {
+      type: "pull_request",
+      parameters: { required_approving_review_count: 0 },
+    },
+  ]);
+  assert.equal(noReview.ok, false);
+  assert.match(noReview.message, /no approving review/);
+  assert.equal(
+    judgeRules([
+      {
+        type: "pull_request",
+        ruleset_id: 9,
+        parameters: { required_approving_review_count: 1 },
+      },
+    ]).ok,
+    true,
+  );
+  const verdict = await checkProtection({
+    api: async (path) => {
+      assert.equal(path, `/repos/${REPO}/rules/branches/main`);
+      return [];
+    },
+    repo: REPO,
+    branch: "main",
+  });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.message, /Gate step 6/);
+});
+
+import { appliedInProduction, configChanged } from "./config-changed.mjs";
+
+const applyJob = (name, conclusion) => ({ name, conclusion });
+
+test("a production apply job counts only when it succeeded", () => {
+  assert.equal(
+    appliedInProduction([
+      applyJob("deploy / production-database / apply", "success"),
+    ]),
+    true,
+  );
+  assert.equal(
+    appliedInProduction([
+      applyJob("deploy / production-database-apply / apply", "success"),
+    ]),
+    true,
+  );
+  for (const conclusion of ["failure", "skipped", "cancelled", null]) {
+    assert.equal(
+      appliedInProduction([
+        applyJob("deploy / production-database / apply", conclusion),
+      ]),
+      false,
+    );
+  }
+  assert.equal(
+    appliedInProduction([
+      applyJob("deploy / staging-database / apply", "success"),
+    ]),
+    false,
+  );
+});
+
+function configApi(runs) {
+  return async (path) => {
+    if (path.includes("/workflows/ci.yaml/runs")) {
+      return {
+        workflow_runs: Object.keys(runs).map((sha, i) => ({
+          id: i + 1,
+          head_sha: sha,
+        })),
+      };
+    }
+    const id = /runs\/(\d+)\/jobs/.exec(path)[1];
+    return { jobs: Object.values(runs)[Number(id) - 1] };
+  };
+}
+
+test("a config change in a superseded candidate is still pushed by the next deploy", async () => {
+  // A changed config.toml; its production run was superseded, so only the commit
+  // before A (Z) ever applied. B is the head: B vs A is unchanged, but B vs Z
+  // differs, and Z is what production last deployed.
+  const api = configApi({
+    A: [applyJob("deploy / production-database / apply", "skipped")],
+    Z: [applyJob("deploy / production-database / apply", "success")],
+  });
+  const asked = [];
+  const result = await configChanged({
+    api,
+    repo: REPO,
+    sha: "B",
+    changedSince: (from, to) => {
+      asked.push([from, to]);
+      return from === "Z";
+    },
+  });
+  assert.equal(result.config, true);
+  assert.deepEqual(asked, [["Z", "B"]]);
+});
+
+test("config is unchanged when nothing differs since the last production apply, and fails open otherwise", async () => {
+  const applied = configApi({
+    Z: [applyJob("deploy / production-database-apply / apply", "success")],
+  });
+  assert.equal(
+    (
+      await configChanged({
+        api: applied,
+        repo: REPO,
+        sha: "B",
+        changedSince: () => false,
+      })
+    ).config,
+    false,
+  );
+  assert.equal(
+    (
+      await configChanged({
+        api: applied,
+        repo: REPO,
+        sha: "B",
+        changedSince: () => null,
+      })
+    ).config,
+    true,
+  );
+  assert.equal(
+    (
+      await configChanged({
+        api: configApi({ Z: [] }),
+        repo: REPO,
+        sha: "B",
+        changedSince: () => false,
+      })
+    ).config,
+    true,
+  );
+  assert.equal(
+    (
+      await configChanged({
+        api: async () => {
+          throw new Error("boom");
+        },
+        repo: REPO,
+        sha: "B",
+        changedSince: () => false,
+      })
+    ).config,
+    true,
+  );
 });

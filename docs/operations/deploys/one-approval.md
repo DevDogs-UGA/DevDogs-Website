@@ -22,7 +22,21 @@ GitHub asks for approval again at every job that names an environment with requi
 | A reviewer-less twin of `production` (`production-deploy`) holding copies of the secrets | Works, but environment secrets cannot be read back, so Sloan would have to re-push every production secret and variable with `backstage env push`, for three repositories, and keep two copies in step.                                       |
 | **Move the pause to its own environment and make `production` reviewer-less**            | **Chosen.** A new `production-approval` environment holds the reviewers and no secrets. `production` keeps its secrets and loses its reviewers. No secret is copied.                                                                          |
 
-The cost of the chosen design is that `production` is no longer a gate by itself: any job on `main` that names it gets the production secrets. The environment keeps its branch rule (`main` only), `main` is protected (pull requests, the merge queue, required checks), and every production job in these workflows `needs` the approval job (including the Slides deck: `slides.yaml` has the same flag-gated `production-approval` and `deploy-approved` pair). Treat a change to a deploy workflow as a change to production access, and review it so.
+The cost of the chosen design is that `production` is no longer a gate by itself: any job on `main` that names it gets the production secrets. The environment keeps its branch rule (`main` only), `main` must be protected by a ruleset that requires a pull request with an approving review (see the next section; the workflows refuse to run the flow without one), and every production job in these workflows `needs` the approval job (including the Slides deck: `slides.yaml` has the same flag-gated `production-approval` and `deploy-approved` pair). Treat a change to a deploy workflow as a change to production access, and review it so.
+
+## Hard prerequisite: main must be protected first
+
+With step 3 done, nothing but `main` stands between a push and the production secrets. So **a repository must not take step 3 (or even step 2) until its `main` has an active ruleset that requires a pull request with at least one approving review.** That ruleset is Gate step 6.
+
+| Repository | `main` protection today (2026-10-14)                                                                  | May it switch on?                             |
+| ---------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| DevDogsUGA | Check with `gh api repos/DevDogsUGA/DevDogsUGA/rules/branches/main` (must show a `pull_request` rule) | Only once that call shows the rule.           |
+| DogDays    | `main-protection` ruleset (deletion and non-fast-forward only), no pull request rule                  | **No.** Apply the Gate step 6 rulesets first. |
+| DogPack    | No rulesets, no branch protection                                                                     | **No.** Apply the Gate step 6 rulesets first. |
+
+The workflows enforce it where they can: `approve-production.yaml` (both its `summary` and `approve` jobs, so before anyone is asked and again after) runs `.github/scripts/main-protection.mjs`, which reads `GET /repos/{repo}/rules/branches/{branch}` with the job token and **fails loudly** unless a `pull_request` rule with `required_approving_review_count >= 1` applies to the default branch. An unreadable answer also fails. What the token cannot see, so stays a manual prerequisite: classic branch protection (it needs admin to read, and does not count), and whether the ruleset has bypass actors (`reviewers` or `devops` members who may push straight to `main`; check Settings -> Rules -> the ruleset -> Bypass list, and leave it to admins only).
+
+Switching on without the ruleset therefore ends in a failed `approve-production` and no production deploy, not in an open `production`. But step 3 is a click in GitHub's settings and the check only runs in a deploy: if you remove the reviewers from `production` first, a push that does not go through `approve-production` (a workflow that names `production` directly) is not stopped by this check. Keep the order below.
 
 ## The shape
 
@@ -43,7 +57,8 @@ When migrations are pending, the schema diff does not exist yet at approval time
 ## Things that changed whatever the variable says
 
 - **No destructive environments.** `production-destructive` and `staging-destructive` are no longer used. See [Destructive changes](./destructive-changes.md): the deploy refuses a destructive plan that no pull request approved.
-- **The config push is skipped** when none of `supabase/config.toml`, `supabase/roles.sql`, a seed or `supabase/config-push.stamp` changed since the tier's last deploy (DevDogsUGA). `config.toml` reads the sign-in client secrets and `BASE_URL*` from the GitHub environment, so a rotated secret only reaches Supabase through a push: **after you change one of those values, edit `supabase/config-push.stamp` (any edit) in the commit that you deploy.** The credential runbooks say so. DogDays and DogPack keep their own rule: a `config.toml` change, or the `config` input of a manual run of their deploy workflow.
+- **The config push is skipped** when none of `supabase/config.toml`, `supabase/roles.sql`, a seed or `supabase/config-push.stamp` changed since the tier's last deploy (DevDogsUGA). `config.toml` reads the sign-in client secrets and `BASE_URL*` from the GitHub environment, so a rotated secret only reaches Supabase through a push: **after you change one of those values, edit `supabase/config-push.stamp` (any edit) in the commit that you deploy.** The credential runbooks say so. DogDays and DogPack decide on `config.toml` alone (or the `config` input of a manual run of their deploy workflow), and compare it with the commit production **last applied** (`.github/scripts/config-changed.mjs`: the newest `main` run whose `production-database(-apply) / apply` job succeeded), not with the previous commit. A config change in a candidate that was superseded or cancelled therefore stays pending until a deploy applies it. Any doubt (no earlier apply found, a commit git cannot reach, an API error) pushes.
+- **What is verified about the config push:** the scope logic (`scopeOf`, `config-changed.mjs`) is unit-tested, and the apply job itself runs when no migration is pending. **The push to Supabase is not verified on staging:** staging holds no `SUPABASE_ACCESS_TOKEN`, so its apply job skips "Push the Supabase configuration" and runs "Supabase configuration skipped (no SUPABASE_ACCESS_TOKEN)" instead (seen in DevDogsUGA run 38504969981). The push path through the new scope has not run anywhere yet; its first real run is the first production deploy that changes `config.toml`, a seed, `roles.sql` or the stamp.
 - **Unchanged Workers are skipped** (DevDogsUGA): the platform when every shipped change since the tier's last deploy is under `apps/catalog/`, the catalog when every one is under `apps/platform/` or `docs/`. A skipped Worker shows as an `unchanged` job and counts as current for the next deploy's comparison. Anything else, or anything the comparison cannot work out, deploys both.
 - Plan and apply artifacts are named per environment (`plan-schema-production`), so staging and production in one run no longer collide.
 
@@ -57,7 +72,7 @@ The deploy now refuses a destructive plan nobody approved on a pull request (see
 
 ## Switching it on
 
-Do these in order. The order matters: the first two steps change nothing, and the last one is what stops `production` asking.
+**Per repository, and only after Gate step 6 has applied its `main` ruleset there** (see the prerequisite above; DogDays and DogPack do not have it today). Do these in order. The order matters: the first two steps change nothing, and the last one is what stops `production` asking.
 
 1. **Create the environment `production-approval`** in each repository that deploys to production (DevDogsUGA, DogDays, DogPack): Settings -> Environments -> New environment. Required reviewers: the `devops` team. Prevent self-review: on. Deployment branches: selected branches, `main`. It holds no secrets or variables.
 2. **Set the repository variable `ONE_APPROVAL` to `true`** in the same repositories (Settings -> Secrets and variables -> Actions -> Variables). From the next push, production runs the new jobs. `production` still has reviewers at this point, so each job still asks; you have changed the structure, not yet the number of clicks. Run one deploy like this if you want to see the summary first.
@@ -68,6 +83,14 @@ If you do step 3 before step 2, `production` is open to every job on `main` with
 `backstage github settings` (`desired.ts`) still lists `production` with reviewers and does not know `production-approval`. Do not run it with `--apply` between steps 3 and a commit that updates `desired.ts` to match, or it puts the reviewers back (harmless, the deploy asks more than once again) or reports drift.
 
 To turn it off, delete the variable (or set it to anything but `true`) and put the required reviewers back on `production`. The old per-job flow is untouched.
+
+## Still to do at Gate step 6
+
+The one-approval flow and the PR-level destructive approval both lean on the Gate step 6 rulesets. In every deploying repository (DevDogsUGA, DogDays, DogPack):
+
+1. Apply the `main` ruleset: pull request required with 1+ approving review, no direct pushes (bypass for admins only), and `destructive-sql` and `destructive-gate` as required status checks.
+2. **Settle the duplicate `destructive-gate` check names** (report section 4, step 6.8). The check is reported both by `destructive-gate.yaml` (`pull_request_target`) and by `database-pr.yaml` (merge queue), and a product repository's caller adds a prefix, so a ruleset naming one context can wait forever for the other or accept the wrong one. Decide one required context per repository and make the other path report under it, before making the check required.
+3. Only then switch on `ONE_APPROVAL` (below).
 
 ## DogDays and DogPack
 
