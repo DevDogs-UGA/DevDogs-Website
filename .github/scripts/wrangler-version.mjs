@@ -60,11 +60,20 @@ export function lastUpload(ndjson) {
  * @returns {string | undefined}
  */
 export function activeVersion(json) {
+  // `pnpm exec` prints its own lines ("Already up to date", "Done in …") to
+  // stdout ahead of wrangler's JSON, so parse from the first line that opens
+  // the object when the whole text is not JSON.
   let status;
   try {
     status = JSON.parse(json);
   } catch {
-    return undefined;
+    const start = json.search(/^\{/m);
+    if (start < 0) return undefined;
+    try {
+      status = JSON.parse(json.slice(start));
+    } catch {
+      return undefined;
+    }
   }
   const versions = Array.isArray(status?.versions) ? status.versions : [];
   let best;

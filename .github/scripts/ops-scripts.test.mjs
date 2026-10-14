@@ -1424,6 +1424,19 @@ test("the active version is the one with the most traffic", () => {
   assert.equal(activeVersion("{}"), undefined);
 });
 
+test("the active version survives pnpm's own stdout lines before the JSON", () => {
+  const body = JSON.stringify(
+    { id: "d", versions: [{ version_id: "v1", percentage: 100 }] },
+    null,
+    2,
+  );
+  assert.equal(
+    activeVersion(`Already up to date\nDone in 423ms using pnpm v11.8.0\n${body}\n`),
+    "v1",
+  );
+  assert.equal(activeVersion("Done in 1ms\nnot json"), undefined);
+});
+
 /** The OAuth server and the consent page, as a fake. */
 function oauthFetch({
   authorizeLocation,
