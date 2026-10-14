@@ -168,6 +168,8 @@ describe("packTypes", () => {
       join(product.root, "lib"),
       "database.types.ts",
     ]);
+    // Named relative to its directory, so a Windows drive letter never reaches tar.
+    expect(calls[0]?.options?.cwd).toBe(product.root);
   });
 
   it("asks for generation first when there is nothing to pack", async () => {
@@ -200,10 +202,12 @@ describe("downloadTypes", () => {
       }
       return Promise.resolve(new Response(new Uint8Array([1, 2, 3])));
     };
-    const { run, calls } = recordingRunner(({ command, args }) => {
-      // Stand in for `tar -xzf archive -C staging`: put the file there.
+    const { run, calls } = recordingRunner(({ command, args, options }) => {
+      // Stand in for `tar -xzf archive` run in the staging directory: put the file there.
       if (command === "tar") {
-        const staging = String(args[args.indexOf("-C") + 1]);
+        const staging = String(options?.cwd);
+        expect(args).not.toContain("-C");
+        expect(args.at(-1)).not.toMatch(/[\\/]/);
         mkdirSync(staging, { recursive: true });
         writeFileSync(join(staging, "database.types.ts"), "// downloaded\n");
       }

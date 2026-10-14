@@ -16,7 +16,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import type { Product } from "./config.js";
 import type { Runner } from "./exec.js";
 import { generatorFor, schemaHashFor, typesAssetName } from "./schema-hash.js";
@@ -151,10 +151,14 @@ export async function packTypes(
       `${product.config.types.out} does not exist; run \`devtools db types\` first.`,
     );
   }
+  // The archive is named relative to the working directory, never by an
+  // absolute path: GNU tar (the one in Git for Windows' PATH) reads the colon in
+  // `D:\...` as `host:file` and fails with "Cannot connect to D".
+  const archive = resolve(product.root, file);
   const result = await run(
     "tar",
-    ["-czf", file, "-C", dirname(out), basename(out)],
-    { cwd: product.root },
+    ["-czf", basename(archive), "-C", dirname(out), basename(out)],
+    { cwd: dirname(archive) },
   );
   if (result.code !== 0) {
     throw new TypesError("tar could not write the asset.", result.stderr);
@@ -222,9 +226,8 @@ export async function downloadTypes(
   mkdirSync(staging, { recursive: true });
   const archive = join(staging, wanted);
   writeFileSync(archive, Buffer.from(await download.arrayBuffer()));
-  const extracted = await deps.run("tar", ["-xzf", archive, "-C", staging], {
-    cwd: product.root,
-  });
+  // Run in `staging` and name the archive relatively: see packTypes.
+  const extracted = await deps.run("tar", ["-xzf", wanted], { cwd: staging });
   if (extracted.code !== 0) {
     throw new TypesError(
       "tar could not read the downloaded asset.",
