@@ -6,4 +6,4 @@ LINKEDIN_*) and BASE_URL* from the GitHub environment, so a rotated secret
 reaches Supabase only when the config is pushed. See
 docs/operations/credentials/ and docs/operations/deploys/one-approval.md.
 
-last bump: never
+last bump: 2026-10-13 (verified the config push runs when no migration is pending)
