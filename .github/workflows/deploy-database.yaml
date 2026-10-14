@@ -291,7 +291,13 @@ jobs:
 
   apply:
     needs: plan-schema
-    if: needs.plan-schema.outputs.empty != 'true' || inputs.apply_config || inputs.register_provider
+    # always(): without a status function GitHub also skips this job when an
+    # earlier job in the chain (apply-migrations, with nothing pending) was
+    # skipped, which would silently skip the schema and the config push.
+    if: >-
+      always()
+      && needs.plan-schema.result == 'success'
+      && (needs.plan-schema.outputs.empty != 'true' || inputs.apply_config || inputs.register_provider)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: ${{ inputs.environment }}
