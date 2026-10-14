@@ -1054,6 +1054,11 @@ export function main(
       }
       const migrationsDestructive = migrations.some((m) => m.destructive);
       writeFileSync(join(planDir, "schema-change.sql"), change.sql);
+      // What the deploy compares its own plan with (destructive-approval.mjs).
+      writeFileSync(
+        join(planDir, "migrations-change.json"),
+        `${JSON.stringify({ classified: migrations }, null, 2)}\n`,
+      );
       writeFileSync(
         join(planDir, "schema-change.json"),
         `${JSON.stringify({ hash: change.hash, schemas: change.schemas, classification: change.classification, dropStatements: change.dropStatements }, null, 2)}\n`,

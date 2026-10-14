@@ -19,10 +19,10 @@ Every commit that lands on `main` is built once, deployed to staging automatical
 
 The work is done by two reusable workflows in `.github/workflows/`. DogDays and DogPack call the same files, pinned by commit SHA, with their own environments and secrets.
 
-| Workflow               | What it does                                                                                                                                |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `deploy-database.yaml` | Hand-written migrations, then the declarative diff, then `supabase config push`. Each step is planned, approved and applied against a hash. |
-| `deploy-worker.yaml`   | Uploads a Worker version, smoke tests it with no traffic, switches traffic, then smoke tests what is live and rolls back if that fails.     |
+| Workflow               | What it does                                                                                                                                                                                                                       |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `deploy-database.yaml` | Hand-written migrations, then the declarative diff, then `supabase config push`. Each step is planned, approved and applied against a hash. (The one-approval flow splits it into `plan-database.yaml` and `apply-database.yaml`.) |
+| `deploy-worker.yaml`   | Uploads a Worker version, smoke tests it with no traffic, switches traffic, then smoke tests what is live and rolls back if that fails.                                                                                            |
 
 The slides deck deploys through `deploy-worker.yaml` too, from `slides.yaml`.
 
@@ -34,7 +34,7 @@ Approving a production job approves **the plan you can read in the run's summary
 - The approval gate refuses you if you wrote the change or queued it. This is checked by the workflow, not just by GitHub.
 - A candidate that is no longer the head of `main` refuses to deploy. A newer commit has its own run; approve that one. The exception is a workflow that runs only on some paths (Slides): a newer commit that does not touch its paths has no run of its own, so the approved candidate still deploys, and only a newer commit that does touch them supersedes it (`latest_paths` in `slides.yaml`, `.github/scripts/superseded.mjs`).
 
-Production asks twice in a normal deploy: once for the database, then once for both Workers together. A plan that drops or rewrites data asks a third time, of `production-destructive` ([Destructive changes](./destructive-changes.md)).
+Production asks once per job today: once for the database, then once for the catalog and once for the platform. A plan that drops or rewrites data is refused unless its pull request approved it ([Destructive changes](./destructive-changes.md)); it does not ask again at deploy time. [One approval per deploy](./one-approval.md) replaces the per-job asks with a single one once it is switched on.
 
 <details>
 <summary>Why are the Worker steps in one job?</summary>

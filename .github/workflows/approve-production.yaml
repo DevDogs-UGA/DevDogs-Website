@@ -1,0 +1,136 @@
+name: Approve production
+
+# The ONE production approval of a deploy. Called by deploy.yaml and, pinned by
+# commit SHA, by DogDays' and DogPack's, after the builds and the database plan
+# (plan-database.yaml) and before anything in production changes. Every later
+# production job `needs` the `approve` job here; none of them names a reviewed
+# environment, so GitHub asks exactly once.
+#
+#   summary   (no environment) one page: the commit, the destructive statements
+#             FIRST, the pending migrations, the schema SQL, and the Workers and
+#             functions the deploy will touch. It runs before the approval so the
+#             reviewer reads it while deciding.
+#   approve   (environment: approval_environment, reviewers = devops, self-review
+#             blocked) the pause. Then the self-approval gate (the approver
+#             neither wrote nor queued the change) and `require_latest`.
+#
+# `approval_environment` holds NO secrets. Its only job is to be the pause. The
+# secrets stay in the deploy environment, which must have no required
+# reviewers when this flow is on (docs/operations/deploys/one-approval.md).
+#
+# A rejected approval fails `approve`, the jobs that need it are skipped, and the
+# run has changed nothing: planning only read.
+on:
+  workflow_call:
+    inputs:
+      approval_environment:
+        description: The reviewed environment that holds the pause (e.g. production-approval).
+        required: true
+        type: string
+      plan_environment_name:
+        description: The `environment` input the plan workflow was called with (names its artifacts, e.g. production). Empty skips the plan sections.
+        required: false
+        type: string
+        default: ""
+      notes:
+        description: Markdown listing what else the deploy will do (Workers that change, functions, configuration).
+        required: false
+        type: string
+        default: ""
+      self_approval_gate:
+        description: Refuse an approver who wrote or queued the change.
+        required: false
+        type: boolean
+        default: true
+      require_latest:
+        description: Refuse when the commit is no longer the head of the default branch.
+        required: false
+        type: boolean
+        default: true
+      shared_ref:
+        description: >-
+          A commit of DevDogsUGA/DevDogsUGA to take the scripts from. Leave empty
+          when DevDogsUGA calls this; product repositories pass the SHA they
+          pinned this workflow at.
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  summary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: Locate the shared scripts
+        run: echo "SCRIPTS=${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
+      - name: Download the plans
+        if: inputs.plan_environment_name != ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: plan-*-${{ inputs.plan_environment_name }}
+          path: ${{ runner.temp }}/plans
+          merge-multiple: true
+      - name: Write the approval summary
+        env:
+          NOTES: ${{ inputs.notes }}
+          PLAN_DIR: ${{ runner.temp }}/plans
+        run: |
+          mkdir -p "$PLAN_DIR"
+          node "$SCRIPTS/approval-summary.mjs" --plan-dir "$PLAN_DIR" --sha "$GITHUB_SHA" \
+            --repo "$GITHUB_REPOSITORY" --notes "$NOTES" >> "$GITHUB_STEP_SUMMARY"
+
+  approve:
+    needs: summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.approval_environment }}
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: Locate the shared scripts
+        run: echo "SCRIPTS=${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
+      # FIRST, before anything changes: whoever approved this deployment is
+      # neither the author of the change nor the person who queued it.
+      - name: Refuse an approver who wrote or queued this change
+        if: inputs.self_approval_gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          node "$SCRIPTS/approval-gate.mjs"
+          --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
+          --environment "${{ inputs.approval_environment }}"
+      - name: Refuse an approved candidate that is no longer the head
+        if: inputs.require_latest
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
+        run: |
+          latest=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" "refs/heads/$DEFAULT_BRANCH" | cut -f1)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::error::Candidate $GITHUB_SHA was superseded by $latest. Nothing was changed; the newer commit has its own run."
+            exit 1
+          fi
+      - run: echo "Production deploy of $GITHUB_SHA approved. Every production job after this one runs without asking again." >> "$GITHUB_STEP_SUMMARY"

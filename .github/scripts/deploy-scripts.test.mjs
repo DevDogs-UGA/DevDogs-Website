@@ -457,3 +457,260 @@ test("lastDeployed is empty when no recent run deployed", async () => {
     "",
   );
 });
+
+// --- one approval per deploy ---------------------------------------------
+
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { renderApprovalSummary } from "./approval-summary.mjs";
+import {
+  deployReasons,
+  evaluate as evaluateDestructive,
+  uncovered,
+} from "./destructive-approval.mjs";
+import { scopeOf } from "./deploy-needed.mjs";
+
+const dropColumn = {
+  kind: "DROP COLUMN",
+  statement: "ALTER TABLE a DROP COLUMN b",
+};
+
+function planDirWith({ schemaReasons = [], migrationReasons = [] } = {}) {
+  const dir = mkdtempSync(join(tmpdir(), "plan-"));
+  writeFileSync(
+    join(dir, "schema-plan.json"),
+    JSON.stringify({ hash: "h", classification: { reasons: schemaReasons } }),
+  );
+  writeFileSync(
+    join(dir, "migrations-plan.json"),
+    JSON.stringify({
+      classified: migrationReasons.length
+        ? [{ file: "20260101_x.sql", reasons: migrationReasons }]
+        : [],
+    }),
+  );
+  return dir;
+}
+
+function checkDirWith(schemaReasons) {
+  const dir = mkdtempSync(join(tmpdir(), "check-"));
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    join(dir, "schema-change.json"),
+    JSON.stringify({ classification: { reasons: schemaReasons } }),
+  );
+  return dir;
+}
+
+const labeled = (login) => [
+  { event: "labeled", label: { name: "allow-destructive" }, actor: { login } },
+];
+
+function destructiveApi({
+  label = labeled("devops-person"),
+  permission = "maintain",
+  runs = [{ id: 7, head_sha: SHA }],
+  artifacts = [{ name: "db-check" }],
+  pulls,
+} = {}) {
+  return fakeApi({
+    [`/repos/${REPO}/commits/${SHA}/pulls`]: pulls ?? [
+      {
+        number: 5,
+        merge_commit_sha: SHA,
+        merged_at: "2026-10-01T00:00:00Z",
+        user: { login: "author" },
+      },
+    ],
+    [`/repos/${REPO}/issues/5/timeline`]: label,
+    [`/repos/${REPO}/collaborators/devops-person/permission`]: {
+      role_name: permission,
+    },
+    [`/repos/${REPO}/actions/runs`]: { workflow_runs: runs },
+    [`/repos/${REPO}/actions/runs/7/artifacts`]: { artifacts },
+  });
+}
+
+test("a plan with nothing destructive needs no pull request approval", async () => {
+  const result = await evaluateDestructive({
+    api: fakeApi({}),
+    repo: REPO,
+    sha: SHA,
+    planDir: planDirWith(),
+    download: () => assert.fail("no download expected"),
+  });
+  assert.equal(result.pass, true);
+});
+
+test("a destructive plan the pull request approved and showed passes", async () => {
+  const result = await evaluateDestructive({
+    api: destructiveApi(),
+    repo: REPO,
+    sha: SHA,
+    planDir: planDirWith({ schemaReasons: [dropColumn] }),
+    download: () => checkDirWith([dropColumn]),
+  });
+  assert.equal(result.pass, true, result.failures.join("\n"));
+  assert.equal(result.approval.pr, 5);
+});
+
+test("a destructive plan from a direct push is refused", async () => {
+  const result = await evaluateDestructive({
+    api: destructiveApi({ pulls: [] }),
+    repo: REPO,
+    sha: SHA,
+    planDir: planDirWith({ schemaReasons: [dropColumn] }),
+    download: () => assert.fail("no download expected"),
+  });
+  assert.equal(result.pass, false);
+  assert.match(result.failures[0], /direct push/);
+});
+
+test("a destructive plan without the label, or with one from a non-devops user, is refused", async () => {
+  const none = await evaluateDestructive({
+    api: destructiveApi({ label: [] }),
+    repo: REPO,
+    sha: SHA,
+    planDir: planDirWith({ schemaReasons: [dropColumn] }),
+    download: () => assert.fail("no download expected"),
+  });
+  assert.equal(none.pass, false);
+  const member = await evaluateDestructive({
+    api: destructiveApi({ permission: "write" }),
+    repo: REPO,
+    sha: SHA,
+    planDir: planDirWith({ schemaReasons: [dropColumn] }),
+    download: () => assert.fail("no download expected"),
+  });
+  assert.equal(member.pass, false);
+  assert.match(member.failures[0], /not a devops member/);
+});
+
+test("a destructive statement the pull request never showed is refused", async () => {
+  const extra = { kind: "DROP TABLE", statement: "DROP TABLE   old" };
+  const result = await evaluateDestructive({
+    api: destructiveApi(),
+    repo: REPO,
+    sha: SHA,
+    planDir: planDirWith({ schemaReasons: [dropColumn, extra] }),
+    download: () => checkDirWith([dropColumn]),
+  });
+  assert.equal(result.pass, false);
+  assert.match(result.failures[0], /DROP TABLE old/);
+  assert.doesNotMatch(result.failures[0], /DROP COLUMN/);
+});
+
+test("a labelled destructive plan with no kept db-check artifact is refused", async () => {
+  const result = await evaluateDestructive({
+    api: destructiveApi({ artifacts: [{ name: "other" }] }),
+    repo: REPO,
+    sha: SHA,
+    planDir: planDirWith({ schemaReasons: [dropColumn] }),
+    download: () => assert.fail("no download expected"),
+  });
+  assert.equal(result.pass, false);
+  assert.match(result.failures[0], /db-check/);
+});
+
+test("deploy reasons read both plans; uncovered ignores whitespace", () => {
+  const dir = planDirWith({
+    schemaReasons: [dropColumn],
+    migrationReasons: [{ kind: "TRUNCATE", statement: "TRUNCATE t" }],
+  });
+  assert.equal(deployReasons(dir).length, 2);
+  assert.deepEqual(
+    uncovered(
+      [
+        {
+          source: "s",
+          kind: "DROP COLUMN",
+          statement: "ALTER TABLE a\n DROP COLUMN b",
+        },
+      ],
+      [dropColumn],
+    ),
+    [],
+  );
+});
+
+test("the approval summary lists destructive statements before everything else", () => {
+  const text = renderApprovalSummary({
+    sha: SHA,
+    repo: REPO,
+    migrations: {
+      migrations: ["20260101_x.sql"],
+      seeds: [],
+      roles: [],
+      classified: [
+        {
+          file: "20260101_x.sql",
+          reasons: [{ kind: "TRUNCATE", statement: "TRUNCATE t" }],
+        },
+      ],
+    },
+    schema: { hash: "abc", classification: { reasons: [dropColumn] } },
+    schemaSql: "ALTER TABLE a DROP COLUMN b;",
+    approval: { pr: 5, actor: "devops-person" },
+    notes: "- Platform Worker: deploys",
+  });
+  const order = [
+    "DESTRUCTIVE",
+    "Pending migrations",
+    "Schema change",
+    "Workers, functions",
+  ].map((h) => text.indexOf(h));
+  assert.deepEqual(
+    [...order].sort((a, b) => a - b),
+    order,
+  );
+  assert.match(text, /allow-destructive` applied by @devops-person/);
+  assert.match(text, /not known yet/);
+});
+
+test("the scope skips the config push and unchanged Workers, and fails open", () => {
+  assert.deepEqual(scopeOf(null), {
+    config: true,
+    platform: true,
+    catalog: true,
+  });
+  assert.deepEqual(scopeOf(["apps/platform/src/x.ts"]), {
+    config: false,
+    platform: true,
+    catalog: false,
+  });
+  assert.deepEqual(scopeOf(["docs/a.md"]), {
+    config: false,
+    platform: true,
+    catalog: false,
+  });
+  assert.deepEqual(scopeOf(["apps/catalog/src/x.ts"]), {
+    config: false,
+    platform: false,
+    catalog: true,
+  });
+  assert.deepEqual(scopeOf(["supabase/config.toml", "pnpm-lock.yaml"]), {
+    config: true,
+    platform: true,
+    catalog: true,
+  });
+  assert.deepEqual(scopeOf(["supabase/seed/officers.sql"]).config, true);
+  // Inert files change neither Worker.
+  assert.deepEqual(scopeOf([".github/scripts/db-plan.mjs"]), {
+    config: false,
+    platform: false,
+    catalog: false,
+  });
+});
+
+test("a Worker skipped as unchanged counts as current for the last-deploy lookup", () => {
+  const job = (name, conclusion, steps = []) => ({ name, conclusion, steps });
+  const jobs = [
+    job("deploy / production-catalog / unchanged", "success"),
+    job("deploy / production-platform / deploy", "success", [
+      { name: "Switch traffic to the new version", conclusion: "success" },
+    ]),
+  ];
+  assert.equal(runDeployed(jobs, "production"), true);
+  assert.equal(runDeployed(jobs.slice(0, 1), "production"), false);
+});

@@ -36,10 +36,21 @@ name: Deploy Worker
 # live smoke test still runs). deploy.yaml reads the repository variable
 # WORKER_DEPLOY_MODE for it. The runbook (docs/operations) says when.
 #
-# One job, one approval. The upload, both smoke tests and the switch share a
-# job because an environment with required reviewers asks for approval once per
+# One job per Worker. The upload, both smoke tests and the switch share a job
+# because an environment with required reviewers asks for approval once per
 # job: splitting them would ask a reviewer to approve the same commit three
 # times.
+#
+# One approval per deploy. A caller that has asked for the production approval
+# once, in an earlier job of its own (approve-production.yaml, in an environment
+# `approval_environment`), passes that name here and makes this call `needs` that
+# job. The self-approval gate below then reads the approvals of THAT
+# environment, and `environment` is a reviewer-less one, so nothing pauses here.
+# See docs/operations/deploys/one-approval.md.
+#
+# `skip: true` is for a Worker the caller found unchanged since the tier's last
+# deploy: a job named `unchanged` runs instead of `deploy`, touches nothing, and
+# deploy-needed.mjs counts it as current.
 #
 # What the caller provides, in `environment`:
 #   secrets    CLOUDFLARE_API_TOKEN. For `authorize`: SECRET_KEY. Whatever the
@@ -132,6 +143,16 @@ on:
         required: false
         type: boolean
         default: false
+      approval_environment:
+        description: The environment whose approval the caller asked for in an earlier job (one approval per deploy). The self-approval gate reads its approvals instead of `environment`'s. Empty means `environment` itself holds the approval.
+        required: false
+        type: string
+        default: ""
+      skip:
+        description: The Worker is unchanged since the tier's last deploy. Nothing is uploaded, switched or smoke tested.
+        required: false
+        type: boolean
+        default: false
       require_latest:
         description: Refuse (before anything changes) when the commit is no longer the head of the default branch, so an approval that arrives late cannot deploy an old candidate.
         required: false
@@ -220,7 +241,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  unchanged:
+    if: inputs.skip
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Worker unchanged, nothing deployed
+        run: echo "${{ inputs.worker_name }} is unchanged since the last ${{ inputs.tier }} deploy, so nothing was uploaded or switched." >> "$GITHUB_STEP_SUMMARY"
+
   deploy:
+    if: ${{ !inputs.skip }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: ${{ inputs.environment }}
@@ -264,7 +294,7 @@ jobs:
         run: >-
           node "$SCRIPTS/approval-gate.mjs"
           --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
-          --environment "${{ inputs.environment }}"
+          --environment "${{ inputs.approval_environment || inputs.environment }}"
       - name: Refuse an approved candidate that is no longer the head
         if: inputs.require_latest
         env:

@@ -67,6 +67,9 @@ const INERT_FILES = new Set([
   ".github/workflows/deploy.yaml",
   ".github/workflows/deploy-database.yaml",
   ".github/workflows/deploy-worker.yaml",
+  ".github/workflows/plan-database.yaml",
+  ".github/workflows/apply-database.yaml",
+  ".github/workflows/approve-production.yaml",
   ".github/workflows/database-pr.yaml",
   ".github/workflows/destructive-gate.yaml",
   ".github/workflows/smoke.yaml",
@@ -116,6 +119,9 @@ const WORKER_CALLS = {
  * @param {string} call  A caller job id in deploy.yaml.
  */
 function callSucceeded(jobs, call) {
+  // A Worker the deploy found unchanged (deploy-worker.yaml `skip`) is current.
+  const skipped = jobs.find((j) => j.name === `deploy / ${call} / unchanged`);
+  if (skipped?.conclusion === "success") return true;
   const job = jobs.find((j) => j.name === `deploy / ${call} / deploy`);
   if (!job || job.conclusion !== "success") return false;
   return (job.steps ?? []).some(
@@ -187,6 +193,37 @@ export function deployable(changed) {
   return changed.filter((path) => !isInert(path));
 }
 
+/**
+ * What a routine deploy has to do for a tier, from the paths changed since the
+ * tier's last deploy. Everything fails open (`true`): skipping is the
+ * optimisation, a missed deploy the failure.
+ *
+ *   config    `supabase config push`: only when config.toml or a seed changed.
+ *   platform  the platform Worker: unless every shipped change is the
+ *             catalog's own directory.
+ *   catalog   the catalog Worker: unless every shipped change is the
+ *             platform's own directory or the docs (the docs ship in the
+ *             platform's artifact only).
+ *
+ * @param {string[] | null} changed  null: unknown, so everything.
+ */
+export function scopeOf(changed) {
+  if (changed === null) return { config: true, platform: true, catalog: true };
+  const shipped = deployable(changed);
+  return {
+    config: changed.some(
+      (path) =>
+        path === "supabase/config.toml" ||
+        path === "supabase/roles.sql" ||
+        path.startsWith("supabase/seed/"),
+    ),
+    platform: shipped.some((path) => !path.startsWith("apps/catalog/")),
+    catalog: shipped.some(
+      (path) => !path.startsWith("apps/platform/") && !path.startsWith("docs/"),
+    ),
+  };
+}
+
 /** @param {string} from @param {string} to @returns {string[] | null} */
 function diff(from, to) {
   try {
@@ -227,9 +264,11 @@ async function main() {
   for (const tier of tiers) {
     let needed = true;
     let reason;
+    /** @type {string[] | null} */
+    let changed = null;
     try {
       const last = await lastDeployed({ api, repo, tier, before: sha });
-      const changed = last ? diff(last, sha) : null;
+      changed = last ? diff(last, sha) : null;
       if (!last) {
         reason = "no earlier deploy found";
       } else if (changed === null) {
@@ -246,6 +285,13 @@ async function main() {
     }
     console.error(`${tier}: ${needed ? "deploy" : "skip"}; ${reason}`);
     process.stdout.write(`${tier}=${needed}\n`);
+    const scope = scopeOf(changed);
+    console.error(
+      `${tier}: config push ${scope.config}, platform ${scope.platform}, catalog ${scope.catalog}`,
+    );
+    for (const [name, value] of Object.entries(scope)) {
+      process.stdout.write(`${tier}_${name}=${value}\n`);
+    }
   }
 }
 

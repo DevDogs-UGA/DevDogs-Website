@@ -1,13 +1,13 @@
 ---
 name: Destructive changes
-description: How a change that drops or rewrites data is stopped on the pull request and again at deploy time, who can let it through, and how to do it properly.
+description: How a change that drops or rewrites data is approved on the pull request, how the deploy refuses one nobody approved, and how to do it properly.
 order: 4
 section: infrastructure
 ---
 
 # Destructive changes
 
-Generated SQL may only add. A change that drops or rewrites data is stopped twice, and both stops are on purpose: the person who wrote it cannot be the one who lets it through, and the person who lets it through has to read the SQL.
+Generated SQL may only add. A change that drops or rewrites data is stopped on the pull request, and the deploy refuses it if that approval is missing or does not cover what is about to run. The person who wrote it cannot be the one who lets it through, and the person who lets it through has to read the SQL.
 
 ## What counts
 
@@ -25,13 +25,18 @@ A new push to the pull request removes the label: it was applied to SQL someone 
 
 To let one through, as a `devops` member: open the **Checks** tab, read the `db-check` summary (the exact SQL, with the destructive statements listed), and only then add the label.
 
-## Stop two: the deploy
+## Stop two: the deploy refuses what the pull request did not approve
 
-Production's own approval is a separate, weaker step: it is not enough for a destructive plan. The database job first needs a deployment of **`production-destructive`** (staging: `staging-destructive`) approved by a `devops` member who did not write or queue the change. That environment holds no secrets; it exists only to be a second approval. Then the apply runs in `production`, and still refuses a plan whose hash is not the one approved.
+The deploy asks nobody a second time. There are no `production-destructive` or `staging-destructive` approvals any more. Instead, `destructive-approval.mjs` runs in the plan jobs (so a doomed deploy never reaches the approver) and again just before each apply, and passes a destructive plan only when both of these hold:
 
-If the job has no destructive environment configured, a destructive plan is refused outright.
+1. **A merged pull request produced the commit and carries `allow-destructive`, applied by a `devops` member.** A direct push (an admin bypass) has no pull request, so a destructive plan from one is refused.
+2. **Every destructive statement in the deploy's plan also appeared in the plan the pull request showed.** The deploy plans against the real database; the pull request planned against its base. If the database moved in between, the deploy sees a statement the reviewer never read, and refuses. The comparison reads the `db-check` artifact of the merge queue run for the same commit.
 
-**The approver cannot be the person who pushed.** The destructive environments block self-review, and a push to `main` is attributed to whoever pushed it. If you pushed, a different `devops` member has to approve the run, so a destructive change should not merge when nobody else is available. It is also a reason to keep migrations non-destructive where you can: a plain statement, not a `DO` block, wherever one will do.
+A refused deploy fails with a message that says what to do, and changes nothing: open a pull request that carries the change, have a `devops` member read its `db-check` summary and apply the label, and merge it.
+
+When the deploy does pass, the approval summary lists the destructive statements first, marked, with the pull request that approved them.
+
+**The pull request check is the only gate, so it has to be required.** `destructive-sql` and `destructive-gate` must be required status checks on `main` in every repository that deploys (the `main-ci` ruleset, Gate step 6). A repository without them would let a destructive change merge unlabelled; the deploy would still refuse it, but only after the merge.
 
 ## Doing it properly
 
@@ -45,8 +50,8 @@ Production applies migrations **before** it deploys the Workers, so a column dro
 Take a copy of anything you cannot recreate first: export the rows to JSON in the repository's `archive/` folder (or a private release asset if they hold personal data), and say where in the pull request.
 
 <details>
-<summary>Why a label and an environment, not just one?</summary>
+<summary>Why not also approve at deploy time?</summary>
 
-The label is a review of the **SQL as proposed**, before it merges. The environment is a review of the **plan as computed against the real database**, which can differ: a data-dependent diff, a database that moved. Each catches what the other cannot. The label can be applied before the plan exists; the plan cannot be approved before it is generated.
+It used to: a second environment asked a second `devops` member. Production now asks for one approval per deploy, and a reviewer of the plan summary sees the destructive statements first, marked, with the pull request that approved them. A second pause would have taught reviewers to click through. What the deploy-time pause caught that the label cannot is the plan that differs from the reviewed one, and the refusal above covers exactly that.
 
 </details>

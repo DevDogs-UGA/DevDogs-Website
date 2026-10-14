@@ -106,10 +106,12 @@ The database and each Worker deploy through two shared, reusable workflows
   `custom:devdogsuga`). Every apply is planned first and hash-checked: the plan
   job writes the SQL and its SHA-256 into the run summary, and the apply job
   regenerates the SQL against the real database and refuses if it is not the
-  approved one. A plan that drops or rewrites data needs a second approval of
-  `production-destructive` (staging: `staging-destructive`), and the pull
-  request had to carry the `allow-destructive` label from a `devops` member
-  (`database-pr.yaml`, `destructive-gate.yaml`).
+  approved one. A plan that drops or rewrites data is refused unless its pull request carried
+  the `allow-destructive` label from a `devops` member
+  (`database-pr.yaml`, `destructive-gate.yaml`, `destructive-approval.mjs`).
+  Production can ask for one approval per deploy instead of one per job:
+  `plan-database.yaml`, `approve-production.yaml` and `apply-database.yaml`,
+  behind the `ONE_APPROVAL` variable (`docs/operations/deploys/one-approval.md`).
 - **`deploy-worker.yaml`.** `wrangler versions upload`, the new version added to
   the deployment at 0%, a smoke test of that version through the version
   override header (the platform's includes the OAuth authorize and consent

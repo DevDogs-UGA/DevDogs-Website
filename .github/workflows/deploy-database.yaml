@@ -18,11 +18,17 @@ name: Deploy database
 # computed against the database it is about to run on.
 #
 # The destructive gate (Q10). A plan that drops or rewrites data (see
-# .github/scripts/sql-classify.mjs) is never applied by the ordinary approval.
-# It first needs a deployment of the `destructive_environment` approved, an
-# environment whose reviewers are `devops` members with self-review blocked.
-# That environment carries no secrets: it is only the gate, and the apply that
-# follows is still in `environment`.
+# .github/scripts/sql-classify.mjs) is approved ON THE PULL REQUEST, by a
+# `devops` member applying `allow-destructive` (database-pr.yaml,
+# destructive-gate.yaml). The deploy asks nobody a second time: it REFUSES, in
+# the plan jobs and again before each apply, a destructive plan that no such
+# pull request approved, or that differs from what the pull request showed
+# (destructive-approval.mjs). There are no destructive environments any more.
+#
+# This file is the whole sequence in one call, with an approval per apply job
+# (today's flow). The one-approval flow splits it into plan-database.yaml and
+# apply-database.yaml around a single approval (approve-production.yaml);
+# docs/operations/deploys/one-approval.md says how to switch to it.
 #
 # Credentials. `plan_environment` holds a READ-ONLY database credential (the
 # migration_planner role) as DB_URL, so planning can run before anything is
@@ -43,11 +49,6 @@ on:
         type: string
       plan_environment:
         description: The environment holding the read-only planner DB_URL. Defaults to `environment` (staging has one credential).
-        required: false
-        type: string
-        default: ""
-      destructive_environment:
-        description: The environment that must approve a destructive plan (e.g. production-destructive). Empty means destructive plans are refused outright.
         required: false
         type: string
         default: ""
@@ -117,6 +118,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: ${{ inputs.plan_environment || inputs.environment }}
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      issues: read
     outputs:
       pending: ${{ steps.plan.outputs.pending }}
       hash: ${{ steps.plan.outputs.hash }}
@@ -146,49 +152,21 @@ jobs:
           DB_URL: ${{ secrets.DB_URL }}
           PLAN_DIR: ${{ runner.temp }}/db-plan
         run: node "$SCRIPTS/db-plan.mjs" migrations-plan ${{ inputs.include_seed && '--include-seed' || '' }}
+      - name: Require the pull request's approval of a destructive plan
+        if: steps.plan.outputs.destructive == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/destructive-approval.mjs" --repo "$GITHUB_REPOSITORY" --sha "$GITHUB_SHA" --plan-dir "$PLAN_DIR"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: plan-migrations
+          name: plan-migrations-${{ inputs.environment }}
           path: ${{ runner.temp }}/db-plan
           retention-days: 90
 
-  # Destructive hand-written migrations are approved here first.
-  gate-migrations:
-    needs: plan-migrations
-    if: needs.plan-migrations.outputs.destructive == 'true' && inputs.destructive_environment != ''
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    environment: ${{ inputs.destructive_environment }}
-    permissions:
-      contents: read
-      actions: read
-      pull-requests: read
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        if: inputs.shared_ref != ''
-        with:
-          repository: DevDogsUGA/DevDogsUGA
-          ref: ${{ inputs.shared_ref }}
-          path: .shared
-          sparse-checkout: .github/scripts
-      - name: Refuse an approver who wrote or queued this change
-        if: inputs.self_approval_gate
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          node "${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}/approval-gate.mjs"
-          --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
-          --environment "${{ inputs.destructive_environment }}"
-      - run: echo "A devops member approved applying the destructive migrations in this plan." >> "$GITHUB_STEP_SUMMARY"
-
   apply-migrations:
-    needs: [plan-migrations, gate-migrations]
-    if: >-
-      always()
-      && needs.plan-migrations.result == 'success'
-      && needs.plan-migrations.outputs.pending != '0'
-      && (needs.gate-migrations.result == 'success' || needs.gate-migrations.result == 'skipped')
+    needs: plan-migrations
+    if: needs.plan-migrations.outputs.pending != '0'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: ${{ inputs.environment }}
@@ -196,6 +174,7 @@ jobs:
       contents: read
       actions: read
       pull-requests: read
+      issues: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -227,11 +206,23 @@ jobs:
           --environment "${{ inputs.environment }}"
       - name: Install the Supabase CLI
         run: npm install --global "supabase@$SUPABASE_VERSION" && supabase --version
+      - name: Plan the migrations again, against the real target
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/db-plan.mjs" migrations-plan ${{ inputs.include_seed && '--include-seed' || '' }}
+      - name: Require the pull request's approval of a destructive plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/destructive-approval.mjs" --repo "$GITHUB_REPOSITORY" --sha "$GITHUB_SHA" --plan-dir "$PLAN_DIR"
       - name: Apply the hand-written migrations
         env:
           DB_URL: ${{ secrets.DB_URL }}
           PLAN_DIR: ${{ runner.temp }}/db-plan
-          DESTRUCTIVE_APPROVED: ${{ needs.gate-migrations.result == 'success' }}
+          # Reached only when the step above passed: the plan is not
+          # destructive, or the pull request approved exactly this plan.
+          DESTRUCTIVE_APPROVED: "true"
         run: >-
           node "$SCRIPTS/db-plan.mjs" migrations-apply
           --expect-hash "${{ needs.plan-migrations.outputs.hash }}"
@@ -252,6 +243,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     environment: ${{ inputs.plan_environment || inputs.environment }}
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      issues: read
     outputs:
       empty: ${{ steps.plan.outputs.empty }}
       hash: ${{ steps.plan.outputs.hash }}
@@ -281,48 +277,21 @@ jobs:
           DB_URL: ${{ secrets.DB_URL }}
           PLAN_DIR: ${{ runner.temp }}/db-plan
         run: node "$SCRIPTS/db-plan.mjs" schema-plan
+      - name: Require the pull request's approval of a destructive plan
+        if: steps.plan.outputs.destructive == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/destructive-approval.mjs" --repo "$GITHUB_REPOSITORY" --sha "$GITHUB_SHA" --plan-dir "$PLAN_DIR"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: plan-schema
+          name: plan-schema-${{ inputs.environment }}
           path: ${{ runner.temp }}/db-plan
           retention-days: 90
 
-  gate-schema:
-    needs: plan-schema
-    if: needs.plan-schema.outputs.destructive == 'true' && inputs.destructive_environment != ''
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    environment: ${{ inputs.destructive_environment }}
-    permissions:
-      contents: read
-      actions: read
-      pull-requests: read
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        if: inputs.shared_ref != ''
-        with:
-          repository: DevDogsUGA/DevDogsUGA
-          ref: ${{ inputs.shared_ref }}
-          path: .shared
-          sparse-checkout: .github/scripts
-      - name: Refuse an approver who wrote or queued this change
-        if: inputs.self_approval_gate
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          node "${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}/approval-gate.mjs"
-          --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
-          --environment "${{ inputs.destructive_environment }}"
-      - run: echo "A devops member approved applying the destructive SQL in plan ${{ needs.plan-schema.outputs.hash }}." >> "$GITHUB_STEP_SUMMARY"
-
   apply:
-    needs: [plan-schema, gate-schema]
-    if: >-
-      always()
-      && needs.plan-schema.result == 'success'
-      && (needs.gate-schema.result == 'success' || needs.gate-schema.result == 'skipped')
-      && (needs.plan-schema.outputs.empty != 'true' || inputs.apply_config || inputs.register_provider)
+    needs: plan-schema
+    if: needs.plan-schema.outputs.empty != 'true' || inputs.apply_config || inputs.register_provider
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: ${{ inputs.environment }}
@@ -330,6 +299,7 @@ jobs:
       contents: read
       actions: read
       pull-requests: read
+      issues: read
     outputs:
       schema_applied: ${{ steps.schema.outputs.applied }}
     env:
@@ -367,13 +337,26 @@ jobs:
           --environment "${{ inputs.environment }}"
       - name: Install the Supabase CLI
         run: npm install --global "supabase@$SUPABASE_VERSION" && supabase --version
+      - name: Plan the declarative diff again, against the real target
+        id: replan
+        if: needs.plan-schema.outputs.empty != 'true'
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/db-plan.mjs" schema-plan
+      - name: Require the pull request's approval of a destructive plan
+        if: needs.plan-schema.outputs.empty != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/destructive-approval.mjs" --repo "$GITHUB_REPOSITORY" --sha "$GITHUB_SHA" --plan-dir "$PLAN_DIR"
       - name: Apply the declarative diff
         id: schema
         if: needs.plan-schema.outputs.empty != 'true'
         env:
           DB_URL: ${{ secrets.DB_URL }}
           PLAN_DIR: ${{ runner.temp }}/db-plan
-          DESTRUCTIVE_APPROVED: ${{ needs.gate-schema.result == 'success' }}
+          DESTRUCTIVE_APPROVED: "true"
         run: |
           node "$SCRIPTS/db-plan.mjs" schema-apply --expect-hash "${{ needs.plan-schema.outputs.hash }}"
           echo "applied=true" >> "$GITHUB_OUTPUT"

@@ -578,5 +578,6 @@ jobs:
       contents: read
       actions: write
       pull-requests: read
+      issues: read
     uses: ./.github/workflows/deploy.yaml
     secrets: inherit

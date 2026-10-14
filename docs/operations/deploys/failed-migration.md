@@ -18,6 +18,8 @@ The database job has four steps in two halves, and a failure in each leaves a di
 | `plan-schema`         | The declarative diff could not be generated.                | Untouched (the hand-written migrations may be in).      |
 | `apply` (schema diff) | The diff failed, or the hash differed.                      | Untouched, unless the plan added an enum value (below). |
 
+In the [one-approval flow](./one-approval.md) the same jobs run as `production-plan` (`plan-migrations`, `plan-schema`) and `production-database-apply` (`apply-migrations`, `apply`). One difference: when migrations are pending, the schema diff is planned inside `apply`, after they are in, so a diff that could not be generated or that is destructive without a pull request approval fails `apply`, with the migrations already applied.
+
 Each migration file runs in its own transaction, so a failing file leaves nothing half-applied. The declarative diff is one transaction for the whole change, with one exception: Postgres will not let a statement use an enum value in the transaction that added it, so the diff is cut after each run of `ALTER TYPE ... ADD VALUE` and the later statements run in the next transaction. A plan with an added enum value is therefore applied in two or more transactions (the job summary says how many), and a failure after the first leaves the new value in place and the later statements not applied. Re-run the deploy: the next plan contains only what is left, because the diff is computed against the database as it now is.
 
 ## The hash differed

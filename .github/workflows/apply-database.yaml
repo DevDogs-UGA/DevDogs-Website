@@ -1,0 +1,263 @@
+name: Apply database
+
+# The apply half of the one-approval database deploy: migrations, the schema
+# diff, the Supabase configuration, the sign-in provider. Called with
+# `workflow_call` AFTER plan-database.yaml and the single production approval
+# (approve-production.yaml), with the plan's outputs. `environment` is the
+# deploy-tier environment; in the one-approval flow it has NO reviewers, so
+# nothing pauses here: the caller's job `needs` the approval job, and
+# `approval_environment` names the environment that was approved, for the
+# self-approval gate to read.
+#
+# Every apply is hash-checked, as in deploy-database.yaml:
+#
+#   * the migrations: regenerated against the target; refuses if the hash is not
+#     the one the approver saw;
+#   * the schema diff: regenerated, and, when plan-database.yaml could plan it
+#     (nothing pending), refused unless its hash is the approved one. With
+#     migrations pending the diff is first known HERE, after they are in; it is
+#     written to the job summary, and a destructive result is refused unless the
+#     pull request approved it (destructive-approval.mjs).
+#
+# What the caller provides, in `environment`: DB_URL (the deploy tier),
+# SUPABASE_ACCESS_TOKEN, and whatever supabase/config.toml names.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: The reviewer-less deploy environment (deploy-tier DB_URL, SUPABASE_ACCESS_TOKEN).
+        required: true
+        type: string
+      approval_environment:
+        description: The environment the single approval was asked of (approve-production.yaml). The self-approval gate reads its approvals.
+        required: true
+        type: string
+      pending:
+        description: plan-database.yaml's `pending`.
+        required: true
+        type: string
+      migrations_hash:
+        description: plan-database.yaml's `migrations_hash`.
+        required: false
+        type: string
+        default: ""
+      schema_hash:
+        description: plan-database.yaml's `schema_hash`. Empty when migrations were pending.
+        required: false
+        type: string
+        default: ""
+      schema_empty:
+        description: plan-database.yaml's `schema_empty`.
+        required: false
+        type: string
+        default: ""
+      include_seed:
+        description: Also apply new seed files (insert-only, recorded by hash).
+        required: false
+        type: boolean
+        default: false
+      apply_config:
+        description: Run `supabase config push` after the schema.
+        required: false
+        type: boolean
+        default: true
+      register_provider:
+        description: Register custom:devdogsuga on the project from DEVDOGS_OAUTH_* secrets (product projects).
+        required: false
+        type: boolean
+        default: false
+      self_approval_gate:
+        description: Refuse an approver who wrote or queued the change (approval-gate.mjs).
+        required: false
+        type: boolean
+        default: true
+      require_latest:
+        description: Refuse (before anything changes) when the commit is no longer the head of the default branch.
+        required: false
+        type: boolean
+        default: true
+      supabase_version:
+        description: The Supabase CLI to install. Keep equal to the repository's own pin.
+        required: false
+        type: string
+        # renovate: datasource=npm depName=supabase
+        default: 2.117.0
+      shared_ref:
+        description: >-
+          A commit of DevDogsUGA/DevDogsUGA to take the scripts from. Leave empty
+          when DevDogsUGA calls this; product repositories pass the SHA they
+          pinned this workflow at.
+        required: false
+        type: string
+        default: ""
+    outputs:
+      schema_applied:
+        description: "`true` when a declarative diff was applied."
+        value: ${{ jobs.apply.outputs.schema_applied }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-database-${{ github.repository }}-${{ inputs.environment }}
+  cancel-in-progress: false
+
+env:
+  SUPABASE_VERSION: ${{ inputs.supabase_version }}
+  SUPABASE_BIN: supabase
+
+jobs:
+  apply-migrations:
+    if: inputs.pending != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      issues: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: Locate the shared scripts
+        run: echo "SCRIPTS=${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
+      - name: Refuse an approved candidate that is no longer the head
+        if: inputs.require_latest
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
+        run: |
+          latest=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" "refs/heads/$DEFAULT_BRANCH" | cut -f1)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::error::Candidate $GITHUB_SHA was superseded by $latest. Nothing was changed; the newer commit has its own run."
+            exit 1
+          fi
+      - name: Refuse an approver who wrote or queued this change
+        if: inputs.self_approval_gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          node "$SCRIPTS/approval-gate.mjs"
+          --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
+          --environment "${{ inputs.approval_environment }}"
+      - name: Install the Supabase CLI
+        run: npm install --global "supabase@$SUPABASE_VERSION" && supabase --version
+      - name: Plan the migrations again, against the real target
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/db-plan.mjs" migrations-plan ${{ inputs.include_seed && '--include-seed' || '' }}
+      - name: Require the pull request's approval of a destructive plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/destructive-approval.mjs" --repo "$GITHUB_REPOSITORY" --sha "$GITHUB_SHA" --plan-dir "$PLAN_DIR"
+      - name: Apply the hand-written migrations
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+          # Reached only when the step above passed: the plan is not
+          # destructive, or the pull request approved exactly this plan.
+          DESTRUCTIVE_APPROVED: "true"
+        run: >-
+          node "$SCRIPTS/db-plan.mjs" migrations-apply
+          --expect-hash "${{ inputs.migrations_hash }}"
+          ${{ inputs.include_seed && '--include-seed' || '' }}
+
+  apply:
+    needs: apply-migrations
+    if: >-
+      always()
+      && (needs.apply-migrations.result == 'success' || needs.apply-migrations.result == 'skipped')
+      && (inputs.schema_empty != 'true' || inputs.apply_config || inputs.register_provider)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      issues: read
+    outputs:
+      schema_applied: ${{ steps.schema.outputs.applied }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: Locate the shared scripts
+        run: echo "SCRIPTS=${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
+      - name: Refuse an approved candidate that is no longer the head
+        if: inputs.require_latest
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
+        run: |
+          latest=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" "refs/heads/$DEFAULT_BRANCH" | cut -f1)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo "::error::Candidate $GITHUB_SHA was superseded by $latest. Nothing was changed; the newer commit has its own run."
+            exit 1
+          fi
+      - name: Refuse an approver who wrote or queued this change
+        if: inputs.self_approval_gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          node "$SCRIPTS/approval-gate.mjs"
+          --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
+          --environment "${{ inputs.approval_environment }}"
+      - name: Install the Supabase CLI
+        run: npm install --global "supabase@$SUPABASE_VERSION" && supabase --version
+      # The diff, computed now: after the migrations, against the real target.
+      - name: Plan the declarative diff against the real target
+        id: replan
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/db-plan.mjs" schema-plan
+      - name: Refuse a diff other than the one that was approved
+        if: inputs.schema_hash != '' && steps.replan.outputs.hash != inputs.schema_hash
+        run: |
+          echo "::error::The schema plan changed since it was approved (approved ${{ inputs.schema_hash }}, now ${{ steps.replan.outputs.hash }}). Nothing was applied."
+          exit 1
+      - name: Require the pull request's approval of a destructive plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/destructive-approval.mjs" --repo "$GITHUB_REPOSITORY" --sha "$GITHUB_SHA" --plan-dir "$PLAN_DIR"
+      - name: Apply the declarative diff
+        id: schema
+        if: steps.replan.outputs.empty != 'true'
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+          DESTRUCTIVE_APPROVED: "true"
+        run: |
+          node "$SCRIPTS/db-plan.mjs" schema-apply --expect-hash "${{ steps.replan.outputs.hash }}"
+          echo "applied=true" >> "$GITHUB_OUTPUT"
+      - name: Supabase configuration skipped (no SUPABASE_ACCESS_TOKEN)
+        if: inputs.apply_config && env.SUPABASE_ACCESS_TOKEN == ''
+        run: echo "::warning::The ${{ inputs.environment }} environment has no SUPABASE_ACCESS_TOKEN secret, so supabase/config.toml was NOT pushed to the project (auth settings, redirect URLs, hooks)."
+      - name: Push the Supabase configuration
+        if: inputs.apply_config && env.SUPABASE_ACCESS_TOKEN != ''
+        env:
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+          VARS_JSON: ${{ toJSON(vars) }}
+        run: node "$SCRIPTS/config-push.mjs" push
+      - name: Register the DevDogs sign-in provider
+        if: inputs.register_provider
+        env:
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+          VARS_JSON: ${{ toJSON(vars) }}
+        run: node "$SCRIPTS/config-push.mjs" register

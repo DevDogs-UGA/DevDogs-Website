@@ -1,0 +1,189 @@
+name: Plan database
+
+# The plan half of the one-approval database deploy. Called with
+# `workflow_call` by deploy.yaml and, pinned by commit SHA, by DogDays' and
+# DogPack's. It READS the target with the planner credential and changes
+# nothing, so it can run before anybody has approved anything:
+#
+#   plan hand-written migrations
+#     -> plan the declarative diff, but only when no migration is pending
+#
+# Then the caller asks for the production approval ONCE (approve-production.yaml)
+# and calls apply-database.yaml with the outputs of this workflow.
+#
+# Why the schema diff is planned only when nothing is pending. The diff is
+# computed against the target AFTER the pending migrations are in; before them
+# it would contain the migrations' own effects, and applying it on top would do
+# them twice. So with migrations pending the schema SQL does not exist yet at
+# approval time: the approval covers the migrations, and apply-database.yaml
+# recomputes the diff once they are in, refusing a destructive result that the
+# pull request did not approve. With nothing pending (a routine deploy) the
+# diff is planned here, shown to the approver, and hash-checked at the apply.
+#
+# A destructive plan is checked here, before the approver is ever asked: it
+# fails this workflow unless a pull request approved it (destructive-
+# approval.mjs), so nobody is asked to approve a deploy that would be refused.
+#
+# What the caller provides, in `plan_environment`: DB_URL (the read-only
+# migration_planner login).
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: The deploy environment this plan is for. Only names the artifacts.
+        required: true
+        type: string
+      plan_environment:
+        description: The environment holding the read-only planner DB_URL.
+        required: true
+        type: string
+      include_seed:
+        description: Also plan new seed files (insert-only, recorded by hash).
+        required: false
+        type: boolean
+        default: false
+      require_read_only_planner:
+        description: Refuse a DB_URL that is not the read-only migration_planner role.
+        required: false
+        type: boolean
+        default: true
+      supabase_version:
+        description: The Supabase CLI to install. Keep equal to the repository's own pin.
+        required: false
+        type: string
+        # renovate: datasource=npm depName=supabase
+        default: 2.117.0
+      shared_ref:
+        description: >-
+          A commit of DevDogsUGA/DevDogsUGA to take the scripts from. Leave empty
+          when DevDogsUGA calls this; product repositories pass the SHA they
+          pinned this workflow at.
+        required: false
+        type: string
+        default: ""
+    outputs:
+      pending:
+        description: How many migrations, seeds and roles files are pending.
+        value: ${{ jobs.plan-migrations.outputs.pending }}
+      migrations_hash:
+        description: The hash of the pending migrations plan.
+        value: ${{ jobs.plan-migrations.outputs.hash }}
+      schema_hash:
+        description: The hash of the schema plan. Empty when migrations are pending (the diff is not known yet).
+        value: ${{ jobs.plan-schema.outputs.hash }}
+      schema_empty:
+        description: "`true` when the schema plan is empty. Empty when migrations are pending."
+        value: ${{ jobs.plan-schema.outputs.empty }}
+      destructive:
+        description: "`true` when either plan is destructive (a pull request approved it, or this workflow failed)."
+        value: ${{ jobs.plan-migrations.outputs.destructive == 'true' || jobs.plan-schema.outputs.destructive == 'true' }}
+
+permissions:
+  contents: read
+
+env:
+  SUPABASE_VERSION: ${{ inputs.supabase_version }}
+  SUPABASE_BIN: supabase
+
+jobs:
+  plan-migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.plan_environment }}
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      issues: read
+    outputs:
+      pending: ${{ steps.plan.outputs.pending }}
+      hash: ${{ steps.plan.outputs.hash }}
+      destructive: ${{ steps.plan.outputs.destructive }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: Locate the shared scripts
+        run: echo "SCRIPTS=${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
+      - name: Install the Supabase CLI
+        run: npm install --global "supabase@$SUPABASE_VERSION" && supabase --version
+      - name: Verify the planner credential is read-only
+        if: inputs.require_read_only_planner
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/db-plan.mjs" planner-check
+      - name: Plan the hand-written migrations
+        id: plan
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/db-plan.mjs" migrations-plan ${{ inputs.include_seed && '--include-seed' || '' }}
+      - name: Require the pull request's approval of a destructive plan
+        if: steps.plan.outputs.destructive == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/destructive-approval.mjs" --repo "$GITHUB_REPOSITORY" --sha "$GITHUB_SHA" --plan-dir "$PLAN_DIR"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: plan-migrations-${{ inputs.environment }}
+          path: ${{ runner.temp }}/db-plan
+          retention-days: 90
+
+  plan-schema:
+    needs: plan-migrations
+    if: needs.plan-migrations.outputs.pending == '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: ${{ inputs.plan_environment }}
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      issues: read
+    outputs:
+      empty: ${{ steps.plan.outputs.empty }}
+      hash: ${{ steps.plan.outputs.hash }}
+      destructive: ${{ steps.plan.outputs.destructive }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: inputs.shared_ref != ''
+        with:
+          repository: DevDogsUGA/DevDogsUGA
+          ref: ${{ inputs.shared_ref }}
+          path: .shared
+          sparse-checkout: .github/scripts
+      - name: Locate the shared scripts
+        run: echo "SCRIPTS=${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}" >> "$GITHUB_ENV"
+      - name: Install the Supabase CLI
+        run: npm install --global "supabase@$SUPABASE_VERSION" && supabase --version
+      - name: Verify the planner credential is read-only
+        if: inputs.require_read_only_planner
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/db-plan.mjs" planner-check
+      - name: Plan the declarative diff
+        id: plan
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/db-plan.mjs" schema-plan
+      - name: Require the pull request's approval of a destructive plan
+        if: steps.plan.outputs.destructive == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLAN_DIR: ${{ runner.temp }}/db-plan
+        run: node "$SCRIPTS/destructive-approval.mjs" --repo "$GITHUB_REPOSITORY" --sha "$GITHUB_SHA" --plan-dir "$PLAN_DIR"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: plan-schema-${{ inputs.environment }}
+          path: ${{ runner.temp }}/db-plan
+          retention-days: 90

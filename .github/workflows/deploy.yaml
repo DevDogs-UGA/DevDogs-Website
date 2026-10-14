@@ -24,6 +24,14 @@ name: Deploy
 #   * Every approved production job opens with a self-approval gate (see
 #     approval-gate.mjs) and refuses a candidate that is no longer main.
 #
+# ONE APPROVAL (opt-in). With the repository variable ONE_APPROVAL set to `true`
+# production asks for approval once, not once per job: `production-plan` reads
+# the database, `production-approval` (approve-production.yaml) is the single
+# pause, in the reviewed `production-approval` environment, and everything after
+# it (migrations, schema, config, both Workers) runs in `production`, which then
+# has no reviewers. Unset, production asks per job exactly as before. The switch
+# and its provisioning steps: docs/operations/deploys/one-approval.md.
+#
 # PHASE GATE. Until the production cutover to this repository, production
 # still deploys from Backstage's copy of this flow and this one deploys STAGING
 # only. Every production job (and the production build) is off unless the
@@ -43,6 +51,7 @@ permissions:
   contents: read
   actions: write
   pull-requests: read
+  issues: read
 
 env:
   DEPLOY_ENV: staging
@@ -94,6 +103,15 @@ jobs:
       # that would redeploy what is live is skipped, approval and all.
       staging: ${{ steps.needed.outputs.staging }}
       production: ${{ steps.needed.outputs.production }}
+      # What a routine deploy of each tier has to do (deploy-needed.mjs): the
+      # config push and each Worker are skipped when nothing they depend on
+      # changed since the tier's last deploy. `false` skips; anything else runs.
+      staging_config: ${{ steps.needed.outputs.staging_config }}
+      staging_platform: ${{ steps.needed.outputs.staging_platform }}
+      staging_catalog: ${{ steps.needed.outputs.staging_catalog }}
+      production_config: ${{ steps.needed.outputs.production_config }}
+      production_platform: ${{ steps.needed.outputs.production_platform }}
+      production_catalog: ${{ steps.needed.outputs.production_catalog }}
     steps:
       # Full history: deploy-needed diffs against each tier's last deploy.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -191,14 +209,14 @@ jobs:
 
   # The database goes through the shared deploy-database.yaml (Q15): hand-written
   # migrations, then the declarative diff, each hash-checked, with the
-  # destructive gate and the Supabase configuration push. Staging has no
-  # reviewers, so nothing waits here unless the plan is destructive, in which
-  # case a `devops` member approves `staging-destructive`.
+  # destructive check and the Supabase configuration push. Staging has no
+  # reviewers, so nothing waits here. A destructive plan is refused unless the
+  # pull request that produced the commit approved it (allow-destructive).
   #
   # `--include-seed` runs the seed files staging has not recorded yet; they are
   # insert-only, so a rerun or an edited file changes nothing there.
   staging-database:
-    needs: staging-preflight
+    needs: [resolve, staging-preflight]
     if: needs.staging-preflight.outputs.paused != 'true'
     uses: ./.github/workflows/deploy-database.yaml
     secrets: inherit
@@ -206,11 +224,11 @@ jobs:
       contents: read
       actions: read
       pull-requests: read
+      issues: read
     with:
       environment: staging
-      destructive_environment: staging-destructive
       include_seed: true
-      apply_config: true
+      apply_config: ${{ needs.resolve.outputs.staging_config != 'false' }}
 
   # The seed SQL never touches Storage. This uploads only the headshots the
   # bucket lacks, so a photo an officer replaced is never overwritten.
@@ -257,6 +275,7 @@ jobs:
       tier: staging
       worker_dir: apps/platform
       worker_name: staging-platform
+      skip: ${{ needs.resolve.outputs.staging_platform == 'false' }}
       authorize: true
       artifact_name: staging-${{ github.sha }}
       artifact_run_id: ${{ needs.resolve.outputs.merge_group_run }}
@@ -315,6 +334,7 @@ jobs:
       tier: staging
       worker_dir: apps/catalog
       worker_name: staging-catalog
+      skip: ${{ needs.resolve.outputs.staging_catalog == 'false' }}
       smoke_path: apps/catalog
       workers_json: apps/catalog/smoke.json
       build_cli: true
@@ -326,13 +346,22 @@ jobs:
         CATALOG_URL=https://api-staging.devdogsuga.org/catalog/v1 pnpm --filter catalog run test:smoke
 
   # --- production -------------------------------------------------------------
-  # Four jobs, in order, each a shared building block:
+  # In order, each a shared building block:
   #
   #   production-database   plan (read-only credential, in `preflight`), then an
   #                         approval of `production`, then migrations, the
   #                         schema diff and the config push. A plan that drops
-  #                         or rewrites data needs a second approval, of
-  #                         `production-destructive`.
+  #                         or rewrites data is refused unless its pull request
+  #                         approved it (allow-destructive).
+  #
+  # With ONE_APPROVAL=true that job is replaced by three, and the Workers
+  # after it no longer ask:
+  #
+  #   production-plan       the same plans, read-only, before any approval.
+  #   production-approval   THE approval (production-approval environment), with
+  #                         one summary of everything this deploy will do.
+  #   production-database-apply  migrations, schema, config, in `production`
+  #                         (no reviewers in this mode).
   #   production-catalog    the registrar scrape and the catalog API. BEFORE
   #                         the platform: it no longer runs the scrape or the
   #                         Bulletin sync, so the catalog's Workflows have to
@@ -345,19 +374,13 @@ jobs:
   # Each approved job refuses an approver who wrote or queued the change (Q61)
   # and refuses a candidate that is no longer the head of `main`.
   production-database:
-    needs:
-      [
-        supersede,
-        resolve,
-        build,
-        staging-platform,
-        staging-catalog,
-      ]
+    needs: [supersede, resolve, build, staging-platform, staging-catalog]
     if: >-
       github.event_name == 'push'
       && !cancelled()
       && !inputs.prune_orphans
       && vars.BACKSTAGE_DEPLOYS_PRODUCTION == 'true'
+      && vars.ONE_APPROVAL != 'true'
       && needs.resolve.result == 'success'
       && needs.resolve.outputs.production == 'true'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
@@ -368,15 +391,84 @@ jobs:
       contents: read
       actions: read
       pull-requests: read
+      issues: read
     with:
       environment: production
       plan_environment: preflight
       require_read_only_planner: true
-      destructive_environment: production-destructive
       include_seed: true
-      apply_config: true
+      apply_config: ${{ needs.resolve.outputs.production_config != 'false' }}
       self_approval_gate: true
       require_latest: true
+
+  # --- the one-approval flow (ONE_APPROVAL=true) ---
+  production-plan:
+    needs: [supersede, resolve, build, staging-platform, staging-catalog]
+    if: >-
+      github.event_name == 'push'
+      && !cancelled()
+      && !inputs.prune_orphans
+      && vars.BACKSTAGE_DEPLOYS_PRODUCTION == 'true'
+      && vars.ONE_APPROVAL == 'true'
+      && needs.resolve.result == 'success'
+      && needs.resolve.outputs.production == 'true'
+      && (needs.build.result == 'success' || needs.build.result == 'skipped')
+      && ((needs.staging-platform.result == 'success' && needs.staging-catalog.result == 'success') || needs.resolve.outputs.staging == 'false')
+    uses: ./.github/workflows/plan-database.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      issues: read
+    with:
+      environment: production
+      plan_environment: preflight
+      include_seed: true
+
+  production-approval:
+    needs: [resolve, production-plan]
+    if: >-
+      !cancelled()
+      && vars.ONE_APPROVAL == 'true'
+      && needs.production-plan.result == 'success'
+    uses: ./.github/workflows/approve-production.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    with:
+      approval_environment: production-approval
+      plan_environment_name: production
+      notes: |
+        - Supabase configuration push: ${{ needs.resolve.outputs.production_config == 'false' && 'skipped (config.toml and the seeds did not change)' || 'yes' }}
+        - Catalog Worker (`production-catalog`): ${{ needs.resolve.outputs.production_catalog == 'false' && 'unchanged, skipped' || 'deploys: upload, preview smoke test, switch traffic, live smoke test' }}
+        - Platform Worker (`production-platform`): ${{ needs.resolve.outputs.production_platform == 'false' && 'unchanged, skipped' || 'deploys: upload, preview smoke test, switch traffic, live smoke test, search index, reconcile' }}
+        - Order: migrations, schema and configuration, then the catalog, then the platform.
+
+  production-database-apply:
+    needs: [resolve, production-plan, production-approval]
+    if: >-
+      !cancelled()
+      && vars.ONE_APPROVAL == 'true'
+      && needs.production-approval.result == 'success'
+    uses: ./.github/workflows/apply-database.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      issues: read
+    with:
+      environment: production
+      approval_environment: production-approval
+      pending: ${{ needs.production-plan.outputs.pending }}
+      migrations_hash: ${{ needs.production-plan.outputs.migrations_hash }}
+      schema_hash: ${{ needs.production-plan.outputs.schema_hash }}
+      schema_empty: ${{ needs.production-plan.outputs.schema_empty }}
+      include_seed: true
+      apply_config: ${{ needs.resolve.outputs.production_config != 'false' }}
 
   # api.devdogsuga.org is Supabase's custom domain for the platform project
   # until the cutover (Q90), so the catalog's production route reaches nothing
@@ -385,13 +477,21 @@ jobs:
   # this deploy (until then the Worker deploys and switches without them). The
   # first production deploy needs CATALOG_DEPLOY_MODE=full, as on staging.
   production-catalog:
-    needs: [resolve, build, production-database]
+    needs:
+      [
+        resolve,
+        build,
+        production-database,
+        production-approval,
+        production-database-apply,
+      ]
     if: >-
       github.event_name == 'push'
       && !cancelled()
       && needs.resolve.result == 'success'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
-      && needs.production-database.result == 'success'
+      && ((vars.ONE_APPROVAL != 'true' && needs.production-database.result == 'success')
+          || (vars.ONE_APPROVAL == 'true' && needs.production-approval.result == 'success' && needs.production-database-apply.result == 'success'))
     uses: ./.github/workflows/deploy-worker.yaml
     secrets: inherit
     permissions:
@@ -402,6 +502,8 @@ jobs:
       tier: production
       worker_dir: apps/catalog
       worker_name: production-catalog
+      skip: ${{ needs.resolve.outputs.production_catalog == 'false' }}
+      approval_environment: ${{ vars.ONE_APPROVAL == 'true' && 'production-approval' || '' }}
       smoke_path: apps/catalog
       workers_json: apps/catalog/smoke.json
       smoke: ${{ vars.CATALOG_PRODUCTION_ROUTED == 'true' }}
@@ -418,13 +520,22 @@ jobs:
         fi
 
   production-platform:
-    needs: [resolve, build, production-database, production-catalog]
+    needs:
+      [
+        resolve,
+        build,
+        production-database,
+        production-approval,
+        production-database-apply,
+        production-catalog,
+      ]
     if: >-
       github.event_name == 'push'
       && !cancelled()
       && needs.resolve.result == 'success'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
-      && needs.production-database.result == 'success'
+      && ((vars.ONE_APPROVAL != 'true' && needs.production-database.result == 'success')
+          || (vars.ONE_APPROVAL == 'true' && needs.production-approval.result == 'success' && needs.production-database-apply.result == 'success'))
       && needs.production-catalog.result == 'success'
     uses: ./.github/workflows/deploy-worker.yaml
     secrets: inherit
@@ -436,6 +547,8 @@ jobs:
       tier: production
       worker_dir: apps/platform
       worker_name: production-platform
+      skip: ${{ needs.resolve.outputs.production_platform == 'false' }}
+      approval_environment: ${{ vars.ONE_APPROVAL == 'true' && 'production-approval' || '' }}
       authorize: true
       self_approval_gate: true
       require_latest: true
@@ -463,11 +576,34 @@ jobs:
         backstage deploy prune-monitors --tier production --yes --app platform --no-env
         backstage env audit --target production --no-env --yes
 
-  prune-orphans:
+  # `production` has no reviewers in the one-approval flow, so a manual prune
+  # asks for the approval itself first.
+  prune-approval:
     if: >-
       github.event_name == 'workflow_dispatch'
       && inputs.prune_orphans
       && vars.BACKSTAGE_DEPLOYS_PRODUCTION == 'true'
+      && vars.ONE_APPROVAL == 'true'
+    uses: ./.github/workflows/approve-production.yaml
+    secrets: inherit
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    with:
+      approval_environment: production-approval
+      notes: Deletes the production Worker secrets nothing declares any more (`backstage env audit --prune`).
+      self_approval_gate: false
+      require_latest: false
+
+  prune-orphans:
+    needs: prune-approval
+    if: >-
+      !cancelled()
+      && github.event_name == 'workflow_dispatch'
+      && inputs.prune_orphans
+      && vars.BACKSTAGE_DEPLOYS_PRODUCTION == 'true'
+      && (vars.ONE_APPROVAL != 'true' || needs.prune-approval.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
