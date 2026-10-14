@@ -1,3 +1,5 @@
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   DEPLOY_ENVIRONMENTS,
@@ -193,4 +195,65 @@ describe("product targets", () => {
     expect(PRODUCTS.dogdays.repo).toBe("DevDogsUGA/DogDays");
     expect(PRODUCTS.dogpack.repo).toBe("DevDogsUGA/DogPack");
   });
+
+  it("lists DogDays' public keys as its GitHub environments hold them", () => {
+    expect([...PRODUCTS.dogdays.variables]).toEqual([
+      "API_URL",
+      "BASE_URL",
+      "BASE_URL_CALLBACK",
+      "CATALOG_URL",
+      "DEVDOGS_OAUTH_BASE_URL",
+      "GOOGLE_MAPS_API_KEY",
+      "PROJECT_REF",
+      "PUBLISHABLE_KEY",
+      "SENTRY_DSN",
+    ]);
+    expect([...PRODUCTS.dogpack.variables]).toEqual([
+      "API_URL",
+      "DEVDOGS_OAUTH_BASE_URL",
+      "PLATFORM_API_URL",
+      "PROJECT_REF",
+      "PUBLISHABLE_KEY",
+    ]);
+  });
+
+  // Pins each list to the names the product's workflows and scripts read from
+  // the `vars` context. Runs when a checkout is named (DOGDAYS_CHECKOUT,
+  // DOGPACK_CHECKOUT); skipped otherwise so the suite needs no sibling repo.
+  for (const product of PRODUCT_NAMES) {
+    const dir = process.env[`${product.toUpperCase()}_CHECKOUT`];
+    it.skipIf(!dir || !existsSync(dir ?? ""))(
+      `${product}'s public keys cover every vars name its CI reads`,
+      () => {
+        const root = join(dir as string, ".github");
+        const read: string[] = [];
+        const walk = (d: string) => {
+          for (const entry of readdirSync(d)) {
+            const path = join(d, entry);
+            if (statSync(path).isDirectory()) walk(path);
+            else read.push(readFileSync(path, "utf8"));
+          }
+        };
+        walk(root);
+        const text = read.join("\n");
+        const names = new Set<string>();
+        for (const m of text.matchAll(/\bvars\.([A-Z][A-Z0-9_]*)/g)) {
+          names.add(m[1] as string);
+        }
+        // worker-build.sh reads the vars JSON with get/need calls.
+        for (const m of text.matchAll(/\b(?:get|need) ([A-Z][A-Z0-9_]*)\b/g)) {
+          names.add(m[1] as string);
+        }
+        // Feature switches, not environment configuration.
+        const switches = (n: string) => /^DOG[A-Z]+_/.test(n);
+        const missing = [...names]
+          .filter((n) => !switches(n))
+          .filter(
+            (n) =>
+              !(PRODUCTS[product].variables as readonly string[]).includes(n),
+          );
+        expect(missing).toEqual([]);
+      },
+    );
+  }
 });

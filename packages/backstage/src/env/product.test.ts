@@ -167,14 +167,8 @@ describe("selectProductPush", () => {
   });
 
   it("uses each product's own variable list", () => {
-    const pack = selectProductPush(
-      [["DEVDOGS_OAUTH_BASE_URL", "u"]],
-      "dogpack",
-    );
-    const days = selectProductPush(
-      [["DEVDOGS_OAUTH_BASE_URL", "u"]],
-      "dogdays",
-    );
+    const pack = selectProductPush([["PLATFORM_API_URL", "u"]], "dogpack");
+    const days = selectProductPush([["PLATFORM_API_URL", "u"]], "dogdays");
     expect(pack.variables.size).toBe(1);
     expect(days.secrets.size).toBe(1);
   });

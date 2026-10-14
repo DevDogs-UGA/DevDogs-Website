@@ -261,10 +261,13 @@ export const PRODUCTS = {
     variables: [
       "API_URL",
       "BASE_URL",
+      "BASE_URL_CALLBACK",
       "CATALOG_URL",
-      "PLATFORM_API_URL",
+      "DEVDOGS_OAUTH_BASE_URL",
+      "GOOGLE_MAPS_API_KEY",
       "PROJECT_REF",
       "PUBLISHABLE_KEY",
+      "SENTRY_DSN",
     ],
   },
   dogpack: {
