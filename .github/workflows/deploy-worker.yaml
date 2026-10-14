@@ -354,10 +354,15 @@ jobs:
           set +e
           # shellcheck disable=SC2086
           $WRANGLER deployments status --json $WRANGLER_ENV_FLAG --name "$WORKER_NAME" > "$RUNNER_TEMP/previous.json" 2> "$RUNNER_TEMP/previous.err"
+          status=$?
           previous=$(node "$SCRIPTS/wrangler-version.mjs" --active "$RUNNER_TEMP/previous.json" 2>/dev/null)
           echo "version_id=$previous" >> "$GITHUB_OUTPUT"
           if [ -n "$previous" ]; then
             echo "Serving now: $previous"
+          elif [ "$status" -ne 0 ]; then
+            # The status call itself failed: that is not "a first deploy". Show
+            # why (a token scope, an account lookup), never hide it.
+            echo "::warning::wrangler deployments status failed (exit $status), so the serving version is unknown. wrangler said: $(tr '\n' ' ' < "$RUNNER_TEMP/previous.err" | cut -c1-600) $(tr '\n' ' ' < "$RUNNER_TEMP/previous.json" | cut -c1-300)"
           else
             echo "::notice::No version is serving $WORKER_NAME yet (a first deploy), so there is nothing to roll back to."
           fi
