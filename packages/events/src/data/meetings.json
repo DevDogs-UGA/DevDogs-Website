@@ -321,8 +321,8 @@
     },
     {
       "slug": "2026-10-26",
-      "title": "Merge Monday: Supabase II",
-      "summary": "A Supabase II workshop on changing the database in our apps, with Merge Monday around it until 8.",
+      "title": "Merge Monday",
+      "summary": "Pick an issue in DogDays or DogPack and open a pull request before you leave. An unfinished PR counts. Focus leads are here to pair with you.",
       "kind": "Build Session",
       "building": "DLW",
       "location": "124",
@@ -332,13 +332,7 @@
       "cancelledAt": null,
       "cancellationReason": null,
       "surveyUrl": null,
-      "agenda": [
-        {
-          "title": "Supabase II: Editing Our App Schemas",
-          "description": null,
-          "project": "DogDays & DogPack"
-        }
-      ],
+      "agenda": [],
       "countsForCredit": true,
       "questions": ["how_did_you_learn"]
     },
