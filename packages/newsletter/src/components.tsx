@@ -597,7 +597,7 @@ function EventRow({
               <table {...TABLE_RESET} width="100%">
                 <tbody>
                   <tr>
-                    <td valign="middle">
+                    <td valign="top" rowSpan={meeting.rsvpUrl ? 2 : 1}>
                       <div
                         className={tc(t.ink)}
                         style={{
@@ -639,55 +639,41 @@ function EventRow({
                       width={meeting.rsvpUrl ? 74 : 56}
                       style={{ paddingLeft: "14px" }}
                     >
-                      {/* The RSVP sits under the icon, both right-aligned, so the two never compete for the row's middle. */}
-                      <table {...TABLE_RESET} align="right">
-                        <tbody>
-                          <tr>
-                            <td align="right">
-                              <EventArt
-                                t={t}
-                                ctx={ctx}
-                                meeting={meeting}
-                                kind={card.kind}
-                                size={42}
-                              />
-                            </td>
-                          </tr>
-                          {meeting.rsvpUrl ? (
-                            <tr>
-                              <td align="right" style={{ paddingTop: "12px" }}>
-                                <CtaButton
-                                  label="RSVP"
-                                  url={meeting.rsvpUrl}
-                                  color={
-                                    t.name === "cosmic"
-                                      ? card.color
-                                      : t.cta.fill
-                                  }
-                                  textColor={
-                                    t.name === "cosmic"
-                                      ? PALETTE.ink
-                                      : t.cta.text
-                                  }
-                                  borderColor={
-                                    t.name === "cosmic"
-                                      ? card.color
-                                      : t.cta.border
-                                  }
-                                  ground={
-                                    t.name === "cosmic"
-                                      ? PALETTE.card
-                                      : undefined
-                                  }
-                                  compact
-                                />
-                              </td>
-                            </tr>
-                          ) : null}
-                        </tbody>
-                      </table>
+                      <EventArt
+                        t={t}
+                        ctx={ctx}
+                        meeting={meeting}
+                        kind={card.kind}
+                        size={42}
+                      />
                     </td>
                   </tr>
+                  {/* The text spans both rows: the icon sits top right, the RSVP bottom right, level with the text's last line. */}
+                  {meeting.rsvpUrl ? (
+                    <tr>
+                      <td
+                        valign="bottom"
+                        align="right"
+                        style={{ paddingLeft: "14px", paddingTop: "10px" }}
+                      >
+                        <CtaButton
+                          label="RSVP"
+                          url={meeting.rsvpUrl}
+                          color={t.name === "cosmic" ? card.color : t.cta.fill}
+                          textColor={
+                            t.name === "cosmic" ? PALETTE.ink : t.cta.text
+                          }
+                          borderColor={
+                            t.name === "cosmic" ? card.color : t.cta.border
+                          }
+                          ground={
+                            t.name === "cosmic" ? PALETTE.card : undefined
+                          }
+                          compact
+                        />
+                      </td>
+                    </tr>
+                  ) : null}
                 </tbody>
               </table>
             </td>
