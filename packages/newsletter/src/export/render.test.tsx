@@ -15,13 +15,12 @@ function imageSources(html: string): string[] {
   return [...html.matchAll(/<img[^>]*\ssrc="([^"]+)"/g)].map((m) => m[1]!);
 }
 
-/** Authored copy as React's renderer emits it: apostrophes and quotes escaped. */
+/** Authored copy as an issue renders it: quotes escaped (apostrophes go out bare, see unescapeApostrophes). */
 function escaped(text: string): string {
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/'/g, "&#x27;")
     .replace(/"/g, "&quot;");
 }
 

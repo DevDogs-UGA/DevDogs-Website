@@ -375,6 +375,35 @@ function TitleDots({ t, ctx }: { t: Theme; ctx: RenderContext }) {
  * anchor is responsible only for the label.
  */
 /**
+ * Phosphor's ArrowRight (bold) after a button label, as a PNG in the label's
+ * color (build-theme-assets.py): a glyph would fall back to whatever font the
+ * client has. Paper's quiet buttons take its grey, which reads on the light
+ * card and the dark twin alike.
+ */
+function ButtonArrow({
+  ctx,
+  color,
+  size,
+}: {
+  ctx: RenderContext;
+  color: string;
+  size: number;
+}) {
+  const hex = (color === PAPER.body ? PAPER.grey : color)
+    .slice(1)
+    .toLowerCase();
+  return (
+    <img
+      src={ctx.assets.themeImage(`arrow-${hex}`)}
+      width={size}
+      height={size}
+      alt=""
+      style={{ border: 0, verticalAlign: "-2px", marginLeft: "5px" }}
+    />
+  );
+}
+
+/**
  * An event's two buttons, the same size side by side: a quiet secondary on
  * the left (outlined, muted text) and a filled primary on the right. Drawn
  * like `CtaButton compact`, but as cells of one table rather than a table
@@ -382,12 +411,14 @@ function TitleDots({ t, ctx }: { t: Theme; ctx: RenderContext }) {
  * HTML at ~102KB.
  */
 function ButtonRow({
+  ctx,
   secondary,
   primary,
   ground,
   quiet,
   loud,
 }: {
+  ctx: RenderContext;
   secondary: { label: string; url: string };
   primary: { label: string; url: string };
   ground: string;
@@ -412,7 +443,6 @@ function ButtonRow({
           borderRadius: "8px",
           padding: "9px 13px",
           msoPaddingAlt: "0",
-          whiteSpace: "nowrap",
         } as EmailCSSProperties
       }
     >
@@ -429,7 +459,8 @@ function ButtonRow({
           } as EmailCSSProperties
         }
       >
-        {b.label} ▸
+        {b.label}
+        <ButtonArrow ctx={ctx} color={text} size={12} />
       </a>
     </td>
   );
@@ -457,6 +488,7 @@ function ButtonRow({
 }
 
 function CtaButton({
+  ctx,
   label,
   url,
   color,
@@ -466,6 +498,7 @@ function CtaButton({
   align,
   borderColor = color,
 }: {
+  ctx: RenderContext;
   label: string;
   url: string;
   color: string;
@@ -509,7 +542,12 @@ function CtaButton({
                 } as EmailCSSProperties
               }
             >
-              {label} ▸
+              {label}
+              <ButtonArrow
+                ctx={ctx}
+                color={textColor}
+                size={compact ? 12 : 14}
+              />
             </a>
           </td>
         </tr>
@@ -646,7 +684,6 @@ function EventRow({
                 style={{
                   ...ambient(800, 30, 1.1),
                   color: dateInk,
-                  fontVariantNumeric: "tabular-nums",
                   padding: "4px 0 3px",
                 }}
               >
@@ -728,10 +765,11 @@ function EventRow({
                   <tr>
                     <td colSpan={2} style={{ paddingTop: "12px" }}>
                       <ButtonRow
+                        ctx={ctx}
                         secondary={{ label: "Details", url: page }}
                         primary={primary}
                         ground={t.cardFill}
-                        quiet={{ line: t.cardLine, text: t.mute }}
+                        quiet={{ line: t.quietLine, text: t.mute }}
                         loud={
                           t.name === "cosmic"
                             ? { fill: kt.date, line: kt.date, text: kt.dateInk }
@@ -885,6 +923,7 @@ function FeaturedCard({
                     <td align="right" style={{ textAlign: "right" }}>
                       {"cta" in featured ? (
                         <CtaButton
+                          ctx={ctx}
                           label={featured.cta}
                           url={meeting.rsvpUrl ?? `${SITE}/events`}
                           color={t.cta.fill}

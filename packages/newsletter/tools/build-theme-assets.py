@@ -3,7 +3,7 @@
 Source art lives in the design-system workspace (default ~/scratchpad/devdogs/design-system; pass another path as
 argv[1]): cosmic_dirs_bg.scene() for the space strip, the Arcade sprites in assets/sprite (made by
 tools/fluent_sprite.py), the dithered card glows in assets/dirs, the flat Fluent emoji in assets/emoji/paper,
-the Phosphor asterisk and the official GDG on Campus lockups. Run from anywhere:
+the Phosphor asterisk and button arrow, and the official GDG on Campus lockups. Run from anywhere:
 
     python3 packages/newsletter/tools/build-theme-assets.py [design-system-dir]
 
@@ -58,6 +58,15 @@ CIRCLE = np.array([[0,1,1,1,1,0],[1,1,1,1,1,1],[1,1,1,1,1,1],[1,1,1,1,1,1],[1,1,
 for hexc in ["a684ff", "00a6f4", "ffb900"]:
     px = np.zeros((6, 6, 4), np.uint8); px[CIRCLE] = [*rgb("#" + hexc).astype(np.uint8), 255]
     Image.fromarray(px, "RGBA").resize((24, 24), Image.NEAREST).save(OUT / f"dot-{hexc}.png", optimize=True)
+
+# Buttons: Phosphor's ArrowRight (bold) after each label, one per button text colour (Cosmic's muted Details and
+# white primaries, the CTAs' ink, and Paper's grey, which holds 3:1 on both its white card and the dark twin's
+# #202124, so one image serves both), 48 px for a 12-14 px display.
+ARROW = "M224.49,136.49l-72,72a12,12,0,0,1-17-17L187,140H40a12,12,0,0,1,0-24H187L135.51,64.48a12,12,0,0,1,17-17l72,72A12,12,0,0,1,224.49,136.49Z"
+for hexc in ["a49eb1", "ffffff", "f3f1f6", "5f6368"]:
+    svg = OUT / f"arrow-{hexc}.svg"
+    svg.write_text(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path fill="#{hexc}" d="{ARROW}"/></svg>')
+    raster(svg, f"arrow-{hexc}.png", 48); svg.unlink()
 
 # Paper: flat Fluent emoji at 120 px (shown at 60 and 38), the asterisk, and the logo/lockup pairs
 for name in ART:

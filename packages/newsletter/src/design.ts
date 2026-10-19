@@ -247,6 +247,8 @@ export interface Theme {
   sep: string;
   cardFill: string;
   cardLine: string;
+  /** A quiet button's outline: a step softer than `cardLine`. */
+  quietLine: string;
   cardBw: number;
   cardDepth: number;
   /** Tonight card outline width. */
@@ -297,6 +299,7 @@ export const THEMES: Record<ThemeName, Theme> = {
     sep: PALETTE.border,
     cardFill: PALETTE.card,
     cardLine: PALETTE.border,
+    quietLine: "#2b2837",
     cardBw: 2,
     cardDepth: 5,
     tonightBw: 4.5,
@@ -343,6 +346,7 @@ export const THEMES: Record<ThemeName, Theme> = {
     sep: PAPER.rule,
     cardFill: GDGC.white,
     cardLine: GDGC.ink,
+    quietLine: PAPER.rule,
     cardBw: 2,
     cardDepth: 0,
     tonightBw: 3,
@@ -395,7 +399,8 @@ export type ThemeImage =
   | `glow-${KindKey}`
   | `sprite-${string}`
   | `emoji-${string}`
-  | `dot-${string}`;
+  | `dot-${string}`
+  | `arrow-${string}`;
 
 /**
  * Colors each theme paints beyond the shared Changelog set, which the pin
@@ -414,6 +419,7 @@ export const THEME_PAINT = {
     border: [
       THEMES.cosmic.cta.border,
       THEMES.cosmic.cardLine,
+      THEMES.cosmic.quietLine,
       ...Object.values(COSMIC_KINDS).map((k) => k.date),
     ],
   },

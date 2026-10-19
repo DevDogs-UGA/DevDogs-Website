@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildEml } from "./eml.js";
 
 const IMAGE = {
-  cid: "devdogs-lockup@changelog.devdogsuga.org",
+  cid: "devdogs-lockup@devdogsuga.org",
   filename: "devdogs-lockup@2x.png",
   contentType: "image/png",
   // A real 1x1 transparent PNG, so decoding the part back is meaningful.

@@ -34,7 +34,7 @@ import { EMAIL_FONTS } from "../theme.js";
 export { buildEml, type EmlImage, type EmlInput } from "./eml.js";
 
 /** The right-hand side of every Content-ID; any stable, unique-ish token works. */
-const CID_DOMAIN = "changelog.devdogsuga.org";
+const CID_DOMAIN = "devdogsuga.org";
 
 /**
  * One image the email needs: its SVG source, the width to rasterise at (2x
@@ -193,6 +193,17 @@ export function renderIssueDocument(
 ): string {
   return pruneUnusedPins(
     "<!doctype html>" +
-      renderToStaticMarkup(<ChangelogDocument issue={issue} ctx={ctx} />),
+      unescapeApostrophes(
+        renderToStaticMarkup(<ChangelogDocument issue={issue} ctx={ctx} />),
+      ),
   );
+}
+
+/**
+ * React writes every `'` as `&#x27;`, even in its always double-quoted
+ * attributes where a bare one is valid — some 350 times an issue, mostly in
+ * the quoted font stacks, which is ~1.8KB toward Gmail's ~102KB clip.
+ */
+function unescapeApostrophes(html: string): string {
+  return html.replaceAll("&#x27;", "'");
 }

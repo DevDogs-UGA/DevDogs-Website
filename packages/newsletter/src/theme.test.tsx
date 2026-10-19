@@ -24,7 +24,7 @@ describe("theme selection", () => {
 describe("Cosmic", () => {
   it("draws the space strip, pixel stairs, glow, sprites and rounded, shadowed frames", () => {
     for (const image of ["cosmic-strip", "cosmic-stairs", "sprite-laptop"]) {
-      expect(cosmic).toContain(`cid:theme-${image}@changelog.devdogsuga.org`);
+      expect(cosmic).toContain(`cid:theme-${image}@devdogsuga.org`);
     }
     expect(cosmic).toContain("bgi-glow-build");
     expect(cosmic).toContain("border-radius:14px");
@@ -71,8 +71,8 @@ describe("Paper", () => {
   });
 
   it("sets Google Sans and Google Sans Mono", () => {
-    expect(paper).toContain("&#x27;Google Sans Mono&#x27;");
-    expect(paper).toContain("font-family:&#x27;Google Sans&#x27;");
+    expect(paper).toContain("'Google Sans Mono'");
+    expect(paper).toContain("font-family:'Google Sans'");
     expect(paper).toContain("GoogleSans-Regular.ttf");
     expect(paper).toContain("GoogleSansMono-Regular.ttf");
   });
