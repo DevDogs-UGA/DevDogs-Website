@@ -597,7 +597,7 @@ function EventRow({
               <table {...TABLE_RESET} width="100%">
                 <tbody>
                   <tr>
-                    <td valign="top" rowSpan={meeting.rsvpUrl ? 2 : 1}>
+                    <td valign="top">
                       <div
                         className={tc(t.ink)}
                         style={{
@@ -622,21 +622,11 @@ function EventRow({
                         </span>{" "}
                         {card.loc}
                       </div>
-                      <div
-                        className={tc(t.dim)}
-                        style={{
-                          ...ambient(400, 13, 1.55),
-                          color: t.dim,
-                          paddingTop: "7px",
-                        }}
-                      >
-                        {meeting.summary}
-                      </div>
                     </td>
                     <td
                       valign="top"
                       align="right"
-                      width={meeting.rsvpUrl ? 74 : 56}
+                      width={56}
                       style={{ paddingLeft: "14px" }}
                     >
                       <EventArt
@@ -648,13 +638,27 @@ function EventRow({
                       />
                     </td>
                   </tr>
-                  {/* The text spans both rows: the icon sits top right, the RSVP bottom right, level with the text's last line. */}
+                  {/* The icon is as tall as the title and time, so the summary below runs the card's full width, then the RSVP. */}
+                  <tr>
+                    <td colSpan={2}>
+                      <div
+                        className={tc(t.dim)}
+                        style={{
+                          ...ambient(400, 13, 1.55),
+                          color: t.dim,
+                          paddingTop: "7px",
+                        }}
+                      >
+                        {meeting.summary}
+                      </div>
+                    </td>
+                  </tr>
                   {meeting.rsvpUrl ? (
                     <tr>
                       <td
-                        valign="bottom"
+                        colSpan={2}
                         align="right"
-                        style={{ paddingLeft: "14px", paddingTop: "10px" }}
+                        style={{ paddingTop: "12px" }}
                       >
                         <CtaButton
                           label="RSVP"
