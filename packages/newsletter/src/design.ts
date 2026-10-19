@@ -91,24 +91,100 @@ export interface KindTheme {
   shadow: string;
   /** Paper: the pastel chip and tonight-card fill. */
   fill: string;
+  /** The event row's date column and its primary button: Cosmic takes the kind's 700 under white text (at
+   * least 5:1, and light-on-dark survives the dark modes that flip dark text); Paper the halftone under ink. */
+  date: string;
+  dateInk: string;
 }
 
 export const COSMIC_KINDS: Record<KindKey, KindTheme> = {
-  build: { bar: "#38bdf8", shadow: "#0084d1", fill: PALETTE.card },
-  interest: { bar: "#c4b5fd", shadow: "#7c3aed", fill: PALETTE.card },
-  workshop: { bar: "#34d399", shadow: "#009966", fill: PALETTE.card },
-  demo: { bar: "#a5b4fc", shadow: "#4f39f6", fill: PALETTE.card },
-  social: { bar: "#fb7185", shadow: "#ec003f", fill: PALETTE.card },
-  study: { bar: "#fbbf24", shadow: "#d97706", fill: PALETTE.card },
+  build: {
+    bar: "#38bdf8",
+    shadow: "#0084d1",
+    fill: PALETTE.card,
+    date: "#0369a1",
+    dateInk: "#ffffff",
+  },
+  interest: {
+    bar: "#c4b5fd",
+    shadow: "#7c3aed",
+    fill: PALETTE.card,
+    date: "#6d28d9",
+    dateInk: "#ffffff",
+  },
+  workshop: {
+    bar: "#34d399",
+    shadow: "#009966",
+    fill: PALETTE.card,
+    date: "#047857",
+    dateInk: "#ffffff",
+  },
+  demo: {
+    bar: "#a5b4fc",
+    shadow: "#4f39f6",
+    fill: PALETTE.card,
+    date: "#4338ca",
+    dateInk: "#ffffff",
+  },
+  social: {
+    bar: "#fb7185",
+    shadow: "#ec003f",
+    fill: PALETTE.card,
+    date: "#be123c",
+    dateInk: "#ffffff",
+  },
+  study: {
+    bar: "#fbbf24",
+    shadow: "#d97706",
+    fill: PALETTE.card,
+    date: "#b45309",
+    dateInk: "#ffffff",
+  },
 };
 
 export const PAPER_KINDS: Record<KindKey, KindTheme> = {
-  build: { bar: "#57caff", shadow: GDGC.ink, fill: GDGC.sky },
-  interest: { bar: "#ffd427", shadow: GDGC.ink, fill: GDGC.butter },
-  workshop: { bar: "#5cdb6d", shadow: GDGC.ink, fill: GDGC.mint },
-  demo: { bar: "#57caff", shadow: GDGC.ink, fill: GDGC.sky },
-  social: { bar: "#ff7daf", shadow: GDGC.ink, fill: GDGC.blush },
-  study: { bar: "#9aa0a6", shadow: GDGC.ink, fill: GDGC.grey },
+  build: {
+    bar: "#57caff",
+    shadow: GDGC.ink,
+    fill: GDGC.sky,
+    date: "#57caff",
+    dateInk: GDGC.ink,
+  },
+  interest: {
+    bar: "#ffd427",
+    shadow: GDGC.ink,
+    fill: GDGC.butter,
+    date: "#ffd427",
+    dateInk: GDGC.ink,
+  },
+  workshop: {
+    bar: "#5cdb6d",
+    shadow: GDGC.ink,
+    fill: GDGC.mint,
+    date: "#5cdb6d",
+    dateInk: GDGC.ink,
+  },
+  demo: {
+    bar: "#57caff",
+    shadow: GDGC.ink,
+    fill: GDGC.sky,
+    date: "#57caff",
+    dateInk: GDGC.ink,
+  },
+  social: {
+    bar: "#ff7daf",
+    shadow: GDGC.ink,
+    fill: GDGC.blush,
+    date: "#ff7daf",
+    dateInk: GDGC.ink,
+  },
+  study: {
+    bar: "#9aa0a6",
+    shadow: GDGC.ink,
+    fill: GDGC.grey,
+    date: "#9aa0a6",
+    dateInk: GDGC.ink,
+  },
 };
 
 /** Paper's extra neutrals and Google accents (the rest are `GDGC`). */
@@ -194,8 +270,6 @@ export interface Theme {
   newHereLabel: string;
   signoffLabel: string;
   arrows: [string, string, string];
-  /** Text on a filled date column (the kind colour): dark on both themes. */
-  dateInk: string;
   dots: [string, string, string];
   /** "pixel": stepped-circle PNGs (`dot-<hex>`), so every client, classic Outlook too, draws the same circle. */
   dotShape: "pixel" | "round";
@@ -245,7 +319,6 @@ export const THEMES: Record<ThemeName, Theme> = {
       COSMIC_KINDS.workshop.bar,
       COSMIC_KINDS.social.bar,
     ],
-    dateInk: PALETTE.bar,
     dots: [KIND.interest, KIND.build, KIND.study],
     dotShape: "pixel",
     cta: { fill: UGA, border: "#8a0a22", text: PALETTE.ink },
@@ -288,7 +361,6 @@ export const THEMES: Record<ThemeName, Theme> = {
     newHereLabel: PAPER.amber,
     signoffLabel: PAPER.red,
     arrows: [PAPER.googleBlue, PAPER.googleGreen, PAPER.googleRed],
-    dateInk: GDGC.ink,
     dots: [PAPER.googleRed, PAPER.googleYellow, PAPER.googleGreen],
     dotShape: "round",
     cta: { fill: GDGC.blue, border: PAPER.ctaBorder, text: GDGC.white },
@@ -336,14 +408,14 @@ export const THEME_PAINT = {
       COSMIC_SKY,
       THEMES.cosmic.rule,
       THEMES.cosmic.cta.border,
-      ...Object.values(COSMIC_KINDS).map((k) => k.bar),
+      ...Object.values(COSMIC_KINDS).flatMap((k) => [k.bar, k.date]),
     ],
-    text: [
-      ...Object.values(COSMIC_KINDS).map((k) => k.bar),
-      "#ffffff",
-      PALETTE.bar,
+    text: [...Object.values(COSMIC_KINDS).map((k) => k.bar), "#ffffff"],
+    border: [
+      THEMES.cosmic.cta.border,
+      THEMES.cosmic.cardLine,
+      ...Object.values(COSMIC_KINDS).map((k) => k.date),
     ],
-    border: [THEMES.cosmic.cta.border],
   },
   paper: {
     background: [

@@ -375,60 +375,81 @@ function TitleDots({ t, ctx }: { t: Theme; ctx: RenderContext }) {
  * anchor is responsible only for the label.
  */
 /**
- * A row of compact buttons drawn exactly like `CtaButton compact`, but as
- * cells of one table rather than a table each: an issue lists up to three per
- * event, and Gmail clips a message's HTML at ~102KB.
+ * An event's two buttons, the same size side by side: a quiet secondary on
+ * the left (outlined, muted text) and a filled primary on the right. Drawn
+ * like `CtaButton compact`, but as cells of one table rather than a table
+ * each, since an issue lists one pair per event and Gmail clips a message's
+ * HTML at ~102KB.
  */
 function ButtonRow({
-  buttons,
-  textColor,
-  borderColor,
+  secondary,
+  primary,
   ground,
+  quiet,
+  loud,
 }: {
-  buttons: { label: string; url: string }[];
-  textColor: string;
-  borderColor: string;
+  secondary: { label: string; url: string };
+  primary: { label: string; url: string };
   ground: string;
+  quiet: { line: string; text: string };
+  loud: { fill: string; line: string; text: string };
 }) {
+  const cell = (
+    b: { label: string; url: string },
+    fill: string,
+    line: string,
+    text: string,
+  ) => (
+    <td
+      width="48%"
+      align="center"
+      valign="middle"
+      {...bgAttr(fill)}
+      className={`${bc(fill)} ${brc(line)}`}
+      style={
+        {
+          border: `1px solid ${line}`,
+          borderRadius: "8px",
+          padding: "9px 13px",
+          msoPaddingAlt: "0",
+          whiteSpace: "nowrap",
+        } as EmailCSSProperties
+      }
+    >
+      <a
+        href={b.url}
+        className={tc(text)}
+        style={
+          {
+            display: "block",
+            ...ambient(700, 12, 1),
+            color: text,
+            textDecoration: "none",
+            msoLineHeightRule: "exactly",
+          } as EmailCSSProperties
+        }
+      >
+        {b.label} ▸
+      </a>
+    </td>
+  );
   return (
-    <table {...TABLE_RESET}>
+    <table {...TABLE_RESET} width="100%" style={{ borderCollapse: "separate" }}>
       <tbody>
         <tr>
-          {buttons.flatMap((b, i) => [
-            ...(i ? [<td key={`gap-${b.label}`} width={8} />] : []),
-            <td
-              key={b.label}
-              align="center"
-              valign="middle"
-              {...bgAttr(ground)}
-              className={`${bc(ground)} ${brc(borderColor)}`}
-              style={
-                {
-                  border: `1px solid ${borderColor}`,
-                  borderRadius: "8px",
-                  padding: "9px 13px",
-                  msoPaddingAlt: "0",
-                  whiteSpace: "nowrap",
-                } as EmailCSSProperties
-              }
-            >
-              <a
-                href={b.url}
-                className={tc(textColor)}
-                style={
-                  {
-                    display: "block",
-                    ...ambient(700, 12, 1),
-                    color: textColor,
-                    textDecoration: "none",
-                    msoLineHeightRule: "exactly",
-                  } as EmailCSSProperties
-                }
-              >
-                {b.label} ▸
-              </a>
-            </td>,
-          ])}
+          {cell(secondary, ground, quiet.line, quiet.text)}
+          <td
+            width={10}
+            style={{
+              width: "10px",
+              minWidth: "10px",
+              fontSize: "0px",
+              lineHeight: 0,
+            }}
+          >
+            &nbsp;
+          </td>
+          {cell(primary, loud.fill, loud.line, loud.text)}
         </tr>
       </tbody>
     </table>
@@ -576,18 +597,13 @@ function EventRow({
   const card = eventCard(meeting);
   const kt = t.kinds[card.kind];
   const radiusIn = Math.max(t.radius.row - t.cardBw, 0);
-  const dateInk = t.dateInk;
-  const buttons = [
-    ...(meeting.rsvpUrl ? [{ label: "RSVP", url: meeting.rsvpUrl }] : []),
-    {
-      label: "Add to calendar",
-      url: `${SITE}/events/${encodeURIComponent(meeting.slug)}/calendar.ics`,
-    },
-    {
-      label: "Details",
-      url: `${SITE}/events/${encodeURIComponent(meeting.slug)}`,
-    },
-  ];
+  const dateInk = kt.dateInk;
+  const page = `${SITE}/events/${encodeURIComponent(meeting.slug)}`;
+  // Exactly two: Details (quiet, left) and the one thing to do (filled, right):
+  // RSVP where there is one, else Add to Calendar.
+  const primary = meeting.rsvpUrl
+    ? { label: "RSVP", url: meeting.rsvpUrl }
+    : { label: "Add to Calendar", url: `${page}/calendar.ics` };
   return (
     <Frame
       t={t}
@@ -606,8 +622,8 @@ function EventRow({
               width={72}
               align="center"
               valign="middle"
-              {...bgAttr(kt.bar)}
-              className={bc(kt.bar)}
+              {...bgAttr(kt.date)}
+              className={bc(kt.date)}
               style={{
                 padding: "14px 4px",
                 fontFamily: fonts.display,
@@ -712,12 +728,19 @@ function EventRow({
                   <tr>
                     <td colSpan={2} style={{ paddingTop: "12px" }}>
                       <ButtonRow
-                        buttons={buttons}
-                        textColor={t.ink}
-                        borderColor={
-                          t.name === "cosmic" ? card.color : t.cardLine
-                        }
+                        secondary={{ label: "Details", url: page }}
+                        primary={primary}
                         ground={t.cardFill}
+                        quiet={{ line: t.cardLine, text: t.mute }}
+                        loud={
+                          t.name === "cosmic"
+                            ? { fill: kt.date, line: kt.date, text: kt.dateInk }
+                            : {
+                                fill: t.cta.fill,
+                                line: t.cta.border,
+                                text: t.cta.text,
+                              }
+                        }
                       />
                     </td>
                   </tr>
