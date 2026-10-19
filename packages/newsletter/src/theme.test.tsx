@@ -24,9 +24,7 @@ describe("theme selection", () => {
 describe("Cosmic", () => {
   it("draws the space strip, pixel stairs, glow, sprites and stepped frames", () => {
     for (const image of ["cosmic-strip", "cosmic-stairs", "sprite-laptop"]) {
-      expect(cosmic).toContain(
-        `https://devdogsuga.org/brand/newsletter/theme/${image}.png`,
-      );
+      expect(cosmic).toContain(`cid:theme-${image}@changelog.devdogsuga.org`);
     }
     expect(cosmic).toContain("bgi-glow-build");
     expect(cosmic).toContain("px-o");
@@ -83,14 +81,16 @@ describe("Paper", () => {
     expect(paper).toContain("border-radius:8px");
     expect(paper).toContain('bgcolor="#ea4335"');
     expect(paper).toContain('bgcolor="#57caff"');
-    expect(paper).toContain("emoji-laptop.png");
-    expect(paper).toContain("paper-asterisk.png");
+    expect(paper).toContain("theme-emoji-laptop@");
+    expect(paper).toContain("theme-paper-asterisk@");
   });
 
   it("leads the footer with the GDG on Campus lockup, then DevDogs", () => {
-    const footer = paper.slice(paper.lastIndexOf("paper-gdgc-lockup.png") - 50);
-    expect(footer.indexOf("paper-gdgc-lockup.png")).toBeLessThan(
-      footer.indexOf("paper-devdogs-logo.png"),
+    const footer = paper.slice(
+      paper.lastIndexOf("theme-paper-gdgc-lockup@") - 50,
+    );
+    expect(footer.indexOf("theme-paper-gdgc-lockup@")).toBeLessThan(
+      footer.indexOf("theme-paper-devdogs-logo@"),
     );
   });
 
@@ -105,7 +105,7 @@ describe("Paper", () => {
     expect(dark).toContain("[data-ogsc] .tc-5f6368{color:#9aa0a6");
     expect(dark).toContain("[data-ogsb] .bc-c3ecf6{background-color:#12333d");
     expect(paper).toContain("gdgc-dark");
-    expect(paper).toContain("paper-gdgc-lockup-dark.png");
+    expect(paper).toContain("theme-paper-gdgc-lockup-dark@");
   });
 
   it("paints every background through a class with paint and pin rules", () => {

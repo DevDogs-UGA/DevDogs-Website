@@ -387,9 +387,10 @@ async function attachments() {
       cid: image.cid,
       filename: image.filename,
       contentType: "image/png",
-      base64: (await rasterize(image.svg, image.rasterWidth)).toString(
-        "base64",
-      ),
+      base64:
+        "png" in image
+          ? image.png
+          : (await rasterize(image.svg, image.rasterWidth)).toString("base64"),
     })),
   );
 }

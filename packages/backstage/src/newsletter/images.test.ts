@@ -50,6 +50,7 @@ describe("rasterize", () => {
 
   it("rasterises every image the email references at its declared width", async () => {
     for (const image of emailImages()) {
+      if (!("svg" in image)) continue; // theme PNGs attach as is, nothing to rasterise
       const png = await rasterize(image.svg, image.rasterWidth);
       expect(pngSize(png).width, image.filename).toBe(image.rasterWidth);
     }

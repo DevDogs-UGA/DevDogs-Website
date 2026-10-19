@@ -28,6 +28,7 @@ import {
 import type { ChangelogIssue } from "../issues.js";
 import { PARTNER_NAMES, partnerSvg, type PartnerName } from "../partners.js";
 import { THEME_IMAGE_BASE } from "../design.js";
+import { THEME_PNGS } from "../generated/theme-images.js";
 import { EMAIL_FONTS } from "../theme.js";
 
 export { buildEml, type EmlImage, type EmlInput } from "./eml.js";
@@ -40,12 +41,11 @@ const CID_DOMAIN = "changelog.devdogsuga.org";
  * the on-screen size the components declare), and the identity it carries
  * into the MIME parts.
  */
-export interface EmailImage {
-  cid: string;
-  filename: string;
-  svg: string;
-  rasterWidth: number;
-}
+export type EmailImage = { cid: string; filename: string } & (
+  | { svg: string; rasterWidth: number }
+  /** Already a PNG (the theme images), base64: attached as is. */
+  | { png: string }
+);
 
 function cidFor(key: string): string {
   return `${key}@${CID_DOMAIN}`;
@@ -94,7 +94,24 @@ export function emailImages(): EmailImage[] {
       svg: partnerSvg(name),
       rasterWidth: partnerLogoSize(name).width * 2,
     })),
+    ...Object.entries(THEME_PNGS)
+      .filter(([name]) => !isHostedThemeImage(name))
+      .map(([name, png]) => ({
+        cid: cidFor(`theme-${name}`),
+        filename: `${name}.png`,
+        png,
+      })),
   ];
+}
+
+/**
+ * The theme images a send links rather than attaches: the dithered glows,
+ * which only a stylesheet `background-image` uses. That is an enhancement
+ * classic Outlook and Gmail drop anyway, and an inline part nothing in the
+ * body's `<img>`s references shows up in some clients as a stray attachment.
+ */
+function isHostedThemeImage(name: string): boolean {
+  return name.startsWith("glow-");
 }
 
 /**
@@ -113,8 +130,13 @@ export function emailRenderContext(
       gdgcLockup: `cid:${cidFor("gdgc-lockup")}`,
       socialIcon,
       partnerLogo: (name: PartnerName) => `cid:${cidFor(`partner-${name}`)}`,
-      // theme images are hosted PNGs, not parts of the MIME
-      themeImage: hostedThemeImage(imageBase),
+      // Theme <img>s ride as inline parts like every other image: both
+      // Outlooks hold linked images behind "download pictures". Only the
+      // stylesheet glows stay linked (see isHostedThemeImage).
+      themeImage: (name) =>
+        isHostedThemeImage(name)
+          ? hostedThemeImage(imageBase)(name)
+          : `cid:${cidFor(`theme-${name}`)}`,
     },
   };
 }

@@ -64,11 +64,8 @@ describe("renderIssueDocument", () => {
       const sources = imageSources(renderIssueDocument(issue));
       expect(sources.length).toBeGreaterThan(0);
       for (const src of sources) {
-        // Theme images are hosted PNGs; every other image is embedded.
-        expect(
-          cids.has(src) || src.startsWith(THEME_URL),
-          `unembedded image source ${src}`,
-        ).toBe(true);
+        // Every <img> is embedded, theme images included.
+        expect(cids.has(src), `unembedded image source ${src}`).toBe(true);
       }
     }
   });
@@ -181,12 +178,19 @@ describe("renderIssueDocument", () => {
 });
 
 describe("emailImages", () => {
-  it("yields renderable SVG at 2x display size for every mark", () => {
+  it("yields renderable SVG at 2x display size for every mark, and the theme PNGs as is", () => {
     const images = emailImages();
     expect(images.map((image) => image.cid)).toEqual([
       ...new Set(images.map((image) => image.cid)),
     ]);
     for (const image of images) {
+      if ("png" in image) {
+        // theme images ship as PNGs already: check the signature
+        expect(Buffer.from(image.png, "base64").subarray(1, 4).toString()).toBe(
+          "PNG",
+        );
+        continue;
+      }
       expect(image.svg.trimStart().startsWith("<svg")).toBe(true);
       expect(image.rasterWidth).toBeGreaterThan(0);
     }
