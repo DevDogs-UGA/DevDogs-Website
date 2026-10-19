@@ -374,6 +374,67 @@ function TitleDots({ t, ctx }: { t: Theme; ctx: RenderContext }) {
  * backgrounds to anchors. All button geometry lives on a table cell; the
  * anchor is responsible only for the label.
  */
+/**
+ * A row of compact buttons drawn exactly like `CtaButton compact`, but as
+ * cells of one table rather than a table each: an issue lists up to three per
+ * event, and Gmail clips a message's HTML at ~102KB.
+ */
+function ButtonRow({
+  buttons,
+  textColor,
+  borderColor,
+  ground,
+}: {
+  buttons: { label: string; url: string }[];
+  textColor: string;
+  borderColor: string;
+  ground: string;
+}) {
+  return (
+    <table {...TABLE_RESET}>
+      <tbody>
+        <tr>
+          {buttons.flatMap((b, i) => [
+            ...(i ? [<td key={`gap-${b.label}`} width={8} />] : []),
+            <td
+              key={b.label}
+              align="center"
+              valign="middle"
+              {...bgAttr(ground)}
+              className={`${bc(ground)} ${brc(borderColor)}`}
+              style={
+                {
+                  border: `1px solid ${borderColor}`,
+                  borderRadius: "8px",
+                  padding: "9px 13px",
+                  msoPaddingAlt: "0",
+                  whiteSpace: "nowrap",
+                } as EmailCSSProperties
+              }
+            >
+              <a
+                href={b.url}
+                className={tc(textColor)}
+                style={
+                  {
+                    display: "block",
+                    ...ambient(700, 12, 1),
+                    color: textColor,
+                    textDecoration: "none",
+                    msoLineHeightRule: "exactly",
+                  } as EmailCSSProperties
+                }
+              >
+                {b.label} ▸
+              </a>
+            </td>,
+          ])}
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
 function CtaButton({
   label,
   url,
@@ -514,7 +575,19 @@ function EventRow({
   const fonts = t.fonts(ctx.fonts);
   const card = eventCard(meeting);
   const kt = t.kinds[card.kind];
-  const barH = t.frame === "flat" ? 6 : 5;
+  const radiusIn = Math.max(t.radius.row - t.cardBw, 0);
+  const dateInk = t.dateInk;
+  const buttons = [
+    ...(meeting.rsvpUrl ? [{ label: "RSVP", url: meeting.rsvpUrl }] : []),
+    {
+      label: "Add to calendar",
+      url: `${SITE}/events/${encodeURIComponent(meeting.slug)}/calendar.ics`,
+    },
+    {
+      label: "Details",
+      url: `${SITE}/events/${encodeURIComponent(meeting.slug)}`,
+    },
+  ];
   return (
     <Frame
       t={t}
@@ -528,71 +601,54 @@ function EventRow({
       <table {...TABLE_RESET} width="100%">
         <tbody>
           <tr>
-            <td width={66} align="center" valign="top">
-              <table {...TABLE_RESET} width="100%">
-                <tbody>
-                  <tr>
-                    <td
-                      {...bgAttr(kt.bar)}
-                      className={bc(kt.bar)}
-                      height={barH}
-                      style={{
-                        height: `${barH}px`,
-                        fontSize: "0px",
-                        lineHeight: 0,
-                        borderRadius: `${Math.max(t.radius.row - t.cardBw, 0)}px 0 0 0`,
-                      }}
-                    >
-                      {" "}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td
-                      align="center"
-                      style={{
-                        padding: "17px 2px 18px 8px",
-                        fontFamily: fonts.display,
-                      }}
-                    >
-                      <div
-                        className={tc(t.name === "cosmic" ? t.mute : t.dim)}
-                        style={{
-                          ...ambient(800, 10, 1),
-                          letterSpacing: "2px",
-                          color: t.name === "cosmic" ? t.mute : t.dim,
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        {card.dow}
-                      </div>
-                      <div
-                        className={tc(t.ink)}
-                        style={{
-                          ...ambient(800, 28, 1.1),
-                          color: t.ink,
-                          fontVariantNumeric: "tabular-nums",
-                          padding: "3px 0 2px",
-                        }}
-                      >
-                        {card.day}
-                      </div>
-                      <div
-                        className={tc(t.dim)}
-                        style={{
-                          ...ambient(700, 10, 1),
-                          letterSpacing: "2px",
-                          color: t.dim,
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        {card.month}
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            {/* The date column is the kind's colour, top to bottom, with the weekday leading. */}
+            <td
+              width={72}
+              align="center"
+              valign="middle"
+              {...bgAttr(kt.bar)}
+              className={bc(kt.bar)}
+              style={{
+                padding: "14px 4px",
+                fontFamily: fonts.display,
+                borderRadius: `${radiusIn}px 0 0 ${radiusIn}px`,
+              }}
+            >
+              <div
+                className={tc(dateInk)}
+                style={{
+                  ...ambient(800, 15, 1),
+                  letterSpacing: "1.5px",
+                  color: dateInk,
+                  textTransform: "uppercase",
+                }}
+              >
+                {card.dow}
+              </div>
+              <div
+                className={tc(dateInk)}
+                style={{
+                  ...ambient(800, 30, 1.1),
+                  color: dateInk,
+                  fontVariantNumeric: "tabular-nums",
+                  padding: "4px 0 3px",
+                }}
+              >
+                {card.day}
+              </div>
+              <div
+                className={tc(dateInk)}
+                style={{
+                  ...ambient(700, 10, 1),
+                  letterSpacing: "2px",
+                  color: dateInk,
+                  textTransform: "uppercase",
+                  opacity: 0.75,
+                }}
+              >
+                {card.month}
+              </div>
             </td>
-            <DividerCell color={t.cardLine} size={2} vertical />
             <td valign="middle" style={{ padding: "15px 17px" }}>
               <table {...TABLE_RESET} width="100%">
                 <tbody>
@@ -638,7 +694,7 @@ function EventRow({
                       />
                     </td>
                   </tr>
-                  {/* The icon is as tall as the title and time, so the summary below runs the card's full width, then the RSVP. */}
+                  {/* The icon is as tall as the title and time, so the summary below runs the card's full width, then the buttons. */}
                   <tr>
                     <td colSpan={2}>
                       <div
@@ -653,31 +709,18 @@ function EventRow({
                       </div>
                     </td>
                   </tr>
-                  {meeting.rsvpUrl ? (
-                    <tr>
-                      <td
-                        colSpan={2}
-                        align="right"
-                        style={{ paddingTop: "12px" }}
-                      >
-                        <CtaButton
-                          label="RSVP"
-                          url={meeting.rsvpUrl}
-                          color={t.name === "cosmic" ? card.color : t.cta.fill}
-                          textColor={
-                            t.name === "cosmic" ? PALETTE.ink : t.cta.text
-                          }
-                          borderColor={
-                            t.name === "cosmic" ? card.color : t.cta.border
-                          }
-                          ground={
-                            t.name === "cosmic" ? PALETTE.card : undefined
-                          }
-                          compact
-                        />
-                      </td>
-                    </tr>
-                  ) : null}
+                  <tr>
+                    <td colSpan={2} style={{ paddingTop: "12px" }}>
+                      <ButtonRow
+                        buttons={buttons}
+                        textColor={t.ink}
+                        borderColor={
+                          t.name === "cosmic" ? card.color : t.cardLine
+                        }
+                        ground={t.cardFill}
+                      />
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </td>

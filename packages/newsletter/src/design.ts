@@ -194,6 +194,8 @@ export interface Theme {
   newHereLabel: string;
   signoffLabel: string;
   arrows: [string, string, string];
+  /** Text on a filled date column (the kind colour): dark on both themes. */
+  dateInk: string;
   dots: [string, string, string];
   /** "pixel": stepped-circle PNGs (`dot-<hex>`), so every client, classic Outlook too, draws the same circle. */
   dotShape: "pixel" | "round";
@@ -243,6 +245,7 @@ export const THEMES: Record<ThemeName, Theme> = {
       COSMIC_KINDS.workshop.bar,
       COSMIC_KINDS.social.bar,
     ],
+    dateInk: PALETTE.bar,
     dots: [KIND.interest, KIND.build, KIND.study],
     dotShape: "pixel",
     cta: { fill: UGA, border: "#8a0a22", text: PALETTE.ink },
@@ -285,6 +288,7 @@ export const THEMES: Record<ThemeName, Theme> = {
     newHereLabel: PAPER.amber,
     signoffLabel: PAPER.red,
     arrows: [PAPER.googleBlue, PAPER.googleGreen, PAPER.googleRed],
+    dateInk: GDGC.ink,
     dots: [PAPER.googleRed, PAPER.googleYellow, PAPER.googleGreen],
     dotShape: "round",
     cta: { fill: GDGC.blue, border: PAPER.ctaBorder, text: GDGC.white },
@@ -334,7 +338,11 @@ export const THEME_PAINT = {
       THEMES.cosmic.cta.border,
       ...Object.values(COSMIC_KINDS).map((k) => k.bar),
     ],
-    text: [...Object.values(COSMIC_KINDS).map((k) => k.bar), "#ffffff"],
+    text: [
+      ...Object.values(COSMIC_KINDS).map((k) => k.bar),
+      "#ffffff",
+      PALETTE.bar,
+    ],
     border: [THEMES.cosmic.cta.border],
   },
   paper: {
