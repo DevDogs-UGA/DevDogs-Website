@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { darkModeCss, paintCss, pixelCss } from "./darkmode.js";
-import { pixelPolygon, THEMES, themeOf } from "./design.js";
+import { darkModeCss, paintCss } from "./darkmode.js";
+import { eventArt, THEMES, themeOf } from "./design.js";
 import {
   previewRenderContext,
   pruneUnusedPins,
@@ -22,13 +22,15 @@ describe("theme selection", () => {
 });
 
 describe("Cosmic", () => {
-  it("draws the space strip, pixel stairs, glow, sprites and stepped frames", () => {
+  it("draws the space strip, pixel stairs, glow, sprites and rounded, shadowed frames", () => {
     for (const image of ["cosmic-strip", "cosmic-stairs", "sprite-laptop"]) {
       expect(cosmic).toContain(`cid:theme-${image}@changelog.devdogsuga.org`);
     }
     expect(cosmic).toContain("bgi-glow-build");
-    expect(cosmic).toContain("px-o");
-    expect(cosmic).toContain("px-i");
+    expect(cosmic).toContain("border-radius:14px");
+    // the hard shadows are inline, so clients that drop <style> keep them
+    expect(cosmic).toMatch(/style="[^"]*box-shadow:7px 7px 0 0 #0084d1/);
+    expect(cosmic).not.toContain("clip-path");
     expect(cosmic).toContain("text-shadow:3px 3px 0 #0084d1");
     expect(cosmic).toContain("padding:4.5px");
   });
@@ -39,8 +41,9 @@ describe("Cosmic", () => {
     expect(cosmic).not.toContain("Google Sans");
   });
 
-  it("leaves chips and buttons in their shape", () => {
-    expect(cosmic).toContain("border-radius:20px");
+  it("leaves buttons in their shape and puts no badges over events", () => {
+    expect(cosmic).not.toContain("border-radius:20px");
+    expect(cosmic).not.toContain("text-transform:uppercase;padding:5px 10px");
     expect(cosmic).toContain("padding:14px 26px");
     expect(cosmic).toContain("border-radius:8px");
   });
@@ -137,26 +140,16 @@ describe("Paper", () => {
   });
 });
 
-describe("pixel frames", () => {
-  it("steps all four corners with the mockup's polygon", () => {
-    const polygon = pixelPolygon();
-    expect(
-      polygon.startsWith(
-        "polygon(0px 15px,5px 15px,5px 5px,15px 5px,15px 0px,",
-      ),
-    ).toBe(true);
-    expect(polygon.match(/,/g)).toHaveLength(19);
-  });
-
-  it("enhance only under @supports and fall back to a plain hard shadow", () => {
-    const css = pixelCss();
-    const supports = css.slice(css.indexOf("@supports"));
-    expect(css.slice(0, css.indexOf("@supports"))).toContain(
-      ".px-sh-8-000000{box-shadow:8px 8px 0 0 #000000}",
-    );
-    expect(supports).toContain("clip-path:polygon(");
-    expect(supports).toContain("filter:drop-shadow(7px 7px 0 #0084d1)");
-    expect(css).not.toContain("!important");
+describe("event art", () => {
+  it("matches the night, then falls back to the kind", () => {
+    expect(eventArt("Bug Bash", "build")).toBe("bug");
+    expect(eventArt("Merge Monday", "build")).toBe("laptop");
+    expect(eventArt("Workshop Wednesday", "workshop")).toBe("light_bulb");
+    expect(eventArt("Georgia 311 Kickoff", "study")).toBe("rocket");
+    expect(eventArt("Georgia 311 Checkpoint", "build")).toBe("triangular_flag");
+    expect(eventArt("Demo Day", "demo")).toBe("trophy");
+    expect(eventArt("DevDogs Touch Grass #2", "social")).toBe("deciduous_tree");
+    expect(eventArt("Something New", "social")).toBe("party_popper");
   });
 });
 

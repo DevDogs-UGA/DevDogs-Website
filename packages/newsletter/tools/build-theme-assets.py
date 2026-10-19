@@ -45,12 +45,15 @@ base, hi, goal = rgb("#0f0b1e"), np.array([25, 18, 67.0]), np.array([48, 22, 80.
 t = ((demo - base) / (hi - base)).mean(axis=2, keepdims=True)
 Image.fromarray(np.clip(base + t * (goal - base), 0, 255).astype("uint8")).save(OUT / "glow-interest.png", optimize=True)
 
-# Cosmic: sprites, one per kind
-for name in ["laptop", "megaphone", "triangular_flag", "trophy", "party_popper", "light_bulb"]:
+# Sprites (Cosmic) and flat emoji (Paper): one per kind (design.ts KIND_ART) plus the per-event art (EVENT_ART)
+ART = ["laptop", "megaphone", "triangular_flag", "trophy", "party_popper", "light_bulb", "bug", "rocket", "deciduous_tree"]
+
+# Cosmic: sprites
+for name in ART:
     Image.open(DS / "assets/sprite" / f"{name}.png").save(OUT / f"sprite-{name}.png", optimize=True)
 
 # Paper: flat Fluent emoji at 120 px (shown at 60 and 38), the asterisk, and the logo/lockup pairs
-for name in ["laptop", "megaphone", "triangular_flag", "trophy", "party_popper", "light_bulb"]:
+for name in ART:
     raster(DS / "assets/emoji/paper" / f"{name}.svg", f"emoji-{name}.png", 120)
 raster(DS / "assets/icons/paper/Asterisk-white.svg", "paper-asterisk.png", 52)
 raster(DS / "assets/devdogs-logo.svg", "paper-devdogs-logo.png", 264)

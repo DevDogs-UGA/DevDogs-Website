@@ -50,6 +50,30 @@ export function kindKey(kind: string | null | undefined): KindKey {
   }
 }
 
+/**
+ * Decor by what the night is, matched on its title: a bug for the Bug Bash, a
+ * trophy for Demo Day. First match wins; anything unmatched takes its kind's
+ * art. Until the series redesign gives each series its own icon, this is
+ * where a new recurring night gets one.
+ */
+export const EVENT_ART: [RegExp, string][] = [
+  [/bug bash/i, "bug"],
+  [/merge monday|build session/i, "laptop"],
+  [/workshop/i, "light_bulb"],
+  [/kickoff|cold start/i, "rocket"],
+  [/checkpoint/i, "triangular_flag"],
+  [/demo/i, "trophy"],
+  [/touch grass/i, "deciduous_tree"],
+  [/interest meeting|info session/i, "megaphone"],
+];
+
+/** The sprite/emoji stem for an event: its title's match in `EVENT_ART`, else its kind's. */
+export function eventArt(title: string, kind: KindKey): string {
+  return (
+    EVENT_ART.find(([pattern]) => pattern.test(title))?.[1] ?? KIND_ART[kind]
+  );
+}
+
 /** Per-kind decor shared by both themes: the sprite/emoji name (the file stem under `theme/`). */
 export const KIND_ART: Record<KindKey, string> = {
   build: "laptop",
@@ -223,7 +247,7 @@ export const THEMES: Record<ThemeName, Theme> = {
     cta: { fill: UGA, border: "#8a0a22", text: PALETTE.ink },
     terminal: "devdogs",
     signature: "— the DevDogs officers",
-    radius: { window: 0, card: 0, row: 0 },
+    radius: { window: 14, card: 14, row: 12 },
   },
   paper: {
     name: "paper",
@@ -294,47 +318,6 @@ export type ThemeImage =
   | `glow-${KindKey}`
   | `sprite-${string}`
   | `emoji-${string}`;
-
-/** The three step sizes of a pixel corner, in px (the mockup's `poly(5)`). */
-export const PIXEL_STEP = 5;
-
-/** A stepped-corner `clip-path` polygon, ported from the mockups' `poly()`. */
-export function pixelPolygon(s = PIXEL_STEP): string {
-  const c: [number, number][] = [
-    [0, 3],
-    [1, 3],
-    [1, 1],
-    [3, 1],
-    [3, 0],
-  ];
-  const pt = (x: number, y: number, right: boolean, bottom: boolean) => {
-    const px = (v: number, far: boolean) =>
-      far ? (v === 0 ? "100%" : `calc(100% - ${v * s}px)`) : `${v * s}px`;
-    return `${px(x, right)} ${px(y, bottom)}`;
-  };
-  const r = [...c].reverse();
-  return `polygon(${[
-    ...c.map(([x, y]) => pt(x, y, false, false)),
-    ...r.map(([x, y]) => pt(x, y, true, false)),
-    ...c.map(([x, y]) => pt(x, y, true, true)),
-    ...r.map(([x, y]) => pt(x, y, false, true)),
-  ].join(",")})`;
-}
-
-/** The class a pixel frame's wrapper carries for its hard shadow, e.g. `px-sh-8-0084d1`. */
-export function shadowClass(depth: number, color: string): string {
-  return `px-sh-${String(depth).replace(".", "_")}-${color.slice(1)}`;
-}
-
-/** Every (depth, color) a Cosmic frame can ask for; `pixelCss()` writes a rule for each. */
-export const PIXEL_SHADOWS: { depth: number; color: string }[] = [
-  { depth: THEMES.cosmic.windowDepth, color: "#000000" },
-  { depth: THEMES.cosmic.cardDepth, color: "#000000" },
-  ...Object.values(COSMIC_KINDS).map(({ shadow }) => ({
-    depth: THEMES.cosmic.tonightDepth,
-    color: shadow,
-  })),
-];
 
 /**
  * Colors each theme paints beyond the shared Changelog set, which the pin

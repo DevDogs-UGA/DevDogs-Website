@@ -42,9 +42,6 @@ import type { CSSProperties } from "react";
 import {
   KIND_KEYS_FOR_CSS,
   PAPER_DARK,
-  PIXEL_SHADOWS,
-  pixelPolygon,
-  shadowClass,
   THEME_IMAGE_BASE,
   THEME_PAINT,
   type ThemeImage,
@@ -233,47 +230,12 @@ export function paintCss({
       (kind) =>
         `.${glowClass(kind)}{background-image:url('${themeImage(`glow-${kind}`)}');background-size:cover;background-position:right bottom}`,
     ),
-    pixelCss(),
   ].join("\n");
 }
 
 /** Class for the tonight card fill that wears a kind's glow. */
 export function glowClass(kind: string): string {
   return `bgi-glow-${kind}`;
-}
-
-/** Marks a pixel frame's outline layer and its fill layer. */
-export const PIXEL_OUTLINE_CLASS = "px-o";
-export const PIXEL_FILL_CLASS = "px-i";
-
-/**
- * Cosmic's pixel frames, as progressive enhancement over a square base. Every
- * frame is already a complete square card (bgcolor outline cell around a
- * bgcolor fill cell, so Outlook shows it as a flat outlined box); here the
- * clients that understand `@supports` get stepped corners via `clip-path` on
- * both layers and a hard drop shadow that follows the steps via
- * `filter: drop-shadow` on the wrapper. Clients without `@supports` (Gmail)
- * keep the square corners and a plain hard `box-shadow`.
- */
-export function pixelCss(): string {
-  const shadows = [
-    ...new Map(
-      PIXEL_SHADOWS.map((s) => [shadowClass(s.depth, s.color), s]),
-    ).entries(),
-  ];
-  return [
-    ...shadows.map(
-      ([cls, { depth, color }]) =>
-        `.${cls}{box-shadow:${depth}px ${depth}px 0 0 ${color}}`,
-    ),
-    "@supports (clip-path:polygon(0 0)){",
-    `.${PIXEL_OUTLINE_CLASS},.${PIXEL_FILL_CLASS}{clip-path:${pixelPolygon()}}`,
-    ...shadows.map(
-      ([cls, { depth, color }]) =>
-        `.${cls}{box-shadow:none;filter:drop-shadow(${depth}px ${depth}px 0 ${color})}`,
-    ),
-    "}",
-  ].join("\n");
 }
 
 /**

@@ -16,8 +16,8 @@ import type { PartnerName } from "./partners.js";
 export type FeaturedEvent = (
   { meeting: Meeting; cta: string } | { meeting: Meeting; partner: PartnerName }
 ) & {
-  /** Overrides the chip a kind-less one-off would get ("Workshop"). */
-  chip?: { label: string; kind: KindKey };
+  /** The colours a kind-less one-off takes (it would otherwise read as a workshop). */
+  kind?: KindKey;
 };
 
 export interface ChangelogIssue {
@@ -206,7 +206,7 @@ export const ISSUES: ChangelogIssue[] = [
       {
         meeting: EVENTS.g311kickoff,
         cta: "See the schedule",
-        chip: { label: "Kickoff", kind: "study" },
+        kind: "study",
       },
     ],
     upcoming: [

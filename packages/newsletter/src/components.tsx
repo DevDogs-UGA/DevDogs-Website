@@ -24,9 +24,10 @@ import { CAMPAIGN_FONT_CSS } from "./campaign-fonts.js";
  * embed `paintCss()` too; only `ChangelogDocument` adds the pins.
  *
  * Two design-system themes (`design.ts`) finish this one structure: Cosmic
- * (pixel art, stepped corners, hard shadows) for DevDogs and Paper (flat
- * pastel, ink outlines, Google Sans) for GDGC. Every pixel effect is a
- * stylesheet enhancement over a square bgcolor-painted base (see `pixelCss`).
+ * (pixel art, rounded outlined cards with hard shadows) for DevDogs and Paper
+ * (flat pastel, ink outlines, Google Sans) for GDGC. Corners and shadows are
+ * inline enhancements over a square bgcolor-painted base, which is all
+ * classic Outlook keeps.
  *
  * The two targets differ only through `RenderContext`: the page passes
  * `next/font` CSS variables and SVG image sources, the exporter passes literal
@@ -47,16 +48,13 @@ import {
   glowClass,
   LIGHT_IMAGE_CLASS,
   paintCss,
-  PIXEL_FILL_CLASS,
-  PIXEL_OUTLINE_CLASS,
   tc,
 } from "./darkmode.js";
 import {
   COSMIC_SKY,
+  eventArt,
   kindKey,
-  KIND_ART,
   PAPER,
-  shadowClass,
   themeOf,
   type KindKey,
   type Theme,
@@ -65,7 +63,6 @@ import {
 import type { ChangelogIssue, FeaturedEvent } from "./issues.js";
 import { PARTNERS } from "./partners.js";
 import {
-  chipColors,
   font,
   type FontStacks,
   KIND,
@@ -226,9 +223,9 @@ function ThemeImgPair({
  * One outlined card in the active theme.
  *
  * Pixel (Cosmic): a bgcolor outline cell around a bgcolor fill cell — a plain
- * outlined box in every client — that `pixelCss` upgrades to stepped corners
- * and a hard drop shadow where the client allows. Flat (Paper): a bordered
- * cell with rounded corners where `border-radius` works.
+ * outlined box in every client — rounded and given a hard inline shadow where
+ * the client allows. Flat (Paper): a bordered cell with rounded corners where
+ * `border-radius` works.
  */
 function Frame({
   t,
@@ -282,26 +279,40 @@ function Frame({
       </table>
     );
   }
+  // Cosmic: a bgcolor outline cell around a bgcolor fill cell, rounded where
+  // border-radius works (square in classic Outlook). The hard shadow is inline
+  // so it survives clients that drop <style> blocks; classic Outlook has none.
+  const inner = Math.max(radius - bw, 0);
   return (
     <table
       {...TABLE_RESET}
       width={sized.width}
-      className={depth ? shadowClass(depth, shadow) : undefined}
-      style={{ ...sized.style, margin }}
+      style={{
+        ...sized.style,
+        margin,
+        borderCollapse: "separate",
+        borderRadius: `${radius}px`,
+        boxShadow: depth ? `${depth}px ${depth}px 0 0 ${shadow}` : undefined,
+      }}
     >
       <tbody>
         <tr>
           <td
             {...bgAttr(line)}
-            className={`${bc(line)} ${PIXEL_OUTLINE_CLASS}`}
-            style={{ padding: `${bw}px` }}
+            className={bc(line)}
+            style={{ padding: `${bw}px`, borderRadius: `${radius}px` }}
           >
-            <table {...TABLE_RESET} width="100%">
+            <table
+              {...TABLE_RESET}
+              width="100%"
+              style={{ borderCollapse: "separate" }}
+            >
               <tbody>
                 <tr>
                   <td
                     {...bgAttr(fill)}
-                    className={`${bc(fill)} ${PIXEL_FILL_CLASS} ${fillClass}`}
+                    className={`${bc(fill)} ${fillClass}`}
+                    style={{ borderRadius: `${inner}px` }}
                   >
                     {children}
                   </td>
@@ -335,43 +346,6 @@ function TitleDots({ t }: { t: Theme }) {
           }}
         />
       ))}
-    </span>
-  );
-}
-
-/** The site's event chip: a tinted pill with a faint accent border and lightened accent text, flattened to hex. Paper keeps the shape and swaps in a pastel fill with an ink outline. */
-function Chip({
-  label,
-  color,
-  kind,
-  t,
-  ground = PALETTE.card,
-}: {
-  label: string;
-  color: string;
-  kind: KindKey;
-  t: Theme;
-  ground?: string;
-}) {
-  const colors =
-    t.name === "paper"
-      ? { border: t.ink, fill: t.kinds[kind].fill, text: t.ink }
-      : chipColors(color, ground);
-  return (
-    <span
-      className={`${tc(colors.text)} ${bc(colors.fill)} ${brc(colors.border)}`}
-      style={{
-        display: "inline-block",
-        border: `1px solid ${colors.border}`,
-        color: colors.text,
-        ...ambient(700, 11, 1),
-        letterSpacing: "0.4px",
-        textTransform: "uppercase",
-        padding: "5px 10px",
-        borderRadius: "20px",
-      }}
-    >
-      {label}
     </span>
   );
 }
@@ -459,16 +433,15 @@ function inEventZone(at: Date, options: Intl.DateTimeFormatOptions): string {
 /**
  * What a card prints for a meeting, in Eastern time. A night with no kind is
  * a workshop night, the same reading the site's calendar gives it, unless the
- * issue labels it (`FeaturedEvent.chip`): a one-off like a kickoff has no kind
- * to read until the series redesign gives every meeting a category.
+ * issue gives it one (`FeaturedEvent.kind`): a one-off like a kickoff has no
+ * kind to read until the series redesign gives every meeting a category.
  */
-function eventCard(meeting: Meeting, label?: FeaturedEvent["chip"]) {
+function eventCard(meeting: Meeting, kindOverride?: KindKey) {
   const startsAt = new Date(meeting.startsAt);
   return {
-    chip: label?.label ?? meeting.kind ?? "Workshop",
-    kind: label?.kind ?? kindKey(meeting.kind),
-    color: label
-      ? KIND[label.kind]
+    kind: kindOverride ?? kindKey(meeting.kind),
+    color: kindOverride
+      ? KIND[kindOverride]
       : ((meeting.kind && KIND_COLOR[meeting.kind]) ?? KIND.workshop),
     dow: inEventZone(startsAt, { weekday: "short" }).toUpperCase(),
     month: inEventZone(startsAt, { month: "short" }),
@@ -478,15 +451,17 @@ function eventCard(meeting: Meeting, label?: FeaturedEvent["chip"]) {
   };
 }
 
-/** A kind's sprite (Cosmic) or flat emoji (Paper) at `size` px, top right of its card. */
-function KindArt({
+/** The event's sprite (Cosmic) or flat emoji (Paper) at `size` px, top right of its card: picked by what the night is (`eventArt`), falling back to its kind. */
+function EventArt({
   t,
   ctx,
+  meeting,
   kind,
   size,
 }: {
   t: Theme;
   ctx: RenderContext;
+  meeting: Meeting;
   kind: KindKey;
   size: number;
 }) {
@@ -494,7 +469,7 @@ function KindArt({
   return (
     <ThemeImg
       ctx={ctx}
-      name={`${cosmic ? "sprite" : "emoji"}-${KIND_ART[kind]}`}
+      name={`${cosmic ? "sprite" : "emoji"}-${eventArt(meeting.title, kind)}`}
       width={size}
       height={size}
       style={cosmic ? PIXELATED : undefined}
@@ -546,10 +521,7 @@ function EventRow({
                         height: `${barH}px`,
                         fontSize: "0px",
                         lineHeight: 0,
-                        borderRadius:
-                          t.frame === "flat"
-                            ? `${t.radius.row - t.cardBw}px 0 0 0`
-                            : undefined,
+                        borderRadius: `${Math.max(t.radius.row - t.cardBw, 0)}px 0 0 0`,
                       }}
                     >
                       {" "}
@@ -607,19 +579,13 @@ function EventRow({
                 <tbody>
                   <tr>
                     <td valign="middle">
-                      <Chip
-                        label={card.chip}
-                        color={card.color}
-                        kind={card.kind}
-                        t={t}
-                      />
                       <div
                         className={tc(t.ink)}
                         style={{
                           ...font(800, 18, 1.25, fonts.display),
                           color: t.ink,
                           letterSpacing: "-0.2px",
-                          padding: "9px 0 5px",
+                          padding: "0 0 5px",
                         }}
                       >
                         {meeting.title}
@@ -675,10 +641,16 @@ function EventRow({
                     <td
                       valign="top"
                       align="right"
-                      width={48}
+                      width={56}
                       style={{ paddingLeft: "14px" }}
                     >
-                      <KindArt t={t} ctx={ctx} kind={card.kind} size={34} />
+                      <EventArt
+                        t={t}
+                        ctx={ctx}
+                        meeting={meeting}
+                        kind={card.kind}
+                        size={42}
+                      />
                     </td>
                   </tr>
                 </tbody>
@@ -704,7 +676,7 @@ function FeaturedCard({
   const fonts = t.fonts(ctx.fonts);
   const { assets } = ctx;
   const { meeting } = featured;
-  const card = eventCard(meeting, featured.chip);
+  const card = eventCard(meeting, featured.kind);
   const kt = t.kinds[card.kind];
   const cosmic = t.name === "cosmic";
   return (
@@ -726,20 +698,13 @@ function FeaturedCard({
                 <tbody>
                   <tr>
                     <td valign="top">
-                      <Chip
-                        label={card.chip}
-                        color={card.color}
-                        kind={card.kind}
-                        t={t}
-                        ground={t.cardFill}
-                      />
                       <div
                         className={tc(t.title)}
                         style={{
                           ...font(700, 28, 1.15, fonts.display),
                           color: t.title,
                           letterSpacing: "-0.4px",
-                          padding: "14px 0 10px",
+                          padding: "0 0 10px",
                           ...(t.titleShadow
                             ? { textShadow: `3px 3px 0 ${kt.shadow}` }
                             : {}),
@@ -754,11 +719,12 @@ function FeaturedCard({
                       width={cosmic ? 70 : 76}
                       style={{ paddingLeft: "16px" }}
                     >
-                      <KindArt
+                      <EventArt
                         t={t}
                         ctx={ctx}
+                        meeting={meeting}
                         kind={card.kind}
-                        size={cosmic ? 54 : 60}
+                        size={cosmic ? 56 : 60}
                       />
                     </td>
                   </tr>
@@ -964,7 +930,7 @@ export function ChangelogEmail({
   const fonts = t.fonts(ctx.fonts);
   const cosmic = t.name === "cosmic";
   const headingColor = cosmic
-    ? t.kinds[eventCard(issue.featured[0].meeting, issue.featured[0].chip).kind]
+    ? t.kinds[eventCard(issue.featured[0].meeting, issue.featured[0].kind).kind]
         .bar
     : t.link;
   const arrowLinkStyle: CSSProperties = {
