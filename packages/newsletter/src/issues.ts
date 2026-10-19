@@ -199,10 +199,10 @@ export const ISSUES: ChangelogIssue[] = [
     command: "changelog --date 2026-10-19",
     title: "Georgia 311 Kicks Off Tonight (DevDogs Changelog v3.2.0)",
     preview:
-      "Tonight at 6: the Georgia 311 Kickoff. Plus Workshop Wednesday on Nov 4, and DevDogs Demo Day moves to Nov 16.",
+      "Tonight at 6: the Georgia 311 Kickoff. Teams present at DevFest Atlanta on Friday, Oct 30.",
     tagline: "Georgia 311 starts tonight.",
     intro:
-      "Tonight at 6 in DLW 124, Georgia 311 teams kick off their sprint for the City of Mableton. Not on a team? DLW 124 stays open until 8, so bring a laptop and keep working on your pull request. Teams check in on Oct 21 and 28, then present to Mableton Mayor Owens at DevFest Atlanta on Friday, Oct 30. Two schedule changes: the Supabase II workshop is now Workshop Wednesday on Nov 4, and DevDogs Demo Day moves to Monday, Nov 16, at 7. That makes Nov 9 the last Merge Monday of the semester. Touch Grass #2 is Wednesday, Nov 18, from 6 to 7:30.",
+      "Tonight at 6 in DLW 124, Georgia 311 teams kick off their sprint for the City of Mableton. Not on a team? DLW 124 stays open until 8, so bring a laptop and keep working on your pull request. Teams check in on Oct 21 and 28, then present to Mableton Mayor Michael Owens at DevFest Atlanta on Friday, Oct 30.",
     featuredLabel: "happening_tonight",
     featured: [
       {
