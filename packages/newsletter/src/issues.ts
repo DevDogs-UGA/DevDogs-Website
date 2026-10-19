@@ -1,5 +1,5 @@
 import type { CampaignContent } from "./campaign.js";
-import type { ThemeName } from "./design.js";
+import type { KindKey, ThemeName } from "./design.js";
 /**
  * The Changelog's content: the dated sends themselves, listing events read
  * from the club config in `@devdogsuga/events`.
@@ -13,9 +13,12 @@ import { getClubConfig, type Meeting } from "@devdogsuga/events";
 import type { PartnerName } from "./partners.js";
 
 /** A hero card: the meeting plus either a button or a partner's logo. */
-export type FeaturedEvent =
-  | { meeting: Meeting; cta: string }
-  | { meeting: Meeting; partner: PartnerName };
+export type FeaturedEvent = (
+  { meeting: Meeting; cta: string } | { meeting: Meeting; partner: PartnerName }
+) & {
+  /** Overrides the chip a kind-less one-off would get ("Workshop"). */
+  chip?: { label: string; kind: KindKey };
+};
 
 export interface ChangelogIssue {
   /**
@@ -74,7 +77,9 @@ const EVENTS = {
   build5: meeting("2026-10-14"),
   g311interest: meeting("2026-10-14-georgia-311"),
   g311kickoff: meeting("2026-10-19"),
-  supabase2: meeting("2026-10-26"),
+  merge1026: meeting("2026-10-26"),
+  g311check1: meeting("2026-10-21"),
+  bugbash: meeting("2026-11-11"),
   workshopwed: meeting("2026-11-04"),
   demoday: meeting("2026-11-16"),
   touchgrass2: meeting("2026-11-18"),
@@ -177,13 +182,43 @@ export const ISSUES: ChangelogIssue[] = [
       EVENTS.build5,
       EVENTS.g311interest,
       EVENTS.g311kickoff,
-      EVENTS.supabase2,
+      EVENTS.merge1026,
       EVENTS.workshopwed,
       EVENTS.demoday,
       EVENTS.touchgrass2,
     ],
     signoff:
       "Doors tonight at 6 in DLW 124. Fork DogDays or DogPack before you come if you can, and we'll pair you with someone for your first PR either way. Can't make it? Apply for Georgia 311 at devdogsuga.org/georgia311 before Thursday.",
+  },
+  {
+    version: "3.2.0",
+    term: "Fall 2026",
+    sendLabel: "Mon · Oct 19",
+    command: "changelog --date 2026-10-19",
+    title: "Georgia 311 Kicks Off Tonight (DevDogs Changelog v3.2.0)",
+    preview:
+      "Tonight at 6: the Georgia 311 Kickoff. Plus Workshop Wednesday on Nov 4, and Demo Day moves to Nov 16.",
+    tagline: "Georgia 311 starts tonight.",
+    intro:
+      "Tonight at 6 in DLW 124, Georgia 311 teams kick off their sprint for the City of Mableton. Not on a team? DLW 124 stays open until 8, so bring a laptop and keep working on your pull request. Two schedule changes: the Supabase II workshop is now Workshop Wednesday on Nov 4, and Demo Day moves to Monday, Nov 16, at 7. That makes Nov 9 the last Merge Monday of the semester. Touch Grass #2 is Wednesday, Nov 18, from 6 to 7:30.",
+    featuredLabel: "happening_tonight",
+    featured: [
+      {
+        meeting: EVENTS.g311kickoff,
+        cta: "See the schedule",
+        chip: { label: "Kickoff", kind: "study" },
+      },
+    ],
+    upcoming: [
+      EVENTS.g311check1,
+      EVENTS.merge1026,
+      EVENTS.workshopwed,
+      EVENTS.bugbash,
+      EVENTS.demoday,
+      EVENTS.touchgrass2,
+    ],
+    signoff:
+      "Doors tonight at 6 in DLW 124. Georgia 311 teams start their sprint; everyone else, bring a laptop and keep building. See you there.",
   },
 ];
 

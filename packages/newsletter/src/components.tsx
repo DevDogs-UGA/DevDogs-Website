@@ -458,14 +458,18 @@ function inEventZone(at: Date, options: Intl.DateTimeFormatOptions): string {
 
 /**
  * What a card prints for a meeting, in Eastern time. A night with no kind is
- * a workshop night, the same reading the site's calendar gives it.
+ * a workshop night, the same reading the site's calendar gives it, unless the
+ * issue labels it (`FeaturedEvent.chip`): a one-off like a kickoff has no kind
+ * to read until the series redesign gives every meeting a category.
  */
-function eventCard(meeting: Meeting) {
+function eventCard(meeting: Meeting, label?: FeaturedEvent["chip"]) {
   const startsAt = new Date(meeting.startsAt);
   return {
-    chip: meeting.kind ?? "Workshop",
-    kind: kindKey(meeting.kind),
-    color: (meeting.kind && KIND_COLOR[meeting.kind]) ?? KIND.workshop,
+    chip: label?.label ?? meeting.kind ?? "Workshop",
+    kind: label?.kind ?? kindKey(meeting.kind),
+    color: label
+      ? KIND[label.kind]
+      : ((meeting.kind && KIND_COLOR[meeting.kind]) ?? KIND.workshop),
     dow: inEventZone(startsAt, { weekday: "short" }).toUpperCase(),
     month: inEventZone(startsAt, { month: "short" }),
     day: inEventZone(startsAt, { day: "numeric" }),
@@ -700,7 +704,7 @@ function FeaturedCard({
   const fonts = t.fonts(ctx.fonts);
   const { assets } = ctx;
   const { meeting } = featured;
-  const card = eventCard(meeting);
+  const card = eventCard(meeting, featured.chip);
   const kt = t.kinds[card.kind];
   const cosmic = t.name === "cosmic";
   return (
@@ -960,7 +964,8 @@ export function ChangelogEmail({
   const fonts = t.fonts(ctx.fonts);
   const cosmic = t.name === "cosmic";
   const headingColor = cosmic
-    ? t.kinds[eventCard(issue.featured[0].meeting).kind].bar
+    ? t.kinds[eventCard(issue.featured[0].meeting, issue.featured[0].chip).kind]
+        .bar
     : t.link;
   const arrowLinkStyle: CSSProperties = {
     color: t.ink,
