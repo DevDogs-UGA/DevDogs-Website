@@ -93,6 +93,15 @@ does a full color invert with no override hook. The result stays readable
 (its whole purpose is contrast), just re-themed, and readers get a
 per-message toggle back to the sent colors.
 
+## Themes
+
+An issue's `theme` picks the design-system finish over the one Changelog structure; unset means `"cosmic"`. Tokens live in `src/design.ts`.
+
+- **cosmic** (DevDogs): the dark Changelog with a pixel-art space strip, pixel stairs, a dithered glow and sprite on the tonight card, kind-colored date bars, and stepped corners with hard shadows. The corners and shadows are `@supports` enhancements (`pixelCss()`) over square bgcolor-painted frames, so Outlook shows plain outlined boxes and Gmail gets a plain hard `box-shadow`.
+- **paper** (GDGC): flat pastel ground, white cards with ink outlines, Google Sans, flat emoji. It is light-native, so it ships a dark twin through the same `campaign` path as the GDGC layout.
+
+Theme images are hosted PNGs under `apps/platform/public/brand/newsletter/theme/` (absolute `https://devdogsuga.org/brand/newsletter/theme/…` in a send), regenerated with `tools/build-theme-assets.py`. They go live when the site deploys. `renderIssueDocument` prunes pin rules the body does not use, which keeps a send under Gmail's ~102KB clip.
+
 ## Issues
 
 `src/issues.ts` is the content: one `ChangelogIssue` per send, versioned with

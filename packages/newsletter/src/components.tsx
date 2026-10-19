@@ -1,6 +1,7 @@
 import { timeRange } from "./date-format.js";
 import { CHANGELOG_FONT_CSS } from "./changelog-fonts.js";
 import { CampaignEmail } from "./campaign.js";
+import { CAMPAIGN_FONT_CSS } from "./campaign-fonts.js";
 /**
  * The Changelog, as one component tree with two render targets.
  *
@@ -22,6 +23,11 @@ import { CampaignEmail } from "./campaign.js";
  * dark mode rewrites stylesheets instead. The platform's /changelog pages
  * embed `paintCss()` too; only `ChangelogDocument` adds the pins.
  *
+ * Two design-system themes (`design.ts`) finish this one structure: Cosmic
+ * (pixel art, stepped corners, hard shadows) for DevDogs and Paper (flat
+ * pastel, ink outlines, Google Sans) for GDGC. Every pixel effect is a
+ * stylesheet enhancement over a square bgcolor-painted base (see `pixelCss`).
+ *
  * The two targets differ only through `RenderContext`: the page passes
  * `next/font` CSS variables and SVG image sources, the exporter passes literal
  * font stacks and `cid:` references to embedded PNGs (Gmail and Outlook strip
@@ -36,19 +42,32 @@ import {
   bc,
   brc,
   darkModeCss,
+  DARK_IMAGE_CLASS,
   DOT_GRID_CLASS,
+  glowClass,
+  LIGHT_IMAGE_CLASS,
   paintCss,
-  SLANTS_CLASS,
+  PIXEL_FILL_CLASS,
+  PIXEL_OUTLINE_CLASS,
   tc,
 } from "./darkmode.js";
+import {
+  COSMIC_SKY,
+  kindKey,
+  KIND_ART,
+  PAPER,
+  shadowClass,
+  themeOf,
+  type KindKey,
+  type Theme,
+  type ThemeImage,
+} from "./design.js";
 import type { ChangelogIssue, FeaturedEvent } from "./issues.js";
 import { PARTNERS } from "./partners.js";
 import {
-  blockShadow,
   chipColors,
   font,
   type FontStacks,
-  HEADING_TINTS,
   KIND,
   PALETTE,
   SITE,
@@ -66,9 +85,24 @@ import {
 type EmailCSSProperties = CSSProperties & {
   msoPaddingAlt?: string;
   msoLineHeightRule?: string;
+  msoHide?: string;
 };
 
 const WIDTH = 600;
+
+/**
+ * Longhand text styling that leaves the family to inherit: the sans stack is
+ * set once on each section's `<td>` (`sectionStyle`) instead of on every
+ * line — the stack is ~200 bytes, and repeating it was most of the weight
+ * Gmail counts toward its ~102KB clip.
+ */
+function ambient(
+  weight: number,
+  size: number,
+  lineHeight: number | string,
+): CSSProperties {
+  return { fontWeight: weight, fontSize: `${size}px`, lineHeight };
+}
 
 /** Every layout table shares these; email clients honor the attributes where they ignore the CSS. */
 const TABLE_RESET = {
@@ -89,40 +123,215 @@ function bgAttr(color: string): Record<string, string> {
 }
 
 /**
- * A 1px divider as a painted cell, never a border: the web Outlooks' dark
- * mode repaints border colors inline with `!important` (turning dividers
+ * A divider as a painted cell, never a border: the web Outlooks' dark mode
+ * repaints border colors inline with `!important` (turning dividers
  * near-white on the pinned dark surfaces), while a painted cell gets the
- * full background armor. Card outlines stay true borders — their repaint
- * reads as an intentional outline.
+ * full background armor. Card outlines stay true borders in Paper — their
+ * repaint reads as an intentional outline.
  */
-function DividerCell({ vertical = false }: { vertical?: boolean }) {
-  const size = vertical ? { width: "1px" } : { height: "1px" };
+function DividerCell({
+  color,
+  size = 1,
+  vertical = false,
+}: {
+  color: string;
+  size?: number;
+  vertical?: boolean;
+}) {
+  const box = vertical ? { width: `${size}px` } : { height: `${size}px` };
   return (
     <td
-      {...bgAttr(PALETTE.border)}
-      {...(vertical ? { width: 1 } : { height: 1 })}
-      className={bc(PALETTE.border)}
-      style={{ ...size, fontSize: "0px", lineHeight: 0 }}
+      {...bgAttr(color)}
+      {...(vertical ? { width: size } : { height: size })}
+      className={bc(color)}
+      style={{ ...box, fontSize: "0px", lineHeight: 0 }}
     >
-      {" "}
+      {" "}
     </td>
   );
 }
 
-/** Three title-bar dots in event-type colors, echoing terminal window controls. */
-function KindDots() {
+/** A themed image: an `<img>` with its size declared so a blocked image keeps the layout. */
+function ThemeImg({
+  ctx,
+  name,
+  width,
+  height,
+  alt = "",
+  style,
+}: {
+  ctx: RenderContext;
+  name: ThemeImage;
+  width: number;
+  height: number;
+  alt?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <img
+      src={ctx.assets.themeImage(name)}
+      width={width}
+      height={height}
+      alt={alt}
+      style={{ display: "block", border: 0, outline: "none", ...style }}
+    />
+  );
+}
+
+const PIXELATED: CSSProperties = { imageRendering: "pixelated" };
+
+/** A light graphic and its dark twin; only the Outlook dark-mode stamps swap them (see `darkModeCss`). */
+function ThemeImgPair({
+  ctx,
+  light,
+  dark,
+  width,
+  height,
+  alt,
+}: {
+  ctx: RenderContext;
+  light: ThemeImage;
+  dark: ThemeImage;
+  width: number;
+  height: number;
+  alt: string;
+}) {
+  return (
+    <>
+      <img
+        src={ctx.assets.themeImage(light)}
+        width={width}
+        height={height}
+        alt={alt}
+        className={LIGHT_IMAGE_CLASS}
+        style={{ display: "block", border: 0 }}
+      />
+      <div
+        className={DARK_IMAGE_CLASS}
+        style={{ display: "none", msoHide: "all" } as EmailCSSProperties}
+      >
+        <img
+          src={ctx.assets.themeImage(dark)}
+          width={width}
+          height={height}
+          alt={alt}
+          style={{ display: "block", border: 0 }}
+        />
+      </div>
+    </>
+  );
+}
+
+/**
+ * One outlined card in the active theme.
+ *
+ * Pixel (Cosmic): a bgcolor outline cell around a bgcolor fill cell — a plain
+ * outlined box in every client — that `pixelCss` upgrades to stepped corners
+ * and a hard drop shadow where the client allows. Flat (Paper): a bordered
+ * cell with rounded corners where `border-radius` works.
+ */
+function Frame({
+  t,
+  line,
+  fill,
+  bw,
+  depth = 0,
+  shadow = "#000000",
+  radius = 0,
+  fillClass = "",
+  width,
+  margin,
+  children,
+}: {
+  t: Theme;
+  line: string;
+  fill: string;
+  bw: number;
+  depth?: number;
+  shadow?: string;
+  radius?: number;
+  fillClass?: string;
+  width?: number;
+  margin?: string;
+  children: ReactNode;
+}) {
+  const sized = width
+    ? { width, style: { maxWidth: `${width}px`, width: "100%" } }
+    : { width: "100%", style: {} };
+  if (t.frame === "flat") {
+    return (
+      <table
+        {...TABLE_RESET}
+        width={sized.width}
+        style={{ ...sized.style, borderCollapse: "separate", margin }}
+      >
+        <tbody>
+          <tr>
+            <td
+              {...bgAttr(fill)}
+              className={`${bc(fill)} ${brc(line)} ${fillClass}`}
+              style={{
+                border: `${bw}px solid ${line}`,
+                borderRadius: `${radius}px`,
+              }}
+            >
+              {children}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    );
+  }
+  return (
+    <table
+      {...TABLE_RESET}
+      width={sized.width}
+      className={depth ? shadowClass(depth, shadow) : undefined}
+      style={{ ...sized.style, margin }}
+    >
+      <tbody>
+        <tr>
+          <td
+            {...bgAttr(line)}
+            className={`${bc(line)} ${PIXEL_OUTLINE_CLASS}`}
+            style={{ padding: `${bw}px` }}
+          >
+            <table {...TABLE_RESET} width="100%">
+              <tbody>
+                <tr>
+                  <td
+                    {...bgAttr(fill)}
+                    className={`${bc(fill)} ${PIXEL_FILL_CLASS} ${fillClass}`}
+                  >
+                    {children}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+/** Three title-bar dots echoing terminal window controls: kind-colored squares (Cosmic) or Google's red/yellow/green (Paper). */
+function TitleDots({ t }: { t: Theme }) {
   return (
     <span style={{ fontSize: "0px", lineHeight: 0 }}>
-      {[KIND.interest, KIND.build, KIND.study].map((color) => (
+      {t.dots.map((color) => (
         <span
           key={color}
-          className={bc(color)}
+          className={`${bc(color)}${t.dotShape === "round" ? ` ${brc(t.ink)}` : ""}`}
           style={{
             display: "inline-block",
             width: "11px",
             height: "11px",
-            borderRadius: "50%",
+            borderRadius: t.dotShape === "round" ? "50%" : "0",
             marginLeft: "6px",
+            ...(t.dotShape === "round"
+              ? { border: `1.5px solid ${t.ink}`, width: "8px", height: "8px" }
+              : {}),
           }}
         />
       ))}
@@ -130,19 +339,24 @@ function KindDots() {
   );
 }
 
-/** The site's event chip: a tinted pill with a faint accent border and lightened accent text, flattened to hex. */
+/** The site's event chip: a tinted pill with a faint accent border and lightened accent text, flattened to hex. Paper keeps the shape and swaps in a pastel fill with an ink outline. */
 function Chip({
   label,
   color,
+  kind,
+  t,
   ground = PALETTE.card,
-  fonts,
 }: {
   label: string;
   color: string;
+  kind: KindKey;
+  t: Theme;
   ground?: string;
-  fonts: FontStacks;
 }) {
-  const colors = chipColors(color, ground);
+  const colors =
+    t.name === "paper"
+      ? { border: t.ink, fill: t.kinds[kind].fill, text: t.ink }
+      : chipColors(color, ground);
   return (
     <span
       className={`${tc(colors.text)} ${bc(colors.fill)} ${brc(colors.border)}`}
@@ -150,7 +364,7 @@ function Chip({
         display: "inline-block",
         border: `1px solid ${colors.border}`,
         color: colors.text,
-        ...font(700, 11, 1, fonts.sans),
+        ...ambient(700, 11, 1),
         letterSpacing: "0.4px",
         textTransform: "uppercase",
         padding: "5px 10px",
@@ -171,19 +385,21 @@ function CtaButton({
   label,
   url,
   color,
+  textColor,
   ground,
-  fonts,
   compact = false,
   align,
+  borderColor = color,
 }: {
   label: string;
   url: string;
   color: string;
+  textColor: string;
   ground?: string;
-  fonts: FontStacks;
   compact?: boolean;
   /** The table's `align` attribute, for clients that ignore the cell's. */
   align?: "left" | "right";
+  borderColor?: string;
 }) {
   const fill = ground ?? color;
   return (
@@ -194,10 +410,10 @@ function CtaButton({
             align="center"
             valign="middle"
             {...bgAttr(fill)}
-            className={`${bc(fill)} ${brc(color)}`}
+            className={`${bc(fill)} ${brc(borderColor)}`}
             style={
               {
-                border: `1px solid ${color}`,
+                border: `1px solid ${borderColor}`,
                 borderRadius: "8px",
                 padding: compact ? "9px 13px" : "14px 26px",
                 msoPaddingAlt: "0",
@@ -207,24 +423,18 @@ function CtaButton({
           >
             <a
               href={url}
-              className={tc(PALETTE.ink)}
+              className={tc(textColor)}
               style={
                 {
                   display: "block",
-                  ...font(
-                    compact ? 700 : 800,
-                    compact ? 12 : 15,
-                    1,
-                    fonts.sans,
-                  ),
-                  color: PALETTE.ink,
+                  ...ambient(compact ? 700 : 800, compact ? 12 : 15, 1),
+                  color: textColor,
                   textDecoration: "none",
                   msoLineHeightRule: "exactly",
                 } as EmailCSSProperties
               }
             >
-              {label}
-              {" "}▸
+              {label} ▸
             </a>
           </td>
         </tr>
@@ -254,6 +464,7 @@ function eventCard(meeting: Meeting) {
   const startsAt = new Date(meeting.startsAt);
   return {
     chip: meeting.kind ?? "Workshop",
+    kind: kindKey(meeting.kind),
     color: (meeting.kind && KIND_COLOR[meeting.kind]) ?? KIND.workshop,
     dow: inEventZone(startsAt, { weekday: "short" }).toUpperCase(),
     month: inEventZone(startsAt, { month: "short" }),
@@ -263,282 +474,391 @@ function eventCard(meeting: Meeting) {
   };
 }
 
-/**
- * An upcoming-event row, drawn the way the site's schedule list draws one: a
- * stacked weekday / day-number date column, a chip pill, a display-face
- * title, and the time + room in quiet sans.
- */
-function EventRow({ meeting, ctx }: { meeting: Meeting; ctx: RenderContext }) {
-  const { fonts } = ctx;
-  const card = eventCard(meeting);
+/** A kind's sprite (Cosmic) or flat emoji (Paper) at `size` px, top right of its card. */
+function KindArt({
+  t,
+  ctx,
+  kind,
+  size,
+}: {
+  t: Theme;
+  ctx: RenderContext;
+  kind: KindKey;
+  size: number;
+}) {
+  const cosmic = t.name === "cosmic";
   return (
-    <table
-      {...TABLE_RESET}
-      width="100%"
-      bgcolor={PALETTE.card}
-      className={`${bc(PALETTE.card)} ${brc(PALETTE.border)}`}
-      style={{
-        border: `1px solid ${PALETTE.border}`,
-        borderRadius: "10px",
-        margin: "0 0 12px",
-      }}
-    >
-      <tbody>
-        <tr>
-          <td
-            width={66}
-            align="center"
-            valign="middle"
-            style={{
-              padding: "16px 2px 16px 8px",
-            }}
-          >
-            <div
-              className={tc(PALETTE.mute)}
-              style={{
-                ...font(800, 10, 1, fonts.display),
-                letterSpacing: "2px",
-                color: PALETTE.mute,
-                textTransform: "uppercase",
-              }}
-            >
-              {card.dow}
-            </div>
-            <div
-              className={tc(PALETTE.ink)}
-              style={{
-                ...font(800, 28, 1.1, fonts.display),
-                color: PALETTE.ink,
-                fontVariantNumeric: "tabular-nums",
-                padding: "3px 0 2px",
-              }}
-            >
-              {card.day}
-            </div>
-            <div
-              className={tc(PALETTE.dim)}
-              style={{
-                ...font(700, 10, 1, fonts.display),
-                letterSpacing: "2px",
-                color: PALETTE.dim,
-                textTransform: "uppercase",
-              }}
-            >
-              {card.month}
-            </div>
-          </td>
-          <DividerCell vertical />
-          <td valign="middle" style={{ padding: "15px 17px" }}>
-            <table {...TABLE_RESET} width="100%">
-              <tbody>
-                <tr>
-                  <td valign="middle">
-                    <Chip label={card.chip} color={card.color} fonts={fonts} />
-                    <div
-                      className={tc(PALETTE.ink)}
-                      style={{
-                        ...font(800, 18, 1.25, fonts.display),
-                        color: PALETTE.ink,
-                        letterSpacing: "-0.2px",
-                        padding: "9px 0 5px",
-                      }}
-                    >
-                      {meeting.title}
-                    </div>
-                    <div
-                      className={tc(PALETTE.mute)}
-                      style={{
-                        ...font(400, 13, 1.5, fonts.sans),
-                        color: PALETTE.mute,
-                      }}
-                    >
-                      {card.time}{" "}
-                      <span
-                        className={tc(PALETTE.dim)}
-                        style={{ color: PALETTE.dim }}
-                      >
-                        ·
-                      </span>{" "}
-                      {card.loc}
-                    </div>
-                    <div
-                      className={tc(PALETTE.dim)}
-                      style={{
-                        ...font(400, 13, 1.55, fonts.sans),
-                        color: PALETTE.dim,
-                        paddingTop: "7px",
-                      }}
-                    >
-                      {meeting.summary}
-                    </div>
-                  </td>
-                  {meeting.rsvpUrl ? (
-                    <td
-                      valign="middle"
-                      align="right"
-                      width={74}
-                      style={{ paddingLeft: "10px" }}
-                    >
-                      <CtaButton
-                        label="RSVP"
-                        url={meeting.rsvpUrl}
-                        color={card.color}
-                        ground={PALETTE.card}
-                        fonts={fonts}
-                        compact
-                      />
-                    </td>
-                  ) : null}
-                </tr>
-              </tbody>
-            </table>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <ThemeImg
+      ctx={ctx}
+      name={`${cosmic ? "sprite" : "emoji"}-${KIND_ART[kind]}`}
+      width={size}
+      height={size}
+      style={cosmic ? PIXELATED : undefined}
+    />
   );
 }
 
-/** A `## heading` in the terminal voice. */
+/**
+ * An upcoming-event row, drawn the way the site's schedule list draws one: a
+ * stacked weekday / day-number date column under a bar in the kind's color, a
+ * chip pill, a display-face title, the time + room in quiet sans, and the
+ * kind's sprite at the top right.
+ */
+function EventRow({
+  meeting,
+  ctx,
+  t,
+}: {
+  meeting: Meeting;
+  ctx: RenderContext;
+  t: Theme;
+}) {
+  const fonts = t.fonts(ctx.fonts);
+  const card = eventCard(meeting);
+  const kt = t.kinds[card.kind];
+  const barH = t.frame === "flat" ? 6 : 5;
+  return (
+    <Frame
+      t={t}
+      line={t.cardLine}
+      fill={t.cardFill}
+      bw={t.cardBw}
+      depth={t.cardDepth}
+      radius={t.radius.row}
+      margin={`0 0 ${t.frame === "pixel" ? 16 : 12}px`}
+    >
+      <table {...TABLE_RESET} width="100%">
+        <tbody>
+          <tr>
+            <td width={66} align="center" valign="top">
+              <table {...TABLE_RESET} width="100%">
+                <tbody>
+                  <tr>
+                    <td
+                      {...bgAttr(kt.bar)}
+                      className={bc(kt.bar)}
+                      height={barH}
+                      style={{
+                        height: `${barH}px`,
+                        fontSize: "0px",
+                        lineHeight: 0,
+                        borderRadius:
+                          t.frame === "flat"
+                            ? `${t.radius.row - t.cardBw}px 0 0 0`
+                            : undefined,
+                      }}
+                    >
+                      {" "}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      align="center"
+                      style={{
+                        padding: "17px 2px 18px 8px",
+                        fontFamily: fonts.display,
+                      }}
+                    >
+                      <div
+                        className={tc(t.name === "cosmic" ? t.mute : t.dim)}
+                        style={{
+                          ...ambient(800, 10, 1),
+                          letterSpacing: "2px",
+                          color: t.name === "cosmic" ? t.mute : t.dim,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {card.dow}
+                      </div>
+                      <div
+                        className={tc(t.ink)}
+                        style={{
+                          ...ambient(800, 28, 1.1),
+                          color: t.ink,
+                          fontVariantNumeric: "tabular-nums",
+                          padding: "3px 0 2px",
+                        }}
+                      >
+                        {card.day}
+                      </div>
+                      <div
+                        className={tc(t.dim)}
+                        style={{
+                          ...ambient(700, 10, 1),
+                          letterSpacing: "2px",
+                          color: t.dim,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {card.month}
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+            <DividerCell color={t.cardLine} size={2} vertical />
+            <td valign="middle" style={{ padding: "15px 17px" }}>
+              <table {...TABLE_RESET} width="100%">
+                <tbody>
+                  <tr>
+                    <td valign="middle">
+                      <Chip
+                        label={card.chip}
+                        color={card.color}
+                        kind={card.kind}
+                        t={t}
+                      />
+                      <div
+                        className={tc(t.ink)}
+                        style={{
+                          ...font(800, 18, 1.25, fonts.display),
+                          color: t.ink,
+                          letterSpacing: "-0.2px",
+                          padding: "9px 0 5px",
+                        }}
+                      >
+                        {meeting.title}
+                      </div>
+                      <div
+                        className={tc(t.mute)}
+                        style={{
+                          ...ambient(400, 13, 1.5),
+                          color: t.mute,
+                        }}
+                      >
+                        {card.time}{" "}
+                        <span className={tc(t.dim)} style={{ color: t.dim }}>
+                          ·
+                        </span>{" "}
+                        {card.loc}
+                      </div>
+                      <div
+                        className={tc(t.dim)}
+                        style={{
+                          ...ambient(400, 13, 1.55),
+                          color: t.dim,
+                          paddingTop: "7px",
+                        }}
+                      >
+                        {meeting.summary}
+                      </div>
+                    </td>
+                    {meeting.rsvpUrl ? (
+                      <td
+                        valign="middle"
+                        align="right"
+                        width={74}
+                        style={{ paddingLeft: "10px" }}
+                      >
+                        <CtaButton
+                          label="RSVP"
+                          url={meeting.rsvpUrl}
+                          color={t.name === "cosmic" ? card.color : t.cta.fill}
+                          textColor={
+                            t.name === "cosmic" ? PALETTE.ink : t.cta.text
+                          }
+                          borderColor={
+                            t.name === "cosmic" ? card.color : t.cta.border
+                          }
+                          ground={
+                            t.name === "cosmic" ? PALETTE.card : undefined
+                          }
+                          compact
+                        />
+                      </td>
+                    ) : null}
+                    <td
+                      valign="top"
+                      align="right"
+                      width={48}
+                      style={{ paddingLeft: "14px" }}
+                    >
+                      <KindArt t={t} ctx={ctx} kind={card.kind} size={34} />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </Frame>
+  );
+}
+
 /** A hero card: the big version of an event, with its own button. */
 function FeaturedCard({
   featured,
-  ctx: { fonts, assets },
+  ctx,
+  t,
 }: {
   featured: FeaturedEvent;
   ctx: RenderContext;
+  t: Theme;
 }) {
+  const fonts = t.fonts(ctx.fonts);
+  const { assets } = ctx;
   const { meeting } = featured;
   const card = eventCard(meeting);
+  const kt = t.kinds[card.kind];
+  const cosmic = t.name === "cosmic";
   return (
-    <table
-      {...TABLE_RESET}
-      width="100%"
-      bgcolor={PALETTE.card2}
-      className={`${bc(PALETTE.card2)} ${brc(card.color)}`}
-      style={{
-        border: `1px solid ${card.color}`,
-        borderRadius: "10px",
-        ...blockShadow(card.color),
-      }}
+    <Frame
+      t={t}
+      line={cosmic ? kt.bar : t.cardLine}
+      fill={cosmic ? t.cardFill : kt.fill}
+      bw={t.tonightBw}
+      depth={t.tonightDepth}
+      shadow={kt.shadow}
+      radius={t.radius.card}
+      fillClass={cosmic ? glowClass(card.kind) : ""}
     >
-      <tbody>
-        <tr>
-          <td style={{ padding: "22px 22px 24px" }}>
-            <Chip
-              label={card.chip}
-              color={card.color}
-              ground={PALETTE.card2}
-              fonts={fonts}
-            />
-            <div
-              className={tc(PALETTE.ink)}
-              style={{
-                ...font(700, 30, 1.1, fonts.display),
-                color: PALETTE.ink,
-                letterSpacing: "-0.4px",
-                padding: "14px 0 8px",
-              }}
-            >
-              {meeting.title}
-            </div>
-            <table {...TABLE_RESET} style={{ margin: "2px 0 4px" }}>
-              <tbody>
-                <tr>
-                  <td
-                    className={tc(PALETTE.ink)}
-                    style={{
-                      ...font(700, 14, 1.5, fonts.sans),
-                      color: PALETTE.ink,
-                      paddingRight: "8px",
-                    }}
-                  >
-                    {card.dow}, {card.month} {card.day}
-                  </td>
-                  <DividerCell vertical />
-                  <td
-                    className={tc(PALETTE.mute)}
-                    style={{
-                      ...font(400, 14, 1.5, fonts.sans),
-                      color: PALETTE.mute,
-                      padding: "0 8px",
-                    }}
-                  >
-                    {card.time}
-                  </td>
-                  <DividerCell vertical />
-                  <td
-                    className={tc(PALETTE.mute)}
-                    style={{
-                      ...font(400, 14, 1.5, fonts.sans),
-                      color: PALETTE.mute,
-                      padding: "0 8px",
-                    }}
-                  >
-                    {card.loc}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <div
-              className={tc(PALETTE.mute)}
-              style={{
-                ...font(400, 15, 1.6, fonts.sans),
-                color: PALETTE.mute,
-                paddingTop: "10px",
-              }}
-            >
-              {meeting.summary}
-            </div>
-            <div
-              style={{
-                height: "18px",
-                lineHeight: "18px",
-                fontSize: "0px",
-              }}
-            >
-              {" "}
-            </div>
-            {/* the card's action, right-justified */}
-            <table {...TABLE_RESET} width="100%">
-              <tbody>
-                <tr>
-                  <td align="right" style={{ textAlign: "right" }}>
-                    {"cta" in featured ? (
-                      <CtaButton
-                        label={featured.cta}
-                        url={meeting.rsvpUrl ?? `${SITE}/events`}
-                        color={UGA}
-                        fonts={fonts}
-                        align="right"
+      <table {...TABLE_RESET} width="100%">
+        <tbody>
+          <tr>
+            <td style={{ padding: "22px 24px 24px" }}>
+              <table {...TABLE_RESET} width="100%">
+                <tbody>
+                  <tr>
+                    <td valign="top">
+                      <Chip
+                        label={card.chip}
+                        color={card.color}
+                        kind={card.kind}
+                        t={t}
+                        ground={t.cardFill}
                       />
-                    ) : (
-                      <a
-                        href={PARTNERS[featured.partner].url}
-                        style={{ textDecoration: "none" }}
+                      <div
+                        className={tc(t.title)}
+                        style={{
+                          ...font(700, 28, 1.15, fonts.display),
+                          color: t.title,
+                          letterSpacing: "-0.4px",
+                          padding: "14px 0 10px",
+                          ...(t.titleShadow
+                            ? { textShadow: `3px 3px 0 ${kt.shadow}` }
+                            : {}),
+                        }}
                       >
-                        <img
-                          src={assets.partnerLogo(featured.partner)}
-                          alt={PARTNERS[featured.partner].name}
-                          width={partnerLogoSize(featured.partner).width}
-                          height={partnerLogoSize(featured.partner).height}
-                          style={{
-                            display: "inline-block",
-                            verticalAlign: "middle",
-                            border: 0,
-                            outline: "none",
-                          }}
+                        {meeting.title}
+                      </div>
+                    </td>
+                    <td
+                      valign="top"
+                      align="right"
+                      width={cosmic ? 70 : 76}
+                      style={{ paddingLeft: "16px" }}
+                    >
+                      <KindArt
+                        t={t}
+                        ctx={ctx}
+                        kind={card.kind}
+                        size={cosmic ? 54 : 60}
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <table {...TABLE_RESET} style={{ margin: "2px 0 4px" }}>
+                <tbody>
+                  <tr>
+                    <td
+                      className={tc(t.ink)}
+                      style={{
+                        ...ambient(700, 14, 1.5),
+                        color: t.ink,
+                        paddingRight: "8px",
+                      }}
+                    >
+                      {card.dow}, {card.month} {card.day}
+                    </td>
+                    <DividerCell color={t.sep} vertical />
+                    <td
+                      className={tc(cosmic ? t.ink : t.ink)}
+                      style={{
+                        ...ambient(400, 14, 1.5),
+                        color: t.ink,
+                        padding: "0 8px",
+                      }}
+                    >
+                      {card.time}
+                    </td>
+                    <DividerCell color={t.sep} vertical />
+                    <td
+                      className={tc(t.ink)}
+                      style={{
+                        ...ambient(400, 14, 1.5),
+                        color: t.ink,
+                        padding: "0 8px",
+                      }}
+                    >
+                      {card.loc}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div
+                className={tc(t.mute)}
+                style={{
+                  ...ambient(400, 15, 1.6),
+                  color: t.mute,
+                  paddingTop: "10px",
+                }}
+              >
+                {meeting.summary}
+              </div>
+              <div
+                style={{
+                  height: "18px",
+                  lineHeight: "18px",
+                  fontSize: "0px",
+                }}
+              >
+                {" "}
+              </div>
+              {/* the card's action, right-justified */}
+              <table {...TABLE_RESET} width="100%">
+                <tbody>
+                  <tr>
+                    <td align="right" style={{ textAlign: "right" }}>
+                      {"cta" in featured ? (
+                        <CtaButton
+                          label={featured.cta}
+                          url={meeting.rsvpUrl ?? `${SITE}/events`}
+                          color={t.cta.fill}
+                          textColor={t.cta.text}
+                          borderColor={t.cta.border}
+                          align="right"
                         />
-                      </a>
-                    )}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+                      ) : (
+                        <a
+                          href={PARTNERS[featured.partner].url}
+                          style={{ textDecoration: "none" }}
+                        >
+                          <img
+                            src={assets.partnerLogo(featured.partner)}
+                            alt={PARTNERS[featured.partner].name}
+                            width={partnerLogoSize(featured.partner).width}
+                            height={partnerLogoSize(featured.partner).height}
+                            style={{
+                              display: "inline-block",
+                              verticalAlign: "middle",
+                              border: 0,
+                              outline: "none",
+                            }}
+                          />
+                        </a>
+                      )}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </Frame>
   );
 }
 
@@ -568,24 +888,58 @@ function SectionHeading({
 }
 
 /** One quiet bottom card — the shared frame under "new here?" and "sign-off". */
-function QuietCard({ children }: { children: ReactNode }) {
+function QuietCard({
+  t,
+  fill,
+  children,
+}: {
+  t: Theme;
+  fill: string;
+  children: ReactNode;
+}) {
   return (
-    <table
-      {...TABLE_RESET}
-      width="100%"
-      bgcolor={PALETTE.card}
-      className={`${bc(PALETTE.card)} ${brc(PALETTE.border)}`}
-      style={{
-        border: `1px solid ${PALETTE.border}`,
-        borderRadius: "10px",
-      }}
+    <Frame
+      t={t}
+      line={t.cardLine}
+      fill={fill}
+      bw={t.cardBw}
+      depth={t.cardDepth}
+      radius={t.radius.card}
     >
-      <tbody>
-        <tr>
-          <td style={{ padding: "18px 20px" }}>{children}</td>
-        </tr>
-      </tbody>
-    </table>
+      <table {...TABLE_RESET} width="100%">
+        <tbody>
+          <tr>
+            <td style={{ padding: "18px 20px" }}>{children}</td>
+          </tr>
+        </tbody>
+      </table>
+    </Frame>
+  );
+}
+
+/** The DevDogs logo for the active theme: the on-dark lockup (Cosmic) or the light/dark pair (Paper). */
+function DevDogsMark({ t, ctx }: { t: Theme; ctx: RenderContext }) {
+  const { width, height } = MARK_SIZES.devdogsLockup;
+  if (t.name === "cosmic") {
+    return (
+      <img
+        src={ctx.assets.devdogsLockup}
+        width={width}
+        height={height}
+        alt="DevDogs"
+        style={{ display: "block" }}
+      />
+    );
+  }
+  return (
+    <ThemeImgPair
+      ctx={ctx}
+      light="paper-devdogs-logo"
+      dark="paper-devdogs-logo-dark"
+      width={Math.round((height * 264) / 71)}
+      height={height}
+      alt="DevDogs"
+    />
   );
 }
 
@@ -601,509 +955,652 @@ export function ChangelogEmail({
   ctx: RenderContext;
 }) {
   if (issue.campaign) return <CampaignEmail issue={issue} ctx={ctx} />;
-  const { fonts, assets } = ctx;
-  const headingColor = eventCard(issue.featured[0].meeting).color;
+  const { assets } = ctx;
+  const t = themeOf(issue);
+  const fonts = t.fonts(ctx.fonts);
+  const cosmic = t.name === "cosmic";
+  const headingColor = cosmic
+    ? t.kinds[eventCard(issue.featured[0].meeting).kind].bar
+    : t.link;
   const arrowLinkStyle: CSSProperties = {
-    color: PALETTE.ink,
+    color: t.ink,
     textDecoration: "none",
   };
+  const mirrorPath = cosmic
+    ? `changelog/${issue.version}`
+    : `newsletters/gdgc/${issue.version}`;
+  const dotGrid = t.barTexture ? ` ${DOT_GRID_CLASS}` : "";
 
   return (
-    <table
-      {...TABLE_RESET}
+    <Frame
+      t={t}
+      line={t.windowLine}
+      fill={t.windowFill}
+      bw={t.windowBw}
+      depth={t.windowDepth}
+      radius={t.radius.window}
       width={WIDTH}
-      bgcolor={PALETTE.bg}
-      className={`${bc(PALETTE.bg)} ${brc(PALETTE.border)}`}
-      style={{
-        maxWidth: `${WIDTH}px`,
-        width: "100%",
-        border: `1px solid ${PALETTE.border}`,
-        borderRadius: "14px",
-        overflow: "hidden",
-      }}
     >
-      <tbody>
-        {/* terminal title bar */}
-        <tr>
-          <td
-            {...bgAttr(PALETTE.bar)}
-            className={`${bc(PALETTE.bar)} ${DOT_GRID_CLASS}`}
-            style={{
-              padding: "12px 18px",
-            }}
-          >
-            <table {...TABLE_RESET} width="100%">
-              <tbody>
-                <tr>
-                  <td width={86}>
-                    <KindDots />
-                  </td>
-                  <td
-                    align="center"
-                    className={tc(PALETTE.dim)}
-                    style={{
-                      ...font(600, 12, 1, fonts.mono),
-                      color: PALETTE.dim,
-                    }}
-                  >
-                    devdogs -{" "}
-                    <span
-                      className={tc(KIND.workshop)}
-                      style={{ color: KIND.workshop }}
-                    >
-                      changelog
-                    </span>{" "}
-                    - 80×24
-                  </td>
-                  <td
-                    width={86}
-                    align="right"
-                    className={tc(PALETTE.dim)}
-                    style={{
-                      ...font(600, 12, 1, fonts.mono),
-                      color: PALETTE.dim,
-                    }}
-                  >
-                    {issue.sendLabel}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </td>
-        </tr>
-
-        <tr>
-          <DividerCell />
-        </tr>
-
-        {/* masthead: the DevDogs lockup and "Changelog_" on one shared line */}
-        <tr>
-          <td style={{ padding: "24px 22px 4px" }}>
-            <table {...TABLE_RESET} width="100%">
-              <tbody>
-                <tr>
-                  <td valign="middle">
-                    <table {...TABLE_RESET}>
-                      <tbody>
-                        <tr>
-                          <td valign="middle">
-                            <img
-                              src={assets.devdogsLockup}
-                              width={MARK_SIZES.devdogsLockup.width}
-                              height={MARK_SIZES.devdogsLockup.height}
-                              alt="DevDogs"
-                              style={{ display: "block" }}
-                            />
-                          </td>
-                          <td
-                            valign="bottom"
-                            style={{ padding: "0 0 5px 8px" }}
-                          >
-                            <span
-                              className={tc(KIND.workshop)}
-                              style={{
-                                ...font(700, 22, 1, fonts.mono),
-                                letterSpacing: "-0.4px",
-                                color: KIND.workshop,
-                              }}
-                            >
-                              Changelog_
-                            </span>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </td>
-                  <td valign="middle" align="right">
-                    <div
-                      className={tc(UGA)}
-                      style={{ ...font(800, 12, 1, fonts.mono), color: UGA }}
-                    >
-                      v{issue.version}
-                    </div>
-                    <div
-                      className={tc(PALETTE.mute)}
+      {cosmic ? null : <style>{CAMPAIGN_FONT_CSS + PAPER_MONO_CSS}</style>}
+      <table {...TABLE_RESET} width="100%">
+        <tbody>
+          {/* terminal title bar */}
+          <tr>
+            <td
+              {...bgAttr(t.bar)}
+              className={`${bc(t.bar)}${dotGrid}`}
+              style={{
+                padding: "12px 18px",
+              }}
+            >
+              <table {...TABLE_RESET} width="100%">
+                <tbody>
+                  <tr>
+                    <td width={96}>
+                      <TitleDots t={t} />
+                    </td>
+                    <td
+                      align="center"
+                      className={tc(t.dim)}
                       style={{
                         ...font(600, 12, 1, fonts.mono),
-                        color: PALETTE.mute,
-                        paddingTop: "5px",
+                        color: t.dim,
                       }}
                     >
-                      {issue.term}
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <div
-              className={tc(PALETTE.mute)}
-              style={{
-                ...font(400, 13, 1.6, fonts.mono),
-                color: PALETTE.mute,
-                paddingTop: "16px",
-              }}
-            >
-              <span
-                className={tc(KIND.workshop)}
-                style={{ color: KIND.workshop, fontWeight: 700 }}
-              >
-                $
-              </span>{" "}
-              <span
-                className={tc(KIND.workshop)}
-                style={{ color: KIND.workshop }}
-              >
-                changelog
-              </span>{" "}
-              <span className={tc(PALETTE.ink)} style={{ color: PALETTE.ink }}>
-                {issue.command.replace(/^changelog\s*/, "")}
-              </span>
-            </div>
-            {/* The "view in browser" escape hatch, in the terminal costume:
-                the command's output points at the archive page rendering this
-                same tree, phrased as the curl that would fetch it. */}
-            <div
-              className={tc(PALETTE.dim)}
-              style={{
-                ...font(400, 13, 1.6, fonts.mono),
-                color: PALETTE.dim,
-                paddingTop: "3px",
-              }}
-            >
-              → mirror:{" "}
-              <a
-                href={`${SITE}/changelog/${issue.version}`}
-                className={tc(KIND.build)}
-                style={{ color: KIND.build, textDecoration: "none" }}
-              >
-                curl devdogsuga.org/changelog/{issue.version}
-              </a>
-            </div>
-          </td>
-        </tr>
-
-        {/* slant stripe */}
-        <tr>
-          <td style={{ padding: "14px 22px 0" }}>
-            {/* a table cell rather than a div so the stripe can carry the
-                bgcolor attribute every other painted surface has */}
-            <table {...TABLE_RESET} width="100%">
-              <tbody>
-                <tr>
-                  <td
-                    {...bgAttr(UGA)}
-                    className={`${bc(UGA)} ${SLANTS_CLASS}`}
-                    height={9}
-                    style={{
-                      height: "9px",
-                      borderRadius: "4px",
-                      fontSize: "0px",
-                      lineHeight: 0,
-                    }}
-                  >
-                    {" "}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </td>
-        </tr>
-
-        {/* intro */}
-        <tr>
-          <td style={{ padding: "20px 22px 6px" }}>
-            <div
-              className={tc(PALETTE.ink)}
-              style={{
-                ...font(800, 24, 1.25, fonts.display),
-                color: PALETTE.ink,
-                letterSpacing: "-0.3px",
-              }}
-            >
-              {issue.tagline}
-            </div>
-            <div
-              className={tc(PALETTE.mute)}
-              style={{
-                ...font(400, 15, 1.6, fonts.sans),
-                color: PALETTE.mute,
-                paddingTop: "11px",
-              }}
-            >
-              {issue.intro}
-            </div>
-          </td>
-        </tr>
-
-        {/* featured / hero event */}
-        <tr>
-          <td style={{ padding: "20px 22px 6px" }}>
-            <SectionHeading color={headingColor} fonts={fonts}>
-              {issue.featuredLabel}
-            </SectionHeading>
-            {issue.featured.map((featured, index) => (
-              <Fragment key={featured.meeting.slug}>
-                {index > 0 ? (
-                  <div
-                    style={{
-                      height: "20px",
-                      lineHeight: "20px",
-                      fontSize: "0px",
-                    }}
-                  >
-                    {" "}
-                  </div>
-                ) : null}
-                <FeaturedCard featured={featured} ctx={ctx} />
-              </Fragment>
-            ))}
-          </td>
-        </tr>
-
-        {/* upcoming events */}
-        <tr>
-          <td style={{ padding: "22px 22px 0" }}>
-            <SectionHeading color={PALETTE.ink} fonts={fonts}>
-              upcoming
-            </SectionHeading>
-            {issue.upcoming.map((meeting) => (
-              <EventRow key={meeting.slug} meeting={meeting} ctx={ctx} />
-            ))}
-            <div style={{ padding: "2px 0 4px", textAlign: "center" }}>
-              <a
-                href={`${SITE}/events`}
-                className={tc(KIND.build)}
-                style={{
-                  ...font(700, 13, 1, fonts.mono),
-                  color: KIND.build,
-                  textDecoration: "none",
-                }}
-              >
-                → full calendar &amp; subscribe (.ics)
-              </a>
-            </div>
-          </td>
-        </tr>
-
-        {/* new here? */}
-        <tr>
-          <td style={{ padding: "18px 22px 0" }}>
-            <QuietCard>
-              <SectionHeading
-                color={HEADING_TINTS.newHere}
-                fonts={fonts}
-                paddingBottom={11}
-              >
-                new here?
-              </SectionHeading>
-              <div
-                className={tc(PALETTE.mute)}
-                style={{
-                  ...font(400, 14, 1.6, fonts.sans),
-                  color: PALETTE.mute,
-                  paddingBottom: "12px",
-                }}
-              >
-                No experience required, ever. Bring a laptop if you've got one,
-                curiosity if you don't. Start here:
-              </div>
-              <div
-                className={tc(PALETTE.ink)}
-                style={{ ...font(600, 14, 2, fonts.mono), color: PALETTE.ink }}
-              >
-                <a
-                  href="https://discord.gg/devdogs"
-                  className={tc(PALETTE.ink)}
-                  style={arrowLinkStyle}
-                >
-                  <span
-                    className={tc(KIND.build)}
-                    style={{ color: KIND.build }}
-                  >
-                    →
-                  </span>{" "}
-                  join the Discord
-                </a>
-                <br />
-                <a
-                  href={`${SITE}/events`}
-                  className={tc(PALETTE.ink)}
-                  style={arrowLinkStyle}
-                >
-                  <span
-                    className={tc(KIND.workshop)}
-                    style={{ color: KIND.workshop }}
-                  >
-                    →
-                  </span>{" "}
-                  add our events to your calendar
-                </a>
-                <br />
-                <a
-                  href="https://github.com/devdogsuga"
-                  className={tc(PALETTE.ink)}
-                  style={arrowLinkStyle}
-                >
-                  <span
-                    className={tc(KIND.social)}
-                    style={{ color: KIND.social }}
-                  >
-                    →
-                  </span>{" "}
-                  browse what members are building
-                </a>
-              </div>
-            </QuietCard>
-          </td>
-        </tr>
-
-        {/* sign-off */}
-        <tr>
-          {/* 24px below the last card, mirroring the 24px above the masthead,
-              so the content column meets both bar dividers evenly. */}
-          <td style={{ padding: "18px 22px 24px" }}>
-            <QuietCard>
-              <SectionHeading
-                color={HEADING_TINTS.signoff}
-                fonts={fonts}
-                paddingBottom={11}
-              >
-                sign-off
-              </SectionHeading>
-              <div
-                className={tc(PALETTE.mute)}
-                style={{
-                  ...font(400, 14, 1.6, fonts.sans),
-                  color: PALETTE.mute,
-                }}
-              >
-                {issue.signoff}
-                <div
-                  className={tc(PALETTE.dim)}
-                  style={{
-                    color: PALETTE.dim,
-                    fontSize: "13px",
-                    textAlign: "right",
-                    paddingTop: "4px",
-                  }}
-                >
-                  {"— the DevDogs officers"}
-                </div>
-              </div>
-            </QuietCard>
-          </td>
-        </tr>
-
-        <tr>
-          <DividerCell />
-        </tr>
-
-        {/* footer: both lockups on one centered line, then the socials.
-            No unsubscribe — this goes out over the University listserv. */}
-        <tr>
-          <td
-            align="center"
-            {...bgAttr(PALETTE.bar)}
-            className={`${bc(PALETTE.bar)} ${DOT_GRID_CLASS}`}
-            style={{
-              padding: "28px 22px 30px",
-            }}
-          >
-            <table {...TABLE_RESET} style={{ margin: "0 auto" }}>
-              <tbody>
-                <tr>
-                  <td align="center" valign="top" style={{ padding: "0 20px" }}>
-                    <img
-                      src={assets.devdogsLockup}
-                      width={MARK_SIZES.devdogsLockup.width}
-                      height={MARK_SIZES.devdogsLockup.height}
-                      alt="DevDogs"
-                      style={{ display: "block" }}
-                    />
-                  </td>
-                  {/* 7px down so the GDG wordmark's baseline sits on the DevDogs
-                      wordmark's, with "On Campus · UGA" hanging as a subtitle. */}
-                  <td
-                    align="center"
-                    valign="top"
-                    style={{ padding: "7px 20px 0" }}
-                  >
-                    <img
-                      src={assets.gdgcLockup}
-                      width={MARK_SIZES.gdgcLockup.width}
-                      height={MARK_SIZES.gdgcLockup.height}
-                      alt="Google Developer Groups On Campus · University of Georgia"
-                      style={{ display: "block" }}
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <table {...TABLE_RESET} style={{ margin: "20px auto 0" }}>
-              <tbody>
-                <tr>
-                  {SOCIAL_LINKS.map((social) => (
+                      {t.terminal} ~{" "}
+                      <span
+                        className={tc(t.termAccent)}
+                        style={{ color: t.termAccent }}
+                      >
+                        changelog
+                      </span>{" "}
+                      ~ 80×24
+                    </td>
                     <td
-                      key={social.label}
-                      align="center"
-                      valign="middle"
-                      style={{ padding: "0 10px", whiteSpace: "nowrap" }}
+                      width={96}
+                      align="right"
+                      className={tc(t.dim)}
+                      style={{
+                        ...font(600, 12, 1, fonts.mono),
+                        color: t.dim,
+                        whiteSpace: "nowrap",
+                      }}
                     >
-                      <a
-                        href={social.url}
-                        className={tc(PALETTE.ink)}
+                      {issue.sendLabel}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <DividerCell color={t.rule} size={t.ruleH} />
+          </tr>
+
+          {/* masthead: the DevDogs lockup and "Changelog_" on one shared line */}
+          <tr>
+            <td style={{ padding: "24px 22px 4px" }}>
+              <table {...TABLE_RESET} width="100%">
+                <tbody>
+                  <tr>
+                    <td valign="middle">
+                      <table {...TABLE_RESET}>
+                        <tbody>
+                          <tr>
+                            <td valign="middle">
+                              <DevDogsMark t={t} ctx={ctx} />
+                            </td>
+                            <td
+                              valign="bottom"
+                              style={{ padding: "0 0 5px 8px" }}
+                            >
+                              <span
+                                className={tc(t.accent)}
+                                style={{
+                                  ...font(700, 22, 1, fonts.mono),
+                                  letterSpacing: "-0.4px",
+                                  color: t.accent,
+                                }}
+                              >
+                                Changelog_
+                              </span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
+                    <td valign="middle" align="right">
+                      <div
+                        className={tc(t.version)}
                         style={{
-                          ...font(600, 13, "17px", fonts.mono),
-                          color: PALETTE.ink,
-                          textDecoration: "none",
-                          whiteSpace: "nowrap",
+                          ...font(800, 12, 1, fonts.mono),
+                          color: t.version,
                         }}
                       >
-                        <img
-                          src={assets.socialIcon(social.icon)}
-                          width={MARK_SIZES.socialIcon.width}
-                          height={MARK_SIZES.socialIcon.height}
-                          alt=""
+                        v{issue.version}
+                      </div>
+                      <div
+                        className={tc(t.mute)}
+                        style={{
+                          ...font(600, 12, 1, fonts.mono),
+                          color: t.mute,
+                          paddingTop: "5px",
+                        }}
+                      >
+                        {issue.term}
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <table {...TABLE_RESET} width="100%">
+                <tbody>
+                  <tr>
+                    <td valign="top">
+                      <div
+                        className={tc(t.mute)}
+                        style={{
+                          ...font(400, 13, 1.6, fonts.mono),
+                          color: t.mute,
+                          paddingTop: "16px",
+                        }}
+                      >
+                        <span
+                          className={tc(t.accent)}
+                          style={{ color: t.accent, fontWeight: 700 }}
+                        >
+                          $
+                        </span>{" "}
+                        <span
+                          className={tc(t.accent)}
+                          style={{ color: t.accent }}
+                        >
+                          changelog
+                        </span>{" "}
+                        <span className={tc(t.ink)} style={{ color: t.ink }}>
+                          {issue.command.replace(/^(changelog|gdgc)\s*/, "")}
+                        </span>
+                      </div>
+                      {/* The "view in browser" escape hatch, in the terminal
+                          costume: the command's output points at the archive
+                          page rendering this same tree, phrased as the curl
+                          that would fetch it. */}
+                      <div
+                        className={tc(t.dim)}
+                        style={{
+                          ...font(400, 13, 1.6, fonts.mono),
+                          color: t.dim,
+                          paddingTop: "3px",
+                        }}
+                      >
+                        → mirror:{" "}
+                        <a
+                          href={`${SITE}/${mirrorPath}`}
+                          className={tc(t.link)}
+                          style={{ color: t.link, textDecoration: "none" }}
+                        >
+                          curl devdogsuga.org/{mirrorPath}
+                        </a>
+                      </div>
+                    </td>
+                    {cosmic ? null : (
+                      <td valign="middle" align="right" width={40}>
+                        {/* Paper's one asterisk, as decoration */}
+                        <ThemeImg
+                          ctx={ctx}
+                          name="paper-asterisk"
+                          width={26}
+                          height={26}
+                          style={{ marginLeft: "auto" }}
+                        />
+                      </td>
+                    )}
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+
+          {/* the stripe: Cosmic's pixel-art space strip over pixel stairs;
+              Paper's Google four-color bar. Cosmic's cells carry the colors
+              the images paint, so blocked images leave a solid band. */}
+          <tr>
+            <td style={{ padding: "14px 22px 0" }}>
+              {cosmic ? (
+                <table {...TABLE_RESET} width="100%">
+                  <tbody>
+                    <tr>
+                      <td
+                        {...bgAttr(COSMIC_SKY)}
+                        className={bc(COSMIC_SKY)}
+                        height={64}
+                        style={{ height: "64px", lineHeight: 0, fontSize: 0 }}
+                      >
+                        <ThemeImg
+                          ctx={ctx}
+                          name="cosmic-strip"
+                          width={556}
+                          height={64}
                           style={{
-                            display: "inline-block",
-                            verticalAlign: "middle",
-                            border: 0,
-                            outline: "none",
+                            ...PIXELATED,
+                            width: "100%",
+                            height: "auto",
                           }}
                         />
-                        {" "}
-                        <span
-                          className={tc(PALETTE.ink)}
-                          style={{ color: PALETTE.ink }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td
+                        {...bgAttr(UGA)}
+                        className={bc(UGA)}
+                        height={10}
+                        style={{ height: "10px", lineHeight: 0, fontSize: 0 }}
+                      >
+                        <ThemeImg
+                          ctx={ctx}
+                          name="cosmic-stairs"
+                          width={556}
+                          height={10}
+                          style={{
+                            ...PIXELATED,
+                            width: "100%",
+                            height: "auto",
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              ) : (
+                <table
+                  {...TABLE_RESET}
+                  width="100%"
+                  className={brc(t.ink)}
+                  style={{
+                    border: `2px solid ${t.ink}`,
+                    borderRadius: "99px",
+                    borderCollapse: "separate",
+                    overflow: "hidden",
+                  }}
+                >
+                  <tbody>
+                    <tr>
+                      {[
+                        PAPER.googleBlue,
+                        PAPER.googleRed,
+                        PAPER.googleYellow,
+                        PAPER.googleGreen,
+                      ].map((color) => (
+                        <td
+                          key={color}
+                          {...bgAttr(color)}
+                          className={bc(color)}
+                          width="25%"
+                          height={10}
+                          style={{
+                            height: "10px",
+                            fontSize: "0px",
+                            lineHeight: 0,
+                          }}
                         >
-                          {social.label}
-                        </span>
-                      </a>
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
-            <div
-              className={tc(PALETTE.dim)}
+                          {" "}
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              )}
+            </td>
+          </tr>
+
+          {/* intro */}
+          <tr>
+            <td style={{ padding: "20px 22px 6px", fontFamily: fonts.sans }}>
+              <div
+                className={tc(t.title)}
+                style={{
+                  ...font(800, 24, 1.25, fonts.display),
+                  color: t.title,
+                  letterSpacing: "-0.3px",
+                }}
+              >
+                {issue.tagline}
+              </div>
+              <div
+                className={tc(t.mute)}
+                style={{
+                  ...ambient(400, 15, 1.6),
+                  color: t.mute,
+                  paddingTop: "11px",
+                }}
+              >
+                {issue.intro}
+              </div>
+            </td>
+          </tr>
+
+          {/* featured / hero event */}
+          <tr>
+            <td style={{ padding: "20px 22px 6px", fontFamily: fonts.sans }}>
+              <SectionHeading color={headingColor} fonts={fonts}>
+                {issue.featuredLabel}
+              </SectionHeading>
+              {issue.featured.map((featured, index) => (
+                <Fragment key={featured.meeting.slug}>
+                  {index > 0 ? (
+                    <div
+                      style={{
+                        height: "20px",
+                        lineHeight: "20px",
+                        fontSize: "0px",
+                      }}
+                    >
+                      {" "}
+                    </div>
+                  ) : null}
+                  <FeaturedCard featured={featured} ctx={ctx} t={t} />
+                </Fragment>
+              ))}
+            </td>
+          </tr>
+
+          {/* upcoming events */}
+          <tr>
+            <td style={{ padding: "22px 22px 0", fontFamily: fonts.sans }}>
+              <SectionHeading color={t.ink} fonts={fonts}>
+                upcoming
+              </SectionHeading>
+              {issue.upcoming.map((meeting) => (
+                <EventRow
+                  key={meeting.slug}
+                  meeting={meeting}
+                  ctx={ctx}
+                  t={t}
+                />
+              ))}
+              <div style={{ padding: "2px 0 4px", textAlign: "center" }}>
+                <a
+                  href={`${SITE}/events`}
+                  className={tc(t.link)}
+                  style={{
+                    ...font(700, 13, 1, fonts.mono),
+                    color: t.link,
+                    textDecoration: "none",
+                  }}
+                >
+                  → full calendar &amp; subscribe (.ics)
+                </a>
+              </div>
+            </td>
+          </tr>
+
+          {/* new here? */}
+          <tr>
+            <td style={{ padding: "18px 22px 0", fontFamily: fonts.sans }}>
+              <QuietCard t={t} fill={t.newHereFill}>
+                <SectionHeading
+                  color={t.newHereLabel}
+                  fonts={fonts}
+                  paddingBottom={11}
+                >
+                  new here?
+                </SectionHeading>
+                <div
+                  className={tc(t.mute)}
+                  style={{
+                    ...ambient(400, 14, 1.6),
+                    color: t.mute,
+                    paddingBottom: "12px",
+                  }}
+                >
+                  No experience required, ever. Bring a laptop if you've got
+                  one, curiosity if you don't. Start here:
+                </div>
+                <div
+                  className={tc(t.ink)}
+                  style={{ ...font(600, 14, 2, fonts.mono), color: t.ink }}
+                >
+                  <a
+                    href="https://discord.gg/devdogs"
+                    className={tc(t.ink)}
+                    style={arrowLinkStyle}
+                  >
+                    <span
+                      className={tc(t.arrows[0])}
+                      style={{ color: t.arrows[0] }}
+                    >
+                      →
+                    </span>{" "}
+                    join the Discord
+                  </a>
+                  <br />
+                  <a
+                    href={`${SITE}/events`}
+                    className={tc(t.ink)}
+                    style={arrowLinkStyle}
+                  >
+                    <span
+                      className={tc(t.arrows[1])}
+                      style={{ color: t.arrows[1] }}
+                    >
+                      →
+                    </span>{" "}
+                    add our events to your calendar
+                  </a>
+                  <br />
+                  <a
+                    href="https://github.com/devdogsuga"
+                    className={tc(t.ink)}
+                    style={arrowLinkStyle}
+                  >
+                    <span
+                      className={tc(t.arrows[2])}
+                      style={{ color: t.arrows[2] }}
+                    >
+                      →
+                    </span>{" "}
+                    browse what members are building
+                  </a>
+                </div>
+              </QuietCard>
+            </td>
+          </tr>
+
+          {/* sign-off */}
+          <tr>
+            {/* 24px below the last card, mirroring the 24px above the masthead,
+                so the content column meets both bar dividers evenly. */}
+            <td style={{ padding: "18px 22px 24px", fontFamily: fonts.sans }}>
+              <QuietCard t={t} fill={t.signoffFill}>
+                <SectionHeading
+                  color={t.signoffLabel}
+                  fonts={fonts}
+                  paddingBottom={11}
+                >
+                  sign-off
+                </SectionHeading>
+                <div
+                  className={tc(t.mute)}
+                  style={{
+                    ...ambient(400, 14, 1.6),
+                    color: t.mute,
+                  }}
+                >
+                  {issue.signoff}
+                  <div
+                    className={tc(t.dim)}
+                    style={{
+                      color: t.dim,
+                      fontSize: "13px",
+                      textAlign: "right",
+                      paddingTop: "4px",
+                    }}
+                  >
+                    {t.signature}
+                  </div>
+                </div>
+              </QuietCard>
+            </td>
+          </tr>
+
+          <tr>
+            <DividerCell color={t.rule} size={t.ruleH} />
+          </tr>
+
+          {/* footer: both lockups on one centered line, then the socials.
+              No unsubscribe — this goes out over the University listserv.
+              Paper leads with the official GDG on Campus lockup. */}
+          <tr>
+            <td
+              align="center"
+              {...bgAttr(t.bar)}
+              className={`${bc(t.bar)}${dotGrid}`}
               style={{
-                ...font(400, 12, 1.7, fonts.mono),
-                color: PALETTE.dim,
-                paddingTop: "16px",
+                padding: "28px 22px 30px",
               }}
             >
-              {/* A deliberate two-line stack: left to wrap on its own, the
-                  line broke with "Campus" orphaned. */}
-              DevDogs at the University of Georgia
-              <br />
-              Google Developer Group on Campus
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+              <table {...TABLE_RESET} style={{ margin: "0 auto" }}>
+                <tbody>
+                  <tr>
+                    {cosmic ? (
+                      <>
+                        <td
+                          align="center"
+                          valign="top"
+                          style={{ padding: "0 20px" }}
+                        >
+                          <DevDogsMark t={t} ctx={ctx} />
+                        </td>
+                        {/* 7px down so the GDG wordmark's baseline sits on the
+                            DevDogs wordmark's, with "On Campus · UGA" hanging
+                            as a subtitle. */}
+                        <td
+                          align="center"
+                          valign="top"
+                          style={{ padding: "7px 20px 0" }}
+                        >
+                          <img
+                            src={assets.gdgcLockup}
+                            width={MARK_SIZES.gdgcLockup.width}
+                            height={MARK_SIZES.gdgcLockup.height}
+                            alt="Google Developer Groups On Campus · University of Georgia"
+                            style={{ display: "block" }}
+                          />
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td
+                          align="center"
+                          valign="middle"
+                          style={{ padding: "0 20px" }}
+                        >
+                          <ThemeImgPair
+                            ctx={ctx}
+                            light="paper-gdgc-lockup"
+                            dark="paper-gdgc-lockup-dark"
+                            width={236}
+                            height={30}
+                            alt="Google Developer Groups On Campus · University of Georgia"
+                          />
+                        </td>
+                        <td
+                          align="center"
+                          valign="middle"
+                          style={{ padding: "0 20px" }}
+                        >
+                          <DevDogsMark t={t} ctx={ctx} />
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                </tbody>
+              </table>
+              <table {...TABLE_RESET} style={{ margin: "20px auto 0" }}>
+                <tbody>
+                  <tr>
+                    {SOCIAL_LINKS.map((social) => (
+                      <td
+                        key={social.label}
+                        align="center"
+                        valign="middle"
+                        style={{ padding: "0 10px", whiteSpace: "nowrap" }}
+                      >
+                        <a
+                          href={social.url}
+                          className={tc(t.ink)}
+                          style={{
+                            ...font(600, 13, "17px", fonts.mono),
+                            color: t.ink,
+                            textDecoration: "none",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {cosmic ? (
+                            <>
+                              <img
+                                src={assets.socialIcon(social.icon)}
+                                width={MARK_SIZES.socialIcon.width}
+                                height={MARK_SIZES.socialIcon.height}
+                                alt=""
+                                style={{
+                                  display: "inline-block",
+                                  verticalAlign: "middle",
+                                  border: 0,
+                                  outline: "none",
+                                }}
+                              />{" "}
+                            </>
+                          ) : null}
+                          <span className={tc(t.ink)} style={{ color: t.ink }}>
+                            {social.label}
+                          </span>
+                        </a>
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+              <div
+                className={tc(t.dim)}
+                style={{
+                  ...font(400, 12, 1.7, fonts.mono),
+                  color: t.dim,
+                  paddingTop: "16px",
+                }}
+              >
+                {/* A deliberate two-line stack: left to wrap on its own, the
+                    line broke with "Campus" orphaned. */}
+                {cosmic ? (
+                  <>
+                    DevDogs at the University of Georgia
+                    <br />
+                    Google Developer Group on Campus
+                  </>
+                ) : (
+                  <>
+                    Google Developer Group on Campus
+                    <br />
+                    DevDogs at the University of Georgia
+                  </>
+                )}
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </Frame>
   );
 }
+
+/** Google Sans Mono for Paper's terminal voice: hosted beside the Google Sans files, with no embedded copy. */
+const PAPER_MONO_CSS = [400, 700]
+  .map(
+    (weight) =>
+      `@font-face{font-family:'Google Sans Mono';font-style:normal;font-weight:${weight};src:local('Google Sans Mono'),url('https://devdogsuga.org/brand/newsletter/GoogleSansMono-${weight === 400 ? "Regular" : "Bold"}.ttf') format('truetype')}`,
+  )
+  .join("");
 
 /**
  * The full mail document around `ChangelogEmail`: head metas, the Google Fonts
@@ -1119,6 +1616,14 @@ export function ChangelogDocument({
   issue: ChangelogIssue;
   ctx: RenderContext;
 }) {
+  const t = themeOf(issue);
+  // Campaign and Paper are light-native: both ship a dark twin to the web
+  // Outlooks instead of pinning themselves light.
+  const light = !!issue.campaign || t.name === "paper";
+  const selected = issue.campaign ? "none" : t.name;
+  const cosmicChangelog = !issue.campaign && t.name === "cosmic";
+  // The campaign layout paints its own panels; its canvas stays Cosmic's.
+  const ground = issue.campaign ? PALETTE.bg : t.ground;
   return (
     <html lang="en">
       <head>
@@ -1140,14 +1645,14 @@ export function ChangelogDocument({
         <link href={FONTS_HREF} rel="stylesheet" />
         <style
           dangerouslySetInnerHTML={{
-            __html: issue.campaign
-              ? ""
-              : `@import url('${FONTS_HREF}');${CHANGELOG_FONT_CSS}`,
+            __html: cosmicChangelog
+              ? `@import url('${FONTS_HREF}');${CHANGELOG_FONT_CSS}`
+              : "",
           }}
         />
         <style
           dangerouslySetInnerHTML={{
-            __html: `${paintCss({ campaign: !!issue.campaign })}\n${darkModeCss({ campaign: !!issue.campaign })}`,
+            __html: `${paintCss({ campaign: light, theme: selected, themeImage: ctx.assets.themeImage })}\n${darkModeCss({ campaign: light, theme: selected })}`,
           }}
         />
       </head>
@@ -1158,9 +1663,9 @@ export function ChangelogDocument({
           darkModeCss(). The repainted body itself is fully covered by the
           pinned full-width table below, so the sacrifice never shows. */}
       <body
-        className={bc(PALETTE.bg)}
-        {...bgAttr(PALETTE.bg)}
-        style={{ margin: 0, padding: 0, ...solidBg(PALETTE.bg) }}
+        className={bc(ground)}
+        {...bgAttr(ground)}
+        style={{ margin: 0, padding: 0, ...solidBg(ground) }}
       >
         <div
           style={{
@@ -1175,8 +1680,8 @@ export function ChangelogDocument({
         <table
           {...TABLE_RESET}
           width="100%"
-          bgcolor={PALETTE.bg}
-          className={bc(PALETTE.bg)}
+          bgcolor={ground}
+          className={bc(ground)}
         >
           <tbody>
             <tr>

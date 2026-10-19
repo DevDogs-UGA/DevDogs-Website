@@ -9,6 +9,8 @@ import {
   renderIssueDocument,
 } from "./index.js";
 
+const THEME_URL = "https://devdogsuga.org/brand/newsletter/theme/";
+
 function imageSources(html: string): string[] {
   return [...html.matchAll(/<img[^>]*\ssrc="([^"]+)"/g)].map((m) => m[1]!);
 }
@@ -62,7 +64,11 @@ describe("renderIssueDocument", () => {
       const sources = imageSources(renderIssueDocument(issue));
       expect(sources.length).toBeGreaterThan(0);
       for (const src of sources) {
-        expect(cids.has(src), `unembedded image source ${src}`).toBe(true);
+        // Theme images are hosted PNGs; every other image is embedded.
+        expect(
+          cids.has(src) || src.startsWith(THEME_URL),
+          `unembedded image source ${src}`,
+        ).toBe(true);
       }
     }
   });
@@ -72,7 +78,9 @@ describe("renderIssueDocument", () => {
     const sources = imageSources(html);
     expect(sources.length).toBeGreaterThan(0);
     for (const src of sources) {
-      expect(src.startsWith("data:image/svg+xml")).toBe(true);
+      expect(
+        src.startsWith("data:image/svg+xml") || src.startsWith(THEME_URL),
+      ).toBe(true);
     }
   });
 
@@ -143,8 +151,6 @@ describe("renderIssueDocument", () => {
     for (const issue of [...ISSUES, ...GDGC_ISSUES]) {
       const html = renderIssueDocument(issue);
       expect(html).toContain(`.bc-13121b{background-color:#13121b`);
-      expect(html).toContain(".bg-slants{");
-      expect(html).toContain(".bg-dots{");
       for (const element of html.split("<")) {
         const style = /style="([^"]*)"/.exec(element)?.[1];
         const classes = /class="([^"]*)"/.exec(element)?.[1] ?? "";

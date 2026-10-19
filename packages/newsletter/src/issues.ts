@@ -1,4 +1,5 @@
 import type { CampaignContent } from "./campaign.js";
+import type { ThemeName } from "./design.js";
 /**
  * The Changelog's content: the dated sends themselves, listing events read
  * from the club config in `@devdogsuga/events`.
@@ -17,6 +18,12 @@ export type FeaturedEvent =
   | { meeting: Meeting; partner: PartnerName };
 
 export interface ChangelogIssue {
+  /**
+   * The design-system finish: `"cosmic"` (the default, DevDogs issues) or
+   * `"paper"` (GDGC issues). Ignored when `campaign` is set, which has its
+   * own layout.
+   */
+  theme?: ThemeName;
   /** Optional reusable GDG campaign layout; other issues retain the Changelog design. */
   campaign?: CampaignContent;
   /** Issue identifier: Changelog semver or GDGC sequential number; also the URL segment. */

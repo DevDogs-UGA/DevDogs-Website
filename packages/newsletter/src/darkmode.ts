@@ -40,6 +40,17 @@
  */
 import type { CSSProperties } from "react";
 import {
+  KIND_KEYS_FOR_CSS,
+  PAPER_DARK,
+  PIXEL_SHADOWS,
+  pixelPolygon,
+  shadowClass,
+  THEME_IMAGE_BASE,
+  THEME_PAINT,
+  type ThemeImage,
+  type ThemeName,
+} from "./design.js";
+import {
   chipColors,
   dotGrid,
   GDGC,
@@ -73,10 +84,38 @@ const CHIPS = KINDS.flatMap((kind) =>
 );
 
 /** The GDGC email's light colors, which its dark version replaces. */
-const CAMPAIGN_COLORS: string[] = [...new Set(Object.values(GDGC))];
+const CAMPAIGN_COLORS: string[] = [
+  ...new Set([
+    ...Object.values(GDGC),
+    // Paper (the light Changelog theme) swaps its extra neutrals too.
+    ...Object.values(PAPER_DARK).flatMap((map) => Object.keys(map)),
+  ]),
+];
+
+/** The light-to-dark replacements for one property: the GDGC set plus Paper's. */
+const darkFor = (
+  base: Record<string, string>,
+  extra: Record<string, string>,
+): Record<string, string> => ({ ...base, ...extra });
+
+/**
+ * Which themes' extra colors a stylesheet carries: one theme, or (the
+ * default, for the platform's archive pages that render any issue) both.
+ * `"none"` is the campaign layout, which paints only the shared set.
+ */
+export type ThemeSelect = ThemeName | "none" | "all";
+
+function themeColors(
+  select: ThemeSelect,
+  property: "background" | "text" | "border",
+): string[] {
+  const names: ThemeName[] =
+    select === "all" ? ["cosmic", "paper"] : select === "none" ? [] : [select];
+  return names.flatMap((name) => [...THEME_PAINT[name][property]]);
+}
 
 /** Every background the components paint — the classes `paintCss` must feed. */
-const BACKGROUNDS = [
+const backgrounds = (select: ThemeSelect) => [
   ...CAMPAIGN_COLORS,
   PALETTE.bg,
   PALETTE.bar,
@@ -89,19 +128,22 @@ const BACKGROUNDS = [
   UGA,
   ...KINDS,
   ...CHIPS.map((chip) => chip.fill),
+  ...themeColors(select, "background"),
 ];
 
-const PINS: {
+const pins = (
+  select: ThemeSelect,
+): {
   classFor: (color: string) => string;
   property: string;
   /** The campaign's dark replacements for this property. */
   campaignDark: Record<string, string>;
   colors: string[];
-}[] = [
+}[] => [
   {
     classFor: tc,
     property: "color",
-    campaignDark: GDGC_DARK.color,
+    campaignDark: darkFor(GDGC_DARK.color, PAPER_DARK.color),
     colors: [
       ...CAMPAIGN_COLORS,
       PALETTE.ink,
@@ -111,24 +153,26 @@ const PINS: {
       ...KINDS,
       ...CHIPS.map((chip) => chip.text),
       ...Object.values(HEADING_TINTS),
+      ...themeColors(select, "text"),
     ],
   },
   {
     classFor: bc,
     property: "background-color",
-    campaignDark: GDGC_DARK.background,
-    colors: BACKGROUNDS,
+    campaignDark: darkFor(GDGC_DARK.background, PAPER_DARK.background),
+    colors: backgrounds(select),
   },
   {
     classFor: brc,
     property: "border-color",
-    campaignDark: GDGC_DARK.border,
+    campaignDark: darkFor(GDGC_DARK.border, PAPER_DARK.border),
     colors: [
       GDGC.ink,
       PALETTE.border,
       UGA,
       ...KINDS,
       ...CHIPS.map((chip) => chip.border),
+      ...themeColors(select, "border"),
     ],
   },
 ];
@@ -167,14 +211,68 @@ export const DARK_IMAGE_CLASS = "gdgc-dark";
  */
 export function paintCss({
   campaign = false,
-}: { campaign?: boolean } = {}): string {
+  theme = "all",
+  themeImage = (name: ThemeImage) => `${THEME_IMAGE_BASE}/${name}.png`,
+}: {
+  campaign?: boolean;
+  /** Which theme's extra colors to paint (default: both). */
+  theme?: ThemeSelect;
+  /** Where the Cosmic card glows are hosted; defaults to the live site. */
+  themeImage?: (name: ThemeImage) => string;
+} = {}): string {
   return [
-    ...[...new Set(BACKGROUNDS)].map(
+    ...[...new Set(backgrounds(theme))].map(
       (color) =>
         `.${bc(color)}{${campaign && CAMPAIGN_COLORS.includes(color) ? `background-color:${color}` : declarations(solidBg(color))}}`,
     ),
     `.${SLANTS_CLASS}{${declarations(slants(UGA))}}`,
     `.${DOT_GRID_CLASS}{${declarations(dotGrid(PALETTE.bar, "rgba(255,255,255,.05)"))}}`,
+    // Cosmic's dithered glow behind the tonight card: a stylesheet-only image
+    // over the flat `bc-` fill, which is all classic Outlook ever shows.
+    ...KIND_KEYS_FOR_CSS.map(
+      (kind) =>
+        `.${glowClass(kind)}{background-image:url('${themeImage(`glow-${kind}`)}');background-size:cover;background-position:right bottom}`,
+    ),
+    pixelCss(),
+  ].join("\n");
+}
+
+/** Class for the tonight card fill that wears a kind's glow. */
+export function glowClass(kind: string): string {
+  return `bgi-glow-${kind}`;
+}
+
+/** Marks a pixel frame's outline layer and its fill layer. */
+export const PIXEL_OUTLINE_CLASS = "px-o";
+export const PIXEL_FILL_CLASS = "px-i";
+
+/**
+ * Cosmic's pixel frames, as progressive enhancement over a square base. Every
+ * frame is already a complete square card (bgcolor outline cell around a
+ * bgcolor fill cell, so Outlook shows it as a flat outlined box); here the
+ * clients that understand `@supports` get stepped corners via `clip-path` on
+ * both layers and a hard drop shadow that follows the steps via
+ * `filter: drop-shadow` on the wrapper. Clients without `@supports` (Gmail)
+ * keep the square corners and a plain hard `box-shadow`.
+ */
+export function pixelCss(): string {
+  const shadows = [
+    ...new Map(
+      PIXEL_SHADOWS.map((s) => [shadowClass(s.depth, s.color), s]),
+    ).entries(),
+  ];
+  return [
+    ...shadows.map(
+      ([cls, { depth, color }]) =>
+        `.${cls}{box-shadow:${depth}px ${depth}px 0 0 ${color}}`,
+    ),
+    "@supports (clip-path:polygon(0 0)){",
+    `.${PIXEL_OUTLINE_CLASS},.${PIXEL_FILL_CLASS}{clip-path:${pixelPolygon()}}`,
+    ...shadows.map(
+      ([cls, { depth, color }]) =>
+        `.${cls}{box-shadow:none;filter:drop-shadow(${depth}px ${depth}px 0 ${color})}`,
+    ),
+    "}",
   ].join("\n");
 }
 
@@ -199,28 +297,30 @@ function rules(
   scope: (selector: string) => string,
   shadowArmor = false,
   campaign = false,
+  theme: ThemeSelect = "all",
 ): string {
-  const pins = PINS.flatMap(({ classFor, property, campaignDark, colors }) =>
-    [...new Set(colors)].flatMap((color) => {
-      const value =
-        campaign && CAMPAIGN_COLORS.includes(color)
-          ? campaignDark[color]
-          : color;
-      if (!value) return [];
-      const selector = `.${classFor(color)}`;
-      const armor =
-        shadowArmor && property === "background-color"
-          ? `;box-shadow:inset 0 0 0 3000px ${value} !important`
-          : "";
-      return [`${scope(selector)}{${property}:${value} !important${armor}}`];
-    }),
+  const pinRules = pins(theme).flatMap(
+    ({ classFor, property, campaignDark, colors }) =>
+      [...new Set(colors)].flatMap((color) => {
+        const value =
+          campaign && CAMPAIGN_COLORS.includes(color)
+            ? campaignDark[color]
+            : color;
+        if (!value) return [];
+        const selector = `.${classFor(color)}`;
+        const armor =
+          shadowArmor && property === "background-color"
+            ? `;box-shadow:inset 0 0 0 3000px ${value} !important`
+            : "";
+        return [`${scope(selector)}{${property}:${value} !important${armor}}`];
+      }),
   );
   if (campaign)
-    pins.push(
+    pinRules.push(
       `${scope(`.${LIGHT_IMAGE_CLASS}`)}{display:none !important}`,
       `${scope(`.${DARK_IMAGE_CLASS}`)}{display:block !important}`,
     );
-  return pins.join("\n");
+  return pinRules.join("\n");
 }
 /**
  * The pinning stylesheet `ChangelogDocument` embeds. Three layers, weakest
@@ -257,7 +357,8 @@ function rules(
  */
 export function darkModeCss({
   campaign = false,
-}: { campaign?: boolean } = {}): string {
+  theme = "all",
+}: { campaign?: boolean; theme?: ThemeSelect } = {}): string {
   return [
     ":root{color-scheme:light dark;supported-color-schemes:light dark}",
     // The campaign skips the media layer: the web Outlooks evaluate it
@@ -267,9 +368,9 @@ export function darkModeCss({
     ...(campaign
       ? []
       : [
-          `@media (prefers-color-scheme: dark){\n${rules((selector) => selector)}\n}`,
+          `@media (prefers-color-scheme: dark){\n${rules((selector) => selector, false, false, theme)}\n}`,
         ]),
-    rules((selector) => `[data-ogsc] ${selector}`, true, campaign),
-    rules((selector) => `[data-ogsb] ${selector}`, true, campaign),
+    rules((selector) => `[data-ogsc] ${selector}`, true, campaign, theme),
+    rules((selector) => `[data-ogsb] ${selector}`, true, campaign, theme),
   ].join("\n");
 }

@@ -13,6 +13,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import {
   DATA_URI_ASSETS,
   DEVDOGS_LOCKUP,
+  hostedThemeImage,
   GDGC_UGA,
   MARK_SIZES,
   partnerLogoSize,
@@ -26,6 +27,7 @@ import {
 } from "../icons.js";
 import type { ChangelogIssue } from "../issues.js";
 import { PARTNER_NAMES, partnerSvg, type PartnerName } from "../partners.js";
+import { THEME_IMAGE_BASE } from "../design.js";
 import { EMAIL_FONTS } from "../theme.js";
 
 export { buildEml, type EmlImage, type EmlInput } from "./eml.js";
@@ -99,7 +101,9 @@ export function emailImages(): EmailImage[] {
  * The context a send renders with: literal font stacks and `cid:` references
  * matching the `emailImages()` manifest.
  */
-export function emailRenderContext(): RenderContext {
+export function emailRenderContext(
+  imageBase: string = THEME_IMAGE_BASE,
+): RenderContext {
   const socialIcon = (name: SocialIconName) => `cid:${cidFor(`icon-${name}`)}`;
   return {
     fonts: EMAIL_FONTS,
@@ -109,6 +113,8 @@ export function emailRenderContext(): RenderContext {
       gdgcLockup: `cid:${cidFor("gdgc-lockup")}`,
       socialIcon,
       partnerLogo: (name: PartnerName) => `cid:${cidFor(`partner-${name}`)}`,
+      // theme images are hosted PNGs, not parts of the MIME
+      themeImage: hostedThemeImage(imageBase),
     },
   };
 }
@@ -118,8 +124,44 @@ export function emailRenderContext(): RenderContext {
  * stacks a mail client would fall down, but self-contained data-URI images so
  * the file opens anywhere with nothing to attach.
  */
-export function previewRenderContext(): RenderContext {
-  return { fonts: EMAIL_FONTS, assets: DATA_URI_ASSETS };
+export function previewRenderContext(
+  imageBase: string = THEME_IMAGE_BASE,
+): RenderContext {
+  return {
+    fonts: EMAIL_FONTS,
+    assets: { ...DATA_URI_ASSETS, themeImage: hostedThemeImage(imageBase) },
+  };
+}
+
+/**
+ * Drops the paint, pin and effect rules for utility classes the rendered body
+ * never uses. `paintCss`/`darkModeCss` carry a rule per color any theme or chip can
+ * paint, three times over (media layer plus two Outlook scopes); one issue
+ * uses a fraction, and Gmail clips a message's HTML at ~102KB. Rules are one
+ * per line, so this is a line filter over the document's own stylesheet.
+ */
+export function pruneUnusedPins(html: string): string {
+  const bodyStart = html.indexOf("<body");
+  const body = html.slice(bodyStart);
+  const used = new Set(
+    [...body.matchAll(/class="([^"]*)"/g)].flatMap((m) => m[1]!.split(" ")),
+  );
+  const keep = (line: string) => {
+    const match =
+      /\.((?:tc|bc|brc)-[0-9a-f]{6}|bgi-glow-[a-z]+|px-sh-[0-9_]+-[0-9a-f]{6}|bg-slants|bg-dots)\{/.exec(
+        line,
+      );
+    return match === null || used.has(match[1]!);
+  };
+  return (
+    html
+      .slice(0, bodyStart)
+      .replace(
+        /(<style[^>]*>)([\s\S]*?)(<\/style>)/g,
+        (_, open: string, css: string, close: string) =>
+          open + css.split("\n").filter(keep).join("\n") + close,
+      ) + body
+  );
 }
 
 /** An issue as one self-describing HTML document string. */
@@ -127,8 +169,8 @@ export function renderIssueDocument(
   issue: ChangelogIssue,
   ctx: RenderContext = emailRenderContext(),
 ): string {
-  return (
+  return pruneUnusedPins(
     "<!doctype html>" +
-    renderToStaticMarkup(<ChangelogDocument issue={issue} ctx={ctx} />)
+      renderToStaticMarkup(<ChangelogDocument issue={issue} ctx={ctx} />),
   );
 }

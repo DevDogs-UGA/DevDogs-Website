@@ -8,6 +8,7 @@
  */
 export { ChangelogDocument, ChangelogEmail } from "./components.js";
 export { paintCss } from "./darkmode.js";
+export { THEMES, themeOf, type Theme, type ThemeName } from "./design.js";
 export {
   DATA_URI_ASSETS,
   DEVDOGS_LOCKUP,
@@ -49,7 +50,11 @@ export {
   UGA,
 } from "./theme.js";
 
-import { DATA_URI_ASSETS, type RenderContext } from "./assets.js";
+import {
+  DATA_URI_ASSETS,
+  hostedThemeImage,
+  type RenderContext,
+} from "./assets.js";
 import { CSS_VARIABLE_FONTS } from "./theme.js";
 
 /**
@@ -58,7 +63,14 @@ import { CSS_VARIABLE_FONTS } from "./theme.js";
  * names would never match) and SVG data-URI image sources.
  */
 export function webRenderContext(): RenderContext {
-  return { fonts: CSS_VARIABLE_FONTS, assets: DATA_URI_ASSETS };
+  return {
+    fonts: CSS_VARIABLE_FONTS,
+    assets: {
+      ...DATA_URI_ASSETS,
+      // the page is served from the site that hosts the images
+      themeImage: hostedThemeImage("/brand/newsletter/theme"),
+    },
+  };
 }
 
 export { assertIssueReadyToSend, type CampaignContent } from "./campaign.js";

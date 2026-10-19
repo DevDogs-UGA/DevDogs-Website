@@ -11,6 +11,7 @@ import { campaignDataUri, type CampaignImage } from "./campaign-assets.js";
 import { GDGC_UGA, LOCKUP_ON_DARK, type Asset } from "@devdogsuga/sdk/brand";
 import { socialIconDataUri, type SocialIconName } from "./icons.js";
 import { PARTNERS, partnerDataUri, type PartnerName } from "./partners.js";
+import { THEME_IMAGE_BASE, type ThemeImage } from "./design.js";
 import type { FontStacks } from "./theme.js";
 
 export { GDGC_UGA };
@@ -57,6 +58,13 @@ export interface NewsletterAssets {
   socialIcon: (name: SocialIconName) => string;
   /** `<img>` src for a partner's logo on a hero card. */
   partnerLogo: (name: PartnerName) => string;
+  /**
+   * `<img>` src for a theme image (space strip, sprites, Paper emoji and
+   * lockups). Theme images are hosted PNGs under devdogsuga.org, never
+   * embedded: sends and previews use the absolute URL, the platform's own
+   * pages a root-relative one.
+   */
+  themeImage: (name: ThemeImage) => string;
 }
 
 /**
@@ -80,4 +88,12 @@ export const DATA_URI_ASSETS: NewsletterAssets = {
   gdgcLockup: GDGC_UGA.src,
   socialIcon: socialIconDataUri,
   partnerLogo: partnerDataUri,
+  themeImage: hostedThemeImage(),
 };
+
+/** A theme image's URL under `base` (the live site by default). */
+export function hostedThemeImage(
+  base: string = THEME_IMAGE_BASE,
+): (name: ThemeImage) => string {
+  return (name) => `${base}/${name}.png`;
+}
