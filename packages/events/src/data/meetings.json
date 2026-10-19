@@ -354,6 +354,23 @@
       "questions": ["how_did_you_learn"]
     },
     {
+      "slug": "2026-10-30",
+      "title": "Georgia 311 Demo Day",
+      "summary": "Georgia 311 teams present their projects to Mableton Mayor Owens and the judges at DevFest Atlanta.",
+      "kind": "Demo Night",
+      "building": null,
+      "location": "Morehouse College, Atlanta",
+      "startsAt": "2026-10-30T13:00:00.000Z",
+      "endsAt": "2026-10-30T19:00:00.000Z",
+      "rsvpUrl": "https://gdg.community.dev/events/details/google-gdg-on-campus-morehouse-college-atlanta-united-states-of-america-presents-georgia-311-challenge-2026/",
+      "cancelledAt": null,
+      "cancellationReason": null,
+      "surveyUrl": null,
+      "agenda": [],
+      "countsForCredit": false,
+      "questions": ["how_did_you_learn"]
+    },
+    {
       "slug": "2026-11-02",
       "title": "Merge Monday",
       "summary": "Pick an issue in DogDays or DogPack and open a pull request before you leave. An unfinished PR counts. Focus leads are here to pair with you.",
@@ -429,7 +446,7 @@
     },
     {
       "slug": "2026-11-16",
-      "title": "Demo Day",
+      "title": "DevDogs Demo Day",
       "summary": "DogDays and DogPack show what they shipped this semester.",
       "kind": "Demo Night",
       "building": "DLW",
@@ -447,7 +464,7 @@
     {
       "slug": "2026-11-18",
       "title": "DevDogs Touch Grass #2",
-      "summary": "No laptops required -- just come outside, get some air, and hang out with the club one last time before finals.",
+      "summary": "No laptops required! Just come outside, get some air, and hang out with the club one last time before finals.",
       "kind": "Social",
       "building": null,
       "location": "TBA",
