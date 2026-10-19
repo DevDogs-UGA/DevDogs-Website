@@ -75,8 +75,8 @@ const EVENTS = {
   g311interest: meeting("2026-10-14-georgia-311"),
   g311kickoff: meeting("2026-10-19"),
   supabase2: meeting("2026-10-26"),
-  bugbash1: meeting("2026-11-04"),
-  demoday: meeting("2026-11-18-demo-day"),
+  workshopwed: meeting("2026-11-04"),
+  demoday: meeting("2026-11-16"),
   touchgrass2: meeting("2026-11-18"),
 };
 
@@ -178,7 +178,7 @@ export const ISSUES: ChangelogIssue[] = [
       EVENTS.g311interest,
       EVENTS.g311kickoff,
       EVENTS.supabase2,
-      EVENTS.bugbash1,
+      EVENTS.workshopwed,
       EVENTS.demoday,
       EVENTS.touchgrass2,
     ],
