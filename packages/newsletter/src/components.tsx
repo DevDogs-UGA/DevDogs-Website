@@ -326,23 +326,42 @@ function Frame({
   );
 }
 
-/** Three title-bar dots echoing terminal window controls: kind-colored squares (Cosmic) or Google's red/yellow/green (Paper). */
-function TitleDots({ t }: { t: Theme }) {
+/** Three title-bar dots echoing terminal window controls: kind-colored pixel circles (Cosmic) or Google's red/yellow/green (Paper). */
+function TitleDots({ t, ctx }: { t: Theme; ctx: RenderContext }) {
+  if (t.dotShape === "pixel") {
+    return (
+      <table {...TABLE_RESET}>
+        <tbody>
+          <tr>
+            {t.dots.map((color) => (
+              <td key={color} style={{ paddingLeft: "6px" }}>
+                <ThemeImg
+                  ctx={ctx}
+                  name={`dot-${color.slice(1).toLowerCase()}`}
+                  width={12}
+                  height={12}
+                  style={PIXELATED}
+                />
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+    );
+  }
   return (
     <span style={{ fontSize: "0px", lineHeight: 0 }}>
       {t.dots.map((color) => (
         <span
           key={color}
-          className={`${bc(color)}${t.dotShape === "round" ? ` ${brc(t.ink)}` : ""}`}
+          className={`${bc(color)} ${brc(t.ink)}`}
           style={{
             display: "inline-block",
-            width: "11px",
-            height: "11px",
-            borderRadius: t.dotShape === "round" ? "50%" : "0",
+            borderRadius: "50%",
             marginLeft: "6px",
-            ...(t.dotShape === "round"
-              ? { border: `1.5px solid ${t.ink}`, width: "8px", height: "8px" }
-              : {}),
+            border: `1.5px solid ${t.ink}`,
+            width: "8px",
+            height: "8px",
           }}
         />
       ))}
@@ -614,43 +633,59 @@ function EventRow({
                         {meeting.summary}
                       </div>
                     </td>
-                    {meeting.rsvpUrl ? (
-                      <td
-                        valign="middle"
-                        align="right"
-                        width={74}
-                        style={{ paddingLeft: "10px" }}
-                      >
-                        <CtaButton
-                          label="RSVP"
-                          url={meeting.rsvpUrl}
-                          color={t.name === "cosmic" ? card.color : t.cta.fill}
-                          textColor={
-                            t.name === "cosmic" ? PALETTE.ink : t.cta.text
-                          }
-                          borderColor={
-                            t.name === "cosmic" ? card.color : t.cta.border
-                          }
-                          ground={
-                            t.name === "cosmic" ? PALETTE.card : undefined
-                          }
-                          compact
-                        />
-                      </td>
-                    ) : null}
                     <td
                       valign="top"
                       align="right"
-                      width={56}
+                      width={meeting.rsvpUrl ? 74 : 56}
                       style={{ paddingLeft: "14px" }}
                     >
-                      <EventArt
-                        t={t}
-                        ctx={ctx}
-                        meeting={meeting}
-                        kind={card.kind}
-                        size={42}
-                      />
+                      {/* The RSVP sits under the icon, both right-aligned, so the two never compete for the row's middle. */}
+                      <table {...TABLE_RESET} align="right">
+                        <tbody>
+                          <tr>
+                            <td align="right">
+                              <EventArt
+                                t={t}
+                                ctx={ctx}
+                                meeting={meeting}
+                                kind={card.kind}
+                                size={42}
+                              />
+                            </td>
+                          </tr>
+                          {meeting.rsvpUrl ? (
+                            <tr>
+                              <td align="right" style={{ paddingTop: "12px" }}>
+                                <CtaButton
+                                  label="RSVP"
+                                  url={meeting.rsvpUrl}
+                                  color={
+                                    t.name === "cosmic"
+                                      ? card.color
+                                      : t.cta.fill
+                                  }
+                                  textColor={
+                                    t.name === "cosmic"
+                                      ? PALETTE.ink
+                                      : t.cta.text
+                                  }
+                                  borderColor={
+                                    t.name === "cosmic"
+                                      ? card.color
+                                      : t.cta.border
+                                  }
+                                  ground={
+                                    t.name === "cosmic"
+                                      ? PALETTE.card
+                                      : undefined
+                                  }
+                                  compact
+                                />
+                              </td>
+                            </tr>
+                          ) : null}
+                        </tbody>
+                      </table>
                     </td>
                   </tr>
                 </tbody>
@@ -968,7 +1003,7 @@ export function ChangelogEmail({
                 <tbody>
                   <tr>
                     <td width={96}>
-                      <TitleDots t={t} />
+                      <TitleDots t={t} ctx={ctx} />
                     </td>
                     <td
                       align="center"

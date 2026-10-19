@@ -52,6 +52,13 @@ ART = ["laptop", "megaphone", "triangular_flag", "trophy", "party_popper", "ligh
 for name in ART:
     Image.open(DS / "assets/sprite" / f"{name}.png").save(OUT / f"sprite-{name}.png", optimize=True)
 
+# Cosmic: the title bar's three dots as pixel circles (a 6x6 grid, corners cut), 4 px per cell so they show crisp at
+# 12 px on 2x screens. One per kind accent the dots use (design.ts THEMES.cosmic.dots).
+CIRCLE = np.array([[0,1,1,1,1,0],[1,1,1,1,1,1],[1,1,1,1,1,1],[1,1,1,1,1,1],[1,1,1,1,1,1],[0,1,1,1,1,0]], bool)
+for hexc in ["a684ff", "00a6f4", "ffb900"]:
+    px = np.zeros((6, 6, 4), np.uint8); px[CIRCLE] = [*rgb("#" + hexc).astype(np.uint8), 255]
+    Image.fromarray(px, "RGBA").resize((24, 24), Image.NEAREST).save(OUT / f"dot-{hexc}.png", optimize=True)
+
 # Paper: flat Fluent emoji at 120 px (shown at 60 and 38), the asterisk, and the logo/lockup pairs
 for name in ART:
     raster(DS / "assets/emoji/paper" / f"{name}.svg", f"emoji-{name}.png", 120)

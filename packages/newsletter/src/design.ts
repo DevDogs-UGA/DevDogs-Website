@@ -195,7 +195,8 @@ export interface Theme {
   signoffLabel: string;
   arrows: [string, string, string];
   dots: [string, string, string];
-  dotShape: "square" | "round";
+  /** "pixel": stepped-circle PNGs (`dot-<hex>`), so every client, classic Outlook too, draws the same circle. */
+  dotShape: "pixel" | "round";
   cta: { fill: string; border: string; text: string };
   terminal: string;
   signature: string;
@@ -243,7 +244,7 @@ export const THEMES: Record<ThemeName, Theme> = {
       COSMIC_KINDS.social.bar,
     ],
     dots: [KIND.interest, KIND.build, KIND.study],
-    dotShape: "square",
+    dotShape: "pixel",
     cta: { fill: UGA, border: "#8a0a22", text: PALETTE.ink },
     terminal: "devdogs",
     signature: "— the DevDogs officers",
@@ -317,7 +318,8 @@ export type ThemeImage =
   | "paper-gdgc-lockup-dark"
   | `glow-${KindKey}`
   | `sprite-${string}`
-  | `emoji-${string}`;
+  | `emoji-${string}`
+  | `dot-${string}`;
 
 /**
  * Colors each theme paints beyond the shared Changelog set, which the pin
