@@ -12,10 +12,10 @@ describe("buildDesiredSettings", () => {
     });
   });
 
-  it("enables Dependabot alerts and security updates", () => {
+  it("enables Dependabot alerts but leaves security updates to Renovate", () => {
     const desired = buildDesiredSettings([]);
     expect(desired.vulnerabilityAlerts).toBe(true);
-    expect(desired.dependabotSecurityUpdates).toBe(true);
+    expect(desired.dependabotSecurityUpdates).toBe(false);
   });
 
   it("wants SHA pinning required and allowed_actions: selected with the given patterns, sorted", () => {
@@ -40,7 +40,7 @@ describe("buildDesiredSettings", () => {
     });
   });
 
-  it("names the six deploy environments, publishing-next and the two destructive gates", () => {
+  it("names the six deploy environments, publishing-next, the two destructive gates and production-approval", () => {
     const desired = buildDesiredSettings([]);
     expect(desired.environments.map((e) => e.name)).toEqual([
       "publishing",
@@ -52,7 +52,40 @@ describe("buildDesiredSettings", () => {
       "publishing-next",
       "production-destructive",
       "staging-destructive",
+      "production-approval",
     ]);
+  });
+
+  it("production-approval needs a devops approver who did not write the change, flag on or off", () => {
+    for (const oneApproval of [false, true]) {
+      expect(
+        buildDesiredSettings([], "DevDogsUGA", {
+          oneApproval,
+        }).environments.find((e) => e.name === "production-approval"),
+      ).toMatchObject({
+        allowedBranches: ["main"],
+        requireReviewers: true,
+        preventSelfReview: true,
+        createIfMissing: true,
+        reviewerTeams: ["devops"],
+      });
+    }
+  });
+
+  it("production keeps its reviewers until ONE_APPROVAL moves them to production-approval", () => {
+    const production = (oneApproval: boolean) =>
+      buildDesiredSettings([], "DevDogsUGA", { oneApproval }).environments.find(
+        (e) => e.name === "production",
+      );
+    expect(production(false)).toMatchObject({
+      requireReviewers: true,
+      preventSelfReview: true,
+    });
+    expect(production(true)).toMatchObject({
+      allowedBranches: ["main"],
+      requireReviewers: false,
+      preventSelfReview: false,
+    });
   });
 
   it("the destructive gates need a devops approver who did not write the change", () => {

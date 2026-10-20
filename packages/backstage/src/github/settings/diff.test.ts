@@ -47,7 +47,7 @@ function matchingSnapshot(): LiveSettingsSnapshot {
       },
     },
     vulnerabilityAlerts: true,
-    automatedSecurityFixes: { enabled: true },
+    automatedSecurityFixes: { enabled: false },
     actionsPermissions: {
       enabled: true,
       allowed_actions: "selected",
@@ -182,9 +182,9 @@ describe("planSettings — drift", () => {
     });
   });
 
-  it("flags disabled dependabot security updates as drift, fixable", () => {
+  it("flags enabled dependabot security updates as drift, fixable", () => {
     const live = matchingSnapshot();
-    live.automatedSecurityFixes = { enabled: false };
+    live.automatedSecurityFixes = { enabled: true };
     const plan = planSettings(desiredFixture(), live, []);
     expect(
       plan.checks.find((c) => c.key === "dependabot_security_updates"),

@@ -234,6 +234,25 @@ export async function setWorkflowPermissions(
   await writeJson("PUT", repoPath(r, "/actions/permissions/workflow"), body);
 }
 
+// ── Repository variables ─────────────────────────────────────────────────────
+
+/** A repository-level Actions variable's value, or `null` when it is not set. */
+export async function getRepoVariable(
+  r: Repo,
+  name: string,
+): Promise<string | null> {
+  try {
+    const variable = await readJson<{ value: string }>(
+      repoPath(r, `/actions/variables/${encodeURIComponent(name)}`),
+    );
+    return variable.value;
+  } catch (err) {
+    if (err instanceof GhSettingsError && /\b404\b/.test(err.message))
+      return null;
+    throw err;
+  }
+}
+
 // ── Environments ─────────────────────────────────────────────────────────────
 
 /** `null` when the environment does not exist yet — reported, never created here. */

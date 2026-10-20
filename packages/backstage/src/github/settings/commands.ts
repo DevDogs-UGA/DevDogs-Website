@@ -27,6 +27,7 @@ import {
   getDeploymentBranchPolicies,
   getEnvironment,
   getRepo,
+  getRepoVariable,
   getSelectedActions,
   getVulnerabilityAlertsEnabled,
   getWorkflowPermissions,
@@ -378,10 +379,14 @@ export async function runGithubSettings(
   }
   const unpinned = unpinnedActionUses(uses);
   const patterns = computeActionPatterns(uses);
-  const desired = buildDesiredSettings(patterns, opts.repo);
-
   let live: LiveSettingsSnapshot;
+  let desired: DesiredSettings;
   try {
+    // The workflows read `vars.ONE_APPROVAL == 'true'`; so does this.
+    const oneApproval =
+      opts.repo === "DevDogsUGA" &&
+      (await getRepoVariable(r, "ONE_APPROVAL")) === "true";
+    desired = buildDesiredSettings(patterns, opts.repo, { oneApproval });
     live = await fetchSnapshot(r, desired);
   } catch (err) {
     process.stderr.write(

@@ -80,7 +80,7 @@ The deploy now refuses a destructive plan nobody approved on a pull request (see
 
 If you do step 3 before step 2, `production` is open to every job on `main` with no approval in front of it. Do not.
 
-`backstage github settings` (`desired.ts`) still lists `production` with reviewers and does not know `production-approval`. Do not run it with `--apply` between steps 3 and a commit that updates `desired.ts` to match, or it puts the reviewers back (harmless, the deploy asks more than once again) or reports drift.
+In DevDogsUGA, `pnpm backstage github settings --apply` can do step 1: `desired.ts` wants `production-approval` (reviewers `devops`, self-review prevented, `main` only) and creates it when missing. It reads `ONE_APPROVAL` too: while the variable is not `true` it checks `production` for reviewers, and once it is, it stops, so step 3 reads as no drift. It never writes reviewers onto an existing environment, so it cannot undo step 3. DogDays and DogPack are not managed by it; do step 1 there by hand.
 
 To turn it off, delete the variable (or set it to anything but `true`) and put the required reviewers back on `production`. The old per-job flow is untouched.
 

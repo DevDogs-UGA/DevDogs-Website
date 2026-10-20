@@ -55,7 +55,7 @@ function baseEnvironment(name: string, requireReviewers: boolean) {
 const api = vi.hoisted(() => ({
   getRepo: vi.fn(async () => baseRepoFixture()),
   getVulnerabilityAlertsEnabled: vi.fn(async () => true),
-  getAutomatedSecurityFixes: vi.fn(async () => ({ enabled: true })),
+  getAutomatedSecurityFixes: vi.fn(async () => ({ enabled: false })),
   getActionsPermissions: vi.fn(async () => ({
     enabled: true,
     allowed_actions: "selected" as const,
@@ -76,6 +76,7 @@ const api = vi.hoisted(() => ({
         name,
         name === "production" ||
           name === "publishing" ||
+          name === "production-approval" ||
           name.endsWith("-destructive"),
       ).environment,
   ),
@@ -93,6 +94,7 @@ const api = vi.hoisted(() => ({
   addDeploymentBranchPolicy: vi.fn(async () => undefined),
   deleteDeploymentBranchPolicy: vi.fn(async () => undefined),
   createEnvironment: vi.fn(async () => undefined),
+  getRepoVariable: vi.fn(async (): Promise<string | null> => null),
 }));
 
 vi.mock("./api.js", () => api);
@@ -252,6 +254,33 @@ describe("--apply", () => {
     // reconciler has no function that could even express one.
     expect(api.setDeploymentBranchPolicyMode).not.toHaveBeenCalled();
     restore();
+  });
+
+  it("checks production for reviewers until ONE_APPROVAL is true, then no longer", async () => {
+    api.getEnvironment.mockImplementation(async (_r: unknown, name: string) =>
+      name === "production"
+        ? baseEnvironment(name, false).environment
+        : baseEnvironment(name, name !== "staging" && name !== "preflight")
+            .environment,
+    );
+    const reviewerCheck = async () => {
+      const { log, restore } = captureConsole();
+      await runGithubSettings(["--json"]);
+      const plan = JSON.parse(log.mock.calls[0]![0] as string) as {
+        checks: { key: string; status: string }[];
+      };
+      restore();
+      return plan.checks.find(
+        (c) => c.key === "environments.production.required_reviewers",
+      )?.status;
+    };
+    expect(await reviewerCheck()).toBe("drift");
+    api.getRepoVariable.mockResolvedValueOnce("true");
+    expect(await reviewerCheck()).toBeUndefined();
+    expect(api.getRepoVariable).toHaveBeenLastCalledWith(
+      expect.anything(),
+      "ONE_APPROVAL",
+    );
   });
 
   it("refuses to apply with no confirmation and no TTY, without --yes", async () => {

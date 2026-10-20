@@ -5,7 +5,7 @@
  * Sibling of `../rulesets/desired.ts` — same shape of module (a pure
  * builder, no network, so `desired.test.ts` can assert it directly) covering
  * a different slice of repository configuration: security-and-analysis,
- * Dependabot, Actions permissions, and the four deploy environments'
+ * Dependabot, Actions permissions, and the deploy environments'
  * branch policies. `diff.ts` compares this against what `api.ts`'s reads
  * report; `commands.ts` is the `backstage github settings` command that
  * prints or applies the difference.
@@ -92,11 +92,14 @@ export interface DesiredSettings {
 export function buildDesiredSettings(
   actionPatterns: readonly string[],
   repo: ManagedRepo = "DevDogsUGA",
+  { oneApproval = false }: { oneApproval?: boolean } = {},
 ): DesiredSettings {
   return {
     ...baseSettings(actionPatterns),
     environments:
-      repo === "Backstage" ? BACKSTAGE_ENVIRONMENTS : DEVDOGSUGA_ENVIRONMENTS,
+      repo === "Backstage"
+        ? BACKSTAGE_ENVIRONMENTS
+        : devdogsugaEnvironments(oneApproval),
   };
 }
 
@@ -155,7 +158,7 @@ const BACKSTAGE_ENVIRONMENTS: readonly DesiredEnvironmentPolicy[] = [
  * environment went with the deploy-PR App. Created on `--apply` when missing,
  * like Backstage's.
  */
-const DESTRUCTIVE_GATE = (name: string): DesiredEnvironmentPolicy => ({
+const DEVOPS_REVIEWED = (name: string): DesiredEnvironmentPolicy => ({
   name,
   allowedBranches: ["main"],
   requireReviewers: true,
@@ -164,8 +167,23 @@ const DESTRUCTIVE_GATE = (name: string): DesiredEnvironmentPolicy => ({
   reviewerTeams: ["devops"],
 });
 
-const DEVDOGSUGA_ENVIRONMENTS: readonly DesiredEnvironmentPolicy[] = [
-  ...BACKSTAGE_ENVIRONMENTS,
+/**
+ * `production-approval` is the one-approval flow's single pause
+ * (`docs/operations/deploys/one-approval.md`): the `devops` reviewers and no
+ * secrets. It is wanted whether or not the flow is on, so `--apply` can create
+ * it before the `ONE_APPROVAL` variable is set (the doc's step 1). Once the
+ * variable is `true`, `production` keeps its secrets and loses its reviewers
+ * (step 3), so it is no longer checked for them; while it is off, `production`
+ * is still the reviewed gate.
+ */
+const devdogsugaEnvironments = (
+  oneApproval: boolean,
+): readonly DesiredEnvironmentPolicy[] => [
+  ...BACKSTAGE_ENVIRONMENTS.map((env) =>
+    env.name === "production" && oneApproval
+      ? { ...env, requireReviewers: false, preventSelfReview: false }
+      : env,
+  ),
   {
     ...plain("publishing-next"),
     // `devdogsuga_sdk-v<version>` tag pushes publish the Dart SDK to pub.dev
@@ -173,8 +191,9 @@ const DEVDOGSUGA_ENVIRONMENTS: readonly DesiredEnvironmentPolicy[] = [
     allowedTags: ["devdogsuga_sdk-v*"],
     createIfMissing: true,
   },
-  DESTRUCTIVE_GATE("production-destructive"),
-  DESTRUCTIVE_GATE("staging-destructive"),
+  DEVOPS_REVIEWED("production-destructive"),
+  DEVOPS_REVIEWED("staging-destructive"),
+  DEVOPS_REVIEWED("production-approval"),
 ];
 
 function baseSettings(
@@ -191,7 +210,9 @@ function baseSettings(
       secretScanningValidityChecks: false,
     },
     vulnerabilityAlerts: true,
-    dependabotSecurityUpdates: true,
+    // Renovate opens the security update PRs (its shared preset), so
+    // Dependabot's would only duplicate them. Alerts stay on.
+    dependabotSecurityUpdates: false,
     actions: {
       shaPinningRequired: true,
       allowedActions: "selected",
