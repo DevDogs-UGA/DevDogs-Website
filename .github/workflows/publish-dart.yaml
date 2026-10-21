@@ -68,5 +68,17 @@ jobs:
           git fetch origin main
           git merge-base --is-ancestor "$GITHUB_SHA" origin/main \
             || { echo "::error::$GITHUB_REF_NAME is not on main."; exit 1; }
+      # The brand is held from stable releases until the design overhaul
+      # (HELD_FROM_STABLE in scripts/publish-changed-packages.mjs). Prereleases
+      # are not affected.
+      - name: The Dart SDK is not held from stable
+        run: |
+          node --input-type=module -e '
+            import { HELD_FROM_STABLE } from "./scripts/publish-changed-packages.mjs";
+            if (HELD_FROM_STABLE.has("devdogsuga_sdk")) {
+              console.log("::error::devdogsuga_sdk is held from stable releases (HELD_FROM_STABLE in scripts/publish-changed-packages.mjs).");
+              process.exit(1);
+            }
+          '
       - name: Publish
         uses: ./.github/actions/publish-dart

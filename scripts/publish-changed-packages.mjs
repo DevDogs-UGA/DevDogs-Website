@@ -399,6 +399,42 @@ export function publishEdges(pkg, byName) {
 }
 
 /**
+ * Held back from the stable channel until the design overhaul settles the
+ * brand (`@devdogsuga/sdk`'s `./brand`, palette, tokens and artwork, and the
+ * Dart SDK's assets): they keep publishing to `next`, but never to `latest`
+ * or pub.dev's stable versions. `@devdogsuga/backstage` is held with the sdk
+ * because it depends on it at runtime: a stable backstage would install the
+ * sdk's `latest`, which is still the 0.0.0 placeholder. `devdogsuga_sdk` is
+ * the Dart package; publish-dart.yaml's stable job reads this list too. Lift
+ * the hold by deleting the names, sdk and backstage together.
+ */
+export const HELD_FROM_STABLE = new Set([
+  "@devdogsuga/sdk",
+  "@devdogsuga/backstage",
+  "devdogsuga_sdk",
+]);
+
+/**
+ * Splits the public packages into the ones the stable channel publishes and
+ * the held ones. Refuses a published package that needs a held one installed
+ * (`publishEdges`): it would reach `latest` depending on a version that was
+ * never published there.
+ */
+export function withoutHeld(pkgs, held = HELD_FROM_STABLE) {
+  const byName = new Map(pkgs.map((p) => [p.json.name, p]));
+  const publish = pkgs.filter((p) => !held.has(p.json.name));
+  for (const pkg of publish) {
+    const needs = publishEdges(pkg, byName).filter((name) => held.has(name));
+    if (needs.length > 0) {
+      throw new Error(
+        `${pkg.json.name} needs ${needs.join(", ")} at runtime, which ${needs.length > 1 ? "are" : "is"} held from the stable channel; hold it too, or lift the hold.`,
+      );
+    }
+  }
+  return { publish, held: pkgs.filter((p) => held.has(p.json.name)) };
+}
+
+/**
  * Group packages into publish layers: layer N holds every package whose
  * deepest dependency chain is N long, so everything in a layer can publish at
  * once and a layer only needs the layers before it. Sorted by name inside a
@@ -589,11 +625,18 @@ async function main() {
   // `@devdogsuga/backstage` is public, so a first run finds it unpublished and
   // publishes it at its committed 0.1.0 (the first publish is done by hand
   // to set up Trusted Publishing; later runs patch-bump it like the rest).
-  const pkgs = discoverPackages()
-    .map((dir) => readPackageJson(dir))
-    .filter(
-      ({ json }) => json.private !== true && typeof json.name === "string",
+  const { publish: pkgs, held } = withoutHeld(
+    discoverPackages()
+      .map((dir) => readPackageJson(dir))
+      .filter(
+        ({ json }) => json.private !== true && typeof json.name === "string",
+      ),
+  );
+  if (held.length > 0) {
+    console.log(
+      `Held from the stable channel (see HELD_FROM_STABLE): ${held.map((p) => p.json.name).join(", ")}`,
     );
+  }
   const originalPackageFiles = new Map(
     pkgs.map((pkg) => [pkg.path, readFileSync(pkg.path, "utf8")]),
   );

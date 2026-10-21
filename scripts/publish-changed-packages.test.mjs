@@ -16,9 +16,11 @@ import { test } from "node:test";
 import {
   canonical,
   contentHashOfPackageDir,
+  HELD_FROM_STABLE,
   publishEdges,
   publishLayers,
   runLayers,
+  withoutHeld,
 } from "./publish-changed-packages.mjs";
 
 const pkg = (name, fields = {}) => ({ json: { name, ...fields } });
@@ -114,6 +116,40 @@ test("the repo's own public packages layer cleanly: four published, the rest bun
   assert.ok(
     layerOf("@devdogsuga/backstage") > layerOf("@devdogsuga/sdk"),
     "backstage depends on the sdk (brand), so it publishes after it",
+  );
+});
+
+test("the stable channel holds the sdk and backstage, and what it publishes needs neither", () => {
+  const dir = join(import.meta.dirname, "..", "packages");
+  const pkgs = readdirSync(dir)
+    .filter((name) => existsSync(join(dir, name, "package.json")))
+    .map((name) => ({
+      json: JSON.parse(readFileSync(join(dir, name, "package.json"), "utf8")),
+    }))
+    .filter(({ json }) => json.private !== true);
+  const { publish, held } = withoutHeld(pkgs);
+  assert.deepEqual(publish.map((p) => p.json.name).sort(), [
+    "@devdogsuga/config",
+    "@devdogsuga/devtools",
+  ]);
+  assert.deepEqual(held.map((p) => p.json.name).sort(), [
+    "@devdogsuga/backstage",
+    "@devdogsuga/sdk",
+  ]);
+  assert.ok(HELD_FROM_STABLE.has("devdogsuga_sdk"), "the Dart SDK is held too");
+});
+
+test("holding a package another one needs at runtime is refused", () => {
+  const sdk = pkg("sdk");
+  const cli = pkg("cli", { dependencies: { sdk: "workspace:*" } });
+  const tool = pkg("tool", { devDependencies: { sdk: "workspace:*" } });
+  assert.throws(
+    () => withoutHeld([sdk, cli, tool], new Set(["sdk"])),
+    /cli needs sdk at runtime/,
+  );
+  assert.deepEqual(
+    withoutHeld([sdk, tool], new Set(["sdk"])).publish.map((p) => p.json.name),
+    ["tool"],
   );
 });
 

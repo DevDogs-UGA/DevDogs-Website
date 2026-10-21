@@ -24,6 +24,8 @@ The product repositories depend on the **prereleases**, so a change to the SDK r
 
 Stable publishing from this repository stays off until the repository variable `BACKSTAGE_PUBLISHES_STABLE` is `true`; until then only prereleases flow.
 
+`@devdogsuga/sdk`, `@devdogsuga/backstage` and the Dart SDK are held from stable releases until the design overhaul settles the brand. They keep publishing to `next`. Backstage is held with the SDK because it needs the SDK at runtime, and the SDK's `latest` is still a placeholder. The list is `HELD_FROM_STABLE` in `scripts/publish-changed-packages.mjs`: delete the names to lift the hold, the SDK and backstage together.
+
 ## Checking a release
 
 ```sh
