@@ -27,12 +27,12 @@ The merge queue ruleset is withheld until the repository's `ci.yaml` has a `merg
 
 ## What each ruleset does
 
-| Ruleset            | Purpose                                                                                                                                                                                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `main-integrity`   | No deleting or force-pushing `main`, and **signed commits only**. No bypass for anyone.                                                                                                                                                           |
-| `main-reviews`     | Pull requests only; squash only; one code-owner approval; threads resolved. Admins bypass; Renovate may open its own pull requests but not push.                                                                                                  |
-| `main-ci`          | Required checks: `validate`, `database`, `toolchain`/`flutter` as the repository has them, `destructive-sql` and `destructive-gate` (in the product repositories `destructive-gate / destructive-sql` and `destructive-gate / destructive-gate`). |
-| `main-merge-queue` | Squash, up to five entries built and merged together, all checks green.                                                                                                                                                                           |
+| Ruleset            | Purpose                                                                                                                                                                                                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `main-integrity`   | No deleting or force-pushing `main`, and **signed commits only**. No bypass for anyone.                                                                                                                                                                         |
+| `main-reviews`     | Pull requests only; squash only; one code-owner approval; threads resolved. Admins bypass; Renovate may open its own pull requests but not push.                                                                                                                |
+| `main-ci`          | Required checks: `validate`, `database`, `toolchain` and `dart-sdk` in DevDogsUGA, `flutter` in DogPack, `destructive-sql` and `destructive-gate` (in the product repositories `destructive-gate / destructive-sql` and `destructive-gate / destructive-gate`). |
+| `main-merge-queue` | Squash, up to five entries built and merged together, all checks green.                                                                                                                                                                                         |
 
 `~ALL` covers every other branch, including any `team/*` branch left over from the removed Teams feature. The old `team/**` ruleset (which exempted those branches from `~ALL`) is a deletion target in `desired.ts`: applying the plan widens `~ALL` first and deletes `team/**` after, so no branch is unprotected in between. Do not delete `team/**` by hand before that, or `team/*` branches have no rule at all.
 
@@ -47,7 +47,7 @@ node packages/backstage/bin/backstage.mjs github rulesets --repo DevDogsUGA --ap
 
 The preview must show `- ref exclude refs/heads/team/**` on `~ALL` and `- delete "team/**"`. If it shows `= ok "team/**"`, you are running the old code: stop.
 
-The same plan carries two older changes that have nothing to do with Teams: `required_signatures` is switched on for `main-integrity` (set up your [signing key](#signed-commits) first, or your direct pushes to `main` are refused; merges through the queue are signed by GitHub), and `main-ci`'s required checks change from `format` to `toolchain`, `destructive-sql` and `destructive-gate`. Read the whole plan before applying; it is one action per repository, not per ruleset.
+The same plan carries two older changes that have nothing to do with Teams: `required_signatures` is switched on for `main-integrity` (set up your [signing key](#signed-commits) first, or your direct pushes to `main` are refused; merges through the queue are signed by GitHub), and `main-ci`'s required checks change from `flutter` and `format` (no job reports either name any more; formatting is a step of `validate`) to `toolchain`, `dart-sdk`, `destructive-sql` and `destructive-gate`. Read the whole plan before applying; it is one action per repository, not per ruleset.
 
 A bypass actor bypasses **every** rule in its ruleset, which is why they are split: letting admins push directly past the review rule must not also let them force-push.
 

@@ -98,6 +98,7 @@ describe("buildDesiredRulesets", () => {
           { context: "validate" },
           { context: "database" },
           { context: "toolchain" },
+          { context: "dart-sdk" },
           { context: "destructive-sql" },
           { context: "destructive-gate" },
         ],
