@@ -89,7 +89,7 @@ To turn it off, delete the variable (or set it to anything but `true`) and put t
 The one-approval flow and the PR-level destructive approval both lean on the Gate step 6 rulesets. In every deploying repository (DevDogsUGA, DogDays, DogPack):
 
 1. Apply the `main` ruleset: pull request required with 1+ approving review, no direct pushes (bypass for admins only), and `destructive-sql` and `destructive-gate` as required status checks.
-2. **Settle the duplicate `destructive-gate` check names** (report section 4, step 6.8). The check is reported both by `destructive-gate.yaml` (`pull_request_target`) and by `database-pr.yaml` (merge queue), and a product repository's caller adds a prefix, so a ruleset naming one context can wait forever for the other or accept the wrong one. Decide one required context per repository and make the other path report under it, before making the check required.
+2. Check that each repository reports `destructive-gate` once per commit. Only `database-pr.yaml` reports it, on pull requests and the merge queue. `destructive-gate.yaml`'s job is `destructive-label` and is not required. A product repository must call it from a job named `destructive-label` and pin a DevDogsUGA commit that has this split (see [Product repository CI](../repositories/product-ci.md)).
 3. Only then switch on `ONE_APPROVAL` (below).
 
 ## DogDays and DogPack

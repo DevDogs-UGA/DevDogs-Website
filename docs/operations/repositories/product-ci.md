@@ -9,13 +9,13 @@ section: infrastructure
 
 DogDays and DogPack reuse DevDogsUGA's workflows for the database checks and the deploys. A reusable workflow's jobs report to GitHub as **`<caller job> / <called job>`**, so the check names a ruleset requires depend on how the product names its caller jobs. Get the names wrong and `main-ci` waits for a check nobody reports, which blocks every pull request. The names the rulesets require are fixed in `PRODUCT_REQUIRED_CHECKS` (`packages/backstage/src/github/rulesets/desired.ts`):
 
-| Required check                        | Reported by                                                                |
-| ------------------------------------- | -------------------------------------------------------------------------- |
-| `validate`, `database`                | the product's own CI jobs (and `flutter` for DogPack)                      |
-| `destructive-gate / destructive-sql`  | `database-pr.yaml`, called from a caller job named `destructive-gate`      |
-| `destructive-gate / destructive-gate` | `destructive-gate.yaml` on a pull request, `database-pr.yaml` on the queue |
+| Required check                        | Reported by                                                           |
+| ------------------------------------- | --------------------------------------------------------------------- |
+| `validate`, `database`                | the product's own CI jobs (and `flutter` for DogPack)                 |
+| `destructive-gate / destructive-sql`  | `database-pr.yaml`, called from a caller job named `destructive-gate` |
+| `destructive-gate / destructive-gate` | the same call, on pull requests and the merge queue                   |
 
-Both caller jobs are called `destructive-gate` on purpose: the merge queue has no `pull_request_target` event, so the queue's copy of the gate comes from `database-pr.yaml` and must carry the same name as the pull request's.
+`destructive-gate.yaml` removes the label when someone outside `devops` applies it. Its caller job is named `destructive-label`, so it reports `destructive-label / destructive-label`, which is not required. Don't name it `destructive-gate`: two results under one required name on the same commit let either one satisfy the ruleset, and GitHub counts a skipped job as passing.
 
 ## The two workflow files
 
@@ -52,7 +52,7 @@ permissions:
   pull-requests: write
   issues: write
 jobs:
-  destructive-gate:
+  destructive-label:
     uses: DevDogsUGA/DevDogsUGA/.github/workflows/destructive-gate.yaml@<sha>
     with:
       shared_ref: <sha>

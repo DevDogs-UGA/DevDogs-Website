@@ -18,10 +18,11 @@ name: Database change
 # `destructive-sql` fails unless the pull request carries the `allow-destructive`
 # label. `destructive-gate` fails if that label was applied by anyone who is not
 # a `devops` member (the label is read from the PR timeline, so who applied it
-# is on record). The `pull_request_target` half of the gate, which can also
-# REMOVE a label a non-devops user applied, lives in destructive-gate.yaml; the
-# merge queue has no such event, so the same check runs here on `merge_group`,
-# and a queued pull request is re-checked on the exact commit the queue built.
+# is on record). Both run here, on pull requests and on `merge_group`, so a
+# queued pull request is re-checked on the exact commit the queue built.
+# Removing a label a non-devops user applied takes a write token, so that lives
+# in destructive-gate.yaml (`pull_request_target`), as the unrequired
+# `destructive-label` job.
 #
 # Both are required checks on `main` (the `main-ci` ruleset). They run on every
 # pull request and queue entry, unconditionally: a required check that is
@@ -138,11 +139,17 @@ jobs:
           if [ "$ACTION" = synchronize ]; then target+=(--ignore-label); fi
           node "$SCRIPTS/destructive-label.mjs" need --repo "$GITHUB_REPOSITORY" "${target[@]}" --destructive "$DESTRUCTIVE" | tee -a "$GITHUB_STEP_SUMMARY"
 
-  # On the merge queue only: pull_request_target does not fire for it, but the
-  # required check must report there too (destructive-gate.yaml has the other
-  # half).
+  # The required `destructive-gate` check, on pull requests and the merge queue
+  # alike. It is the only job that reports under that name: a second one (a
+  # skipped job, or destructive-gate.yaml's) would sit beside it on the same
+  # commit, and GitHub counts a skipped check as passing, so it could stand in
+  # for a failing gate. destructive-gate.yaml's job is `destructive-label`: it
+  # removes a label a non-devops user applied, and is not required.
+  #
+  # It only reads the label, so it needs no write token, and on a pull request
+  # it runs the base branch's script, never one the pull request edited. The
+  # queue's commit is the reviewed pull request, so it runs that.
   destructive-gate:
-    if: github.event_name == 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -151,6 +158,8 @@ jobs:
       issues: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         if: inputs.shared_ref != ''
         with:
@@ -161,9 +170,12 @@ jobs:
       - name: Who applied the allow-destructive label
         env:
           GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
           QUEUE_REF: ${{ github.event.merge_group.head_ref }}
           SCRIPTS: ${{ github.workspace }}/${{ inputs.shared_ref != '' && '.shared/.github/scripts' || '.github/scripts' }}
         # `shell: bash` is `bash -eo pipefail`: without it the pipe to tee
         # would hide a failing check.
         shell: bash
-        run: node "$SCRIPTS/destructive-label.mjs" gate --repo "$GITHUB_REPOSITORY" --ref "$QUEUE_REF" | tee -a "$GITHUB_STEP_SUMMARY"
+        run: |
+          if [ -n "$PR" ]; then target=(--pr "$PR"); else target=(--ref "$QUEUE_REF"); fi
+          node "$SCRIPTS/destructive-label.mjs" gate --repo "$GITHUB_REPOSITORY" "${target[@]}" | tee -a "$GITHUB_STEP_SUMMARY"

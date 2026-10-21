@@ -42,13 +42,13 @@ export const DESTRUCTIVE_GATE_CHECKS = [
  * The destructive gate as a product repository reports it. A product calls
  * database-pr.yaml and destructive-gate.yaml as reusable workflows, and a
  * called workflow's job reports as `<caller job> / <called job>`, so the bare
- * `destructive-sql` and `destructive-gate` can never appear there. Both caller
- * jobs are named `destructive-gate` (docs/operations/repositories/product-ci.md
- * has the two workflow files): the pull-request workflow's caller reports
- * `destructive-gate / destructive-gate` (from destructive-gate.yaml) and the
- * merge queue's caller reports `destructive-gate / destructive-sql` and, on the
- * queue only, `destructive-gate / destructive-gate` (from database-pr.yaml), so
- * the same two required names are satisfied on a pull request and on the queue.
+ * `destructive-sql` and `destructive-gate` can never appear there. The caller
+ * of database-pr.yaml is named `destructive-gate`
+ * (docs/operations/repositories/product-ci.md has the workflow files), and it
+ * reports both names on a pull request and on the queue. destructive-gate.yaml
+ * (which removes a label from a non-devops applier) is called from a job named
+ * `destructive-label` and is not required, so no required name is ever
+ * reported twice on one commit.
  */
 export const PRODUCT_DESTRUCTIVE_GATE_CHECKS = [
   "destructive-gate / destructive-sql",

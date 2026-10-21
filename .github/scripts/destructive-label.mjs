@@ -20,10 +20,13 @@
  *
  * Two commands, run by two different jobs:
  *
- *   gate   Runs on `pull_request_target` (so it holds a token that can edit
- *          the PR) and never checks out or runs the PR's code. If the label
- *          is present and its applier is not devops, it fails, and with
- *          `--remove-rejected` it removes the label as well.
+ *   gate   If the label is present and its applier is not devops, it fails.
+ *          The required `destructive-gate` check runs it read-only on
+ *          `pull_request` and `merge_group` (database-pr.yaml), from the base
+ *          branch's copy on a pull request. destructive-gate.yaml's
+ *          `destructive-label` job runs it on `pull_request_target`, where
+ *          the token can edit the PR, with `--remove-rejected` to remove the
+ *          label as well; it never checks out or runs the PR's code.
  *   need   Runs beside the SQL classification, on `pull_request` and
  *          `merge_group`. If the SQL is destructive the label must be there.
  *          (In the merge queue the PR is found from the queue branch name.)

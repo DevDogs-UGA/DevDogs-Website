@@ -13,8 +13,10 @@ name: Destructive gate
 #     because it was applied to SQL a devops member read, and the SQL has
 #     changed since. A devops member re-applies it after reading the new diff.
 #
-# The merge queue has no `pull_request_target`, so database-pr.yaml runs the
-# same check there under the same name, `destructive-gate`.
+# The required `destructive-gate` check is database-pr.yaml's, which runs the
+# same test read-only. This job is `destructive-label`, and not required: one
+# check name per job, so a ruleset requiring `destructive-gate` never sees two
+# results for it on one commit.
 #
 # Shared like database-pr.yaml: a product repository calls it from a
 # `pull_request_target` workflow of its own, pinned by commit SHA, with
@@ -45,7 +47,7 @@ permissions:
   contents: read
 
 jobs:
-  destructive-gate:
+  destructive-label:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
