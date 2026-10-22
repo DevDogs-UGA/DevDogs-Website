@@ -10,6 +10,8 @@ interface Props {
   fillColor?: "amber" | "sky";
   /** The event category hue; wins over `fillColor`. Omit both for the info hue. */
   kind?: EventCategory;
+  /** Accessible name; required when the bar stands alone. */
+  label?: string;
   className?: string;
 }
 
@@ -19,6 +21,7 @@ export default function ProgressBar({
   max,
   fillColor = "amber",
   kind,
+  label,
   className,
 }: Props) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
@@ -26,6 +29,7 @@ export default function ProgressBar({
   return (
     <div
       role="progressbar"
+      aria-label={label}
       aria-valuemin={0}
       aria-valuemax={max}
       aria-valuenow={Math.min(value, max)}

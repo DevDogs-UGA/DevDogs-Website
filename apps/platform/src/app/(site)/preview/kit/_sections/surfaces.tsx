@@ -229,6 +229,15 @@ export default function SurfacesSection() {
             </PageHeader>
             <PageHeader title="Merge Monday" kind="build" accent="cyan" />
             <PageHeader title="Legacy accent" accent="violet" />
+            <PageHeader
+              title="Crumbs and a different head"
+              kind="info"
+              head="workshop"
+              crumbs={<span>Community / Workshops</span>}
+              centerActions
+            >
+              <Button size="sm">Centered action</Button>
+            </PageHeader>
             <div style={{ padding: "40px 0" }}>
               <p style={{ margin: 0 }}>A plain section above the band.</p>
               <Band as="div" style={{ margin: "40px 0", padding: "32px 24px" }}>

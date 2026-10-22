@@ -110,7 +110,9 @@ function Header({
 }: PropsWithChildren<{ title: string; description?: ReactNode }>) {
   return (
     <div className="card-head flex-wrap justify-between">
-      <h2 className="card-title [text-shadow:none]">{title}</h2>
+      <h2 className="card-title font-sans [font-size:18px] leading-[1.3] font-bold tracking-normal [text-shadow:none]">
+        {title}
+      </h2>
       {children}
       {description && (
         <p className="m-0 w-full max-w-prose text-sm text-[var(--text-3)]">
