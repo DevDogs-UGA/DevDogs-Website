@@ -1,0 +1,74 @@
+/* ListRow (P7): `.vrow`, `.arow` and `.mrow` are in cosmic.css. The meeting
+   row's stretched title link and its off/past variants are console-attendance's
+   page rules, shared here because every meeting list needs them. */
+@layer cosmic {
+  .mrow {
+    position: relative;
+  }
+  .mrow .t {
+    text-decoration: none;
+  }
+  .mrow .t::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+  .cosmic .mrow .t:focus-visible {
+    outline: 0;
+  }
+  .mrow:has(.t:focus-visible) {
+    outline: 2px dashed var(--brand3);
+    outline-offset: -4px;
+  }
+  .mrow .end {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .mrow.past {
+    opacity: 1;
+  }
+  .mrow.past .date {
+    opacity: 0.7;
+  }
+  .mrow.off .date {
+    opacity: 0.45;
+  }
+  .mrow.off .t {
+    color: var(--text-3);
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+  }
+  .mrow .go {
+    color: var(--text-3);
+    font-size: 18px;
+  }
+  .mrow .mrow-meta {
+    font-size: 14px;
+    color: var(--text-3);
+  }
+  .mrow .mrow-head {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .vrow small,
+  .arow small {
+    display: block;
+    font-size: 14px;
+    color: var(--text-3);
+  }
+  @media (max-width: 720px) {
+    .mrow .end:has(> .go:only-child),
+    .mrow .badges:empty {
+      display: none;
+    }
+    .mrow .end {
+      justify-content: flex-start;
+    }
+  }
+}

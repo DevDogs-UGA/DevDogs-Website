@@ -1,13 +1,12 @@
 "use client";
 
 import { Fragment } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { CaretRightIcon } from "@phosphor-icons/react/ssr";
-import devdog from "~/assets/devdog.svg";
+import { ArrowRightIcon, CaretRightIcon } from "@phosphor-icons/react/ssr";
 import {
   Command,
   CommandEmpty,
+  CommandFooter,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -20,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/ui/dialog";
+import { Kbd } from "~/ui/kbd";
 import { highlightMatches } from "~/server/search/match";
 import { SUPPORT_ACTION_URL, type SearchEntry } from "~/server/search/types";
 import { openSupport } from "./SupportWidget/events";
@@ -38,35 +38,38 @@ function SearchResultItem({
   const Icon = icons[entry.icon];
 
   return (
-    <CommandItem value={entry.id} onSelect={onSelect} className="gap-2.5">
-      {Icon && <Icon className="text-muted-foreground size-4 shrink-0" />}
-      <div className="flex min-w-0 flex-col">
+    <CommandItem
+      value={entry.id}
+      onSelect={onSelect}
+      icon={Icon ? <Icon weight="bold" /> : undefined}
+    >
+      <div className="cmd-tx">
         {entry.breadcrumbs.length > 0 && (
-          <div className="text-muted-foreground inline-flex items-center gap-0.5 text-xs">
+          <div className="cmd-sub inline-flex items-center gap-0.5">
             {entry.breadcrumbs.map((b, i) => (
               <Fragment key={i}>
-                {i > 0 && <CaretRightIcon className="size-3" />}
+                {i > 0 && <CaretRightIcon weight="bold" className="size-3" />}
                 <span>{b}</span>
               </Fragment>
             ))}
           </div>
         )}
         <div
-          className="min-w-0 truncate font-medium [&_mark]:bg-transparent [&_mark]:font-bold [&_mark]:text-white [&_mark]:underline"
+          className="cmd-title"
           dangerouslySetInnerHTML={{
             __html: highlightMatches(entry.title, query),
           }}
         />
         {entry.snippet ? (
           <div
-            className="text-muted-foreground [&_mark]:text-popover-foreground line-clamp-2 min-w-0 text-xs [&_mark]:bg-transparent [&_mark]:font-medium [&_mark]:underline"
+            className="cmd-sub clamp"
             // Server-built: HTML-escaped before sentinel → <mark> replacement.
             dangerouslySetInnerHTML={{ __html: entry.snippet }}
           />
         ) : (
           entry.description && (
             <div
-              className="text-muted-foreground [&_mark]:text-popover-foreground min-w-0 truncate text-xs [&_mark]:bg-transparent [&_mark]:font-medium [&_mark]:underline"
+              className="cmd-sub"
               dangerouslySetInnerHTML={{
                 __html: highlightMatches(entry.description, query),
               }}
@@ -74,6 +77,9 @@ function SearchResultItem({
           )
         )}
       </div>
+      <Kbd className="cmd-go" aria-hidden>
+        <ArrowRightIcon weight="bold" /> Open
+      </Kbd>
     </CommandItem>
   );
 }
@@ -105,47 +111,32 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
         <DialogDescription>Search pages, docs, and settings</DialogDescription>
       </DialogHeader>
       <DialogContent
-        className="top-1/4 translate-y-0 overflow-hidden rounded-xl p-0 sm:max-w-xl"
-        overlayClassName="bg-black/40"
+        className="cmd-dialog top-[72px] translate-y-0 gap-0 overflow-visible"
         showCloseButton={false}
       >
-        <Command shouldFilter={false} className="p-1.5">
+        <Command shouldFilter={false}>
           <CommandInput
             placeholder="Search pages, docs, and settings..."
             value={search}
             onValueChange={setSearch}
-            className="text-base"
-            fieldClassName="h-11! *:data-[slot=input-group-addon]:pl-3! [&_[data-slot=input-group-addon]_svg]:size-5!"
           />
-          <div
-            aria-hidden
-            className="mx-2 mt-1 h-0.5 overflow-hidden rounded-full"
-          >
-            {isLoading && (
-              <div className="animate-search-progress h-full w-1/3 rounded-full bg-gradient-to-r from-amber-400 to-rose-500" />
-            )}
+          <div aria-hidden className="cmd-progress">
+            {isLoading && <i className="animate-search-progress" />}
           </div>
-          <CommandList className="max-h-96">
+          <CommandList>
             {!search.trim() && (
-              <div className="text-muted-foreground flex flex-col items-center gap-1.5 px-6 py-14 text-center">
-                <figure className="size-8 shrink-0 opacity-70">
-                  <Image alt="" src={devdog} />
-                </figure>
-                <p className="text-foreground text-sm font-medium">
-                  Search DevDogs
-                </p>
-                <p className="text-xs">
-                  Start typing to find pages, docs, and settings.
-                </p>
+              <div className="cmd-empty">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img alt="" src="/cosmic/a/mascot-peek.png" />
+                <b>Search DevDogs</b>
+                <span>Start typing to find pages, docs, and settings.</span>
               </div>
             )}
             {!isLoading && search.trim() && !hasResults && (
-              <CommandEmpty className="px-6 py-14 text-base">
-                No results found.
-              </CommandEmpty>
+              <CommandEmpty>No results found.</CommandEmpty>
             )}
             {pageResults.length > 0 && (
-              <CommandGroup heading="Pages">
+              <CommandGroup heading="Pages" count={pageResults.length}>
                 {pageResults.map((entry) => (
                   <SearchResultItem
                     key={entry.id}
@@ -157,7 +148,7 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
               </CommandGroup>
             )}
             {docsResults.length > 0 && (
-              <CommandGroup heading="Docs">
+              <CommandGroup heading="Docs" count={docsResults.length}>
                 {docsResults.map((entry) => (
                   <SearchResultItem
                     key={entry.id}
@@ -169,7 +160,10 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
               </CommandGroup>
             )}
             {forumResults.length > 0 && (
-              <CommandGroup heading="Answered questions">
+              <CommandGroup
+                heading="Answered questions"
+                count={forumResults.length}
+              >
                 {forumResults.map((entry) => (
                   <SearchResultItem
                     key={entry.id}
@@ -181,6 +175,18 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
               </CommandGroup>
             )}
           </CommandList>
+          <CommandFooter>
+            <span>
+              <Kbd>↑</Kbd>
+              <Kbd>↓</Kbd> to move
+            </span>
+            <span>
+              <Kbd>↵</Kbd> to open
+            </span>
+            <span className="end">
+              <Kbd>Esc</Kbd> to close
+            </span>
+          </CommandFooter>
         </Command>
       </DialogContent>
     </Dialog>

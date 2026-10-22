@@ -1,5 +1,7 @@
 "use client";
 
+import "./command.css";
+
 import * as React from "react";
 import { Command as CommandPrimitive } from "cmdk";
 
@@ -11,9 +13,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/ui/dialog";
-import { InputGroup, InputGroupAddon } from "~/ui/input-group";
-import { MagnifyingGlassIcon, CheckIcon } from "@phosphor-icons/react/ssr";
+import { Kbd } from "~/ui/kbd";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react/ssr";
 
+/**
+ * The command palette (search.html): a Dialog card holding a query field,
+ * grouped result rows with an icon tile, and key hints. cmdk owns the
+ * selection and keyboard model; this file only draws it.
+ */
 function Command({
   className,
   ...props
@@ -21,10 +28,7 @@ function Command({
   return (
     <CommandPrimitive
       data-slot="command"
-      className={cn(
-        "bg-popover text-popover-foreground flex size-full flex-col overflow-hidden rounded-xl! p-1",
-        className,
-      )}
+      className={cn("cmd", className)}
       {...props}
     />
   );
@@ -51,7 +55,7 @@ function CommandDialog({
       </DialogHeader>
       <DialogContent
         className={cn(
-          "top-1/3 translate-y-0 overflow-hidden rounded-xl! p-0",
+          "cmd-dialog top-[72px] translate-y-0 gap-0 overflow-visible",
           className,
         )}
         showCloseButton={showCloseButton}
@@ -64,33 +68,24 @@ function CommandDialog({
 
 function CommandInput({
   className,
-  // Sizing lives on the InputGroup, so callers that want a taller field
-  // (the site search dialog) override it here rather than on the input.
+  // Kept so existing callers compile; the palette's field has one size now.
   fieldClassName,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Input> & {
   fieldClassName?: string;
 }) {
   return (
-    <div data-slot="command-input-wrapper" className="p-1 pb-0">
-      <InputGroup
-        className={cn(
-          "border-input/30 bg-input/30 h-8! rounded-lg! shadow-none! *:data-[slot=input-group-addon]:pl-2!",
-          fieldClassName,
-        )}
-      >
-        <CommandPrimitive.Input
-          data-slot="command-input"
-          className={cn(
-            "w-full text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
-            className,
-          )}
-          {...props}
-        />
-        <InputGroupAddon>
-          <MagnifyingGlassIcon className="size-4 shrink-0 opacity-50" />
-        </InputGroupAddon>
-      </InputGroup>
+    <div
+      data-slot="command-input-wrapper"
+      className={cn("cmd-in", fieldClassName)}
+    >
+      <MagnifyingGlassIcon weight="bold" aria-hidden />
+      <CommandPrimitive.Input
+        data-slot="command-input"
+        className={className}
+        {...props}
+      />
+      <Kbd aria-hidden>Esc</Kbd>
     </div>
   );
 }
@@ -102,10 +97,7 @@ function CommandList({
   return (
     <CommandPrimitive.List
       data-slot="command-list"
-      className={cn(
-        "no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto outline-none",
-        className,
-      )}
+      className={cn("cmd-list", className)}
       {...props}
     />
   );
@@ -118,7 +110,7 @@ function CommandEmpty({
   return (
     <CommandPrimitive.Empty
       data-slot="command-empty"
-      className={cn("py-6 text-center text-sm", className)}
+      className={cn("cmd-empty", className)}
       {...props}
     />
   );
@@ -126,15 +118,27 @@ function CommandEmpty({
 
 function CommandGroup({
   className,
+  heading,
+  count,
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.Group>) {
+}: React.ComponentProps<typeof CommandPrimitive.Group> & {
+  /** The number of rows, drawn small beside the caption. */
+  count?: number;
+}) {
   return (
     <CommandPrimitive.Group
       data-slot="command-group"
-      className={cn(
-        "text-foreground **:[[cmdk-group-heading]]:text-muted-foreground overflow-hidden p-1 **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium",
-        className,
-      )}
+      className={className}
+      heading={
+        heading !== undefined && count !== undefined ? (
+          <>
+            {heading}
+            <span className="cmd-count">{count}</span>
+          </>
+        ) : (
+          heading
+        )
+      }
       {...props}
     />
   );
@@ -147,7 +151,7 @@ function CommandSeparator({
   return (
     <CommandPrimitive.Separator
       data-slot="command-separator"
-      className={cn("bg-border -mx-1 h-px", className)}
+      className={cn("cmd-sep", className)}
       {...props}
     />
   );
@@ -156,34 +160,51 @@ function CommandSeparator({
 function CommandItem({
   className,
   children,
+  icon,
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.Item>) {
+}: React.ComponentProps<typeof CommandPrimitive.Item> & {
+  /** An icon for the row's 34px tile; it takes the category colour. */
+  icon?: React.ReactNode;
+}) {
   return (
     <CommandPrimitive.Item
       data-slot="command-item"
-      className={cn(
-        "group/command-item data-selected:bg-muted data-selected:text-foreground data-selected:*:[svg]:text-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg! data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className,
-      )}
+      className={cn("cmd-item", className)}
       {...props}
     >
+      {icon ? (
+        <span className="cmd-ic" aria-hidden>
+          {icon}
+        </span>
+      ) : null}
       {children}
-      <CheckIcon className="ml-auto opacity-0 group-has-data-[slot=command-shortcut]/command-item:hidden group-data-[checked=true]/command-item:opacity-100" />
     </CommandPrimitive.Item>
   );
 }
 
+/** The right-hand key hint of a row (`G A`); `Open` shows only on the selected row. */
 function CommandShortcut({
   className,
+  children,
   ...props
 }: React.ComponentProps<"span">) {
   return (
     <span
       data-slot="command-shortcut"
-      className={cn(
-        "text-muted-foreground group-data-selected/command-item:text-foreground ml-auto text-xs tracking-widest",
-        className,
-      )}
+      className={cn("cmd-end", className)}
+      {...props}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** Key hints under the list (arrows, enter, escape). Hidden on phones. */
+function CommandFooter({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="command-footer"
+      className={cn("cmd-foot", className)}
       {...props}
     />
   );
@@ -199,4 +220,5 @@ export {
   CommandItem,
   CommandShortcut,
   CommandSeparator,
+  CommandFooter,
 };

@@ -1,0 +1,255 @@
+/* Command palette (P7): search.html's `.pal`, ported with the `cmd` prefix. The
+   frame is the Dialog's `.dialog` card; everything inside is drawn here. */
+@layer cosmic {
+  .cosmic .dialog.cmd-dialog {
+    --s: calc(var(--px) * 1.25);
+    --o: var(--line-strong);
+    width: min(680px, calc(100vw - 32px));
+    padding: 0;
+  }
+  .cmd {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    color: var(--text-2);
+  }
+  .cmd-in {
+    margin: 0 var(--s);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 24px;
+    color: var(--text);
+    box-shadow: inset 0 -2px 0 var(--line-strong);
+  }
+  .cmd-in:has(input:focus-visible) {
+    box-shadow: inset 0 -2px 0 var(--brand3);
+  }
+  .cmd-in > svg {
+    flex: none;
+    font-size: 26px;
+    width: 1em;
+    height: 1em;
+    color: var(--k3);
+  }
+  .cmd-in input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    padding: 0;
+    font: 600 22px/1.2 var(--font-ui);
+    color: var(--text);
+    caret-color: var(--k3);
+    box-shadow: none;
+  }
+  .cosmic .cmd-in input:focus,
+  .cosmic .cmd-in input:focus-visible {
+    outline: 0;
+  }
+  .cmd-in input::placeholder {
+    color: var(--text-3);
+    font-weight: 400;
+  }
+  .cmd-in input:disabled {
+    opacity: 0.5;
+  }
+  .cmd-list {
+    padding: 6px 10px 10px;
+    max-height: min(560px, 60vh);
+    overflow-x: hidden;
+    overflow-y: auto;
+    outline: 0;
+  }
+  .cmd-list [cmdk-group-heading] {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font: 700 11.5px/1 var(--font-ui);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    padding: 14px 10px 8px;
+  }
+  .cmd-count {
+    font-weight: 600;
+    letter-spacing: 0;
+    opacity: 0.7;
+  }
+  .cmd-sep {
+    height: 1px;
+    margin: 6px 10px;
+    background: var(--line);
+  }
+  .cmd-item {
+    --row: transparent;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 9px 10px;
+    min-width: 0;
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-2);
+    background:
+      linear-gradient(var(--row), var(--row)) 0 2px / 100% calc(100% - 4px)
+        no-repeat,
+      linear-gradient(var(--row), var(--row)) 2px 0 / calc(100% - 4px) 100%
+        no-repeat;
+  }
+  .cmd-item[data-selected="true"] {
+    --row: var(--surface-2);
+    background:
+      linear-gradient(var(--k3), var(--k3)) 0 2px / 3px calc(100% - 4px)
+        no-repeat,
+      linear-gradient(var(--row), var(--row)) 0 2px / 100% calc(100% - 4px)
+        no-repeat,
+      linear-gradient(var(--row), var(--row)) 2px 0 / calc(100% - 4px) 100%
+        no-repeat;
+  }
+  .cmd-item[data-disabled="true"] {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .cmd-ic {
+    --ic: var(--surface-2);
+    flex: none;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    font-size: 19px;
+    color: var(--k3);
+    background:
+      linear-gradient(var(--ic), var(--ic)) 0 2px / 100% calc(100% - 4px)
+        no-repeat,
+      linear-gradient(var(--ic), var(--ic)) 2px 0 / calc(100% - 4px) 100%
+        no-repeat;
+  }
+  .cmd-item[data-selected="true"] .cmd-ic {
+    --ic: var(--k3);
+    color: var(--on-accent);
+    box-shadow: 2px 2px 0 var(--k6);
+  }
+  .cmd-tx {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    flex: 1;
+  }
+  .cmd-tx > b,
+  .cmd-title {
+    font: 600 15px/1.25 var(--font-ui);
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cmd-sub {
+    font-size: 13px;
+    color: var(--text-3);
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cmd-sub.clamp {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .cmd mark {
+    background: none;
+    color: var(--brand3);
+    font-weight: 800;
+    box-shadow: inset 0 -2px 0 var(--brand3);
+  }
+  .cmd-sub mark {
+    color: var(--text-2);
+    box-shadow: inset 0 -2px 0 var(--line-strong);
+    font-weight: 700;
+  }
+  .cmd-item kbd.cmd-go {
+    display: none;
+    white-space: nowrap;
+    align-items: center;
+    gap: 6px;
+    flex: none;
+    color: var(--text-2);
+  }
+  .cmd-item[data-selected="true"] kbd.cmd-go {
+    display: inline-flex;
+  }
+  .cmd-end {
+    margin-left: auto;
+    flex: none;
+    font-size: 12.5px;
+    color: var(--text-3);
+  }
+  .cmd-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--text-3);
+    font-size: 14px;
+  }
+  .cmd-empty img {
+    width: 72px;
+    margin-inline: auto;
+    margin-bottom: 6px;
+  }
+  .cmd-empty b {
+    font: 700 16px/1.3 var(--font-ui);
+    color: var(--text);
+  }
+  .cmd-progress {
+    height: 2px;
+    margin: 0 var(--s);
+    overflow: hidden;
+  }
+  .cmd-progress > i {
+    display: block;
+    height: 100%;
+    width: 33.33%;
+    background: var(--k3);
+  }
+  .cmd-foot {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 24px 16px;
+    margin: 0 var(--s) var(--s);
+    font-size: 12.5px;
+    color: var(--text-3);
+    box-shadow: inset 0 2px 0 var(--line-strong);
+  }
+  .cmd-foot > span {
+    display: inline-flex;
+    gap: 7px;
+    align-items: center;
+  }
+  .cmd-foot > .end {
+    margin-left: auto;
+  }
+  @media (max-width: 720px) {
+    .cmd-in {
+      padding: 16px;
+    }
+    .cmd-in input {
+      font-size: 18px;
+    }
+    .cmd-in .kbd,
+    .cmd-foot {
+      display: none;
+    }
+    .cmd-end {
+      display: none;
+    }
+  }
+}

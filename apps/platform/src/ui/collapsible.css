@@ -1,0 +1,44 @@
+/* Disclosure (P7): docs.css `.dt` on a Radix Collapsible. Only applies when the
+   root asks for `disclosure`; the sidebar and TOC callers style their own. */
+@layer cosmic {
+  .cosmic .dt {
+    font-size: 15px;
+    background:
+      linear-gradient(var(--surface), var(--surface)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface), var(--surface)) 2px 0 / calc(100% - 4px)
+        100% no-repeat;
+  }
+  .dt > [data-slot="collapsible-trigger"] {
+    display: flex;
+    width: 100%;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .dt > [data-slot="collapsible-trigger"] .dt-caret {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    color: var(--text-3);
+    transition: transform 0.15s steps(3, end);
+  }
+  .dt > [data-slot="collapsible-trigger"][data-state="open"] .dt-caret {
+    transform: rotate(90deg);
+  }
+  .dt > [data-slot="collapsible-content"] {
+    padding: 2px 18px 18px 40px;
+  }
+  .dt > [data-slot="collapsible-content"] > * + * {
+    margin-top: 12px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dt > [data-slot="collapsible-trigger"] .dt-caret {
+      transition: none;
+    }
+  }
+}

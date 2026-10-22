@@ -1,0 +1,48 @@
+/* Drop target and sort handles (P7). The marching dashes are the one place the
+   kit animates a rule; reduced motion stops them (globals.css). */
+@layer cosmic {
+  .drop-target {
+    position: relative;
+    color: var(--line-strong);
+    background:
+      linear-gradient(var(--surface-2), var(--surface-2)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 2px 0 /
+        calc(100% - 4px) 100% no-repeat;
+  }
+  .drop-target svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .grip {
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 36px;
+    flex: none;
+    padding: 0;
+    color: var(--text-3);
+    font-size: 18px;
+    background: none;
+    border: 0;
+    cursor: grab;
+    touch-action: none;
+  }
+  .grip:hover {
+    color: var(--text);
+  }
+  .grip:active {
+    cursor: grabbing;
+  }
+  .reorder {
+    display: inline-flex;
+    flex: none;
+  }
+  .reorder .iconbtn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
