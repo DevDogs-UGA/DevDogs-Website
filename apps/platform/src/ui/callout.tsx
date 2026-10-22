@@ -1,14 +1,20 @@
 import type { ReactNode } from "react";
+import {
+  CheckCircleIcon,
+  InfoIcon,
+  WarningIcon,
+  XCircleIcon,
+} from "@phosphor-icons/react/ssr";
 import { cn } from "~/lib/cn";
 
-const TONE_CLASSES = {
-  info: "border-blue-400/30 bg-blue-400/10 text-blue-200",
-  success: "border-emerald-400/30 bg-emerald-400/10 text-emerald-200",
-  warning: "border-amber-400/30 bg-amber-400/10 text-amber-200",
-  critical: "border-rose-400/30 bg-rose-400/10 text-rose-200",
+const TONES = {
+  info: { cls: "", Icon: InfoIcon },
+  success: { cls: "ok", Icon: CheckCircleIcon },
+  warning: { cls: "warn", Icon: WarningIcon },
+  critical: { cls: "bad", Icon: XCircleIcon },
 } as const;
 
-export type CalloutTone = keyof typeof TONE_CLASSES;
+export type CalloutTone = keyof typeof TONES;
 
 interface CalloutProps {
   tone?: CalloutTone;
@@ -26,11 +32,8 @@ interface CalloutProps {
 
 /**
  * Something worth saying next to the thing it is about: a refusal, a warning,
- * a confirmation.
- *
- * One component rather than a separate inline block per page, each picking
- * its own border radius and opacity. The tone is the only thing that ought
- * to vary.
+ * a confirmation (kit `.alert`). The tone is the only thing that ought to vary.
+ * The tone's icon is part of the signal, so colour is never the only cue.
  */
 export default function Callout({
   tone = "info",
@@ -40,22 +43,23 @@ export default function Callout({
   alert,
   id,
 }: CalloutProps) {
+  const { cls, Icon } = TONES[tone];
   return (
     <div
       id={id}
       role={alert ? "alert" : undefined}
-      className={cn(
-        "rounded-xl border px-4 py-3 text-sm",
-        TONE_CLASSES[tone],
-        className,
-      )}
+      className={cn("alert", cls, className)}
     >
-      {title && <p className="font-medium">{title}</p>}
-      {children && (
-        <div className={cn("[&_a]:underline", title && "mt-1 opacity-90")}>
-          {children}
-        </div>
-      )}
+      <Icon
+        weight="bold"
+        aria-hidden
+        className="mt-px shrink-0 text-xl in-[.cosmic]:text-[var(--c,var(--note))]"
+      />
+      <div className="min-w-0 [&_a]:underline">
+        {title && <b>{title}</b>}
+        {title && children ? " " : null}
+        {children}
+      </div>
     </div>
   );
 }

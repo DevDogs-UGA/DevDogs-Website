@@ -1,10 +1,12 @@
 import { cn } from "~/lib/cn";
 
+/** `.skel`: a static dithered stripe (no animation). Size it with width/height utilities. */
 function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="skeleton"
-      className={cn("bg-muted animate-pulse rounded-md", className)}
+      aria-hidden="true"
+      className={cn("skel", className)}
       {...props}
     />
   );

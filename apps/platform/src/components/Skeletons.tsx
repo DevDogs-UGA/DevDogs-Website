@@ -1,41 +1,44 @@
+import { Card } from "~/ui/card";
+import { Skeleton } from "~/ui/skeleton";
+
 export function CardSkeleton({ rows = 3 }: { rows?: number }) {
   return (
-    <div className="w-full animate-pulse rounded-xl border-2 border-mauve-800 bg-mauve-950 px-6 py-4 shadow-lg shadow-black/30">
+    <Card className="w-full" aria-hidden="true">
       <div className="py-2">
-        <div className="h-3 w-24 rounded bg-mauve-800" />
+        <Skeleton className="w-24" />
       </div>
-      <div className="divide-y divide-mauve-800">
+      <div className="divide-y divide-[var(--line)]">
         {Array.from({ length: rows }, (_, i) => (
           <div key={i} className="flex flex-col gap-2 py-6">
-            <div className="h-4 w-32 rounded bg-mauve-800" />
-            <div className="h-3 w-64 rounded bg-mauve-800/60" />
-            <div className="mt-2 h-9 w-full rounded-md bg-mauve-800/40" />
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="w-64 max-w-full" />
+            <Skeleton className="mt-2 h-9 w-full" />
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }
 
 export function TableSkeleton({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="w-full animate-pulse rounded-xl border-2 border-mauve-800 bg-mauve-950 px-6 py-4 shadow-lg shadow-black/30">
-      <div className="flex gap-4 border-b border-mauve-800 py-3">
-        <div className="h-3 w-20 rounded bg-mauve-800" />
-        <div className="h-3 w-32 rounded bg-mauve-800" />
-        <div className="h-3 w-24 rounded bg-mauve-800" />
+    <Card className="w-full" aria-hidden="true">
+      <div className="flex gap-4 border-b border-[var(--line)] py-3">
+        <Skeleton className="w-20" />
+        <Skeleton className="w-32" />
+        <Skeleton className="w-24" />
         <div className="flex-1" />
-        <div className="h-3 w-16 rounded bg-mauve-800" />
+        <Skeleton className="w-16" />
       </div>
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="flex gap-4 border-b border-mauve-800/50 py-4">
-          <div className="h-3 w-20 rounded bg-mauve-800/60" />
-          <div className="h-3 w-40 rounded bg-mauve-800/40" />
-          <div className="h-3 w-24 rounded bg-mauve-800/40" />
+        <div key={i} className="flex gap-4 border-b border-[var(--line)] py-4">
+          <Skeleton className="w-20" />
+          <Skeleton className="w-40" />
+          <Skeleton className="w-24" />
           <div className="flex-1" />
-          <div className="h-3 w-16 rounded bg-mauve-800/30" />
+          <Skeleton className="w-16" />
         </div>
       ))}
-    </div>
+    </Card>
   );
 }

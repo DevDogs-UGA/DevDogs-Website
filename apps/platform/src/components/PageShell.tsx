@@ -1,11 +1,20 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import AccentBlobs, { type AccentColor } from "~/ui/accent-blobs";
-import PageHeader from "~/components/PageHeader";
+
+import PageHeader, {
+  type AccentColor,
+  type PageHeadKind,
+} from "~/components/PageHeader";
+import type { EventCategory } from "~/lib/eventKind";
 
 interface PageShellProps extends PropsWithChildren {
-  accent: AccentColor;
+  /** Legacy hue; maps to a head (rose is the brand, the others an event category). */
+  accent?: AccentColor;
   title: string;
   description?: ReactNode;
+  /** An event category for the head's hue. */
+  kind?: EventCategory;
+  head?: PageHeadKind;
+  crumbs?: ReactNode;
   /**
    * Rendered opposite the title, in the header's own row. A page-level control
    * belongs here rather than above the first card, where it has to be dragged
@@ -15,27 +24,35 @@ interface PageShellProps extends PropsWithChildren {
 }
 
 /**
- * The opening of every page inside the site layout: centred column, the accent
- * wash behind it, and the title.
+ * The opening of every page inside the site layout: the full-width page head
+ * (title over its scene), then a centred column for the content.
  *
  * Was `ConsolePageShell`, which was never accurate. The console is six of its
- * callers and one of the rest is the public results page. It is the app's page
- * shell, and the name no longer implies a permission.
+ * callers and one of the rest is the public results page.
  */
 export default function PageShell({
   accent,
   title,
   description,
+  kind,
+  head,
+  crumbs,
   actions,
   children,
 }: PageShellProps) {
   return (
-    <div className="relative isolate mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 @sm:px-6">
-      <AccentBlobs accent={accent} />
-      <PageHeader title={title} description={description} accent={accent}>
+    <>
+      <PageHeader
+        title={title}
+        description={description}
+        accent={accent}
+        kind={kind}
+        head={head}
+        crumbs={crumbs}
+      >
         {actions}
       </PageHeader>
-      {children}
-    </div>
+      <div className="wrap flex w-full flex-col gap-6 py-8">{children}</div>
+    </>
   );
 }

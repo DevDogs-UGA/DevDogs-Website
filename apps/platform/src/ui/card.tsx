@@ -1,8 +1,83 @@
 import type {
   ComponentPropsWithoutRef,
+  CSSProperties,
+  ElementType,
   PropsWithChildren,
   ReactNode,
 } from "react";
+
+import { cn } from "~/lib/cn";
+import type { EventCategory } from "~/lib/eventKind";
+
+type CardProps = ComponentPropsWithoutRef<"div"> & {
+  /** Rendered element. `a` and `button` get the cursor glow; pass `href`/`type` through. */
+  as?: ElementType;
+  href?: string;
+  type?: "button" | "submit" | "reset";
+  target?: string;
+  rel?: string;
+  /** Rings and shadows the card in an event category's hues. Omit for the neutral card. */
+  kind?: EventCategory;
+  /** The dithered glow behind the content (one per view, for the lead item). */
+  glow?: boolean;
+  /** Outline only, no block shadow. */
+  flat?: boolean;
+  size?: "default" | "lg";
+  /** Lights up under the pointer; a non-link element also becomes focusable. */
+  interactive?: boolean;
+};
+
+/**
+ * `.card` (kit-spec section 3): the stepped, framed container. Never nest one
+ * card inside another.
+ */
+function Card({
+  as: As = "div",
+  kind,
+  glow,
+  flat,
+  size = "default",
+  interactive,
+  className,
+  style,
+  tabIndex,
+  ...props
+}: CardProps) {
+  const native = As === "a" || As === "button";
+  const glowStyle = glow
+    ? ({
+        "--glow": `url(/cosmic/img/glow-${kind ?? "brand"}.png)`,
+      } as CSSProperties)
+    : undefined;
+  return (
+    <As
+      data-slot="card"
+      data-kind={kind}
+      tabIndex={tabIndex ?? (interactive && !native ? 0 : undefined)}
+      className={cn(
+        "card",
+        kind && "k",
+        glow && "glow",
+        flat && "flat",
+        size === "lg" && "lg",
+        className,
+      )}
+      style={glowStyle ? { ...glowStyle, ...style } : style}
+      {...props}
+    />
+  );
+}
+
+/** A flat red-ruled panel for destructive actions; not a framed card. */
+function DangerZone({ className, ...props }: ComponentPropsWithoutRef<"div">) {
+  return (
+    <div
+      data-slot="danger-zone"
+      className={cn("danger", className)}
+      {...props}
+    />
+  );
+}
 
 function Root({
   children,
@@ -10,13 +85,14 @@ function Root({
   ...props
 }: ComponentPropsWithoutRef<"section">) {
   return (
-    <section
+    // scroll-mt clears the sticky TopNav when search jumps to #id.
+    <Card
+      as="section"
       {...props}
-      // scroll-mt clears the h-16 sticky TopNav when search jumps to #id.
-      className={`w-full scroll-mt-20 rounded-xl border-2 border-mauve-800 bg-mauve-950 px-6 py-4 shadow-lg shadow-black/30 ${className ?? ""}`}
+      className={cn("w-full scroll-mt-20", className)}
     >
       {children}
-    </section>
+    </Card>
   );
 }
 
@@ -33,22 +109,27 @@ function Header({
   children,
 }: PropsWithChildren<{ title: string; description?: ReactNode }>) {
   return (
-    <div className="flex flex-col gap-1 py-2">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-xs font-extrabold tracking-widest text-mauve-500 uppercase">
-          {title}
-        </h2>
-        {children}
-      </div>
+    <div className="card-head flex-wrap justify-between">
+      <h2 className="card-title [text-shadow:none]">{title}</h2>
+      {children}
       {description && (
-        <p className="max-w-prose text-sm text-mauve-400">{description}</p>
+        <p className="m-0 w-full max-w-prose text-sm text-[var(--text-3)]">
+          {description}
+        </p>
       )}
     </div>
   );
 }
 
 function Content({ children }: PropsWithChildren) {
-  return <div className="divide-y divide-mauve-800 *:py-6">{children}</div>;
+  return (
+    <div className="divide-y divide-[var(--line)] *:py-6 [&>*:first-child]:pt-2 [&>*:last-child]:pb-2">
+      {children}
+    </div>
+  );
 }
 
 export const ConsoleCard = { Root, Header, Content };
+export { Card, DangerZone };
+export type { CardProps };
+export default Card;
