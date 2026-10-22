@@ -10,5 +10,11 @@ export const toast = {
     sonnerToast.custom((id) => (
       <Toast id={id} message={message} type="error" />
     )),
+  warning: (message: string) =>
+    sonnerToast.custom((id) => (
+      <Toast id={id} message={message} type="warning" />
+    )),
+  info: (message: string) =>
+    sonnerToast.custom((id) => <Toast id={id} message={message} type="info" />),
   dismiss: sonnerToast.dismiss,
 };

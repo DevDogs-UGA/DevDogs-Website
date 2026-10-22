@@ -38,7 +38,10 @@ interface Props {
   header: ReactNode;
   /** The body below the header; the only part that scrolls. */
   children: ReactNode;
-  /** The marketing plate's white panel, or the console's dark one. */
+  /**
+   * Both tones render the one Cosmic dialog look; the prop stays so existing
+   * callers compile.
+   */
   tone?: DialogTone;
   /** See {@link DialogPairRole}. Omit for a dialog that stands alone. */
   pair?: DialogPairRole;
@@ -66,7 +69,7 @@ interface Props {
  *    to shrink below its content, so without it the body would push past the
  *    panel's max height and get clipped by `overflow-hidden` instead of
  *    scrolling.
- *  - `-mx-5 px-5`: the scroll container reaches the panel's edges and puts the
+ *  - `-mx-6 px-6`: the scroll container reaches the panel's edges and puts the
  *    padding inside itself, so the scrollbar sits against the panel edge where
  *    it did when the panel itself scrolled, rather than floating 20px in.
  *
@@ -106,7 +109,7 @@ export default function DialogShell({
   trigger,
   header,
   children,
-  tone = "light",
+  tone: _tone = "light",
   pair,
   backLabel = "Back",
   onOpenAutoFocus,
@@ -131,7 +134,6 @@ export default function DialogShell({
     return () => notifyPrimary(false);
   }, [isAside, notifyPrimary, open]);
 
-  const t = TONES[tone];
   const role = isPrimary ? PRIMARY : isAside ? ASIDE : NONE;
   const stackedAside = isAside && !paired;
 
@@ -148,17 +150,16 @@ export default function DialogShell({
         showCloseButton={!stackedAside}
         onOpenAutoFocus={onOpenAutoFocus}
         onInteractOutside={paired ? keepPairOpen : undefined}
-        overlayClassName={t.overlay}
-        className={`flex max-h-[85dvh] w-full flex-col gap-4 overflow-hidden p-5 ring-0 sm:max-w-xl ${t.panel} ${role.panel}`}
+        className={`flex max-h-[85dvh] w-full flex-col gap-4 overflow-hidden p-6 sm:max-w-xl ${role.panel}`}
       >
         {stackedAside ? <div className="pr-24">{header}</div> : header}
-        <div className="-mx-5 grid min-h-0 gap-4 overflow-y-auto px-5">
+        <div className="-mx-6 grid min-h-0 gap-4 overflow-y-auto px-6">
           {children}
         </div>
         {stackedAside && (
           <DialogClose asChild>
-            <button type="button" className={t.back}>
-              <ArrowLeftIcon /> {backLabel}
+            <button type="button" className={BACK}>
+              <ArrowLeftIcon weight="bold" /> {backLabel}
             </button>
           </DialogClose>
         )}
@@ -233,22 +234,8 @@ function keepPairOpen(event: {
 const PAIR_VARS =
   "lg:[--pair-panel:min(36rem,50vw_-_1.5rem)] lg:[--pair-offset:calc(var(--pair-panel)_/_2_+_0.5rem)] lg:[--pair-travel:calc(var(--pair-panel)_+_1rem)]";
 
-const TONES = {
-  light: {
-    panel: "rounded-sm border-2 border-black bg-white text-black",
-    overlay: "",
-    back: "hover:shadow-block-md transition-lift absolute top-3 right-3 flex items-center gap-1.5 rounded-sm border-2 border-black bg-white px-2.5 py-1 text-xs font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5",
-  },
-  dark: {
-    panel:
-      "rounded-xl border-2 border-mauve-800 bg-mauve-950 text-white shadow-2xl shadow-black/60",
-    overlay: "bg-black/40",
-    back: "absolute top-3 right-3 flex items-center gap-1.5 rounded-lg border border-mauve-600 bg-mauve-800 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:border-white",
-  },
-} satisfies Record<
-  DialogTone,
-  { panel: string; overlay: string; back: string }
->;
+/** The stacked aside's way back: a small secondary button in the dialog's corner. */
+const BACK = "btn secondary sm absolute top-3 right-3";
 
 const NONE = { panel: "" };
 

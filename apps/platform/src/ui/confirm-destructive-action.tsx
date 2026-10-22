@@ -15,9 +15,10 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
+  AlertDialogFooter,
   AlertDialogTitle,
 } from "~/ui/alert-dialog";
-import FormButton from "~/components/FormButton";
+import { Input } from "~/ui/input";
 
 interface Props extends PropsWithChildren {
   title: string;
@@ -80,14 +81,9 @@ export default function ConfirmDestructiveAction({
         {userConfirmText !== undefined && (
           <label className="flex flex-col gap-1.5 text-sm">
             <span>
-              Type{" "}
-              <span className="rounded-sm bg-white/10 px-1 py-0.5 font-mono text-rose-300">
-                {userConfirmText}
-              </span>{" "}
-              to confirm.
+              Type <code>{userConfirmText}</code> to confirm.
             </span>
-            <input
-              className="rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-1.5 font-mono text-white transition-colors outline-none focus:border-white"
+            <Input
               type="text"
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
@@ -96,20 +92,17 @@ export default function ConfirmDestructiveAction({
           </label>
         )}
 
-        <div className="flex items-center justify-end gap-4">
+        <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction asChild>
-            <FormButton
-              theme="rose"
-              className="text-sm"
-              disabled={disableConfirmButton}
-              onClick={handleConfirm}
-              type="button"
-            >
-              {submitLabel}
-            </FormButton>
+          <AlertDialogAction
+            variant="danger-solid"
+            disabled={disableConfirmButton}
+            onClick={handleConfirm}
+            type="button"
+          >
+            {submitLabel}
           </AlertDialogAction>
-        </div>
+        </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );
