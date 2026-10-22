@@ -103,22 +103,11 @@ function assets() {
     path.join(BRAND, "gdgc-uga-lockup-dark.svg"),
     "utf8",
   );
+  const gdgcLight = readFileSync(
+    path.join(BRAND, "gdgc-uga-lockup.svg"),
+    "utf8",
+  );
   const gdgMark = readFileSync(path.join(BRAND, "gdg-bracket.svg"), "utf8");
-
-  /**
-   * The same lockup for a light ground.
-   *
-   * The checked-in file is the dark-ground variant: "Google Developer Groups"
-   * and "UGA" are white, so on a white ground the chevron and the blue "On
-   * Campus" float over nothing. Only the neutral ink changes — Google's four
-   * chevron colours and the blue belong to the mark and are left alone.
-   *
-   * `#636d74` is not a guess at a Google grey. It is sampled from the club's
-   * own copy of the lockup at
-   * the schedule builder's `public/images/GoogleDevLogo.png`, which is what the
-   * UGA chapter actually publishes.
-   */
-  const gdgcLight = gdgc.replace(/fill="(white|#FFFFFF)"/gi, 'fill="#636d74"');
 
   const decls: string[] = [];
   const add = (
@@ -181,14 +170,14 @@ function assets() {
     "GDGC_UGA",
     gdgc,
     svgAttrs(gdgc),
-    "The GDG on Campus · UGA chapter lockup, for dark grounds. Rebuilt as vector from Google's official chevron and wordmark.",
+    "The GDG on Campus · UGA chapter lockup, for dark grounds. Google's official chapter template (chevron raster, vector wordmark), the white-text variant.",
   );
   add(
     decls,
     "GDGC_UGA_LIGHT",
     gdgcLight,
-    svgAttrs(gdgc),
-    "The same chapter lockup with its neutral ink darkened, for light grounds.",
+    svgAttrs(gdgcLight),
+    "The chapter lockup for light grounds (its own official file: ink wordmark, Google blue).",
   );
 
   const assetInterface = `/**

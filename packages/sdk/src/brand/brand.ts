@@ -41,6 +41,42 @@ export const ACCENT = {
 export const WHITE = "#ffffff";
 
 /**
+ * The Cosmic finish's category colours: one triple per event category.
+ *
+ * `3` is the light step (rings, text on a dark ground), `6` the shadow and
+ * title-shadow step, `7` the date-tile fill, which has to hold white text. Study
+ * and Milestone use one value for both of the dark steps. DevDogs red is not a
+ * category; it is the brand pair beside them. Mirrors `data-kind` in the
+ * platform's `cosmic.css`.
+ */
+export const KIND = {
+  build: { 3: "#38bdf8", 6: "#0084d1", 7: "#0369a1" },
+  workshop: { 3: "#34d399", 6: "#009966", 7: "#047857" },
+  social: { 3: "#f9a8d4", 6: "#db2777", 7: "#be185d" },
+  info: { 3: "#fcd34d", 6: "#d97706", 7: "#b45309" },
+  study: { 3: "#cbd5e1", 6: "#475569", 7: "#475569" },
+  milestone: { 3: "#a5b4fc", 6: "#4f39f6", 7: "#4f39f6" },
+} as const;
+
+/** DevDogs red, from the mascot's frames: the brand's own pair, never a category. */
+export const DEVDOGS = { 3: "#ffa1ad", 6: "#ec003f", 7: "#c70036" } as const;
+
+/** The Cosmic ground, surfaces, lines and ink (the dark, default finish). */
+export const COSMIC = {
+  bg: "#0a0718",
+  surface: "#0f0b1e",
+  "surface-2": "#171230",
+  raised: "#1d1738",
+  line: "#2a2433",
+  "line-strong": "#4a4258",
+  "ink-line": "#04020a",
+  text: "#ffffff",
+  "text-2": "#d7d0d7",
+  "text-3": "#a89ea9",
+  "on-accent": "#0a0718",
+} as const;
+
+/**
  * The roles those colours play, named for the job rather than the swatch.
  *
  * `.dark` in globals.css is the mapping this mirrors: background is mauve-950,

@@ -1,4 +1,4 @@
-import { ACCENT, MAUVE, THEME, WHITE } from "./brand.js";
+import { ACCENT, COSMIC, DEVDOGS, KIND, MAUVE, THEME, WHITE } from "./brand.js";
 
 /**
  * The palette flattened to `name -> #rrggbb`.
@@ -21,6 +21,17 @@ export const PALETTE: Readonly<Record<string, string>> = {
   emerald400: ACCENT.emerald400,
   white: WHITE,
   ink: THEME.ink,
+  ...Object.fromEntries(
+    Object.entries(KIND).flatMap(([kind, steps]) =>
+      Object.entries(steps).map(([step, hex]) => [`kind-${kind}-${step}`, hex]),
+    ),
+  ),
+  ...Object.fromEntries(
+    Object.entries(DEVDOGS).map(([step, hex]) => [`devdogs-${step}`, hex]),
+  ),
+  ...Object.fromEntries(
+    Object.entries(COSMIC).map(([name, hex]) => [`cosmic-${name}`, hex]),
+  ),
 };
 
 /** Kebab-cases an accent key: `red400` is `red-400`. */
