@@ -15,7 +15,7 @@ import {
   blockNavigation,
   shouldInterceptNavigation,
 } from "~/lib/navigationGuard";
-import { toast } from "~/lib/toast";
+import { WarningCircleIcon } from "@phosphor-icons/react/ssr";
 
 /**
  * One save button for a whole settings page.
@@ -34,7 +34,7 @@ import { toast } from "~/lib/toast";
  *   1. Nothing saves while any dirty field reports an `error`. Those come from
  *      ~/lib/validation/profile, the same module the server actions validate
  *      with, so the client refuses exactly what the server would.
- *   2. If a write fails anyway, the toast names the fields that did not land
+ *   2. If a write fails anyway, the bar names the fields that did not land
  *      and the rest stay dirty, so the bar is there to retry them.
  */
 
@@ -66,7 +66,13 @@ interface FieldHandlers {
   reset: () => void;
 }
 
-interface SettingsFormContextValue {
+/** What the last Save did. The bar shows it until the next edit, save or reset. */
+export interface SettingsSaveResult {
+  kind: "saved" | "error";
+  message: string;
+}
+
+export interface SettingsFormContextValue {
   setSummary: (id: string, summary: FieldSummary) => void;
   unregister: (id: string) => void;
   handlers: React.RefObject<Map<string, FieldHandlers>>;
@@ -76,6 +82,8 @@ interface SettingsFormContextValue {
    */
   errorsRevealed: number;
   isSaving: boolean;
+  /** The outcome of the last Save; "saved" clears itself after a few seconds. */
+  result: SettingsSaveResult | null;
   dirtyCount: number;
   /** Labels of dirty fields that are currently blocking the save. */
   invalidLabels: string[];
@@ -89,9 +97,8 @@ interface SettingsFormContextValue {
   blockedAt: number;
 }
 
-const SettingsFormContext = createContext<SettingsFormContextValue | null>(
-  null,
-);
+export const SettingsFormContext =
+  createContext<SettingsFormContextValue | null>(null);
 
 const listFormatter = new Intl.ListFormat("en", {
   style: "long",
@@ -102,6 +109,7 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
   const [summaries, setSummaries] = useState<Record<string, FieldSummary>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [errorsRevealed, setErrorsRevealed] = useState(0);
+  const [result, setResult] = useState<SettingsSaveResult | null>(null);
   const handlers = useRef(new Map<string, FieldHandlers>());
 
   const setSummary = useCallback((id: string, summary: FieldSummary) => {
@@ -204,6 +212,7 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
 
     const targets = dirty.map(([id, summary]) => ({ id, summary }));
     setIsSaving(true);
+    setResult(null);
 
     void Promise.allSettled(
       targets.map(({ id }) => {
@@ -230,25 +239,37 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
         .map(({ summary }) => summary.label);
 
       if (failed.length === 0) {
-        toast.success(
-          targets.length === 1
-            ? `${targets[0]!.summary.label} saved`
-            : "Changes saved",
-        );
+        setResult({
+          kind: "saved",
+          message:
+            targets.length === 1
+              ? `Saved. ${targets[0]!.summary.label} is up to date.`
+              : "Saved. Your changes are up to date.",
+        });
         return;
       }
 
       const names = listFormatter.format(failed);
-      toast.error(
-        failed.length === targets.length
-          ? `Couldn't save ${names}.`
-          : `Couldn't save ${names}. Your other changes were saved.`,
-      );
+      setResult({
+        kind: "error",
+        message:
+          failed.length === targets.length
+            ? `Couldn\u2019t save ${names}. Nothing was lost; try again.`
+            : `Couldn\u2019t save ${names}. Your other changes were saved.`,
+      });
     });
   }, [dirty, invalid, isSaving]);
 
+  // "Saved" is a confirmation, not a state to live in: it leaves after 4s.
+  useEffect(() => {
+    if (result?.kind !== "saved") return;
+    const timer = setTimeout(() => setResult(null), 4000);
+    return () => clearTimeout(timer);
+  }, [result]);
+
   const resetAll = useCallback(() => {
     if (isSaving) return;
+    setResult(null);
     for (const [id] of dirty) handlers.current.get(id)?.reset();
   }, [dirty, isSaving]);
 
@@ -279,6 +300,7 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
       handlers,
       errorsRevealed,
       isSaving,
+      result,
       dirtyCount,
       invalidLabels,
       saveAll,
@@ -290,6 +312,7 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
       unregister,
       errorsRevealed,
       isSaving,
+      result,
       dirtyCount,
       invalidLabels,
       saveAll,
@@ -316,7 +339,7 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
       <div
         aria-hidden
         className={`shrink-0 transition-[height] duration-200 ease-out ${
-          isDirty ? "h-24" : "h-0"
+          isDirty || isSaving || result ? "h-24" : "h-0"
         }`}
       />
     </SettingsFormContext.Provider>
@@ -406,12 +429,15 @@ export function useBlurredError(error: string | null) {
 export function FieldError({ error }: { error: string | null }) {
   return (
     <div
-      className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
+      className={`grid transition-[grid-template-rows] duration-200 ease-in-out motion-reduce:transition-none ${
         error ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
       }`}
     >
       <div className="overflow-hidden">
-        <p role="alert" className="pt-2 text-xs leading-tight text-rose-400">
+        <p role="alert" className="err pt-2">
+          {error && (
+            <WarningCircleIcon weight="fill" aria-hidden className="shrink-0" />
+          )}
           {error}
         </p>
       </div>

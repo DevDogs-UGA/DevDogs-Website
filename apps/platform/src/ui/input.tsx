@@ -2,17 +2,63 @@ import * as React from "react";
 
 import { cn } from "~/lib/cn";
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+/**
+ * Input types that are not a text box: they keep the browser's own control (or
+ * none at all) and are returned unframed, with `className` on the element
+ * itself, exactly as the bare `<input>` this component used to be.
+ */
+const UNFRAMED_TYPES = new Set([
+  "hidden",
+  "checkbox",
+  "radio",
+  "file",
+  "range",
+  "color",
+  "image",
+  "submit",
+  "reset",
+  "button",
+]);
+
+/**
+ * The kit's `.input` field frame around a native `<input>`.
+ *
+ * Every native prop (`ref`, `name`, `value`, `defaultValue`, `onChange`,
+ * `aria-*`, `autoComplete`, `inputMode`, `maxLength`, `form`, `required`,
+ * `data-*`, spread from `react-hook-form`'s `register`) lands on the inner
+ * `<input>`. `className` and `style` go to the frame, which is what a caller
+ * sizes (`max-w-sm`, `w-40`). `aria-invalid` on the input draws the frame in
+ * the invalid colour; `disabled` dims it. Not for checkboxes, radios or files:
+ * those are returned bare (see `UNFRAMED_TYPES`), and `Checkbox` is the kit's.
+ */
+function Input({
+  className,
+  style,
+  type,
+  ...props
+}: React.ComponentProps<"input">) {
+  if (type && UNFRAMED_TYPES.has(type)) {
+    return (
+      <input
+        type={type}
+        data-slot="input"
+        className={className}
+        style={style}
+        {...props}
+      />
+    );
+  }
   return (
-    <input
-      type={type}
-      data-slot="input"
+    <span
+      data-slot="input-frame"
       className={cn(
-        "border-input file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:bg-input/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 h-8 w-full min-w-0 rounded-lg border bg-transparent px-2.5 py-1 text-base transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:ring-3 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-3 md:text-sm",
+        "input has-disabled:cursor-not-allowed has-disabled:opacity-60 has-[[aria-invalid=true]]:[--bo:var(--bad)]",
         className,
       )}
-      {...props}
-    />
+      style={style}
+    >
+      <input type={type} data-slot="input" {...props} />
+    </span>
   );
 }
 

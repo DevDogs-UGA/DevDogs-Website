@@ -57,7 +57,7 @@ export default function SettingsField({
             isDirty ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
           }`}
         >
-          <div className="flex min-h-0 flex-col overflow-hidden pt-2 text-xs leading-tight text-mauve-600 *:truncate *:transition-[height] *:data-hidden:h-0">
+          <div className="flex min-h-0 flex-col overflow-hidden pt-2 text-[12.5px] leading-tight text-[var(--text-3)] *:truncate *:transition-[height] *:data-hidden:h-0">
             <span data-hidden={!meta || undefined}>{meta}</span>
             <span data-hidden={!secondaryMeta || undefined}>
               {secondaryMeta}

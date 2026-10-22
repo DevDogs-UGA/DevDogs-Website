@@ -1,0 +1,114 @@
+/* Fields unit (P4): the checked / focus states the kit draws with a script-set
+   `.on` class, driven here by the real input's own state so uncontrolled
+   checkboxes and radio groups stay right with no JS. Mirrors kit.css `.check.on`
+   and `.seg > .on`. */
+@layer cosmic {
+  .cosmic .check {
+    position: relative;
+    cursor: pointer;
+  }
+  .cosmic .check:has(> input:disabled) {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  .cosmic .check > input {
+    position: absolute;
+    opacity: 0;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    inset: 0 auto auto 0;
+    cursor: inherit;
+  }
+  .cosmic .check:not(:has(> input:checked)) i svg {
+    visibility: hidden;
+  }
+  .cosmic .check:has(> input:checked) i {
+    background:
+      linear-gradient(var(--k3), var(--k3)) 0 2px / 100% calc(100% - 4px)
+        no-repeat,
+      linear-gradient(var(--k3), var(--k3)) 2px 0 / calc(100% - 4px) 100%
+        no-repeat;
+    color: var(--on-accent);
+    filter: drop-shadow(2px 2px 0 var(--k6));
+  }
+  .cosmic .check.radio:has(> input:checked) i {
+    background: var(--k3);
+  }
+  .cosmic .check.radio:has(> input:checked) i::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    background: var(--on-accent);
+  }
+  .cosmic .check:has(> input:focus-visible) i {
+    outline: 2px dashed var(--brand3);
+    outline-offset: 3px;
+  }
+  .cosmic .check[data-invalid]:not(:has(> input:checked)) i {
+    background:
+      linear-gradient(var(--bg), var(--bg)) 2px 4px / calc(100% - 4px)
+        calc(100% - 8px) no-repeat,
+      linear-gradient(var(--bg), var(--bg)) 4px 2px / calc(100% - 8px)
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--bad), var(--bad)) 0 2px / 100% calc(100% - 4px)
+        no-repeat,
+      linear-gradient(var(--bad), var(--bad)) 2px 0 / calc(100% - 4px) 100%
+        no-repeat;
+  }
+
+  .cosmic .seg > span {
+    position: relative;
+  }
+  .cosmic .seg > span > input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+  }
+  .cosmic .seg > span > :is(label, a)::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+  .cosmic .seg > span > :is(label, a) {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: inherit;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .cosmic .seg > span:has(> input:checked),
+  .cosmic .seg > span:has(> a[aria-current]) {
+    background:
+      linear-gradient(var(--k3), var(--k3)) 2px 100% / calc(100% - 4px) 3px
+        no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 2px 0 /
+        calc(100% - 4px) 100% no-repeat;
+    color: var(--text);
+  }
+  .cosmic .seg > span:has(> input:focus-visible),
+  .cosmic .seg > span:has(> a:focus-visible) {
+    outline: 2px dashed var(--brand3);
+    outline-offset: 3px;
+  }
+  .cosmic .seg > span:has(> input:disabled) {
+    opacity: 0.5;
+  }
+
+  /* switch: spinner sits in the knob while a submit is pending */
+  .cosmic .switch:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  .cosmic .switch[aria-busy="true"] {
+    cursor: progress;
+    opacity: 1;
+  }
+}

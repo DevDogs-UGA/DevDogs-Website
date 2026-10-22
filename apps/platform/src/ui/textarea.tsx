@@ -2,16 +2,32 @@ import * as React from "react";
 
 import { cn } from "~/lib/cn";
 
-function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+/**
+ * The kit's `.input.area` frame around a native `<textarea>`. Props forward to
+ * the textarea (`ref`, `name`, `value`, `rows`, `maxLength`, `aria-*`); the
+ * `className` and `style` go to the frame. The field grows with its content and
+ * never shrinks below the frame's 112px.
+ */
+function Textarea({
+  className,
+  style,
+  ...props
+}: React.ComponentProps<"textarea">) {
   return (
-    <textarea
-      data-slot="textarea"
+    <span
+      data-slot="textarea-frame"
       className={cn(
-        "border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 disabled:bg-input/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 flex field-sizing-content min-h-16 w-full rounded-lg border bg-transparent px-2.5 py-2 text-base transition-colors outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-3 md:text-sm",
+        "input area has-disabled:cursor-not-allowed has-disabled:opacity-60 has-[[aria-invalid=true]]:[--bo:var(--bad)]",
         className,
       )}
-      {...props}
-    />
+      style={style}
+    >
+      <textarea
+        data-slot="textarea"
+        className="block [field-sizing:content] min-h-[4.25rem] w-full resize-none"
+        {...props}
+      />
+    </span>
   );
 }
 

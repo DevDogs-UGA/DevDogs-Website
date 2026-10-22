@@ -10,6 +10,7 @@ interface Props {
   label?: string;
 }
 
+/** The profile-visibility switch (`.visibility` in the mockups). */
 export default function VisibilityToggle({
   checked,
   pending,
@@ -18,7 +19,7 @@ export default function VisibilityToggle({
 }: Props) {
   return (
     <form
-      className="flex items-center gap-3 self-start text-sm text-white"
+      className="flex items-center gap-3 self-start text-sm text-[var(--text)]"
       onSubmit={(e) => {
         e.preventDefault();
         onToggle();
@@ -28,7 +29,7 @@ export default function VisibilityToggle({
         <Toggle checked={checked} pending={pending} disabled={pending} />
         {label}
       </label>
-      <span className="text-mauve-400">
+      <span className="text-[var(--text-3)]">
         {checked ? "(Currently Visible)" : "(Currently Hidden)"}
       </span>
     </form>

@@ -1,9 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type Ref,
+} from "react";
 import { createPortal } from "react-dom";
-import { SpinnerGapIcon, WarningCircleIcon } from "@phosphor-icons/react/ssr";
-import { useSettingsForm } from "~/ui/settings-form";
+import {
+  CheckCircleIcon,
+  SpinnerGapIcon,
+  WarningCircleIcon,
+  XCircleIcon,
+} from "@phosphor-icons/react/ssr";
+import { Button } from "~/ui/button";
+import { Kbd } from "~/ui/kbd";
+import { cn } from "~/lib/cn";
+import { useSettingsForm, type SettingsSaveResult } from "~/ui/settings-form";
 
 /**
  * The page's one save affordance, fixed to the bottom of the viewport.
@@ -12,7 +26,8 @@ import { useSettingsForm } from "~/ui/settings-form";
  * than a viewport, and someone who edits their preferred name at the top should
  * not have to hunt for a button at the bottom to commit it.
  *
- * z-40 matches AnnouncementBanner, under the z-50 dialog and sheet overlays and
+ * Cosmic `.savebar` (sticky bottom, a 2px rule above, an 8px shade over the
+ * page), fixed to the viewport here. z-40 matches AnnouncementBanner, under the z-50 dialog and sheet overlays and
  * under sonner's toasts. The two never share a page (`showsAnnouncement` keeps
  * the notice off `/account` and every other signed-in page), and
  * `announcement.test.ts` pins that down so they cannot start to.
@@ -55,13 +70,9 @@ function ShortcutHint() {
   );
 
   return (
-    <span aria-hidden="true" className="ml-[1ch] flex items-center gap-0.5">
-      <kbd className="rounded-sm border border-b-2 border-current/20 bg-current/10 px-1 font-mono text-[0.6875rem] font-normal whitespace-nowrap">
-        {isMac ? "⌘" : "Ctrl"}
-      </kbd>
-      <kbd className="rounded-sm border border-b-2 border-current/20 bg-current/10 px-1 font-mono text-[0.6875rem] font-normal whitespace-nowrap">
-        S
-      </kbd>
+    <span aria-hidden="true" className="ml-[1ch] flex items-center gap-1">
+      <Kbd className="text-inherit!">{isMac ? "\u2318" : "Ctrl"}</Kbd>
+      <Kbd className="text-inherit!">S</Kbd>
     </span>
   );
 }
@@ -78,45 +89,161 @@ const listFormatter = new Intl.ListFormat("en", {
   type: "conjunction",
 });
 
+type SaveBarStatus = "dirty" | "blocked" | "saving" | "saved" | "error";
+
+interface SettingsSaveBarViewProps {
+  status: SaveBarStatus;
+  dirtyCount: number;
+  invalidLabels: string[];
+  /** Text of the saved / error outcome. */
+  message?: string;
+  isSaving: boolean;
+  onSave: () => void;
+  onReset: () => void;
+  /** Spoken when a link click was swallowed; empty otherwise. */
+  blockedMessage?: string;
+  /** Hidden bars are `inert`: kept mounted so they animate, out of the tab order. */
+  show?: boolean;
+  /** Draws in the flow instead of fixed to the viewport (the gallery, tests). */
+  inline?: boolean;
+  /** The element the "swallowed click" shake runs on. */
+  innerRef?: Ref<HTMLDivElement>;
+}
+
+/**
+ * The bar's five looks (`.savebar` + `.state.*` in `settings-profile.html`).
+ * Presentational: `SettingsSaveBar` feeds it from the form context, and the
+ * gallery feeds it stubs to show every state.
+ */
+export function SettingsSaveBarView({
+  status,
+  dirtyCount,
+  invalidLabels,
+  message,
+  isSaving,
+  onSave,
+  onReset,
+  blockedMessage = "",
+  show = true,
+  inline = false,
+  innerRef,
+}: SettingsSaveBarViewProps) {
+  const blocked = status === "blocked";
+  const dirtyText = `${dirtyCount} unsaved ${dirtyCount === 1 ? "change" : "changes"}`;
+
+  return (
+    <div
+      inert={!show}
+      aria-hidden={!show}
+      className={cn(
+        "savebar transition-[translate,opacity] duration-200 ease-out motion-reduce:transition-none",
+        inline
+          ? "relative"
+          : "pointer-events-auto fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)]",
+        show ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
+      )}
+    >
+      <div className="wrap">
+        <div
+          ref={innerRef}
+          className="in max-sm:h-auto max-sm:flex-wrap max-sm:gap-y-2 max-sm:py-3 [&_.state]:min-w-0"
+        >
+          {/* The shake is the whole feedback for a cancelled click. Same news,
+              spoken. */}
+          <span aria-live="assertive" className="sr-only">
+            {blockedMessage}
+          </span>
+
+          {status === "saving" && (
+            <span className="state saving" role="status">
+              <SpinnerGapIcon
+                aria-hidden
+                className="animate-spin [animation-duration:750ms] motion-reduce:animate-none"
+              />
+              {"Saving\u2026"}
+            </span>
+          )}
+          {status === "saved" && (
+            <span className="state saved" role="status">
+              <CheckCircleIcon aria-hidden weight="fill" />
+              {message ?? "Saved."}
+            </span>
+          )}
+          {status === "error" && (
+            <span className="state error" role="alert">
+              <XCircleIcon aria-hidden weight="fill" />
+              {message ?? "Couldn\u2019t save."}
+            </span>
+          )}
+          {(status === "dirty" || blocked) && (
+            <span
+              className={cn("state", blocked ? "error" : "dirty")}
+              role="status"
+            >
+              <WarningCircleIcon aria-hidden weight="fill" />
+              {blocked
+                ? `Fix ${listFormatter.format(invalidLabels)} before saving.`
+                : dirtyText}
+            </span>
+          )}
+
+          <div className="acts">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onReset}
+              disabled={isSaving || status === "saved"}
+            >
+              Discard
+            </Button>
+            <Button
+              type="button"
+              onClick={onSave}
+              loading={isSaving}
+              disabled={blocked || status === "saved"}
+            >
+              Save
+              {!blocked && !isSaving && <ShortcutHint />}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsSaveBar() {
-  const { dirtyCount, invalidLabels, isSaving, saveAll, resetAll, blockedAt } =
-    useSettingsForm();
+  const {
+    dirtyCount,
+    invalidLabels,
+    isSaving,
+    saveAll,
+    resetAll,
+    blockedAt,
+    result,
+  } = useSettingsForm();
 
-  const show = dirtyCount > 0;
   const blocked = invalidLabels.length > 0;
-  const cardRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
 
-  /**
-   * Has this mounted on the client yet? `document` does not exist during the
-   * server render, so the portal cannot be created until it does, and the two
-   * renders have to agree or hydration mismatches.
-   *
-   * useSyncExternalStore answers that without a `useState` + `useEffect` pair:
-   * a store that never changes, reading `false` on the server and `true` on the
-   * client. The pair would set state synchronously inside an effect, which lint
-   * rejects as a cascading render. Every mount would render twice.
-   *
-   * Rendering nothing before mount costs nothing here. The bar is only on
-   * screen once a field is dirty, and a field only becomes dirty from a client
-   * interaction, so there was never server markup worth keeping.
-   */
+  const status: SaveBarStatus = isSaving
+    ? "saving"
+    : blocked
+      ? "blocked"
+      : result?.kind === "error"
+        ? "error"
+        : dirtyCount > 0
+          ? "dirty"
+          : "saved";
+  const show = dirtyCount > 0 || isSaving || result !== null;
+  const shown: SettingsSaveResult | null = result;
+
   const mounted = useSyncExternalStore(
     subscribeToNothing,
     () => true,
     () => false,
   );
 
-  /**
-   * Answer a swallowed link click.
-   *
-   * Driven from JS rather than a CSS class because it has to fire twice in a
-   * row. Clicking the same dead link again should give the same shake, and
-   * re-adding a class that is already there animates nothing. The Web
-   * Animations API restarts on every call and needs no global keyframes.
-   *
-   * Skipped on the first render: `blockedAt` starts at 0 and nothing has been
-   * blocked yet.
-   */
   const previousBlockedAt = useRef(blockedAt);
   const [blockedMessage, setBlockedMessage] = useState("");
   useEffect(() => {
@@ -131,26 +258,21 @@ export default function SettingsSaveBar() {
     );
     const clear = setTimeout(() => setBlockedMessage(""), 4000);
 
-    const card = cardRef.current;
-    if (!card?.animate) return () => clearTimeout(clear);
+    const inner = innerRef.current;
+    if (!inner?.animate) return () => clearTimeout(clear);
 
     const reduced = window.matchMedia?.(
       "(prefers-reduced-motion: reduce)",
     ).matches;
 
-    // `transform` rather than the `translate` property: animatable everywhere,
-    // and the outer wrapper owns the bar's own translate-y so there is nothing
-    // here to fight over.
-    //
-    // Reduced motion gets the same message without the movement, the edge
-    // flares instead. Deliberately NOT boxShadow, which would blow away the
-    // card's drop shadow for the length of the animation and read as a flicker.
-    card.animate(
+    // Reduced motion gets the same message without the movement: the bar
+    // flashes instead.
+    inner.animate(
       reduced
         ? [
-            { borderColor: "var(--color-mauve-600)" },
-            { borderColor: "var(--color-white)" },
-            { borderColor: "var(--color-mauve-600)" },
+            { filter: "brightness(1)" },
+            { filter: "brightness(1.6)" },
+            { filter: "brightness(1)" },
           ]
         : [
             { transform: "translateX(0)" },
@@ -168,114 +290,22 @@ export default function SettingsSaveBar() {
 
   if (!mounted) return null;
 
+  // Rendered through a portal to <body> (see the note at the top of the file).
+  // Kept mounted so it can animate both ways, and `inert` while hidden so a bar
+  // nobody can see is not in the tab order.
   return createPortal(
-    /* Kept mounted so it can animate both ways, and `inert` while hidden so a
-       bar nobody can see is not in the tab order. The gutter is
-       pointer-events-none for the same reason as the announcement's: it spans
-       the viewport and would otherwise swallow clicks on the page behind it. */
-    <div
-      inert={!show}
-      aria-hidden={!show}
-      className={`pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[translate,opacity] duration-200 ease-out sm:px-6 ${
-        show ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-      }`}
-    >
-      {/* Grounds the bar against whatever is scrolling under it. Same
-          mask-image trick as the announcement banner: backdrop-filter takes no
-          gradient, so the fade goes on the mask and takes the blur with it. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 -top-6 bottom-0 bg-black/50 [mask-image:linear-gradient(to_top,#000_0%,#000_20%,transparent_100%)] supports-backdrop-filter:backdrop-blur-sm"
-      />
-
-      {/* The surface deliberately does NOT match either thing behind it. The
-          page is mauve-900 and the cards are mauve-950 inside a mauve-800
-          border, so a dark bar with a dim edge read as one more card stuck to
-          the bottom of the window. Lighter than both, mauve-800 on a mauve-600
-          edge, reads as chrome over the page instead, and the inset highlight
-          plus the deeper drop shadow sell the floating. */}
-      <div
-        ref={cardRef}
-        /* Narrower than PageShell's max-w-5xl on purpose. At the same width it
-           lined up edge-to-edge with the cards above it and read as the last
-           one in the stack; pulled in, it stops sharing their gridlines and
-           sits over the page as its own object. The border thinned to 1px for
-           the same reason: at 2px the edge competed with the card borders
-           instead of containing the bar. */
-        className="pointer-events-auto relative mx-auto flex w-full max-w-3xl items-center justify-between gap-x-3 rounded-lg border border-mauve-600 bg-mauve-800 px-3 py-3 shadow-2xl inset-ring-1 shadow-black/60 inset-ring-white/10 sm:gap-x-4 sm:px-4"
-      >
-        {/* The shake is the whole feedback for a cancelled click. Same news,
-            spoken. */}
-        <span aria-live="assertive" className="sr-only">
-          {blockedMessage}
-        </span>
-
-        {/* Leads the bar, because it is the reason the bar is on screen at all.
-            The two controls that follow are what you do about it. `text-left`
-            rather than centred: with the actions gathered on the right there is
-            no second edge to balance against. */}
-        <p
-          role="status"
-          className={`min-w-0 text-left text-sm leading-tight font-semibold ${
-            blocked ? "text-rose-300" : "text-mauve-100"
-          }`}
-        >
-          {blocked ? (
-            <span className="flex items-center gap-1.5">
-              <WarningCircleIcon
-                weight="fill"
-                aria-hidden
-                className="hidden size-4 shrink-0 sm:inline"
-              />
-              <span>
-                Fix {listFormatter.format(invalidLabels)} before saving.
-              </span>
-            </span>
-          ) : (
-            <>
-              {dirtyCount} unsaved {dirtyCount === 1 ? "change" : "changes"}
-            </>
-          )}
-        </p>
-
-        {/* Both actions live on the right, discard nearest the text so Save
-            keeps the outer corner. The far edge is the easiest target in the
-            bar and it should belong to the safe action, not the destructive
-            one. */}
-        <div className="flex shrink-0 items-center gap-4 sm:gap-6">
-          <button
-            type="button"
-            onClick={resetAll}
-            disabled={isSaving}
-            /* A link, not a button: two buttons side by side read as a pair of
-               equal options, and discarding is not the equal of saving.
-               Demoting it to text puts Save alone at button weight. Rose
-               carries the warning now that the box is gone, since this throws
-               away everything typed since the last save with no undo. Underline
-               only on hover/focus. */
-            className="shrink-0 rounded-xs text-sm font-medium text-rose-400 underline-offset-4 transition outline-none hover:text-rose-300 hover:underline focus-visible:underline focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-800 disabled:pointer-events-none disabled:opacity-50"
-          >
-            Reset
-          </button>
-
-          <button
-            type="button"
-            onClick={saveAll}
-            disabled={isSaving || blocked}
-            className="relative flex shrink-0 items-center justify-center rounded-sm border-2 border-white bg-white px-4 py-1.5 text-sm font-medium text-black transition outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-800 enabled:hover:bg-transparent enabled:hover:text-white enabled:hover:shadow-sm enabled:hover:shadow-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSaving ? (
-              <SpinnerGapIcon className="animate-spin [animation-duration:750ms]" />
-            ) : (
-              <>
-                Save
-                {!blocked && <ShortcutHint />}
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>,
+    <SettingsSaveBarView
+      status={status}
+      dirtyCount={dirtyCount}
+      invalidLabels={invalidLabels}
+      message={shown?.message}
+      isSaving={isSaving}
+      onSave={saveAll}
+      onReset={resetAll}
+      blockedMessage={blockedMessage}
+      show={show}
+      innerRef={innerRef}
+    />,
     document.body,
   );
 }
