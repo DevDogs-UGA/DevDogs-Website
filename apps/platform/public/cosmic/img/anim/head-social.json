@@ -1,0 +1,70 @@
+{
+ "name": "head-social",
+ "kind": "social",
+ "cell": 3,
+ "scene": [
+  1440,
+  280
+ ],
+ "cells": [
+  480,
+  93
+ ],
+ "planet": {
+  "file": "head-social-planet.png",
+  "frames": 48,
+  "frame": [
+   57,
+   57
+  ],
+  "left": 389,
+  "top": 22,
+  "cx": 416.6666666666667,
+  "cy": 50.0,
+  "r": 23.333333333333332,
+  "duration": 90,
+  "loops": true,
+  "direction": "surface moves left to right"
+ },
+ "ring": {
+  "file": "head-social-ring.png",
+  "frame": [
+   92,
+   30
+  ],
+  "left": 371,
+  "top": 39
+ },
+ "sky": "head-social-sky.png",
+ "twinkle": {
+  "file": "head-social-twinkle.png",
+  "groups": 3,
+  "group_size": [
+   480,
+   93
+  ],
+  "layout": "3 stacked groups; show group g with background-position-y: g*50%",
+  "pixels": [
+   32,
+   4,
+   4
+  ],
+  "durations": [
+   4.0,
+   5.5,
+   7.0
+  ],
+  "delays": [
+   0,
+   -1.7,
+   -3.1
+  ],
+  "levels": [
+   1,
+   0.55,
+   0.2,
+   0.55
+  ],
+  "note": "animate opacity with step-end"
+ }
+}

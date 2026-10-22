@@ -1,0 +1,156 @@
+{
+ "head-brand": {
+  "ar": "1440/280",
+  "sky": "head-brand-sky.png",
+  "planet": [
+   "head-brand-planet.png",
+   48,
+   90,
+   81.0417,
+   23.6559,
+   11.875,
+   61.2903
+  ],
+  "tw": "head-brand-twinkle.png",
+  "shoot": [
+   "head-brand-shoot.png",
+   36.25,
+   9.6774,
+   2.0833,
+   5.3763
+  ]
+ },
+ "head-build": {
+  "ar": "1440/280",
+  "sky": "head-build-sky.png",
+  "planet": [
+   "head-build-planet.png",
+   48,
+   90,
+   81.0417,
+   23.6559,
+   11.875,
+   61.2903
+  ],
+  "ring": [
+   "head-build-ring.png",
+   77.2917,
+   41.9355,
+   19.1667,
+   32.2581
+  ],
+  "tw": "head-build-twinkle.png"
+ },
+ "head-info": {
+  "ar": "1440/280",
+  "sky": "head-info-sky.png",
+  "planet": [
+   "head-info-planet.png",
+   48,
+   90,
+   81.0417,
+   23.6559,
+   11.875,
+   61.2903
+  ],
+  "tw": "head-info-twinkle.png"
+ },
+ "head-milestone": {
+  "ar": "1440/280",
+  "sky": "head-milestone-sky.png",
+  "planet": [
+   "head-milestone-planet.png",
+   48,
+   90,
+   77.0833,
+   3.2258,
+   19.7917,
+   96.7742
+  ],
+  "ring": [
+   "head-milestone-ring.png",
+   77.2917,
+   41.9355,
+   19.1667,
+   32.2581
+  ],
+  "tw": "head-milestone-twinkle.png"
+ },
+ "head-social": {
+  "ar": "1440/280",
+  "sky": "head-social-sky.png",
+  "planet": [
+   "head-social-planet.png",
+   48,
+   90,
+   81.0417,
+   23.6559,
+   11.875,
+   61.2903
+  ],
+  "ring": [
+   "head-social-ring.png",
+   77.2917,
+   41.9355,
+   19.1667,
+   32.2581
+  ],
+  "tw": "head-social-twinkle.png"
+ },
+ "head-study": {
+  "ar": "1440/280",
+  "sky": "head-study-sky.png",
+  "planet": [
+   "head-study-planet.png",
+   48,
+   90,
+   81.0417,
+   23.6559,
+   11.875,
+   61.2903
+  ],
+  "tw": "head-study-twinkle.png"
+ },
+ "head-workshop": {
+  "ar": "1440/280",
+  "sky": "head-workshop-sky.png",
+  "planet": [
+   "head-workshop-planet.png",
+   48,
+   90,
+   81.0417,
+   23.6559,
+   11.875,
+   61.2903
+  ],
+  "tw": "head-workshop-twinkle.png",
+  "shoot": [
+   "head-workshop-shoot.png",
+   49.375,
+   9.6774,
+   2.0833,
+   5.3763
+  ]
+ },
+ "hero-home": {
+  "ar": "1440/640",
+  "sky": "hero-home-sky.png",
+  "planet": [
+   "hero-home-planet.png",
+   64,
+   120,
+   68.5417,
+   21.5962,
+   22.9167,
+   51.6432
+  ],
+  "ring": [
+   "hero-home-ring.png",
+   59.5833,
+   38.4977,
+   40.4167,
+   26.7606
+  ],
+  "tw": "hero-home-twinkle.png"
+ }
+}

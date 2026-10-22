@@ -1,0 +1,77 @@
+{
+ "name": "head-workshop",
+ "kind": "workshop",
+ "cell": 3,
+ "scene": [
+  1440,
+  280
+ ],
+ "cells": [
+  480,
+  93
+ ],
+ "planet": {
+  "file": "head-workshop-planet.png",
+  "frames": 48,
+  "frame": [
+   57,
+   57
+  ],
+  "left": 389,
+  "top": 22,
+  "cx": 416.6666666666667,
+  "cy": 50.0,
+  "r": 23.333333333333332,
+  "duration": 90,
+  "loops": true,
+  "direction": "surface moves left to right"
+ },
+ "sky": "head-workshop-sky.png",
+ "twinkle": {
+  "file": "head-workshop-twinkle.png",
+  "groups": 3,
+  "group_size": [
+   480,
+   93
+  ],
+  "layout": "3 stacked groups; show group g with background-position-y: g*50%",
+  "pixels": [
+   4,
+   12,
+   4
+  ],
+  "durations": [
+   4.0,
+   5.5,
+   7.0
+  ],
+  "delays": [
+   0,
+   -1.7,
+   -3.1
+  ],
+  "levels": [
+   1,
+   0.55,
+   0.2,
+   0.55
+  ],
+  "note": "animate opacity with step-end"
+ },
+ "shoot": {
+  "file": "head-workshop-shoot.png",
+  "frame": [
+   10,
+   5
+  ],
+  "left": 237,
+  "top": 9,
+  "travel": [
+   -40,
+   20
+  ],
+  "duration": 23,
+  "visible_fraction": 0.05,
+  "note": "bright head is the upper-right end, the tail fades toward lower-left: it travels up and to the right"
+ }
+}

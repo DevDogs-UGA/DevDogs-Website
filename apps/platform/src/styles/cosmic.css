@@ -1,0 +1,3355 @@
+/* @generated from the frozen draft-26 mockups (site-v26-final/kit.css + app.css) by
+   design-system/migration/f1/port_cosmic.py, then edited by hand: change this file directly from here on.
+   Everything lives in @layer cosmic (below Tailwind's utilities). Every selector is scoped under .cosmic or .paper, so
+   the kit styles nothing until an ancestor (body, in the end) carries one of them. Fonts come from next/font in
+   app/layout.tsx (--font-display, --font-sans, --font-mono on <html>); Paper's Google Sans is loaded here. */
+
+@font-face {
+  font-family: "Google Sans";
+  font-weight: 400;
+  src: url(/cosmic/a/fonts/GoogleSans-Regular.ttf);
+  font-display: swap;
+}
+@font-face {
+  font-family: "Google Sans";
+  font-weight: 700;
+  src: url(/cosmic/a/fonts/GoogleSans-Bold.ttf);
+  font-display: swap;
+}
+@font-face {
+  font-family: "Google Sans Mono";
+  font-weight: 400;
+  src: url(/cosmic/a/fonts/GoogleSansMono-Regular.ttf);
+  font-display: swap;
+}
+@font-face {
+  font-family: "Google Sans Mono";
+  font-weight: 700;
+  src: url(/cosmic/a/fonts/GoogleSansMono-Bold.ttf);
+  font-display: swap;
+}
+
+@property --d {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+@keyframes fx-spin {
+  to {
+    background-position-x: 100%;
+  }
+}
+@keyframes fx-blink {
+  0% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.2;
+  }
+  60% {
+    opacity: 0.55;
+  }
+  72% {
+    opacity: 1;
+  }
+}
+@keyframes fx-streak {
+  0%,
+  90% {
+    opacity: 0;
+    transform: translate(-300%, 300%);
+  }
+  91% {
+    opacity: 1;
+    transform: translate(-300%, 300%);
+    animation-timing-function: steps(14);
+  }
+  95% {
+    opacity: 1;
+    transform: translate(600%, -600%);
+  }
+  95.01%,
+  100% {
+    opacity: 0;
+    transform: translate(600%, -600%);
+  }
+}
+
+@layer cosmic {
+  /* DevDogs design system, draft 26: the site kit.
+   One markup, two finishes. Put .cosmic (DevDogs, Arcade) or .paper (GDG on Campus, flat) on <body> or any section.
+   Category colour comes from data-kind="build|workshop|social|info|study|milestone" on any element; it sets --k3/--k6
+   (Cosmic light/shadow) and --ks/--kt/--kg (Paper strong/tint/ground). Chrome is neutral; colour means a category. */
+  /* ── tokens ─────────────────────────────────────────────────────────────── */
+  :where(.cosmic, .paper) {
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-7: 48px;
+    --space-8: 64px;
+    --space-9: 96px;
+    --space-10: 128px;
+    --max: 1180px;
+  }
+  .cosmic {
+    --bg: var(--brand-cosmic-bg);
+    --surface: var(--brand-cosmic-surface);
+    --surface-2: var(--brand-cosmic-surface-2);
+    --raised: var(--brand-cosmic-raised);
+    --line: var(--brand-cosmic-line);
+    --line-strong: var(--brand-cosmic-line-strong);
+    --text: var(--brand-cosmic-text);
+    --text-2: var(--brand-cosmic-text-2);
+    --text-3: var(--brand-cosmic-text-3);
+    --on-accent: var(--brand-cosmic-on-accent);
+    --brand3: var(--brand-devdogs-3);
+    --brand6: var(
+      --brand-devdogs-6
+    ); /* DevDogs red, from the mascot's frames */
+    --ok: #5ee9b5;
+    --warn: #fcd34d;
+    --bad: #ff6467;
+    --note: #74d4ff;
+    --font-ui: var(--font-sans), "Hanken Grotesk", system-ui, sans-serif;
+    --px: 2px; /* one pixel cell: outlines, steps, shadows are multiples (4px read too blocky) */
+    --tsh: 4px; /* the title shadow keeps its own, chunkier step */
+    --k3: var(--brand-devdogs-3);
+    --k6: var(--brand-devdogs-6);
+    --k7: var(--brand-devdogs-7);
+    color-scheme: dark;
+    background: var(--bg);
+    color: var(--text-2);
+    font: 16px/1.6 var(--font-ui);
+  }
+  .paper {
+    --bg: #f8f9fa;
+    --surface: #ffffff;
+    --surface-2: #f1f3f4;
+    --raised: #ffffff;
+    --line: #dadce0;
+    --line-strong: #1e1e1e;
+    --text: #1e1e1e;
+    --text-2: #3c4043;
+    --text-3: #5f6368;
+    --on-accent: #ffffff;
+    --ink: #1e1e1e;
+    --brand3: #57caff;
+    --brand6: #4285f4;
+    --ok: #34a853;
+    --warn: #f9ab00;
+    --bad: #ea4335;
+    --note: #4285f4;
+    --font-display: "Google Sans", sans-serif;
+    --font-ui: "Google Sans", Roboto, sans-serif;
+    --font-mono: "Google Sans Mono", ui-monospace, monospace;
+    --ks: #4285f4;
+    --kt: #57caff;
+    --kg: #c3ecf6;
+    --kx: #1967d2;
+    color-scheme: light;
+    background: var(--bg);
+    color: var(--text-2);
+    font: 16px/1.6 var(--font-ui);
+  }
+  .cosmic [data-kind="build"],
+  .cosmic[data-kind="build"] {
+    --k3: var(--brand-kind-build-3);
+    --k6: var(--brand-kind-build-6);
+    --k7: var(--brand-kind-build-7);
+  }
+  .cosmic [data-kind="workshop"],
+  .cosmic[data-kind="workshop"] {
+    --k3: var(--brand-kind-workshop-3);
+    --k6: var(--brand-kind-workshop-6);
+    --k7: var(--brand-kind-workshop-7);
+  }
+  .cosmic [data-kind="social"],
+  .cosmic[data-kind="social"] {
+    --k3: var(--brand-kind-social-3);
+    --k6: var(--brand-kind-social-6);
+    --k7: var(--brand-kind-social-7);
+  }
+  .cosmic [data-kind="info"],
+  .cosmic[data-kind="info"] {
+    --k3: var(--brand-kind-info-3);
+    --k6: var(--brand-kind-info-6);
+    --k7: var(--brand-kind-info-7);
+  }
+  .cosmic [data-kind="study"],
+  .cosmic[data-kind="study"] {
+    --k3: var(--brand-kind-study-3);
+    --k6: var(--brand-kind-study-6);
+    --k7: var(--brand-kind-study-7);
+  }
+  .cosmic [data-kind="milestone"],
+  .cosmic[data-kind="milestone"] {
+    --k3: var(--brand-kind-milestone-3);
+    --k6: var(--brand-kind-milestone-6);
+    --k7: var(--brand-kind-milestone-7);
+  }
+  .paper [data-kind="build"],
+  .paper[data-kind="build"] {
+    --ks: #4285f4;
+    --kt: #57caff;
+    --kg: #c3ecf6;
+    --kx: #1967d2;
+  }
+  .paper [data-kind="workshop"],
+  .paper[data-kind="workshop"] {
+    --ks: #34a853;
+    --kt: #5cdb6d;
+    --kg: #ccf6c5;
+    --kx: #137333;
+  }
+  .paper [data-kind="social"],
+  .paper[data-kind="social"] {
+    --ks: #ea4335;
+    --kt: #ff7daf;
+    --kg: #f8d8d8;
+    --kx: #c5221f;
+  }
+  .paper [data-kind="info"],
+  .paper[data-kind="info"] {
+    --ks: #f9ab00;
+    --kt: #ffd427;
+    --kg: #ffe7a5;
+    --kx: #b06000;
+  }
+  .paper [data-kind="study"],
+  .paper[data-kind="study"] {
+    --ks: #5f6368;
+    --kt: #bdc1c6;
+    --kg: #e8eaed;
+    --kx: #3c4043;
+  }
+  .paper [data-kind="milestone"],
+  .paper[data-kind="milestone"] {
+    --ks: #1e1e1e;
+    --kt: #bdc1c6;
+    --kg: #f1f3f4;
+    --kx: #1e1e1e;
+  }
+  :where(.cosmic, .paper) * {
+    box-sizing: border-box;
+  }
+  :where(.cosmic, .paper) img {
+    max-width: 100%;
+    height: auto;
+  }
+  :where(.cosmic, .paper) a {
+    color: inherit;
+  }
+  :where(.cosmic, .paper) .pix,
+  :where(.cosmic, .paper) .sprite {
+    image-rendering: pixelated;
+  }
+  :where(.cosmic, .paper) .wrap {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+  }
+  :where(.cosmic, .paper) .col {
+    display: flex;
+    flex-direction: column;
+  }
+  :where(.cosmic, .paper) .stack > * + * {
+    margin-top: var(--space-4);
+  }
+  :where(.cosmic, .paper) .row {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  :where(.cosmic, .paper) .grid {
+    display: grid;
+    gap: var(--space-6);
+  }
+  :where(.cosmic, .paper) .g2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  :where(.cosmic, .paper) .g3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  :where(.cosmic, .paper) .g4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  :where(.cosmic, .paper) .muted {
+    color: var(--text-3);
+  }
+  :where(.cosmic, .paper) .mono {
+    font-family: var(--font-mono);
+  }
+  /* ── type ───────────────────────────────────────────────────────────────── */
+  :where(.cosmic, .paper) .display,
+  :where(.cosmic, .paper) .h1,
+  :where(.cosmic, .paper) .h2,
+  :where(.cosmic, .paper) .h3,
+  :where(.cosmic, .paper) h1,
+  :where(.cosmic, .paper) h2,
+  :where(.cosmic, .paper) h3 {
+    color: var(--text);
+    margin: 0;
+  }
+  .cosmic .display,
+  .cosmic h1,
+  .cosmic .h1,
+  .cosmic h2,
+  .cosmic .h2 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  /* The hard title shadow: page titles and section titles. */
+  .cosmic .display,
+  .cosmic h1,
+  .cosmic .h1 {
+    text-shadow: calc(var(--tsh) * 1.25) calc(var(--tsh) * 1.25) 0 var(--k6);
+  }
+  .cosmic h2,
+  .cosmic .h2 {
+    text-shadow: var(--tsh) var(--tsh) 0 var(--k6);
+  }
+  .paper .display,
+  .paper h1,
+  .paper .h1,
+  .paper h2,
+  .paper .h2 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+  :where(.cosmic, .paper) .display {
+    font-size: 72px;
+    line-height: 1;
+  }
+  :where(.cosmic, .paper) h1,
+  :where(.cosmic, .paper) .h1 {
+    font-size: 48px;
+    line-height: 1.05;
+  }
+  :where(.cosmic, .paper) h2,
+  :where(.cosmic, .paper) .h2 {
+    font-size: 32px;
+    line-height: 1.1;
+  }
+  :where(.cosmic, .paper) h3,
+  :where(.cosmic, .paper) .h3 {
+    font: 700 20px/1.3 var(--font-ui);
+  }
+  :where(.cosmic, .paper) .lead {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--text-2);
+    max-width: 62ch;
+  }
+  :where(.cosmic, .paper) .small {
+    font-size: 14px;
+  }
+  :where(.cosmic, .paper) .tiny {
+    font-size: 12.5px;
+  }
+  :where(.cosmic, .paper) .eyebrow {
+    font: 700 12px/1 var(--font-ui);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .cosmic .eyebrow.k {
+    color: var(--k3);
+  }
+  .paper .eyebrow.k {
+    color: var(--kx);
+  }
+  /* --kx: the strong colour darkened to pass on white */
+  .paper .eyebrow {
+    letter-spacing: 0.06em;
+  }
+  :where(.cosmic, .paper) code,
+  :where(.cosmic, .paper) .code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+  }
+  .cosmic :not(pre) > code {
+    background:
+      linear-gradient(var(--surface-2), var(--surface-2)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 2px 0 /
+        calc(100% - 4px) 100% no-repeat;
+    color: var(--k3);
+    padding: 2px 6px;
+  }
+  .paper :not(pre) > code {
+    background: var(--surface-2);
+    color: var(--text);
+    padding: 2px 6px;
+    border-radius: 6px;
+  }
+  /* ── the card (the graphics' card, at UI size) ───────────────────────────────
+   Cosmic: stepped corners (3 cells) and a pixel-art depth frame, outside in:
+     a 1-cell near-black outline (four hard drop-shadows, so it follows the steps),
+     a 1-cell ring in --o, lit top-left (--o-hi) and shaded bottom-right (--o-lo),
+     a 1-cell inner bevel (a tint of --o top-left, black bottom-right), then the fill;
+   plus the 2-cell block shadow in --sh. Layers: ::before = the ring, ::after = bevel + fill.
+   Paper: a white card, ink outline, rounded corners, no shadow.                                              */
+  :where(.cosmic, .paper) .card {
+    position: relative;
+    padding: var(--space-5);
+  }
+  /* --d (a control's lift / shadow offset) is a registered length so it transitions both ways, and everything built from it
+   (the shadow's translate, the ink gap's size) animates with it instead of snapping back when the pointer leaves. */
+  .cosmic {
+    --ink-line: var(--brand-cosmic-ink-line);
+    /* stepped corners for plain fills (no square backgrounds in Cosmic): --step1 cuts one 2px cell, --step2 the controls' two-cell stair */
+    --step1: polygon(
+      0 2px,
+      2px 2px,
+      2px 0,
+      calc(100% - 2px) 0,
+      calc(100% - 2px) 2px,
+      100% 2px,
+      100% calc(100% - 2px),
+      calc(100% - 2px) calc(100% - 2px),
+      calc(100% - 2px) 100%,
+      2px 100%,
+      2px calc(100% - 2px),
+      0 calc(100% - 2px)
+    );
+    --step2: polygon(
+      0 4px,
+      2px 4px,
+      2px 2px,
+      4px 2px,
+      4px 0,
+      calc(100% - 4px) 0,
+      calc(100% - 4px) 2px,
+      calc(100% - 2px) 2px,
+      calc(100% - 2px) 4px,
+      100% 4px,
+      100% calc(100% - 4px),
+      calc(100% - 2px) calc(100% - 4px),
+      calc(100% - 2px) calc(100% - 2px),
+      calc(100% - 4px) calc(100% - 2px),
+      calc(100% - 4px) 100%,
+      4px 100%,
+      4px calc(100% - 2px),
+      2px calc(100% - 2px),
+      2px calc(100% - 4px),
+      0 calc(100% - 4px)
+    );
+  }
+  .cosmic :is(.card, .menu, .toast, .dialog, .lb) {
+    --d: calc(var(--s) * 2);
+    --o: #6a6082;
+    --sh: #000;
+    --fill: var(--surface);
+    --s: var(--px);
+    isolation: isolate;
+    --o-hi: var(--o);
+    --o-lo: var(
+      --o
+    ); /* the ring is even on all four sides (a lit top-left read as a heavier top border); depth comes from the bevel inside it */
+    filter: drop-shadow(var(--px) 0 0 var(--ink-line))
+      drop-shadow(calc(var(--px) * -1) 0 0 var(--ink-line))
+      drop-shadow(0 var(--px) 0 var(--ink-line))
+      drop-shadow(0 calc(var(--px) * -1) 0 var(--ink-line))
+      drop-shadow(var(--d) var(--d) 0 var(--sh));
+  }
+  .cosmic :is(.card, .menu, .toast, .dialog, .lb)::before,
+  .cosmic :is(.card, .menu, .toast, .dialog, .lb)::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    clip-path: polygon(
+      0 calc(var(--s) * 3),
+      var(--s) calc(var(--s) * 3),
+      var(--s) var(--s),
+      calc(var(--s) * 3) var(--s),
+      calc(var(--s) * 3) 0,
+      calc(100% - var(--s) * 3) 0,
+      calc(100% - var(--s) * 3) var(--s),
+      calc(100% - var(--s)) var(--s),
+      calc(100% - var(--s)) calc(var(--s) * 3),
+      100% calc(var(--s) * 3),
+      100% calc(100% - var(--s) * 3),
+      calc(100% - var(--s)) calc(100% - var(--s) * 3),
+      calc(100% - var(--s)) calc(100% - var(--s)),
+      calc(100% - var(--s) * 3) calc(100% - var(--s)),
+      calc(100% - var(--s) * 3) 100%,
+      calc(var(--s) * 3) 100%,
+      calc(var(--s) * 3) calc(100% - var(--s)),
+      var(--s) calc(100% - var(--s)),
+      var(--s) calc(100% - var(--s) * 3),
+      0 calc(100% - var(--s) * 3)
+    );
+  }
+  .cosmic :is(.card, .menu, .toast, .dialog, .lb)::before {
+    inset: 0;
+    background: var(--o);
+    box-shadow:
+      inset var(--s) var(--s) 0 var(--o-hi),
+      inset calc(var(--s) * -1) calc(var(--s) * -1) 0 var(--o-lo);
+  }
+  .cosmic :is(.card, .menu, .toast, .dialog, .lb)::after {
+    inset: var(--s);
+    background: var(--fill);
+    box-shadow:
+      inset 0 var(--px) 0 color-mix(in srgb, var(--o) 22%, var(--fill)),
+      inset 0 calc(var(--px) * -1) 0 rgba(0, 0, 0, 0.32);
+  }
+  /* one cell of light along the top, one of shade along the bottom: even weight */
+  .cosmic .card.k {
+    --o: var(--k3);
+    --sh: var(--k6);
+  }
+  /* cursor glow: a card that links somewhere lights up under the pointer with a dithered white glow (img/hover-glow.png,
+   3px Bayer cells like the .glow cards), positioned by chrome.js via --gx/--gy. It follows the pointer outside the card too, so its rim shows as the pointer nears (within 240px) and the face clips it; parked off-card when out of reach.
+   The card itself doesn't move; the shadow stays put. */
+  .cosmic
+    :is(a.card, button.card, .card[tabindex], .card:has(.title > a))::after {
+    background:
+      url(/cosmic/img/hover-glow.png) var(--gx, -999px) var(--gy, -999px) /
+        480px 480px no-repeat,
+      var(--fill);
+  }
+  .cosmic
+    :is(
+      a.card,
+      button.card,
+      .card[tabindex],
+      .card:has(.title > a)
+    ).glow::after {
+    background:
+      url(/cosmic/img/hover-glow.png) var(--gx, -999px) var(--gy, -999px) /
+        480px 480px no-repeat,
+      var(--glow, var(--fill)) right bottom / cover;
+  }
+  .cosmic .card.glow::after {
+    background: var(--glow, var(--fill)) right bottom / cover;
+    image-rendering: pixelated;
+  }
+  .cosmic .card.flat {
+    filter: drop-shadow(var(--px) 0 0 var(--ink-line))
+      drop-shadow(calc(var(--px) * -1) 0 0 var(--ink-line))
+      drop-shadow(0 var(--px) 0 var(--ink-line))
+      drop-shadow(0 calc(var(--px) * -1) 0 var(--ink-line));
+  }
+  /* .quiet was the calm pass's frameless card; frames are back at the finer 2px cell, so it is now an ordinary card */
+  .cosmic .card.lg {
+    --s: calc(var(--px) * 1.25);
+  }
+  .paper .card {
+    background: var(--surface);
+    border: 2px solid var(--ink);
+    border-radius: 20px;
+  }
+  .paper .card.k {
+    background: var(--surface);
+  }
+  .paper .card.tint {
+    background: var(--kg);
+  }
+  .paper .card.flat,
+  .paper .card.quiet {
+    border-color: var(--line);
+    border-width: 1px;
+  }
+  :where(.cosmic, .paper) .card > .card-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+  :where(.cosmic, .paper) .card-title {
+    font: 700 18px/1.3 var(--font-ui);
+    color: var(--text);
+    margin: 0;
+  }
+  .cosmic .card-title.display-font {
+    font-family: var(--font-display);
+    font-weight: 800;
+  }
+  /* a plain box: the same frame without a block shadow, for inputs and quiet containers */
+  :where(.cosmic, .paper) .box {
+    position: relative;
+  }
+  .cosmic .box {
+    background: var(--surface);
+    clip-path: var(--step2);
+  }
+  .paper .box {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+  /* ── buttons ────────────────────────────────────────────────────────────────
+   Primary = white with ink text and a hard shadow in the context hue (the titles' treatment, as a control).
+   Paper: ink pill, flat. One primary per view.                                                                */
+  :where(.cosmic, .paper) .btn {
+    --h: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: var(--h);
+    padding: 0 16px;
+    font: 700 14.5px/1 var(--font-ui);
+    text-decoration: none;
+    cursor: pointer;
+    border: 0;
+    white-space: nowrap;
+    position: relative;
+  }
+  :where(.cosmic, .paper) .btn x-icon {
+    font-size: 1.1em;
+  }
+  :where(.cosmic, .paper) .btn.sm {
+    --h: 34px;
+    padding: 0 11px;
+    font-size: 13px;
+    gap: 6px;
+  }
+  :where(.cosmic, .paper) .btn.lg {
+    --h: 54px;
+    padding: 0 24px;
+    font-size: 17px;
+  }
+  :where(.cosmic, .paper) .btn.icon {
+    width: var(--h);
+    padding: 0;
+  }
+  /* Cosmic controls (buttons, fields, search) share one frame: ::before is the ring (--bo), ::after the fill (--bf),
+   both cut with 2-cell stepped corners (--s = 2px). Like the card, the ring is lit and shaded and the fill has a bevel:
+   buttons are raised (light top-left), fields and search are sunken (dark top-left). A near-black outline sits outside. */
+  .cosmic .btn,
+  .cosmic .input,
+  .cosmic .search {
+    --s: 2px;
+    --bo: var(--line-strong);
+    --bf: var(--surface-2);
+    isolation: isolate;
+    background: none;
+    box-shadow: none;
+    --b-hi: var(--bo);
+    --b-lo: var(--bo); /* even rings; the bevel inside carries the depth */
+    filter: drop-shadow(var(--s) 0 0 var(--ink-line))
+      drop-shadow(calc(var(--s) * -1) 0 0 var(--ink-line))
+      drop-shadow(0 var(--s) 0 var(--ink-line))
+      drop-shadow(0 calc(var(--s) * -1) 0 var(--ink-line));
+  }
+  .cosmic .btn.ghost {
+    filter: none;
+  }
+  /* hover lift (buttons only; the live site's transition-lift): the button rises a cell up-left and its dithered shadow slides
+   out from behind it; leaving or pressing slides it back. Pixel-stepped timing, and none for reduced motion.             */
+  .cosmic .btn:not(.ghost, .flat, .terminal, [disabled], .disabled) {
+    transition:
+      translate 0.12s steps(2, end),
+      --d 0.12s steps(2, end);
+  }
+  .cosmic .btn:not(.ghost, .flat, .terminal, [disabled], .disabled):hover {
+    translate: calc(var(--s) * -1) calc(var(--s) * -1);
+    --d: var(--lift);
+  }
+  .cosmic .btn:not(.ghost, .flat, .terminal, [disabled], .disabled):active {
+    translate: 0 0;
+    --d: 0px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cosmic :is(.card, .btn) {
+      transition: none;
+    }
+  }
+  .cosmic .btn::before,
+  .cosmic .btn::after,
+  .cosmic .input::before,
+  .cosmic .input::after,
+  .cosmic .search::before,
+  .cosmic .search::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    clip-path: polygon(
+      calc(var(--s) * 0) calc(var(--s) * 2),
+      calc(var(--s) * 1) calc(var(--s) * 2),
+      calc(var(--s) * 1) calc(var(--s) * 1),
+      calc(var(--s) * 2) calc(var(--s) * 1),
+      calc(var(--s) * 2) calc(var(--s) * 0),
+      calc(100% - var(--s) * 2) calc(var(--s) * 0),
+      calc(100% - var(--s) * 2) calc(var(--s) * 1),
+      calc(100% - var(--s) * 1) calc(var(--s) * 1),
+      calc(100% - var(--s) * 1) calc(var(--s) * 2),
+      calc(100% - var(--s) * 0) calc(var(--s) * 2),
+      calc(100% - var(--s) * 0) calc(100% - var(--s) * 2),
+      calc(100% - var(--s) * 1) calc(100% - var(--s) * 2),
+      calc(100% - var(--s) * 1) calc(100% - var(--s) * 1),
+      calc(100% - var(--s) * 2) calc(100% - var(--s) * 1),
+      calc(100% - var(--s) * 2) calc(100% - var(--s) * 0),
+      calc(var(--s) * 2) calc(100% - var(--s) * 0),
+      calc(var(--s) * 2) calc(100% - var(--s) * 1),
+      calc(var(--s) * 1) calc(100% - var(--s) * 1),
+      calc(var(--s) * 1) calc(100% - var(--s) * 2),
+      calc(var(--s) * 0) calc(100% - var(--s) * 2)
+    );
+  }
+  .cosmic .btn {
+    --d: 0px;
+    --lift: calc(var(--s) * 4);
+    --f-hi: color-mix(in srgb, var(--bf) 82%, #fff);
+    --f-lo: color-mix(in srgb, var(--bf) 84%, #000);
+  }
+  .cosmic .btn.sm {
+    --lift: calc(var(--s) * 3);
+  }
+  /* ::after is the whole face: the ring (--bo, lit and shaded by the insets) under the fill (--bf) with its bevel, the fill's
+   two-cell stair drawn as gradient strips one cell in. That frees ::before for the shadow below.                       */
+  .cosmic .btn::after {
+    inset: 0;
+    box-shadow:
+      inset var(--s) var(--s) 0 var(--b-hi),
+      inset calc(var(--s) * -1) calc(var(--s) * -1) 0 var(--b-lo);
+    background:
+      linear-gradient(var(--bf), var(--bf)) calc(var(--s) * 2)
+        calc(var(--s) * 2) / calc(100% - var(--s) * 4) calc(100% - var(--s) * 4)
+        no-repeat,
+      linear-gradient(var(--bf), var(--bf)) var(--s) calc(var(--s) * 3) /
+        calc(100% - var(--s) * 2) calc(100% - var(--s) * 6) no-repeat,
+      linear-gradient(var(--f-hi), var(--f-hi)) calc(var(--s) * 3) var(--s) /
+        calc(100% - var(--s) * 6) var(--s) no-repeat,
+      linear-gradient(var(--f-lo), var(--f-lo)) calc(var(--s) * 3)
+        calc(100% - var(--s) * 2) / calc(100% - var(--s) * 6) var(--s) no-repeat,
+      var(--bo);
+  }
+  /* ::before is the block shadow: the context's 600 dithered through four of its own shades, brightest at the lower right
+   (img/btn-shade.png, the .glow cards' dithering); no cell drops to the ground. It hides under the face at rest on every button and slides out on hover, an ink cell apart from the face. */
+  .cosmic .btn::before {
+    inset: 0;
+    translate: var(--d) var(--d);
+    background:   /* first three layers: the face's outline grown by one cell, in ink, so a one-cell gap that follows the stair separates face and shadow */
+      linear-gradient(var(--ink-line), var(--ink-line))
+        calc(0px - var(--d) - var(--s)) calc(var(--s) - var(--d)) /
+        calc(100% + var(--s) * 2) calc(100% - var(--s) * 2) no-repeat,
+      linear-gradient(var(--ink-line), var(--ink-line)) calc(0px - var(--d))
+        calc(0px - var(--d)) / 100% 100% no-repeat,
+      linear-gradient(var(--ink-line), var(--ink-line))
+        calc(var(--s) - var(--d)) calc(0px - var(--d) - var(--s)) /
+        calc(100% - var(--s) * 2) calc(100% + var(--s) * 2) no-repeat,
+      url(/cosmic/img/btn-shade.png) right bottom / 400px 64px no-repeat,
+      linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)) left top /
+        calc(100% - 400px) 100% no-repeat,
+      var(--bsh, var(--k6));
+    image-rendering: pixelated;
+  }
+  .cosmic .input::before,
+  .cosmic .search::before {
+    inset: 0;
+    background: var(--bo);
+    box-shadow:
+      inset var(--s) var(--s) 0 var(--b-lo),
+      inset calc(var(--s) * -1) calc(var(--s) * -1) 0 var(--b-hi);
+  }
+  .cosmic .input::after,
+  .cosmic .search::after {
+    inset: var(--s);
+    background: var(--bf);
+    box-shadow: inset 0 var(--s) 0 rgba(0, 0, 0, 0.3);
+  }
+  /* same staircase as the outline, one cell in: every step of the outline is a full cell */
+  .cosmic .btn-shadow {
+    display: inline-flex;
+  }
+  /* kept for markup; the shadow is the button's own ::before, hidden at rest */
+  /* .btn.flat: no reveal shadow and no lift; hover only lightens the fill */
+  .cosmic .btn.flat::before {
+    content: none;
+  }
+  .cosmic .btn.flat:hover::after {
+    filter: brightness(1.12);
+  }
+  .cosmic .btn.primary {
+    --bo: #fff;
+    --bf: #fff;
+    color: var(--on-accent);
+  }
+  .cosmic .btn.primary.k {
+    --bo: var(--k3);
+    --bf: var(--k3);
+  }
+  .cosmic .btn.secondary {
+    --bo: #8d84a0;
+    --bf: var(--surface-2);
+    color: var(--text);
+  }
+  .cosmic .k .btn.secondary,
+  .cosmic .btn.secondary.k {
+    --bo: var(--k3);
+  }
+  .cosmic .btn.ghost {
+    color: var(--text-2);
+  }
+  .cosmic .btn.ghost::before,
+  .cosmic .btn.ghost::after {
+    content: none;
+  }
+  .cosmic .btn.ghost:hover,
+  .cosmic .btn.ghost.on {
+    background:
+      linear-gradient(var(--surface-2), var(--surface-2)) 0 4px / 100%
+        calc(100% - 8px) no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 2px 2px /
+        calc(100% - 4px) calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 4px 0 /
+        calc(100% - 8px) 100% no-repeat;
+    color: var(--text);
+  }
+  .cosmic .btn.danger {
+    --bo: var(--bad);
+    --bf: var(--surface);
+    color: var(--bad);
+  }
+  .cosmic .btn.danger.solid {
+    --bf: var(--bad);
+    --bsh: color-mix(in srgb, var(--bad) 55%, #000);
+    color: #1a0006;
+  }
+  /* filled: the destructive action itself */
+  .cosmic .btn.terminal {
+    --bo: #5c5470;
+    --bf: #06040f;
+    color: var(--text-2);
+    font: 400 14px/1 var(--font-mono);
+  }
+  .cosmic .btn.terminal {
+    --f-hi: var(--bf);
+    --f-lo: var(--bf);
+  }
+  .cosmic .btn.terminal b {
+    color: var(--k3);
+    font-weight: 400;
+  }
+  .paper .btn {
+    border-radius: 999px;
+  }
+  .paper .btn-shadow {
+    display: inline-flex;
+  }
+  .paper .btn.primary {
+    background: var(--ink);
+    color: #fff;
+  }
+  .paper .btn.primary.k {
+    background: var(--ks);
+  }
+  .paper .btn.secondary {
+    background: #fff;
+    color: var(--ink);
+    box-shadow: inset 0 0 0 2px var(--ink);
+  }
+  .paper .btn.ghost {
+    background: transparent;
+    color: var(--text-2);
+  }
+  .paper .btn.ghost:hover,
+  .paper .btn.ghost.on {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+  .paper .btn.danger {
+    background: #fff;
+    color: #c5221f;
+    box-shadow: inset 0 0 0 2px #c5221f;
+  }
+  .paper .btn.terminal {
+    padding-top: 2px;
+    background: #fff;
+    color: var(--text-2);
+    font: 400 14px/1 var(--font-mono);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  :where(.cosmic, .paper) .btn[disabled],
+  :where(.cosmic, .paper) .btn.disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+  }
+  .cosmic .btn.focus {
+    outline: 2px dashed var(--k3);
+    outline-offset: 4px;
+  }
+  .paper .btn.focus {
+    outline: 3px solid var(--kt);
+    outline-offset: 2px;
+  }
+  :where(.cosmic, .paper) .textlink {
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .cosmic .textlink {
+    color: var(--k3);
+  }
+  .paper .textlink {
+    color: var(--kx);
+  }
+  :where(.cosmic, .paper) .textlink:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  /* ── chips, badges, tags ──────────────────────────────────────────────────── */
+  :where(.cosmic, .paper) .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 9px;
+    font: 700 11.5px/1 var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .cosmic .chip {
+    background:
+      linear-gradient(
+          color-mix(in srgb, var(--k3) 62%, #fff),
+          color-mix(in srgb, var(--k3) 62%, #fff)
+        )
+        2px 0 / calc(100% - 4px) 2px no-repeat,
+      linear-gradient(
+          color-mix(in srgb, var(--k3) 72%, #000),
+          color-mix(in srgb, var(--k3) 72%, #000)
+        )
+        2px 100% / calc(100% - 4px) 2px no-repeat,
+      linear-gradient(var(--k3), var(--k3)) 0 2px / 100% calc(100% - 4px)
+        no-repeat,
+      linear-gradient(var(--k3), var(--k3)) 2px 0 / calc(100% - 4px) 100%
+        no-repeat;
+    color: var(--on-accent);
+    filter: drop-shadow(2px 2px 0 var(--k6));
+  }
+  /* stepped fill, lit top row and shaded bottom row (even weight), hard shadow in the 600 */
+  .cosmic .chip.outline {
+    background:
+      linear-gradient(
+          color-mix(in srgb, var(--k3) 45%, transparent),
+          color-mix(in srgb, var(--k3) 45%, transparent)
+        )
+        2px 0 / calc(100% - 4px) 2px no-repeat,
+      linear-gradient(
+          color-mix(in srgb, var(--k3) 45%, transparent),
+          color-mix(in srgb, var(--k3) 45%, transparent)
+        )
+        2px 100% / calc(100% - 4px) 2px no-repeat,
+      linear-gradient(
+          color-mix(in srgb, var(--k3) 45%, transparent),
+          color-mix(in srgb, var(--k3) 45%, transparent)
+        )
+        0 2px / 2px calc(100% - 4px) no-repeat,
+      linear-gradient(
+          color-mix(in srgb, var(--k3) 45%, transparent),
+          color-mix(in srgb, var(--k3) 45%, transparent)
+        )
+        100% 2px / 2px calc(100% - 4px) no-repeat,
+      linear-gradient(
+          color-mix(in srgb, var(--k3) 14%, transparent),
+          color-mix(in srgb, var(--k3) 14%, transparent)
+        )
+        0 2px / 100% calc(100% - 4px) no-repeat,
+      linear-gradient(
+          color-mix(in srgb, var(--k3) 14%, transparent),
+          color-mix(in srgb, var(--k3) 14%, transparent)
+        )
+        2px 0 / calc(100% - 4px) 100% no-repeat;
+    color: var(--k3);
+    filter: none;
+  }
+  /* a stepped ring in the 300 round a tint */
+  .paper .chip {
+    background: var(--kg);
+    color: var(--ink);
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+  }
+  .paper .chip.outline {
+    background: #fff;
+  }
+  :where(.cosmic, .paper) .chip .dot {
+    width: 7px;
+    height: 7px;
+    background: currentColor;
+  }
+  .cosmic .chip .dot {
+    width: 6px;
+    height: 6px;
+    clip-path: polygon(
+      2px 0,
+      4px 0,
+      4px 2px,
+      6px 2px,
+      6px 4px,
+      4px 4px,
+      4px 6px,
+      2px 6px,
+      2px 4px,
+      0 4px,
+      0 2px,
+      2px 2px
+    );
+  }
+  /* a pixel sparkle */
+  .paper .chip .dot {
+    border-radius: 50%;
+    background: var(--ks);
+  }
+  :where(.cosmic, .paper) .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 22px;
+    padding: 0 8px;
+    font: 600 12px/1 var(--font-ui);
+    white-space: nowrap;
+  }
+  /* badges, tags and inline code carry no outline: a fill only (Sloan, 10-22: no square-bordered items) */
+  .cosmic .badge {
+    background:
+      linear-gradient(var(--line-strong), var(--line-strong)) 2px 0 /
+        calc(100% - 4px) 2px no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 2px 100% /
+        calc(100% - 4px) 2px no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 0 2px / 2px
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 100% 2px / 2px
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 2px 0 /
+        calc(100% - 4px) 100% no-repeat;
+    color: var(--text-2);
+  }
+  .cosmic .badge.ok,
+  .cosmic .badge.warn,
+  .cosmic .badge.bad,
+  .cosmic .badge.note {
+    background:
+      linear-gradient(
+          color-mix(in srgb, currentColor 42%, transparent),
+          color-mix(in srgb, currentColor 42%, transparent)
+        )
+        2px 0 / calc(100% - 4px) 2px no-repeat,
+      linear-gradient(
+          color-mix(in srgb, currentColor 42%, transparent),
+          color-mix(in srgb, currentColor 42%, transparent)
+        )
+        2px 100% / calc(100% - 4px) 2px no-repeat,
+      linear-gradient(
+          color-mix(in srgb, currentColor 42%, transparent),
+          color-mix(in srgb, currentColor 42%, transparent)
+        )
+        0 2px / 2px calc(100% - 4px) no-repeat,
+      linear-gradient(
+          color-mix(in srgb, currentColor 42%, transparent),
+          color-mix(in srgb, currentColor 42%, transparent)
+        )
+        100% 2px / 2px calc(100% - 4px) no-repeat,
+      linear-gradient(
+          color-mix(in srgb, currentColor 14%, transparent),
+          color-mix(in srgb, currentColor 14%, transparent)
+        )
+        0 2px / 100% calc(100% - 4px) no-repeat,
+      linear-gradient(
+          color-mix(in srgb, currentColor 14%, transparent),
+          color-mix(in srgb, currentColor 14%, transparent)
+        )
+        2px 0 / calc(100% - 4px) 100% no-repeat;
+  }
+  /* stepped ring in the status colour round its tint */
+  .cosmic .badge.ok {
+    color: var(--ok);
+  }
+  .cosmic .badge.warn {
+    color: var(--warn);
+  }
+  .cosmic .badge.bad {
+    color: var(--bad);
+  }
+  .cosmic .badge.note {
+    color: var(--note);
+  }
+  .cosmic .badge.brand {
+    background:
+      linear-gradient(
+          color-mix(in srgb, var(--brand6) 70%, #fff),
+          color-mix(in srgb, var(--brand6) 70%, #fff)
+        )
+        2px 0 / calc(100% - 4px) 2px no-repeat,
+      linear-gradient(
+          color-mix(in srgb, var(--brand6) 70%, #000),
+          color-mix(in srgb, var(--brand6) 70%, #000)
+        )
+        2px 100% / calc(100% - 4px) 2px no-repeat,
+      linear-gradient(var(--brand6), var(--brand6)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--brand6), var(--brand6)) 2px 0 / calc(100% - 4px)
+        100% no-repeat;
+    color: #fff;
+    filter: drop-shadow(2px 2px 0 #7a0020);
+  }
+  .paper .badge {
+    background: var(--surface-2);
+    color: var(--text-2);
+    border-radius: 6px;
+  }
+  .paper .badge.ok {
+    background: #e6f4ea;
+    color: #137333;
+  }
+  .paper .badge.warn {
+    background: #fef7e0;
+    color: #b06000;
+  }
+  .paper .badge.bad {
+    background: #fce8e6;
+    color: #c5221f;
+  }
+  .paper .badge.note {
+    background: #e8f0fe;
+    color: #1967d2;
+  }
+  .paper .badge.brand {
+    background: var(--ink);
+    color: #fff;
+  }
+  :where(.cosmic, .paper) .tag {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 8px;
+    font: 400 12.5px/1 var(--font-mono);
+    color: var(--text-2);
+  }
+  .cosmic .tag {
+    --tg: color-mix(in srgb, var(--surface-2) 82%, #fff);
+    padding-left: 16px;
+    color: var(--text);
+    background:
+      linear-gradient(var(--bg), var(--bg)) 6px calc(50% - 1px) / 2px 2px
+        no-repeat,
+      linear-gradient(
+          color-mix(in srgb, var(--tg) 75%, #fff),
+          color-mix(in srgb, var(--tg) 75%, #fff)
+        )
+        10px 0 / 100% 2px no-repeat,
+      var(--tg);
+    clip-path: polygon(
+      calc(100% - 2px) 0,
+      calc(100% - 2px) 2px,
+      100% 2px,
+      100% calc(100% - 2px),
+      calc(100% - 2px) calc(100% - 2px),
+      calc(100% - 2px) 100%,
+      10px 100%,
+      10px calc(100% - 2px),
+      8px calc(100% - 2px),
+      8px calc(100% - 4px),
+      6px calc(100% - 4px),
+      6px calc(100% - 6px),
+      4px calc(100% - 6px),
+      4px calc(100% - 8px),
+      2px calc(100% - 8px),
+      2px calc(100% - 10px),
+      0 calc(100% - 10px),
+      0 10px,
+      2px 10px,
+      2px 8px,
+      4px 8px,
+      4px 6px,
+      6px 6px,
+      6px 4px,
+      8px 4px,
+      8px 2px,
+      10px 2px,
+      10px 0
+    );
+  }
+  /* a luggage tag: stepped point, punched hole, lit top row */
+  .paper .tag {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  /* ── form fields ─────────────────────────────────────────────────────────── */
+  :where(.cosmic, .paper) .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  :where(.cosmic, .paper) .field > label,
+  :where(.cosmic, .paper) .label {
+    font: 700 13.5px/1.2 var(--font-ui);
+    color: var(--text);
+  }
+  :where(.cosmic, .paper) .help {
+    font-size: 13px;
+    color: var(--text-3);
+  }
+  :where(.cosmic, .paper) .err {
+    font-size: 13px;
+    color: var(--bad);
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  :where(.cosmic, .paper) .input {
+    height: 44px;
+    padding: 0 12px;
+    font: 500 14.5px/1 var(--font-ui);
+    color: var(--text);
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  :where(.cosmic, .paper) .input .ph {
+    color: var(--text-3);
+    font-weight: 400;
+  }
+  :where(.cosmic, .paper) textarea.input,
+  :where(.cosmic, .paper) .input.area {
+    height: auto;
+    min-height: 96px;
+    padding: 12px;
+    align-items: flex-start;
+    line-height: 1.5;
+  }
+  .cosmic .input {
+    --bo: #5c5470;
+    --bf: var(--bg);
+    border: 0;
+    position: relative;
+  }
+  .cosmic .input::after {
+    box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.55);
+  }
+  .cosmic .input.focus {
+    --bo: var(--k3);
+  }
+  .cosmic .input.invalid {
+    --bo: var(--bad);
+  }
+  .paper .input {
+    background: #fff;
+    border: 1.5px solid #80868b;
+    border-radius: 10px;
+  }
+  .paper .input.focus {
+    border-color: var(--ks);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--kt) 45%, transparent);
+  }
+  .paper .input.invalid {
+    border-color: var(--bad);
+  }
+  :where(.cosmic, .paper) .input.select {
+    justify-content: space-between;
+  }
+  :where(.cosmic, .paper) .check {
+    display: inline-flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 15px;
+    color: var(--text-2);
+  }
+  :where(.cosmic, .paper) .check:not(.on) i x-icon {
+    visibility: hidden;
+  }
+  :where(.cosmic, .paper) .check i {
+    width: 20px;
+    height: 20px;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    flex: none;
+  }
+  .cosmic .check i {
+    background:
+      linear-gradient(var(--bg), var(--bg)) 2px 4px / calc(100% - 4px)
+        calc(100% - 8px) no-repeat,
+      linear-gradient(var(--bg), var(--bg)) 4px 2px / calc(100% - 8px)
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 2px 0 /
+        calc(100% - 4px) 100% no-repeat;
+  }
+  .cosmic .check.on i {
+    background:
+      linear-gradient(var(--k3), var(--k3)) 0 2px / 100% calc(100% - 4px)
+        no-repeat,
+      linear-gradient(var(--k3), var(--k3)) 2px 0 / calc(100% - 4px) 100%
+        no-repeat;
+    color: var(--on-accent);
+    filter: drop-shadow(2px 2px 0 var(--k6));
+  }
+  .cosmic .check.radio i {
+    box-shadow: none;
+    background: var(--line-strong);
+  }
+  .cosmic .check.radio:not(.on) i::after {
+    content: "";
+    width: 12px;
+    height: 12px;
+    background: var(--bg);
+  }
+  .cosmic .check.radio.on i {
+    box-shadow: none;
+    background: var(--k3);
+  }
+  .cosmic .check.radio.on i::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    background: var(--on-accent);
+  }
+  .cosmic .check.radio i {
+    clip-path: polygon(
+      25% 0,
+      75% 0,
+      75% 12.5%,
+      87.5% 12.5%,
+      87.5% 25%,
+      100% 25%,
+      100% 75%,
+      87.5% 75%,
+      87.5% 87.5%,
+      75% 87.5%,
+      75% 100%,
+      25% 100%,
+      25% 87.5%,
+      12.5% 87.5%,
+      12.5% 75%,
+      0 75%,
+      0 25%,
+      12.5% 25%,
+      12.5% 12.5%,
+      25% 12.5%
+    );
+  }
+  .paper .check i {
+    border: 2px solid #5f6368;
+    border-radius: 4px;
+    background: #fff;
+  }
+  .paper .check.on i {
+    background: var(--ks);
+    border-color: var(--ks);
+    color: #fff;
+  }
+  .paper .check.radio i {
+    border-radius: 50%;
+  }
+  .paper .check.radio.on i {
+    background: #fff;
+    box-shadow:
+      inset 0 0 0 4px #fff,
+      inset 0 0 0 10px var(--ks);
+  }
+  :where(.cosmic, .paper) .switch {
+    width: 44px;
+    height: 24px;
+    position: relative;
+    display: inline-block;
+    flex: none;
+  }
+  :where(.cosmic, .paper) .switch::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 16px;
+    height: 16px;
+  }
+  :where(.cosmic, .paper) .switch.on::after {
+    left: 24px;
+  }
+  .cosmic .switch {
+    background:
+      linear-gradient(var(--bg), var(--bg)) 2px 4px / calc(100% - 4px)
+        calc(100% - 8px) no-repeat,
+      linear-gradient(var(--bg), var(--bg)) 4px 2px / calc(100% - 8px)
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 2px 0 /
+        calc(100% - 4px) 100% no-repeat;
+  }
+  .cosmic .switch::after {
+    background: var(--text-3);
+    clip-path: var(--step1);
+  }
+  .cosmic .switch.on {
+    background:
+      linear-gradient(var(--k6), var(--k6)) 2px 4px / calc(100% - 4px)
+        calc(100% - 8px) no-repeat,
+      linear-gradient(var(--k6), var(--k6)) 4px 2px / calc(100% - 8px)
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--k3), var(--k3)) 0 2px / 100% calc(100% - 4px)
+        no-repeat,
+      linear-gradient(var(--k3), var(--k3)) 2px 0 / calc(100% - 4px) 100%
+        no-repeat;
+  }
+  .cosmic .switch.on::after {
+    background: #fff;
+  }
+  .paper .switch {
+    background: #dadce0;
+    border-radius: 999px;
+  }
+  .paper .switch::after {
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  .paper .switch.on {
+    background: var(--ks);
+  }
+  :where(.cosmic, .paper) .seg {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+  }
+  :where(.cosmic, .paper) .seg > span {
+    padding: 7px 14px;
+    font: 600 14px/1 var(--font-ui);
+    color: var(--text-3);
+  }
+  .cosmic .seg {
+    background:
+      linear-gradient(var(--surface), var(--surface)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface), var(--surface)) 2px 0 / calc(100% - 4px)
+        100% no-repeat;
+  }
+  .cosmic .seg > .on {
+    background:
+      linear-gradient(var(--k3), var(--k3)) 2px 100% / calc(100% - 4px) 3px
+        no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 2px 0 /
+        calc(100% - 4px) 100% no-repeat;
+    color: var(--text);
+  }
+  .paper .seg {
+    background: var(--surface-2);
+    border-radius: 999px;
+  }
+  .paper .seg > span {
+    border-radius: 999px;
+  }
+  .paper .seg > .on {
+    background: #fff;
+    color: var(--ink);
+    box-shadow: 0 0 0 1.5px var(--ink);
+  }
+  /* ── navigation ──────────────────────────────────────────────────────────── */
+  :where(.cosmic, .paper) .topnav {
+    height: 68px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    padding: 0 var(--space-6);
+    position: relative;
+    z-index: 5;
+  }
+  .cosmic .topnav {
+    background: rgba(10, 7, 24, 0.92);
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+  .paper .topnav {
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+  }
+  :where(.cosmic, .paper) .topnav .logo {
+    height: 30px;
+    display: block;
+  }
+  :where(.cosmic, .paper) .topnav nav {
+    display: flex;
+    gap: 4px;
+  }
+  :where(.cosmic, .paper) .topnav nav a {
+    text-decoration: none;
+    padding: 8px 12px;
+    font: 600 15px/1 var(--font-ui);
+    color: var(--text-2);
+  }
+  :where(.cosmic, .paper) .topnav nav a.on {
+    color: var(--text);
+  }
+  .cosmic .topnav nav {
+    align-self: stretch;
+  }
+  .cosmic .topnav nav a {
+    display: flex;
+    align-items: center;
+    position: relative;
+  }
+  .cosmic .topnav nav a.on::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    background: var(--brand6);
+    clip-path: polygon(
+      2px 0,
+      calc(100% - 2px) 0,
+      calc(100% - 2px) 2px,
+      100% 2px,
+      100% 100%,
+      0 100%,
+      0 2px,
+      2px 2px
+    );
+  }
+  /* sits on the navbar's bottom line, covering it */
+  .paper .topnav nav a.on {
+    background: var(--surface-2);
+    border-radius: 999px;
+  }
+  :where(.cosmic, .paper) .topnav .end {
+    margin-left: auto;
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+  }
+  :where(.cosmic, .paper) .search {
+    height: 38px;
+    width: 220px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    font-size: 14px;
+    color: var(--text-3);
+  }
+  :where(.cosmic, .paper) .search kbd {
+    margin-left: auto;
+    font: 400 11.5px/1 var(--font-mono);
+    padding: 3px 6px;
+  }
+  .cosmic .search {
+    --bo: var(--line-strong);
+    --bf: var(--bg);
+    position: relative;
+  }
+  .cosmic .search kbd {
+    background:
+      linear-gradient(var(--line-strong), var(--line-strong)) 2px 0 /
+        calc(100% - 4px) 1px no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 2px 100% /
+        calc(100% - 4px) 1px no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 0 2px / 1px
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 100% 2px / 1px
+        calc(100% - 4px) no-repeat;
+  }
+  .paper .search {
+    background: var(--surface-2);
+    border-radius: 999px;
+  }
+  .paper .search kbd {
+    background: #fff;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+  }
+  :where(.cosmic, .paper) .avatar {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    font: 700 14px/1 var(--font-ui);
+    color: var(--on-accent);
+    flex: none;
+    overflow: hidden;
+    background: var(--k3);
+  }
+  :where(.cosmic, .paper) .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  :where(.cosmic, .paper) .avatar.lg {
+    width: 96px;
+    height: 96px;
+    font-size: 36px;
+  }
+  :where(.cosmic, .paper) .avatar.md {
+    width: 56px;
+    height: 56px;
+    font-size: 20px;
+  }
+  :where(.cosmic, .paper) .avatar.sm {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+  .cosmic .avatar {
+    box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.25);
+    clip-path: polygon(
+      0 12%,
+      6% 12%,
+      6% 6%,
+      12% 6%,
+      12% 0,
+      88% 0,
+      88% 6%,
+      94% 6%,
+      94% 12%,
+      100% 12%,
+      100% 88%,
+      94% 88%,
+      94% 94%,
+      88% 94%,
+      88% 100%,
+      12% 100%,
+      12% 94%,
+      6% 94%,
+      6% 88%,
+      0 88%
+    );
+  }
+  .paper .avatar {
+    border-radius: 50%;
+    border: 2px solid var(--ink);
+    background: var(--kt);
+    color: var(--ink);
+  }
+  :where(.cosmic, .paper) .avatars {
+    display: flex;
+  }
+  :where(.cosmic, .paper) .avatars > .avatar + .avatar {
+    margin-left: -8px;
+  }
+  :where(.cosmic, .paper) .tabs {
+    display: flex;
+    gap: var(--space-5);
+  }
+  :where(.cosmic, .paper) .tabs a {
+    text-decoration: none;
+    padding: 10px 0;
+    font: 600 15px/1 var(--font-ui);
+    color: var(--text-3);
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+  }
+  :where(.cosmic, .paper) .tabs a.on {
+    color: var(--text);
+  }
+  .cosmic .tabs {
+    box-shadow: inset 0 -2px 0 var(--line);
+  }
+  .cosmic .tabs a.on {
+    box-shadow: inset 0 -4px 0 var(--k3);
+  }
+  .paper .tabs {
+    border-bottom: 1px solid var(--line);
+  }
+  .paper .tabs a.on {
+    box-shadow: inset 0 -3px 0 var(--ks);
+  }
+  :where(.cosmic, .paper) .crumbs {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 14px;
+    color: var(--text-3);
+  }
+  :where(.cosmic, .paper) .crumbs a {
+    text-decoration: none;
+  }
+  :where(.cosmic, .paper) .crumbs b {
+    color: var(--text);
+    font-weight: 600;
+  }
+  :where(.cosmic, .paper) .pager {
+    display: flex;
+    gap: 6px;
+  }
+  :where(.cosmic, .paper) .pager span {
+    min-width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    font: 600 14px/1 var(--font-ui);
+    color: var(--text-2);
+  }
+  .cosmic .pager span.on {
+    background:
+      linear-gradient(#fff, #fff) 0 2px / 100% calc(100% - 4px) no-repeat,
+      linear-gradient(#fff, #fff) 2px 0 / calc(100% - 4px) 100% no-repeat;
+    color: var(--on-accent);
+    filter: drop-shadow(2px 2px 0 var(--brand6));
+  }
+  .paper .pager span {
+    border-radius: 50%;
+  }
+  .paper .pager span.on {
+    background: var(--ink);
+    color: #fff;
+  }
+  :where(.cosmic, .paper) .sidenav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 14.5px;
+  }
+  :where(.cosmic, .paper) .sidenav .grp {
+    font: 700 11.5px/1 var(--font-ui);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin: 18px 0 8px;
+  }
+  :where(.cosmic, .paper) .sidenav a {
+    text-decoration: none;
+    padding: 7px 10px;
+    color: var(--text-2);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .cosmic .sidenav a:hover {
+    background:
+      linear-gradient(
+          color-mix(in srgb, var(--raised) 86%, #fff),
+          color-mix(in srgb, var(--raised) 86%, #fff)
+        )
+        0 2px / 100% calc(100% - 4px) no-repeat,
+      linear-gradient(
+          color-mix(in srgb, var(--raised) 86%, #fff),
+          color-mix(in srgb, var(--raised) 86%, #fff)
+        )
+        2px 0 / calc(100% - 4px) 100% no-repeat;
+    color: var(--text);
+  }
+  .cosmic .sidenav a.on {
+    --acc: var(--k3);
+    color: var(--text);
+    background:
+      linear-gradient(
+          color-mix(in srgb, var(--acc) 26%, var(--raised)),
+          color-mix(in srgb, var(--acc) 26%, var(--raised))
+        )
+        0 2px / 100% calc(100% - 4px) no-repeat,
+      linear-gradient(
+          color-mix(in srgb, var(--acc) 26%, var(--raised)),
+          color-mix(in srgb, var(--acc) 26%, var(--raised))
+        )
+        2px 0 / calc(100% - 4px) 100% no-repeat;
+  }
+  /* matches the user menu: whole row tinted, no side stripe */
+  .paper .sidenav a {
+    border-radius: 8px;
+  }
+  .paper .sidenav a.on {
+    color: var(--ink);
+    background: var(--kg);
+    font-weight: 700;
+  }
+  /* ── page header strip, hero, section, footer ────────────────────────────── */
+  :where(.cosmic, .paper) .pagehead {
+    position: relative;
+    min-height: 240px;
+    display: flex;
+    align-items: flex-end;
+    padding: var(--space-8) 0 var(--space-7);
+  }
+  .cosmic .pagehead {
+    background: var(--head) center / cover;
+    image-rendering: pixelated;
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+  .cosmic .pagehead > * {
+    image-rendering: auto;
+  }
+  /* scene motion: chrome.js stacks a generated scene's layers (img/anim/, tools/site_bg.py --anim) in an .fx stage at the back of
+   every Cosmic .hero and .pagehead. The stage covers the section like background:center/cover; the planet's surface turns
+   behind a fixed terminator (a horizontal sprite sheet stepped frame by frame), three groups of stars twinkle out of phase,
+   and a shooting star crosses now and then. Reduced motion: the planet holds frame 0 and the shooting star stays hidden; the twinkle keeps running. Layers are 1px per cell. */
+  :where(.cosmic, .paper)
+    :where(.cosmic .hero, .cosmic .pagehead)
+    > :where(:not(.fx)) {
+    position: relative;
+    z-index: 1;
+  }
+  /* zero specificity: absolutely placed children keep their position */
+  :where(.cosmic, .paper) .fx {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    container-type: size;
+    pointer-events: none;
+    z-index: 0;
+  }
+  :where(.cosmic, .paper) .fx .stage {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100cqw, calc(100cqh * var(--ar)));
+    aspect-ratio: var(--ar);
+    transform: translate(-50%, -50%);
+  }
+  :where(.cosmic, .paper) .fx i {
+    position: absolute;
+    display: block;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+  }
+  :where(.cosmic, .paper) .fx .sky {
+    inset: 0;
+    background-size: 100% 100%;
+  }
+  :where(.cosmic, .paper) .fx :is(.planet, .ring, .shoot) {
+    left: var(--l);
+    top: var(--t);
+    width: var(--w);
+    height: var(--h);
+    background-size: 100% 100%;
+  }
+  :where(.cosmic, .paper) .fx .planet {
+    background-size: calc(var(--n) * 100%) 100%;
+  }
+  :where(.cosmic, .paper) .fx .tw {
+    inset: 0;
+    background-size: 100% 300%;
+  }
+  :where(.cosmic, .paper) .fx .tw0 {
+    background-position: 0 0;
+  }
+  :where(.cosmic, .paper) .fx .tw1 {
+    background-position: 0 50%;
+  }
+  :where(.cosmic, .paper) .fx .tw2 {
+    background-position: 0 100%;
+  }
+  :where(.cosmic, .paper) .fx .tw0 {
+    animation: fx-blink 4s step-end infinite;
+  }
+  /* twinkle only fades stars in place, so it runs even under reduced motion (Sloan, 10-22) */
+  :where(.cosmic, .paper) .fx .tw1 {
+    animation: fx-blink 5.5s step-end -1.7s infinite;
+  }
+  :where(.cosmic, .paper) .fx .tw2 {
+    animation: fx-blink 7s step-end -3.1s infinite;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    :where(.cosmic, .paper) .fx .planet {
+      animation: fx-spin var(--spin) steps(var(--n), jump-none) infinite;
+    }
+    :where(.cosmic, .paper) .fx .shoot {
+      animation: fx-streak 23s linear infinite;
+      opacity: 0;
+    }
+  }
+  :where(.cosmic, .paper) .pagehead > .wrap {
+    width: 100%;
+  }
+  .paper .pagehead {
+    background: var(--kg);
+    border-bottom: 2px solid var(--ink);
+    overflow: hidden;
+  }
+  .paper .pagehead .wall {
+    position: absolute;
+    right: -30px;
+    top: 28px;
+    height: 520px;
+  }
+  /* the top row stays whole; the wall runs off the bottom */
+  :where(.cosmic, .paper) .section {
+    padding: var(--space-10) 0;
+  }
+  /* the calm pass kept only its spacing */
+  /* A band: every other section sits on a lighter ground, entered and left through a dithered 3px edge (img/band-edge.png).
+   It replaced the home page's marquees as the separator between sections. */
+  :where(.cosmic, .paper) .band {
+    position: relative;
+    background: #120d28;
+  }
+  :where(.cosmic, .paper) .band::before,
+  :where(.cosmic, .paper) .band::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 24px;
+    background: url(/cosmic/img/band-edge.png) repeat-x;
+    image-rendering: pixelated;
+    pointer-events: none;
+  }
+  :where(.cosmic, .paper) .band::before {
+    top: -24px;
+  }
+  :where(.cosmic, .paper) .band::after {
+    bottom: -24px;
+    transform: scaleY(-1);
+  }
+  .paper .band {
+    background: var(--surface-2);
+  }
+  .paper .band::before,
+  .paper .band::after {
+    display: none;
+  }
+  :where(.cosmic, .paper) .footer {
+    padding: var(--space-8) 0 var(--space-6);
+    font-size: 14px;
+  }
+  .cosmic .footer {
+    background: url(/cosmic/img/footer.png) center bottom / cover;
+    image-rendering: pixelated;
+    box-shadow: inset 0 1px 0 var(--line);
+  }
+  .cosmic .footer > * {
+    image-rendering: auto;
+  }
+  .paper .footer {
+    background: #fff;
+    border-top: 2px solid var(--ink);
+  }
+  :where(.cosmic, .paper) .footer h4 {
+    font: 700 12px/1 var(--font-ui);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin: 0 0 14px;
+  }
+  :where(.cosmic, .paper) .footer a:not(.btn) {
+    display: block;
+    text-decoration: none;
+    color: var(--text-2);
+    padding: 4px 0;
+  }
+  /* ── event row: the graphics' card shrunk to a list item ─────────────────── */
+  :where(.cosmic, .paper) .event {
+    display: grid;
+    grid-template-columns: 84px 1fr auto;
+    gap: var(--space-5);
+    align-items: center;
+  }
+  :where(.cosmic, .paper) .date {
+    text-align: center;
+    padding: 8px 0;
+  }
+  :where(.cosmic, .paper) .date .dow {
+    font: 700 11px/1 var(--font-ui);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  :where(.cosmic, .paper) .date .day {
+    font: 800 36px/1 var(--font-display);
+    margin-top: 4px;
+  }
+  :where(.cosmic, .paper) .date .mon {
+    font: 700 11px/1 var(--font-ui);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .cosmic .date {
+    clip-path: var(--step1);
+    background: var(--k7, var(--k6));
+    color: #fff;
+    box-shadow:
+      inset var(--px) var(--px) 0 rgba(255, 255, 255, 0.18),
+      inset calc(var(--px) * -1) calc(var(--px) * -1) 0 rgba(0, 0, 0, 0.3);
+  }
+  .paper .date {
+    background: var(--kx);
+    color: #fff;
+    border-radius: 14px;
+    border: 2px solid var(--ink);
+  }
+  .paper .date .day {
+    font-weight: 700;
+  }
+  :where(.cosmic, .paper) .event .title {
+    font: 700 19px/1.25 var(--font-ui);
+    color: var(--text);
+    margin: 0 0 4px;
+  }
+  .cosmic .event .title {
+    font: 800 21px/1.2 var(--font-display);
+  }
+  :where(.cosmic, .paper) .event .meta {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 14px;
+    color: var(--text-3);
+  }
+  :where(.cosmic, .paper) .event .meta span {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+  }
+  /* ── alerts, toasts, empty, skeleton, progress ───────────────────────────── */
+  :where(.cosmic, .paper) .alert {
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    font-size: 14.5px;
+    align-items: flex-start;
+  }
+  :where(.cosmic, .paper) .alert x-icon {
+    font-size: 20px;
+    flex: none;
+    margin-top: 1px;
+  }
+  :where(.cosmic, .paper) .alert b {
+    color: var(--text);
+  }
+  .cosmic .alert {
+    background: var(--surface);
+    box-shadow: inset 4px 0 0 var(--c, var(--note));
+    clip-path: var(--step2);
+  }
+  .cosmic .alert x-icon {
+    color: var(--c, var(--note));
+  }
+  .paper .alert {
+    background: var(--bgc, #e8f0fe);
+    border-radius: 12px;
+    color: var(--text);
+    border: 1.5px solid var(--ink);
+  }
+  :where(.cosmic, .paper) .alert.ok {
+    --c: var(--ok);
+    --bgc: #e6f4ea;
+  }
+  :where(.cosmic, .paper) .alert.warn {
+    --c: var(--warn);
+    --bgc: #fef7e0;
+  }
+  :where(.cosmic, .paper) .alert.bad {
+    --c: var(--bad);
+    --bgc: #fce8e6;
+  }
+  :where(.cosmic, .paper) .toast {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 14px;
+    font-size: 14.5px;
+    color: var(--text);
+    width: 360px;
+  }
+  .cosmic .toast {
+    --fill: #2a2249;
+    --o: #8d84a0;
+  }
+  /* the card frame (above), a step brighter than any surface so it floats off the page */
+  .paper .toast {
+    background: var(--ink);
+    color: #fff;
+    border-radius: 12px;
+  }
+  :where(.cosmic, .paper) .empty {
+    text-align: center;
+    padding: var(--space-7) var(--space-5);
+  }
+  :where(.cosmic, .paper) .empty img {
+    height: 96px;
+  }
+  :where(.cosmic, .paper) .skel {
+    height: 12px;
+  }
+  .cosmic .skel {
+    background: repeating-linear-gradient(
+      90deg,
+      var(--surface-2) 0 8px,
+      var(--raised) 8px 16px
+    );
+  }
+  .paper .skel {
+    background: var(--surface-2);
+    border-radius: 6px;
+  }
+  :where(.cosmic, .paper) .progress {
+    height: 12px;
+    position: relative;
+  }
+  :where(.cosmic, .paper) .progress > i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--v, 40%);
+  }
+  .cosmic .progress {
+    background:
+      linear-gradient(var(--bg), var(--bg)) 2px 4px / calc(100% - 4px)
+        calc(100% - 8px) no-repeat,
+      linear-gradient(var(--bg), var(--bg)) 4px 2px / calc(100% - 8px)
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 2px 0 /
+        calc(100% - 4px) 100% no-repeat;
+  }
+  .cosmic .progress > i {
+    background: repeating-linear-gradient(
+      90deg,
+      var(--k3) 0 8px,
+      transparent 8px 12px
+    );
+    inset: 3px auto 3px 3px;
+  }
+  .paper .progress {
+    background: var(--surface-2);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .paper .progress > i {
+    background: var(--ks);
+    border-radius: 999px;
+  }
+  /* ── overlays ────────────────────────────────────────────────────────────── */
+  :where(.cosmic, .paper) .menu {
+    min-width: 220px;
+    padding: 6px;
+    font-size: 14.5px;
+  }
+  :where(.cosmic, .paper) .menu a {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 10px;
+    text-decoration: none;
+    color: var(--text-2);
+  }
+  :where(.cosmic, .paper) .menu a.on {
+    color: var(--text);
+  }
+  :where(.cosmic, .paper) .menu hr {
+    border: 0;
+    height: 1px;
+    background: var(--line);
+    margin: 6px 0;
+  }
+  :where(.cosmic, .paper) .menu kbd {
+    margin-left: auto;
+    font: 400 12px/1 var(--font-mono);
+    color: var(--text-3);
+  }
+  .cosmic .menu {
+    --fill: var(--raised);
+  }
+  :where(.cosmic, .paper) :where(.cosmic) :where(.menu, .toast, .lb) {
+    position: relative;
+  }
+  .cosmic .menu a:hover {
+    background:
+      linear-gradient(
+          color-mix(in srgb, var(--raised) 86%, #fff),
+          color-mix(in srgb, var(--raised) 86%, #fff)
+        )
+        0 2px / 100% calc(100% - 4px) no-repeat,
+      linear-gradient(
+          color-mix(in srgb, var(--raised) 86%, #fff),
+          color-mix(in srgb, var(--raised) 86%, #fff)
+        )
+        2px 0 / calc(100% - 4px) 100% no-repeat;
+    color: var(--text);
+  }
+  .cosmic .menu a.on {
+    background:
+      linear-gradient(
+          color-mix(in srgb, var(--k3) 26%, var(--raised)),
+          color-mix(in srgb, var(--k3) 26%, var(--raised))
+        )
+        0 2px / 100% calc(100% - 4px) no-repeat,
+      linear-gradient(
+          color-mix(in srgb, var(--k3) 26%, var(--raised)),
+          color-mix(in srgb, var(--k3) 26%, var(--raised))
+        )
+        2px 0 / calc(100% - 4px) 100% no-repeat;
+    color: var(--text);
+  }
+  /* the whole row lifts in the 300, no side stripe */
+  .paper .menu {
+    background: #fff;
+    border: 1.5px solid var(--ink);
+    border-radius: 14px;
+  }
+  .paper .menu a {
+    border-radius: 8px;
+  }
+  .paper .menu a.on {
+    background: var(--surface-2);
+  }
+  :where(.cosmic, .paper) .tip {
+    display: inline-block;
+    padding: 6px 9px;
+    font: 600 12.5px/1.2 var(--font-ui);
+  }
+  .cosmic .tip {
+    background: #fff;
+    color: var(--on-accent);
+    box-shadow: 3px 3px 0 var(--k6);
+  }
+  .paper .tip {
+    background: var(--ink);
+    color: #fff;
+    border-radius: 6px;
+  }
+  :where(.cosmic, .paper) .scrim {
+    position: relative;
+    padding: var(--space-7);
+    display: grid;
+    place-items: center;
+  }
+  .cosmic .scrim {
+    background: rgba(5, 3, 12, 0.78);
+  }
+  .paper .scrim {
+    background: rgba(32, 33, 36, 0.45);
+  }
+  /* ── table, key-values, timeline ─────────────────────────────────────────── */
+  :where(.cosmic, .paper) .table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+  }
+  :where(.cosmic, .paper) .table th {
+    text-align: left;
+    font: 700 11.5px/1 var(--font-ui);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    padding: 12px 14px;
+  }
+  :where(.cosmic, .paper) .table td {
+    padding: 12px 14px;
+    color: var(--text-2);
+    vertical-align: middle;
+  }
+  :where(.cosmic, .paper) .table td.strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .cosmic .table th {
+    box-shadow: inset 0 -2px 0 var(--line-strong);
+  }
+  .cosmic .table td {
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+  .cosmic .table tr.sel td {
+    background: var(--surface-2);
+  }
+  .paper .table th {
+    border-bottom: 1.5px solid var(--ink);
+  }
+  .paper .table td {
+    border-bottom: 1px solid var(--line);
+  }
+  .paper .table tr.sel td {
+    background: #e8f0fe;
+  }
+  :where(.cosmic, .paper) .kv {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 10px 16px;
+    font-size: 14.5px;
+    margin: 0;
+  }
+  :where(.cosmic, .paper) .kv dt {
+    color: var(--text-3);
+  }
+  :where(.cosmic, .paper) .kv dd {
+    margin: 0;
+    color: var(--text);
+  }
+  :where(.cosmic, .paper) .timeline {
+    position: relative;
+    padding-left: 28px;
+  }
+  :where(.cosmic, .paper) .timeline::before {
+    content: "";
+    position: absolute;
+    left: 7px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+  }
+  .cosmic .timeline::before {
+    background: repeating-linear-gradient(
+      var(--line-strong) 0 6px,
+      transparent 6px 10px
+    );
+  }
+  .paper .timeline::before {
+    background: var(--line);
+  }
+  :where(.cosmic, .paper) .timeline .pt {
+    position: absolute;
+    left: -28px;
+    top: 4px;
+    width: 16px;
+    height: 16px;
+  }
+  .cosmic .timeline .pt {
+    background: var(--k3);
+    box-shadow: 2px 2px 0 var(--k6);
+  }
+  .paper .timeline .pt {
+    background: var(--kt);
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+  }
+  :where(.cosmic, .paper) .timeline > div {
+    position: relative;
+    padding-bottom: var(--space-5);
+  }
+  /* ── code block (the Changelog's terminal voice) ─────────────────────────── */
+  :where(.cosmic, .paper) pre.term {
+    margin: 0;
+    padding: 16px 18px;
+    font: 400 14px/1.65 var(--font-mono);
+    overflow: auto;
+    color: var(--text-2);
+  }
+  :where(.cosmic, .paper) pre.term .p {
+    color: var(--k3);
+  }
+  :where(.cosmic, .paper) pre.term .c {
+    color: var(--text-3);
+  }
+  :where(.cosmic, .paper) pre.term .s {
+    color: #5ee9b5;
+  }
+  :where(.cosmic, .paper) pre.term .k {
+    color: #f9a8d4;
+  }
+  :where(.cosmic, .paper) pre.term .cur {
+    display: inline-block;
+    width: 0.6em;
+    height: 1.1em;
+    background: var(--k3);
+    vertical-align: -0.2em;
+  }
+  .cosmic pre.term {
+    background: #06040f;
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+  }
+  .paper pre.term {
+    background: #202124;
+    color: #e8eaed;
+    border-radius: 14px;
+  }
+  .paper pre.term .p {
+    color: #8ab4f8;
+  }
+  .paper pre.term .cur {
+    background: #8ab4f8;
+  }
+  :where(.cosmic, .paper) .termbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 12px;
+    font: 400 12.5px/1 var(--font-mono);
+    color: var(--text-3);
+  }
+  .cosmic .termbar {
+    background: var(--surface-2);
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+  }
+  .paper .termbar {
+    background: #303134;
+    color: #bdc1c6;
+    border-radius: 14px 14px 0 0;
+  }
+  .paper .termbar + pre.term {
+    border-radius: 0 0 14px 14px;
+  }
+  /* ── decor ───────────────────────────────────────────────────────────────── */
+  :where(.cosmic, .paper) .sprite {
+    width: var(--w, 56px);
+    display: block;
+  }
+  :where(.cosmic, .paper) .emoji-badge {
+    width: var(--w, 64px);
+    height: var(--w, 64px);
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--ink);
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  :where(.cosmic, .paper) .emoji-badge img {
+    width: 62%;
+  }
+  :where(.cosmic, .paper) .marquee {
+    white-space: nowrap;
+    overflow: hidden;
+    padding: 14px 0;
+    font: 800 22px/1 var(--font-display);
+    letter-spacing: 0.02em;
+  }
+  .cosmic .marquee {
+    background: var(--brand6);
+    color: #fff;
+    text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+    box-shadow:
+      inset 0 4px 0 rgba(255, 255, 255, 0.18),
+      inset 0 -4px 0 rgba(0, 0, 0, 0.25);
+  }
+  .paper .marquee {
+    background: var(--ink);
+    color: #fff;
+  }
+  :where(.cosmic, .paper) .marquee span {
+    margin: 0 22px;
+  }
+  /* ── nesting: a .paper region inside a .cosmic page (a GDGC card on a DevDogs page) drops the Cosmic-only treatments ── */
+  .cosmic .paper h1,
+  .cosmic .paper .h1,
+  .cosmic .paper h2,
+  .cosmic .paper .h2,
+  .cosmic .paper .display {
+    text-shadow: none;
+  }
+  .cosmic .paper .card {
+    filter: none;
+  }
+  .cosmic .paper .card::before,
+  .cosmic .paper .card::after {
+    content: none;
+  }
+  .cosmic .paper .btn::before,
+  .cosmic .paper .btn::after,
+  .cosmic .paper .input::before,
+  .cosmic .paper .input::after,
+  .cosmic .paper .search::before,
+  .cosmic .paper .search::after {
+    content: none;
+  }
+  .cosmic .paper .btn-shadow {
+    filter: none;
+  }
+  .cosmic .paper .avatar,
+  .cosmic .paper :is(.box, .alert, .date, .switch::after) {
+    clip-path: none;
+  }
+  .cosmic .paper :is(.chip, .badge, .pager span, .check i) {
+    filter: none;
+  }
+  .cosmic .paper :is(.menu, .toast, .dialog, .lb) {
+    filter: none;
+  }
+  .cosmic .paper :is(.menu, .toast, .dialog, .lb)::before,
+  .cosmic .paper :is(.menu, .toast, .dialog, .lb)::after {
+    content: none;
+  }
+  .cosmic .paper :not(pre) > code {
+    color: var(--text);
+    box-shadow: none;
+  }
+  /* ── focus: every interactive element gets a visible ring (mockups use real <a href>/<button>) ── */
+  :where(.cosmic, .paper) .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  :where(.cosmic, .paper) .skip {
+    position: absolute;
+    left: 16px;
+    top: -60px;
+    z-index: 50;
+  }
+  :where(.cosmic, .paper) .skip:focus {
+    top: 12px;
+  }
+  .cosmic
+    :is(a, button, summary, [tabindex], input, select, textarea):focus-visible {
+    outline: 2px dashed var(--brand3);
+    outline-offset: 3px;
+  }
+  .cosmic .btn:focus-visible {
+    outline-offset: 4px;
+  }
+  .cosmic .input:focus-within {
+    --bo: var(--brand3);
+  }
+  .cosmic .input :is(input, textarea, select):focus-visible {
+    outline: none;
+  }
+  .paper
+    :is(a, button, summary, [tabindex], input, select, textarea):focus-visible {
+    outline: 3px solid var(--kt);
+    outline-offset: 2px;
+  }
+  .paper .input:focus-within {
+    border-color: var(--ks);
+  }
+  :where(.cosmic, .paper) .input :is(input, textarea, select) {
+    all: unset;
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    color: inherit;
+  }
+  :where(.cosmic, .paper) .input :is(input, textarea)::placeholder {
+    color: var(--text-3);
+  }
+  :where(.cosmic, .paper) button.btn {
+    font-family: var(--font-ui);
+  }
+  .cosmic .btn.primary:hover {
+    --bf: #f0eef5;
+  }
+  .cosmic .btn.secondary:hover {
+    --bf: var(--raised);
+  }
+  /* ── layout helpers that collapse on narrow screens ── */
+  :where(.cosmic, .paper) .split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: var(--space-8);
+    align-items: center;
+  }
+  :where(.cosmic, .paper) .with-aside {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: var(--space-8);
+    align-items: start;
+  }
+  :where(.cosmic, .paper) .with-aside > aside {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+  :where(.cosmic, .paper) .footgrid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr;
+    gap: var(--space-6);
+  }
+  /* mobile nav (chrome.js renders the toggle; the open state is a mockup class) */
+  :where(.cosmic, .paper) .navtoggle {
+    display: none;
+  }
+  :where(.cosmic, .paper) .mnav {
+    display: none;
+  }
+  /* ── responsive ── */
+  @media (max-width: 1024px) {
+    :where(.cosmic, .paper) .wrap {
+      padding: 0 var(--space-5);
+    }
+    :where(.cosmic, .paper) .g4 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    :where(.cosmic, .paper) .with-aside {
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: var(--space-6);
+    }
+    :where(.cosmic, .paper) .footgrid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    :where(.cosmic, .paper) .footgrid > :first-child {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (max-width: 900px) {
+    :where(.cosmic, .paper) .topnav {
+      padding: 0 var(--space-4);
+      gap: var(--space-3);
+    }
+    :where(.cosmic, .paper) .topnav nav,
+    :where(.cosmic, .paper) .topnav .search kbd,
+    :where(.cosmic, .paper) .topnav .search .lbl {
+      display: none;
+    }
+    :where(.cosmic, .paper) .topnav .search {
+      width: 40px;
+      padding: 0;
+      justify-content: center;
+    }
+    :where(.cosmic, .paper) .navtoggle {
+      display: inline-flex;
+    }
+    :where(.cosmic, .paper) .mnav.open {
+      display: flex;
+      flex-direction: column;
+      padding: 8px var(--space-4) 16px;
+      gap: 2px;
+    }
+    .cosmic .mnav.open {
+      background: var(--surface);
+      box-shadow: inset 0 -1px 0 var(--line);
+    }
+    :where(.cosmic, .paper) .mnav a {
+      padding: 12px 8px;
+      font: 600 16px/1 var(--font-ui);
+      color: var(--text-2);
+      text-decoration: none;
+    }
+    :where(.cosmic, .paper) .mnav a.on {
+      color: var(--text);
+    }
+    :where(.cosmic, .paper) .with-aside,
+    :where(.cosmic, .paper) .split {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    :where(.cosmic, .paper) .with-aside > aside {
+      position: static;
+    }
+  }
+  @media (max-width: 720px) {
+    :where(.cosmic, .paper) .wrap {
+      padding: 0 var(--space-4);
+    }
+    :where(.cosmic, .paper) .g2,
+    :where(.cosmic, .paper) .g3,
+    :where(.cosmic, .paper) .g4 {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    :where(.cosmic, .paper) .display {
+      font-size: 38px;
+    }
+    :where(.cosmic, .paper) h1,
+    :where(.cosmic, .paper) .h1 {
+      font-size: 30px;
+    }
+    :where(.cosmic, .paper) h2,
+    :where(.cosmic, .paper) .h2 {
+      font-size: 22px;
+    }
+    :where(.cosmic, .paper) .lead {
+      font-size: 16.5px;
+    }
+    :where(.cosmic, .paper) .section {
+      padding: var(--space-8) 0;
+    }
+    :where(.cosmic, .paper) .pagehead {
+      min-height: 0;
+      padding: var(--space-7) 0 var(--space-6);
+    }
+    :where(.cosmic, .paper) .event {
+      grid-template-columns: 56px minmax(0, 1fr);
+      gap: var(--space-4);
+    }
+    :where(.cosmic, .paper) .event > :nth-child(n + 3) {
+      grid-column: 2;
+      justify-self: start;
+    }
+    :where(.cosmic, .paper) .date .day {
+      font-size: 22px;
+    }
+    :where(.cosmic, .paper) .kv {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2px 0;
+    }
+    :where(.cosmic, .paper) .kv dd {
+      margin-bottom: 10px;
+    }
+    :where(.cosmic, .paper) .footgrid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    :where(.cosmic, .paper) .toast {
+      width: auto;
+    }
+    :where(.cosmic, .paper) .btn.lg {
+      width: 100%;
+    }
+  }
+  @media (pointer: coarse) {
+    :where(.cosmic, .paper) .btn.sm {
+      --h: 40px;
+    }
+    :where(.cosmic, .paper) .btn.icon.sm {
+      width: 40px;
+    }
+  }
+  @media (max-width: 720px) {
+    :where(.cosmic, .paper) .btn-shadow:has(.btn.lg) {
+      display: flex;
+    }
+  }
+  /* ── avatar menu (chrome.js) ── */
+  :where(.cosmic, .paper) .me {
+    position: relative;
+  }
+  :where(.cosmic, .paper) .me > summary {
+    list-style: none;
+    cursor: pointer;
+  }
+  :where(.cosmic, .paper) .me > summary::-webkit-details-marker {
+    display: none;
+  }
+  :where(.cosmic, .paper) .me > .menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    z-index: 30;
+  }
+  :where(.cosmic, .paper) .me .menu .who {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px 4px;
+  }
+  :where(.cosmic, .paper) .me .menu .who b {
+    color: var(--text);
+  }
+  /* touch: 44px hit areas for small controls */
+  @media (pointer: coarse) {
+    :where(.cosmic, .paper) .iconbtn {
+      width: 44px;
+      height: 44px;
+    }
+    :where(.cosmic, .paper) .btn.sm {
+      --h: 44px;
+    }
+    :where(.cosmic, .paper) .btn.icon.sm {
+      width: 44px;
+    }
+    :where(.cosmic, .paper) .sidenav a,
+    :where(.cosmic, .paper) .menu a {
+      min-height: 44px;
+    }
+  }
+  /* DevDogs design system, draft 26: the app shell, shared by Settings (contributors) and the Console (officers).
+   Load after kit.css. One side nav for both: Account, Developer, and (officers only) Console groups.
+   Promoted from the page-local CSS of settings-*.html and console-*.html; pages should not redefine these. */
+  /* ── shell: side nav + page ──────────────────────────────────────────────── */
+  :where(.cosmic, .paper) .shell {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: 56px;
+    align-items: start;
+    padding: 48px 0 128px;
+  }
+  :where(.cosmic, .paper) .side {
+    position: sticky;
+    top: 24px;
+  }
+  :where(.cosmic, .paper) .side .who {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 0 10px 22px;
+  }
+  :where(.cosmic, .paper) .side .who .avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 15px;
+    flex: none;
+  }
+  :where(.cosmic, .paper) .side .who b {
+    display: block;
+    color: var(--text);
+    line-height: 1.25;
+  }
+  :where(.cosmic, .paper) .side .sidenav .grp:first-child {
+    margin-top: 0;
+  }
+  :where(.cosmic, .paper) .side .sidenav a x-icon {
+    font-size: 18px;
+    color: var(--text-3);
+  }
+  :where(.cosmic, .paper) .side .sidenav a.on x-icon {
+    color: var(--brand3);
+  }
+  .cosmic .side .sidenav a.on {
+    --acc: var(--brand3);
+  }
+  /* chrome is brand, not a category */
+  :where(.cosmic, .paper) .side .sidenav a .n {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-3);
+  }
+  /* page header inside the shell */
+  :where(.cosmic, .paper) .pgh {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+  :where(.cosmic, .paper) .pgh h1 {
+    font-size: 34px;
+    line-height: 1.1;
+  }
+  :where(.cosmic, .paper) .pgh p {
+    margin: 10px 0 0;
+    max-width: 60ch;
+    color: var(--text-3);
+  }
+  :where(.cosmic, .paper) .pgh .acts {
+    display: flex;
+    gap: 12px;
+    flex: none;
+  }
+  :where(.cosmic, .paper) .pgh .crumbs {
+    margin-bottom: 12px;
+  }
+  /* a titled group of settings or a console panel: flat by default (the stepped card is for the one thing that matters) */
+  :where(.cosmic, .paper) .panel {
+    padding: 24px 0;
+  }
+  :where(.cosmic, .paper) .panel + .panel {
+    box-shadow: inset 0 1px 0 var(--line);
+  }
+  :where(.cosmic, .paper) .panel > h2 {
+    text-shadow: none;
+    font: 700 17px/1.3 var(--font-ui);
+    color: var(--text);
+    margin: 0 0 4px;
+  }
+  :where(.cosmic, .paper) .panel > .help:first-of-type {
+    margin-bottom: 18px;
+  }
+  /* fields */
+  :where(.cosmic, .paper) .input.mono,
+  :where(.cosmic, .paper) .mono-in {
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    font-weight: 400;
+  }
+  :where(.cosmic, .paper) .input .at {
+    color: var(--text-3);
+    font-weight: 400;
+  }
+  :where(.cosmic, .paper) .input .unit {
+    margin-left: auto;
+    color: var(--text-3);
+    font-weight: 400;
+  }
+  :where(.cosmic, .paper) .input .ok {
+    margin-left: auto;
+    color: var(--ok);
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  :where(.cosmic, .paper) .input.area {
+    min-height: 112px;
+    display: block;
+  }
+  :where(.cosmic, .paper) .count {
+    text-align: right;
+    font-size: 12.5px;
+    color: var(--text-3);
+  }
+  :where(.cosmic, .paper) .f2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  :where(.cosmic, .paper) .fields {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 560px;
+  }
+  /* list rows: verified things, accounts, meetings */
+  :where(.cosmic, .paper) .vrow,
+  :where(.cosmic, .paper) .arow {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 0;
+  }
+  :where(.cosmic, .paper) .vrow + .vrow,
+  :where(.cosmic, .paper) .arow + .arow {
+    box-shadow: inset 0 1px 0 var(--line);
+  }
+  :where(.cosmic, .paper) .vrow .ic,
+  :where(.cosmic, .paper) .arow .ic {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    font-size: 22px;
+    background: var(--surface-2);
+    color: var(--text);
+    flex: none;
+  }
+  :where(.cosmic, .paper) .vrow b,
+  :where(.cosmic, .paper) .arow b {
+    display: block;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  :where(.cosmic, .paper) .vrow .st {
+    margin-left: auto;
+    color: var(--ok);
+    font-size: 22px;
+  }
+  :where(.cosmic, .paper) .arow .btn,
+  :where(.cosmic, .paper) .arow .badge,
+  :where(.cosmic, .paper) .arow .end {
+    margin-left: auto;
+  }
+  :where(.cosmic, .paper) .mrow {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr) auto auto;
+    gap: 20px;
+    align-items: center;
+    padding: 12px 16px;
+    text-decoration: none;
+  }
+  :where(.cosmic, .paper) .mrow + .mrow {
+    box-shadow: inset 0 1px 0 var(--line);
+  }
+  :where(.cosmic, .paper) .mrow.sel {
+    background: var(--surface-2);
+    box-shadow: inset 3px 0 0 var(--brand6);
+  }
+  :where(.cosmic, .paper) .mrow .date {
+    padding: 6px 0;
+  }
+  :where(.cosmic, .paper) .mrow .date .day {
+    font-size: 22px;
+  }
+  :where(.cosmic, .paper) .mrow.past {
+    opacity: 0.72;
+  }
+  :where(.cosmic, .paper) .mrow .t {
+    font: 700 16px/1.25 var(--font-ui);
+    color: var(--text);
+  }
+  :where(.cosmic, .paper) .mrow .badges {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  /* stat tiles: quiet numbers, no frame */
+  :where(.cosmic, .paper) .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+  }
+  :where(.cosmic, .paper) .tile {
+    padding: 16px 18px;
+  }
+  .cosmic .tile {
+    background:
+      linear-gradient(var(--surface), var(--surface)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface), var(--surface)) 2px 0 / calc(100% - 4px)
+        100% no-repeat;
+    clip-path: var(--step2);
+  }
+  :where(.cosmic, .paper) .tile .lbl {
+    font-size: 13px;
+    color: var(--text-3);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  :where(.cosmic, .paper) .tile .num {
+    font: 800 28px/1 var(--font-display);
+    color: var(--text);
+    margin-top: 10px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+  :where(.cosmic, .paper) .tile .of {
+    font: 500 14px/1 var(--font-ui);
+    color: var(--text-3);
+  }
+  :where(.cosmic, .paper) .iconbtn {
+    width: 36px;
+    height: 36px;
+    display: inline-grid;
+    place-items: center;
+    color: var(--text-2);
+    font-size: 18px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  :where(.cosmic, .paper) .iconbtn:hover {
+    color: var(--text);
+    background:
+      linear-gradient(var(--surface-2), var(--surface-2)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 2px 0 /
+        calc(100% - 4px) 100% no-repeat;
+  }
+  /* toolbars, tables, bulk selection */
+  :where(.cosmic, .paper) .toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  :where(.cosmic, .paper) .toolbar .input {
+    width: 300px;
+  }
+  :where(.cosmic, .paper) .toolbar .end {
+    margin-left: auto;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  :where(.cosmic, .paper) .tablewrap {
+    overflow-x: auto;
+  }
+  :where(.cosmic, .paper) .table td,
+  :where(.cosmic, .paper) .table th {
+    white-space: nowrap;
+  }
+  :where(.cosmic, .paper) .table td.wrap {
+    white-space: normal;
+  }
+  :where(.cosmic, .paper) .table .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  :where(.cosmic, .paper) .table th.sort {
+    cursor: pointer;
+  }
+  :where(.cosmic, .paper) .table th.sort x-icon {
+    font-size: 11px;
+    vertical-align: -1px;
+    margin-left: 4px;
+  }
+  :where(.cosmic, .paper) .table th.sort.on {
+    color: var(--text);
+  }
+  :where(.cosmic, .paper) .table tr.sel td:first-child {
+    box-shadow:
+      inset 3px 0 0 var(--brand6),
+      inset 0 -1px 0 var(--line);
+  }
+  :where(.cosmic, .paper) .selbar {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    padding: 10px 16px;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+  .cosmic .selbar {
+    background:
+      linear-gradient(var(--surface-2), var(--surface-2)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 2px 0 /
+        calc(100% - 4px) 100% no-repeat;
+  }
+  :where(.cosmic, .paper) .live {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 13px;
+    color: var(--text-3);
+  }
+  :where(.cosmic, .paper) .live i {
+    width: 8px;
+    height: 8px;
+    background: var(--ok);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent);
+  }
+  /* save bar: one model per page. Fields wait for Save; switches in the same form also wait (no instant saves mixed in). */
+  :where(.cosmic, .paper) .savebar {
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+  }
+  .cosmic .savebar {
+    background: var(--surface);
+    box-shadow:
+      inset 0 2px 0 var(--line-strong),
+      0 -8px 0 rgba(10, 7, 24, 0.6);
+  }
+  :where(.cosmic, .paper) .savebar .in {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 68px;
+  }
+  :where(.cosmic, .paper) .savebar .state {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 14px;
+  }
+  :where(.cosmic, .paper) .savebar .state.dirty {
+    color: var(--warn);
+  }
+  :where(.cosmic, .paper) .savebar .state.saving {
+    color: var(--text-3);
+  }
+  :where(.cosmic, .paper) .savebar .state.saved {
+    color: var(--ok);
+  }
+  :where(.cosmic, .paper) .savebar .state.error {
+    color: var(--bad);
+  }
+  :where(.cosmic, .paper) .savebar .acts {
+    margin-left: auto;
+    display: flex;
+    gap: 12px;
+  }
+  /* danger zone: a flat red-ruled panel, not a framed card */
+  :where(.cosmic, .paper) .danger {
+    padding: 20px 22px;
+    background: color-mix(in srgb, var(--bad) 8%, transparent);
+    clip-path: var(--step2);
+  }
+  :where(.cosmic, .paper) .danger .arow + .arow {
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bad) 25%, transparent);
+  }
+  /* ── overlays: drawer (edit) and dialog (confirm) ─────────────────────────────
+   Mockups show them open over a .stage; .layer positions them, .shade is the scrim. */
+  :where(.cosmic, .paper) .stage {
+    position: relative;
+  }
+  :where(.cosmic, .paper) .layer {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+  }
+  :where(.cosmic, .paper) .layer.center {
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 120px;
+  }
+  :where(.cosmic, .paper) .layer .shade {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 3, 12, 0.78);
+  }
+  .paper .layer .shade {
+    background: rgba(32, 33, 36, 0.45);
+  }
+  :where(.cosmic, .paper) .drawer {
+    --s: 4px;
+    position: sticky;
+    top: 0;
+    width: 480px;
+    max-width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    isolation: isolate;
+    filter: drop-shadow(-8px 0 0 rgba(0, 0, 0, 0.6));
+    color: var(--text-2);
+  }
+  :where(.cosmic, .paper) .drawer::before,
+  :where(.cosmic, .paper) .drawer::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    clip-path: polygon(
+      0 calc(var(--s) * 3),
+      var(--s) calc(var(--s) * 3),
+      var(--s) var(--s),
+      calc(var(--s) * 3) var(--s),
+      calc(var(--s) * 3) 0,
+      100% 0,
+      100% 100%,
+      calc(var(--s) * 3) 100%,
+      calc(var(--s) * 3) calc(100% - var(--s)),
+      var(--s) calc(100% - var(--s)),
+      var(--s) calc(100% - var(--s) * 3),
+      0 calc(100% - var(--s) * 3)
+    );
+  }
+  :where(.cosmic, .paper) .drawer::before {
+    inset: 0;
+    background: var(--line-strong);
+  }
+  :where(.cosmic, .paper) .drawer::after {
+    inset: var(--s) 0 var(--s) var(--s);
+    background: var(--surface);
+  }
+  :where(.cosmic, .paper) .drawer > header {
+    margin: 4px 0 0 4px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 22px 24px 18px 28px;
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+  :where(.cosmic, .paper) .drawer > header h2 {
+    font-size: 22px;
+  }
+  :where(.cosmic, .paper) .drawer > header .iconbtn {
+    margin-left: auto;
+    margin-top: -4px;
+  }
+  :where(.cosmic, .paper) .drawer .dbody {
+    flex: 1;
+    overflow: auto;
+    padding: 24px 24px 24px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  :where(.cosmic, .paper) .drawer > footer {
+    margin: 0 0 4px 4px;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 14px 24px 16px 28px;
+    background: var(--surface-2);
+    box-shadow: inset 0 2px 0 var(--line-strong);
+  }
+  :where(.cosmic, .paper) .drawer .sect {
+    font: 700 11.5px/1 var(--font-ui);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  :where(.cosmic, .paper) .drawer .sect::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+  :where(.cosmic, .paper) .dialog {
+    position: relative;
+    width: 440px;
+    max-width: calc(100vw - 32px);
+    padding: 24px;
+  }
+  .cosmic .dialog {
+    --fill: var(--raised);
+  }
+  /* the card frame (kit) */
+  .paper .dialog {
+    background: #fff;
+    border: 1.5px solid var(--ink);
+    border-radius: 16px;
+  }
+  :where(.cosmic, .paper) .dialog h2 {
+    font: 700 19px/1.3 var(--font-ui);
+    color: var(--text);
+    margin: 0 0 8px;
+    text-shadow: none;
+  }
+  :where(.cosmic, .paper) .dialog p {
+    margin: 0 0 16px;
+    font-size: 15px;
+  }
+  :where(.cosmic, .paper) .dialog .acts {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 20px;
+  }
+  /* ── narrow screens ──────────────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    :where(.cosmic, .paper) .shell {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 24px;
+      padding-top: 20px;
+    }
+    :where(.cosmic, .paper) .side {
+      position: static;
+    }
+    :where(.cosmic, .paper) .side .who {
+      display: none;
+    }
+    :where(.cosmic, .paper) .side .sidenav {
+      flex-direction: row;
+      overflow-x: auto;
+      gap: 4px;
+      padding-bottom: 6px;
+      box-shadow: inset 0 -1px 0 var(--line);
+    }
+    :where(.cosmic, .paper) .side .sidenav .grp {
+      display: none;
+    }
+    :where(.cosmic, .paper) .side .sidenav a {
+      white-space: nowrap;
+      flex: none;
+    }
+  }
+  @media (max-width: 720px) {
+    :where(.cosmic, .paper) .pgh {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    :where(.cosmic, .paper) .pgh h1 {
+      font-size: 28px;
+    }
+    :where(.cosmic, .paper) .pgh .acts {
+      flex-wrap: wrap;
+    }
+    :where(.cosmic, .paper) .f2 {
+      grid-template-columns: 1fr;
+    }
+    :where(.cosmic, .paper) .toolbar .input {
+      width: 100%;
+    }
+    :where(.cosmic, .paper) .mrow {
+      grid-template-columns: 48px minmax(0, 1fr);
+    }
+    :where(.cosmic, .paper) .mrow > :nth-child(n + 3) {
+      grid-column: 2;
+    }
+    :where(.cosmic, .paper) .drawer {
+      width: 100%;
+    }
+    :where(.cosmic, .paper) .drawer .dbody {
+      padding: 20px;
+    }
+    :where(.cosmic, .paper) .savebar .in {
+      height: auto;
+      padding: 12px 0;
+      flex-wrap: wrap;
+    }
+  }
+  :where(.cosmic, .paper) .tablewrap {
+    position: relative;
+  }
+  /* round 2: phones see the current page first in the scrolling nav; tables keep their row menu reachable */
+  @media (max-width: 900px) {
+    :where(.cosmic, .paper) .side .sidenav a.on {
+      order: -1;
+    }
+    :where(.cosmic, .paper) .side .sidenav {
+      display: flex;
+    }
+  }
+  :where(.cosmic, .paper) .table td.menu-cell,
+  :where(.cosmic, .paper) .table th.menu-cell {
+    position: sticky;
+    right: 0;
+    background: var(--bg);
+    box-shadow: inset 1px 0 0 var(--line);
+  }
+}

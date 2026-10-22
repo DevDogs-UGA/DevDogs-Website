@@ -1,6 +1,10 @@
+/* The Cosmic kit sits between base and components: below every Tailwind utility, above preflight. */
+@layer theme, base, cosmic, components, utilities;
+
 @import "tailwindcss";
 @import "@devdogsuga/sdk/brand/palette.css";
 @import "../components/moderation/styles.css";
+@import "./cosmic.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 

@@ -1,0 +1,70 @@
+{
+ "name": "hero-home",
+ "kind": "build",
+ "cell": 3,
+ "scene": [
+  1440,
+  640
+ ],
+ "cells": [
+  480,
+  213
+ ],
+ "planet": {
+  "file": "hero-home-planet.png",
+  "frames": 64,
+  "frame": [
+   110,
+   110
+  ],
+  "left": 329,
+  "top": 46,
+  "cx": 383.3333333333333,
+  "cy": 100.0,
+  "r": 50.0,
+  "duration": 120,
+  "loops": true,
+  "direction": "surface moves left to right"
+ },
+ "ring": {
+  "file": "hero-home-ring.png",
+  "frame": [
+   194,
+   57
+  ],
+  "left": 286,
+  "top": 82
+ },
+ "sky": "hero-home-sky.png",
+ "twinkle": {
+  "file": "hero-home-twinkle.png",
+  "groups": 3,
+  "group_size": [
+   480,
+   213
+  ],
+  "layout": "3 stacked groups; show group g with background-position-y: g*50%",
+  "pixels": [
+   65,
+   29,
+   25
+  ],
+  "durations": [
+   4.0,
+   5.5,
+   7.0
+  ],
+  "delays": [
+   0,
+   -1.7,
+   -3.1
+  ],
+  "levels": [
+   1,
+   0.55,
+   0.2,
+   0.55
+  ],
+  "note": "animate opacity with step-end"
+ }
+}
