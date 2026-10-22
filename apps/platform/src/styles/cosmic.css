@@ -934,7 +934,7 @@
     filter: drop-shadow(2px 2px 0 var(--k6));
   }
   /* stepped fill, lit top row and shaded bottom row (even weight), hard shadow in the 600 */
-  .cosmic .chip.outline {
+  .cosmic .chip:is(.hollow, .outline) {
     background:
       linear-gradient(
           color-mix(in srgb, var(--k3) 45%, transparent),
@@ -977,7 +977,7 @@
     border-radius: 999px;
     letter-spacing: 0.04em;
   }
-  .paper .chip.outline {
+  .paper .chip:is(.hollow, .outline) {
     background: #fff;
   }
   :where(.cosmic, .paper) .chip .dot {
@@ -1540,6 +1540,29 @@
     padding: 0 10px;
     font-size: 14px;
     color: var(--text-3);
+  }
+  /* standalone key cap (the Kbd primitive); search and menu kbds below set their own */
+  :where(.cosmic, .paper) kbd.kbd {
+    display: inline-block;
+    font: 400 11.5px/1 var(--font-mono);
+    padding: 3px 6px;
+    color: var(--text-2);
+  }
+  .cosmic kbd.kbd {
+    background:
+      linear-gradient(var(--line-strong), var(--line-strong)) 2px 0 /
+        calc(100% - 4px) 1px no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 2px 100% /
+        calc(100% - 4px) 1px no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 0 2px / 1px
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 100% 2px / 1px
+        calc(100% - 4px) no-repeat;
+  }
+  .paper kbd.kbd {
+    background: #fff;
+    border-radius: 4px;
+    border: 1px solid var(--line);
   }
   :where(.cosmic, .paper) .search kbd {
     margin-left: auto;

@@ -6,7 +6,7 @@ import { cn } from "~/lib/cn";
 type ChipProps = React.ComponentProps<"span"> & {
   /** The event category that sets the colour; omit for DevDogs red. */
   kind?: EventCategory;
-  /** A tinted ring instead of the solid fill. */
+  /** A tinted ring instead of the solid fill (class `.hollow`: `.outline` clashes with Tailwind's utility). */
   outline?: boolean;
   /** A pixel-sparkle before the label. */
   dot?: boolean;
@@ -30,10 +30,8 @@ function Chip({
     <span
       data-slot="chip"
       data-kind={kind}
-      className={cn("chip", outline && "outline", className)}
-      // The kit's `.chip.outline` modifier shares its name with Tailwind's
-      // `outline` utility, which would draw a 1px rectangle. Inline wins.
-      style={outline ? { outline: "none", ...style } : style}
+      className={cn("chip", outline && "hollow", className)}
+      style={style}
       {...props}
     >
       {dot ? <span className="dot" aria-hidden="true" /> : null}

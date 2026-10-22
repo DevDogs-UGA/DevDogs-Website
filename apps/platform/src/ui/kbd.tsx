@@ -1,7 +1,3 @@
-"use client";
-
-import "./kbd.css";
-
 import type * as React from "react";
 
 import { cn } from "~/lib/cn";
