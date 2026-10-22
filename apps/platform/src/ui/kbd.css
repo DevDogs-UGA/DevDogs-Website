@@ -1,0 +1,24 @@
+@layer cosmic {
+  :where(.cosmic, .paper) kbd.kbd {
+    display: inline-block;
+    font: 400 11.5px/1 var(--font-mono);
+    padding: 3px 6px;
+    color: var(--text-2);
+  }
+  .cosmic kbd.kbd {
+    background:
+      linear-gradient(var(--line-strong), var(--line-strong)) 2px 0 /
+        calc(100% - 4px) 1px no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 2px 100% /
+        calc(100% - 4px) 1px no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 0 2px / 1px
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--line-strong), var(--line-strong)) 100% 2px / 1px
+        calc(100% - 4px) no-repeat;
+  }
+  .paper kbd.kbd {
+    background: #fff;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+  }
+}

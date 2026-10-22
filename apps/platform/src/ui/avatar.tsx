@@ -3,25 +3,68 @@
 import * as React from "react";
 import { Avatar as AvatarPrimitive } from "radix-ui";
 
+import type { EventCategory } from "~/lib/eventKind";
 import { cn } from "~/lib/cn";
 
+type AvatarSize = "sm" | "default" | "md" | "lg";
+
+/** Outer box per size (kit `.avatar`: 28 / 36 / 56 / 96). */
+const SIZE_CLASS: Record<AvatarSize, string> = {
+  sm: "size-7",
+  default: "size-9",
+  md: "size-14",
+  lg: "size-24",
+};
+
+type AvatarProps = React.ComponentProps<typeof AvatarPrimitive.Root> & {
+  size?: AvatarSize;
+  /** Tints the fallback fill with the event category's colour. */
+  kind?: EventCategory;
+};
+
+/**
+ * `.avatar` (kit-spec section 5). The pixel-rounded clip-path cuts the Radix
+ * root, so the wrapper is the sized, positioned box and any `AvatarBadge`
+ * child is lifted out of the clipped root and drawn on the wrapper.
+ */
 function Avatar({
   className,
   size = "default",
+  kind,
+  children,
   ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Root> & {
-  size?: "default" | "sm" | "lg";
-}) {
+}: AvatarProps) {
+  const all = React.Children.toArray(children);
+  const badges = all.filter(
+    (c) => React.isValidElement(c) && c.type === AvatarBadge,
+  );
+  const rest = all.filter((c) => !badges.includes(c));
   return (
-    <AvatarPrimitive.Root
+    <span
       data-slot="avatar"
       data-size={size}
       className={cn(
-        "group/avatar after:border-border relative flex size-8 shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=lg]:size-10 data-[size=sm]:size-6 dark:after:mix-blend-lighten",
+        "group/avatar relative inline-flex shrink-0 select-none",
+        SIZE_CLASS[size],
         className,
       )}
-      {...props}
-    />
+    >
+      <AvatarPrimitive.Root
+        data-slot="avatar-root"
+        data-kind={kind}
+        className={cn(
+          "avatar",
+          size === "sm" && "sm",
+          size === "md" && "md",
+          size === "lg" && "lg",
+          "size-full!",
+        )}
+        {...props}
+      >
+        {rest}
+      </AvatarPrimitive.Root>
+      {badges}
+    </span>
   );
 }
 
@@ -32,10 +75,7 @@ function AvatarImage({
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
-      className={cn(
-        "aspect-square size-full rounded-full object-cover",
-        className,
-      )}
+      className={cn("aspect-square size-full object-cover", className)}
       {...props}
     />
   );
@@ -48,24 +88,23 @@ function AvatarFallback({
   return (
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
-      className={cn(
-        "bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs",
-        className,
-      )}
+      className={cn("flex size-full items-center justify-center", className)}
       {...props}
     />
   );
 }
 
+/** The status dot (the nav's warning dot). Lives on the wrapper, outside the clip. */
 function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span
       data-slot="avatar-badge"
       className={cn(
-        "bg-primary text-primary-foreground ring-background absolute right-0 bottom-0 z-10 inline-flex items-center justify-center rounded-full bg-blend-color ring-2 select-none",
+        "absolute right-0 bottom-0 z-10 inline-flex items-center justify-center bg-[var(--warn)] ring-2 ring-[var(--bg)] select-none",
         "group-data-[size=sm]/avatar:size-2 group-data-[size=sm]/avatar:[&>svg]:hidden",
         "group-data-[size=default]/avatar:size-2.5 group-data-[size=default]/avatar:[&>svg]:size-2",
-        "group-data-[size=lg]/avatar:size-3 group-data-[size=lg]/avatar:[&>svg]:size-2",
+        "group-data-[size=md]/avatar:size-3 group-data-[size=md]/avatar:[&>svg]:size-2",
+        "group-data-[size=lg]/avatar:size-4 group-data-[size=lg]/avatar:[&>svg]:size-3",
         className,
       )}
       {...props}
@@ -73,14 +112,12 @@ function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
   );
 }
 
+/** `.avatars`: an overlapping row, 8px of overlap. */
 function AvatarGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="avatar-group"
-      className={cn(
-        "group/avatar-group *:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2",
-        className,
-      )}
+      className={cn("group/avatar-group flex [&>*+*]:-ml-2", className)}
       {...props}
     />
   );
@@ -94,7 +131,7 @@ function AvatarGroupCount({
     <div
       data-slot="avatar-group-count"
       className={cn(
-        "bg-muted text-muted-foreground ring-background relative flex size-8 shrink-0 items-center justify-center rounded-full text-sm ring-2 group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3",
+        "avatar relative group-has-data-[size=lg]/avatar-group:size-24 group-has-data-[size=md]/avatar-group:size-14 group-has-data-[size=sm]/avatar-group:size-7 [&>svg]:size-4",
         className,
       )}
       {...props}
@@ -110,3 +147,4 @@ export {
   AvatarGroupCount,
   AvatarBadge,
 };
+export type { AvatarProps, AvatarSize };

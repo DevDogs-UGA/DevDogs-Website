@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import { cn } from "~/lib/cn";
 
+/** `.badge` states (kit-spec section 5): the default is neutral, the rest carry a state colour. */
 const VARIANT_CLASSES = {
-  default: "bg-white/10 text-mauve-300",
-  success: "bg-emerald-500/10 text-emerald-300",
-  warning: "bg-amber-500/10 text-amber-300",
-  danger: "bg-rose-500/10 text-rose-300",
-  info: "bg-blue-500/10 text-blue-300",
+  default: "",
+  success: "ok",
+  warning: "warn",
+  danger: "bad",
+  info: "note",
+  brand: "brand",
 } as const;
 
 interface BadgeProps {
@@ -15,6 +17,7 @@ interface BadgeProps {
   children: ReactNode;
 }
 
+/** A state label. Not interactive; use a button for that. */
 export default function Badge({
   variant = "default",
   className,
@@ -22,11 +25,8 @@ export default function Badge({
 }: BadgeProps) {
   return (
     <span
-      className={cn(
-        "inline-flex items-center rounded-sm px-2 py-0.5 text-xs font-medium",
-        VARIANT_CLASSES[variant],
-        className,
-      )}
+      data-slot="badge"
+      className={cn("badge", VARIANT_CLASSES[variant], className)}
     >
       {children}
     </span>
