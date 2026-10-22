@@ -41,11 +41,11 @@ export default function Field({
           </span>
         )}
       </span>
-      {description && <span className="help max-w-prose">{description}</span>}
     </>
   );
   const footer = (
     <>
+      {description && <span className="help max-w-prose">{description}</span>}
       {error && (
         <span className="err" role="alert">
           <WarningCircleIcon weight="fill" aria-hidden className="shrink-0" />

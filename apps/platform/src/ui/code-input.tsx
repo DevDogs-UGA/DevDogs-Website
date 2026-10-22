@@ -54,7 +54,7 @@ function CodeInput({
       role="group"
       aria-label={ariaLabel}
       id={groupId}
-      className={cn("inline-flex items-center gap-2", className)}
+      className={cn("flex w-full max-w-max items-center gap-1.5 sm:gap-2", className)}
     >
       {name && <input type="hidden" name={name} value={code.value} />}
       {Array.from({ length }, (_, i) => (
@@ -66,7 +66,7 @@ function CodeInput({
           )}
           <span
             className={cn(
-              "input mono w-11 justify-center px-0 text-center has-disabled:opacity-60 has-[[aria-invalid=true]]:[--bo:var(--bad)]",
+              "input mono min-w-0 max-w-11 flex-1 basis-0 justify-center px-0 text-center has-disabled:opacity-60 has-[[aria-invalid=true]]:[--bo:var(--bad)]",
             )}
           >
             <input

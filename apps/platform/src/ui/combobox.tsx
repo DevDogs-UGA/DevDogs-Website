@@ -51,6 +51,7 @@ export function ComboboxPanel({
 
 function Content({
   className,
+  children,
   ...props
 }: ComponentPropsWithoutRef<typeof Popover.Content>) {
   return (
@@ -58,13 +59,18 @@ function Content({
       className={cn(
         "combobox-popover",
         LB_FRAME,
+        "flex flex-col",
         // Older callers still pass the mauve border / fill / block shadow; the
         // frame is the list box's now, so those lose.
         "rounded-none! border-0! bg-transparent! shadow-none!",
         className,
       )}
       {...props}
-    />
+    >
+      {/* The frame's ::before/::after paint at inset 0 of this element, so the
+          scroller must be a child or the ring scrolls away with the rows. */}
+      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+    </Popover.Content>
   );
 }
 

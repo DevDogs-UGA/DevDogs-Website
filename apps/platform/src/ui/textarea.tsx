@@ -17,14 +17,14 @@ function Textarea({
     <span
       data-slot="textarea-frame"
       className={cn(
-        "input area has-disabled:cursor-not-allowed has-disabled:opacity-60 has-[[aria-invalid=true]]:[--bo:var(--bad)]",
+        "input area flex-col items-stretch has-disabled:cursor-not-allowed has-disabled:opacity-60 has-[[aria-invalid=true]]:[--bo:var(--bad)]",
         className,
       )}
       style={style}
     >
       <textarea
         data-slot="textarea"
-        className="block [field-sizing:content] min-h-[4.25rem] w-full resize-none"
+        className="block [field-sizing:content] max-h-[inherit] min-h-0 w-full flex-1 resize-none overflow-y-auto"
         {...props}
       />
     </span>
