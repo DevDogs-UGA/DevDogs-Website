@@ -94,7 +94,11 @@ function AvatarFallback({
   );
 }
 
-/** The status dot (the nav's warning dot). Lives on the wrapper, outside the clip. */
+/**
+ * The status dot (the nav's warning dot). Lives on the wrapper, outside the clip,
+ * and is lifted only when it is a direct child of `Avatar` (not inside a fragment).
+ * It is colour-only: pair it with visually hidden text or an aria-label on the trigger.
+ */
 function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span

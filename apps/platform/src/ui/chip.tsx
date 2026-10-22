@@ -23,6 +23,7 @@ function Chip({
   dot,
   className,
   children,
+  style,
   ...props
 }: ChipProps) {
   return (
@@ -30,6 +31,9 @@ function Chip({
       data-slot="chip"
       data-kind={kind}
       className={cn("chip", outline && "outline", className)}
+      // The kit's `.chip.outline` modifier shares its name with Tailwind's
+      // `outline` utility, which would draw a 1px rectangle. Inline wins.
+      style={outline ? { outline: "none", ...style } : style}
       {...props}
     >
       {dot ? <span className="dot" aria-hidden="true" /> : null}
