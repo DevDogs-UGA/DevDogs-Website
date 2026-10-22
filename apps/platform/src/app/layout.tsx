@@ -149,7 +149,10 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
-      <body className="bg-black text-mauve-950">
+      {/* `cosmic` is the kit's scope (tokens, ground, type). It sits on the body,
+          not a wrapper, so Radix portals, which mount on document.body, are
+          inside it too. */}
+      <body className="cosmic">
         {/* Stamps `<html data-announcement="dismissed">` before first paint
             when this session already dismissed the current notice, so the card
             in the static shell never flashes up. First in the <body> so it has

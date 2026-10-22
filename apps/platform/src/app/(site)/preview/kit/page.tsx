@@ -3,8 +3,7 @@ import { notFound } from "next/navigation";
 import Scene, { type SceneName } from "~/components/Scene";
 import { kitGalleryEnabled } from "~/server/features";
 import Glow from "./Glow";
-import KitMarkup from "./KitMarkup";
-import { KIT_GROUPS } from "./groups";
+import { KIT_SECTIONS } from "./registry";
 
 export const metadata: Metadata = {
   title: "Kit gallery | DevDogs",
@@ -13,11 +12,6 @@ export const metadata: Metadata = {
 
 /** Development only and never cached: staging and production answer 404. */
 export const dynamic = "force-dynamic";
-
-const FINISHES = [
-  { finish: "cosmic", label: "Cosmic · DevDogs" },
-  { finish: "paper", label: "Paper · GDG on Campus" },
-] as const;
 
 const SCENES: SceneName[] = [
   "head-brand",
@@ -50,21 +44,8 @@ export default function KitGalleryPage() {
           </p>
         </header>
 
-        {KIT_GROUPS.map((group) => (
-          <section key={group.title} className="grp">
-            <h2>{group.title}</h2>
-            <p dangerouslySetInnerHTML={{ __html: group.note }} />
-            <div className="pair">
-              {FINISHES.map(({ finish, label }) => (
-                <KitMarkup
-                  key={finish}
-                  finish={finish}
-                  label={label}
-                  html={group.html}
-                />
-              ))}
-            </div>
-          </section>
+        {KIT_SECTIONS.map(({ id, Section }) => (
+          <Section key={id} />
         ))}
 
         <section className="grp">

@@ -942,37 +942,43 @@
    real `.dark` ancestor. */
 :root,
 .dark {
-  --background: var(--color-mauve-950);
-  --foreground: var(--color-white);
-  --card: var(--color-mauve-900);
-  --card-foreground: var(--color-white);
-  --popover: var(--color-mauve-950);
-  --popover-foreground: var(--color-white);
-  --primary: var(--color-white);
-  --primary-foreground: var(--color-mauve-950);
-  --secondary: var(--color-mauve-800);
-  --secondary-foreground: var(--color-white);
-  --muted: var(--color-mauve-900);
-  --muted-foreground: var(--color-mauve-400);
-  --accent: var(--color-mauve-800);
-  --accent-foreground: var(--color-white);
-  --destructive: var(--color-rose-600);
-  --border: var(--color-mauve-800);
-  --input: var(--color-mauve-800);
-  --ring: var(--color-mauve-500);
+  /* Re-pointed at the Cosmic tokens (shadcn semantic names -> kit values) so the
+     Radix pieces nobody has migrated yet stay legible on the dark ground. They
+     read the `--brand-cosmic-*` palette directly, not `--surface` and friends:
+     those are declared on `.cosmic` (the body), and a var() here resolves on
+     <html>, where they do not exist. The mauve scale above is untouched; the
+     sweep deletes it with the last caller. */
+  --background: var(--brand-cosmic-bg);
+  --foreground: var(--brand-cosmic-text);
+  --card: var(--brand-cosmic-surface);
+  --card-foreground: var(--brand-cosmic-text);
+  --popover: var(--brand-cosmic-surface-2);
+  --popover-foreground: var(--brand-cosmic-text);
+  --primary: var(--brand-devdogs-6);
+  --primary-foreground: var(--brand-white);
+  --secondary: var(--brand-cosmic-raised);
+  --secondary-foreground: var(--brand-cosmic-text);
+  --muted: var(--brand-cosmic-surface-2);
+  --muted-foreground: var(--brand-cosmic-text-3);
+  --accent: var(--brand-cosmic-raised);
+  --accent-foreground: var(--brand-cosmic-text);
+  --destructive: var(--brand-devdogs-6);
+  --border: var(--brand-cosmic-line-strong);
+  --input: var(--brand-cosmic-line-strong);
+  --ring: var(--brand-devdogs-3);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: var(--color-mauve-950);
-  --sidebar-foreground: var(--color-white);
-  --sidebar-primary: var(--color-white);
-  --sidebar-primary-foreground: var(--color-mauve-950);
-  --sidebar-accent: var(--color-mauve-800);
-  --sidebar-accent-foreground: var(--color-white);
-  --sidebar-border: var(--color-mauve-800);
-  --sidebar-ring: var(--color-mauve-500);
+  --sidebar: var(--brand-cosmic-surface);
+  --sidebar-foreground: var(--brand-cosmic-text);
+  --sidebar-primary: var(--brand-devdogs-6);
+  --sidebar-primary-foreground: var(--brand-white);
+  --sidebar-accent: var(--brand-cosmic-raised);
+  --sidebar-accent-foreground: var(--brand-cosmic-text);
+  --sidebar-border: var(--brand-cosmic-line-strong);
+  --sidebar-ring: var(--brand-devdogs-3);
 }
 
 @layer base {
