@@ -19,3 +19,15 @@
 export function publicProfilesEnabled(): boolean {
   return process.env.DEPLOY_ENV !== "production";
 }
+
+/**
+ * Whether `/preview/kit` exists: the gallery of every Cosmic kit class that
+ * later design units screenshot their primitives against. Development only;
+ * staging and production answer 404.
+ */
+export function kitGalleryEnabled(): boolean {
+  return (
+    process.env.DEPLOY_ENV !== "production" &&
+    process.env.DEPLOY_ENV !== "staging"
+  );
+}

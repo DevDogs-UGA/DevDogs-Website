@@ -1819,7 +1819,8 @@
     inset: 0;
     background-size: 100% 100%;
   }
-  :where(.cosmic, .paper) .fx :is(.planet, .ring, .shoot) {
+  /* the ring layer is `.orbit`: Tailwind's `.ring` utility would draw a 1px box-shadow rectangle around it */
+  :where(.cosmic, .paper) .fx :is(.planet, .orbit, .shoot) {
     left: var(--l);
     top: var(--t);
     width: var(--w);
@@ -1851,6 +1852,10 @@
   }
   :where(.cosmic, .paper) .fx .tw2 {
     animation: fx-blink 7s step-end -3.1s infinite;
+  }
+  /* the streak stays hidden unless it is animated (the mockup only set this inside the motion query, which left it parked in view under reduced motion) */
+  :where(.cosmic, .paper) .fx .shoot {
+    opacity: 0;
   }
   @media (prefers-reduced-motion: no-preference) {
     :where(.cosmic, .paper) .fx .planet {

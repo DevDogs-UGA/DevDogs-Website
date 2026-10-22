@@ -96,6 +96,12 @@ export const TERMINAL_PATHS = [
     page: "(site)/docs/[project]/[...slug]/page.tsx",
   },
 
+  {
+    pattern: "/preview/kit",
+    regex: /^\/preview\/kit\/?$/,
+    page: "(site)/preview/kit/page.tsx",
+  },
+
   { pattern: "/help", regex: /^\/help\/?$/, page: null },
   {
     pattern: "/help/:threadId",

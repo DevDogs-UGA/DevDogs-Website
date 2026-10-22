@@ -2,7 +2,8 @@ import { SITE } from "@devdogsuga/newsletter";
 import { getVisibleDocsProjects } from "~/server/docs/queries";
 import { getPublishedFaqPost } from "~/server/support/forumIndex";
 import type { Block } from "../blocks";
-import { NOT_FOUND, page, PUBLIC, terminal } from "../define";
+import { kitGalleryEnabled } from "~/server/features";
+import { gatedBy, NOT_FOUND, page, PUBLIC, terminal } from "../define";
 
 /**
  * The smaller paths: docs (a pointer, never the pages) and help.
@@ -51,6 +52,32 @@ export const docs = terminal(PUBLIC, async ({ params, path }) => {
     body,
   });
 });
+
+/**
+ * The kit gallery is a visual page (every Cosmic class rendered side by side),
+ * so the terminal only says where it is. Development only, like the page.
+ */
+export const kitGallery = terminal(
+  gatedBy(kitGalleryEnabled, { kind: "notFound" }),
+  ({ path }) =>
+    page({
+      banner: "DEVDOGS",
+      accent: "cyan",
+      aside: ["development only"],
+      command: "kit --gallery",
+      body: [
+        {
+          type: "notice",
+          notice: {
+            tone: "info",
+            title: "The kit gallery is visual",
+            text: "Every Cosmic component, the animated scene and the cursor glow, rendered for screenshots.",
+            url: `${SITE}${path}`,
+          },
+        },
+      ],
+    }),
+);
 
 /** What `curl devdogsuga.org/help` lists, in reading order. */
 const HELP = [

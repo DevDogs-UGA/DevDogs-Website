@@ -5,7 +5,7 @@ import { gdgcArchive, gdgcIssue } from "./routes/gdgc";
 import { communityDirectory, communityProfile } from "./routes/community";
 import { directions, eventDetail, eventsSchedule } from "./routes/events";
 import { home } from "./routes/home";
-import { docs, help, helpThread } from "./routes/misc";
+import { docs, help, helpThread, kitGallery } from "./routes/misc";
 
 /**
  * What the terminal does for every path in `TERMINAL_PATHS`. Typed against
@@ -27,6 +27,7 @@ export const TERMINAL_ROUTES = {
   "/docs": docs,
   "/docs/:project": docs,
   "/docs/:project/*": docs,
+  "/preview/kit": kitGallery,
   "/help": help,
   "/help/:threadId": helpThread,
 } as const satisfies Record<TerminalPattern, TerminalRoute>;
