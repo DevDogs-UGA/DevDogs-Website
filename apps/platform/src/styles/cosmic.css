@@ -2075,6 +2075,7 @@
   }
   :where(.cosmic, .paper) .empty img {
     height: 96px;
+    margin-inline: auto;
   }
   :where(.cosmic, .paper) .skel {
     height: 12px;

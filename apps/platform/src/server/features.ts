@@ -26,8 +26,5 @@ export function publicProfilesEnabled(): boolean {
  * staging and production answer 404.
  */
 export function kitGalleryEnabled(): boolean {
-  return (
-    process.env.DEPLOY_ENV !== "production" &&
-    process.env.DEPLOY_ENV !== "staging"
-  );
+  return process.env.DEPLOY_ENV === "development";
 }
