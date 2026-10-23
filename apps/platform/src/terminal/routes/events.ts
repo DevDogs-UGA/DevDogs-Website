@@ -128,7 +128,7 @@ export const eventDetail = terminal(PUBLIC, async ({ params }) => {
   const where = locationLine(meeting.building, meeting.location);
   const chips = segmentChips(meeting.category, workshops);
   const title = meetingTitle(meeting, workshops);
-  const kicker = seriesKicker(meeting.series);
+  const kicker = seriesKicker(meeting.series, title);
 
   const card: Card = {
     color: chips[0]!.color,

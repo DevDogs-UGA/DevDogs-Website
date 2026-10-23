@@ -339,6 +339,7 @@
     },
     {
       "slug": "2026-11-04",
+      "summary": "A Supabase II workshop on changing the database in our apps. Bring a laptop.",
       "series": "workshop-wednesday",
       "startsAt": "2026-11-04T23:00:00.000Z",
       "endsAt": "2026-11-05T00:00:00.000Z",

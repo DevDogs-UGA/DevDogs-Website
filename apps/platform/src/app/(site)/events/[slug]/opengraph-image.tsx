@@ -71,7 +71,10 @@ export default async function Image({
         meeting: {
           ...meeting,
           category: categoryOf(meeting),
-          kicker: seriesKicker(meeting.series),
+          kicker: seriesKicker(
+            meeting.series,
+            meetingTitle(meeting, workshops),
+          ),
         },
         title: meetingTitle(meeting, workshops),
         agenda: workshops.map(workshopLabel),

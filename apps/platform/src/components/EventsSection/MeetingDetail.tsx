@@ -95,7 +95,7 @@ export default function MeetingDetail({
 }) {
   const category = meetingCategory({ category: meeting.category });
   const title = meetingTitle(meeting, workshops);
-  const kicker = seriesKicker(meeting.series);
+  const kicker = seriesKicker(meeting.series, title);
 
   const happeningNow = now >= meeting.startsAt && now < meeting.endsAt;
   const ended = now >= meeting.endsAt;
