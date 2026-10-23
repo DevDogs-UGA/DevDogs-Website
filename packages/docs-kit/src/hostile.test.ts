@@ -119,11 +119,6 @@ const hostileEverywhere: [string, string, RegExp][] = [
     /set|`a`|<a>/,
   ],
   [
-    "an id on the root svg",
-    '<svg id="location"><circle r="1"/></svg>',
-    /root `<svg>`/,
-  ],
-  [
     "an SVG animate",
     '<svg><animate attributeName="href" values="javascript:1"/></svg>',
     /animate/,
@@ -351,6 +346,12 @@ describe("trusted keeps its hooks", () => {
       trusted,
     );
     expect(html).toContain('class="note"');
+  });
+
+  it("untrusted refuses an id on the root svg", async () => {
+    await expect(
+      render('<svg id="location"><circle r="1"/></svg>'),
+    ).rejects.toThrow(/root `<svg>`/);
   });
 
   it("untrusted refuses class and id", async () => {
