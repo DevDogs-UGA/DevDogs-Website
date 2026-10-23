@@ -1,6 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { GDGC_ISSUES, PALETTE, UGA } from "@devdogsuga/newsletter";
+import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
+import { GDGC_ISSUES } from "@devdogsuga/newsletter";
+
+import "~/components/Content/content.css";
+import Badge from "~/ui/badge";
+import { Breadcrumbs } from "~/ui/breadcrumbs";
+import { Card } from "~/ui/card";
+import LinkButton from "~/ui/link-button";
+import { TextLink } from "~/ui/text-link";
 
 /**
  * Static data from `@devdogsuga/newsletter`; changes only with a deploy.
@@ -18,60 +26,97 @@ export const metadata: Metadata = {
 };
 
 /**
- * The page paints the newsletter's own palette inline rather than site theme
- * tokens, because its content does too: every issue below renders from
- * email-safe components that carry their colors with them. A themed shell
- * around an unthemed email would split at the seam in dark mode.
+ * The GDGC newsletter keeps the Paper finish (`newsletter-gdgc.html`): the
+ * page's main region is a `.paper` region nested in the Cosmic site, so the
+ * nav and footer stay DevDogs'. The latest issue is the lead card; earlier
+ * issues are the grid.
  */
-export default function Changelog() {
-  const issues = [...GDGC_ISSUES].reverse();
+export default function GdgcNewsletters() {
+  const [latest, ...past] = [...GDGC_ISSUES].reverse();
   return (
-    <div className="flex-1" style={{ backgroundColor: PALETTE.bg }}>
-      <div className="mx-auto w-full max-w-2xl px-4 pt-28 pb-24">
-        <p className="font-mono text-sm" style={{ color: PALETTE.dim }}>
-          $ gdgc --list
-        </p>
-        <h1
-          className="font-display mt-2 text-4xl font-bold"
-          style={{ color: PALETTE.ink }}
-        >
-          GDGC Newsletter
-        </h1>
-        <p className="mt-4 max-w-prose" style={{ color: PALETTE.mute }}>
-          Opportunities, civic projects and events from GDG on Campus UGA.
-        </p>
+    <div className="paper content-paper">
+      <section className="pagehead content-phead">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="wall" src="/cosmic/a/wall/info.svg" alt="" />
+        <div className="wrap">
+          <Breadcrumbs
+            items={[
+              { label: "Newsletters", href: "/newsletters/gdgc" },
+              { label: "GDGC" },
+            ]}
+          />
+          <div className="eyebrow k" style={{ margin: "26px 0 0" }}>
+            GDG on Campus UGA
+          </div>
+          <h1 className="display">GDGC Newsletter</h1>
+          <p className="lead">
+            Opportunities, civic projects and events from GDG on Campus UGA.
+          </p>
+        </div>
+      </section>
 
-        <ul className="mt-10 space-y-4">
-          {issues.map((issue) => (
-            <li key={issue.version}>
-              <Link
-                href={`/newsletters/gdgc/${issue.version}`}
-                className="block rounded-md border p-5 transition-colors hover:brightness-110"
+      <div className="wrap">
+        {latest && (
+          <Card className="content-latest" aria-labelledby="latest-issue">
+            <div>
+              <div className="eyebrow" style={{ marginBottom: 14 }}>
+                Latest issue
+              </div>
+              <div className="ver">{latest.version}</div>
+              <div className="when">{latest.sendLabel}</div>
+              <span className="chip">{latest.term}</span>
+            </div>
+            <div>
+              <h2 id="latest-issue">{latest.tagline}</h2>
+              <p>{latest.preview}</p>
+              <div
                 style={{
-                  backgroundColor: PALETTE.card,
-                  borderColor: PALETTE.border,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 16,
+                  alignItems: "center",
                 }}
               >
-                <div className="flex items-baseline gap-3 font-mono text-sm">
-                  <span className="font-bold" style={{ color: UGA }}>
-                    Issue {issue.version}
-                  </span>
-                  <span style={{ color: PALETTE.dim }}>{issue.sendLabel}</span>
-                  <span style={{ color: PALETTE.dim }}>{issue.term}</span>
-                </div>
-                <p
-                  className="font-display mt-2 text-lg font-bold"
-                  style={{ color: PALETTE.ink }}
-                >
-                  {issue.tagline}
-                </p>
-                <p className="mt-1 text-sm" style={{ color: PALETTE.mute }}>
-                  {issue.preview}
-                </p>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                <span className="btn-shadow">
+                  <LinkButton
+                    href={`/newsletters/gdgc/${latest.version}`}
+                    variant="default"
+                  >
+                    Read issue
+                    <ArrowRightIcon weight="bold" aria-hidden />
+                  </LinkButton>
+                </span>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {past.length > 0 && (
+          <section className="content-archive" aria-labelledby="past-issues">
+            <div className="content-archive-head">
+              <div className="eyebrow">Archive</div>
+              <h2 id="past-issues">Past issues</h2>
+            </div>
+            <div className="content-issues">
+              {past.map((issue) => (
+                <Card key={issue.version} className="quiet content-issue">
+                  <div className="content-issue-row">
+                    <span className="eyebrow">{issue.sendLabel}</span>
+                    <Badge>{issue.term}</Badge>
+                  </div>
+                  <div className="v">Issue {issue.version}</div>
+                  <p>{issue.preview}</p>
+                  <TextLink asChild>
+                    <Link href={`/newsletters/gdgc/${issue.version}`}>
+                      Read issue {issue.version}
+                      <ArrowRightIcon weight="bold" aria-hidden />
+                    </Link>
+                  </TextLink>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

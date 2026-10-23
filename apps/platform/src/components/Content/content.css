@@ -1,0 +1,403 @@
+/* Content pages (changelog, GDGC newsletter, legal, help, 404). The kit supplies cards, badges, tags, the timeline and the
+   paper finish; this file adds only layout the kit lacks. Every selector hangs off a `content-` class. */
+/* Same statement as globals.css line 2. A static page can load this sheet before the global one, and the first
+   `@layer` seen fixes the order, which would otherwise put `cosmic` below Tailwind's base. */
+@layer theme, base, cosmic, components, utilities;
+
+@layer cosmic {
+  /* ── changelog list (changelog.html) ─────────────────────────────────────── */
+  .cosmic .content-sec {
+    padding: var(--space-8) 0 var(--space-9);
+  }
+  .cosmic .content-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: var(--space-7);
+    align-items: start;
+  }
+  .cosmic .content-timeline {
+    padding-left: 40px;
+  }
+  .cosmic .content-timeline::before {
+    left: 11px;
+  }
+  .cosmic .content-timeline .pt {
+    left: -40px;
+    top: 22px;
+    width: 20px;
+    height: 20px;
+  }
+  .cosmic .content-timeline > div {
+    padding-bottom: 36px;
+  }
+  .cosmic .content-rel {
+    padding: 28px 32px;
+  }
+  .cosmic .content-rh {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .cosmic .content-ver {
+    font: 700 15px/1 var(--font-mono);
+    color: var(--k3);
+    background:
+      linear-gradient(var(--surface-2), var(--surface-2)) 0 2px / 100% calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 2px 0 / calc(100% - 4px) 100% no-repeat;
+    padding: 6px 10px;
+  }
+  .cosmic .content-date {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cosmic .content-title {
+    margin: 14px 0 10px;
+  }
+  .cosmic .content-lede {
+    margin: 0 0 18px;
+    max-width: 62ch;
+    font-size: 16.5px;
+  }
+  .cosmic .content-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 20px;
+  }
+  .cosmic .content-read {
+    margin-top: 20px;
+  }
+  .cosmic .content-sub {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  .cosmic .content-sub .btn.terminal {
+    width: 100%;
+    justify-content: flex-start;
+    margin: 16px 0 6px;
+    padding: 0 14px;
+  }
+  .cosmic .content-sub h2 {
+    margin: 10px 0 8px;
+  }
+  .cosmic .content-sub p {
+    margin: 0;
+  }
+  @media (max-width: 900px) {
+    .cosmic .content-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .cosmic .content-sub {
+      position: static;
+    }
+  }
+  @media (max-width: 720px) {
+    .cosmic .content-rel {
+      padding: 22px 18px;
+    }
+    .cosmic .content-timeline {
+      padding-left: 30px;
+    }
+    .cosmic .content-timeline .pt {
+      left: -30px;
+      width: 16px;
+      height: 16px;
+    }
+    .cosmic .content-rh {
+      flex-wrap: wrap;
+    }
+  }
+
+  /* ── an issue rendered inside the shell ──────────────────────────────────── */
+  .cosmic .content-crumbs {
+    padding: var(--space-6) 0 var(--space-5);
+  }
+  .cosmic .content-stage {
+    padding: var(--space-7) var(--space-3) var(--space-9);
+  }
+  .cosmic .content-stage-inner {
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
+    overflow-x: auto;
+  }
+
+  /* ── GDGC newsletter (newsletter-gdgc.html), Paper ───────────────────────── */
+  .paper.content-paper {
+    flex: 1;
+    min-width: 0;
+    overflow-x: clip;
+    background: var(--bg);
+    color: var(--text-2);
+  }
+  .paper .content-phead {
+    min-height: 300px;
+    padding-bottom: 104px;
+  }
+  .paper .content-phead .wrap {
+    position: relative;
+    z-index: 1;
+  }
+  .paper .content-phead h1 {
+    font-size: 60px;
+    margin: 14px 0;
+  }
+  .paper .content-phead .lead {
+    margin: 0;
+    max-width: 50ch;
+  }
+  .paper .content-latest {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: var(--space-7);
+    padding: 36px;
+    align-items: center;
+    margin-top: -56px;
+    position: relative;
+    z-index: 2;
+  }
+  .paper .content-latest .ver {
+    font: 700 96px/1 var(--font-display);
+    letter-spacing: -0.03em;
+    color: var(--ink);
+  }
+  .paper .content-latest .when {
+    margin-top: 10px;
+    font-weight: 700;
+    color: var(--text-3);
+  }
+  .paper .content-latest .chip {
+    margin-top: 16px;
+    background: #fff;
+  }
+  .paper .content-latest h2 {
+    margin: 0 0 12px;
+  }
+  .paper .content-latest p {
+    margin: 0 0 26px;
+    max-width: 60ch;
+  }
+  .paper .content-archive {
+    padding: var(--space-8) 0 var(--space-9);
+  }
+  .paper .content-archive-head {
+    margin-bottom: var(--space-6);
+  }
+  .paper .content-archive-head .eyebrow {
+    margin-bottom: 12px;
+  }
+  .paper .content-issues {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-5);
+  }
+  .paper .content-issue {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .paper .content-issue .v {
+    font: 700 34px/1 var(--font-display);
+    color: var(--ink);
+  }
+  .paper .content-issue p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text-2);
+    flex: 1;
+  }
+  .paper .content-issue-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  @media (max-width: 900px) {
+    .paper .content-latest {
+      grid-template-columns: minmax(0, 1fr);
+      padding: 24px;
+      gap: var(--space-5);
+    }
+    .paper .content-latest .ver {
+      font-size: 64px;
+    }
+    .paper .content-issues {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (max-width: 720px) {
+    .paper .content-phead .wall {
+      display: none;
+    }
+    .paper .content-phead h1 {
+      font-size: 36px;
+    }
+  }
+  .paper .content-crumbs {
+    padding: var(--space-6) 0 var(--space-5);
+  }
+  .paper .content-stage {
+    padding: var(--space-7) var(--space-3) var(--space-9);
+  }
+  .paper .content-stage-inner {
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
+    overflow-x: auto;
+  }
+
+  /* ── legal pages: wrapper and typography only ────────────────────────────── */
+  .cosmic .content-legal {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: var(--space-8) var(--space-4) var(--space-10);
+    color: var(--text-2);
+    font-size: 16px;
+    line-height: 1.7;
+    text-wrap: pretty;
+  }
+  .cosmic .content-legal h1 {
+    font: 800 44px/1.05 var(--font-display);
+    color: var(--text);
+    margin: 0 0 var(--space-5);
+    text-wrap: balance;
+  }
+  .cosmic .content-legal h2 {
+    font: 800 26px/1.2 var(--font-display);
+    color: var(--text);
+    margin: var(--space-8) 0 var(--space-3);
+    text-wrap: balance;
+    scroll-margin-top: 88px;
+  }
+  .cosmic .content-legal h3 {
+    font: 700 18px/1.3 var(--font-ui);
+    color: var(--text);
+    margin: var(--space-6) 0 var(--space-2);
+    scroll-margin-top: 88px;
+  }
+  .cosmic .content-legal p {
+    margin: 0 0 var(--space-4);
+  }
+  .cosmic .content-legal ul {
+    margin: 0 0 var(--space-4);
+    padding-left: 22px;
+    display: grid;
+    gap: 8px;
+  }
+  .cosmic .content-legal strong {
+    color: var(--text);
+  }
+  .cosmic .content-legal a {
+    color: var(--k3);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .cosmic .content-legal code {
+    font: 400 0.9em var(--font-mono);
+    background: var(--surface-2);
+    padding: 1px 6px;
+  }
+  .cosmic .content-legal table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 var(--space-5);
+    font-size: 14.5px;
+    line-height: 1.5;
+  }
+  .cosmic .content-legal th,
+  .cosmic .content-legal td {
+    text-align: left;
+    vertical-align: top;
+    padding: 10px 12px;
+    border-bottom: 2px solid var(--line);
+  }
+  .cosmic .content-legal th {
+    color: var(--text);
+    font-weight: 700;
+  }
+  @media (max-width: 720px) {
+    .cosmic .content-legal h1 {
+      font-size: 32px;
+    }
+    .cosmic .content-legal table {
+      display: block;
+      overflow-x: auto;
+    }
+  }
+
+  /* ── help thread (an answered question) ──────────────────────────────────── */
+  .cosmic .content-qa {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    max-width: 760px;
+  }
+  .cosmic .content-qa-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .cosmic .content-qa-body {
+    font-size: 15.5px;
+    line-height: 1.65;
+  }
+  .cosmic .content-qa-more {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    font-size: 14.5px;
+    color: var(--text-3);
+  }
+
+  /* ── 404 and error boundaries (404.html) ─────────────────────────────────── */
+  .cosmic .content-nf {
+    min-height: 560px;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: var(--space-9) 0;
+  }
+  .cosmic .content-nf img {
+    height: 120px;
+    margin: 0 auto var(--space-5);
+    display: block;
+  }
+  .cosmic .content-nf .display {
+    font-size: 56px;
+    margin: 12px 0 16px;
+  }
+  .cosmic .content-nf p {
+    margin: 0 auto var(--space-6);
+    max-width: 44ch;
+  }
+  .cosmic .content-nf-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+  }
+  .cosmic .content-nf-ref {
+    margin-top: var(--space-5);
+    font: 400 12.5px var(--font-mono);
+    color: var(--text-3);
+  }
+  @media (max-width: 720px) {
+    .cosmic .content-nf {
+      padding: var(--space-8) 0;
+      min-height: 0;
+    }
+    .cosmic .content-nf .display {
+      font-size: 38px;
+    }
+    .cosmic .content-nf-actions > * {
+      width: 100%;
+    }
+  }
+}

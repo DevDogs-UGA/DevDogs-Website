@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import "~/components/Content/content.css";
+
 /**
  * Static copy; changes only with a deploy.
  */
@@ -20,7 +22,7 @@ export default async function Terms() {
   "use cache";
 
   return (
-    <div className="prose-sm prose-headings:text-balance mx-auto mt-19 max-w-xl px-3 pt-12 pb-24">
+    <article className="content-legal">
       <h1 id="devdogs-terms-of-service">DevDogs Terms of Service</h1>
       <p>
         <strong>Effective date:</strong> October 10, 2026
@@ -336,6 +338,6 @@ export default async function Terms() {
           <Link href="/legal/privacy#dogpack">Privacy Policy</Link>.
         </li>
       </ul>
-    </div>
+    </article>
   );
 }

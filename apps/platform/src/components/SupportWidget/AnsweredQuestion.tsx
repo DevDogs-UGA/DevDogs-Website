@@ -2,6 +2,8 @@
 
 import { ChatCircleDotsIcon, SealCheckIcon } from "@phosphor-icons/react/ssr";
 import { Button } from "~/ui/button";
+import { Card } from "~/ui/card";
+import "~/components/Content/content.css";
 import DiscordMarkdown from "./DiscordMarkdown";
 import { openSupport } from "./events";
 
@@ -18,28 +20,33 @@ export default function AnsweredQuestion({
   answer: string;
 }) {
   return (
-    <div className="flex flex-col gap-4">
-      <section className="bg-card text-card-foreground flex flex-col gap-2 rounded-xl border p-4">
-        <h2 className="text-muted-foreground text-xs font-semibold uppercase">
+    <div className="content-qa">
+      <Card className="quiet" as="section" aria-labelledby="qa-question">
+        <h2 id="qa-question" className="eyebrow content-qa-label">
           Question
         </h2>
-        <div className="text-sm">
+        <div className="content-qa-body">
           <DiscordMarkdown content={question} users={{}} roles={{}} />
         </div>
-      </section>
-      <section className="text-foreground flex flex-col gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
-        <h2 className="flex items-center gap-1 text-xs font-semibold text-emerald-300 uppercase">
-          <SealCheckIcon className="size-4" weight="fill" />
+      </Card>
+      <Card
+        className="quiet"
+        kind="workshop"
+        as="section"
+        aria-labelledby="qa-answer"
+      >
+        <h2 id="qa-answer" className="eyebrow k content-qa-label">
+          <SealCheckIcon weight="fill" aria-hidden />
           Answer from an officer
         </h2>
-        <div className="text-sm">
+        <div className="content-qa-body">
           <DiscordMarkdown content={answer} users={{}} roles={{}} />
         </div>
-      </section>
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <span className="text-muted-foreground">Still stuck?</span>
+      </Card>
+      <div className="content-qa-more">
+        <span>Still stuck?</span>
         <Button onClick={openSupport}>
-          <ChatCircleDotsIcon /> Ask a question
+          <ChatCircleDotsIcon aria-hidden /> Ask a question
         </Button>
       </div>
     </div>

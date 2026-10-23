@@ -1,14 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  ChangelogEmail,
-  ISSUES,
-  issueByVersion,
-  paintCss,
-  PALETTE,
-  webRenderContext,
-} from "@devdogsuga/newsletter";
+import { ISSUES, issueByVersion, PALETTE } from "@devdogsuga/newsletter";
+
+import EmailStage from "~/components/Content/EmailStage";
+import "~/components/Content/content.css";
+import { Breadcrumbs } from "~/ui/breadcrumbs";
 
 /**
  * /changelog/[version], one issue, rendered from the same email-safe
@@ -50,25 +46,19 @@ export default async function ChangelogIssue({
   if (!issue) notFound();
 
   return (
-    <div className="flex-1" style={{ backgroundColor: PALETTE.bar }}>
-      <div className="mx-auto w-full max-w-2xl px-4 pt-28 pb-24">
-        <p className="mb-6 font-mono text-sm">
-          <Link
-            href="/changelog"
-            className="transition-colors hover:brightness-125"
-            style={{ color: PALETTE.dim }}
-          >
-            cd ../changelog
-          </Link>
-        </p>
-        <div className="mx-auto w-fit max-w-full overflow-x-auto">
-          {/* The email paints its backgrounds by class (never inline — see
-              Backstage's packages/newsletter/src/darkmode.ts), so the page embeds the
-              same base paint layer the mailed document does. */}
-          <style dangerouslySetInnerHTML={{ __html: paintCss() }} />
-          <ChangelogEmail issue={issue} ctx={webRenderContext()} />
-        </div>
+    <>
+      <div className="wrap content-crumbs">
+        <Breadcrumbs
+          items={[
+            { label: "Changelog", href: "/changelog" },
+            { label: `v${issue.version}` },
+          ]}
+        />
       </div>
-    </div>
+      <h1 className="sr-only">
+        Changelog v{issue.version}: {issue.tagline}
+      </h1>
+      <EmailStage issue={issue} background={PALETTE.bar} />
+    </>
   );
 }
