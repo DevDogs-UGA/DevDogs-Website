@@ -52,7 +52,9 @@ export async function requestAccountDeletion(
   reason?: string,
 ): Promise<DeletionActionResult> {
   const actorUserId = await expectSession();
-  const trimmedReason = reason?.trim().slice(0, MAX_REASON_LENGTH) || null;
+  // An empty reason is no reason.
+  const sliced = reason?.trim().slice(0, MAX_REASON_LENGTH);
+  const trimmedReason = sliced === undefined || sliced === "" ? null : sliced;
   try {
     const result = await scheduleAccountDeletion(userId, actorUserId, {
       reason: trimmedReason,

@@ -60,7 +60,10 @@ export default async function UserModerationPage({
         />
       </Panel>
 
-      {canDelete && (
+      {/* Your own account is deleted from Settings, where the dialog signs you
+          out to the pending page; scheduling it here would revoke the session
+          this page is rendering for. */}
+      {canDelete && targetUserId !== viewerId && (
         <Panel
           id="account-deletion"
           title="Account deletion"
