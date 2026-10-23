@@ -1,0 +1,623 @@
+/* /partners layout (partners.html). The kit supplies cards, buttons, bands, tags and badges; this file adds the
+   page's own grids, the tiers table and the "Your Logo Here" listing. Every selector hangs off a `partners-` class. */
+@layer cosmic {
+  .cosmic .partners-head {
+    min-height: 300px;
+  }
+  .cosmic .partners-sec {
+    padding: var(--space-8) 0;
+  }
+  .cosmic .partners-eyebrow {
+    margin-bottom: 14px;
+  }
+  .cosmic .partners-lead {
+    margin: 16px 0 0;
+  }
+  .cosmic .partners-lead2 {
+    margin: 0 0 var(--space-7);
+  }
+  .cosmic .partners-cta {
+    gap: 16px;
+    margin-top: 26px;
+  }
+  .cosmic .partners-h2 {
+    font-size: 32px;
+    margin-bottom: var(--space-6);
+  }
+  .cosmic .partners-eyebrow + .partners-h2:has(+ .lead),
+  .cosmic .partners-eyebrow + .partners-h2:has(+ .muted) {
+    margin-bottom: 14px;
+  }
+  .cosmic .partners-body {
+    margin: 0 0 12px;
+  }
+
+  /* numbers */
+  .cosmic .partners-stats-section {
+    padding-bottom: var(--space-6);
+  }
+  .cosmic .partners-stats {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .cosmic .partners-stats > div {
+    padding: 8px 28px;
+    background: linear-gradient(var(--line), var(--line)) 0 0 / 2px 100%
+      no-repeat;
+  }
+  .cosmic .partners-stats > div:first-child {
+    background: none;
+    padding-left: 0;
+  }
+  .cosmic .partners-stats dd {
+    margin: 0 0 10px;
+    font: 800 52px/1 var(--font-display);
+    color: var(--text);
+  }
+  .cosmic .partners-stats dt {
+    font-size: 15px;
+    color: var(--text-3);
+  }
+  /* dl order is value first; flex-direction keeps dt/dd reading order for screen readers */
+  .cosmic .partners-stats > div {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+  }
+
+  /* proof */
+  .cosmic .partners-proof {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-6);
+    align-items: stretch;
+  }
+  .cosmic .partners-pc {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cosmic .partners-pc p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text-2);
+  }
+  .cosmic .partners-mark {
+    height: 36px;
+    width: auto;
+    align-self: flex-start;
+    image-rendering: pixelated;
+  }
+  .cosmic .partners-pr-icon {
+    font-size: 32px;
+    color: var(--brand3);
+  }
+  .cosmic .partners-tight {
+    gap: 8px;
+  }
+  .cosmic .partners-tight .h3 {
+    margin: 0;
+  }
+  .cosmic .partners-tags {
+    gap: 6px;
+  }
+  .cosmic .partners-foot {
+    margin-top: auto;
+    padding-top: 6px;
+  }
+  .cosmic .partners-proofrow {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+    gap: var(--space-7);
+    align-items: center;
+    margin: var(--space-7) 0 0;
+  }
+  .cosmic .partners-photo {
+    padding: 6px;
+  }
+  .cosmic .partners-photo img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 374 / 260;
+    object-fit: cover;
+  }
+  .cosmic .partners-proofrow figcaption {
+    font-size: 16px;
+    color: var(--text-2);
+  }
+
+  /* three-up columns (why, week, UGA track) */
+  .cosmic .partners-cols3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-7);
+  }
+  .cosmic .partners-cols3 h3 {
+    margin: 0 0 10px;
+    font-size: 20px;
+  }
+  .cosmic .partners-cols3 p {
+    margin: 0;
+    color: var(--text-2);
+    font-size: 15.5px;
+  }
+  .cosmic .partners-cols3 .eyebrow {
+    display: block;
+    margin-bottom: 12px;
+  }
+  .cosmic .partners-uga ul {
+    margin: 14px 0 0;
+    padding-left: 20px;
+    font-size: 15px;
+    color: var(--text-2);
+  }
+  .cosmic .partners-uga li + li {
+    margin-top: 6px;
+  }
+
+  /* tiers */
+  .cosmic .partners-note {
+    margin: 0 0 var(--space-4);
+    max-width: 62ch;
+  }
+  .cosmic .partners-note:last-of-type {
+    margin-bottom: var(--space-6);
+  }
+  .cosmic .partners-tiers-card {
+    padding: 32px;
+  }
+  .cosmic .partners-tiers {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+  .cosmic .partners-tiers th,
+  .cosmic .partners-tiers td {
+    padding: 14px;
+    text-align: left;
+    vertical-align: top;
+    background: linear-gradient(var(--line), var(--line)) 0 100% / 100% 1px
+      no-repeat;
+  }
+  .cosmic .partners-tiers thead th {
+    font: 800 20px/1.1 var(--font-display);
+    color: var(--text);
+    vertical-align: bottom;
+  }
+  .cosmic .partners-tiers thead th small {
+    display: block;
+    font: 700 15px/1.4 var(--font-ui);
+    color: var(--brand3);
+    margin-top: 4px;
+  }
+  .cosmic .partners-tiers thead th:first-child {
+    width: 22%;
+  }
+  .cosmic .partners-tiers tbody th {
+    font-weight: 600;
+    color: var(--text);
+  }
+  .cosmic .partners-tiers tr.grp th {
+    font: 700 11.5px/1 var(--font-ui);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    padding-top: 22px;
+  }
+  .cosmic .partners-tiers td {
+    color: var(--text-2);
+  }
+  .cosmic .partners-tiers td.no,
+  .cosmic .partners-tc dd.no {
+    color: var(--text-3);
+  }
+  .cosmic .partners-tiers td.chg,
+  .cosmic .partners-tc dd.chg {
+    color: var(--text);
+    font-weight: 700;
+  }
+  .cosmic .partners-tiers td.chg::before,
+  .cosmic .partners-tc dd.chg::before {
+    content: "+ ";
+    color: var(--brand3);
+  }
+  .cosmic .partners-tiercards {
+    display: none;
+  }
+  .cosmic .partners-tc {
+    padding: 18px 0;
+    background: linear-gradient(var(--line), var(--line)) 0 0 / 100% 2px
+      no-repeat;
+  }
+  .cosmic .partners-tc:first-child {
+    background: none;
+    padding-top: 0;
+  }
+  .cosmic .partners-tc h3 {
+    margin: 0 0 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    font-size: 22px;
+  }
+  .cosmic .partners-tc h3 small {
+    font: 800 22px/1 var(--font-display);
+    color: var(--brand3);
+  }
+  .cosmic .partners-tc dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: 6px 14px;
+    font-size: 15px;
+  }
+  .cosmic .partners-tc dt {
+    color: var(--text-3);
+  }
+  .cosmic .partners-tc dd {
+    margin: 0;
+    color: var(--text-2);
+  }
+  .cosmic .partners-legend {
+    margin: var(--space-4) 0 0;
+    font-size: 13.5px;
+    color: var(--text-3);
+  }
+  .cosmic .partners-custom {
+    display: flex;
+    gap: var(--space-5);
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: var(--space-6);
+    padding-top: var(--space-5);
+    background: linear-gradient(var(--line), var(--line)) 0 0 / 100% 2px
+      no-repeat;
+  }
+  .cosmic .partners-custom > div {
+    flex: 1;
+    min-width: 240px;
+  }
+  .cosmic .partners-custom .h3 {
+    margin-bottom: 4px;
+  }
+  .cosmic .partners-custom p {
+    margin: 0;
+  }
+  .cosmic .partners-pay {
+    margin: var(--space-4) 0 0;
+  }
+
+  /* how to start */
+  .cosmic .partners-howto {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-6);
+    margin: var(--space-7) 0 0;
+    counter-reset: s;
+  }
+  .cosmic .partners-howto li {
+    counter-increment: s;
+  }
+  .cosmic .partners-howto li::before {
+    content: counter(s);
+    display: block;
+    font: 800 28px/1 var(--font-display);
+    color: var(--brand3);
+    margin-bottom: 10px;
+  }
+  .cosmic .partners-howto .h3 {
+    margin-bottom: 4px;
+  }
+  .cosmic .partners-howto p {
+    margin: 0;
+    color: var(--text-2);
+    font-size: 15.5px;
+  }
+  .cosmic .partners-mondays {
+    display: flex;
+    gap: 10px 28px;
+    flex-wrap: wrap;
+    margin-top: var(--space-5);
+    font-size: 15px;
+    color: var(--text-2);
+  }
+  .cosmic .partners-mondays b {
+    color: var(--text);
+  }
+  .cosmic .partners-listing {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-7);
+    align-items: start;
+    margin-top: var(--space-7);
+  }
+  .cosmic .partners-listing .h3 {
+    margin-bottom: 6px;
+  }
+  .cosmic .partners-listing p {
+    margin: 0;
+  }
+  .cosmic .partners-lslot {
+    padding: 22px;
+    display: flex;
+    gap: 18px;
+    align-items: center;
+  }
+  .cosmic .partners-logo {
+    position: relative;
+    width: 96px;
+    height: 96px;
+    flex: none;
+    display: grid;
+    place-items: center;
+  }
+  .cosmic .partners-burst {
+    position: absolute;
+    inset: 0;
+    background: url(/cosmic/a/badge/logo-slot-48.png) 0 0 / 600% 100%;
+    image-rendering: pixelated;
+    animation: partners-ants 0.9s steps(6) infinite;
+  }
+  @keyframes partners-ants {
+    to {
+      background-position: 120% 0;
+    }
+  }
+  .cosmic .partners-slot-txt {
+    position: relative;
+    rotate: 8deg;
+    padding: 0 18px;
+    text-align: center;
+    font: 800 12px/1.1 var(--font-display);
+    color: var(--text);
+    text-wrap: balance;
+  }
+  .cosmic .partners-lslot b {
+    color: var(--text);
+    display: block;
+  }
+  .cosmic .partners-lslot p {
+    margin: 4px 0 6px;
+    font-size: 14.5px;
+    color: var(--text-2);
+  }
+
+  /* bring a project */
+  .cosmic .partners-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-8);
+    align-items: start;
+  }
+  .cosmic .partners-terms {
+    display: flex;
+    gap: 12px 28px;
+    flex-wrap: wrap;
+    margin-top: var(--space-6);
+    font-size: 15px;
+    color: var(--text-2);
+  }
+  .cosmic .partners-terms span {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .cosmic .partners-terms svg {
+    color: var(--brand3);
+    font-size: 20px;
+  }
+  .cosmic .partners-steps3 {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: var(--space-5);
+    counter-reset: s;
+  }
+  .cosmic .partners-steps3 li {
+    counter-increment: s;
+  }
+  .cosmic .partners-steps3 li::before {
+    content: counter(s);
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 14px;
+    font: 800 20px/1 var(--font-display);
+    color: #fff;
+    background: var(--brand6);
+    box-shadow:
+      inset 4px 4px 0 rgba(255, 255, 255, 0.18),
+      inset -4px -4px 0 rgba(0, 0, 0, 0.3);
+  }
+  .cosmic .partners-steps3 .h3 {
+    margin-bottom: 4px;
+  }
+  .cosmic .partners-steps3 p {
+    margin: 0;
+  }
+
+  /* case study */
+  .cosmic .partners-case {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    gap: var(--space-8);
+    align-items: start;
+    margin-top: var(--space-8);
+    padding-top: var(--space-7);
+    background: linear-gradient(var(--line), var(--line)) 0 0 / 100% 2px
+      no-repeat;
+  }
+  .cosmic .partners-case h3 {
+    margin: 0 0 12px;
+    font-size: 24px;
+  }
+  .cosmic .partners-case p {
+    margin: 0;
+  }
+  .cosmic .partners-case dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: 7.5em minmax(0, 1fr);
+    gap: 10px 18px;
+    font-size: 15.5px;
+  }
+  .cosmic .partners-case dt {
+    color: var(--text-3);
+  }
+  .cosmic .partners-case dd {
+    margin: 0;
+    color: var(--text-2);
+  }
+  .cosmic .partners-orgs {
+    margin-top: var(--space-6);
+  }
+
+  /* FAQ */
+  .cosmic .partners-faq {
+    max-width: 820px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .cosmic .partners-faq details {
+    background:
+      linear-gradient(var(--surface), var(--surface)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface), var(--surface)) 2px 0 / calc(100% - 4px)
+        100% no-repeat;
+  }
+  .cosmic .partners-faq summary {
+    cursor: pointer;
+    padding: 14px 18px;
+    font-weight: 700;
+    color: var(--text);
+    list-style: none;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    min-height: 48px;
+  }
+  .cosmic .partners-faq summary::-webkit-details-marker {
+    display: none;
+  }
+  .cosmic .partners-faq summary svg {
+    font-size: 14px;
+    color: var(--text-3);
+    transition: transform 0.15s;
+    flex: none;
+  }
+  .cosmic .partners-faq details[open] summary svg {
+    transform: rotate(90deg);
+  }
+  .cosmic .partners-faq .a {
+    padding: 0 18px 18px 42px;
+    color: var(--text-2);
+  }
+  .cosmic .partners-faq .a p {
+    margin: 0;
+  }
+
+  /* contact */
+  .cosmic .partners-contact {
+    padding: 44px 48px;
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: var(--space-7);
+    align-items: center;
+  }
+  .cosmic .partners-contact p {
+    margin: 0;
+  }
+  .cosmic .partners-contact .partners-p2 {
+    margin-top: 12px;
+  }
+  .cosmic .partners-contact-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: stretch;
+  }
+  .cosmic .partners-addr {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .cosmic .partners-addr code {
+    font-size: 18px;
+    padding: 8px 12px;
+  }
+
+  @media (max-width: 900px) {
+    .cosmic .partners-proof,
+    .cosmic .partners-howto,
+    .cosmic .partners-case,
+    .cosmic .partners-listing,
+    .cosmic .partners-proofrow {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-6);
+    }
+    .cosmic .partners-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-6) 0;
+    }
+    .cosmic .partners-stats > div:nth-child(3) {
+      background: none;
+      padding-left: 0;
+    }
+    .cosmic .partners-cols3,
+    .cosmic .partners-split,
+    .cosmic .partners-contact {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-6);
+    }
+  }
+  @media (max-width: 720px) {
+    .cosmic .partners-stats dd {
+      font-size: 38px;
+    }
+    .cosmic .partners-stats > div {
+      padding: 4px 16px;
+    }
+    .cosmic .partners-contact {
+      padding: 28px 22px;
+    }
+    .cosmic .partners-tiers-card {
+      padding: 20px;
+    }
+    .cosmic .partners-tiers {
+      display: none;
+    }
+    .cosmic .partners-tiercards {
+      display: block;
+    }
+    .cosmic .partners-tc dl {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0;
+    }
+    .cosmic .partners-tc dd {
+      margin-bottom: 8px;
+    }
+    .cosmic .partners-lslot {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cosmic .partners-burst {
+      animation: none;
+    }
+    .cosmic .partners-faq summary svg {
+      transition: none;
+    }
+  }
+}
