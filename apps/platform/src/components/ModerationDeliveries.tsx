@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react/ssr";
 import { resendDelivery } from "~/server/actions/moderationDeliveries";
+import ConfirmDestructiveAction from "~/ui/confirm-destructive-action";
 import FormButton from "~/components/FormButton";
 import Badge from "~/ui/badge";
 
@@ -76,12 +77,17 @@ export default function ModerationDeliveries({
             </p>
           </div>
           {delivery.status !== "delivered" && (
-            <form action={resendDelivery.bind(null, delivery.id)}>
+            <ConfirmDestructiveAction
+              title={`Resend ${delivery.type}${delivery.appName ? ` to ${delivery.appName}` : ""}?`}
+              description={`It goes back to pending and is queued again.${delivery.appName ? ` ${delivery.appName} ignores` : " The app ignores"} a decision it has already applied.`}
+              action={resendDelivery.bind(null, delivery.id)}
+              submitLabel="Resend"
+            >
               <FormButton theme="black" type="submit" size="sm">
                 <ArrowsClockwiseIcon weight="bold" aria-hidden />
                 Resend
               </FormButton>
-            </form>
+            </ConfirmDestructiveAction>
           )}
         </li>
       ))}

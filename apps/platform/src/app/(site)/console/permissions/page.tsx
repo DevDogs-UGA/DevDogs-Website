@@ -36,7 +36,7 @@ async function PermissionsData() {
 
       <Panel
         id="assign-roles"
-        title="Assign roles"
+        title="Assign Roles"
         help="Search for a member by name. You can give out and take away roles ranked below yours."
       >
         <UserRoleManager
@@ -46,7 +46,7 @@ async function PermissionsData() {
         />
       </Panel>
 
-      <Panel id="role-definitions" title="Role definitions">
+      <Panel id="role-definitions" title="Role Definitions">
         <RolesManager
           initialRoles={roles}
           callerMinRank={callerMinRank}

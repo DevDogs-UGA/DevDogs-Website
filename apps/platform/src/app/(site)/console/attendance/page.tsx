@@ -52,6 +52,21 @@ function Row({ meeting, past }: { meeting: Meeting; past?: boolean }) {
           ? "Canceled in the schedule · no check-in"
           : timeRange(meeting.startsAt, meeting.endsAt)
       }
+      end={
+        off ? undefined : (
+          <OpenDisplayLink
+            href={`/console/attendance/${meeting.id}`}
+            className="btn secondary sm"
+          >
+            <PresentationIcon weight="bold" aria-hidden />
+            Open display
+            <span className="sr-only">
+              {" "}
+              for {meetingTitle(meeting)} (opens the projector in a new window)
+            </span>
+          </OpenDisplayLink>
+        )
+      }
       badges={
         off ? (
           <Badge variant="danger">
@@ -82,7 +97,9 @@ export default async function AttendanceDisplaysPage({
   const upcoming = meetings
     .filter((m) => m.startsAt > now)
     .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
-  const past = meetings.filter((m) => m.endsAt < now && !live.includes(m));
+  // Everything that is neither live nor ahead, so a canceled meeting whose
+  // slot is still running lands here rather than nowhere.
+  const past = meetings.filter((m) => !live.includes(m) && !(m.startsAt > now));
 
   const rawPage =
     typeof params.page === "string" ? parseInt(params.page, 10) : 1;
