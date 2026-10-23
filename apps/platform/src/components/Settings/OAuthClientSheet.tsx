@@ -191,7 +191,7 @@ export default function OAuthClientSheet({
                       placeholder={
                         production
                           ? "https://dogdays.supabase.co/auth/v1/callback"
-                          : "http://localhost:3000/auth/callback"
+                          : "http://127.0.0.1:54321/auth/v1/callback"
                       }
                       required
                     />
