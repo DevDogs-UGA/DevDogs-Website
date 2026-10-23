@@ -3,7 +3,9 @@
 import Image, { type StaticImageData } from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { SidebarIcon } from "@phosphor-icons/react/ssr";
+import { ListIcon } from "@phosphor-icons/react/ssr";
+import { Button } from "~/ui/button";
+import "~/components/Docs/docs.css";
 import apple from "~/assets/os/apple.svg";
 import linux from "~/assets/os/linux.svg";
 import windows from "~/assets/os/windows.svg";
@@ -118,12 +120,9 @@ function SidebarContent({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="docs-side">
       {projects.length > 1 && (
-        // The site's own select, the same control the account page's
-        // graduation fields use, rather than the shadcn one in ~/ui, which is
-        // styled for a light surface and left the chosen project's name
-        // painted in <body>'s text-mauve-950 against the dark sidebar.
+        // The site's own select (`.input.select`), with each project's mark.
         <Select
           value={project}
           onValueChange={onProjectChange}
@@ -194,29 +193,28 @@ export default function DocsSidebar(props: DocsSidebarProps) {
 
   return (
     <>
-      {/* Mobile: disclosure bar under the navbar */}
-      <div className="sticky top-16 z-40 border-b border-mauve-800 bg-mauve-950/90 px-4 py-2 backdrop-blur lg:hidden">
+      {/* Phones: the contents open as a sheet from the left */}
+      <div className="docs-navbar-m">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetTrigger className="flex items-center gap-2 rounded-sm px-2 py-1 text-sm font-medium text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white">
-            <SidebarIcon className="size-4" />
-            Browse docs
+          <SheetTrigger asChild>
+            <Button variant="outline" size="sm">
+              <ListIcon weight="bold" />
+              Contents
+            </Button>
           </SheetTrigger>
-          <SheetContent
-            side="left"
-            className="w-80 overflow-y-auto border-mauve-800 bg-mauve-950 p-4"
-          >
-            <SheetHeader className="p-0 pb-3">
-              <SheetTitle className="text-left text-sm text-mauve-400">
-                Documentation
-              </SheetTitle>
+          <SheetContent side="left" className="overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Documentation</SheetTitle>
             </SheetHeader>
-            <SidebarContent {...props} />
+            <div className="px-4 pb-6">
+              <SidebarContent {...props} />
+            </div>
           </SheetContent>
         </Sheet>
       </div>
 
       {/* Desktop: sticky aside */}
-      <aside className="sticky top-16 hidden h-[calc(100vh-var(--spacing)*16)] w-72 shrink-0 overflow-y-auto border-r border-mauve-800 p-4 lg:block">
+      <aside className="docs-nav" aria-label="Documentation">
         <SidebarContent {...props} />
       </aside>
     </>

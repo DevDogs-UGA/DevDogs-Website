@@ -23,6 +23,7 @@ import {
   XIcon,
 } from "@phosphor-icons/react/ssr";
 import { Button } from "~/ui/button";
+import "./support.css";
 import { Input } from "~/ui/input";
 import { Textarea } from "~/ui/textarea";
 import { cn } from "~/lib/cn";
@@ -134,9 +135,8 @@ export default function SupportWidget({
             if (!event.currentTarget.contains(event.target as Node)) return;
             if (event.key === "Escape") close();
           }}
-          // Lifted off the page on purpose: the page is mauve-950, so the
-          // panel is a step lighter with a lit border.
-          className="text-popover-foreground fixed inset-x-2 bottom-2 z-50 flex max-h-[min(40rem,calc(100dvh-1rem))] flex-col overflow-hidden rounded-xl border-2 border-mauve-600 bg-mauve-900 sm:inset-x-auto sm:right-6 sm:bottom-24 sm:w-[26rem]"
+          // A framed panel a step lighter than the page (`.docs-support-panel`).
+          className="docs-support-panel text-popover-foreground fixed inset-x-2 bottom-2 z-50 flex max-h-[min(40rem,calc(100dvh-1rem))] flex-col overflow-hidden sm:inset-x-auto sm:right-6 sm:bottom-24 sm:w-[26rem]"
         >
           <Panel
             view={view}
@@ -164,9 +164,9 @@ export default function SupportWidget({
           }
           onClick={() => (open ? close() : setOpen(true))}
           className={cn(
-            // The site's call-to-action cyan: the one thing in the corner
-            // that should catch the eye.
-            "fixed right-4 bottom-4 z-50 flex size-14 items-center justify-center rounded-full border-2 border-black bg-cyan-400 text-black transition-transform hover:-translate-y-0.5 sm:right-6 sm:bottom-6",
+            // The kit's primary icon button: the one thing in the corner that
+            // should catch the eye.
+            "btn primary icon lg fixed right-4 bottom-4 z-50 sm:right-6 sm:bottom-6",
             open && "max-sm:hidden",
           )}
         >
@@ -176,7 +176,7 @@ export default function SupportWidget({
             <ChatCircleDotsIcon className="size-7" weight="fill" />
           )}
           {!open && unread > 0 && (
-            <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full border-2 border-black bg-rose-500 text-[0.65rem] font-bold text-white">
+            <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-[var(--brand6)] text-[0.65rem] font-bold text-white">
               {unread}
             </span>
           )}
@@ -207,7 +207,7 @@ function Panel({
 
   return (
     <>
-      <header className="flex items-center gap-2 border-b-2 border-mauve-700 bg-mauve-950/40 px-3 py-2.5">
+      <header className="docs-support-head flex items-center gap-2 px-3 py-2.5">
         {view.name !== "inbox" && (
           <Button
             variant="ghost"
@@ -318,7 +318,7 @@ function InboxView({
                   onFocus={() =>
                     void prefetchThread(client, conversation.threadId)
                   }
-                  className="flex w-full items-center gap-2 rounded-lg border border-mauve-800 bg-mauve-950/40 px-3 py-2 text-left hover:border-mauve-600 hover:bg-mauve-800"
+                  className="docs-support-row flex w-full items-center gap-2 px-3 py-2 text-left"
                 >
                   <span className="min-w-0 flex-1">
                     <span
@@ -335,7 +335,7 @@ function InboxView({
                     </span>
                   </span>
                   {conversation.unread && (
-                    <span className="size-2 shrink-0 rounded-full bg-rose-500">
+                    <span className="size-2 shrink-0 rounded-full bg-[var(--brand6)]">
                       <span className="sr-only">Unread replies</span>
                     </span>
                   )}
@@ -345,7 +345,7 @@ function InboxView({
           </ul>
         )}
       </div>
-      <div className="border-t border-mauve-800 p-3">
+      <div className="docs-support-foot p-3">
         <Button className="w-full" onClick={onCompose}>
           <PlusIcon /> Ask a question
         </Button>
@@ -414,14 +414,14 @@ function SetupTagList({
       {tags.map((tag) => (
         <span
           key={tag.group}
-          className="flex items-center gap-1 rounded-full border border-mauve-700 bg-mauve-800 py-0.5 pr-1 pl-2"
+          className="docs-support-chip flex items-center gap-1 py-0.5 pr-1 pl-2"
         >
           {tag.label}
           <button
             type="button"
             aria-label={`Remove the ${tag.label} tag`}
             onClick={() => onRemove(tag.group)}
-            className="text-muted-foreground rounded-full p-0.5 hover:bg-mauve-700 hover:text-white"
+            className="text-muted-foreground rounded-full p-0.5 hover:bg-[var(--raised)] hover:text-white"
           >
             <XIcon className="size-3" weight="bold" />
           </button>
@@ -600,7 +600,7 @@ function ComposeView({
         </p>
         {error && <p className="text-destructive text-sm">{error.message}</p>}
       </div>
-      <div className="border-t border-mauve-800 p-3">
+      <div className="docs-support-foot p-3">
         <Button
           type="submit"
           className="w-full"
@@ -622,7 +622,7 @@ function ComposeView({
 function NotifyNudge() {
   const pathname = usePathname() ?? "/docs";
   return (
-    <div className="bg-primary/10 mx-3 mt-3 flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm">
+    <div className="docs-support-note mx-3 mt-3 flex items-center gap-3 px-3 py-2.5 text-sm">
       <BellRingingIcon className="text-primary size-5 shrink-0" weight="fill" />
       <p className="min-w-0 flex-1">
         Posted! Get notified when someone responds.
@@ -673,17 +673,17 @@ function ThreadView({
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         {title && (
-          <p className="truncate border-b border-mauve-800 px-3 py-2 text-sm font-medium">
+          <p className="docs-support-sub truncate px-3 py-2 text-sm font-medium">
             {title}
           </p>
         )}
         <div className="flex flex-col gap-3 p-3" aria-busy>
           {[0, 1].map((i) => (
             <div key={i} className="flex gap-2.5">
-              <div className="size-8 shrink-0 animate-pulse rounded-full bg-mauve-800" />
+              <div className="size-8 shrink-0 animate-pulse rounded-full bg-[var(--surface-2)]" />
               <div className="flex flex-1 flex-col gap-1.5">
-                <div className="h-3 w-24 animate-pulse rounded bg-mauve-800" />
-                <div className="h-3 w-full animate-pulse rounded bg-mauve-800" />
+                <div className="h-3 w-24 animate-pulse bg-[var(--surface-2)]" />
+                <div className="h-3 w-full animate-pulse bg-[var(--surface-2)]" />
               </div>
             </div>
           ))}
@@ -711,7 +711,7 @@ function ThreadView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center gap-2 border-b border-mauve-800 px-3 py-2">
+      <div className="docs-support-sub flex items-center gap-2 px-3 py-2">
         <p className="min-w-0 flex-1 truncate text-sm font-medium">
           {data.title}
         </p>
@@ -719,7 +719,7 @@ function ThreadView({
       </div>
       {justPosted && gateStep(viewer) !== "view-in-discord" && <NotifyNudge />}
       {data.duplicateOf && (
-        <div className="mx-3 mt-3 rounded-lg border bg-amber-500/10 px-3 py-2 text-sm">
+        <div className="docs-support-note mx-3 mt-3 px-3 py-2 text-sm">
           An officer marked this as a duplicate.{" "}
           <button
             type="button"
@@ -768,14 +768,14 @@ function ThreadView({
         })}
       </div>
       {data.status === "resolved" && (
-        <p className="text-muted-foreground flex items-center justify-center gap-1.5 border-t border-mauve-800 px-3 py-2 text-xs">
-          <CheckCircleIcon className="size-4 text-emerald-400" weight="fill" />
+        <p className="text-muted-foreground docs-support-foot flex items-center justify-center gap-1.5 px-3 py-2 text-xs">
+          <CheckCircleIcon className="size-4 text-[var(--ok)]" weight="fill" />
           Resolved. Reply to reopen it.
         </p>
       )}
       <form
         onSubmit={send}
-        className="flex flex-col gap-2 border-t border-mauve-800 p-3"
+        className="docs-support-foot flex flex-col gap-2 p-3"
       >
         <div className="flex items-end gap-2">
           <Textarea

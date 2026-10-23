@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { GithubLogoIcon } from "@phosphor-icons/react/ssr";
+import { PencilSimpleIcon } from "@phosphor-icons/react/ssr";
+import "~/components/Docs/docs.css";
 import DocsBreadcrumbs from "~/components/DocsBreadcrumbs";
 import DocsCodeCopy from "~/components/DocsCodeCopy";
 import DocsGithubLogin from "~/components/DocsGithubLogin";
@@ -18,6 +19,10 @@ interface Props {
   /** Headings extracted at build time by @devdogsuga/docs. */
   headings: DocHeading[];
   breadcrumbs?: string[];
+  /** The page's own title, closing the trail. */
+  title?: string;
+  /** A small line over the title, e.g. "Step 2 of 4". */
+  eyebrow?: ReactNode;
   githubUrl?: string;
   /** Under the article: a course page's step pager. */
   footer?: ReactNode;
@@ -29,6 +34,8 @@ export default function DocPageContent({
   html,
   headings,
   breadcrumbs,
+  title,
+  eyebrow,
   githubUrl,
   footer,
   notice,
@@ -42,80 +49,71 @@ export default function DocPageContent({
   }));
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col">
-      <div className="flex min-w-0 flex-1">
-        <div className="min-w-0 flex-1 overflow-auto px-6 py-10 lg:px-10">
-          <InlineTableOfContents items={toc} />
-          {notice && (
-            <div className="mx-auto mb-4 max-w-3xl rounded-md border border-amber-300/30 bg-amber-300/10 px-3 py-2">
-              {notice}
-            </div>
-          )}
+    <div className="docs-page">
+      <div className="docs-main">
+        {notice && <div className="docs-sched-note">{notice}</div>}
 
-          {(breadcrumbs && breadcrumbs.length > 0) || githubUrl ? (
-            <div className="mx-auto mb-4 flex max-w-3xl items-center justify-between gap-4">
-              {breadcrumbs && <DocsBreadcrumbs items={breadcrumbs} />}
-              {githubUrl && (
-                // The navbar link treatment, so it reads as chrome around the
-                // article rather than a link inside it.
-                <a
-                  href={githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="-mr-2 flex shrink-0 items-center gap-1.5 rounded-sm px-2 py-1 text-sm font-medium text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white"
-                >
-                  <GithubLogoIcon className="size-4" />
-                  Edit on GitHub
-                </a>
-              )}
-            </div>
-          ) : null}
-
-          <article
-            className={cn(
-              "prose prose-invert mx-auto max-w-3xl",
-              !vscode && "docs-no-vscode",
+        {(breadcrumbs && breadcrumbs.length > 0) || githubUrl ? (
+          <div className="docs-bar">
+            {breadcrumbs ? (
+              <DocsBreadcrumbs items={breadcrumbs} current={title} />
+            ) : (
+              <span />
             )}
-          >
-            {splitDocsDiffs(html).map((part, i) =>
-              part.kind === "diff" ? (
-                <DocsDiff
-                  key={i}
-                  file={part.file}
-                  lang={part.lang}
-                  icon={part.icon}
-                  patch={part.patch}
-                  oldContent={part.oldContent}
-                  newContent={part.newContent}
-                  href={part.href}
-                  vscode={vscode ? part.vscode : undefined}
-                />
-              ) : (
-                // Our own repo's markdown, compiled at build time; nothing a
-                // visitor wrote reaches this string. `contents`, so the
-                // prose styles see its elements as the article's own.
-                <div
-                  key={i}
-                  className="contents"
-                  dangerouslySetInnerHTML={{ __html: part.html }}
-                />
-              ),
+            {githubUrl && (
+              <a
+                href={githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="textlink"
+              >
+                <PencilSimpleIcon weight="bold" aria-hidden />
+                Edit on GitHub
+              </a>
             )}
-          </article>
-          {footer}
-          <DocsCodeCopy />
-          {vscode && <DocsVscode />}
-          <DocsGithubLogin />
-        </div>
-
-        {toc.length > 0 && (
-          <div className="hidden w-52 shrink-0 lg:block xl:w-64">
-            <div className="sticky top-16 max-h-[calc(100vh-var(--spacing)*16)] overflow-auto py-10 pr-4">
-              <TableOfContents items={toc} />
-            </div>
           </div>
-        )}
+        ) : null}
+
+        <InlineTableOfContents items={toc} />
+        {eyebrow && <div className="eyebrow docs-eyebrow">{eyebrow}</div>}
+
+        <article className={cn("docs-prose", !vscode && "docs-no-vscode")}>
+          {splitDocsDiffs(html).map((part, i) =>
+            part.kind === "diff" ? (
+              <DocsDiff
+                key={i}
+                file={part.file}
+                lang={part.lang}
+                icon={part.icon}
+                patch={part.patch}
+                oldContent={part.oldContent}
+                newContent={part.newContent}
+                href={part.href}
+                vscode={vscode ? part.vscode : undefined}
+              />
+            ) : (
+              // Our own repo's markdown, compiled at build time; nothing a
+              // visitor wrote reaches this string. `contents`, so the
+              // prose styles see its elements as the article's own.
+              <div
+                key={i}
+                className="contents"
+                dangerouslySetInnerHTML={{ __html: part.html }}
+              />
+            ),
+          )}
+        </article>
+        {footer}
+        <DocsCodeCopy />
+        {vscode && <DocsVscode />}
+        <DocsGithubLogin />
       </div>
+
+      {toc.length > 0 && (
+        <aside className="docs-tocwrap" aria-label="On this page">
+          <TableOfContents items={toc} />
+        </aside>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import "./support.css";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import {
@@ -49,10 +50,10 @@ export function SuggestionsSummary({
     <button
       type="button"
       onClick={() => onOpen(questions.length > 0 ? "questions" : "docs")}
-      className="flex w-full items-center gap-2.5 rounded-lg border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-left hover:bg-cyan-400/15"
+      className="docs-support-row flex w-full items-center gap-2.5 px-3 py-2 text-left"
     >
       <ChatsCircleIcon
-        className="size-5 shrink-0 text-cyan-300"
+        className="size-5 shrink-0 text-[var(--k3)]"
         weight="fill"
       />
       <span className="min-w-0 flex-1">
@@ -63,7 +64,7 @@ export function SuggestionsSummary({
           {parts.join(" · ")}
         </span>
       </span>
-      <CaretRightIcon className="size-4 shrink-0 text-cyan-300" />
+      <CaretRightIcon className="size-4 shrink-0 text-[var(--k3)]" />
     </button>
   );
 }
@@ -96,8 +97,8 @@ export function SuggestionsDialog({
   const { questions, docs } = suggestions;
   return (
     <Dialog open={tab !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[85dvh] flex-col gap-0 overflow-hidden border-2 border-mauve-700 bg-mauve-900 p-0 sm:max-w-2xl">
-        <div className="flex flex-col gap-1 border-b border-mauve-800 px-5 pt-4 pb-3">
+      <DialogContent className="flex max-h-[85dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <div className="docs-support-sub flex flex-col gap-1 px-5 pt-4 pb-3">
           <DialogTitle className="text-base font-semibold">
             Before you post
           </DialogTitle>
@@ -172,17 +173,17 @@ function TabButton({
       aria-selected={selected}
       onClick={onSelect}
       className={cn(
-        "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium",
+        "flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium",
         selected
-          ? "bg-mauve-700 text-white"
-          : "text-muted-foreground hover:bg-mauve-800 hover:text-white",
+          ? "bg-[var(--surface-2)] text-white shadow-[inset_0_-3px_0_var(--k3)]"
+          : "text-muted-foreground hover:bg-[var(--surface-2)] hover:text-white",
       )}
     >
       {children}
       <span
         className={cn(
           "rounded px-1.5 text-xs",
-          selected ? "bg-mauve-950/60" : "bg-mauve-800",
+          selected ? "bg-[var(--bg)]" : "bg-[var(--surface-2)]",
         )}
       >
         {count}
@@ -211,14 +212,25 @@ function QuestionCard({
   onNavigate: () => void;
 }) {
   const status = question.hasAnswer
-    ? { label: "Answered", className: "bg-emerald-500/15 text-emerald-300" }
+    ? {
+        label: "Answered",
+        className:
+          "bg-[color-mix(in_srgb,var(--ok)_16%,transparent)] text-[var(--ok)]",
+      }
     : question.status === "resolved"
-      ? { label: "Resolved", className: "bg-mauve-700 text-mauve-200" }
-      : { label: "Open", className: "bg-amber-400/15 text-amber-300" };
+      ? {
+          label: "Resolved",
+          className: "bg-[var(--raised)] text-[var(--text-2)]",
+        }
+      : {
+          label: "Open",
+          className:
+            "bg-[color-mix(in_srgb,var(--warn)_16%,transparent)] text-[var(--warn)]",
+        };
   const canFollow = question.status === "open";
 
   return (
-    <article className="flex flex-col gap-2.5 rounded-lg border border-mauve-800 bg-mauve-950/50 p-3.5">
+    <article className="docs-support-card flex flex-col gap-2.5 p-3.5">
       <header className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-1.5">
           <span
@@ -232,7 +244,7 @@ function QuestionCard({
           {question.tags.map((tag) => (
             <span
               key={tag}
-              className="rounded border border-mauve-800 px-1.5 py-0.5 text-[0.65rem] text-mauve-300"
+              className="docs-support-chip px-1.5 py-0.5 text-[0.65rem] text-[var(--text-2)]"
             >
               {tag}
             </span>
@@ -242,14 +254,14 @@ function QuestionCard({
       </header>
 
       {question.question && (
-        <div className="text-sm text-mauve-200">
+        <div className="text-sm text-[var(--text-2)]">
           <DiscordMarkdown content={question.question} users={{}} roles={{}} />
         </div>
       )}
 
       {question.answer ? (
-        <section className="flex flex-col gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
-          <h4 className="flex items-center gap-1 text-xs font-semibold text-emerald-300 uppercase">
+        <section className="flex flex-col gap-1.5 bg-[color-mix(in_srgb,var(--ok)_8%,transparent)] p-3 shadow-[inset_3px_0_0_var(--ok)]">
+          <h4 className="flex items-center gap-1 text-xs font-semibold text-[var(--ok)] uppercase">
             <SealCheckIcon className="size-4" weight="fill" />
             Answer from an officer
           </h4>
@@ -260,7 +272,7 @@ function QuestionCard({
       ) : (
         question.hasAnswer && (
           <p
-            className="text-muted-foreground border-l-2 border-emerald-500/50 pl-2.5 text-xs [&_mark]:bg-transparent [&_mark]:font-semibold [&_mark]:text-current"
+            className="text-muted-foreground border-l-2 border-[var(--ok)] pl-2.5 text-xs [&_mark]:bg-transparent [&_mark]:font-semibold [&_mark]:text-current"
             // Server-built: HTML-escaped before the <mark> swap.
             dangerouslySetInnerHTML={{ __html: question.snippet }}
           />
@@ -309,7 +321,7 @@ function DocCard({
   onNavigate: () => void;
 }) {
   return (
-    <article className="flex flex-col gap-1.5 rounded-lg border border-mauve-800 bg-mauve-950/50 p-3.5">
+    <article className="docs-support-card flex flex-col gap-1.5 p-3.5">
       {doc.breadcrumbs.length > 0 && (
         <p className="text-muted-foreground flex items-center gap-1 text-xs">
           <BookOpenIcon className="size-3.5 shrink-0" />
@@ -318,11 +330,11 @@ function DocCard({
       )}
       <h3 className="font-semibold">{doc.title}</h3>
       {doc.description && (
-        <p className="text-sm text-mauve-200">{doc.description}</p>
+        <p className="text-sm text-[var(--text-2)]">{doc.description}</p>
       )}
       {doc.snippet && (
         <p
-          className="text-muted-foreground line-clamp-4 border-l-2 border-mauve-700 pl-2.5 text-xs [&_mark]:rounded-sm [&_mark]:bg-cyan-400/20 [&_mark]:px-0.5 [&_mark]:text-cyan-100"
+          className="text-muted-foreground line-clamp-4 border-l-2 border-[var(--line-strong)] pl-2.5 text-xs [&_mark]:rounded-sm [&_mark]:bg-[color-mix(in_srgb,var(--k3)_25%,transparent)] [&_mark]:px-0.5 [&_mark]:text-current"
           // Server-built: HTML-escaped before the <mark> swap.
           dangerouslySetInnerHTML={{ __html: doc.snippet }}
         />

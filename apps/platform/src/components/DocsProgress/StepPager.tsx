@@ -3,12 +3,13 @@
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
-  CheckCircleIcon,
-  CircleIcon,
+  CheckIcon,
 } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 import { DOCS_BASE, docsHref } from "~/lib/docsSlug";
-import { cn } from "~/lib/cn";
+import { Button } from "~/ui/button";
+import ProgressBar from "~/ui/progress-bar";
+import "~/components/Docs/docs.css";
 import DocsScheduled from "~/components/DocsScheduled";
 import DocsHandoff from "~/components/DocsVscode/DocsHandoff";
 import { setStepDone, stepKey, useDoneSteps } from "./store";
@@ -29,9 +30,6 @@ interface Props {
   /** `/docs`, or the preview's prefix, so the links stay where the reader is. */
   base?: string;
 }
-
-const NAV_LINK =
-  "flex min-w-0 flex-col gap-0.5 rounded-md border border-mauve-800 px-4 py-3 transition-colors hover:border-mauve-600 hover:bg-mauve-900";
 
 /**
  * Under every page of a course: how far through it the reader is, a
@@ -59,22 +57,48 @@ export default function StepPager({
   return (
     <>
       <DocsHandoff project={project} steps={steps} />
-      <nav
-        aria-label={`${course} steps`}
-        className="mx-auto mt-16 flex max-w-3xl flex-col gap-4 border-t border-mauve-800 pt-6"
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
+      <nav aria-label={`${course} steps`} className="docs-pager">
+        <div className="docs-pager-prog">
+          <span>
+            Step{" "}
+            <b>
+              {index + 1} of {steps.length}
+            </b>{" "}
+            · {finished} of {steps.length} done · {course}
+          </span>
+          <ProgressBar
+            value={finished}
+            max={steps.length}
+            kind="workshop"
+            label={`${course} progress`}
+          />
+        </div>
+
+        <div className="docs-pager-act">
+          <Button
+            type="button"
+            variant="outline"
+            aria-pressed={done}
+            className={done ? "isdone" : undefined}
+            onClick={() => setStepDone(key, !done)}
+          >
+            {done && <CheckIcon weight="bold" />}
+            {done ? "Done" : "Mark as done"}
+          </Button>
+          <span>Saves your place in this course.</span>
+        </div>
+
+        <div className="docs-pager-pn">
           {previous ? (
             <Link
               href={docsHref(project, previous.path.split("/"), base)}
-              className={NAV_LINK}
+              className="card quiet"
+              data-sched={previous.publishAt ? "" : undefined}
             >
-              <span className="flex items-center gap-1.5 text-xs text-mauve-400">
-                <ArrowLeftIcon className="size-3" /> Previous
-              </span>
-              <span className="truncate text-sm font-medium text-white">
-                {previous.title}
-              </span>
+              <div className="docs-pager-dir">
+                <ArrowLeftIcon weight="bold" /> Previous
+              </div>
+              <div className="docs-pager-t">{previous.title}</div>
               {previous.publishAt && <DocsScheduled at={previous.publishAt} />}
             </Link>
           ) : (
@@ -84,62 +108,20 @@ export default function StepPager({
             <Link
               href={docsHref(project, next.path.split("/"), base)}
               onClick={() => setStepDone(key, true)}
-              className={cn(NAV_LINK, "sm:items-end sm:text-right")}
+              className="card quiet docs-pager-nx"
+              data-sched={next.publishAt ? "" : undefined}
             >
-              <span className="flex items-center gap-1.5 text-xs text-mauve-400">
-                Next <ArrowRightIcon className="size-3" />
-              </span>
-              <span className="truncate text-sm font-medium text-white">
-                {next.title}
-              </span>
+              <div className="docs-pager-dir">
+                Next <ArrowRightIcon weight="bold" />
+              </div>
+              <div className="docs-pager-t">{next.title}</div>
               {next.publishAt && <DocsScheduled at={next.publishAt} />}
             </Link>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <p className="text-sm text-mauve-400">
-              Step {index + 1} of {steps.length} · {course}
-            </p>
-            <div
-              role="progressbar"
-              aria-label={`${course} progress`}
-              aria-valuemin={0}
-              aria-valuemax={steps.length}
-              aria-valuenow={finished}
-              className="h-1 w-48 overflow-hidden rounded-full bg-mauve-800"
-            >
-              <div
-                className="h-full rounded-full bg-emerald-400 transition-[width]"
-                style={{ width: `${(finished / steps.length) * 100}%` }}
-              />
-            </div>
-          </div>
-          <button
-            type="button"
-            aria-pressed={done}
-            onClick={() => setStepDone(key, !done)}
-            className={cn(
-              "flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
-              done
-                ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/20"
-                : "border-mauve-700 text-mauve-200 hover:bg-mauve-800 hover:text-white",
-            )}
-          >
-            {done ? (
-              <CheckCircleIcon weight="fill" className="size-4" />
-            ) : (
-              <CircleIcon className="size-4" />
-            )}
-            {done ? "Done" : "Mark as done"}
-          </button>
-        </div>
-
         {finished === steps.length && (
-          <p className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-200">
-            You&apos;ve finished {course}.
-          </p>
+          <p className="docs-finished">You&apos;ve finished {course}.</p>
         )}
       </nav>
     </>

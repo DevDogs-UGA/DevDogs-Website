@@ -290,7 +290,7 @@ export default function Message({
         "group flex gap-2.5 px-3",
         grouped ? "pt-0.5" : "pt-3",
         message.isAnswer &&
-          "-mx-0 rounded-md bg-emerald-500/5 py-2 ring-1 ring-emerald-500/30",
+          "-mx-0 bg-[color-mix(in_srgb,var(--ok)_8%,transparent)] py-2 shadow-[inset_3px_0_0_var(--ok)]",
       )}
     >
       <div className="w-8 shrink-0">
@@ -334,7 +334,7 @@ export default function Message({
               {message.mine ? "You" : author.name}
             </span>
             {author.isOfficer && (
-              <span className="inline-flex items-center gap-0.5 rounded bg-indigo-500/20 px-1 text-[0.65rem] font-semibold tracking-wide text-indigo-300 uppercase">
+              <span className="inline-flex items-center gap-0.5 bg-[color-mix(in_srgb,var(--note)_20%,transparent)] px-1 text-[0.65rem] font-semibold tracking-wide text-[var(--note)] uppercase">
                 <SealCheckIcon className="size-3" weight="fill" />
                 Officer
               </span>
@@ -345,7 +345,7 @@ export default function Message({
               </span>
             )}
             {message.isAnswer && (
-              <span className="rounded bg-emerald-500/20 px-1 text-[0.65rem] font-semibold tracking-wide text-emerald-300 uppercase">
+              <span className="bg-[color-mix(in_srgb,var(--ok)_20%,transparent)] px-1 text-[0.65rem] font-semibold tracking-wide text-[var(--ok)] uppercase">
                 Answer
               </span>
             )}

@@ -1,8 +1,8 @@
 import { FileTextIcon, FolderIcon } from "@phosphor-icons/react/ssr";
 import DocsBreadcrumbs from "~/components/DocsBreadcrumbs";
 import { Mark } from "~/components/DocsProjectMark";
+import "~/components/Docs/docs.css";
 import DocsTileGrid from "~/components/DocsTileGrid";
-import { docsProjectMark } from "~/config/docs";
 import DocsScheduled from "~/components/DocsScheduled";
 import { DOCS_BASE, docsHref } from "~/lib/docsSlug";
 import type { DocsFolderEntry } from "~/server/docs/queries";
@@ -32,36 +32,35 @@ export default function DocsFolderContents({
   entries,
   base = DOCS_BASE,
 }: Props) {
-  const { iconBg } = docsProjectMark(project);
-
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-10 lg:px-10">
-      <div className="flex flex-col gap-1.5">
-        <DocsBreadcrumbs items={breadcrumbs} />
-        <h1 className="font-display text-3xl font-bold text-white">{title}</h1>
-        <p className="max-w-prose text-sm text-mauve-400">
-          Everything filed under this section.
-        </p>
+    <div className="docs-main docs-folder">
+      <div className="docs-bar">
+        <DocsBreadcrumbs items={breadcrumbs} current={title} />
+      </div>
+      <div className="docs-prose">
+        <h1>{title}</h1>
+        <p>Everything filed under this section.</p>
       </div>
 
       {entries.length > 0 ? (
-        <DocsTileGrid
-          tiles={entries.map((entry) => ({
-            href: docsHref(project, entry.path.split("/"), base),
-            title: entry.title,
-            description: entry.description,
-            note: entry.publishAt && <DocsScheduled at={entry.publishAt} />,
-            mark: (
-              <Mark
-                icon={entry.kind === "folder" ? FolderIcon : FileTextIcon}
-                iconBg={iconBg}
-                size="lg"
-              />
-            ),
-          }))}
-        />
+        <div style={{ marginTop: 32 }}>
+          <DocsTileGrid
+            tiles={entries.map((entry) => ({
+              href: docsHref(project, entry.path.split("/"), base),
+              title: entry.title,
+              description: entry.description,
+              note: entry.publishAt && <DocsScheduled at={entry.publishAt} />,
+              mark: (
+                <Mark
+                  icon={entry.kind === "folder" ? FolderIcon : FileTextIcon}
+                  size="lg"
+                />
+              ),
+            }))}
+          />
+        </div>
       ) : (
-        <p className="text-sm text-mauve-400">This section is empty.</p>
+        <p className="docs-hubfoot">This section is empty.</p>
       )}
     </div>
   );

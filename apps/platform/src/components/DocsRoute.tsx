@@ -4,9 +4,11 @@ import { notFound, redirect } from "next/navigation";
 import DocPageContent from "~/components/DocPageContent";
 import DocsFolderContents from "~/components/DocsFolderContents";
 import StepPager from "~/components/DocsProgress/StepPager";
+import { docsProjectKind } from "~/components/DocsProjectMark";
 import DocsScheduled from "~/components/DocsScheduled";
 import DocsSidebar from "~/components/DocsSidebar";
 import DocsVariants from "~/components/DocsVariants";
+import "~/components/Docs/docs.css";
 import { DOCS_BRANCH, DOCS_REPO } from "~/config/docs";
 import { env } from "~/env";
 import {
@@ -65,7 +67,8 @@ export async function DocsProjectLayout({
   return (
     <DocsVariants
       offered={{ os: current.os, supabase: groups.supabase.values }}
-      className="flex min-w-0 flex-1 items-start max-lg:flex-col"
+      className="docs-layout"
+      kind={docsProjectKind(project)}
     >
       <DocsSidebar
         projects={projects.map(({ slug, name, description }) => ({
@@ -81,9 +84,7 @@ export async function DocsProjectLayout({
         tree={await getDocsSidebarTree(project, mode)}
         base={baseOf(mode)}
       />
-      <div className="flex min-w-0 flex-1 flex-col self-stretch">
-        {children}
-      </div>
+      <div className="docs-pagecol">{children}</div>
     </DocsVariants>
   );
 }
@@ -109,17 +110,11 @@ export async function DocsProjectIndex({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-1.5 px-6 py-10 lg:px-10">
-      <h1 className="font-display text-2xl font-bold text-white">
-        Nothing here yet
-      </h1>
-      <p className="max-w-prose text-sm text-mauve-400">
+    <div className="docs-main docs-prose">
+      <h1>Nothing here yet</h1>
+      <p>
         This project hasn&rsquo;t published any documentation. Add markdown
-        files under its{" "}
-        <code className="rounded-sm border border-mauve-700 bg-mauve-800 px-1.5 py-0.5 font-mono text-xs text-white">
-          docs/{project}/
-        </code>{" "}
-        directory to get started.
+        files under its <code>docs/{project}/</code> directory to get started.
       </p>
     </div>
   );
@@ -240,6 +235,10 @@ export async function DocsPageRoute({
       html={page.html}
       headings={page.headings}
       breadcrumbs={breadcrumbs}
+      title={page.title}
+      eyebrow={
+        stepNav && `Step ${stepNav.index + 1} of ${stepNav.steps.length}`
+      }
       githubUrl={githubUrl}
       notice={page.publishAt && <DocsScheduled at={page.publishAt} />}
       footer={

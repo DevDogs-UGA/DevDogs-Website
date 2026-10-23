@@ -22,7 +22,7 @@ import "@git-diff-view/react/styles/diff-view-pure.css";
 import { useEffect, useMemo, useState } from "react";
 import type { DocsDiff as DocsDiffData } from "~/lib/docsDiffs";
 import VsCodeIcon from "~/components/DocsVscode/VsCodeIcon";
-import { cn } from "~/lib/cn";
+import "~/components/Docs/docs.css";
 
 const MODES = [
   { mode: DiffModeEnum.Unified, label: "Unified" },
@@ -30,7 +30,7 @@ const MODES = [
 ] as const;
 
 /** The compiler's `CodeIcon`s, as the Phosphor icons its code blocks draw
- * (colored by `data-icon` in globals.css). */
+ * (colored by `data-icon` in components/Docs/docs.css). */
 const FILE_ICONS: Record<string, Icon> = {
   ts: FileTsIcon,
   tsx: FileTsxIcon,
@@ -63,7 +63,7 @@ export function newSide(patch: string): string {
  * One file diff from a docs page (see ~/lib/docsDiffs), in @git-diff-view's
  * viewer: the file's own highlighting, real line numbers, and a unified/split
  * toggle, under the same file tab and copy button as the page's other code
- * blocks (`.docs-code-bar`, styles/globals.css).
+ * blocks (`.docs-dv-*`, components/Docs/docs.css).
  *
  * The `DiffFile` is built during render rather than in an effect, so the
  * server renders the finished diff into the page and hydration finds the same
@@ -120,23 +120,40 @@ export default function DocsDiff({
     return diff;
   }, [file, lang, patch, oldContent, newContent]);
 
+  const { added, removed } = useMemo(() => {
+    let added = 0;
+    let removed = 0;
+    for (const line of patch.split("\n")) {
+      if (line.startsWith("+") && !line.startsWith("+++")) added++;
+      else if (line.startsWith("-") && !line.startsWith("---")) removed++;
+    }
+    return { added, removed };
+  }, [patch]);
+
   return (
-    <figure className="docs-diff not-prose border-border my-6 overflow-hidden rounded-md border">
-      <figcaption className="docs-code-bar">
-        <span className="docs-code-tab">
+    <figure className="docs-dv not-prose">
+      <figcaption className="docs-dv-bar">
+        <span className="docs-dv-tab">
           <FileIcon
             weight="fill"
             aria-hidden
             data-icon={icon in FILE_ICONS ? icon : "code"}
-            className="docs-code-icon"
+            className="docs-dv-icon"
           />
           {file}
         </span>
-        <div className="flex shrink-0 items-center gap-2 self-center pb-1.5">
+        <span
+          className="docs-dv-stat"
+          aria-label={`${added} added, ${removed} removed`}
+        >
+          <span className="a">+{added}</span>{" "}
+          <span className="r">&minus;{removed}</span>
+        </span>
+        <div className="docs-dv-acts">
           <div
             role="group"
             aria-label="Diff layout"
-            className="flex gap-0.5 rounded-sm bg-mauve-900 p-0.5 max-sm:hidden"
+            className="docs-dv-seg max-sm:hidden"
           >
             {MODES.map(({ mode: value, label }) => (
               <button
@@ -144,12 +161,6 @@ export default function DocsDiff({
                 type="button"
                 aria-pressed={mode === value}
                 onClick={() => setMode(value)}
-                className={cn(
-                  "rounded-sm px-2 py-0.5 text-xs transition-colors",
-                  mode === value
-                    ? "bg-mauve-800 text-white"
-                    : "text-mauve-400 hover:text-white",
-                )}
               >
                 {label}
               </button>
@@ -172,10 +183,9 @@ export default function DocsDiff({
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Compare on GitHub"
-              className="docs-code-link"
             >
-              <GithubLogoIcon className="size-3.5" />
-              <span className="docs-code-link-label">GitHub</span>
+              <GithubLogoIcon weight="bold" />
+              GitHub
             </a>
           )}
           <button
@@ -183,9 +193,8 @@ export default function DocsDiff({
             onClick={copy}
             aria-label="Copy the new code"
             data-copied={copied || undefined}
-            className="docs-code-copy !mb-0"
           >
-            <CopyIcon className="size-3.5" />
+            <CopyIcon weight="bold" />
             {copied ? "Copied" : "Copy"}
           </button>
         </div>

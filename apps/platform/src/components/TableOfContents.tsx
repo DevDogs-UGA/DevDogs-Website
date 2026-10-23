@@ -1,14 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CaretRightIcon } from "@phosphor-icons/react/ssr";
+import { CaretDownIcon, RowsIcon } from "@phosphor-icons/react/ssr";
+import "~/components/Docs/docs.css";
 import type { TOCItem } from "~/lib/toc";
-import { cn } from "~/lib/cn";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "~/ui/collapsible";
 
 interface Props {
   items: TOCItem[];
@@ -16,9 +11,8 @@ interface Props {
 
 /**
  * The headings of one docs page, shared by both shapes the layout needs: the
- * sticky column from `lg` up, and the fold-out above the article below it. The
- * list, its colors, and its depth indents live here so a change to how an entry
- * looks reaches both.
+ * sticky column beside the article, and the "On this page" fold above it on
+ * narrow widths (`.docs-tocfold`, a real <details>). Depth reads as indent.
  */
 function Entries({
   items,
@@ -30,24 +24,16 @@ function Entries({
   onNavigate?: () => void;
 }) {
   return (
-    <ul className="flex flex-col gap-0.5">
+    <ul>
       {items.map((item) => {
         const id = item.url.slice(1);
-        const active = activeId === id;
         return (
           <li key={item.url}>
             <a
               href={item.url}
               onClick={onNavigate}
-              aria-current={active ? "location" : undefined}
-              // The sidebar tree's link: mauve at rest, white once hovered or
-              // current. Depth reads as indent rather than a second rail.
-              className={cn(
-                "block rounded-sm px-2 py-1 text-sm text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white",
-                item.depth > 2 && "pl-5",
-                item.depth > 3 && "pl-8",
-                active && "bg-mauve-800/60 font-medium text-white",
-              )}
+              data-depth={item.depth}
+              aria-current={activeId === id ? "location" : undefined}
             >
               {item.title}
             </a>
@@ -58,13 +44,9 @@ function Entries({
   );
 }
 
-/** The section label the mobile menu sheet puts over each of its groups. */
-const LABEL_CLASS =
-  "px-2 pb-1 text-xs font-semibold tracking-wide text-mauve-500 uppercase";
-
 /**
- * The sticky column, shown from `lg` up. {@link InlineTableOfContents} hides
- * there, so exactly one of the two is on screen at any width.
+ * The sticky column, shown from 1100px up (CSS). {@link InlineTableOfContents}
+ * takes over below it, so exactly one of the two is on screen at any width.
  */
 export default function TableOfContents({ items }: Props) {
   const [activeId, setActiveId] = useState<string>("");
@@ -95,38 +77,33 @@ export default function TableOfContents({ items }: Props) {
   if (items.length === 0) return null;
 
   return (
-    <nav aria-label="Table of contents" className="flex flex-col gap-0.5">
-      <p className={LABEL_CLASS}>On this page</p>
+    <nav aria-label="Table of contents" className="docs-toc">
+      <p className="docs-toc-h">On this page</p>
       <Entries items={items} activeId={activeId} />
     </nav>
   );
 }
 
-/**
- * The same contents folded up above the article, for widths with no room for
- * the column. Built from the Collapsible and rotating caret the sidebar's
- * folders use rather than a bare <details>, and hidden from `lg`.
- */
+/** The same contents folded up above the article, for widths with no room for the column. */
 export function InlineTableOfContents({ items }: Props) {
   const [open, setOpen] = useState(false);
 
   if (items.length === 0) return null;
 
   return (
-    <Collapsible
+    <details
+      className="docs-tocfold"
       open={open}
-      onOpenChange={setOpen}
-      className="mx-auto mb-6 max-w-3xl rounded-lg border border-mauve-800 bg-mauve-900/50 p-1.5 lg:hidden"
+      onToggle={(event) => setOpen(event.currentTarget.open)}
     >
-      <CollapsibleTrigger className="group flex w-full items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm font-medium text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white">
-        <CaretRightIcon className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
+      <summary>
+        <RowsIcon weight="bold" aria-hidden />
         On this page
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="mt-1 border-t border-mauve-800 pt-1.5">
-          <Entries items={items} onNavigate={() => setOpen(false)} />
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
+        <CaretDownIcon weight="bold" aria-hidden className="docs-fold-caret" />
+      </summary>
+      <nav aria-label="On this page" className="docs-toc">
+        <Entries items={items} onNavigate={() => setOpen(false)} />
+      </nav>
+    </details>
   );
 }

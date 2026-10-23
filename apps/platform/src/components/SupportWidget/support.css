@@ -1,0 +1,67 @@
+/* Support widget (docs to Discord bridge), Cosmic. No mockup: restyled by analogy with .menu, .dialog and .input.
+   Inside @layer cosmic; step-cornered fills over a ring colour instead of borders. */
+@layer cosmic {
+  .docs-support-panel {
+    clip-path: var(--step2);
+    color: var(--text);
+    background:
+      linear-gradient(var(--surface-2), var(--surface-2)) 2px 2px /
+        calc(100% - 4px) calc(100% - 4px) no-repeat,
+      var(--line-strong);
+    padding: 2px;
+  }
+  .docs-support-head {
+    background: var(--surface);
+    box-shadow: inset 0 -2px 0 var(--line-strong);
+  }
+  .docs-support-foot {
+    box-shadow: inset 0 1px 0 var(--line);
+  }
+  .docs-support-sub {
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+  .docs-support-row,
+  .docs-support-card {
+    background:
+      linear-gradient(var(--surface), var(--surface)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface), var(--surface)) 2px 0 / calc(100% - 4px)
+        100% no-repeat;
+  }
+  .docs-support-row:hover {
+    background:
+      linear-gradient(var(--raised), var(--raised)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--raised), var(--raised)) 2px 0 / calc(100% - 4px)
+        100% no-repeat;
+  }
+  .docs-support-row:focus-visible {
+    outline: 2px dashed var(--brand3);
+    outline-offset: 3px;
+  }
+  .docs-support-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background:
+      linear-gradient(var(--surface-2), var(--surface-2)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 2px 0 /
+        calc(100% - 4px) 100% no-repeat;
+  }
+  .docs-support-note {
+    clip-path: var(--step1);
+    background:
+      linear-gradient(
+          color-mix(in srgb, var(--note) 10%, var(--surface)),
+          color-mix(in srgb, var(--note) 10%, var(--surface))
+        )
+        0 2px / 100% calc(100% - 4px) no-repeat,
+      linear-gradient(
+          color-mix(in srgb, var(--note) 10%, var(--surface)),
+          color-mix(in srgb, var(--note) 10%, var(--surface))
+        )
+        2px 0 / calc(100% - 4px) 100% no-repeat;
+    box-shadow: inset 3px 0 0 var(--note);
+  }
+}

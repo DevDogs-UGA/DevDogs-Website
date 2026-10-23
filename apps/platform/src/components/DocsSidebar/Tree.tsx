@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CaretRightIcon, CheckCircleIcon } from "@phosphor-icons/react/ssr";
+import "~/components/Docs/docs.css";
 import { stepKey, useDoneSteps } from "~/components/DocsProgress/store";
 import { DOCS_INDEX_LABEL } from "~/config/docs";
 import DocsScheduled from "~/components/DocsScheduled";
@@ -16,7 +17,6 @@ import {
   type DocsTreeFolder,
   type DocsTreeNode,
 } from "~/lib/docsTree";
-import { cn } from "~/lib/cn";
 import {
   Collapsible,
   CollapsibleContent,
@@ -32,12 +32,6 @@ interface TreeContext {
   done: ReadonlySet<string>;
 }
 
-const PAGE_LINK =
-  "flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white";
-
-const ACTIVE_LINK =
-  "data-active:bg-mauve-800/60 data-active:font-medium data-active:text-white";
-
 function contains(folder: DocsTreeFolder, activePath: string) {
   return activePath === folder.path || activePath.startsWith(folder.path + "/");
 }
@@ -51,15 +45,9 @@ function contains(folder: DocsTreeFolder, activePath: string) {
  * Decoration only. The whole row is the one toggle, label and caret alike, so
  * there is no second, smaller target beside the label to aim for.
  */
-function Caret({ className }: { className: string }) {
+function Caret() {
   return (
-    <CaretRightIcon
-      aria-hidden
-      className={cn(
-        "shrink-0 text-mauve-500 transition-transform group-data-[state=open]:rotate-90",
-        className,
-      )}
-    />
+    <CaretRightIcon aria-hidden weight="bold" className="docs-tree-caret" />
   );
 }
 
@@ -107,9 +95,9 @@ function SectionHeading({
 
   return (
     <Collapsible defaultOpen>
-      <CollapsibleTrigger className="group flex w-full items-center gap-1.5 rounded-sm px-1.5 py-1 text-left text-xs font-semibold tracking-wide text-mauve-500 uppercase transition-colors hover:bg-mauve-800 hover:text-white">
-        <span className="min-w-0 flex-1">{section.label}</span>
-        <Caret className="size-3" />
+      <CollapsibleTrigger className="docs-tree-sec">
+        <span className="docs-tree-label">{section.label}</span>
+        <Caret />
       </CollapsibleTrigger>
       <CollapsibleContent>
         <Nodes nodes={children} ctx={ctx} depth={1} />
@@ -155,27 +143,25 @@ function Folder({
 
   return (
     <Collapsible open={open} onOpenChange={onOpenChange}>
-      <CollapsibleTrigger className="group flex w-full items-center gap-1.5 rounded-sm px-1.5 py-1.5 text-left text-sm font-medium text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white">
-        <span className="min-w-0 flex-1">
+      <CollapsibleTrigger className="docs-tree-row">
+        <span className="docs-tree-label">
           {folder.name}
           {folder.publishAt && (
-            <DocsScheduled at={folder.publishAt} className="mt-0.5 flex" />
+            <DocsScheduled at={folder.publishAt} className="flex" />
           )}
         </span>
         {folder.steps && (
           <span
             aria-label={`${finished} of ${steps.length} done`}
-            className={cn(
-              "shrink-0 text-xs tabular-nums",
-              finished === steps.length ? "text-emerald-400" : "text-mauve-500",
-            )}
+            data-done={finished === steps.length || undefined}
+            className="docs-tree-count"
           >
             {finished}/{steps.length}
           </span>
         )}
-        <Caret className="size-3.5" />
+        <Caret />
       </CollapsibleTrigger>
-      <CollapsibleContent className="ml-3 border-l border-mauve-800 pl-1.5">
+      <CollapsibleContent className="docs-tree-kids">
         <Nodes
           nodes={folder.children}
           ctx={ctx}
@@ -210,19 +196,19 @@ function Page({
       // The relabelled row is the one place the sidebar shows a name the page
       // does not answer to, so the real one stays reachable on hover.
       title={label === page.title ? undefined : page.title}
-      className={cn(PAGE_LINK, ACTIVE_LINK)}
+      className="docs-tree-link"
     >
-      <span className="min-w-0 flex-1">
+      <span className="docs-tree-label">
         {label}
         {page.publishAt && (
-          <DocsScheduled at={page.publishAt} className="mt-0.5 flex" />
+          <DocsScheduled at={page.publishAt} className="flex" />
         )}
       </span>
       {done && (
         <CheckCircleIcon
           weight="fill"
           aria-label="Done"
-          className="size-3.5 shrink-0 text-emerald-400"
+          className="docs-tree-done"
         />
       )}
     </Link>
@@ -249,7 +235,7 @@ function Nodes({
   course?: boolean;
 }) {
   return (
-    <ul className="flex flex-col gap-0.5">
+    <ul>
       {nodes.map((node) =>
         node.type === "folder" ? (
           <li key={`folder:${node.path}`}>
@@ -276,24 +262,22 @@ export default function Tree({
   const ctx = { ...base, done };
   if (tree.overview === null && tree.sections.length === 0) {
     return (
-      <p className="px-2 py-1.5 text-sm text-mauve-500">
-        No documentation for this project yet.
-      </p>
+      <p className="docs-tree-empty">No documentation for this project yet.</p>
     );
   }
 
   return (
-    <div className="flex flex-col gap-0.5">
+    <nav aria-label="Docs" className="docs-tree">
       {tree.overview && (
         <div>
           <Page page={tree.overview} ctx={ctx} />
         </div>
       )}
       {tree.sections.map((section) => (
-        <div key={section.id} className="mt-4 first:mt-0">
+        <div key={section.id} className="docs-tree-secwrap">
           <SectionHeading section={section} ctx={ctx} />
         </div>
       ))}
-    </div>
+    </nav>
   );
 }

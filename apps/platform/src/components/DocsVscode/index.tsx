@@ -14,7 +14,7 @@ import {
 } from "./handoff";
 
 /** How long the "Opening VS Code…" popup lasts, fade included (see
- * `.docs-vscode-popup` in globals.css, whose animation this matches). */
+ * `.docs-popup` in components/Docs/docs.css, whose animation this matches). */
 const POPUP_MS = 7000;
 
 /** How long "Continued in a newer tab" stays. */
@@ -117,7 +117,7 @@ export default function DocsVscode() {
         <div
           key={popup.id}
           role="status"
-          className="docs-vscode-popup"
+          className="docs-popup"
           style={{ top: popup.top, left: popup.left }}
         >
           Opening VS Code&hellip; Nothing happened?{" "}
@@ -127,7 +127,7 @@ export default function DocsVscode() {
         </div>
       )}
       {showContinued && (
-        <div role="status" className="docs-vscode-notice">
+        <div role="status" className="docs-notice">
           Continued in a newer tab
         </div>
       )}

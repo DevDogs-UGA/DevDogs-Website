@@ -1,81 +1,55 @@
 import Image from "next/image";
+import { cn } from "~/lib/cn";
 import type { ComponentType } from "react";
 import devdog from "~/assets/devdog.svg";
 import * as icons from "~/config/icons";
 import { docsProjectMark } from "~/config/docs";
+import type { EventCategory } from "~/lib/eventKind";
+import "~/components/Docs/docs.css";
 
 type MarkSize = "sm" | "lg";
 
-interface MarkProps {
-  icon: ComponentType<{ className?: string; weight?: "bold" | "fill" }>;
-  /** The fill behind the glyph: a solid, saturated Tailwind background. */
-  iconBg: string;
-  /**
-   * `sm` for a row in a menu or a select; `lg` for a tile, where the mark is
-   * the thing you look at and carries the same block shadow as the app
-   * switcher's icons.
-   */
-  size?: MarkSize;
+/** `.pm` hue per documented project; unlisted projects wear the club red. */
+const PROJECT_KIND: Record<string, EventCategory | undefined> = {
+  toolkit: "build",
+  workshops: "workshop",
+};
+
+/** The category hue a project's docs wear (tiles, headings, active rows). */
+export function docsProjectKind(slug: string): EventCategory | undefined {
+  return PROJECT_KIND[slug];
 }
 
-/**
- * An app-icon-shaped mark. The rim and shadow stay black, as everywhere else
- * on the site. The color goes on the surface beneath, so they have something
- * to read against.
- */
-export function Mark({ icon: Icon, iconBg, size = "sm" }: MarkProps) {
-  const box =
-    size === "lg"
-      ? "shadow-block-sm size-12 rounded-xl border-2 text-2xl shadow-black"
-      : "size-6 rounded-md border text-sm";
+/** Projects with an app mark of their own (DogDays), drawn bare in the tile. */
+const PROJECT_IMAGE: Record<string, string> = {
+  "schedule-builder": "/cosmic/a/dogdays.png",
+};
 
+interface MarkProps {
+  icon: ComponentType<{ className?: string; weight?: "bold" | "fill" }>;
+  /** The event category hue behind the glyph; omit for the club red. */
+  kind?: EventCategory;
+  size?: MarkSize;
+  /** Legacy fill class (TopNav's sub-menu rows); the tile paints from `kind` now. */
+  iconBg?: string;
+}
+
+/** `.pm` (docs kit): a stepped tile in the hue, white glyph. */
+export function Mark({ icon: Icon, kind, size = "sm", iconBg }: MarkProps) {
   return (
     <span
       aria-hidden
-      className={`flex shrink-0 items-center justify-center border-black text-black ${iconBg} ${box}`}
+      data-kind={kind}
+      className={cn(size === "lg" ? "docs-pm lg" : "docs-pm", iconBg)}
     >
       <Icon weight="bold" />
     </span>
   );
 }
 
-/** The mascot at a mark's size: the platform's own icon, as in the navbar. */
-function Logo({ size = "sm" }: { size?: MarkSize }) {
-  return (
-    <span
-      aria-hidden
-      className={`flex shrink-0 items-center justify-center ${size === "lg" ? "size-12" : "size-6"}`}
-    >
-      <Image alt="" src={devdog} sizes={size === "lg" ? "48px" : "24px"} />
-    </span>
-  );
-}
-
-/** A filled glyph in its color with no tile, in a mark's box so rows still
- * line up. */
-function Glyph({
-  icon: Icon,
-  color,
-  size = "sm",
-}: {
-  icon: MarkProps["icon"];
-  color: string;
-  size?: MarkSize;
-}) {
-  return (
-    <span
-      aria-hidden
-      className={`flex shrink-0 items-center justify-center ${color} ${size === "lg" ? "size-12 text-4xl" : "size-6 text-lg"}`}
-    >
-      <Icon weight="fill" />
-    </span>
-  );
-}
-
 /**
- * A documented project's mark: the mascot for the platform, else a bare
- * glyph in the project's color: an app's own logo, or a Phosphor icon (see
- * DOCS_PROJECT_MARKS).
+ * A documented project's mark: the mascot for the platform, DogDays' own mark
+ * for the schedule builder, else a glyph on a tile (see DOCS_PROJECT_MARKS).
  */
 export default function DocsProjectMark({
   slug,
@@ -85,8 +59,25 @@ export default function DocsProjectMark({
   slug: string;
   size?: MarkSize;
 }) {
-  const { kind, icon, color } = docsProjectMark(slug);
+  const { kind, icon } = docsProjectMark(slug);
+  const image = PROJECT_IMAGE[slug];
+  const tileKind = PROJECT_KIND[slug];
 
-  if (kind === "logo") return <Logo size={size} />;
-  return <Glyph icon={icons[icon]} color={color} size={size} />;
+  if (kind === "logo" || image) {
+    return (
+      <span
+        aria-hidden
+        data-kind={tileKind}
+        className={size === "lg" ? "docs-pm lg" : "docs-pm"}
+      >
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element -- a 40px static mark
+          <img src={image} alt="" />
+        ) : (
+          <Image alt="" src={devdog} sizes="32px" />
+        )}
+      </span>
+    );
+  }
+  return <Mark icon={icons[icon]} kind={tileKind} size={size} />;
 }

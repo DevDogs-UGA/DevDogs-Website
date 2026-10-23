@@ -1,15 +1,24 @@
 import type { Metadata } from "next";
-import PageShell from "~/components/PageShell";
+import Link from "next/link";
 import DocsProjectMark from "~/components/DocsProjectMark";
+import {
+  CourseStatus,
+  ContinueStrip,
+  type HubCourse,
+} from "~/components/DocsProgress/HubProgress";
 import DocsTileGrid, { type DocsTile } from "~/components/DocsTileGrid";
 import {
   DOCS_LANDING_LARGE,
   DOCS_LANDING_SMALL,
   DOCS_LANDING_WORKSHOPS,
 } from "~/config/docs";
+import { DOCS_BASE, docsHref } from "~/lib/docsSlug";
+import type { DocsTreeNode } from "~/lib/docsTree";
 import { formatEventShortDate } from "~/lib/eventTime";
+import "~/components/Docs/docs.css";
 import {
   getDocsUpcoming,
+  getDocsTree,
   getVisibleDocsProjects,
   type DocsProject,
 } from "~/server/docs/queries";
@@ -27,12 +36,12 @@ export const metadata: Metadata = {
   description: "Documentation for DevDogs projects.",
 };
 
-function tile(project: DocsProject, size: "sm" | "lg"): DocsTile {
+function tile(project: DocsProject): DocsTile {
   return {
     href: `/docs/${encodeURIComponent(project.slug)}`,
     title: project.name,
     description: project.description,
-    mark: <DocsProjectMark slug={project.slug} size={size} />,
+    mark: <DocsProjectMark slug={project.slug} size="lg" />,
   };
 }
 
@@ -48,87 +57,133 @@ function projectsFor(
     .filter((project): project is DocsProject => project != null);
 }
 
+/** Every `steps: true` folder under a project, as a course. A course's steps are its direct pages. */
+function coursesIn(
+  project: string,
+  nodes: DocsTreeNode[],
+  trail: string[] = [],
+): HubCourse[] {
+  return nodes.flatMap((node): HubCourse[] => {
+    if (node.type !== "folder") return [];
+    if (!node.steps)
+      return coursesIn(project, node.children, [...trail, node.name]);
+    const steps = node.children.flatMap((child) =>
+      child.type === "page"
+        ? [
+            {
+              path: child.path,
+              title: child.title,
+              href: docsHref(project, child.path.split("/"), DOCS_BASE),
+            },
+          ]
+        : [],
+    );
+    if (steps.length === 0) return [];
+    return [
+      {
+        project,
+        name: [...trail.slice(-1), node.name].join(" · "),
+        href: docsHref(project, node.path.split("/"), DOCS_BASE),
+        steps,
+      },
+    ];
+  });
+}
+
 export default async function DocsLandingPage() {
   const projects = await getVisibleDocsProjects();
   const upcoming = [...(await getDocsUpcoming()).values()]
     .flat()
     .sort((a, b) => a.publishAt.localeCompare(b.publishAt));
-  const large = projectsFor(projects, DOCS_LANDING_LARGE);
-  const small = projectsFor(projects, DOCS_LANDING_SMALL);
   const workshops = projectsFor(projects, DOCS_LANDING_WORKSHOPS);
+  const courses = (
+    await Promise.all(
+      workshops.map(async (project) =>
+        coursesIn(project.slug, await getDocsTree(project.slug)),
+      ),
+    )
+  ).flat();
+  const projectRows = [
+    ...projectsFor(projects, DOCS_LANDING_LARGE),
+    ...projectsFor(projects, DOCS_LANDING_SMALL),
+  ];
 
   return (
-    <PageShell
-      accent="cyan"
-      title="Documentation"
-      description="Guides and references for DevDogs projects, published straight from the monorepo."
-    >
-      <div className="flex flex-col gap-8">
-        {/* The front door: which product a new contributor is actually
-            choosing between. Large marks, because this is the one
-            place in the docs a reader is picking a destination rather than
-            looking something up. */}
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold tracking-wide text-mauve-400 uppercase">
-            Which project are you working on?
-          </h2>
-          <DocsTileGrid tiles={large.map((project) => tile(project, "lg"))} />
-          <p className="text-sm text-mauve-400">
-            Not on a project yet?{" "}
-            <a
-              href="/discord"
-              className="font-medium text-mauve-200 underline-offset-4 hover:text-white hover:underline"
-            >
-              Ask in Discord
-            </a>
-            .
-          </p>
-        </section>
+    <div className="wrap">
+      <div className="docs-hub">
+        <h1>Docs</h1>
+        <p className="docs-hub-lead">
+          Follow a workshop course one step at a time, or read how a DevDogs
+          project works. Everything here is free and open source.
+        </p>
 
-        {workshops.length > 0 && (
-          <section className="flex flex-col gap-3">
-            <h2 className="text-xs font-semibold tracking-wide text-mauve-400 uppercase">
-              Missed a workshop?
-            </h2>
+        <ContinueStrip courses={courses} />
+
+        {(courses.length > 0 || workshops.length > 0) && (
+          <section className="docs-group" aria-labelledby="docs-h-courses">
+            <h2 id="docs-h-courses">Workshop courses</h2>
+            <p>
+              Step-by-step courses from our workshops. A new step opens after
+              each workshop.
+            </p>
             <DocsTileGrid
-              tiles={workshops.map((project) => tile(project, "sm"))}
+              tiles={[
+                ...courses.map((course): DocsTile => ({
+                  href: course.href,
+                  title: course.name,
+                  description: `${course.steps.length} steps`,
+                  status: <CourseStatus course={course} />,
+                  mark: <DocsProjectMark slug={course.project} size="lg" />,
+                })),
+                ...workshops.map((project) => tile(project)),
+              ]}
             />
           </section>
         )}
 
-        {/* Everyone touches these two whichever product they pick, so they stay one
-            tap away without competing with the choice above. */}
-        {small.length > 0 && (
-          <section className="flex flex-col gap-3">
-            <h2 className="text-xs font-semibold tracking-wide text-mauve-400 uppercase">
-              Repo-wide
-            </h2>
-            <DocsTileGrid tiles={small.map((project) => tile(project, "sm"))} />
+        {projectRows.length > 0 && (
+          <section className="docs-group" aria-labelledby="docs-h-projects">
+            <h2 id="docs-h-projects">Projects</h2>
+            <p>
+              How each club project runs, and how to contribute. The code is
+              public under BSD-3.
+            </p>
+            <DocsTileGrid tiles={projectRows.map((project) => tile(project))} />
           </section>
         )}
-      </div>
 
-      {/* Named, dated, and not linked: there is nothing to open yet. */}
-      {upcoming.length > 0 && (
-        <section className="mt-8 flex flex-col gap-3">
-          <h2 className="text-xs font-semibold tracking-wide text-mauve-400 uppercase">
-            Coming soon
-          </h2>
-          <ul className="flex flex-col gap-1 text-sm text-mauve-300">
-            {upcoming.map((item) => (
-              <li key={`${item.name}:${item.publishAt}`}>
-                {item.name}: {formatEventShortDate(item.publishAt)}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+        {/* Named, dated, and not linked: there is nothing to open yet. */}
+        {upcoming.length > 0 && (
+          <section className="docs-group" aria-labelledby="docs-h-soon">
+            <h2 id="docs-h-soon">Coming soon</h2>
+            <ul className="muted small">
+              {upcoming.map((item) => (
+                <li key={`${item.name}:${item.publishAt}`}>
+                  {item.name}: {formatEventShortDate(item.publishAt)}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
-      {projects.length === 0 && (
-        <p className="text-sm text-mauve-400">
-          No documentation has been published yet.
+        {projects.length === 0 && (
+          <p className="docs-hubfoot">
+            No documentation has been published yet.
+          </p>
+        )}
+
+        <p className="docs-hubfoot">
+          Stuck? Ask in{" "}
+          <a className="textlink" href="/discord">
+            Discord
+          </a>
+          . Want to register an app that signs in with DevDogs? See{" "}
+          <Link className="textlink" href="/settings/oauth">
+            OAuth apps
+          </Link>
+          .
         </p>
-      )}
-    </PageShell>
+      </div>
+    </div>
   );
 }

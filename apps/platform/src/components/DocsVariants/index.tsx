@@ -17,16 +17,20 @@ import Controller from "./Controller";
 export default function DocsVariants({
   offered,
   className,
+  kind,
   children,
 }: {
   offered: OfferedVariants;
   className?: string;
+  /** The docs category hue (`data-kind`) for everything inside. */
+  kind?: string;
   children: ReactNode;
 }) {
   return (
     <div
       id={DOCS_VARIANTS_ROOT_ID}
       className={className}
+      data-kind={kind}
       suppressHydrationWarning
     >
       <script dangerouslySetInnerHTML={{ __html: prePaintScript(offered) }} />
