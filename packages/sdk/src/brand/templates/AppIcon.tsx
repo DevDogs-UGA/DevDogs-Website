@@ -48,10 +48,11 @@ export function AppIcon({ app, size, background }: AppIconProps) {
   const step = Math.max(1, tile * 0.05);
   // The fill is its own stepped tile laid over the ink one, inset by exactly
   // one border on every side, so the outline has the same weight all round.
-  // Its corner step is the ink's less that border, which lines the two
-  // notches up.
+  // An even border around a stepped tile is that tile eroded by the border,
+  // which keeps the notch size, so the fill's step equals the ink's and an L
+  // of ink wraps every corner.
   const inner = tile - border * 2;
-  const fillStep = Math.max(1, step - border);
+  const fillStep = step;
   const fillMiddle = inner - fillStep * 2;
 
   return (
