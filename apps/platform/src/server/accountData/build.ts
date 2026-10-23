@@ -285,7 +285,9 @@ export async function buildMemberDataExport(userId: string) {
 
   const teamMembershipRequests = [
     ...(await db.execute<Record<string, unknown>>(
-      sql`select "id", "teamId", "direction", "status", "message", "createdAt", "respondedAt"
+      sql`select "id", "teamId", "direction", "status",
+                 case when "createdBy" = ${userId}::uuid then "message" end as "message",
+                 "createdAt", "respondedAt"
           from "platform"."teamMembershipRequests"
           where "userId" = ${userId}::uuid order by "createdAt"`,
     )),

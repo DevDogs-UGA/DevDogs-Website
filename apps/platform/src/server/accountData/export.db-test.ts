@@ -90,8 +90,8 @@ beforeAll(async () => {
             'revision by an officer', ${OTHER}::uuid)`);
 
   await db.execute(sql`
-    insert into platform.apps (id, slug, "displayName")
-    values (${APP}::uuid, 'export-db-test-app', 'Export test app')`);
+    insert into platform.apps (id, slug, "displayName", kind)
+    values (${APP}::uuid, 'export-db-test-app', 'Export test app', 'external')`);
   await db.execute(sql`
     insert into platform.reports
       (id, "appId", "reporterUserId", "reportedUserId", "contentType", "contentRef",

@@ -30,6 +30,8 @@ function refusal(error: unknown): DeletionActionResult {
   throw error;
 }
 
+const MAX_REASON_LENGTH = 500;
+
 /**
  * Schedules a deletion of `userId`'s account: the caller's own, or, for an
  * officer holding `canDeleteAccounts`, any member's. Fourteen days from now,
@@ -50,9 +52,10 @@ export async function requestAccountDeletion(
   reason?: string,
 ): Promise<DeletionActionResult> {
   const actorUserId = await expectSession();
+  const trimmedReason = reason?.trim().slice(0, MAX_REASON_LENGTH) || null;
   try {
     const result = await scheduleAccountDeletion(userId, actorUserId, {
-      reason: reason ?? null,
+      reason: trimmedReason,
     });
     revalidatePath("/console/moderation/users/[userId]", "page");
     return { ok: true, scheduledFor: result.scheduledFor.toISOString() };

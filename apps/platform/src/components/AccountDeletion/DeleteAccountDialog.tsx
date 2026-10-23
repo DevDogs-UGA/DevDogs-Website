@@ -85,7 +85,7 @@ export default function DeleteAccountDialog({
         </Button>
       </AlertDialogTrigger>
 
-      <AlertDialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-[560px]">
+      <AlertDialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-[560px]">
         <AlertDialogTitle>Delete your account?</AlertDialogTitle>
         <AlertDialogDescription>
           Nothing is deleted today. You have 14 days to change your mind: sign

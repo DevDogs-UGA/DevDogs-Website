@@ -49,7 +49,7 @@ describe("requestAccountDeletion", () => {
     );
 
     expect(fake.schedule).toHaveBeenCalledWith("member-1", "officer-1", {
-      reason: "  asked by email ",
+      reason: "asked by email",
     });
     expect(result).toEqual({
       ok: true,
