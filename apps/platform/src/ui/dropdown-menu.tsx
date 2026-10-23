@@ -4,7 +4,6 @@ import * as React from "react";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 
 import { cn } from "~/lib/cn";
-import "./overlays.css";
 import { CheckIcon, CaretRightIcon } from "@phosphor-icons/react/ssr";
 
 function DropdownMenu({
@@ -76,10 +75,7 @@ function DropdownMenuItem({
       data-slot="dropdown-menu-item"
       data-inset={inset}
       data-variant={variant}
-      className={cn(
-        "group/dropdown-menu-item",
-        className,
-      )}
+      className={cn("group/dropdown-menu-item", className)}
       {...props}
     />
   );
@@ -98,10 +94,7 @@ function DropdownMenuCheckboxItem({
     <DropdownMenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
       data-inset={inset}
-      className={cn(
-        "[&_svg:not([class*='size-'])]:size-4",
-        className,
-      )}
+      className={cn("[&_svg:not([class*='size-'])]:size-4", className)}
       checked={checked}
       {...props}
     >
@@ -140,10 +133,7 @@ function DropdownMenuRadioItem({
     <DropdownMenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
-      className={cn(
-        "[&_svg:not([class*='size-'])]:size-4",
-        className,
-      )}
+      className={cn("[&_svg:not([class*='size-'])]:size-4", className)}
       {...props}
     >
       <span
@@ -191,11 +181,7 @@ function DropdownMenuShortcut({
   ...props
 }: React.ComponentProps<"span">) {
   return (
-    <span
-      data-slot="dropdown-menu-shortcut"
-      className={className}
-      {...props}
-    />
+    <span data-slot="dropdown-menu-shortcut" className={className} {...props} />
   );
 }
 
@@ -217,10 +203,7 @@ function DropdownMenuSubTrigger({
     <DropdownMenuPrimitive.SubTrigger
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
-      className={cn(
-        "[&_svg:not([class*='size-'])]:size-4",
-        className,
-      )}
+      className={cn("[&_svg:not([class*='size-'])]:size-4", className)}
       {...props}
     >
       {children}

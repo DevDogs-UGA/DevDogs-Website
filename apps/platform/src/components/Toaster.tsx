@@ -1,7 +1,6 @@
 "use client";
 
 import { Toaster as SonnerToaster } from "sonner";
-import "~/ui/overlays.css";
 
 export default function Toaster() {
   return (

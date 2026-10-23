@@ -8,7 +8,6 @@ import {
   XCircleIcon,
   XIcon,
 } from "@phosphor-icons/react/ssr";
-import "./overlays.css";
 
 type ToastType = "success" | "error" | "warning" | "info";
 

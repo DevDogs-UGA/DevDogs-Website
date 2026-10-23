@@ -4,7 +4,6 @@ import * as React from "react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 
 import { cn } from "~/lib/cn";
-import "./overlays.css";
 import { Button } from "~/ui/button";
 import { XIcon } from "@phosphor-icons/react/ssr";
 

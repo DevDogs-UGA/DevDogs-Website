@@ -1,7 +1,6 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import "./overlays.css";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 import {
   CheckCircleIcon,

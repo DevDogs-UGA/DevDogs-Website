@@ -4,7 +4,6 @@ import * as React from "react";
 import { Popover as PopoverPrimitive } from "radix-ui";
 
 import { cn } from "~/lib/cn";
-import "./overlays.css";
 
 function Popover({
   ...props
