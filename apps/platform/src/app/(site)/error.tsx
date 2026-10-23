@@ -40,8 +40,8 @@ export default function SiteError({
   return (
     <ErrorPanel title="That did not load" digest={error.digest} reset={reset}>
       Something this page needed failed to come back. Nothing you did caused it
-      and nothing was saved incorrectly. Trying again is usually enough,
-      because the failure is almost always one read rather than the service.
+      and nothing was saved incorrectly. Trying again is usually enough, because
+      the failure is almost always one read rather than the service.
     </ErrorPanel>
   );
 }

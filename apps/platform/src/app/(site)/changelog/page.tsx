@@ -76,8 +76,8 @@ export default function Changelog() {
               <div className="eyebrow">Subscribe</div>
               <h2 className="h3">Follow along in your terminal</h2>
               <p className="small muted">
-                The same page, as plain text. Pipe it into <code>less</code>,
-                or run it in a cron job.
+                The same page, as plain text. Pipe it into <code>less</code>, or
+                run it in a cron job.
               </p>
               <Link className="btn terminal" href="/changelog">
                 <b>$</b> curl {host}/changelog

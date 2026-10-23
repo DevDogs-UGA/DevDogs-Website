@@ -6,7 +6,13 @@ import { join } from "node:path";
 const root = new URL("../../../", import.meta.url).pathname;
 const store = join(root, "node_modules/.pnpm");
 const dir = readdirSync(store).find((d) => d.startsWith("@resvg+resvg-js@"));
-const { Resvg } = createRequire(join(store, dir, "node_modules/"))("@resvg/resvg-js");
+const { Resvg } = createRequire(join(store, dir, "node_modules/"))(
+  "@resvg/resvg-js",
+);
 const [, , input, output, width] = process.argv;
-const png = new Resvg(readFileSync(input), { fitTo: { mode: "width", value: Number(width) } }).render().asPng();
+const png = new Resvg(readFileSync(input), {
+  fitTo: { mode: "width", value: Number(width) },
+})
+  .render()
+  .asPng();
 writeFileSync(output, png);

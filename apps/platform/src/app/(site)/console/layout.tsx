@@ -38,5 +38,7 @@ export default async function ConsoleLayout({
 }) {
   await requireSession();
 
-  return <div className="flex min-w-0 flex-1 flex-col *:w-full">{children}</div>;
+  return (
+    <div className="flex min-w-0 flex-1 flex-col *:w-full">{children}</div>
+  );
 }

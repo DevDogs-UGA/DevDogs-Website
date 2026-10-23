@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import {
-  GDGC_ISSUES,
-  gdgcIssueByVersion,
-} from "@devdogsuga/newsletter";
+import { GDGC_ISSUES, gdgcIssueByVersion } from "@devdogsuga/newsletter";
 
 import EmailStage from "~/components/Content/EmailStage";
 import "~/components/Content/content.css";

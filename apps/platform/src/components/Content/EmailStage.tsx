@@ -24,7 +24,10 @@ export default function EmailStage({
 }) {
   const props: EmailProps = { issue, ctx: webRenderContext() };
   return (
-    <div className="content-stage" style={background ? { backgroundColor: background } : undefined}>
+    <div
+      className="content-stage"
+      style={background ? { backgroundColor: background } : undefined}
+    >
       <div className="content-stage-inner">
         <style dangerouslySetInnerHTML={{ __html: paintCss() }} />
         <ChangelogEmail {...props} />

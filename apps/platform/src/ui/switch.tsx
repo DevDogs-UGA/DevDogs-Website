@@ -60,7 +60,7 @@ export default function Toggle({
       {pending && (
         <span
           aria-hidden
-          className={`pointer-events-none absolute z-[1] top-1 grid size-4 place-items-center ${
+          className={`pointer-events-none absolute top-1 z-[1] grid size-4 place-items-center ${
             checked ? "left-6 text-[var(--k6)]" : "left-1 text-[var(--bg)]"
           }`}
         >

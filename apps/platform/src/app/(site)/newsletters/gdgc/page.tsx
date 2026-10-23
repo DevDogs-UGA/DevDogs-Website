@@ -57,7 +57,11 @@ export default function GdgcNewsletters() {
 
       <div className="wrap">
         {latest && (
-          <Card as="section" className="content-latest" aria-labelledby="latest-issue">
+          <Card
+            as="section"
+            className="content-latest"
+            aria-labelledby="latest-issue"
+          >
             <div>
               <div className="eyebrow" style={{ marginBottom: 14 }}>
                 Latest issue

@@ -19,7 +19,10 @@ export default function ConnectCard({
   return (
     <section className="section" style={{ paddingBlock: "var(--space-8)" }}>
       <div className="wrap" style={{ display: "grid", placeItems: "center" }}>
-        <Card className="w-full max-w-lg" style={{ padding: "clamp(20px, 6vw, 32px)" }}>
+        <Card
+          className="w-full max-w-lg"
+          style={{ padding: "clamp(20px, 6vw, 32px)" }}
+        >
           <h1 className="display" style={{ fontSize: 30, margin: "0 0 8px" }}>
             {title}
           </h1>
