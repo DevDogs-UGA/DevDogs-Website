@@ -6,25 +6,24 @@
  */
 
 export const HERO_HEADLINE = [
-  "BUILD REAL",
-  "SOFTWARE.",
-  "EVERY WEEK.",
+  "Build real",
+  "software.",
+  "Every week.",
 ] as const;
 
 export const HERO_BLURB =
   "Learn industry standard tech and compete in hackathons, building features for projects benefitting the UGA community.";
 
 export const MISSION_PARAGRAPHS = [
-  "DevDogs is the large-scale application development club at UGA dedicated to benefitting our community through code.",
-  "All of our projects are free, open-source, and designed to teach students industry-standard technologies and best-practices for collaboration in a fun and welcoming environment.",
-  "Whether you’re writing your first line of code or your thousandth, there’s a place for you here.",
+  "DevDogs is UGA’s large-scale application development club, dedicated to benefiting our community through code.",
+  "Every project is free and open source, and designed to teach industry-standard technologies and how to work well together. Whether you’re writing your first line of code or your thousandth, there’s a place for you here.",
 ] as const;
 
 export const PROJECTS_BLURB =
-  "Every semester, DevDogs members collaborate across design, frontend, and backend to ship a product consumed by real users. Our projects are built by students, for students.";
+  "Built by students, for students. Every project is free and open source under BSD-3: students keep copyright and the code is public.";
 
 export const EVENTS_BLURB =
-  "DevDogs meets regularly on Mondays and Wednesdays: we host workshops, hackathons, and open build nights. Here’s what’s next.";
+  "Merge Monday every week, special events on Wednesdays, and a social each month. Here’s what’s next.";
 
 export const LEADERSHIP_BLURB =
-  "DevDogs is led by a diverse team of UGA students across several disciplines and years.";
+  "DevDogs is led by a team of UGA students across several disciplines and years.";

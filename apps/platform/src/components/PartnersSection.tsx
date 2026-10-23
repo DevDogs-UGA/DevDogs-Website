@@ -1,101 +1,89 @@
 import Link from "next/link";
-import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
-import SectionBackground, {
-  type BlobDef,
-  type EdgeType,
-} from "~/ui/section-background";
+import { ArrowRightIcon, EnvelopeSimpleIcon } from "@phosphor-icons/react/ssr";
+import { Card } from "~/ui/card";
 import LinkButton from "~/ui/link-button";
+import { TextLink } from "~/ui/text-link";
 
-const BADGE_POINTS =
-  "50,4 58,11 68,8 72,17 83,18 83,28 93,32 89,42 96,50 89,58 93,68 83,72 83,83 72,83 68,93 58,89 50,96 42,89 32,93 28,83 18,83 17,72 8,68 11,58 4,50 11,42 8,32 17,28 18,18 28,17 32,8 42,11";
+/** The approved sponsorship packet's numbers (`FACTS.md`). */
+const STATS = [
+  { value: "600+", label: "students in our Discord" },
+  { value: "419", label: "members of our GDG on Campus chapter" },
+  { value: "~2,000", label: "CS and data science undergrads at UGA" },
+  { value: "26–64", label: "students at each event" },
+] as const;
 
-const PARTNERS_BLOBS: BlobDef[] = [
-  { cx: "18%", cy: "35%", rx: "50%", ry: "55%", fill: "#e9d5ff" }, // purple
-  { cx: "75%", cy: "60%", rx: "55%", ry: "50%", fill: "#c084fc", opacity: 0.6 }, // purple
-  { cx: "70%", cy: "10%", rx: "44%", ry: "36%", fill: "#fbcfe8", opacity: 0.5 }, // pink
-  { cx: "12%", cy: "82%", rx: "40%", ry: "30%", fill: "#f9a8d4", opacity: 0.5 }, // pink
-];
+const EMAIL = "devdogs@uga.edu";
 
-function MarchingAntsBadge() {
+/**
+ * The partners call to action: one glowing card with the offer and the "Your
+ * Logo Here" burst, then the club's reach in four numbers. A plain section,
+ * between two bands.
+ */
+export default function PartnersSection() {
   return (
-    <div className="relative min-h-56 grow">
-      <Link
-        href="mailto:devdogs@uga.edu"
-        className="absolute inset-1/2 flex aspect-square w-44 -translate-1/2 items-center justify-center transition-transform will-change-transform hover:scale-105 md:w-56 md:shrink-0"
-        aria-label="Partner with DevDogs"
-      >
-        <svg
-          viewBox="0 0 100 100"
-          className="absolute inset-0 h-full w-full"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <polygon points={BADGE_POINTS} fill="var(--color-purple-200)" />
-          <polygon
-            points={BADGE_POINTS}
-            fill="none"
-            stroke="black"
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-            className="animate-march-dashes"
-          />
-        </svg>
-        <div className="relative z-10 flex rotate-[8deg] flex-col items-center gap-2 px-8 py-6 text-center">
-          <p className="font-display text-sm leading-tight font-extrabold text-mauve-800">
-            Your Logo Here
-          </p>
-          <p className="text-xs text-purple-700 underline">Reach out →</p>
-        </div>
-      </Link>
-    </div>
-  );
-}
-
-interface Props {
-  topEdge: EdgeType;
-  bottomEdge: EdgeType;
-}
-
-export default function PartnersSection({ topEdge, bottomEdge }: Props) {
-  return (
-    <div className="mx-4 overflow-hidden rounded-xl md:mx-6">
-      <section className="relative w-full overflow-hidden pt-(--section-skew-slope) pb-(--section-skew-slope)">
-        <SectionBackground
-          topEdge={topEdge}
-          bottomEdge={bottomEdge}
-          base="#faf5ff"
-          blobs={PARTNERS_BLOBS}
-        />
-        <div className="relative z-10 mx-auto max-w-6xl px-6 py-14 md:px-12 md:py-20">
-          <div className="flex flex-wrap gap-6 md:flex-nowrap md:items-center md:gap-16">
-            <div className="w-full max-w-prose space-y-4 font-medium text-balance text-mauve-800 md:text-lg/relaxed">
-              <h2 className="font-display mb-8 text-left text-4xl font-extrabold text-black md:text-5xl">
-                Partners
-              </h2>
-              <p>
-                DevDogs is the large-scale application development club at UGA
-                building real products for the community every semester.
-              </p>
-              <p>
-                Partnering with us puts your brand in front of driven students,
-                with sponsorship, recruiting, and mentorship opportunities.
-              </p>
-              <p>
-                We strive to be a part of supporting the next generation of UI
-                designers, UX researchers, software engineers, data scientists,
-                project leaders, community builders, and everything in-between.
-              </p>
-              <p>If you want in on the action, let&rsquo;s talk.</p>
-              <LinkButton
-                href="mailto:devdogs@uga.edu"
-                className="hover:shadow-block-md transition-lift mt-8 flex w-fit items-center gap-2 rounded-sm border-2 border-black bg-white px-4 py-2 text-sm font-semibold text-black hover:-translate-x-0.5 hover:-translate-y-0.5"
+    <section id="partners" className="section scroll-mt-20">
+      <div className="wrap home-mission-wrap">
+        <div className="home-rider-host">
+          <Card glow className="home-partner">
+            <div>
+              <div
+                className="eyebrow"
+                style={{ marginBottom: 14, color: "var(--brand3)" }}
               >
-                Get in Touch <ArrowRightIcon />
-              </LinkButton>
+                Partners
+              </div>
+              <h2 style={{ marginBottom: 18, textWrap: "balance" }}>
+                If you want in on the action, let&rsquo;s talk.
+              </h2>
+              <p style={{ margin: "0 0 12px" }}>
+                Co-host a workshop night, recruit early, or bring us a project.
+                Tiers run from $0 to $1,200.
+              </p>
+              <p className="muted" style={{ margin: "0 0 26px" }}>
+                We support the next generation of software engineers, UI
+                designers, UX researchers, data scientists, project leaders,
+                community builders, and everything in between.
+              </p>
+              <div className="row" style={{ gap: "12px 20px" }}>
+                <LinkButton href="/partners" variant="secondary">
+                  How to partner <ArrowRightIcon weight="bold" />
+                </LinkButton>
+                <TextLink asChild>
+                  <a href={`mailto:${EMAIL}`}>
+                    <EnvelopeSimpleIcon weight="bold" />
+                    {EMAIL}
+                  </a>
+                </TextLink>
+              </div>
             </div>
-            <MarchingAntsBadge />
-          </div>
+            <Link
+              className="home-logo-slot"
+              href={`mailto:${EMAIL}`}
+              aria-label="Partner with DevDogs: your logo here"
+            >
+              <span className="home-burst" aria-hidden="true" />
+              <span className="home-slot-txt">
+                <b>Your Logo Here</b>
+                <u>Reach out →</u>
+              </span>
+            </Link>
+          </Card>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            className="home-rider"
+            src="/cosmic/a/sprite/office_building.png"
+            alt=""
+          />
         </div>
-      </section>
-    </div>
+        <div className="home-pstats">
+          {STATS.map(({ value, label }) => (
+            <div key={label}>
+              <b>{value}</b>
+              <span>{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }

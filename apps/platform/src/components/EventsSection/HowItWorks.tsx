@@ -1,451 +1,315 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import type { StaticImageData } from "next/image";
-import type { ReactNode } from "react";
-import CompetitionTimeline, {
-  timelineBadge,
-  type StripDay,
-  type TimelineSegment,
-  type Tone,
-} from "./CompetitionTimeline";
-import CrtTv from "./CrtTv";
-import { CHIP_CLS, CHIP_DARK_CLS } from "./meetingView";
-import bruceAlmighty from "~/assets/bruce-almighty.gif";
-import charlieConspiracy from "~/assets/charlie-conspiracy.gif";
-import informationGif from "~/assets/information.gif";
-import muybridgeHorse from "~/assets/muybridge-horse.gif";
+import { useState, useSyncExternalStore, type CSSProperties } from "react";
+import { Band } from "~/ui/band";
+import { Card } from "~/ui/card";
+import { Chip } from "~/ui/chip";
+import Badge from "~/ui/badge";
+import type { EventCategory } from "~/lib/eventKind";
+import { useTvStatic } from "./useTvStatic";
 
 /**
- * The club's format, said once and drawn twice.
+ * Weekly Programming: the club's week, drawn as a strip and a pixel television.
  *
- * The copy has to keep the model straight (see `docs/platform/guides/meetings-
- * and-teams`): a competition is a week bracketed by two Mondays, and every
- * Monday does both jobs, judging last week's and kicking off this week's. The
- * timeline strip draws that loop. The day cards around it carry the sentences,
- * and they sit on the strip's own eight columns, above and below it, so each
- * card is beside the day it is about with a pointer at its dot.
+ * The strip is eight columns, Monday to the next Monday, with a dot where the
+ * club meets and a barber-pole bar for the review that runs all week. The four
+ * day cards sit on those columns, above and below it, each with a pointer at its
+ * dot. Hovering or focusing a card lights its part of the strip, turns the
+ * set's knobs, colours its lamp and changes the channel to that card's GIF;
+ * static plays whenever no card is live (see `useTvStatic`). Under 720px the
+ * strip and pointers are hidden and the cards stack.
  *
- * The television is the other drawing. It sits beside the heading, hovering a
- * card changes the channel to that card's GIF, and static plays whenever no
- * card is live. The set is a hand-drawn SVG (see {@link CrtTv}) and the static
- * is drawn too, a frame at a time on the client (see {@link useTvStatic})
- * rather than the 1.8 MB GIF it used to be. The clips are still GIFs, 200 KB to
- * 2.4 MB, and next/image passes animated files through unoptimized, so each
- * mounts only while its card is hovered rather than putting megabytes on a page
- * most visitors never hover. The build-week clip is Muybridge's 1878 race
- * horse, public domain via Wikimedia Commons.
- *
- * Renders on both pages, in both dialects. The homepage uses it on its light
- * marketing plate; /events renders it `tone="dark"` inside a console card.
- * `tone` swaps neutrals only. The segment hues are information and never
- * change.
- *
- * `id` is a prop rather than a constant so the two pages can pick their own
- * anchor. Both jump to it from links, so the section carries a scroll margin
- * that clears the sticky TopNav.
+ * Copy is the Merge Monday plan in `FACTS.md`; spring is tentative and says so.
  */
 
+type Strip = "monday" | "wednesday" | "week" | "nextMonday";
+
 interface Beat {
-  /** Which day, as the card prints it. */
+  strip: Strip;
+  kind: EventCategory;
   day: string;
   title: string;
-  body: ReactNode;
-  /** The chips under the title. Empty for the async window, which is not a
-   *  meeting and so has no segment. */
-  segments: TimelineSegment[];
-  /**
-   * What the television shows while this card is hovered, or null to let the
-   * static show through. Mounted only while hovered, see the note above.
-   */
-  gif: StaticImageData | null;
-  /** Which part of the strip this card is about, meaning what lights up. */
-  strip: StripDay;
-  /**
-   * Where the card sits on the strip's eight columns from `lg`: above or below
-   * the track, starting on which column, and which of its two columns its caret
-   * points from, or none, for the async window, which has no dot.
-   */
-  place: {
-    side: "above" | "below";
-    col: 1 | 3 | 5 | 7;
-    caret: "start" | "end" | null;
-  };
+  body: string;
+  chips?: { label: string; kind: EventCategory; tentative?: boolean }[];
+  gif: string;
+  side: "above" | "below";
+  col: 1 | 3 | 5 | 7;
+  caret?: "start" | "end";
 }
 
-const BEATS: Beat[] = [
+const BEATS: readonly Beat[] = [
   {
-    day: "Monday",
-    title: "Workshop, then Kickoff",
-    body: (
-      <>
-        Every workshop is self-contained, and none assumes you were here last
-        week. Then, once you have the tools, we kick off the week&rsquo;s
-        challenge: build the best implementation of that week&rsquo;s feature.
-      </>
-    ),
-    segments: ["workshop", "kickoff"],
-    gif: informationGif,
     strip: "monday",
-    place: { side: "above", col: 1, caret: "start" },
+    kind: "build",
+    day: "Monday, 6 to 8 PM",
+    title: "Merge Monday",
+    body: "Pick an issue in one of our projects and open a pull request before you leave. An unfinished one counts. Focus leads pair with newcomers. This fall, some Mondays open with a workshop.",
+    chips: [{ label: "Build", kind: "build" }],
+    gif: "information",
+    side: "above",
+    col: 1,
+    caret: "start",
   },
   {
-    day: "Wednesday",
-    // Named, because it is a night the club runs rather than a gap in the
-    // week -- unlike Unscheduled, the label for a night nobody scheduled at
-    // all.
-    title: "Build Session",
-    body: (
-      <>
-        Catch up on workshop materials, meet up with friends for hackathons, get
-        unblocked with support from focus leads and club officers, or just come
-        hang out and get work done!
-      </>
-    ),
-    // No segment: a build session is AUTHORED on the meeting rather than
-    // derived from its structure, so there is no entry in `segmentBadge` to
-    // point at and its chip comes from `kindBadge`. The card carries the name
-    // on its own.
-    segments: [],
-    gif: bruceAlmighty,
     strip: "wednesday",
-    place: { side: "below", col: 3, caret: "start" },
+    kind: "workshop",
+    day: "Wednesday, 6 to 7 PM",
+    title: "Workshop Wednesday",
+    body: "In spring, workshops move to about every other Wednesday and a hackathon-team member hosts. Mondays stay pure Merge Monday.",
+    chips: [{ label: "Workshop", kind: "workshop", tentative: true }],
+    gif: "bruce-almighty",
+    side: "below",
+    col: 3,
+    caret: "start",
   },
   {
-    day: "All week",
-    title: "Build It",
-    body: (
-      <>
-        On your own or with friends, wherever and whenever. Open a pull request
-        before Monday.
-      </>
-    ),
-    segments: [],
-    gif: muybridgeHorse,
     strip: "week",
-    place: { side: "above", col: 5, caret: null },
+    kind: "info",
+    day: "All week",
+    title: "Review and merge",
+    body: "Focus leads review your pull request during the week. Get it merged and you earn EL credit and a check-in star.",
+    gif: "muybridge-horse",
+    side: "above",
+    col: 5,
   },
   {
-    day: "Next Monday",
-    title: "Judging, then It All Starts Again",
-    body: (
-      <>
-        Builders demo in front of the club, and officers and members vote on the
-        best implementation. Then, a new workshop kicks off the next one.
-      </>
-    ),
-    segments: ["judging"],
-    gif: charlieConspiracy,
     strip: "nextMonday",
-    place: { side: "below", col: 7, caret: "end" },
+    kind: "build",
+    day: "Next Monday",
+    title: "Merge Monday again",
+    body: "It runs every week, in the same room. Pick up your open pull request or take a new issue.",
+    gif: "charlie-conspiracy",
+    side: "below",
+    col: 7,
+    caret: "end",
   },
 ];
 
-/**
- * The two dialects' neutrals. Class strings are constant per tone, and which
- * card is live is represented by a data attribute.
- *
- * The caret is part of the card: a rotated square in the card's own fill, two
- * of its borders drawn and the corner between them rounded off, laid over the
- * card's edge so the border appears to run out around the point and back. That
- * only works with an OPAQUE fill, since a translucent one would show the edge
- * through the square, which is why the dark card is solid `mauve-900` rather
- * than the console's usual `white/5`. It sits at 25% or 75% of the card's
- * width, the centres of its two strip columns, and only from `lg`, where the
- * cards are on the columns at all. Cards above the track point down, cards
- * below point up.
- *
- * The light card's shadow is a `drop-shadow`, not a `box-shadow`, on purpose: a
- * filter follows the painted shape, caret included, where a box shadow would
- * stop at the rectangle and leave the point casting nothing.
- *
- * While any card is hovered the live one leans in toward the strip and the
- * others step back, smaller and dimmer, so it reads as the channel that is on.
- * See `SIDE` for the direction.
- */
-const CARET_BASE =
-  "lg:before:absolute lg:before:size-3.5 lg:before:-translate-x-1/2 lg:before:rotate-45 lg:before:transition-colors";
-
-const HOVER =
-  "transition-[opacity,scale,translate,border-color] duration-200 group-data-[hovering=true]/beats:data-[active=false]:scale-[0.97] group-data-[hovering=true]/beats:data-[active=false]:opacity-60";
-
-const TONES = {
-  light: {
-    heading: "text-black",
-    intro: "text-mauve-700",
-    tvShadow: "drop-shadow-block-md shadow-black",
-    beat: `drop-shadow-block-md relative flex flex-col gap-2 rounded-sm border-2 border-black bg-white p-4 ${CARET_BASE} lg:before:border-black lg:before:bg-white ${HOVER}`,
-    beatDay:
-      "font-display text-xs font-extrabold tracking-widest text-mauve-600 uppercase",
-    beatTitle: "font-display text-lg leading-tight font-extrabold text-black",
-    beatBody: "text-sm/relaxed text-mauve-700",
-    // Two borders, 2px, at the top-left of the rotated square (pointing up)
-    // or the bottom-right (pointing down), with that corner rounded.
-    caretUp:
-      "lg:before:-top-2 lg:before:rounded-tl-[2px] lg:before:border-t-2 lg:before:border-l-2",
-    caretDown:
-      "lg:before:-bottom-2 lg:before:rounded-br-[2px] lg:before:border-b-2 lg:before:border-r-2",
+const MORE: readonly {
+  kind: EventCategory;
+  label: string;
+  title: string;
+  body: string;
+}[] = [
+  {
+    kind: "milestone",
+    label: "Demo Days",
+    title: "Show what we’ve built",
+    body: "Fall: Mon Nov 16, 7 to 8 PM. Spring, tentative: a mid-semester Demo Day Mar 1 and a final Demo Day Apr 19.",
   },
-  dark: {
-    heading: "text-white",
-    intro: "text-mauve-300",
-    tvShadow: "drop-shadow-block-md shadow-black/60",
-    beat: `relative flex flex-col gap-2 rounded-lg border border-mauve-700 bg-mauve-900 p-4 data-[active=true]:border-white/60 lg:data-[active=true]:before:border-white/60 ${CARET_BASE} lg:before:border-mauve-700 lg:before:bg-mauve-900 ${HOVER}`,
-    beatDay:
-      "font-display text-xs font-extrabold tracking-widest text-mauve-400 uppercase",
-    beatTitle: "font-display text-lg leading-tight font-extrabold text-white",
-    beatBody: "text-sm/relaxed text-mauve-300",
-    caretUp:
-      "lg:before:-top-[calc(0.4375rem+1px)] lg:before:rounded-tl-[2px] lg:before:border-t lg:before:border-l",
-    caretDown:
-      "lg:before:-bottom-[calc(0.4375rem+1px)] lg:before:rounded-br-[2px] lg:before:border-b lg:before:border-r",
+  {
+    kind: "social",
+    label: "Socials",
+    title: "Once a month",
+    body: "Spring, tentative: Jan 20, Feb 17, Mar 24, and Apr 19 alongside the final Demo Day.",
   },
-} satisfies Record<Tone, Record<string, string>>;
+  {
+    kind: "info",
+    label: "Credit",
+    title: "EL credit and a check-in star",
+    body: "Attend a workshop, or contribute a feature to one of our projects. Most contributions start at Merge Monday.",
+  },
+];
 
-/** Static class lookups, so Tailwind sees every utility it has to emit. */
-const CARET_X = {
-  start: "lg:before:left-1/4",
-  end: "lg:before:left-3/4",
-  null: "lg:before:hidden",
-} as const;
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Mon"] as const;
+/** Which day columns light up for each card. */
+const COLS: Record<Strip, readonly number[]> = {
+  monday: [0],
+  wednesday: [2],
+  week: [3, 4, 5, 6],
+  nextMonday: [7],
+};
+const LAMP: Record<Strip, string> = {
+  monday: "#0ea5e9",
+  wednesday: "#10b981",
+  week: "#eab308",
+  nextMonday: "#0ea5e9",
+};
+/** Pointer frames on the knob sheet: 0 is up, clockwise, 45 degrees each. */
+const KNOB: Record<Strip, readonly [number, number]> = {
+  monday: [7, 6],
+  wednesday: [1, 7],
+  week: [3, 1],
+  nextMonday: [5, 3],
+};
 
-const COL_START = {
-  1: "lg:col-start-1",
-  3: "lg:col-start-3",
-  5: "lg:col-start-5",
-  7: "lg:col-start-7",
-} as const;
+const REDUCED = "(prefers-reduced-motion: reduce)";
+function subscribeReduced(onChange: () => void) {
+  const query = window.matchMedia(REDUCED);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
 
-/**
- * Placement, plus the direction of the hover: the live card moves TOWARD the
- * strip and the others shrink AWAY from it, which is a matter of where each
- * card's transform origin sits. A card above the strip scales about its top
- * edge, so getting smaller pulls its bottom, the strip-facing edge, away. A
- * card below scales about its bottom. Below `lg` every card is under the strip,
- * so "toward" is up for all of them.
- */
-const SIDE = {
-  above:
-    "lg:row-start-1 lg:self-end data-[active=true]:-translate-y-1 lg:origin-top lg:data-[active=true]:translate-y-1 lg:group-data-[hovering=true]/beats:data-[active=false]:-translate-y-0.5",
-  below:
-    "lg:row-start-3 lg:self-start data-[active=true]:-translate-y-1 lg:origin-bottom lg:group-data-[hovering=true]/beats:data-[active=false]:translate-y-0.5",
-} as const;
+const knobPosition = (frame: number): CSSProperties => ({
+  backgroundPosition: `${(frame * 100) / 7}% 0`,
+});
 
-export default function HowItWorks({
-  id = "how-it-works",
-  tone = "light",
-  cutout = false,
-}: {
-  id?: string;
-  tone?: Tone;
-  /**
-   * Cut the strip's band out of the plate behind it, edge to edge, so the
-   * timeline runs on the page's own black through a slot in the section.
-   * Homepage only: it assumes it is inside a `SectionBackground` plate that the
-   * `@container` site layout sizes, and draws the plate's rounded corners at
-   * the slot's four corners itself.
-   */
-  cutout?: boolean;
-}) {
-  // `null` is the resting state, not "beat 0": static plays underneath until a
-  // pointer lands on a card.
-  const [hovered, setHovered] = useState<number | null>(null);
-  const [touched, setTouched] = useState<number | null>(null);
-  const [scrolled, setScrolled] = useState<number | null>(null);
-  const timelineRef = useRef<HTMLDivElement>(null);
-  const beatRefs = useRef<Array<HTMLLIElement | null>>([]);
-
-  // On the stacked layout, the strip stays under the nav while the cards move
-  // past it. The first beat starts active; as soon as its card's top edge
-  // reaches the strip, the next beat takes over.
-  useEffect(() => {
-    const mobile = window.matchMedia("(max-width: 63.999rem)");
-    let frame = 0;
-
-    const update = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        if (!mobile.matches || !timelineRef.current) {
-          setScrolled(null);
-          return;
-        }
-
-        const line = timelineRef.current.getBoundingClientRect().bottom;
-        const intersected = beatRefs.current.filter(
-          (beat) => beat !== null && beat.getBoundingClientRect().top <= line,
-        ).length;
-        setScrolled(Math.min(intersected, BEATS.length - 1));
-      });
-    };
-
-    update();
-    window.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
-    mobile.addEventListener("change", update);
-
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
-      mobile.removeEventListener("change", update);
-    };
-  }, []);
-
-  const activeIndex = hovered ?? touched ?? scrolled;
-  // noUncheckedIndexedAccess is on, so this is Beat | undefined either way,
-  // which is what the television wants anyway, since undefined IS static.
-  const active = activeIndex === null ? undefined : BEATS[activeIndex];
-  const t = TONES[tone];
+export default function HowItWorks({ id = "how-it-works" }: { id?: string }) {
+  const [active, setActive] = useState<Strip | null>(null);
+  const staticRef = useTvStatic();
+  // GIFs cannot be paused, so a visitor who wants less motion keeps the frozen
+  // snow on the set instead of a channel.
+  const reduced = useSyncExternalStore(
+    subscribeReduced,
+    () => window.matchMedia(REDUCED).matches,
+    () => true,
+  );
+  const gif = BEATS.find((beat) => beat.strip === active)?.gif;
+  const knobs = active ? KNOB[active] : ([0, 0] as const);
 
   return (
-    <section
-      id={id}
-      aria-labelledby={`${id}-heading`}
-      className="flex scroll-mt-28 flex-col gap-8"
-    >
-      <div className="flex flex-col gap-4">
-        {/* Flex rather than the eight-column grid this used to be. On a grid
-            the set was centred in ITS OWN cell, so the run between the prose's
-            right edge (the paragraphs stop at `max-w-prose`, well short of the
-            column) and the start of the set's column was dead space the
-            centring never saw. `flex-1` gives the set the width left over after
-            the prose. */}
-        <div className="flex flex-col gap-8 lg:flex-row lg:items-stretch lg:gap-0">
-          <div className="flex max-w-prose flex-col gap-4 text-left font-medium text-mauve-800">
-            <h2
-              id={`${id}-heading`}
-              className={`font-display text-2xl font-extrabold md:text-3xl ${t.heading}`}
-            >
-              Weekly Programming
-            </h2>
-            <p className={`text-base/relaxed text-balance ${t.intro}`}>
-              Every DevDogs project grows one merged feature at a time, with a
-              new feature for each project every week.
+    <Band id={id} className="section" aria-labelledby={`${id}-heading`}>
+      <div className="wrap">
+        <div className="home-wp-top">
+          <div className="home-wp-copy">
+            <h2 id={`${id}-heading`}>Weekly Programming</h2>
+            <p className="muted">
+              Merge Monday every week. Workshops, Demo Days and a monthly social
+              round out the semester.
             </p>
           </div>
-          {/* The set is absolutely positioned from `lg`, so its deliberately
-              oversized height contributes nothing to the row: the timeline
-              stays exactly where the title and description put it. Its top edge
-              shares the prose's top edge, and the extra height overflows below. */}
-          <div className="mx-auto hidden w-full max-w-sm lg:relative lg:mx-0 lg:block lg:max-w-none lg:flex-1">
-            <div className="lg:absolute lg:inset-0 lg:flex lg:items-start lg:justify-end">
-              <CrtTv
-                className={`lg:h-[clamp(11rem,16vw,14rem)] lg:w-auto lg:max-w-full ${t.tvShadow}`}
-                channel={active?.strip ?? null}
-                showing={
-                  active?.gif ? { key: active.title, image: active.gif } : null
-                }
-              />
+          <div className="home-tv" aria-hidden="true">
+            <div className="screen">
+              <canvas ref={staticRef} width={96} height={72} />
+              {gif && !reduced ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={gif} src={`/cosmic/a/tv/${gif}.gif`} alt="" />
+              ) : null}
             </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="tv-set" src="/cosmic/a/tv/tv.png" alt="" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="glass" src="/cosmic/a/tv/glass.png" alt="" />
+            <i className="knob a" style={knobPosition(knobs[0])} />
+            <i className="knob b" style={knobPosition(knobs[1])} />
+            <i
+              className="lamp"
+              style={{ background: active ? LAMP[active] : "#78716c" }}
+            />
           </div>
         </div>
-      </div>
 
-      {/* One grid, three rows from `lg`: cards above, the strip, cards below,
-          on the strip's own eight columns, so each card starts under (or over)
-          the day it is about. The `<ol>` keeps its chronological DOM order and
-          dissolves into the grid with `contents`; below `lg` it is a plain
-          stack after the strip. */}
-      {/* `gap-y-5`: the light cards cast a block drop-shadow, and anything
-          tighter let it bleed into the strip's black cutout. */}
-      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-8 lg:gap-x-4 lg:gap-y-5">
         <div
-          ref={timelineRef}
-          className="sticky top-16 z-20 py-5 lg:relative lg:top-auto lg:z-auto lg:col-span-8 lg:row-start-2"
+          className="home-wp-grid"
+          data-hovering={active !== null ? "true" : "false"}
         >
-          {cutout && <Cutout />}
-          {/* Inside a cutout the strip sits on the page's black, whatever
-              plate the rest of the section is on, so it takes the dark
-              neutrals there, or the day names would be black on black. */}
-          <CompetitionTimeline
-            tone={cutout ? "dark" : tone}
-            bleed={cutout}
-            active={active?.strip ?? null}
-          />
+          <div
+            className="home-wp-strip"
+            role="figure"
+            aria-label="A week of the club: Merge Monday on Monday, a Workshop Wednesday on some Wednesdays in spring, pull request review all week, and Merge Monday again the next Monday."
+          >
+            <div className="home-wp-days">
+              {DAYS.map((name, i) => (
+                <span
+                  key={i}
+                  className={i === 0 || i === 7 ? "meet" : undefined}
+                  data-active={
+                    active !== null && COLS[active].includes(i)
+                      ? "true"
+                      : "false"
+                  }
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
+            <div className="home-wp-track">
+              <span className="home-wp-bar tail l" aria-hidden="true" />
+              <span
+                className="home-wp-bar wk"
+                aria-hidden="true"
+                data-active={active === "week" ? "true" : "false"}
+              />
+              <span className="home-wp-bar tail r" aria-hidden="true" />
+              <Dot strip="monday" col={1} color="#0ea5e9" active={active}>
+                Monday: Merge Monday
+              </Dot>
+              <Dot strip="wednesday" col={3} color="#10b981" active={active}>
+                Wednesday: workshop night
+              </Dot>
+              <Dot strip="nextMonday" col={8} color="#0ea5e9" active={active}>
+                Next Monday: Merge Monday again
+              </Dot>
+            </div>
+          </div>
+
+          <ol className="home-wp-beats">
+            {BEATS.map((beat) => (
+              <Card
+                key={beat.strip}
+                as="li"
+                kind={beat.kind}
+                interactive
+                className="home-wp-beat"
+                data-active={active === beat.strip ? "true" : "false"}
+                data-side={beat.side}
+                data-col={beat.col}
+                data-caret={beat.caret}
+                onMouseEnter={() => setActive(beat.strip)}
+                onMouseLeave={() => setActive(null)}
+                onFocus={() => setActive(beat.strip)}
+                onBlur={() => setActive(null)}
+              >
+                <span className="home-wp-caret" aria-hidden="true" />
+                <p className="home-wp-day">{beat.day}</p>
+                <h3>{beat.title}</h3>
+                {beat.chips ? (
+                  <div className="chips">
+                    {beat.chips.map((chip) => (
+                      <span key={chip.label} style={{ display: "contents" }}>
+                        <Chip kind={chip.kind}>{chip.label}</Chip>
+                        {chip.tentative ? (
+                          <Badge variant="info">Tentative</Badge>
+                        ) : null}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                <p className="body">{beat.body}</p>
+              </Card>
+            ))}
+          </ol>
         </div>
 
-        <ol
-          className="group/beats flex flex-col gap-4 lg:contents"
-          data-hovering={activeIndex !== null}
-        >
-          {BEATS.map((beat, i) => (
-            <li
-              key={beat.title}
-              ref={(node) => {
-                beatRefs.current[i] = node;
-              }}
-              tabIndex={0}
-              data-active={activeIndex === i}
-              className={`${t.beat} ${beat.place.side === "above" ? t.caretDown : t.caretUp} ${CARET_X[beat.place.caret ?? "null"]} ${COL_START[beat.place.col]} ${SIDE[beat.place.side]} lg:col-span-2`}
-              onMouseEnter={() => setHovered(i)}
-              onMouseLeave={() => setHovered(null)}
-              onFocus={() => setHovered(i)}
-              onBlur={() => setHovered(null)}
-              onClick={() => {
-                if (
-                  window.matchMedia("(hover: none) and (min-width: 64rem)")
-                    .matches
-                ) {
-                  setHovered(null);
-                  setTouched((current) => (current === i ? null : i));
-                }
-              }}
-            >
-              <p className={t.beatDay}>{beat.day}</p>
-              <h3 className={t.beatTitle}>{beat.title}</h3>
-              {beat.segments.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {beat.segments.map((segment) => {
-                    const badge = timelineBadge[segment];
-                    return (
-                      <span
-                        key={segment}
-                        className={
-                          tone === "dark"
-                            ? `${badge.chipDark} ${CHIP_DARK_CLS}`
-                            : `${badge.bg} ${badge.text} ${CHIP_CLS}`
-                        }
-                      >
-                        {badge.label}
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-              <p className={t.beatBody}>{beat.body}</p>
-            </li>
+        <div className="g3 home-wp-more grid">
+          {MORE.map((card) => (
+            <Card key={card.label} data-kind={card.kind} className="quiet">
+              <p className="home-wp-day">{card.label}</p>
+              <h3>{card.title}</h3>
+              <p className="body">{card.body}</p>
+            </Card>
           ))}
-        </ol>
+        </div>
       </div>
-    </section>
+    </Band>
   );
 }
 
-/**
- * The slot in the plate that the strip runs through.
- *
- * A black band as wide as the section, centred on this wrapper, which is
- * centred in the section because the content column is. The site layout is the
- * `@container`, and a section is that width less its `mx-4` / `md:mx-6`, the
- * same sum `--section-skew-slope` in globals.css is built from. It paints at
- * `-z-10`, under the strip but inside the content's stacking context, which is
- * above the plate.
- *
- * The four ears make it a cutout rather than a stripe: a square at each outer
- * corner, black except for a quarter-circle of transparency where the plate
- * above or below rounds off into the slot. Their radius is the section's own
- * `rounded-xl`, so the slot's corners match the plate's.
- */
-function Cutout() {
+function Dot({
+  strip,
+  col,
+  color,
+  active,
+  children,
+}: {
+  strip: Strip;
+  col: number;
+  color: string;
+  active: Strip | null;
+  children: string;
+}) {
   return (
-    <div
-      aria-hidden
-      className="absolute inset-y-0 left-1/2 -z-10 w-[calc(100cqw-2rem)] -translate-x-1/2 bg-black md:w-[calc(100cqw-3rem)]"
+    <span
+      className="home-wp-cell"
+      style={{ gridColumn: col }}
+      data-active={active === strip ? "true" : "false"}
     >
-      <span className="absolute bottom-full left-0 size-3 bg-[radial-gradient(circle_at_top_right,transparent_11.5px,black_12px)]" />
-      <span className="absolute right-0 bottom-full size-3 bg-[radial-gradient(circle_at_top_left,transparent_11.5px,black_12px)]" />
-      <span className="absolute top-full left-0 size-3 bg-[radial-gradient(circle_at_bottom_right,transparent_11.5px,black_12px)]" />
-      <span className="absolute top-full right-0 size-3 bg-[radial-gradient(circle_at_bottom_left,transparent_11.5px,black_12px)]" />
-    </div>
+      <i
+        className="home-wp-dot"
+        style={{ "--d": color } as CSSProperties}
+        role="img"
+        aria-label={children}
+      />
+    </span>
   );
 }

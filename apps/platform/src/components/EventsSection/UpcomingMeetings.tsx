@@ -1,74 +1,63 @@
+import { cache } from "react";
 import { getMeetingsInRange } from "~/server/loaders/meetings";
 import type { MeetingInRange } from "~/server/loaders/meetings";
-import NextMeetingStrip from "./NextMeetingStrip";
-
-/** How many nights the homepage names. Three is a glance; the schedule is
- *  for the rest. */
-const UPCOMING_COUNT = 3;
+import NextMeetingStrip, { MeetingRow } from "./NextMeetingStrip";
 
 /**
- * The next few meetings as a short stack: the soonest at full size, each one
- * after it scaled down a step about its top edge, so the list recedes into the
- * page and the eye lands on the first. Scale, not opacity: the third night is
- * still a real date somebody may be planning around, so it stays legible, only
- * smaller. The eyebrow changes with rank so three cards do not all claim to be
- * the next meeting.
- *
- * Empty is the ordinary summer state, and the strip already draws it. One
- * strip, with null, rather than an empty list.
+ * How many meetings the homepage names: the lead card plus the rows under the
+ * Events heading. Four is a glance; the schedule is for the rest.
  */
-const STACK_STEP = ["", "scale-[0.95]", "scale-[0.9]"] as const;
-const STACK_EYEBROW = ["Next meeting", "Then", "After that"] as const;
+const HOME_COUNT = 4;
 
 /**
- * Fetches and renders the homepage's short stack of upcoming nights.
- *
- * Deliberately a standalone component, called from `page.tsx` OUTSIDE
- * `HomeSections`'s `"use cache"` scope, rather than awaited inline inside
- * `EventsSection`. `nextMeetings` below reads "now" and the live schedule --
- * genuinely dynamic, per-request data -- and this deployment runs `"use
- * cache"` without Cache Components/PPR (see `next.config.ts`), which has no
- * mechanism to carve a per-request hole out of a cached subtree: everything a
- * `"use cache"` function touches gets baked into its single shared cache
- * entry, including whichever request's database connection happened to
- * populate it. A live Hyperdrive/postgres.js connection is scoped to the
- * request that opened it (see `~/server/db`'s `currentDb`), so once the
- * cached entry outlives that request -- or a second concurrent request
- * shares its population -- Workers refuses the socket write with "Cannot
- * perform I/O on behalf of a different request", which is what threw here
- * before this split (surfaced to the browser as React errors #419/#441).
- *
- * Rendering this element in `page.tsx` and passing it into `HomeSections` as
- * a prop keeps its data fetch on the current request the whole way through,
- * the same reason `AttendanceBanner` sits outside the cached page body in
- * `(site)/layout.tsx`.
+ * One read for both halves of the page. The lead card (under the hero) and the
+ * list (in Events) are separate elements because they sit in different
+ * sections, but they describe the same few nights, so they share a request's
+ * answer instead of asking twice.
  */
-export default async function UpcomingMeetings() {
-  return <UpcomingStack meetings={await nextMeetings(UPCOMING_COUNT)} />;
+const upcoming = cache(() => nextMeetings(HOME_COUNT));
+
+/**
+ * The lead card under the hero: the soonest meeting that has not ended.
+ *
+ * Standalone components, called from `page.tsx` OUTSIDE `HomeSections`'s
+ * `"use cache"` scope, rather than awaited inline inside the sections. They
+ * read "now" and the live schedule -- genuinely dynamic, per-request data --
+ * and this deployment runs `"use cache"` without Cache Components/PPR (see
+ * `next.config.ts`), which has no mechanism to carve a per-request hole out of
+ * a cached subtree: everything a `"use cache"` function touches gets baked into
+ * its single shared cache entry, including whichever request's database
+ * connection happened to populate it. A live Hyperdrive/postgres.js connection
+ * is scoped to the request that opened it (see `~/server/db`'s `currentDb`), so
+ * once the cached entry outlives that request -- or a second concurrent
+ * request shares its population -- Workers refuses the socket write with
+ * "Cannot perform I/O on behalf of a different request", which is what threw
+ * here before this split (surfaced to the browser as React errors #419/#441).
+ *
+ * Rendering these elements in `page.tsx` and passing them into `HomeSections`
+ * as props keeps their data fetch on the current request the whole way
+ * through, the same reason `AttendanceBanner` sits outside the cached page body
+ * in `(site)/layout.tsx`.
+ */
+export async function NextMeeting() {
+  const [first] = await upcoming();
+  return <NextMeetingStrip meeting={first ?? null} now={new Date()} />;
 }
 
-function UpcomingStack({ meetings }: { meetings: MeetingInRange[] }) {
-  const now = new Date();
-  if (meetings.length === 0)
-    return <NextMeetingStrip meeting={null} now={now} />;
-
+/**
+ * The meetings after the lead one, as the Events section's list. Empty is the
+ * ordinary summer state, and the lead card already says so; this renders
+ * nothing rather than a second empty message.
+ */
+export default async function UpcomingMeetings() {
+  const [, ...rest] = await upcoming();
+  if (rest.length === 0) return null;
   return (
-    <ol className="flex w-full max-w-2xl flex-col items-center gap-3">
-      {meetings.map((meeting, i) => (
-        <li
-          key={meeting.id}
-          className={`w-full origin-top ${STACK_STEP[i] ?? STACK_STEP[STACK_STEP.length - 1]}`}
-        >
-          <NextMeetingStrip
-            meeting={meeting}
-            now={now}
-            eyebrow={
-              STACK_EYEBROW[i] ?? STACK_EYEBROW[STACK_EYEBROW.length - 1]
-            }
-          />
-        </li>
+    <div className="home-rows">
+      {rest.map((meeting) => (
+        <MeetingRow key={meeting.id} meeting={meeting} />
       ))}
-    </ol>
+    </div>
   );
 }
 
@@ -93,7 +82,7 @@ export async function nextMeetings(count: number): Promise<MeetingInRange[]> {
     const meetings = await getMeetingsInRange(startOfDay(now), horizon);
     // Cancelled nights are skipped rather than shown struck through, and the
     // homepage has to say so itself: this reads `getMeetingsInRange`, which
-    // deliberately keeps them because it feeds a SCHEDULE. This stack answers a
+    // deliberately keeps them because it feeds a SCHEDULE. This list answers a
     // different question, where should I go, and naming a cancelled meeting as
     // the next one is worse than the vanishing the column was added to fix.
     return meetings

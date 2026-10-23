@@ -1,9 +1,15 @@
 "use client";
 
-import { Fragment, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Dialog, DialogContent, DialogTitle } from "~/ui/dialog";
-import { computeClusterLayout, type CardLayout } from "./clusterLayout";
+import {
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import { Button } from "~/ui/button";
+import { computeClusterLayout } from "./clusterLayout";
 import {
   CARD_H,
   CARD_W,
@@ -17,10 +23,9 @@ import {
   popupSideFor,
   repelOffset,
   type Point,
-  type PopupSide,
 } from "./geometry";
 import { formatLeaderMeta, type LeaderProfile } from "./profile";
-import Headshot from "./Headshot";
+import Helmet from "./Helmet";
 import LeaderDetails from "./LeaderDetails";
 import LeaderTile from "./LeaderTile";
 
@@ -28,105 +33,51 @@ interface Props {
   profiles: LeaderProfile[];
 }
 
-const SPRING = { type: "spring", stiffness: 200, damping: 26 } as const;
+const WIDE = "(min-width: 1024px)";
+const REDUCED = "(prefers-reduced-motion: reduce)";
 
-/**
- * Entrance fold per side: the popup swings open from its anchored edge, far
- * edge starting tipped away from the viewer. Positive rotateY sends the
- * element's right edge into the screen, so the sign follows which edge is far.
- */
-const FOLD: Record<PopupSide, { rotateY: number }> = {
-  right: { rotateY: 20 },
-  left: { rotateY: -20 },
-};
-
-interface PopupProps {
-  profile: LeaderProfile;
-  layout: CardLayout;
-  reduceMotion: boolean;
-  popupRef: (el: HTMLDivElement | null) => void;
-}
-
-function LeaderPopup({ profile, layout, reduceMotion, popupRef }: PopupProps) {
-  const side = popupSideFor(layout);
-  const place = popupPlacement(layout, reduceMotion ? 0 : openShiftX(side));
-  const fold = reduceMotion ? {} : FOLD[side];
-  const meta = formatLeaderMeta(profile.pronouns, profile.year);
-
-  return (
-    // The centering translate lives on this static wrapper, not in the fold's
-    // transform. transform-origin conjugates an element's whole transform
-    // chain, so a translate in the same chain drags the perspective's
-    // projection center along with it and the fold comes out skewed. Split
-    // across two elements, the inner transform is exactly the old keyframes':
-    // perspective(800px) rotateY/X(±20deg) about the near edge. The ref also
-    // measures this wrapper because its rect doesn't wobble mid-fold.
-    // The active portrait stays at z-20 through this panel's exit. Keeping
-    // the panel below it makes both halves of the fold pass behind the
-    // headshot, while z-10 still clears every surrounding card at z-0.
-    <div
-      ref={popupRef}
-      className="absolute z-10 w-80"
-      style={{
-        left: place.left,
-        top: place.top,
-        transform: `translate(${place.x}, ${place.y})`,
-      }}
-    >
-      <motion.div
-        className="shadow-block-md flex flex-col gap-3 rounded-sm border-2 border-mauve-900 bg-amber-50 p-4 shadow-black"
-        style={{
-          transformPerspective: 800,
-          transformOrigin: place.transformOrigin,
-        }}
-        initial={{ opacity: 0, ...fold }}
-        animate={{ opacity: 1, rotateY: 0 }}
-        exit={{
-          opacity: 0,
-          ...fold,
-          transition: { duration: 0.18, ease: "easeIn" },
-        }}
-        transition={{ duration: 0.18, ease: "easeOut" }}
-      >
-        <div className="space-y-0.5">
-          <p className="font-display text-xl leading-tight font-extrabold text-mauve-950">
-            {profile.name}
-          </p>
-          {meta && <p className="text-xs text-mauve-500">{meta}</p>}
-        </div>
-        <LeaderDetails profile={profile} />
-      </motion.div>
-    </div>
+/** A `matchMedia` query as external state; the server answers `false`. */
+function useMedia(query: string): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      const list = window.matchMedia(query);
+      list.addEventListener("change", onChange);
+      return () => list.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(query).matches,
+    () => false,
   );
 }
 
-// A type alias, not an interface: motion's `animate` prop type wants the
-// implicit index signature only aliases carry.
-type CardTarget = {
-  x: number;
-  y: number;
-  rotate: number;
-  scale: number;
-  opacity: number;
-};
-
 /**
- * The spread-out-on-hover cluster.
+ * The fan of officers, as helmets on the starfield.
  *
- * All hover state lives in one `open` index, driven by hit-testing the
- * pointer against the layout `./geometry` computes from that same state —
- * never by mouseenter on the cards, which move. An open card holds the pointer while it stays
- * inside the card + popup region, which is what lets the mouse cross the gap
- * into the popup with no close timers, hover locks, or invisible bridge
- * elements. Keyboard gets the same states: focusing a tile opens it, its
- * popup is next in tab order, Escape or focus leaving the cluster closes.
+ * From 1024px up it is the hover cluster: all state lives in one `open` index,
+ * driven by hit-testing the pointer against the layout `./geometry` computes
+ * from that same state, never by mouseenter on the helmets, which move. An open
+ * helmet holds the pointer while it stays inside the helmet + popup region,
+ * which is what lets the mouse cross the gap into the popup with no close
+ * timers, hover locks or invisible bridge elements. Keyboard gets the same
+ * states: focusing a tile opens it, its popup is next in tab order, Escape or
+ * focus leaving the cluster closes.
+ *
+ * Below 1024px the helmets wrap in a flow and a tap opens the details in a
+ * bottom sheet (a native `<dialog>`).
+ *
+ * The positions are inline custom properties (`left`, `top`, `--tf`, `--op`)
+ * that only the 1024px+ rules read, so the server's HTML already has the fan in
+ * place and hydration moves nothing.
  */
-function DesktopCluster({ profiles }: Props) {
+export default function LeaderCluster({ profiles }: Props) {
+  const wide = useMedia(WIDE);
+  const reduced = useMedia(REDUCED);
   const [open, setOpen] = useState<number | null>(null);
-  const [exiting, setExiting] = useState<Set<number>>(() => new Set());
-  const containerRef = useRef<HTMLDivElement>(null);
-  const popupRef = useRef<HTMLDivElement | null>(null);
-  const reduceMotion = useReducedMotion() ?? false;
+  const [was, setWas] = useState<ReadonlySet<number>>(() => new Set());
+  const [sheet, setSheet] = useState<number | null>(null);
+  const clusterRef = useRef<HTMLDivElement>(null);
+  const tileRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const popupRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   const layout = useMemo(
     () => computeClusterLayout(profiles.length),
@@ -134,24 +85,27 @@ function DesktopCluster({ profiles }: Props) {
   );
   const openLayout = open === null ? undefined : layout[open];
 
-  function changeOpen(next: number | null) {
-    if (open !== null && open !== next) {
-      setExiting((current) => new Set(current).add(open));
+  function change(next: number | null) {
+    if (next === open) return;
+    if (open !== null) {
+      const previous = open;
+      setWas((current) => new Set(current).add(previous));
     }
     setOpen(next);
   }
 
-  function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    const box = containerRef.current?.getBoundingClientRect();
+  function handlePointer(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!wide) return;
+    const box = clusterRef.current?.getBoundingClientRect();
     if (!box) return;
     const p: Point = { x: e.clientX - box.left, y: e.clientY - box.top };
 
     if (openLayout) {
-      const shift = reduceMotion ? 0 : openShiftX(popupSideFor(openLayout));
+      const shift = reduced ? 0 : openShiftX(popupSideFor(openLayout));
       if (holdsPointer(openRegion(openLayout, shift), p)) return;
-      const popupEl = popupRef.current;
-      if (popupEl) {
-        const r = popupEl.getBoundingClientRect();
+      const popup = open === null ? null : popupRefs.current[open];
+      if (popup) {
+        const r = popup.getBoundingClientRect();
         const popupRegion = {
           left: r.left - box.left,
           top: r.top - box.top,
@@ -162,175 +116,197 @@ function DesktopCluster({ profiles }: Props) {
       }
     }
 
-    // Test against the layout as displayed: while a card is open the others
-    // stand repelled, and each claims its whole resting→repelled band, so the
-    // user can aim at where a card is, where it was, or anywhere it fled
-    // through.
-    changeOpen(hitTest(layout, p, reduceMotion ? undefined : openLayout));
+    // Test against the layout as displayed: while a helmet is open the others
+    // stand repelled, and each claims its whole resting-to-repelled band, so
+    // the pointer can aim at where a helmet is, where it was, or anywhere it
+    // fled through.
+    change(hitTest(layout, p, reduced ? undefined : openLayout));
   }
 
+  function openSheet(i: number) {
+    setSheet(i);
+    dialogRef.current?.showModal();
+  }
+
+  const sheetProfile = sheet === null ? undefined : profiles[sheet];
+
   return (
-    <div
-      ref={containerRef}
-      className="relative mx-auto hidden lg:block"
-      style={{ width: CONTAINER_W, height: CONTAINER_H }}
-      onPointerMove={handlePointerMove}
-      onPointerLeave={() => changeOpen(null)}
-      onBlurCapture={(e) => {
-        const next = e.relatedTarget;
-        if (!(next instanceof Node) || !containerRef.current?.contains(next)) {
-          changeOpen(null);
-        }
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") changeOpen(null);
-      }}
-    >
-      {profiles.map((member, i) => {
-        const l = layout[i];
-        if (!l) return null;
-        const isOpen = open === i;
+    <>
+      <div
+        ref={clusterRef}
+        className="home-cluster"
+        onPointerMove={handlePointer}
+        onPointerDown={handlePointer}
+        onPointerLeave={() => {
+          if (wide) change(null);
+        }}
+        onBlurCapture={(e) => {
+          const next = e.relatedTarget;
+          if (
+            wide &&
+            (!(next instanceof Node) || !clusterRef.current?.contains(next))
+          ) {
+            change(null);
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key !== "Escape" || !wide) return;
+          const closing = open;
+          change(null);
+          if (closing !== null) {
+            tileRefs.current[closing]?.focus({ preventScroll: true });
+          }
+        }}
+      >
+        {profiles.map((profile, i) => {
+          const l = layout[i];
+          if (!l) return null;
+          const isOpen = open === i;
 
-        let target: CardTarget;
-        if (isOpen) {
-          target = {
-            x: reduceMotion ? 0 : openShiftX(popupSideFor(l)),
-            y: 0,
-            rotate: 0,
-            scale: reduceMotion ? 1 : 1.06,
-            opacity: 1,
-          };
-        } else if (openLayout) {
-          const off = reduceMotion
-            ? { x: l.tx, y: l.ty }
-            : repelOffset(l, openLayout);
-          target = {
-            ...off,
-            rotate: l.deg,
-            scale: reduceMotion ? 1 : 0.88,
-            opacity: 0.55,
-          };
-        } else {
-          target = { x: l.tx, y: l.ty, rotate: l.deg, scale: 1, opacity: 1 };
-        }
+          let x = l.tx;
+          let y = l.ty;
+          let rotate = l.deg;
+          let scale = 1;
+          let opacity = 1;
+          if (isOpen) {
+            x = reduced ? 0 : openShiftX(popupSideFor(l));
+            y = 0;
+            rotate = 0;
+            scale = reduced ? 1 : 1.06;
+          } else if (openLayout) {
+            const off = reduced
+              ? { x: l.tx, y: l.ty }
+              : repelOffset(l, openLayout);
+            x = off.x;
+            y = off.y;
+            scale = reduced ? 1 : 0.88;
+            opacity = 0.55;
+          }
 
-        return (
-          <Fragment key={member.slug}>
-            <motion.div
-              className="absolute"
-              style={{
-                left: CONTAINER_W / 2 + l.cx - CARD_W / 2,
-                top: CONTAINER_H / 2 + l.cy - CARD_H / 2,
-                zIndex: isOpen || exiting.has(i) ? 20 : 0,
-              }}
-              initial={false}
-              animate={target}
-              transition={SPRING}
-            >
-              <LeaderTile
-                profile={member}
-                aria-expanded={isOpen}
-                onFocus={() => changeOpen(i)}
-              />
-            </motion.div>
-            {/* Sibling of its own card rather than appended after the whole
-                cluster, so tabbing off an open tile reaches the popup's links
-                before the next tile takes the popup over. */}
-            <AnimatePresence
-              onExitComplete={() =>
-                setExiting((current) => {
-                  const next = new Set(current);
-                  next.delete(i);
-                  return next;
-                })
-              }
-            >
-              {isOpen && (
-                <LeaderPopup
-                  key={member.slug}
-                  profile={member}
-                  layout={l}
-                  reduceMotion={reduceMotion}
-                  popupRef={(el) => {
-                    if (el) popupRef.current = el;
+          const shift = reduced ? 0 : openShiftX(popupSideFor(l));
+          const place = popupPlacement(l, shift);
+          const side = popupSideFor(l);
+          const meta = formatLeaderMeta(profile.pronouns, profile.year);
+          const nodeStyle = {
+            left: CONTAINER_W / 2 + l.cx - CARD_W / 2,
+            top: CONTAINER_H / 2 + l.cy - CARD_H / 2,
+            "--tf": `translate(${x}px, ${y}px) rotate(${rotate}deg) scale(${scale})`,
+            "--op": opacity,
+          } as CSSProperties;
+          const popupStyle = {
+            left: place.left,
+            top: place.top,
+            transform: `translate(${place.x}, ${place.y})`,
+            "--to": place.transformOrigin,
+          } as CSSProperties;
+
+          return (
+            <div key={profile.slug} style={{ display: "contents" }}>
+              <div
+                className={`home-lnode${isOpen ? "open" : ""}${was.has(i) ? "was" : ""}`}
+                style={nodeStyle}
+                onTransitionEnd={(e) => {
+                  if (e.target !== e.currentTarget || isOpen) return;
+                  setWas((current) => {
+                    if (!current.has(i)) return current;
+                    const next = new Set(current);
+                    next.delete(i);
+                    return next;
+                  });
+                }}
+              >
+                <LeaderTile
+                  ref={(el) => {
+                    tileRefs.current[i] = el;
+                  }}
+                  profile={profile}
+                  aria-expanded={isOpen}
+                  aria-controls={`leader-pop-${i}`}
+                  onFocus={() => {
+                    if (wide) change(i);
+                  }}
+                  onClick={() => {
+                    if (wide) change(i);
+                    else openSheet(i);
                   }}
                 />
-              )}
-            </AnimatePresence>
-          </Fragment>
-        );
-      })}
-    </div>
-  );
-}
-
-/** One grid tile plus the bottom sheet it opens. Grid mode has no hover. */
-function GridLeader({ profile }: { profile: LeaderProfile }) {
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const meta = formatLeaderMeta(profile.pronouns, profile.year);
-
-  return (
-    <>
-      <LeaderTile profile={profile} onClick={() => setSheetOpen(true)} />
-      <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
-        <DialogContent className="data-open:slide-in-from-bottom-8 data-closed:slide-out-to-bottom-8 top-auto bottom-0 left-0 max-h-[85dvh] w-full max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-b-none border-t-2 border-black bg-white p-0 sm:max-w-none">
-          <DialogTitle className="sr-only">{profile.name}</DialogTitle>
-          <div className="flex flex-col gap-4 p-6 pt-10">
-            <div className="flex items-start gap-4">
-              <div className="shadow-block-md relative size-20 shrink-0 overflow-hidden rounded-full border-2 border-amber-900 shadow-amber-500">
-                <Headshot
-                  name={profile.name}
-                  src={profile.imageSrc}
-                  // `size-20`, fixed. This sheet only ever opens below lg.
-                  sizes="80px"
-                />
               </div>
-              <div>
-                <p className="font-display text-base leading-tight font-extrabold text-black">
-                  {profile.name}
-                </p>
-                {meta && (
-                  <p className="mt-0.5 text-xs text-mauve-500">{meta}</p>
-                )}
-                {profile.titles.map((t) => (
-                  <p
-                    key={t}
-                    className="mt-0.5 text-xs font-semibold text-amber-700"
-                  >
-                    {t}
-                  </p>
-                ))}
+              <div
+                ref={(el) => {
+                  popupRefs.current[i] = el;
+                }}
+                id={`leader-pop-${i}`}
+                className={`home-lpop${isOpen ? "on" : ""}`}
+                data-side={side}
+                role="group"
+                aria-label={[profile.name, ...profile.titles].join(", ")}
+                style={popupStyle}
+              >
+                <div className="home-lcard card">
+                  <p className="home-lpn">{profile.name}</p>
+                  {meta && <p className="home-lmeta">{meta}</p>}
+                  <LeaderDetails profile={profile} />
+                </div>
               </div>
             </div>
-            <LeaderDetails profile={profile} />
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-
-export default function LeaderCluster({ profiles }: Props) {
-  return (
-    <>
-      <div className="lg:hidden">
-        <div className="mx-auto mb-6 grid max-w-3xl grid-cols-1 justify-items-center gap-y-8 sm:grid-cols-2 sm:gap-x-2 sm:gap-y-0">
-          {profiles.slice(0, 2).map((member) => (
-            <div key={member.slug}>
-              <GridLeader profile={member} />
-            </div>
-          ))}
-        </div>
-        <div className="mt-8 grid grid-cols-2 justify-items-center gap-x-2 gap-y-8 sm:grid-cols-3">
-          {profiles.slice(2).map((member) => (
-            <div key={member.slug}>
-              <GridLeader profile={member} />
-            </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
-      <DesktopCluster profiles={profiles} />
+      <dialog
+        ref={dialogRef}
+        className="home-lsheet"
+        aria-labelledby="leader-sheet-name"
+        onClick={(e) => {
+          const target = e.target as HTMLElement;
+          if (
+            target === e.currentTarget ||
+            target.classList.contains("home-lscroll")
+          ) {
+            dialogRef.current?.close();
+          }
+        }}
+      >
+        <div className="home-lscroll">
+          <div className="home-lcard card">
+            {sheetProfile ? (
+              <>
+                <div className="home-lshead">
+                  <Helmet profile={sheetProfile} sizes="50px" />
+                  <div>
+                    <p className="home-lpn" id="leader-sheet-name">
+                      {sheetProfile.name}
+                    </p>
+                    {formatLeaderMeta(
+                      sheetProfile.pronouns,
+                      sheetProfile.year,
+                    ) && (
+                      <p className="home-lmeta">
+                        {formatLeaderMeta(
+                          sheetProfile.pronouns,
+                          sheetProfile.year,
+                        )}
+                      </p>
+                    )}
+                    {sheetProfile.titles.map((title) => (
+                      <p key={title} className="home-lrole">
+                        {title}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+                <LeaderDetails profile={sheetProfile} />
+              </>
+            ) : null}
+            <Button
+              variant="secondary"
+              onClick={() => dialogRef.current?.close()}
+            >
+              Close
+            </Button>
+          </div>
+        </div>
+      </dialog>
     </>
   );
 }

@@ -17,46 +17,41 @@ interface Props {
   name: string;
   src: string | null;
   /**
-   * The circle's rendered width in CSS pixels. Always a constant, never a
+   * The visor's rendered width in CSS pixels. Always a constant, never a
    * viewport fraction: `fill` defaults `sizes` to `100vw`, which fetched these
-   * headshots at w=1920 to fill 112 physical pixels.
+   * headshots at w=1920 to fill 75 physical pixels.
    */
   sizes: string;
 }
 
 /**
- * An officer's headshot, or their initials when there is not one.
+ * An officer's headshot for the helmet's visor, or their initials when there is
+ * not one. The initials sit on the visor's own colour (`--ph` on the helmet).
  *
  * The `avatars` bucket is keyed by bare user id, so a URL can always be
  * composed for an officer whether or not they have ever uploaded anything:
  * "no avatar" is a 404, not a null. That is why the error branch matters as
- * much as the missing-src one, and why it is the same branch. It mirrors what
- * `ui/avatar.tsx` gets from Radix's `Avatar.Fallback` for every other avatar
- * in the app. Officers join the board before they send a photo, and a card
- * showing a broken image is worse than one showing a monogram.
+ * much as the missing-src one, and why it is the same branch. Officers join the
+ * board before they send a photo, and a visor showing a broken image is worse
+ * than one showing a monogram.
  */
 export default function Headshot({ name, src, sizes }: Props) {
   const [failed, setFailed] = useState(false);
 
   if (!src || failed) {
-    return (
-      <span
-        aria-hidden
-        className="font-display flex size-full items-center justify-center bg-amber-100 text-lg font-extrabold text-mauve-700"
-      >
-        {initials(name)}
-      </span>
-    );
+    return <span aria-hidden>{initials(name)}</span>;
   }
 
   return (
     <Image
       fill
-      alt={name}
+      // The name is printed beside the helmet, so the picture adds nothing a
+      // screen reader needs to hear twice.
+      alt=""
       src={src}
       sizes={sizes}
       onError={() => setFailed(true)}
-      className="object-cover object-center"
+      style={{ objectFit: "cover", objectPosition: "center" }}
     />
   );
 }
