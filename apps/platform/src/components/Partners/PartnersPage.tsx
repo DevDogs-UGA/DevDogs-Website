@@ -268,8 +268,8 @@ export default function PartnersPage() {
             </p>
             <p className="muted partners-note">
               A workshop night runs 6&ndash;7 PM in DLW 124, in a spring
-              Workshop Wednesday slot (tentative). Per-event attendance
-              runs 26&ndash;64.
+              Workshop Wednesday slot (tentative). Per-event attendance runs
+              26&ndash;64.
             </p>
           </Heading>
           <Card className="k partners-tiers-card">
@@ -390,10 +390,7 @@ export default function PartnersPage() {
                 <b>
                   Acme Co. <Badge variant="info">Example</Badge>
                 </b>
-                <p>
-                  Co-hosted Workshop night. Building with
-                  Acme&rsquo;s API.
-                </p>
+                <p>Co-hosted Workshop night. Building with Acme&rsquo;s API.</p>
                 <TextLink asChild className="small">
                   <Link href="/events">
                     See the event page <ArrowRightIcon weight="bold" />
@@ -485,9 +482,7 @@ export default function PartnersPage() {
               <dt>Who builds</dt>
               <dd>Student teams, in the same open-source rhythm as the club</dd>
               <dt>How it started</dt>
-              <dd>
-                Interest meetings, then team formation
-              </dd>
+              <dd>Interest meetings, then team formation</dd>
               <dt>Terms</dt>
               <dd>
                 The team repos are private while the challenge runs. &ldquo;Code
