@@ -226,11 +226,9 @@ beforeEach(async () => {
     [BANNED, "ad-banned"],
     [PLAIN, "ad-plain"],
   ] as const) {
-    await insertMember({
-      id: n,
-      handle,
-      preferredName: `Deletion ${handle}`,
-    });
+    // The roster name doubles as the preferred name ("Deletion ad-member"), so
+    // the member passes verification and is listed until deletion hides them.
+    await insertMember({ id: n, handle, first: "Deletion", last: handle });
   }
 });
 
