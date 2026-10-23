@@ -239,3 +239,13 @@
     text-shadow: none;
   }
 }
+
+/* Reduced motion: overlays appear and leave without the zoom/slide. */
+@media (prefers-reduced-motion: reduce) {
+  .cosmic .animate-in,
+  .cosmic .animate-out,
+  .animate-in[data-slot],
+  .animate-out[data-slot] {
+    animation: none !important;
+  }
+}
