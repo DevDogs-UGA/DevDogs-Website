@@ -44,7 +44,7 @@ export default function Toggle({
 
   return (
     <button
-      className={checked ? "switch on" : "switch"}
+      className={checked ? "switch on isolate" : "switch isolate"}
       type="submit"
       role="switch"
       aria-checked={checked}

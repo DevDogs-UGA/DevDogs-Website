@@ -228,6 +228,13 @@ export default function FieldsSection() {
               defaultValue="Building a campus tool for sharing rides to football games and a very long description that goes on."
             />
           </Field>
+          <Field label="Textarea, capped at max-h-32" htmlFor="s-area-cap">
+            <Textarea
+              id="s-area-cap"
+              className="max-h-32"
+              defaultValue={"A long reply that runs past the cap.\n".repeat(12)}
+            />
+          </Field>
           <Field label="Textarea, disabled" htmlFor="s-area-dis">
             <Textarea
               id="s-area-dis"
