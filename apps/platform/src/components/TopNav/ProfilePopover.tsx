@@ -157,7 +157,7 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
               any of its descendants, and Radix cancels its close timer on the
               viewport's. A plain div rather than a pseudo-element on the
               trigger, which would have been fewer lines but would have made the
-              whole band a link to /account. The controls that live in that band
+              whole band a link to /settings/profile. The controls that live in that band
               opt back out by painting above it, so hovering one of them is
               hovering it and not this, and the menu closes as it should.
 
