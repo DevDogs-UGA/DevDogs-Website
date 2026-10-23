@@ -188,9 +188,7 @@ export function resolveMeetings(
     const category = meeting.category ?? series?.category;
     const summary = meeting.summary ?? series?.summary;
     if (category === undefined || summary === undefined) {
-      throw new Error(
-        `Meeting "${meeting.slug}" has no category or summary.`,
-      );
+      throw new Error(`Meeting "${meeting.slug}" has no category or summary.`);
     }
     const venue = resolveVenue(meeting, series, venuesById);
     const { building, location } = legacyPlace(venue, venue.room);

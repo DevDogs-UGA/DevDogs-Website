@@ -60,7 +60,12 @@ function main(): number {
 
   const authoredIssues = [
     ...validateCatalog(workshops.data, venues.data),
-    ...validateAuthored(meetings.data, series.data, workshops.data, venues.data),
+    ...validateAuthored(
+      meetings.data,
+      series.data,
+      workshops.data,
+      venues.data,
+    ),
   ];
   if (authoredIssues.length > 0) {
     process.stderr.write(`${new ClubConfigError(authoredIssues).message}\n`);

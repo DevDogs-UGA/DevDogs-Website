@@ -219,7 +219,7 @@ export const meetingSchema = z
     }),
     room: z.string().min(1).optional().meta({
       description:
-        'The room or space inside the venue, or "TBA" until there is one. Defaults to the series\' room (when the venue is the series\' too).',
+        "The room or space inside the venue, or \"TBA\" until there is one. Defaults to the series' room (when the venue is the series' too).",
     }),
     startsAt: isoInstant.meta({
       description:
