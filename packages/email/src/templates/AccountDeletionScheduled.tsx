@@ -48,8 +48,9 @@ export default function AccountDeletionScheduled(p: Props) {
 
       <Muted>
         After the date nobody can undo the deletion. Copies held by Bevy, Engage
-        and UGA are not ours to delete, and DevDogs apps outside the platform
-        remove their own copies on a best-effort basis.
+        and UGA are not ours to delete. We tell every DevDogs app to delete its
+        copy of your data, but that is best effort: we cannot guarantee each app
+        does.
       </Muted>
     </Layout>
   );

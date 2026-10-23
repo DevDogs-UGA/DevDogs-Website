@@ -17,9 +17,9 @@ export function deletionDueAt(now: Date): Date {
 
 /**
  * The date as a person reads it in an email or on the pending page, in the
- * club's time zone (Eastern): "Friday, November 6, 2026". The job runs every
- * fifteen minutes, so the account is gone shortly after the start of that day
- * rather than at some hour the member has to work out.
+ * club's time zone (Eastern): "Friday, November 6, 2026". The deletion is due at
+ * the same time of day it was scheduled, 14 days later; the job runs every
+ * fifteen minutes, so the account goes shortly after that moment on that date.
  */
 export function formatDeletionDate(date: Date): string {
   return new Intl.DateTimeFormat("en-US", {

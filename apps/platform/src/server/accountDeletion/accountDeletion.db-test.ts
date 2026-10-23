@@ -418,6 +418,34 @@ describe("scheduleAccountDeletion", () => {
   });
 });
 
+describe("canDeleteAccounts", () => {
+  const DEVOPS_DIRECTOR_ROLE_ID = "00000000-0000-4000-8000-000000000003";
+  const can = async (userId: string) =>
+    (
+      await one<{ can: boolean }>(sql`
+        select "canDeleteAccounts" as can
+        from platform."resolvedUserPermissions"
+        where "userId" = ${userId}::uuid`)
+    )?.can ?? false;
+
+  it("is held by the seeded President and DevOps Director roles, and not by a plain member", async () => {
+    try {
+      await db.execute(sql`
+        insert into platform."userRoles" ("userId", "roleId")
+        values (${OFFICER}::uuid, ${PRESIDENT_ROLE_ID}::uuid),
+               (${OTHER}::uuid, ${DEVOPS_DIRECTOR_ROLE_ID}::uuid)`);
+      expect(await can(OFFICER)).toBe(true);
+      expect(await can(OTHER)).toBe(true);
+      expect(await can(PLAIN)).toBe(false);
+    } finally {
+      await db.execute(sql`
+        delete from platform."userRoles"
+        where "userId" in (${OFFICER}::uuid, ${OTHER}::uuid)
+          and "roleId" in (${PRESIDENT_ROLE_ID}::uuid, ${DEVOPS_DIRECTOR_ROLE_ID}::uuid)`);
+    }
+  });
+});
+
 describe("cancelAccountDeletion", () => {
   it("restores the profile and writes an audit entry", async () => {
     await scheduleAccountDeletion(MEMBER, MEMBER, { now: NOW });
@@ -476,6 +504,13 @@ describe("runDueDeletions", () => {
       label: `${PREFIX}-owned`,
       redirectUris: ["http://localhost:3000/auth"],
       userId: MEMBER,
+    });
+    // A production app the member published is deleted with them (Q160).
+    const published = await createOauthClientAndRegister({
+      label: `${PREFIX}-published`,
+      redirectUris: [DOGDAYS],
+      userId: MEMBER,
+      tier: "production",
     });
     const devdogs = await createOauthClientAndRegister({
       label: `${PREFIX}-devdogs`,
@@ -540,6 +575,19 @@ describe("runDueDeletions", () => {
       select deleted_at is not null as deleted from auth.oauth_clients
       where id = ${owned.clientId}::uuid`);
     expect(goTrue?.deleted).toBe(true);
+    expect(
+      await count(sql`select count(*)::int as n from platform."oauthRegistrations"
+                      where "clientId" = ${published.clientId}::uuid`),
+    ).toBe(0);
+    const publishedGoTrue = await one<{ deleted: boolean }>(sql`
+      select deleted_at is not null as deleted from auth.oauth_clients
+      where id = ${published.clientId}::uuid`);
+    expect(publishedGoTrue?.deleted).toBe(true);
+    expect(
+      await count(sql`select count(*)::int as n from platform."auditEvents"
+                      where action = 'oauth_client.owner_cleared'
+                        and "targetId" = ${published.clientId}`),
+    ).toBe(0);
     const kept = await one<{ userId: string | null; deleted: boolean }>(sql`
       select r."userId", c.deleted_at is not null as deleted
       from platform."oauthRegistrations" r
@@ -713,6 +761,38 @@ describe("runDueDeletions", () => {
       (await auditRows(PLAIN)).filter((a) => a.action === "user.deleted"),
     ).toHaveLength(1);
     expect(await getPendingDeletion(PLAIN)).toBeNull();
+  });
+
+  it("leaves a deletion cancellable when the member became the sole President", async () => {
+    const others = await rows<{ userId: string }>(
+      sql`select "userId" from platform."userRoles"
+          where "roleId" = ${PRESIDENT_ROLE_ID}::uuid and "userId" <> ${PLAIN}::uuid`,
+    );
+    try {
+      await scheduleAccountDeletion(PLAIN, PLAIN, { now: LONG_AGO });
+      await db.execute(sql`
+        delete from platform."userRoles" where "roleId" = ${PRESIDENT_ROLE_ID}::uuid`);
+      await db.execute(sql`
+        insert into platform."userRoles" ("userId", "roleId")
+        values (${PLAIN}::uuid, ${PRESIDENT_ROLE_ID}::uuid)`);
+
+      const run = await runDueDeletions(NOW);
+
+      expect(run.completed).toEqual([]);
+      expect(run.failed[0]?.error).toContain(SOLE_PRESIDENT_ERROR);
+      expect((await getPendingDeletion(PLAIN))?.started).toBe(false);
+      await expect(cancelAccountDeletion(PLAIN)).resolves.toBe(true);
+    } finally {
+      await db.execute(sql`
+        delete from platform."userRoles"
+        where "roleId" = ${PRESIDENT_ROLE_ID}::uuid and "userId" = ${PLAIN}::uuid`);
+      for (const { userId } of others) {
+        await db.execute(sql`
+          insert into platform."userRoles" ("userId", "roleId")
+          values (${userId}::uuid, ${PRESIDENT_ROLE_ID}::uuid)
+          on conflict do nothing`);
+      }
+    }
   });
 
   it("does not wait on an email that can never be delivered", async () => {

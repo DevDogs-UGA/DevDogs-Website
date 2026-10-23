@@ -1,4 +1,4 @@
-import { asc, eq, lte, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, lte, or, sql } from "drizzle-orm";
 import { stripSyncedRolesFromGuild } from "~/server/discord/memberSync";
 import { db } from "~/server/db";
 import { accountDeletions, auditEvents } from "~/server/db/schema";
@@ -12,11 +12,20 @@ import { accountDeletionAuditEvent } from "./audit";
 import {
   greetingName,
   isSolePresident,
+  revalidateMemberPages,
   SOLE_PRESIDENT_ERROR,
 } from "./schedule";
 
 /** How many due deletions one run takes on; the next run takes the rest. */
 const BATCH = 20;
+
+/**
+ * How long a run holds a deletion. Another run (the cron trigger and a manual
+ * run can overlap) skips a row stamped inside this window; a run that fails
+ * backdates its own stamp so the next run may retry at once, and a run that
+ * dies leaves it to lapse. Shorter than the cron interval.
+ */
+const LEASE_MS = 10 * 60 * 1000;
 
 type Deletion = typeof accountDeletions.$inferSelect;
 
@@ -72,8 +81,11 @@ export async function runDueDeletions(
  * row was cancelled between listing and starting.
  *
  * `lastAttemptAt` is stamped first, in the same statement that checks the row
- * is still there: `cancelAccountDeletion` only cancels a deletion that has not
- * been stamped, so after this line the deletion runs to the end.
+ * is still there and no other run holds it: `cancelAccountDeletion` only
+ * cancels a deletion that has not been stamped, so after this line the
+ * deletion runs to the end. The one check made before the stamp is the sole
+ * President: a member who became it during the window fails here with the row
+ * still cancellable.
  *
  * The auth user goes partway through, and the row deliberately outlives it
  * (see the table's comment): the audit entry, the email and the row's own
@@ -84,6 +96,19 @@ export async function runDueDeletions(
 async function deleteAccount(deletion: Deletion, now: Date): Promise<boolean> {
   const { userId } = deletion;
 
+  const [member] = await db
+    .select({ email: usersInAuth.email })
+    .from(usersInAuth)
+    .where(eq(usersInAuth.id, userId))
+    .limit(1);
+
+  // Scheduling refused the sole President, but the roles can change during
+  // the window.
+  if (member && (await isSolePresident(userId))) {
+    throw new Error(SOLE_PRESIDENT_ERROR);
+  }
+
+  const leaseEnds = new Date(now.getTime() - LEASE_MS);
   const [claimed] = await db
     .update(accountDeletions)
     .set({
@@ -91,22 +116,43 @@ async function deleteAccount(deletion: Deletion, now: Date): Promise<boolean> {
       lastAttemptAt: now,
       lastError: null,
     })
-    .where(eq(accountDeletions.userId, userId))
+    .where(
+      and(
+        eq(accountDeletions.userId, userId),
+        or(
+          isNull(accountDeletions.lastAttemptAt),
+          lte(accountDeletions.lastAttemptAt, leaseEnds),
+        ),
+      ),
+    )
     .returning({ userId: accountDeletions.userId });
   if (!claimed) return false;
 
-  const [member] = await db
-    .select({ email: usersInAuth.email })
-    .from(usersInAuth)
-    .where(eq(usersInAuth.id, userId))
-    .limit(1);
+  try {
+    await finishDeletion(deletion, member?.email ?? null, now);
+  } catch (error) {
+    // Release the lease but stay stamped: work may already be done.
+    await db
+      .update(accountDeletions)
+      .set({ lastAttemptAt: leaseEnds })
+      .where(eq(accountDeletions.userId, userId))
+      .catch(() => undefined);
+    throw error;
+  }
+  return true;
+}
 
+async function finishDeletion(
+  deletion: Deletion,
+  memberEmail: string | null,
+  now: Date,
+): Promise<void> {
+  const { userId } = deletion;
+  const member = memberEmail === null ? undefined : { email: memberEmail };
   let blocked = false;
   let receivers = 0;
   if (member) {
-    // Scheduling refused the sole President, but the roles can change during
-    // the window. Checked again before anything is removed.
-    if (await isSolePresident(userId)) throw new Error(SOLE_PRESIDENT_ERROR);
+    await revalidateMemberPages(userId);
 
     // 1. The block first: if anything after it fails, the member is still
     //    refused at sign-up, and if it fails nothing else has happened yet.
@@ -171,7 +217,6 @@ async function deleteAccount(deletion: Deletion, now: Date): Promise<boolean> {
   }
 
   await db.delete(accountDeletions).where(eq(accountDeletions.userId, userId));
-  return true;
 }
 
 /**

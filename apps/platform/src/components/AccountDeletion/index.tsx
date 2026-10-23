@@ -21,12 +21,19 @@ export default function AccountDeletionPending({
   scheduledFor,
   requestedByOfficer,
   started,
+  hasGithub,
+  hasDiscord,
+  discordUrl,
 }: {
   scheduledFor: Date;
   /** An officer, not the member, scheduled it: say so, and say who to ask. */
   requestedByOfficer: boolean;
   /** The job has begun: Keep my account is no longer offered. */
   started: boolean;
+  /** Which linked accounts to offer a leave link for. */
+  hasGithub: boolean;
+  hasDiscord: boolean;
+  discordUrl: string;
 }) {
   const date = formatDeletionDate(scheduledFor);
   return (
@@ -38,9 +45,9 @@ export default function AccountDeletionPending({
           {requestedByOfficer
             ? "A DevDogs officer scheduled this. "
             : "You asked for this. "}
-          Until then you are signed out everywhere and your profile is hidden.
-          On that date your account and the personal content attached to it are
-          permanently deleted.
+          We signed you out of every device when this was scheduled, and your
+          profile is hidden. On that date your account and the personal content
+          attached to it are permanently deleted.
         </p>
 
         <Card className="acctdel-card" kind="info">
@@ -71,12 +78,31 @@ export default function AccountDeletionPending({
           </h2>
           <ul>
             <li>
-              Leaving the DevDogs{" "}
-              <TextLink href="https://github.com/DevDogsUGA">
-                GitHub organization
-              </TextLink>{" "}
-              and Discord server is yours to do; we cannot remove you from
-              accounts you manage. Your posts and contributions there stay.
+              Leaving the DevDogs GitHub organization and Discord server is
+              yours to do; we cannot remove you from accounts you manage. Your
+              posts and contributions there stay.
+              {hasGithub || hasDiscord ? (
+                <>
+                  {" "}
+                  Leave
+                  {hasGithub ? (
+                    <>
+                      {" "}
+                      <TextLink href="https://github.com/settings/organizations">
+                        the GitHub organization
+                      </TextLink>
+                    </>
+                  ) : null}
+                  {hasGithub && hasDiscord ? " and" : null}
+                  {hasDiscord ? (
+                    <>
+                      {" "}
+                      <TextLink href={discordUrl}>the Discord server</TextLink>
+                    </>
+                  ) : null}
+                  .
+                </>
+              ) : null}
             </li>
             <li>
               Copies held by Bevy, Engage and UGA stay there. DevDogs apps

@@ -16,10 +16,6 @@ import type { auditEvents } from "~/server/db/schema";
 export const OAUTH_AUDIT_ACTIONS = [
   "oauth_client.created",
   "oauth_client.deleted",
-  // The owner's account was deleted while they still owned a production
-  // client, so ownership was cleared (the client becomes a DevDogs app)
-  // instead of the client being deleted along with sign-in.
-  "oauth_client.owner_cleared",
   "oauth_client.secret_rotated",
   "oauth_client.redirect_uri_added",
   "oauth_client.redirect_uri_removed",

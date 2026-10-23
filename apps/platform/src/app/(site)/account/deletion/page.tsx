@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import AccountDeletionPending from "~/components/AccountDeletion";
 import { getPendingDeletion } from "~/server/accountDeletion/schedule";
 import { expectSession } from "~/server/auth";
+import { getVerificationStatus } from "~/server/loaders/verification";
+import { env } from "~/env";
 
 export const metadata: Metadata = {
   title: "Account scheduled for deletion | DevDogs",
@@ -27,12 +29,16 @@ export default async function AccountDeletionPage() {
   );
   const pending = await getPendingDeletion(userId);
   if (!pending) redirect("/settings/profile");
+  const linked = await getVerificationStatus(userId);
 
   return (
     <AccountDeletionPending
       scheduledFor={pending.scheduledFor}
       requestedByOfficer={pending.requestedByOfficer}
       started={pending.started}
+      hasGithub={linked.verificationStatus.hasGithub}
+      hasDiscord={linked.verificationStatus.hasDiscord}
+      discordUrl={`https://discord.com/channels/${env.DISCORD_GUILD_ID}`}
     />
   );
 }

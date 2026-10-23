@@ -1,5 +1,7 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { env } from "~/env";
+import { COMMUNITY_PATH, profilePath } from "~/lib/profilePath";
 import { canUserDeleteAccounts } from "~/server/actions/permissions";
 import { db } from "~/server/db";
 import {
@@ -69,6 +71,21 @@ export async function isSolePresident(userId: string): Promise<boolean> {
     .from(userRoles)
     .where(eq(userRoles.roleId, PRESIDENT_ROLE_ID));
   return holders.length === 1 && holders[0]!.userId === userId;
+}
+
+/**
+ * Drops the cached public pages a member's visibility change shows up on: the
+ * directory and their profile, both `revalidate`-cached (account-deletion Q4:
+ * hidden on confirm). Call it while the profile row still exists.
+ */
+export async function revalidateMemberPages(userId: string): Promise<void> {
+  const [row] = await db
+    .select({ handle: profiles.handle })
+    .from(profiles)
+    .where(eq(profiles.userId, userId))
+    .limit(1);
+  revalidatePath(COMMUNITY_PATH);
+  if (row?.handle) revalidatePath(profilePath(row.handle));
 }
 
 /**
@@ -168,6 +185,7 @@ export async function scheduleAccountDeletion(
 
   await revokeSessions(userId);
   revalidateOfficers();
+  await revalidateMemberPages(userId);
 
   const result = await sendTemplate(member.email, "AccountDeletionScheduled", {
     name: greetingName(member.name),
@@ -228,6 +246,9 @@ export async function cancelAccountDeletion(userId: string): Promise<boolean> {
     );
     return true;
   });
-  if (cancelled) revalidateOfficers();
+  if (cancelled) {
+    revalidateOfficers();
+    await revalidateMemberPages(userId);
+  }
   return cancelled;
 }
