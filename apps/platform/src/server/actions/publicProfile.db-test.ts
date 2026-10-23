@@ -60,7 +60,11 @@ describe("setPublicProfileField", () => {
     });
     expect(await listed("ppact-a")).toBe(false);
     expect(revalidated).toEqual(
-      expect.arrayContaining(["/community", "/community/@ppact-a", "/settings/profile"]),
+      expect.arrayContaining([
+        "/community",
+        "/community/@ppact-a",
+        "/settings/profile",
+      ]),
     );
 
     await setPublicProfileField("publicProfile", true);

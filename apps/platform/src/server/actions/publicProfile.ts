@@ -35,7 +35,9 @@ const VISIBILITY_LIMIT = 30;
 const VISIBILITY_WINDOW_SECONDS = 10 * 60;
 
 async function sessionUserId(): Promise<string> {
-  return expectSession().catch(() => authenticate("google", "/settings/profile"));
+  return expectSession().catch(() =>
+    authenticate("google", "/settings/profile"),
+  );
 }
 
 /**
