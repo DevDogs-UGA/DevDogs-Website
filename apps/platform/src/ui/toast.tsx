@@ -28,12 +28,17 @@ const TYPES = {
 /**
  * `.toast` (kit-spec section 9): a framed card a step brighter than any
  * surface, with the status icon in its colour, the message, and a dismiss.
- * Sonner's own live region announces it, so the card carries no role.
+ * Sonner's live region is polite, so it announces
+ * every type politely; an error card adds role="alert" to interrupt.
  */
 export default function Toast({ id, message, type }: Props) {
   const { Icon, color } = TYPES[type];
   return (
-    <div className="toast" data-type={type}>
+    <div
+      className="toast"
+      data-type={type}
+      role={type === "error" ? "alert" : undefined}
+    >
       <span className="toast-icon" style={{ color }} aria-hidden>
         <Icon weight="bold" />
       </span>

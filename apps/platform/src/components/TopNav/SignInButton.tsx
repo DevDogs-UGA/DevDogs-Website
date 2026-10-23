@@ -10,6 +10,7 @@ export default function SignInButton({ className }: { className?: string }) {
       className={cn("btn ghost sm", className)}
     >
       Sign in
+      <span aria-hidden className="hit" />
     </Link>
   );
 }
@@ -20,6 +21,7 @@ export function JoinButton() {
     <span className="btn-shadow">
       <a href="https://devdogsuga.org/join" className="btn primary sm">
         Join DevDogs
+        <span aria-hidden className="hit" />
       </a>
     </span>
   );

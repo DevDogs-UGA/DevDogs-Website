@@ -11,6 +11,7 @@ export default function AppSwitcherButton() {
         className="btn ghost icon sm relative z-10 max-[900px]:hidden"
       >
         <DotsNineIcon weight="bold" />
+        <span aria-hidden className="hit" />
       </button>
     </AppSwitcherTrigger>
   );

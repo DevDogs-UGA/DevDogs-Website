@@ -88,6 +88,7 @@ export default function MobileSheet({
         className="navtoggle btn ghost icon sm shrink-0"
       >
         <ListIcon weight="bold" />
+        <span aria-hidden className="hit" />
       </SheetTrigger>
 
       {/* The plain panel, not the 480px drawer: it is the mockup's `.mnav`

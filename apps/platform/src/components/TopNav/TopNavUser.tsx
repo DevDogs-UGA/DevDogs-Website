@@ -23,8 +23,7 @@ export function TopNavProfile() {
   if (me === null) {
     return (
       <>
-        {/* Below 520px it lives in the mobile menu, to keep the bar on one row. */}
-        <SignInButton className="max-[520px]:hidden" />
+        <SignInButton />
         <JoinButton />
       </>
     );
@@ -59,6 +58,7 @@ export function TopNavMobile() {
     return (
       <span aria-hidden className="navtoggle btn ghost icon sm shrink-0">
         <ListIcon weight="bold" />
+        <span className="hit" />
       </span>
     );
   }

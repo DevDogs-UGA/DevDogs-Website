@@ -174,25 +174,59 @@
     background: var(--line);
     margin: 6px 0;
   }
-  /* 44px touch targets: the avatar trigger holds a 36px Avatar, the folded
-     search is the kit's 38px/40px, and touch pads the panel rows */
+  /* 44px touch targets without bigger controls: the avatar trigger holds a
+     36px Avatar, and the bar's buttons stay at the kit's small sizes (the
+     mockup's 375 bar fits on one row). Each button carries a `.hit` span,
+     an invisible box 6px past its frame, so the tappable area reaches 44px.
+     The bar's 12px gap keeps neighbouring extensions from overlapping. */
   ul.topnav .tn-avatar-trigger {
     min-width: 44px;
     min-height: 44px;
     justify-content: center;
   }
+  ul.topnav .btn.sm {
+    --h: 34px;
+  }
+  ul.topnav .search {
+    height: 38px;
+  }
   @media (max-width: 900px) {
     ul.topnav .search {
-      width: 44px;
-      min-width: 44px;
-      height: 44px;
+      width: 40px;
+      min-width: 40px;
+    }
+  }
+  .topnav .hit {
+    position: absolute;
+    inset: -6px;
+  }
+  /* The signed-out bar (toggle, logo, search, Sign in, Join) on one row at
+     375 and 360: a smaller lockup, tighter gaps, a narrower toggle. The
+     controls keep their 44px reach through `.hit`. */
+  @media (max-width: 520px) {
+    ul.topnav > li.topnav-brand {
+      margin-right: 0;
+    }
+    ul.topnav .logo {
+      height: 20px;
+      width: auto;
+    }
+    ul.topnav > li.topnav-end {
+      gap: 8px;
+    }
+    ul.topnav .navtoggle {
+      width: 28px;
+    }
+  }
+  @media (max-width: 380px) {
+    ul.topnav .logo {
+      height: 18px;
+    }
+    ul.topnav .btn.sm {
+      padding-inline: 8px;
     }
   }
   @media (pointer: coarse) {
-    ul.topnav .search {
-      height: 44px;
-      min-width: 44px;
-    }
     .menu .tn-row {
       min-height: 44px;
     }

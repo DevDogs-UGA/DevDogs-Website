@@ -44,6 +44,7 @@ export default function SearchButton() {
         <MagnifyingGlassIcon aria-hidden weight="bold" />
         <span className="lbl">Search</span>
         <Kbd suppressHydrationWarning>{ctrl} K</Kbd>
+        <span aria-hidden className="hit" />
       </button>
 
       <DevDogsSearchDialog open={open} onOpenChange={setOpen} />
