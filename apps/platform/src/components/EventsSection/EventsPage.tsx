@@ -14,9 +14,8 @@ export interface EventsPageProps {
    * calendar shows all of them.
    */
   meetings: MeetingInRange[];
+  /** Past meetings, most recent first: the recent list and the archive dialog. */
   past: MeetingSummary[];
-  /** How many past meetings exist beyond `past`. */
-  pastMoreCount: number;
   /** Resolved once by the caller and threaded down. See `EventsBody`. */
   now: Date;
   today: { year: number; month: number; day: number } | null;
@@ -38,7 +37,6 @@ export interface EventsPageProps {
 export default function EventsPage({
   meetings,
   past,
-  pastMoreCount,
   now,
   today,
   bounds,
@@ -68,7 +66,6 @@ export default function EventsPage({
         <EventsSchedule
           meetings={meetings}
           past={past}
-          pastMoreCount={pastMoreCount}
           now={now}
           today={today}
           bounds={bounds}

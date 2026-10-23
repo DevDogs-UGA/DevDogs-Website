@@ -37,7 +37,8 @@ export default async function EventsBody() {
   return <EventsPage {...data} />;
 }
 
-const PAST_PAGE_SIZE = 8;
+/** How far back the archive dialog reaches. */
+const ARCHIVE_LIMIT = 120;
 
 /**
  * Everything time- and database-dependent about the page, resolved once.
@@ -66,15 +67,14 @@ async function getSchedule(): Promise<EventsPageProps> {
 
   const [meetings, past] = await Promise.all([
     getMeetingsInRange(clubMonthStart(from), clubMonthStart(to)),
-    // One more than shown, which is how the archive knows whether there is more
-    // without a second COUNT query.
-    getPastMeetings(PAST_PAGE_SIZE + 1),
+    // The recent list and the archive dialog share one read: the dialog pages
+    // through these in client state, since the cached page cannot read `?past`.
+    getPastMeetings(ARCHIVE_LIMIT),
   ]);
 
   return {
     meetings,
-    past: past.slice(0, PAST_PAGE_SIZE),
-    pastMoreCount: Math.max(0, past.length - PAST_PAGE_SIZE),
+    past,
     now,
     today,
     bounds: {

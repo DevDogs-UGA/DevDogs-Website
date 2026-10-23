@@ -245,8 +245,27 @@
     font-size: 13px;
     color: var(--text-3);
   }
-  .cosmic .ev-more {
-    margin: var(--space-3) 0 0;
+  .cosmic .ev-more-btn {
+    margin-top: var(--space-3);
+  }
+  .cosmic .ev-archive-head {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-right: 36px;
+  }
+  .cosmic .ev-archive-search {
+    max-width: 320px;
+  }
+  .cosmic .ev-archive-body {
+    max-height: min(52dvh, 440px);
+    overflow-y: auto;
+  }
+  .cosmic .ev-archive-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
   }
   .cosmic .ev-unavailable {
     padding-top: var(--space-8);

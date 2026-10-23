@@ -19,7 +19,6 @@ interface Props {
   /** Every meeting in the window, ascending. */
   meetings: MeetingInRange[];
   past: MeetingSummary[];
-  pastMoreCount: number;
   now: Date;
   today: { year: number; month: number; day: number } | null;
   bounds: {
@@ -38,7 +37,6 @@ interface Props {
 export default function EventsSchedule({
   meetings,
   past,
-  pastMoreCount,
   now,
   today,
   bounds,
@@ -59,7 +57,7 @@ export default function EventsSchedule({
   const aside = (
     <div className="ev-stack">
       <SubscribeToCalendar feedUrl={feedUrl} />
-      <PastMeetings meetings={past} moreCount={pastMoreCount} />
+      <PastMeetings meetings={past} />
     </div>
   );
 
