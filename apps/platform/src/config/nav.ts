@@ -135,6 +135,13 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
       "Present live meeting QR codes, numeric codes, and attendance totals.",
   },
   {
+    label: "Reflections",
+    href: "/console/reflections",
+    icon: "NotePencilIcon",
+    permission: "canManageAttendance",
+    description: "Set the word minimum and submission window for reflections.",
+  },
+  {
     label: "QR Codes",
     href: "/console/qr",
     icon: "QrCodeIcon",

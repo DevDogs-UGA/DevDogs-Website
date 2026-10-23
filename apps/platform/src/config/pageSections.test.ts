@@ -20,6 +20,7 @@ const SOURCES: Record<string, string> = {
   "/settings/accounts": "app/(site)/settings/accounts/page.tsx",
   "/settings/oauth": "app/(site)/settings/oauth/page.tsx",
   "/console/permissions": "app/(site)/console/permissions/page.tsx",
+  "/console/reflections": "components/ReflectionSettingsCard.tsx",
 };
 
 /** vitest runs with the app package as its root. */
