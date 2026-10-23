@@ -337,7 +337,7 @@ export default function MonthCalendar({
                       </span>
                       {isToday && (
                         <Badge variant="info" className="today-b">
-                          Tonight
+                          {list.length > 0 ? "Tonight" : "Today"}
                         </Badge>
                       )}
                       {list.map((meeting) => (
@@ -373,7 +373,7 @@ export default function MonthCalendar({
           {selected && (
             <>
               <div
-                className="selhead"
+                className="ev-selhead"
                 data-kind={
                   selectedMeetings[0]
                     ? meetingCategory(selectedMeetings[0])
@@ -418,7 +418,7 @@ function Pill({ meeting }: { meeting: MeetingInRange }) {
   return (
     <Link
       href={`/events/${meeting.slug}`}
-      className={cn("pill", cancelled && "canceled")}
+      className={cn("ev-pill", cancelled && "canceled")}
       data-kind={meetingCategory(meeting)}
       title={name}
     >

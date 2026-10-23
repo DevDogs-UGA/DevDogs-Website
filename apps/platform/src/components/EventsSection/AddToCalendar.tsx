@@ -39,7 +39,7 @@ export default function AddToCalendar({
           Add to calendar
         </a>
       </span>
-      <div className="acts-row">
+      <div className="ev-acts-row">
         <a
           className="btn ghost sm"
           href={googleUrl}

@@ -51,7 +51,7 @@ export default function PastMeetings({
       {meetings.length === 0 ? (
         <p className="small muted">None yet this semester. Give it a Monday.</p>
       ) : (
-        <div className="past">
+        <div className="ev-past">
           {meetings.map((meeting) => {
             const cancelled = isCancelled(meeting);
             const where = locationLine(meeting.building, meeting.location);

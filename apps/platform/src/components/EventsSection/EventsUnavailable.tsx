@@ -31,7 +31,7 @@ export default function EventsUnavailable({
   retry?: () => void;
 }) {
   return (
-    <div className="wrap ev-wrap ev-unavailable">
+    <div className="wrap ev-fill ev-wrap ev-unavailable">
       <EmptyState
         headingLevel={2}
         title="The schedule could not be loaded"

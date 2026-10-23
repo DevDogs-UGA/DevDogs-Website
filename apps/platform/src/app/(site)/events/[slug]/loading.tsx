@@ -14,20 +14,20 @@ export default function Loading() {
   return (
     <div aria-busy>
       <section className="pagehead" aria-hidden>
-        <div className="wrap">
+        <div className="wrap ev-fill">
           <Skeleton className="h-4 w-48" />
           <Skeleton className="mt-6 h-6 w-24" />
           <Skeleton className="mt-4 h-14 w-2/3" />
           <Skeleton className="mt-4 h-5 w-80 max-w-full" />
         </div>
       </section>
-      <div className="wrap" aria-hidden>
+      <div className="wrap ev-fill" aria-hidden>
         <div className="ev-detail">
-          <aside className="rail">
+          <aside className="ev-rail">
             <Skeleton className="h-64 w-full" />
             <Skeleton className="h-32 w-full" />
           </aside>
-          <div className="main-col">
+          <div className="ev-main">
             <Skeleton className="h-8 w-48" />
             <Skeleton className="mt-4 h-4 w-full" />
             <Skeleton className="mt-2 h-4 w-3/4" />

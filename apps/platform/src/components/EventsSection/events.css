@@ -3,6 +3,9 @@
    only the toolbar, the schedule list, the month grid and the detail page's two-column layout.
    Every selector hangs off an `ev-` class (or a kit class scoped under one) so none can collide with the kit. */
 @layer cosmic {
+  .cosmic .ev-fill {
+    width: 100%;
+  }
   .cosmic .ev-wrap {
     padding-bottom: var(--space-9);
   }
@@ -123,7 +126,7 @@
     font-size: 30px;
   }
   .cosmic .ev-month .rule,
-  .cosmic .selhead .rule {
+  .cosmic .ev-selhead .rule {
     flex: 1;
     height: 2px;
     background: repeating-linear-gradient(
@@ -197,11 +200,11 @@
   .cosmic #past {
     scroll-margin-top: 24px;
   }
-  .cosmic .past {
+  .cosmic .ev-past {
     display: flex;
     flex-direction: column;
   }
-  .cosmic .past a {
+  .cosmic .ev-past a {
     display: grid;
     grid-template-columns: 48px 1fr;
     gap: 12px;
@@ -210,29 +213,29 @@
     align-items: center;
     box-shadow: inset 0 -1px 0 var(--line);
   }
-  .cosmic .past a:last-child {
+  .cosmic .ev-past a:last-child {
     box-shadow: none;
   }
-  .cosmic .past .d {
+  .cosmic .ev-past .d {
     font: 700 11.5px/1.15 var(--font-ui);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     text-align: center;
     color: var(--text-3);
   }
-  .cosmic .past .d b {
+  .cosmic .ev-past .d b {
     display: block;
     font: 800 20px/1.1 var(--font-display);
     color: var(--k3);
     letter-spacing: 0;
   }
-  .cosmic .past .t {
+  .cosmic .ev-past .t {
     font-weight: 700;
     color: var(--text);
     font-size: 15px;
     line-height: 1.3;
   }
-  .cosmic .past .s {
+  .cosmic .ev-past .s {
     font-size: 13px;
     color: var(--text-3);
   }
@@ -335,13 +338,13 @@
     color: var(--text-3);
     opacity: 0.7;
   }
-  .cosmic .ev-cal .cell.out .pill {
+  .cosmic .ev-cal .cell.out .ev-pill {
     opacity: 0.55;
   }
   .cosmic .ev-cal .cell.past .n {
     color: var(--text-3);
   }
-  .cosmic .ev-cal .cell.past .pill {
+  .cosmic .ev-cal .cell.past .ev-pill {
     opacity: 0.6;
   }
   .cosmic .ev-cal .today-b {
@@ -361,7 +364,7 @@
         no-repeat;
     z-index: 1;
   }
-  .cosmic .pill {
+  .cosmic .ev-pill {
     display: flex;
     gap: 7px;
     align-items: center;
@@ -380,25 +383,25 @@
       2px 2px 0 var(--k6);
     min-width: 0;
   }
-  .cosmic .pill .t {
+  .cosmic .ev-pill .t {
     font-weight: 600;
     opacity: 0.8;
     flex: none;
     font-size: 11.5px;
   }
-  .cosmic .pill .nm {
+  .cosmic .ev-pill .nm {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     padding-right: 4px;
   }
-  .cosmic .pill.canceled {
+  .cosmic .ev-pill.canceled {
     background: transparent;
     color: var(--text-3);
     box-shadow: none;
   }
-  .cosmic .pill.canceled .nm,
-  .cosmic .pill.canceled .t {
+  .cosmic .ev-pill.canceled .nm,
+  .cosmic .ev-pill.canceled .t {
     text-decoration: line-through;
     text-decoration-thickness: 2px;
     opacity: 1;
@@ -423,13 +426,13 @@
     margin-top: var(--space-7);
     align-items: start;
   }
-  .cosmic .selhead {
+  .cosmic .ev-selhead {
     display: flex;
     align-items: center;
     gap: var(--space-4);
     margin-bottom: var(--space-4);
   }
-  .cosmic .selhead h3 {
+  .cosmic .ev-selhead h3 {
     font-size: 22px;
   }
 
@@ -450,23 +453,23 @@
     font: 700 18px/1.4 var(--font-ui);
     color: var(--bad);
   }
-  .cosmic .facts {
+  .cosmic .ev-facts {
     display: flex;
     gap: 28px;
     flex-wrap: wrap;
     font-size: 16px;
     color: var(--text-2);
   }
-  .cosmic .facts span {
+  .cosmic .ev-facts span {
     display: inline-flex;
     gap: 8px;
     align-items: center;
   }
-  .cosmic .facts svg {
+  .cosmic .ev-facts svg {
     font-size: 20px;
     color: var(--k3);
   }
-  .cosmic .facts.struck span {
+  .cosmic .ev-facts.struck span {
     text-decoration: line-through;
     text-decoration-thickness: 2px;
   }
@@ -477,11 +480,11 @@
     align-items: start;
     padding: var(--space-6) 0 var(--space-9);
   }
-  .cosmic .ev-detail > .rail {
+  .cosmic .ev-detail > .ev-rail {
     grid-column: 2;
     grid-row: 1;
   }
-  .cosmic .ev-detail > .main-col {
+  .cosmic .ev-detail > .ev-main {
     grid-column: 1;
     grid-row: 1;
     min-width: 0;
@@ -500,11 +503,11 @@
   .cosmic .ev-detail section + section {
     margin-top: var(--space-7);
   }
-  .cosmic .ev-detail .main-col p {
+  .cosmic .ev-detail .ev-main p {
     margin: 0 0 var(--space-4);
     max-width: 64ch;
   }
-  .cosmic .ev-detail .timeline h4 {
+  .cosmic .ev-detail .timeline h3 {
     margin: 0 0 2px;
     font: 700 17px/1.3 var(--font-ui);
     color: var(--text);
@@ -514,7 +517,7 @@
     font-size: 15px;
     color: var(--text-3);
   }
-  .cosmic .rail {
+  .cosmic .ev-rail {
     position: sticky;
     top: 24px;
     display: flex;
@@ -543,14 +546,14 @@
   .cosmic .ev-addcal .btn-shadow {
     display: flex;
   }
-  .cosmic .acts-row {
+  .cosmic .ev-acts-row {
     display: flex;
     gap: 4px;
     margin-top: 12px;
     justify-content: center;
     flex-wrap: wrap;
   }
-  .cosmic .rail .ev-curl {
+  .cosmic .ev-rail .ev-curl {
     margin-top: 14px;
     font-size: 12.5px;
     padding: 0 10px;
@@ -559,7 +562,7 @@
     font-size: 22px;
     color: var(--k3);
   }
-  .cosmic .rail .card-head {
+  .cosmic .ev-rail .card-head {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -592,12 +595,12 @@
       grid-template-columns: minmax(0, 1fr);
       gap: var(--space-7);
     }
-    .cosmic .ev-detail > .rail,
-    .cosmic .ev-detail > .main-col {
+    .cosmic .ev-detail > .ev-rail,
+    .cosmic .ev-detail > .ev-main {
       grid-column: 1;
       grid-row: auto;
     }
-    .cosmic .rail {
+    .cosmic .ev-rail {
       position: static;
     }
     .cosmic .ev-head h1 {
@@ -640,7 +643,7 @@
     .cosmic .ev-head h1 {
       font-size: 36px;
     }
-    .cosmic .facts {
+    .cosmic .ev-facts {
       gap: 12px 20px;
       font-size: 15px;
     }

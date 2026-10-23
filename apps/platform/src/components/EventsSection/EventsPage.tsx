@@ -64,7 +64,7 @@ export default function EventsPage({
         }
       />
 
-      <div className="wrap ev-wrap">
+      <div className="wrap ev-fill ev-wrap">
         <EventsSchedule
           meetings={meetings}
           past={past}

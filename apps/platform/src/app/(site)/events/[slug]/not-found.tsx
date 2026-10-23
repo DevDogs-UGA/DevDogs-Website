@@ -10,7 +10,7 @@ import { buttonVariants } from "~/ui/button";
  */
 export default function MeetingNotFound() {
   return (
-    <div className="wrap" style={{ padding: "var(--space-9) 0" }}>
+    <div className="wrap ev-fill" style={{ padding: "var(--space-9) 0" }}>
       <h1 className="sr-only">Meeting not found</h1>
       <EmptyState
         headingLevel={2}

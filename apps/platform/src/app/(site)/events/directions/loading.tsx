@@ -6,7 +6,7 @@ import { Skeleton } from "~/ui/skeleton";
  */
 export default function Loading() {
   return (
-    <div className="wrap" aria-busy>
+    <div className="wrap ev-fill" aria-busy>
       <div className="flex flex-col gap-4 py-16">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-4 w-full max-w-md" />

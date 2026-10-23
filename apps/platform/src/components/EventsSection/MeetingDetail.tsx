@@ -152,7 +152,7 @@ export default function MeetingDetail({
         }
       >
         <Scene name={`head-${category}`} />
-        <div className="wrap">
+        <div className="wrap ev-fill">
           <Breadcrumbs
             items={[
               { label: "Events", href: "/events" },
@@ -195,7 +195,7 @@ export default function MeetingDetail({
               explanation arrive in separate keystrokes), so the word carries
               the meaning alone and the reason extends it when there is one. */}
           {notice !== null && <p className="ev-notice">{notice}</p>}
-          <div className={cancelled ? "facts struck" : "facts"}>
+          <div className={cancelled ? "ev-facts struck" : "ev-facts"}>
             <span>
               <CalendarIcon weight="bold" aria-hidden />
               {formatEventLongDate(meeting.startsAt)}
@@ -217,9 +217,9 @@ export default function MeetingDetail({
         </div>
       </section>
 
-      <div className="wrap" data-kind={category}>
+      <div className="wrap ev-fill" data-kind={category}>
         <div className="ev-detail">
-          <aside className="rail">
+          <aside className="ev-rail">
             {cancelled ? (
               <Card className="ev-action">
                 <div className="eyebrow ev-bad">{CANCELLED_LABEL}</div>
@@ -318,7 +318,7 @@ export default function MeetingDetail({
             </Card>
           </aside>
 
-          <div className="main-col">
+          <div className="ev-main">
             {meeting.summary !== null && (
               <section>
                 <h2>About this event</h2>
@@ -339,7 +339,7 @@ export default function MeetingDetail({
                 <Timeline>
                   {workshops.map((workshop) => (
                     <TimelineItem key={workshop.workshopId}>
-                      <h4>{workshopLabel(workshop)}</h4>
+                      <h3>{workshopLabel(workshop)}</h3>
                       {workshop.description !== null && (
                         <p>{workshop.description}</p>
                       )}
