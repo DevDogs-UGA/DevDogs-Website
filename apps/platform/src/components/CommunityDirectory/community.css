@@ -98,11 +98,6 @@
     gap: 28px;
     align-items: flex-start;
   }
-  .cosmic .cm-id .avatar {
-    width: 112px;
-    height: 112px;
-    font-size: 40px;
-  }
   .cosmic .cm-id h1 {
     margin: 0;
     font-size: 40px;
@@ -140,14 +135,9 @@
     gap: 6px;
     align-items: center;
   }
-  .cosmic .cm-stars {
-    margin-top: 48px;
-    max-width: 320px;
-  }
   .cosmic .cm-stars h2 {
     font-size: 20px;
     margin: 0 0 16px;
-    text-shadow: none;
   }
   @media (max-width: 1024px) {
     .cosmic .cm-grid {
@@ -171,11 +161,6 @@
     }
     .cosmic .cm-id h1 {
       font-size: 30px;
-    }
-    .cosmic .cm-id .avatar {
-      width: 88px;
-      height: 88px;
-      font-size: 32px;
     }
   }
 }

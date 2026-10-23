@@ -36,56 +36,67 @@ export default function PublicProfile({
             { label: `@${profile.handle}` },
           ]}
         />
-        <div className="cm-id">
-          <Avatar size="lg" aria-label={heading}>
-            {profile.avatarUrl && <AvatarImage src={profile.avatarUrl} alt="" />}
-            <AvatarFallback>
-              <UserIcon size={40} aria-hidden />
-            </AvatarFallback>
-          </Avatar>
+        <div className="with-aside">
           <div className="min-w-0">
-            <h1>{heading}</h1>
-            {profile.displayName && (
-              <p className="cm-handle mono">@{profile.handle}</p>
-            )}
-            {profile.roleDescription && (
-              <p className="cm-role">{profile.roleDescription}</p>
-            )}
-            {profile.bio && <p className="cm-bio">{profile.bio}</p>}
-            {links.length > 0 && (
-              <ul className="cm-links">
-                {links.map((link) => (
-                  <li key={`${link.label}-${link.href}`}>
-                    {link.href ? (
-                      <a
-                        className="textlink"
-                        href={link.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ArrowSquareOutIcon size={14} weight="bold" />
-                        {link.label}
-                      </a>
-                    ) : (
-                      link.label
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <div className="cm-id">
+              <Avatar size="lg" className="size-22 min-[721px]:size-28">
+                {profile.avatarUrl && (
+                  <AvatarImage src={profile.avatarUrl} alt="" />
+                )}
+                <AvatarFallback>
+                  <UserIcon size={40} aria-hidden />
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <h1>{heading}</h1>
+                {profile.displayName && (
+                  <p className="cm-handle mono">@{profile.handle}</p>
+                )}
+                {profile.roleDescription && (
+                  <p className="cm-role">{profile.roleDescription}</p>
+                )}
+                {profile.bio && <p className="cm-bio">{profile.bio}</p>}
+                {links.length > 0 && (
+                  <ul className="cm-links">
+                    {links.map((link) => (
+                      <li key={`${link.label}-${link.href}`}>
+                        {link.href ? (
+                          <a
+                            className="textlink"
+                            href={link.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ArrowSquareOutIcon size={14} weight="bold" />
+                            {link.label}
+                          </a>
+                        ) : (
+                          link.label
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
           </div>
+          {stars && (
+            <aside>
+              <section
+                id="stars"
+                className="cm-stars"
+                aria-labelledby="h-stars"
+              >
+                <Card>
+                  <h2 id="h-stars" className="card-title">
+                    Stars
+                  </h2>
+                  <StarTotalsRow totals={stars} />
+                </Card>
+              </section>
+            </aside>
+          )}
         </div>
-
-        {stars && (
-          <section id="stars" className="cm-stars" aria-labelledby="h-stars">
-            <Card>
-              <h2 id="h-stars" className="card-title">
-                Stars
-              </h2>
-              <StarTotalsRow totals={stars} />
-            </Card>
-          </section>
-        )}
       </div>
     </div>
   );
