@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -25,6 +26,27 @@ function Harness({
       ))}
       <output data-testid="value">{code.value}</output>
       <output data-testid="formatted">{code.formatted}</output>
+    </div>
+  );
+}
+
+/** The check-in form's shape: the parent owns the code and passes it back in. */
+function ControlledHarness({
+  length,
+  initial,
+}: {
+  length: number;
+  initial: string;
+}) {
+  const [value, setValue] = useState(initial);
+  const code = useCodeInput({ length, value, onChange: setValue });
+  return (
+    <div>
+      {code.cells.map((_, i) => (
+        <input key={i} {...code.cellProps(i)} />
+      ))}
+      <output data-testid="value">{value}</output>
+      <output data-testid="complete">{String(code.complete)}</output>
     </div>
   );
 }
@@ -97,5 +119,39 @@ describe("useCodeInput", () => {
     await user.paste("abcd-1234");
     expect(screen.getByTestId("value")).toHaveTextContent("ABCD1234");
     expect(screen.getByTestId("formatted")).toHaveTextContent("ABCD-1234");
+  });
+
+  it("keeps every cell in place when a controlled code is corrected mid-row", async () => {
+    const user = userEvent.setup();
+    render(<ControlledHarness length={6} initial="123456" />);
+    await user.click(screen.getByLabelText("Digit 3 of 6"));
+    await user.keyboard("{Delete}");
+    expect(screen.getByLabelText("Digit 3 of 6")).toHaveValue("");
+    expect(screen.getByLabelText("Digit 4 of 6")).toHaveValue("4");
+    await user.keyboard("9");
+    expect(screen.getByTestId("value")).toHaveTextContent("129456");
+    expect(screen.getByTestId("complete")).toHaveTextContent("true");
+  });
+
+  it("follows a controlled value the parent resets", async () => {
+    function Resettable() {
+      const [value, setValue] = useState("123456");
+      const code = useCodeInput({ length: 6, value, onChange: setValue });
+      return (
+        <div>
+          {code.cells.map((_, i) => (
+            <input key={i} {...code.cellProps(i)} />
+          ))}
+          <button type="button" onClick={() => setValue("")}>
+            Reset
+          </button>
+        </div>
+      );
+    }
+    const user = userEvent.setup();
+    render(<Resettable />);
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+    expect(screen.getByLabelText("Digit 1 of 6")).toHaveValue("");
+    expect(screen.getByLabelText("Digit 6 of 6")).toHaveValue("");
   });
 });

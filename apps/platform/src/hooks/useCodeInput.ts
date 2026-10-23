@@ -83,10 +83,14 @@ export function useCodeInput({
   onComplete,
 }: CodeInputOptions) {
   const [own, setOwn] = useState(() =>
-    toCells(sanitizeCode(defaultValue, kind), length),
+    toCells(sanitizeCode(controlled ?? defaultValue, kind), length),
   );
+  // The reported value drops blank cells ("12456" with digit 3 cleared), so a
+  // controlled value can't carry positions back in. The hook keeps its own
+  // cells either way, and rebuilds them from the parent's value only when the
+  // parent changed it (a reset, a prefill) rather than echoed it.
   const cells =
-    controlled === undefined
+    controlled === undefined || sanitizeCode(controlled, kind) === own.join("")
       ? own
       : toCells(sanitizeCode(controlled, kind), length);
   const refs = useRef<(HTMLInputElement | null)[]>([]);
@@ -101,12 +105,12 @@ export function useCodeInput({
 
   const commit = useCallback(
     (next: string[]) => {
-      if (controlled === undefined) setOwn(next);
+      setOwn(next);
       const joined = next.join("");
       onChange?.(joined);
       if (next.every((c) => c !== "")) onComplete?.(joined);
     },
-    [controlled, onChange, onComplete],
+    [onChange, onComplete],
   );
 
   const paste = useCallback(
