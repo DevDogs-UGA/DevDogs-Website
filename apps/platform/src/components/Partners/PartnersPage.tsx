@@ -27,7 +27,6 @@ import {
   FAQ,
   HOW_TO,
   MAILTO,
-  OPEN_WEDNESDAYS,
   PROJECT_STEPS,
   STATS,
   TIER_GROUPS,
@@ -159,7 +158,7 @@ export default function PartnersPage() {
               />
               <div className="row partners-tight">
                 <b className="h3">DogPack</b>
-                <Badge variant="info">Pilot Nov 12</Badge>
+                <Badge variant="info">Pilot</Badge>
               </div>
               <p>
                 DevDogs&rsquo; first mobile app, for iOS and Android. It matches
@@ -269,7 +268,284 @@ export default function PartnersPage() {
             </p>
             <p className="muted partners-note">
               A workshop night runs 6&ndash;7 PM in DLW 124, in a spring
-              Workshop Wednesday slot (dates tentative). Per-event attendance
+              Workshop Wednesday slot (slots tentative). Per-event attendance
+              runs 26&ndash;64.
+            </p>
+          </Heading>
+          <Card className="k partners-tiers-card">
+            <table className="partners-tiers">
+              <thead>
+                <tr>
+                  <th />
+                  {TIERS.map((t) => (
+                    <th key={t.name} scope="col">
+                      {t.name}
+                      <small>{t.price}</small>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {TIER_GROUPS.map((g) => (
+                  <Fragment key={g.group}>
+                    <tr className="grp">
+                      <th colSpan={5}>{g.group}</th>
+                    </tr>
+                    {g.rows.map((r) => (
+                      <tr key={r.label}>
+                        <th scope="row">{r.label}</th>
+                        {r.cells.map(([text, flag], i) => (
+                          <td key={i} className={flag}>
+                            {text}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+            <div className="partners-tiercards">
+              {TIERS.map((t, i) => (
+                <article key={t.name} className="partners-tc">
+                  <h3>
+                    {t.name} <small>{t.price}</small>
+                  </h3>
+                  <dl>
+                    {TIER_GROUPS.flatMap((g) => g.rows).map((r) => {
+                      const [text, flag] = r.cells[i] ?? ["", undefined];
+                      return (
+                        <Fragment key={r.label}>
+                          <dt>{r.label}</dt>
+                          <dd className={flag}>{text}</dd>
+                        </Fragment>
+                      );
+                    })}
+                  </dl>
+                </article>
+              ))}
+            </div>
+            <p className="partners-legend">
+              A + marks what a tier adds over the one before it.
+            </p>
+            <div className="partners-custom">
+              <div>
+                <div className="h3">Buffer Overflow!</div>
+                <p className="muted">
+                  Want more than one event? We&rsquo;ll build a package around
+                  your goals: students tabling for your organization,
+                  interactive deep-dive product workshops, multiple sponsored
+                  events.
+                </p>
+              </div>
+              <LinkButton href={MAILTO.custom} variant="secondary">
+                Ask about a custom package
+              </LinkButton>
+            </div>
+          </Card>
+          <p className="small muted partners-pay">
+            Once we agree on a tier, we&rsquo;ll send payment details.
+          </p>
+        </div>
+      </section>
+
+      <Band id="how-to-start" className="section partners-sec">
+        <div className="wrap">
+          <Heading
+            eyebrow="How to start"
+            title="Co-host a night in three steps."
+          />
+          <ol className="partners-howto">
+            {HOW_TO.map((h) => (
+              <li key={h.title}>
+                <div className="h3">{h.title}</div>
+                <p>{h.body}</p>
+              </li>
+            ))}
+          </ol>
+          <div className="row partners-cta">
+            <LinkButton href={MAILTO.partnering} variant="default">
+              <EnvelopeSimpleIcon weight="bold" />
+              Email {EMAIL}
+            </LinkButton>
+            <TextLink asChild>
+              <a href="#tiers">
+                See the tiers <ArrowRightIcon weight="bold" />
+              </a>
+            </TextLink>
+          </div>
+        </div>
+      </section>
+
+      <section className="section partners-sec partners-stats-section">
+        <div className="wrap">
+          <dl className="partners-stats">
+            {STATS.map((s) => (
+              <div key={s.value}>
+                <dt>{s.label}</dt>
+                <dd>{s.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
+      <Band id="proof" className="section partners-sec">
+        <div className="wrap">
+          <Heading
+            eyebrow="What members ship"
+            title="Real apps, shipped by members."
+          />
+          <div className="partners-proof">
+            <Card className="partners-pc">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                className="partners-mark"
+                src="/cosmic/a/dogdays.png"
+                alt="DogDays"
+              />
+              <div className="row partners-tight">
+                <b className="h3">DogDays</b>
+                <Badge variant="info">Public alpha</Badge>
+              </div>
+              <p>
+                A course-planning platform for UGA students: conflict-free
+                schedules from live registrar data, now in public alpha at
+                dogdays.dev.
+              </p>
+              <div className="row partners-tags">
+                <Tag>Next.js</Tag>
+                <Tag>TypeScript</Tag>
+                <Tag>Supabase</Tag>
+              </div>
+              <div className="row partners-foot">
+                <TextLink asChild>
+                  <a href="https://dogdays.dev">
+                    dogdays.dev <ArrowUpRightIcon weight="bold" />
+                  </a>
+                </TextLink>
+              </div>
+            </Card>
+            <Card className="partners-pc">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                className="partners-mark"
+                src="/cosmic/a/dogpack.png"
+                alt="DogPack"
+              />
+              <div className="row partners-tight">
+                <b className="h3">DogPack</b>
+                <Badge variant="info">Pilot</Badge>
+              </div>
+              <p>
+                DevDogs&rsquo; first mobile app, for iOS and Android. It matches
+                students in the same courses so they can form study groups.
+              </p>
+              <div className="row partners-tags">
+                <Tag>Flutter</Tag>
+                <Tag>Dart</Tag>
+                <Tag>Supabase</Tag>
+              </div>
+              <div className="row partners-foot">
+                <TextLink asChild>
+                  <Link href="/#projects">
+                    All projects <ArrowRightIcon weight="bold" />
+                  </Link>
+                </TextLink>
+              </div>
+            </Card>
+            <Card className="partners-pc">
+              <GitPullRequestIcon
+                weight="bold"
+                className="partners-pr-icon"
+                aria-hidden
+              />
+              <b className="h3">A pull request every week</b>
+              <p>
+                Every Merge Monday, members pick an issue in DogDays or DogPack
+                and open a pull request before they leave. Merged pull requests
+                ship to the real apps.
+              </p>
+              <div className="row partners-foot">
+                <TextLink asChild>
+                  <Link href="/#projects">
+                    All projects <ArrowRightIcon weight="bold" />
+                  </Link>
+                </TextLink>
+              </div>
+            </Card>
+          </div>
+          <figure className="partners-proofrow">
+            <Card className="k partners-photo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/cosmic/a/hero-photo.jpg"
+                alt="Members planning features on a whiteboard"
+                width={374}
+                height={260}
+              />
+            </Card>
+            <figcaption>
+              Every skill level: first-time coders build alongside experienced
+              members. The 419 members of our GDG on Campus chapter and the 600+
+              students in our Discord are who a partner night reaches.
+            </figcaption>
+          </figure>
+        </div>
+      </Band>
+
+      <section className="section partners-sec">
+        <div className="wrap">
+          <Heading eyebrow="Why partner" title="More than logo placement.">
+            <p className="lead partners-lead2">
+              Partners meet students while they build, introduce them to their
+              technology, become a familiar name before recruiting season, and
+              gain a presence in the UGA computing community.
+            </p>
+          </Heading>
+          <div className="partners-cols3">
+            {WHY.map((w) => (
+              <div key={w.title}>
+                <h3>{w.title}</h3>
+                <p>{w.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <Band className="section partners-sec">
+        <div className="wrap">
+          <Heading
+            eyebrow="A week at DevDogs"
+            title="Where partners show up."
+          />
+          <div className="partners-cols3">
+            {WEEK.map((w) => (
+              <div key={w.title}>
+                <span className="eyebrow">{w.when}</span>
+                <h3>{w.title}</h3>
+                <p>{w.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Band>
+
+      <section className="section partners-sec" id="tiers">
+        <div className="wrap">
+          <Heading
+            eyebrow="Co-host a workshop night"
+            title="Partnership tiers."
+          >
+            <p className="muted partners-note">
+              Each tier covers one co-hosted Workshop Wednesday night. Recurring
+              promotion keeps featuring your company in our posts after the
+              event.
+            </p>
+            <p className="muted partners-note">
+              A workshop night runs 6&ndash;7 PM in DLW 124, in a spring
+              Workshop Wednesday slot (slots tentative). Per-event attendance
               runs 26&ndash;64.
             </p>
           </Heading>
@@ -403,7 +679,7 @@ export default function PartnersPage() {
                   Acme Co. <Badge variant="info">Example</Badge>
                 </b>
                 <p>
-                  Co-hosted Workshop night, Mon Nov 2. Building with
+                  Co-hosted Workshop night. Building with
                   Acme&rsquo;s API.
                 </p>
                 <TextLink asChild className="small">
@@ -498,7 +774,7 @@ export default function PartnersPage() {
               <dd>Student teams, in the same open-source rhythm as the club</dd>
               <dt>How it started</dt>
               <dd>
-                Interest meetings on Oct 8, 11 and 14, then team formation
+                Interest meetings, then team formation
               </dd>
               <dt>Terms</dt>
               <dd>

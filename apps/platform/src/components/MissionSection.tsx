@@ -31,7 +31,7 @@ const WEEK: readonly {
     kind: "milestone",
     sprite: "trophy",
     title: "Demo Days",
-    body: "Show what we’ve built so far. Nov 16 this fall, and two in spring.",
+    body: "Show what we’ve built so far. One this fall, and two in spring.",
   },
   {
     kind: "social",

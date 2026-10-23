@@ -95,13 +95,13 @@ const MORE: readonly {
     kind: "milestone",
     label: "Demo Days",
     title: "Show what we’ve built",
-    body: "Fall: Mon Nov 16, 7 to 8 PM. Spring, tentative: a mid-semester Demo Day Mar 1 and a final Demo Day Apr 19.",
+    body: "Two a semester: a mid-semester Demo Day and a final one. Spring Demo Days are tentative.",
   },
   {
     kind: "social",
     label: "Socials",
     title: "Once a month",
-    body: "Spring, tentative: Jan 20, Feb 17, Mar 24, and Apr 19 alongside the final Demo Day.",
+    body: "A social each month, with the final one alongside the last Demo Day. Spring is tentative.",
   },
   {
     kind: "info",

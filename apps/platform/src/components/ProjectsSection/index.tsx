@@ -23,7 +23,7 @@ const HOME_FACTS: Record<string, { status: string; tech: string[] }> = {
     tech: ["Next.js", "TypeScript", "Tailwind CSS", "Supabase"],
   },
   DogPack: {
-    status: "Pilot Nov 12",
+    status: "Pilot",
     tech: ["Flutter", "Dart", "Supabase"],
   },
 };

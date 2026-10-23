@@ -36,7 +36,7 @@ export default async function LeadershipSection() {
         <div className="home-lfoot">
           <p className="small muted">
             DevDogs leadership is elected each spring semester. Applications for
-            the spring team open Nov 16 to 25.
+            the spring team open late in the fall semester.
           </p>
           <LinkButton
             href="/leadership"

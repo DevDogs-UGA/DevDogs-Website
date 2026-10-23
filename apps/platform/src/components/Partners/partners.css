@@ -321,17 +321,6 @@
     color: var(--text-2);
     font-size: 15.5px;
   }
-  .cosmic .partners-mondays {
-    display: flex;
-    gap: 10px 28px;
-    flex-wrap: wrap;
-    margin-top: var(--space-5);
-    font-size: 15px;
-    color: var(--text-2);
-  }
-  .cosmic .partners-mondays b {
-    color: var(--text);
-  }
   .cosmic .partners-listing {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

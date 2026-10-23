@@ -133,19 +133,6 @@ export const TIER_GROUPS: readonly {
   },
 ];
 
-export const OPEN_WEDNESDAYS = [
-  "Jan 27",
-  "Feb 3",
-  "Feb 10",
-  "Feb 24",
-  "Mar 3",
-  "Mar 17",
-  "Mar 31",
-  "Apr 7",
-  "Apr 14",
-  "Apr 21",
-] as const;
-
 export const HOW_TO = [
   {
     title: "Pick a tier and a Wednesday",
@@ -237,7 +224,7 @@ export const FAQ = [
   },
   {
     q: "How far ahead should we ask?",
-    a: "For a workshop night, at least three weeks before the Wednesday you want. For a project, send the brief before spring project proposals close (Jan 15, tentative).",
+    a: "For a workshop night, at least three weeks before the Wednesday you want. For a project, send the brief before spring project proposals close. That deadline is tentative.",
   },
   {
     q: "Do you work with organizations outside UGA?",
