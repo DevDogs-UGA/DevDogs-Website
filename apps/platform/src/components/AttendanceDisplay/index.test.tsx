@@ -54,7 +54,7 @@ describe("AttendanceDisplay", () => {
     expect(
       screen.getByRole("heading", { name: MEETING.title }),
     ).toBeInTheDocument();
-    expect(screen.getByText("WELCOME!")).toBeInTheDocument();
+    expect(screen.getByText("Build")).toBeInTheDocument();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000);

@@ -7,20 +7,24 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import "./participation/passport.css";
 import { formatEventDateTime } from "~/lib/eventTime";
 import { saveSurvey, type SurveyActionState } from "~/server/actions/survey";
 import { ASKED, OTHER, fieldName, otherFieldName } from "~/lib/surveyFields";
 import type { Survey, SurveyItem } from "~/server/survey/load";
+import { WarningCircleIcon } from "@phosphor-icons/react/ssr";
+import { Button } from "~/ui/button";
+import { Card } from "~/ui/card";
+import { Checkbox } from "~/ui/checkbox";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/ui/collapsible";
+import { Input as TextInput } from "~/ui/input";
+import { Textarea } from "~/ui/textarea";
 
 const initialState: SurveyActionState = { ok: false, message: "" };
-
-const inputClass =
-  "w-full rounded-md border border-mauve-700 bg-mauve-900 px-3 py-2 text-sm text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30";
 
 /**
  * The check-in survey, shown on /attendance after a check-in.
@@ -60,13 +64,18 @@ function SurveyForm({ survey }: { survey: Survey }) {
     ...(survey.meetingOpen ? survey.meeting : []),
   ];
   return (
-    <section className="rounded-xl border-2 border-mauve-800 bg-mauve-950 px-6 py-6 shadow-lg shadow-black/30">
-      <h2 className="text-lg font-semibold text-white">A few questions</h2>
-      <p className="mt-1 text-sm text-mauve-400">
+    <Card
+      as="section"
+      flat
+      className="att-card att-wide att-survey"
+      data-testid="checkin-survey"
+    >
+      <h2>A few questions</h2>
+      <p className="att-note">
         About {survey.meetingLabel}. Your check-in is already recorded; these
         are optional unless marked required.
       </p>
-      <form onSubmit={submit} className="mt-6 grid gap-6" noValidate>
+      <form onSubmit={submit} className="att-sform" noValidate>
         <input type="hidden" name="meetingId" value={survey.meetingId} />
         {open.map((item) => (
           <QuestionField
@@ -76,7 +85,7 @@ function SurveyForm({ survey }: { survey: Survey }) {
           />
         ))}
         {!survey.meetingOpen && survey.meeting.length > 0 && (
-          <p className="text-sm text-mauve-400">
+          <p className="att-note">
             This meeting&rsquo;s questions closed{" "}
             {formatEventDateTime(survey.deadline)}.
           </p>
@@ -86,12 +95,12 @@ function SurveyForm({ survey }: { survey: Survey }) {
             open={showSaved || savedError}
             onOpenChange={setShowSaved}
           >
-            <CollapsibleTrigger className="text-sm font-medium text-cyan-300 hover:text-cyan-200">
+            <CollapsibleTrigger className="att-saved-toggle">
               Your saved answers ({survey.saved.length})
             </CollapsibleTrigger>
             <CollapsibleContent
               forceMount
-              className="mt-4 grid gap-6 data-[state=closed]:hidden"
+              className="mt-4 flex flex-col gap-[22px] data-[state=closed]:hidden"
             >
               {survey.saved.map((item) => (
                 <QuestionField
@@ -103,24 +112,23 @@ function SurveyForm({ survey }: { survey: Survey }) {
             </CollapsibleContent>
           </Collapsible>
         )}
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            disabled={pending}
-            className="rounded-sm bg-cyan-400 px-4 py-1.5 text-sm font-medium text-black disabled:opacity-50"
+        <div className="att-srow">
+          <Button
+            type="submit"
+            variant="secondary"
+            loading={pending}
+            data-testid="survey-save"
           >
             Save answers
-          </button>
+          </Button>
           {state.message && (
-            <p
-              className={`text-sm ${state.ok ? "text-cyan-300" : "text-rose-300"}`}
-              role="status"
-            >
+            <p className={`att-stat ${state.ok ? "ok" : "bad"}`} role="status">
               {state.message}
             </p>
           )}
         </div>
       </form>
-    </section>
+    </Card>
   );
 }
 
@@ -136,25 +144,20 @@ function QuestionField({
   const errorId = `${id}-error`;
   return (
     <fieldset
-      className="grid gap-2.5"
+      className="att-q"
       aria-invalid={error ? true : undefined}
       aria-describedby={error ? errorId : undefined}
     >
       <input type="hidden" name={ASKED} value={question.id} />
       <legend className="text-base font-medium text-white">
         {question.prompt}
-        {question.required && (
-          <span className="ml-2 text-xs font-normal text-mauve-400">
-            required
-          </span>
-        )}
+        {question.required && <span className="att-req">required</span>}
       </legend>
-      {question.help && (
-        <p className="-mt-1 text-xs text-mauve-300">{question.help}</p>
-      )}
+      {question.help && <p className="att-note -mt-1">{question.help}</p>}
       <Input question={question} answer={answer} id={id} />
       {error && (
-        <p id={errorId} className="text-sm text-rose-300">
+        <p id={errorId} className="err">
+          <WarningCircleIcon weight="fill" aria-hidden className="shrink-0" />
           {error}
         </p>
       )}
@@ -175,25 +178,23 @@ function Input({
   switch (question.type) {
     case "text":
       return (
-        <input
+        <TextInput
           id={id}
           name={name}
           aria-label={question.prompt}
           defaultValue={answer && "text" in answer ? answer.text : ""}
           maxLength={question.maxLength}
-          className={inputClass}
         />
       );
     case "longText":
       return (
-        <textarea
+        <Textarea
           id={id}
           name={name}
           aria-label={question.prompt}
           defaultValue={answer && "text" in answer ? answer.text : ""}
           maxLength={question.maxLength}
           rows={4}
-          className={inputClass}
         />
       );
     case "scale": {
@@ -203,21 +204,23 @@ function Input({
         (_, i) => question.min + i,
       );
       return (
-        <div className="flex flex-wrap items-center gap-3 text-sm text-mauve-200">
-          {question.minLabel && <span>{question.minLabel}</span>}
+        <div className="att-scale">
+          {question.minLabel && (
+            <span className="att-note">{question.minLabel}</span>
+          )}
           {values.map((value) => (
-            <label key={value} className="flex items-center gap-1.5">
-              <input
-                type="radio"
-                name={name}
-                value={value}
-                defaultChecked={chosen === value}
-                className="accent-cyan-400"
-              />
-              {value}
-            </label>
+            <Checkbox
+              key={value}
+              type="radio"
+              name={name}
+              value={value}
+              defaultChecked={chosen === value}
+              label={value}
+            />
           ))}
-          {question.maxLabel && <span>{question.maxLabel}</span>}
+          {question.maxLabel && (
+            <span className="att-note">{question.maxLabel}</span>
+          )}
         </div>
       );
     }
@@ -239,36 +242,31 @@ function Input({
         (o) => !o.retired || picked.has(o.id),
       );
       return (
-        <div className="grid gap-2 text-sm text-mauve-200">
+        <div className="att-opts">
           {options.map((option) => (
-            <label key={option.id} className="flex items-center gap-2">
-              <input
-                type={multiple ? "checkbox" : "radio"}
-                name={name}
-                value={option.id}
-                defaultChecked={picked.has(option.id)}
-                className="accent-cyan-400"
-              />
-              {option.label}
-            </label>
+            <Checkbox
+              key={option.id}
+              type={multiple ? "checkbox" : "radio"}
+              name={name}
+              value={option.id}
+              defaultChecked={picked.has(option.id)}
+              label={option.label}
+            />
           ))}
           {question.other && (
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="flex items-center gap-2">
-                <input
-                  type={multiple ? "checkbox" : "radio"}
-                  name={name}
-                  value={OTHER}
-                  defaultChecked={otherText !== ""}
-                  className="accent-cyan-400"
-                />
-                Other
-              </label>
-              <input
+            <div className="flex flex-wrap items-center gap-3">
+              <Checkbox
+                type={multiple ? "checkbox" : "radio"}
+                name={name}
+                value={OTHER}
+                defaultChecked={otherText !== ""}
+                label="Other"
+              />
+              <TextInput
                 name={otherFieldName(question.id)}
                 aria-label={`${question.prompt}: other`}
                 defaultValue={otherText}
-                className={`${inputClass} max-w-xs`}
+                className="max-w-xs"
               />
             </div>
           )}

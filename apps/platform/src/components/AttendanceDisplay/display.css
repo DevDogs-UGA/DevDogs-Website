@@ -1,0 +1,285 @@
+/* The projector slide (console-display.html). A 16:9 stage laid out in cqw so
+   it reads the same in the console card and on a projector. Static: nothing
+   animates but the drain bar, which is one compositor-only transform. */
+@layer cosmic {
+  .disp-region {
+    container-type: size;
+    position: relative;
+    min-height: 0;
+    flex: 1;
+    background: #0b0720;
+    font-family: var(--font-ui);
+  }
+  .disp-stage {
+    container-type: inline-size;
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: min(100cqw, calc(100cqh * 16 / 9));
+    height: min(100cqh, calc(100cqw * 9 / 16));
+    overflow: hidden;
+    isolation: isolate;
+    color: #fff;
+    text-align: left;
+    cursor: pointer;
+    outline: none;
+  }
+  .disp-stage::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(90deg, #15103a 0%, #0b0720 62%);
+  }
+  .disp-stage:focus-visible {
+    outline: 0.3cqw dashed rgba(255, 255, 255, 0.7);
+    outline-offset: -0.8cqw;
+  }
+  .disp-a {
+    position: absolute;
+  }
+  .disp-stage .chip {
+    font-size: 1.25cqw;
+    height: 2.7083cqw;
+    padding: 0 0.9375cqw;
+    letter-spacing: 0.1em;
+  }
+  .disp-title {
+    margin: 0;
+    font: 800 5.625cqw / 1.04 var(--font-display);
+    letter-spacing: 0.005em;
+    color: #fff;
+    text-shadow: none !important;
+  }
+  .disp-meta {
+    font-weight: 600;
+    color: #d9d4ee;
+    white-space: nowrap;
+  }
+  .disp-step {
+    display: flex;
+    align-items: center;
+    font-weight: 700;
+    font-size: 2.2917cqw;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .disp-step b {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.2cqw;
+    height: 3.2cqw;
+    margin-right: 1cqw;
+    background:
+      linear-gradient(#fff, #fff) 0 2px / 100% calc(100% - 4px) no-repeat,
+      linear-gradient(#fff, #fff) 2px 0 / calc(100% - 4px) 100% no-repeat;
+    color: #0b0720;
+    font-weight: 800;
+    font-size: 2.2cqw;
+  }
+  .disp-qr {
+    left: 5cqw;
+    top: 26cqw;
+    width: 28cqw;
+    height: 28cqw;
+    background: #fff;
+    box-shadow: 0.4167cqw 0.625cqw 0 #000;
+  }
+  .disp-qr svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .disp-qr-empty {
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 2.0833cqw;
+    font-size: 2.0833cqw;
+    font-weight: 600;
+    color: #b9b2d6;
+    background:
+      linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25)) 2px
+        0 / calc(100% - 4px) 0.2604cqw no-repeat,
+      linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25)) 2px
+        100% / calc(100% - 4px) 0.2604cqw no-repeat,
+      linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25)) 0
+        2px / 0.2604cqw calc(100% - 4px) no-repeat,
+      linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25)) 100%
+        2px / 0.2604cqw calc(100% - 4px) no-repeat;
+    box-shadow: none;
+  }
+  .disp-qr-err {
+    color: #ffb4bf;
+    font-weight: 800;
+    font-size: 2.4cqw;
+    background:
+      linear-gradient(rgba(255, 80, 100, 0.1), rgba(255, 80, 100, 0.1)) 0 2px /
+        100% calc(100% - 4px) no-repeat,
+      linear-gradient(rgba(255, 80, 100, 0.1), rgba(255, 80, 100, 0.1)) 2px 0 /
+        calc(100% - 4px) 100% no-repeat;
+    box-shadow: inset 0 0 0 0.26cqw #ff9aa8;
+  }
+  .disp-code {
+    display: flex;
+    gap: 2.0833cqw;
+    font: 800 10.9375cqw / 1 var(--font-mono);
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+  }
+  .disp-bar {
+    background: rgba(255, 255, 255, 0.14);
+    overflow: hidden;
+  }
+  .disp-bar i {
+    display: block;
+    height: 100%;
+    width: 100%;
+    transform-origin: left;
+    background: var(--k3);
+  }
+  .disp-bar[data-low="true"] i {
+    background: var(--bad);
+  }
+  .disp-meta[data-low="true"] {
+    color: #ff9aa8;
+  }
+  .disp-meta b {
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .disp-url {
+    font: 800 3.2cqw / 1.2 var(--font-mono);
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+  .disp-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7292cqw;
+    font-weight: 800;
+    font-size: 2.2917cqw;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .disp-count i {
+    width: 1.2cqw;
+    height: 1.2cqw;
+    background: var(--ok);
+  }
+  .disp-bigerr {
+    font: 800 5.6cqw / 1.05 var(--font-display);
+    color: #fff;
+  }
+  .disp-erradv {
+    font-weight: 600;
+    font-size: 2.4cqw;
+    color: #ffb4bf;
+  }
+
+  /* The officer's controls: hidden until the pointer or keyboard is on the
+     window, so the projector shows only the slide. */
+  .disp-ctl {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 3;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .disp-wrap:hover .disp-ctl,
+  .disp-wrap:focus-within .disp-ctl,
+  .disp-ctl[data-show="true"] {
+    opacity: 1;
+  }
+  .disp-ctl .b {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 6px 14px;
+    font: 700 14px/1.2 var(--font-ui);
+    color: #fff;
+    background:
+      linear-gradient(rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.16)) 0
+        2px / 100% calc(100% - 4px) no-repeat,
+      linear-gradient(rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.16)) 2px
+        0 / calc(100% - 4px) 100% no-repeat;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.4);
+    border: 0;
+  }
+  button.b {
+    cursor: pointer;
+  }
+  button.b:hover {
+    background:
+      linear-gradient(rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.26)) 0
+        2px / 100% calc(100% - 4px) no-repeat,
+      linear-gradient(rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.26)) 2px
+        0 / calc(100% - 4px) 100% no-repeat;
+  }
+  .disp-ctl .b.ok {
+    color: #3ee0a0;
+  }
+  .disp-ctl .b.no {
+    color: #ffc857;
+  }
+
+  /* Canceled: confirm step */
+  .disp-cancel {
+    position: absolute;
+    inset: 2.0833cqw;
+    padding: 4.1667cqw;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background:
+      linear-gradient(rgba(70, 10, 24, 0.6), rgba(70, 10, 24, 0.6)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(rgba(70, 10, 24, 0.6), rgba(70, 10, 24, 0.6)) 2px 0 /
+        calc(100% - 4px) 100% no-repeat;
+    box-shadow: inset 0 0 0 0.3125cqw #ff9aa8;
+    color: #fff;
+  }
+  .disp-cancel h2 {
+    margin: 0;
+    font: 800 5cqw / 1.05 var(--font-display);
+    color: #fff;
+    text-shadow: none;
+  }
+  .disp-cancel p {
+    margin: 1.6667cqw 0 0;
+    max-width: 75cqw;
+    font-size: 2.8cqw;
+    line-height: 1.3;
+    color: #ffd5db;
+  }
+  .disp-cancel .gate {
+    align-self: flex-start;
+    margin-top: 2.5cqw;
+    padding: 1.1458cqw 2.0833cqw;
+    border: 0;
+    cursor: pointer;
+    font: 800 2.2cqw var(--font-ui);
+    color: #000;
+    background:
+      linear-gradient(#ffc857, #ffc857) 0 2px / 100% calc(100% - 4px) no-repeat,
+      linear-gradient(#ffc857, #ffc857) 2px 0 / calc(100% - 4px) 100% no-repeat;
+  }
+  .disp-cancel .gate:focus-visible {
+    outline: 0.3cqw dashed #fff;
+    outline-offset: 0.4cqw;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .disp-ctl {
+      transition: none;
+    }
+  }
+}

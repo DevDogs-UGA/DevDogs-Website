@@ -1,12 +1,18 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import "./participation/passport.css";
+
+import { useActionState, useId, useState } from "react";
 import {
   saveReflection,
   type ReflectionActionState,
 } from "~/server/actions/reflections";
 import { formatEventDateTime } from "~/lib/eventTime";
 import type { ReflectionActivity } from "~/server/reflections/load";
+import Badge from "~/ui/badge";
+import { Button } from "~/ui/button";
+import Field from "~/ui/field";
+import { Textarea } from "~/ui/textarea";
 
 const initialState: ReflectionActionState = { ok: false, message: "" };
 
@@ -19,14 +25,14 @@ export default function ReflectionCards({
 }) {
   if (activities.length === 0) return null;
   return (
-    <section className="rounded-xl border-2 border-mauve-800 bg-mauve-950 px-6 py-6 shadow-lg shadow-black/30">
-      <h2 className="text-lg font-semibold text-white">EL reflections</h2>
-      <p className="mt-1 text-sm text-mauve-400">
+    <section className="att-sect" aria-labelledby="reflections">
+      <h2 id="reflections">EL reflections</h2>
+      <p className="muted small">
         Eligible workshops count as one club hour. Save a draft anytime during
         the submission window; submission requires at least {minimumWordCount}{" "}
         words.
       </p>
-      <div className="mt-6 grid gap-5">
+      <div className="att-refl-list">
         {activities.map((activity) => (
           <ReflectionCard
             key={`${activity.activityType}:${activity.activityId}`}
@@ -48,70 +54,81 @@ function ReflectionCard({
 }) {
   const [state, action, pending] = useActionState(saveReflection, initialState);
   const [wordCount, setWordCount] = useState(activity.wordCount);
+  const countId = useId();
   const submitted = activity.submittedAt !== null;
+  const short = Math.max(0, minimumWordCount - wordCount);
   return (
-    <form
-      action={action}
-      className="rounded-lg border border-white/10 bg-white/5 p-4"
-    >
+    <form action={action} className="card flat att-refl">
       <input type="hidden" name="activityType" value={activity.activityType} />
       <input type="hidden" name="activityId" value={activity.activityId} />
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="att-hd">
         <div>
-          <p className="text-xs tracking-wide text-mauve-400 uppercase">
+          <div className="eyebrow" style={{ marginBottom: 6 }}>
             {activity.activityType}
-          </p>
-          <h3 className="font-semibold text-white">{activity.label}</h3>
+          </div>
+          <b>{activity.label}</b>
         </div>
-        <span className="rounded-full bg-mauve-800 px-3 py-1 text-xs text-mauve-200">
+        <Badge variant={submitted ? "success" : "default"}>
           {submitted
             ? "Submitted"
             : activity.canEdit
               ? "Draft"
               : "Window closed"}
-        </span>
+        </Badge>
       </div>
-      <textarea
-        name="content"
-        defaultValue={activity.content}
-        onChange={(event) => setWordCount(countWords(event.target.value))}
-        disabled={!activity.canEdit}
-        maxLength={12_000}
-        rows={7}
-        aria-label={`Reflection for ${activity.label}`}
-        className="mt-4 w-full rounded-md border border-mauve-700 bg-mauve-900 px-3 py-3 text-sm text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 disabled:opacity-70"
-      />
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-mauve-400">
-        <span>
-          {wordCount} words · due {formatEventDateTime(activity.deadline)}
-        </span>
-        {activity.canEdit && (
-          <div className="flex gap-2">
-            <button
-              name="intent"
-              value="save"
-              disabled={pending}
-              className="rounded-sm border border-mauve-500 px-3 py-1.5 text-white disabled:opacity-50"
-            >
-              Save draft
-            </button>
-            <button
-              name="intent"
-              value="submit"
-              disabled={pending}
-              title={`Requires ${minimumWordCount} words`}
-              className="rounded-sm bg-cyan-400 px-3 py-1.5 font-medium text-black disabled:opacity-50"
-            >
-              Submit
-            </button>
-          </div>
+      <Field label="Your reflection" htmlFor={`${countId}-text`}>
+        <Textarea
+          id={`${countId}-text`}
+          name="content"
+          defaultValue={activity.content}
+          onChange={(event) => setWordCount(countWords(event.target.value))}
+          disabled={!activity.canEdit}
+          maxLength={12_000}
+          rows={7}
+          aria-label={`Reflection for ${activity.label}`}
+        />
+      </Field>
+      <p className="att-ft" id={countId}>
+        {short > 0 ? (
+          <b style={{ color: "var(--warn)" }}>
+            {wordCount} of {minimumWordCount} words
+          </b>
+        ) : (
+          <b>
+            {wordCount} {wordCount === 1 ? "word" : "words"}
+          </b>
         )}
-      </div>
+        {short > 0 && activity.canEdit
+          ? ` · ${short} to go before you can submit`
+          : ""}{" "}
+        · due {formatEventDateTime(activity.deadline)}
+      </p>
+      {activity.canEdit && (
+        <div className="att-acts">
+          <Button
+            type="submit"
+            name="intent"
+            value="save"
+            variant="secondary"
+            size="sm"
+            disabled={pending}
+          >
+            Save draft
+          </Button>
+          <Button
+            type="submit"
+            name="intent"
+            value="submit"
+            size="sm"
+            disabled={pending || short > 0}
+            aria-describedby={countId}
+          >
+            Submit
+          </Button>
+        </div>
+      )}
       {state.message && (
-        <p
-          className={`mt-3 text-sm ${state.ok ? "text-cyan-300" : "text-rose-300"}`}
-          role="status"
-        >
+        <p className={`att-stat ${state.ok ? "ok" : "bad"}`} role="status">
           {state.message}
         </p>
       )}

@@ -1,9 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowsOutIcon, WarningIcon } from "@phosphor-icons/react/ssr";
+import {
+  ArrowsOutIcon,
+  ProhibitIcon,
+  SunIcon,
+  WifiSlashIcon,
+} from "@phosphor-icons/react/ssr";
 import { QR_DEFAULTS, renderQrSvg } from "@devdogsuga/sdk/brand/qr";
-import TitleCard, { titleCardWash, type TitleCardMeeting } from "./TitleCard";
+import "./display.css";
+import TitleCard, {
+  CHECK_IN_ADDRESS,
+  type TitleCardMeeting,
+} from "./TitleCard";
 import { useAttendanceCodes } from "./useAttendanceCodes";
 
 /** Advances from the title card to the code, presenter-remote-friendly. */
@@ -37,6 +46,9 @@ export default function AttendanceDisplay({
   present?: boolean;
 }) {
   const screen = useRef<HTMLDivElement>(null);
+  // Whether the screen lock is held right now; the officer at the laptop sees
+  // it in the hover controls. Null until the first request settles.
+  const [awake, setAwake] = useState<boolean | null>(null);
   const [confirmed, setConfirmed] = useState(!canceled);
   // The display opens on the title card, not the code: revealing it is a
   // deliberate act (a key press or a click), and the 30-second code window
@@ -88,10 +100,15 @@ export default function AttendanceDisplay({
       void navigator.wakeLock
         .request("screen")
         .then((sentinel) => {
-          if (disposed) void sentinel.release();
-          else lock = sentinel;
+          if (disposed) {
+            void sentinel.release();
+            return;
+          }
+          lock = sentinel;
+          setAwake(true);
+          sentinel.addEventListener("release", () => setAwake(false));
         })
-        .catch(() => undefined);
+        .catch(() => setAwake(false));
     };
     const onVisible = () => {
       if (document.visibilityState === "visible") acquire();
@@ -105,44 +122,71 @@ export default function AttendanceDisplay({
     };
   }, [confirmed]);
 
-  // The template's own QR: `QR_DEFAULTS` is white modules straight on the
-  // slide background with the DevDogs mark in the middle, which is what the
-  // reference deck's pasted code was exported with.
+  // Black modules on a white square, the same on a projector as on a phone
+  // screen held up to it: white-on-dark codes fail on dim projectors.
   const qr = useMemo(
     () =>
       payload
-        ? renderQrSvg(payload.url, QR_DEFAULTS, "/brand/devdog.svg")
+        ? renderQrSvg(
+            payload.url,
+            {
+              ...QR_DEFAULTS,
+              color: "#0b0720",
+              background: "#ffffff",
+              margin: 3,
+            },
+            "/brand/devdog.svg",
+          )
         : null,
     [payload],
   );
   const remaining = payload
     ? Math.max(0, Math.ceil((payload.expiresAt - now) / 1_000))
     : 0;
+  const low = remaining <= 5;
 
   if (!confirmed) {
     return (
-      <section className="rounded-xl border-2 border-amber-400 bg-amber-950/50 p-6">
-        <div className="flex gap-4">
-          <WarningIcon className="mt-0.5 size-7 shrink-0 text-amber-300" />
-          <div>
-            <h2 className="text-lg font-semibold text-white">
-              This meeting is canceled
-            </h2>
-            <p className="mt-1 max-w-prose text-sm text-amber-100/80">
-              Its codes cannot record attendance unless an officer deliberately
-              opens this display. Member check-in will still reject the canceled
-              meeting.
-            </p>
-            <button
-              type="button"
-              onClick={() => setConfirmed(true)}
-              className="mt-5 rounded-sm border-2 border-amber-300 bg-amber-300 px-4 py-2 font-medium text-black"
-            >
-              Show codes anyway
-            </button>
+      <div
+        className={
+          present
+            ? "relative flex h-dvh w-full flex-col overflow-hidden bg-[#0b0720]"
+            : "relative flex h-[36rem] flex-col overflow-hidden bg-[#0b0720]"
+        }
+      >
+        <div className="disp-region">
+          <div className="disp-stage" style={{ cursor: "default" }}>
+            <div className="disp-cancel" role="alert">
+              <div
+                style={{
+                  display: "flex",
+                  gap: "1.25cqw",
+                  alignItems: "center",
+                }}
+              >
+                <ProhibitIcon
+                  weight="bold"
+                  aria-hidden
+                  style={{ fontSize: "5.7292cqw", color: "#ff9aa8" }}
+                />
+                <h2>This meeting is canceled</h2>
+              </div>
+              <p>
+                Canceled in the schedule. Member check-in rejects a canceled
+                meeting, so nobody can check in with these codes unless an
+                officer deliberately opens this display.
+              </p>
+              <button
+                type="button"
+                className="gate"
+                onClick={() => setConfirmed(true)}
+              >
+                Show codes anyway
+              </button>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
     );
   }
 
@@ -155,97 +199,172 @@ export default function AttendanceDisplay({
       // as one -- the region, and the slide in it, would collapse to 0.
       className={
         present
-          ? "relative isolate flex h-dvh w-full flex-col overflow-hidden bg-mauve-950"
-          : "fullscreen:rounded-none fullscreen:border-0 fullscreen:h-screen relative isolate flex h-[36rem] flex-col overflow-hidden rounded-2xl border-2 border-cyan-400/50 bg-mauve-950 shadow-2xl shadow-cyan-950/40"
+          ? "disp-wrap relative isolate flex h-dvh w-full flex-col overflow-hidden bg-[#0b0720]"
+          : "disp-wrap fullscreen:h-screen fullscreen:border-0 relative isolate flex h-[36rem] flex-col overflow-hidden border-2 border-white/15 bg-[#0b0720]"
       }
     >
-      {/* `container-type: size` so the slide can letterbox itself to 16:9
-          inside whatever is left once the button row below takes its
-          height; the wash stays full-bleed out here. A flex sibling (not an
-          overlay) reserves the "Full screen" button's own row, so the
-          button can never sit on top of the slide's content. */}
-      <div
-        className="[container-type:size] relative min-h-0 flex-1"
-        style={{ backgroundImage: titleCardWash(meeting.kind) }}
-      >
+      <div className="disp-region">
         <TitleCard
           meeting={meeting}
           onReveal={advance}
           qr={
             !revealed ? (
-              <p className="flex size-full items-center justify-center rounded-[4%] border-[0.15cqw] border-dashed border-white/15 p-[8%] text-center text-[1.1cqw] text-mauve-400">
-                <span className="text-balance">
-                  Space / → / Enter to show the{" "}
-                  <span className="whitespace-nowrap">check-in</span> code
+              <p className="disp-qr-empty m-0 size-full">
+                <span>
+                  Space, → or Enter
+                  <br />
+                  to show the check-in code
                 </span>
               </p>
             ) : error ? (
               <p
-                className="flex size-full items-center justify-center p-[8%] text-center text-[1.1cqw] text-rose-300"
+                className="disp-qr-empty disp-qr-err m-0 size-full"
                 role="alert"
               >
-                {error}. The last displayed code may have expired.
+                QR paused
               </p>
             ) : !payload || !qr ? (
-              <p className="flex size-full items-center justify-center text-center text-[1.1cqw] text-mauve-400">
+              <p className="disp-qr-empty m-0 size-full">
                 Preparing attendance codes…
               </p>
             ) : (
               <div
-                aria-label="QR code for meeting attendance"
-                className="animate-in fade-in size-full duration-500 [&>svg]:size-full"
+                role="img"
+                aria-label="QR code that opens the check-in page"
+                className="size-full [&>svg]:size-full"
                 dangerouslySetInnerHTML={{ __html: qr }}
               />
             )
           }
-          code={
-            revealed && payload && !error ? (
-              <>
-                <p className="font-mono text-[2.6cqw] leading-none font-bold tracking-[0.12em] text-white tabular-nums">
-                  {payload.code.slice(0, 3)} {payload.code.slice(3)}
-                </p>
-                <div className="mt-[1.2cqw] h-[0.3cqw] w-3/5 overflow-hidden rounded-full bg-white/10">
-                  <div
-                    key={payload.expiresAt}
-                    className="h-full origin-left bg-cyan-400"
-                    style={{
-                      animation: "attendance-drain 30s linear forwards",
-                      animationDelay: `${drainDelay}ms`,
-                    }}
-                  />
+          right={
+            <>
+              {!revealed ? (
+                <div
+                  className="disp-a disp-meta"
+                  style={{ left: "40cqw", top: "26cqw", fontSize: "2.2917cqw" }}
+                >
+                  The code and the QR appear together.
                 </div>
-              </>
-            ) : null
+              ) : error ? (
+                <>
+                  <div
+                    className="disp-a disp-bigerr"
+                    style={{ left: "40cqw", top: "25cqw", width: "52cqw" }}
+                    role="alert"
+                  >
+                    Codes paused.
+                    <br />
+                    Hang on.
+                  </div>
+                  <div
+                    className="disp-a disp-erradv"
+                    style={{ left: "40cqw", top: "40cqw", width: "52cqw" }}
+                  >
+                    Check-in is back in a moment. An officer is on it.
+                  </div>
+                </>
+              ) : payload ? (
+                <>
+                  <div
+                    className="disp-a disp-step"
+                    style={{ left: "40cqw", top: "21.8cqw" }}
+                  >
+                    <b aria-hidden>2</b>Then type this code
+                  </div>
+                  <div
+                    className="disp-a disp-code"
+                    style={{ left: "40cqw", top: "26cqw" }}
+                    aria-label={`Check-in code ${payload.code.slice(0, 3)} ${payload.code.slice(3)}`}
+                  >
+                    <span>{payload.code.slice(0, 3)}</span>
+                    <span>{payload.code.slice(3)}</span>
+                  </div>
+                  <div
+                    className="disp-a disp-bar"
+                    data-low={low}
+                    style={{
+                      left: "40cqw",
+                      top: "39.4cqw",
+                      width: "46.875cqw",
+                      height: "1.25cqw",
+                    }}
+                  >
+                    <i
+                      key={payload.expiresAt}
+                      style={{
+                        animation: "attendance-drain 30s linear forwards",
+                        animationDelay: `${drainDelay}ms`,
+                      }}
+                    />
+                  </div>
+                  <div
+                    className="disp-a disp-meta"
+                    data-low={low}
+                    style={{
+                      left: "40cqw",
+                      top: "41.4cqw",
+                      fontSize: "1.9792cqw",
+                    }}
+                  >
+                    New code in <b>{remaining} s</b> · the last code still works
+                    until then
+                  </div>
+                </>
+              ) : null}
+              <div
+                className="disp-a disp-meta"
+                style={{ left: "40cqw", top: "46.5cqw", fontSize: "1.9792cqw" }}
+              >
+                Can’t scan? Go to
+              </div>
+              <div
+                className="disp-a disp-url"
+                style={{ left: "40cqw", top: "49.3cqw" }}
+              >
+                {CHECK_IN_ADDRESS}
+              </div>
+            </>
           }
-          status={
+          count={
             revealed && payload && !error ? (
-              <>
-                <p className="text-[1.064cqw] leading-none font-bold text-white tabular-nums">
-                  {payload.attendanceCount} checked in
-                </p>
-                <p className="text-[0.917cqw] leading-none text-[#d7d0d7] tabular-nums">
-                  New code in {remaining} second{remaining === 1 ? "" : "s"}
-                </p>
-              </>
+              <div
+                className="disp-a disp-count"
+                style={{ left: "75cqw", top: "4.9cqw" }}
+              >
+                <i aria-hidden />
+                {payload.attendanceCount} checked in
+              </div>
             ) : null
           }
         />
-      </div>
 
-      {/* A real, laid-out row rather than an overlay, so it can never sit on
-          top of the title card's or the code panel's content in either
-          state -- both panels above get exactly this row's height less to
-          work with instead. Hidden (and its height reclaimed) only once the
-          Fullscreen API is truly active: present mode alone still needs the
-          control, since a popup isn't `:fullscreen` until this is clicked. */}
-      <div className="fullscreen:hidden flex shrink-0 items-center px-4 py-3">
-        <button
-          type="button"
-          onClick={() => void screen.current?.requestFullscreen()}
-          className="flex cursor-pointer items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/15"
-        >
-          <ArrowsOutIcon className="size-4" /> Full screen
-        </button>
+        {/* The officer's controls sit over the region's corner and show on
+            hover or focus only, so the slide is the whole projector image. */}
+        <div className="disp-ctl fullscreen:hidden" data-show={Boolean(error)}>
+          {error ? (
+            <span className="b no" role="status">
+              <WifiSlashIcon weight="bold" aria-hidden />
+              Can’t reach the server. Retrying every 5 s
+            </span>
+          ) : awake === true ? (
+            <span className="b ok">
+              <SunIcon weight="bold" aria-hidden />
+              Screen kept awake
+            </span>
+          ) : awake === false ? (
+            <span className="b no">
+              <SunIcon weight="bold" aria-hidden />
+              Screen may sleep
+            </span>
+          ) : null}
+          <button
+            type="button"
+            className="b"
+            onClick={() => void screen.current?.requestFullscreen()}
+          >
+            <ArrowsOutIcon weight="bold" aria-hidden /> Full screen
+          </button>
+        </div>
       </div>
     </div>
   );

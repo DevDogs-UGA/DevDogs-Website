@@ -1,0 +1,280 @@
+/* Attendance page layout and the passport (attendance.html, checkin.html).
+   Page-local: layout and the star rows only; every control is a kit primitive. */
+@layer cosmic {
+  .cosmic .att-col h2,
+  .cosmic .att-col h3 {
+    text-shadow: none;
+    font-family: var(--font-display);
+    letter-spacing: 0;
+    color: var(--text);
+  }
+  .att-col {
+    width: 100%;
+    max-width: 760px;
+    margin-inline: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .att-step {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: var(--space-4) 0 0;
+    font: 700 12px/1 var(--font-ui);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .att-step b {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    background:
+      linear-gradient(var(--k6), var(--k6)) 0 2px / 100% calc(100% - 4px)
+        no-repeat,
+      linear-gradient(var(--k6), var(--k6)) 2px 0 / calc(100% - 4px) 100%
+        no-repeat;
+    color: #fff;
+    letter-spacing: 0;
+  }
+
+  .att-card {
+    padding: 22px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 480px;
+    width: 100%;
+  }
+  .att-card > * {
+    margin: 0;
+  }
+  .att-wide {
+    max-width: none;
+  }
+
+  .att-mtg {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    align-items: center;
+  }
+  .att-mtg b {
+    font: 800 20px/1.2 var(--font-display);
+    color: var(--text);
+  }
+  .att-mtg .att-when {
+    flex-basis: 100%;
+    font-size: 14px;
+    color: var(--text-3);
+  }
+
+  .att-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .att-form .btn {
+    width: 100%;
+  }
+  .att-note {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-3);
+  }
+  .att-rec {
+    margin: 8px 0 0;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .att-sum {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px 24px;
+    margin: 0;
+    padding: 20px 0;
+    box-shadow:
+      inset 0 1px 0 var(--line),
+      inset 0 -1px 0 var(--line);
+  }
+  .att-sum dt {
+    font: 700 11.5px/1.2 var(--font-ui);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .att-sum dd {
+    margin: 8px 0 0;
+    font: 800 26px/1 var(--font-display);
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .att-sum dd small {
+    font: 500 14px var(--font-ui);
+    color: var(--text-3);
+  }
+  .att-star {
+    color: var(--warn);
+  }
+
+  .att-sect {
+    margin-top: var(--space-6);
+  }
+  .att-sect h2 {
+    font-size: 24px;
+    margin: 0 0 6px;
+  }
+  .att-sect > p {
+    margin: 0 0 var(--space-4);
+  }
+
+  .att-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .att-rows li {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 4px 14px;
+    align-items: center;
+    padding: 14px 0;
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+  .att-rows .att-st {
+    color: var(--warn);
+    font-size: 20px;
+    text-align: center;
+    grid-row: span 2;
+  }
+  .att-rows .att-t {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .att-rows .att-d {
+    font-size: 13.5px;
+    color: var(--text-3);
+    grid-column: 2;
+  }
+
+  /* Survey */
+  .att-survey h2 {
+    font: 800 20px/1.2 var(--font-display);
+    margin: 0;
+  }
+  .att-sform {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    margin-top: 20px;
+  }
+  .att-q {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .att-q legend {
+    padding: 0;
+    margin-bottom: 10px;
+    color: var(--text);
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 1.35;
+  }
+  .att-q .att-req {
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-3);
+  }
+  .att-q .att-opts {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .att-q .att-scale {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 18px;
+  }
+  .att-saved-toggle {
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--k3);
+    background: none;
+    border: 0;
+    padding: 4px 0;
+  }
+  .att-saved-toggle:hover {
+    text-decoration: underline;
+  }
+  .att-srow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    align-items: center;
+  }
+  .att-stat {
+    margin: 0;
+    font-size: 14px;
+  }
+  .att-stat.ok {
+    color: var(--ok);
+  }
+  .att-stat.bad {
+    color: var(--bad);
+  }
+
+  /* Reflections */
+  .att-refl {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .att-refl .att-hd {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .att-refl .att-hd b {
+    display: block;
+    color: var(--text);
+    font-size: 16px;
+  }
+  .att-refl .att-ft {
+    font-size: 14px;
+    color: var(--text-3);
+  }
+  .att-refl .att-acts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .att-refl-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  @media (max-width: 720px) {
+    .att-sum {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .att-card {
+      max-width: none;
+    }
+  }
+}

@@ -1,11 +1,22 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import PageShell from "~/components/PageShell";
+import "~/components/participation/passport.css";
+import CheckInForm, {
+  MeetingLine,
+  type CheckInMeeting,
+} from "~/components/participation/CheckInForm";
 import StarGrid from "~/components/participation/StarGrid";
-import { StarTotalsRow } from "~/components/participation/StarBadges";
+import { PassportSummary } from "~/components/participation/StarBadges";
+import EmptyState from "~/components/participation/EmptyState";
+import {
+  CATEGORY_LABEL,
+  meetingCategory,
+} from "~/components/EventsSection/meetingView";
 import CheckInSurvey from "~/components/CheckInSurvey";
 import ReflectionCards from "~/components/ReflectionCards";
-import { formatEventDateTime, formatEventSpan } from "~/lib/eventTime";
+import { formatEventDateTime } from "~/lib/eventTime";
+import { formatMeetingWhen } from "~/components/participation/when";
 import { meetingTitle } from "~/lib/meetingTitle";
 import { getAttendanceMeetings } from "~/server/attendance/getMeetings";
 import { expectSession } from "~/server/auth";
@@ -13,6 +24,9 @@ import { getStarsForUser, totalStars } from "~/server/loaders/stars";
 import { getStreakForUser } from "~/server/loaders/streak";
 import { getReflectionActivities } from "~/server/reflections/load";
 import { getSurvey } from "~/server/survey/load";
+import Callout, { type CalloutTone } from "~/ui/callout";
+import { Card } from "~/ui/card";
+import { TextLink } from "~/ui/text-link";
 
 export const metadata: Metadata = {
   title: "Attendance | DevDogs",
@@ -21,33 +35,39 @@ export const metadata: Metadata = {
 
 const STATUS_COPY: Record<
   string,
-  { title: string; body: string; good?: boolean }
+  { title: string; body: string; tone: CalloutTone; good?: boolean }
 > = {
   recorded: {
     title: "Attendance recorded",
     body: "You’re checked in. Your attendance and progress have been updated.",
+    tone: "success",
     good: true,
   },
   duplicate: {
     title: "Already checked in",
     body: "Your original attendance record is still on file.",
+    tone: "success",
     good: true,
   },
   invalid_meeting: {
     title: "Meeting unavailable",
     body: "That meeting was canceled, removed, or could not be found.",
+    tone: "critical",
   },
   invalid: {
     title: "Code expired or invalid",
     body: "Use the current code shown at the meeting and try again.",
+    tone: "critical",
   },
   rate_limited: {
     title: "Too many attempts",
     body: "Wait about a minute, then try the current code again.",
+    tone: "warning",
   },
   uga_required: {
     title: "Use your UGA Google account",
     body: "Attendance was not recorded. Sign in again with an @uga.edu account, then scan or enter the current code.",
+    tone: "critical",
   },
 };
 
@@ -100,157 +120,106 @@ export default async function AttendancePage({
     ? requestedMeeting
     : meetings[0]?.id;
 
+  const options: CheckInMeeting[] = meetings.map((meeting) => {
+    const category = meetingCategory(meeting);
+    return {
+      id: meeting.id,
+      title: meetingTitle(meeting),
+      when: formatMeetingWhen(meeting.startsAt, meeting.endsAt),
+      category,
+      categoryLabel: CATEGORY_LABEL[category],
+      ongoing: meeting.ongoing,
+    };
+  });
+  const checkedInOption = options.find((o) => o.id === checkedInMeeting?.id);
+  const problem =
+    receipt && !receipt.good
+      ? {
+          tone: receipt.tone,
+          title: receipt.title,
+          body: receipt.body,
+          code: status === "invalid",
+        }
+      : undefined;
+
   return (
     <PageShell
-      accent="cyan"
+      kind="build"
       title="Attendance"
-      description="Enter the rotating code shown at a DevDogs meeting. New members can sign in with their UGA Google account without losing their check-in."
+      description="Scan the QR code on the projector, then type the six-digit code shown there. It changes every 30 seconds. New members can sign in with their UGA Google account without losing their check-in."
     >
-      {receipt && (
-        <section
-          className={`rounded-xl border-2 px-5 py-4 ${
-            receipt.good
-              ? "border-cyan-500/60 bg-cyan-950/60"
-              : "border-rose-500/60 bg-rose-950/40"
-          }`}
-          role="status"
-        >
-          <h2 className="font-semibold text-white">{receipt.title}</h2>
-          <p className="mt-1 text-sm text-mauve-200">{receiptBody}</p>
-          {recordedAt && !Number.isNaN(recordedAt.getTime()) && (
-            <p className="mt-2 text-sm font-medium text-white">
-              Recorded {formatEventDateTime(recordedAt)}
-            </p>
-          )}
-          {surveyUrl && (
-            <a
-              href={surveyUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-3 inline-block rounded-sm border-2 border-cyan-400 px-4 py-1.5 text-sm font-medium text-cyan-400 transition outline-none hover:bg-cyan-400 hover:text-black focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-950"
-            >
-              Continue to survey
-            </a>
-          )}
-        </section>
-      )}
-
-      {survey && <CheckInSurvey survey={survey} />}
-
-      <section className="rounded-xl border-2 border-mauve-800 bg-mauve-950 px-6 py-6 shadow-lg shadow-black/30">
-        <h2 className="text-lg font-semibold text-white">Enter meeting code</h2>
-        <p className="mt-1 text-sm text-mauve-400">
-          Codes rotate every 30 seconds. If the wrong meeting is selected, you
-          can change it below.
-        </p>
-
-        {meetings.length === 0 ? (
-          <p className="mt-6 text-sm text-mauve-300">
-            There are no meetings available for attendance yet.
-          </p>
-        ) : (
-          <form
-            action="/attendance/claim"
-            method="post"
-            className="mt-6 grid grid-cols-1 gap-5"
+      <div className="att-col">
+        {receipt?.good && (
+          <Card
+            flat
+            className="att-card att-wide"
+            data-testid="checkin-receipt"
           >
-            <label className="grid grid-cols-1 gap-2 text-sm font-medium text-white">
-              Meeting
-              <select
-                name="meeting"
-                defaultValue={selected}
-                required
-                className="rounded-md border border-mauve-700 bg-mauve-900 px-3 py-2.5 text-white outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30"
-              >
-                {meetings.map((meeting) => (
-                  <option key={meeting.id} value={meeting.id}>
-                    {meeting.ongoing ? "Now · " : ""}
-                    {meetingTitle(meeting)} ·{" "}
-                    {formatEventSpan(meeting.startsAt, meeting.endsAt)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="grid grid-cols-1 gap-2 text-sm font-medium text-white">
-              Six-digit code
-              <input
-                name="code"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9]{6}"
-                minLength={6}
-                maxLength={6}
-                required
-                placeholder="000000"
-                className="rounded-md border border-mauve-700 bg-mauve-900 px-4 py-3 font-mono text-2xl tracking-[0.35em] text-white outline-none placeholder:text-mauve-600 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30"
-              />
-            </label>
-
-            <button
-              type="submit"
-              className="justify-self-start rounded-sm border-2 border-cyan-400 bg-cyan-400 px-5 py-2 font-medium text-black transition outline-none hover:bg-cyan-950 hover:text-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-mauve-950"
-            >
-              Check in
-            </button>
-          </form>
-        )}
-      </section>
-
-      {stars && (
-        <section className="rounded-xl border-2 border-mauve-800 bg-mauve-950 px-6 py-6 shadow-lg shadow-black/30">
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-white">
-                Your participation passport
-              </h2>
-              <p className="mt-1 text-sm text-mauve-400">
-                One star for each eligible meeting you attend.
+            {checkedInOption && <MeetingLine meeting={checkedInOption} />}
+            <Callout tone={receipt.tone} title={receipt.title}>
+              {receiptBody}
+              {recordedAt && !Number.isNaN(recordedAt.getTime()) && (
+                <p className="att-rec">
+                  Recorded {formatEventDateTime(recordedAt)}
+                </p>
+              )}
+            </Callout>
+            {surveyUrl && (
+              <p className="att-note">
+                <TextLink href={surveyUrl} target="_blank" rel="noreferrer">
+                  Continue to survey
+                </TextLink>
               </p>
-            </div>
-            <StarTotalsRow totals={totalStars(stars)} />
-          </div>
-          {streak && (
-            <div className="mb-6 grid gap-3 rounded-lg border border-amber-400/25 bg-amber-400/5 p-4 sm:grid-cols-3">
-              <StreakStat
-                label="Current streak"
-                value={`${streak.current} weeks`}
-              />
-              <StreakStat
-                label="Longest streak"
-                value={`${streak.longest} weeks`}
-              />
-              <StreakStat
-                label="This week"
-                value={
-                  streak.thisWeekRequired === 0
-                    ? "No eligible events"
-                    : `${streak.thisWeekEarned}/${streak.thisWeekRequired} stars`
-                }
-              />
-            </div>
-          )}
-          <StarGrid cells={stars} />
-        </section>
-      )}
+            )}
+          </Card>
+        )}
 
-      {reflectionData && (
-        <ReflectionCards
-          activities={reflectionData.activities}
-          minimumWordCount={reflectionData.minimumWordCount}
-        />
-      )}
+        {survey && <CheckInSurvey survey={survey} />}
+
+        {!receipt?.good &&
+          (options.length === 0 ? (
+            <EmptyState
+              title="Nothing to check in to yet"
+              body="Check-in lists meetings that have started. Come back when a meeting is on."
+            />
+          ) : (
+            <Card
+              as="section"
+              flat
+              className="att-card"
+              aria-labelledby="checkin-h"
+            >
+              <h2 id="checkin-h" className="h3" style={{ margin: 0 }}>
+                Enter meeting code
+              </h2>
+              <CheckInForm
+                meetings={options}
+                selectedId={selected ?? options[0]!.id}
+                offerSignIn={!userId || status === "uga_required"}
+                problem={problem}
+              />
+            </Card>
+          ))}
+
+        {stars && (
+          <section className="att-sect" aria-labelledby="passport-h">
+            <h2 id="passport-h">Your participation passport</h2>
+            <p className="muted small">
+              One star for each eligible meeting you attend.
+            </p>
+            <PassportSummary totals={totalStars(stars)} streak={streak} />
+            <StarGrid cells={stars} />
+          </section>
+        )}
+
+        {reflectionData && (
+          <ReflectionCards
+            activities={reflectionData.activities}
+            minimumWordCount={reflectionData.minimumWordCount}
+          />
+        )}
+      </div>
     </PageShell>
-  );
-}
-
-function StreakStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs tracking-wide text-mauve-400 uppercase">{label}</p>
-      <p className="mt-1 font-semibold text-amber-300">{value}</p>
-    </div>
   );
 }
 
