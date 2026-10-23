@@ -26,6 +26,7 @@ import {
   UGA,
   type FontStacks,
 } from "./theme.js";
+import { KIND as SDK_KIND } from "@devdogsuga/sdk/brand";
 
 export type ThemeName = "cosmic" | "paper";
 
@@ -97,49 +98,27 @@ export interface KindTheme {
   dateInk: string;
 }
 
+/** One Cosmic kind from the redesign's category triple (`KIND` in the sdk's brand.ts): 3 is the bar, 6 the
+ * shadow, 7 the date column (all of them at least 5:1 under white text; checked). */
+const cosmicKind = (
+  c: (typeof SDK_KIND)[keyof typeof SDK_KIND],
+): KindTheme => ({
+  bar: c[3],
+  shadow: c[6],
+  fill: PALETTE.card,
+  date: c[7],
+  dateInk: "#ffffff",
+});
+
+/** The newsletter's kinds follow the redesign's six categories: Interest Meeting is `info`, Demo Night
+ * `milestone` (see `categoryOf` in the platform's eventKind.ts). */
 export const COSMIC_KINDS: Record<KindKey, KindTheme> = {
-  build: {
-    bar: "#38bdf8",
-    shadow: "#0084d1",
-    fill: PALETTE.card,
-    date: "#0369a1",
-    dateInk: "#ffffff",
-  },
-  interest: {
-    bar: "#c4b5fd",
-    shadow: "#7c3aed",
-    fill: PALETTE.card,
-    date: "#6d28d9",
-    dateInk: "#ffffff",
-  },
-  workshop: {
-    bar: "#34d399",
-    shadow: "#009966",
-    fill: PALETTE.card,
-    date: "#047857",
-    dateInk: "#ffffff",
-  },
-  demo: {
-    bar: "#a5b4fc",
-    shadow: "#4f39f6",
-    fill: PALETTE.card,
-    date: "#4338ca",
-    dateInk: "#ffffff",
-  },
-  social: {
-    bar: "#fb7185",
-    shadow: "#ec003f",
-    fill: PALETTE.card,
-    date: "#be123c",
-    dateInk: "#ffffff",
-  },
-  study: {
-    bar: "#fbbf24",
-    shadow: "#d97706",
-    fill: PALETTE.card,
-    date: "#b45309",
-    dateInk: "#ffffff",
-  },
+  build: cosmicKind(SDK_KIND.build),
+  interest: cosmicKind(SDK_KIND.info),
+  workshop: cosmicKind(SDK_KIND.workshop),
+  demo: cosmicKind(SDK_KIND.milestone),
+  social: cosmicKind(SDK_KIND.social),
+  study: cosmicKind(SDK_KIND.study),
 };
 
 export const PAPER_KINDS: Record<KindKey, KindTheme> = {
