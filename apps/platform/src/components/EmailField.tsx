@@ -1,35 +1,26 @@
-"use client";
-
-import { useAccountVisibility } from "~/hooks/useAccountVisibility";
+import { GoogleLogoIcon } from "@phosphor-icons/react/ssr";
 import type { getProfilePageData } from "~/server/loaders/console";
-import Input from "~/components/Input";
-import VisibilityToggle from "~/ui/visibility-toggle";
 
 type ProfileData = Awaited<ReturnType<typeof getProfilePageData>>;
 
-export default function EmailField({ id, email, profile }: ProfileData) {
-  const { showEmail, toggle, isPending } = useAccountVisibility(id, {
-    showGithub: profile.showGithub,
-    showDiscord: profile.showDiscord,
-    showEmail: profile.showEmail,
-    showLinkedin: profile.showLinkedin,
-  });
-
+/**
+ * The sign-in account. It is read-only and never public (the profile's own
+ * switches cover only GitHub, Discord and LinkedIn), so there is nothing to
+ * toggle and nothing to unlink.
+ */
+export default function EmailField({ email }: ProfileData) {
   return (
-    <div className="flex flex-col gap-3">
-      <VisibilityToggle
-        checked={showEmail}
-        pending={isPending("uga")}
-        onToggle={() => toggle("uga")}
-      />
-
-      <Input
-        className="max-w-sm"
-        value={email ?? undefined}
-        readOnly
-        disabled
-        type="email"
-      />
+    <div className="set-acc">
+      <span className="ic" aria-hidden>
+        <GoogleLogoIcon />
+      </span>
+      <div>
+        <b>UGA MyID email</b>
+        <span className="small muted">
+          {email ? `${email} · Google` : "Google"}
+        </span>
+        <p className="why">Your sign-in. Can&rsquo;t be unlinked.</p>
+      </div>
     </div>
   );
 }

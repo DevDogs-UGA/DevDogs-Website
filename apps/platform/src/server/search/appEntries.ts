@@ -24,7 +24,7 @@ function toEntry(item: NavItem, breadcrumbs: string[] = []): SearchEntry {
 
 /**
  * A page, plus one entry per section and field it contains, so "graduation"
- * lands on `/account#graduation` rather than on `/account`.
+ * lands on `/settings/profile#graduation` rather than on `/settings/profile`.
  *
  * Sub-entries inherit the page's icon and its permission gate: they only come
  * from a page the caller can already see, so search can't leak the shape of a
@@ -35,7 +35,7 @@ function toEntries(item: NavItem, breadcrumbs: string[] = []): SearchEntry[] {
   const trail = [...breadcrumbs, item.label];
 
   for (const section of PAGE_SECTIONS[item.href] ?? []) {
-    // /account only renders this card while public profiles are on.
+    // /settings/profile only renders this card while public profiles are on.
     if (section.id === "publicProfileSettings" && !publicProfilesEnabled()) {
       continue;
     }

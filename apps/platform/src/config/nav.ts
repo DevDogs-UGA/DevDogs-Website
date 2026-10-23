@@ -186,15 +186,22 @@ export const ACCOUNT_ITEMS: NavItem[] = [
       "Check in with the meeting code and track your participation passport.",
   },
   {
-    label: "Account",
-    href: "/account",
+    label: "Profile",
+    href: "/settings/profile",
     icon: "UserIcon",
     description:
-      "Manage your profile information, connected accounts, and verification status.",
+      "Manage your details, what your public profile shows, and your handle.",
   },
   {
-    label: "OAuth Client",
-    href: "/tools/oauth",
+    label: "Connected accounts",
+    href: "/settings/accounts",
+    icon: "SealCheckIcon",
+    description:
+      "Link GitHub, Discord and LinkedIn, and see what verification needs.",
+  },
+  {
+    label: "OAuth apps",
+    href: "/settings/oauth",
     icon: "KeyIcon",
     description:
       "Set up a local OAuth client to test DevDogs sign-in from your own project.",
@@ -234,7 +241,7 @@ export interface NavGroup {
  */
 export const CONSOLE_GROUP: Omit<NavGroup, "items"> = {
   label: "Console",
-  iconBg: "bg-mauve-300",
+  iconBg: "bg-[var(--brand-kind-info-6)]",
   twoColumn: true,
 };
 

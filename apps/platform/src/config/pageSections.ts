@@ -1,14 +1,15 @@
 /**
- * The sections and fields inside the account, console, and tools pages, so
- * search can land on `/account#graduation` instead of just `/account`.
+ * The sections and fields inside the settings and console pages, so search can
+ * land on `/settings/profile#graduation` instead of just `/settings/profile`.
  *
- * Every `id` here is the anchor the page already renders, `ConsoleCard.Root`'s
- * `id` for a section and `Field`'s `id` for a field, and every label and
+ * Every `id` here is the anchor the page already renders, `Panel`'s (or
+ * `ConsoleCard.Root`'s) `id` for a section and `Field`'s (or `SettingsAnchor`'s)
+ * `id` for a field, and every label and
  * description is the copy that page shows. That duplication is deliberate: the
  * pages stay plain readable JSX rather than being driven by this table.
  * `pageSections.test.ts` parses the page sources and fails if the two drift.
  *
- * Only pages built from `ConsoleCard` + `Field` appear here. The console's
+ * Only pages built from `Panel`/`ConsoleCard` + `Field` appear here. The console's
  * table-driven pages (moderation, feedback, audit log) have no
  * stable in-page anchors to point at.
  */
@@ -21,27 +22,27 @@ export interface PageField {
   description?: string;
 }
 
-/** One `<ConsoleCard.Root>` on a page, with the fields it contains. */
+/** One `<Panel>` (or `<ConsoleCard.Root>`) on a page, with the fields it contains. */
 export interface PageSection {
-  /** Anchor id. Matches the `id` prop on the page's `<ConsoleCard.Root>`. */
+  /** Anchor id. Matches the `id` prop on the page's `<Panel>` or `<ConsoleCard.Root>`. */
   id: string;
-  /** The card's `<ConsoleCard.Header title>`. */
+  /** The panel's `title` (or the card's `<ConsoleCard.Header title>`). */
   label: string;
   fields?: PageField[];
 }
 
 /** Keyed by the page's href, which must be a `href` from `./nav`. */
 export const PAGE_SECTIONS: Record<string, PageSection[]> = {
-  "/account": [
+  "/settings/profile": [
     {
-      id: "profile",
-      label: "Profile",
+      id: "details",
+      label: "Your details",
       fields: [
         {
           id: "avatar",
           label: "Profile Photo",
           description:
-            "Shown on your public profile, the community page, and anywhere else your account appears.",
+            "Press your photo to change it. Shown on your public profile, the community page and anywhere else your account appears.",
         },
         {
           id: "preferredName",
@@ -58,13 +59,13 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
           id: "graduation",
           label: "Graduation",
           description:
-            "Your expected graduation semester and year — used to verify your student status.",
+            "Your expected graduation semester and year. Used to verify your student status; never shown publicly.",
         },
         {
           id: "academics",
           label: "Academics",
           description:
-            "Select all of your UGA programs of study, including majors, minors, graduate programs, and certificates.",
+            "Select all of your UGA programs of study, including majors, minors, graduate programs, and certificates. Never shown publicly.",
         },
         {
           id: "bio",
@@ -75,13 +76,36 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
           id: "links",
           label: "Links",
           description:
-            "Add up to five links (e.g., portfolio, resume, socials) to display on your public profile. Drag to reorder.",
+            "Up to five links (a portfolio, a résumé, socials), shown on your public profile. Use the arrows to reorder.",
         },
       ],
     },
+    // No fields: they are rendered inside PublicProfileSection, which shares
+    // draft state between them, so the page source has no `<Field>` to mirror.
+    // The panel anchor still lands search on the section.
+    { id: "publicProfileSettings", label: "Public profile" },
     {
-      id: "connectedAccounts",
-      label: "Connected Accounts",
+      id: "roles",
+      label: "Roles",
+      fields: [
+        { id: "roles-list", label: "Your roles" },
+        // Rendered only for leaders. Indexed for everyone: the field's existence
+        // is not sensitive, and gating it would mean threading `isLeader` into
+        // the search route for one anchor.
+        {
+          id: "roleDescription",
+          label: "Role Description",
+          description:
+            "A short description of what you do, shown under your name on your profile and on the leadership section of the homepage.",
+        },
+      ],
+    },
+  ],
+
+  "/settings/accounts": [
+    {
+      id: "accounts",
+      label: "Accounts",
       fields: [
         {
           id: "email",
@@ -109,58 +133,13 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
         },
       ],
     },
-    // No fields: they are rendered inside PublicProfileSection, which shares
-    // switch state between them, so the page source has no `<Field>` to mirror.
-    // The card anchor still lands search on the section.
-    { id: "publicProfileSettings", label: "Public Profile" },
-    {
-      id: "status",
-      label: "Status",
-      fields: [
-        {
-          id: "roles",
-          label: "Roles",
-          description:
-            "Your roles within the club. Only officers can change these.",
-        },
-        // Rendered only for leaders. Indexed for everyone: the field's existence
-        // is not sensitive, and gating it would mean threading `isLeader` into
-        // the search route for one anchor.
-        {
-          id: "roleDescription",
-          label: "Role Description",
-          description:
-            "A short description of what you do, shown on the leadership section of the homepage.",
-        },
-        {
-          id: "verification",
-          label: "Profile Verification",
-          description:
-            "Complete all the steps below for your profile to appear on the DevDogs community page.",
-        },
-      ],
-    },
+    { id: "verification", label: "Verification" },
   ],
 
-  "/tools/oauth": [
-    {
-      id: "credentials",
-      label: "Credentials",
-      fields: [
-        {
-          id: "issuer",
-          label: "Issuer URL",
-          description:
-            "Where an OpenID Connect provider (a custom OIDC provider in Supabase, for one) discovers DevDogs sign-in.",
-        },
-        {
-          id: "client-credentials",
-          label: "Client ID",
-          description:
-            "Copy these into your project's environment variables to enable DevDogs sign-in locally.",
-        },
-      ],
-    },
+  "/settings/oauth": [
+    { id: "issuer", label: "Issuer URL" },
+    { id: "dev-clients", label: "Development clients" },
+    { id: "test-accounts", label: "Test accounts" },
     {
       id: "moderation",
       label: "Moderation",
@@ -173,30 +152,7 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
         },
       ],
     },
-    {
-      id: "production-clients",
-      label: "Production clients",
-      fields: [
-        {
-          id: "production-client-list",
-          label: "First-party clients",
-          description:
-            "The credentials a DevDogs app signs its members in with. Approved automatically at sign-in, so only an app's own Supabase callback is accepted. Every change here is recorded in the audit log.",
-        },
-      ],
-    },
-    {
-      id: "test-accounts",
-      label: "Test Accounts",
-      fields: [
-        {
-          id: "test-accounts-list",
-          label: "Test Accounts",
-          description:
-            "Sandboxed identities you can sign in as during the OAuth flow, without using your real DevDogs account.",
-        },
-      ],
-    },
+    { id: "production-clients", label: "Production clients" },
   ],
 
   "/console/permissions": [

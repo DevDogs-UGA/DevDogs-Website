@@ -30,11 +30,11 @@ export default function VerificationDialog({ open, onOpenChange }: Props) {
           <DialogTitle
             ref={headingRef}
             tabIndex={-1}
-            className="font-display text-xl font-extrabold text-white outline-none md:text-2xl"
+            className="text-xl text-[var(--text)] outline-none md:text-2xl"
           >
             Welcome back!
           </DialogTitle>
-          <DialogDescription className="max-w-lg leading-relaxed text-mauve-400">
+          <DialogDescription className="help max-w-lg">
             Your profile is still a work in progress. Complete the steps below
             to verify your account.{" "}
             {ctx.publicProfiles

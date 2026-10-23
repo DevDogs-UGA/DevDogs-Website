@@ -13,26 +13,42 @@ import { getMyHandleChoices } from "~/server/actions/publicProfile";
 import setHandle from "~/server/actions/profileHandle";
 import type { HandleChoices } from "~/server/loaders/publicProfiles";
 import Callout from "~/ui/callout";
+import { profilePath } from "~/lib/profilePath";
+import { CheckCircleIcon, XCircleIcon } from "@phosphor-icons/react/ssr";
 
 interface Props {
   /** What the server read when the picker rendered. Later reads replace it. */
   choices: HandleChoices;
   /** Called with the stored handle after a successful save. */
   onSaved?: (handle: string) => void;
+  /**
+   * Deferred mode, for a page with one Save: the parent owns the selection and
+   * does the write. The picker then shows no Save button and no result.
+   */
+  value?: string | null;
+  onValueChange?: (handle: string) => void;
 }
 
 /**
  * Lets a member choose the handle their public profile lives at. Shared by
- * the verification dialog and /account.
+ * the verification dialog and the profile settings.
  *
  * Availability is a snapshot: another member can take an option after this
  * list was read. `setHandle` answers that race with `taken`, which this shows
  * inline and follows with a fresh read, so the member sees the real state
  * rather than clicking the same dead option again.
  */
-export default function HandlePicker({ choices: initial, onSaved }: Props) {
-  const [choices, setChoices] = useState(initial);
-  const [selected, setSelected] = useState<string | null>(initial.current);
+export default function HandlePicker({
+  choices: initial,
+  onSaved,
+  value,
+  onValueChange,
+}: Props) {
+  const deferred = onValueChange !== undefined;
+  const [ownChoices, setChoices] = useState(initial);
+  const choices = deferred ? initial : ownChoices;
+  const [ownSelected, setSelected] = useState<string | null>(initial.current);
+  const selected = deferred ? (value ?? null) : ownSelected;
   const [result, setResult] = useState<HandleOutcomeMessage | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -72,7 +88,7 @@ export default function HandlePicker({ choices: initial, onSaved }: Props) {
 
   if (choices.options.length === 0) {
     return (
-      <p className="text-sm text-mauve-400">
+      <p className="help">
         There are no handles to choose from yet. Add a preferred name or link a
         GitHub or Discord account, then come back.
       </p>
@@ -81,76 +97,105 @@ export default function HandlePicker({ choices: initial, onSaved }: Props) {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="max-w-md text-xs text-mauve-300">
+      <p className="help max-w-[62ch]">
         Your handle is public: anyone can see it in your profile address.
         Choosing your GitHub or Discord username makes that username public even
         if the account is hidden on your profile.
       </p>
 
-      <fieldset className="flex max-w-md flex-col gap-1.5" disabled={pending}>
+      <fieldset className="set-hpick" disabled={pending}>
         <legend className="sr-only">Handle</legend>
-        {choices.options.map((option) => {
-          const taken = !option.available;
-          const isSelected = selected === option.handle;
-          return (
-            <label
-              key={option.handle}
-              className={`flex items-start gap-3 rounded-sm border px-3 py-2 text-sm ${
-                taken
-                  ? "cursor-not-allowed border-mauve-800 text-mauve-500"
-                  : isSelected
-                    ? "cursor-pointer border-cyan-400 bg-cyan-400/10 text-white"
-                    : "cursor-pointer border-mauve-700 text-white hover:border-mauve-500"
-              }`}
-            >
-              <input
-                type="radio"
-                name="handle"
-                value={option.handle}
-                checked={isSelected}
-                disabled={taken}
-                onChange={() => {
-                  setSelected(option.handle);
-                  setResult(null);
-                }}
-                className="mt-1 accent-cyan-400"
-              />
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="font-medium">
+        <div className="card flat" style={{ padding: 0 }}>
+          {choices.options.map((option) => {
+            const taken = !option.available;
+            const isSelected = selected === option.handle;
+            const isCurrent = option.handle === choices.current;
+            return (
+              <label
+                key={option.handle}
+                className={`set-hopt${isSelected ? "sel" : ""}${taken ? "taken" : ""}`}
+              >
+                <input
+                  type="radio"
+                  name="handle"
+                  value={option.handle}
+                  checked={isSelected}
+                  disabled={taken}
+                  onChange={() => {
+                    if (deferred) onValueChange(option.handle);
+                    else setSelected(option.handle);
+                    setResult(null);
+                  }}
+                  className="sr-only"
+                />
+                <span
+                  className={`check radio${isSelected ? "on" : ""}`}
+                  aria-hidden
+                >
+                  <i />
+                </span>
+                <span className="min-w-0">
+                  <b>
                     {handleKindLabel(option.kind)}
+                    {isCurrent && (
+                      <span className="badge" style={{ marginLeft: 8 }}>
+                        Current
+                      </span>
+                    )}
+                  </b>
+                  <span className="p">{handleUrlPath(option)}</span>
+                </span>
+                {taken ? (
+                  <span className="av no">
+                    <XCircleIcon aria-hidden />
+                    <span className="capitalize">taken</span>
                   </span>
-                  {taken && (
-                    <span className="text-xs text-rose-300">taken</span>
-                  )}
-                </span>
-                <span className="text-xs break-all text-mauve-400">
-                  {handleUrlPath(option)}
-                </span>
-              </span>
-            </label>
-          );
-        })}
+                ) : (
+                  !isCurrent && (
+                    <span className="av ok">
+                      <CheckCircleIcon aria-hidden />
+                      Available
+                    </span>
+                  )
+                )}
+              </label>
+            );
+          })}
+        </div>
       </fieldset>
 
-      {picked && revealsConnectedUsername(picked.kind) && (
-        <p className="max-w-md text-xs text-amber-200">
-          This publishes your {handleKindLabel(picked.kind)} to everyone who
-          sees your profile address.
-        </p>
-      )}
+      {picked &&
+        revealsConnectedUsername(picked.kind) &&
+        picked.handle !== choices.current && (
+          <Callout tone="info">
+            This publishes your {handleKindLabel(picked.kind)} to everyone who
+            sees your profile address.
+          </Callout>
+        )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <FormButton
-          type="button"
-          theme="cyan"
-          className="w-fit text-sm"
-          disabled={unchanged || pending}
-          onClick={save}
-        >
-          {pending ? "Saving…" : "Save handle"}
-        </FormButton>
-      </div>
+      {deferred &&
+        picked &&
+        choices.current &&
+        picked.handle !== choices.current && (
+          <Callout tone="warning" title="Your address will change">
+            from {profilePath(choices.current)} to {profilePath(picked.handle)}.
+            Old links stop working when you save.
+          </Callout>
+        )}
+
+      {!deferred && (
+        <div className="flex flex-wrap items-center gap-3">
+          <FormButton
+            type="button"
+            theme="cyan"
+            className="w-fit text-sm"
+            disabled={unchanged || pending}
+            onClick={save}
+          >
+            {pending ? "Saving…" : "Save handle"}
+          </FormButton>
+        </div>
+      )}
 
       {result && (
         <Callout tone={result.tone} alert>

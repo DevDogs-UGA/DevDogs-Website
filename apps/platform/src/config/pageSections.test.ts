@@ -16,8 +16,9 @@ import { CONSOLE_ITEMS, PROFILE_ITEMS, PUBLIC_LINKS } from "./nav";
  */
 
 const SOURCES: Record<string, string> = {
-  "/account": "app/(site)/account/page.tsx",
-  "/tools/oauth": "app/(site)/tools/oauth/page.tsx",
+  "/settings/profile": "app/(site)/settings/profile/page.tsx",
+  "/settings/accounts": "app/(site)/settings/accounts/page.tsx",
+  "/settings/oauth": "app/(site)/settings/oauth/page.tsx",
   "/console/permissions": "app/(site)/console/permissions/page.tsx",
 };
 
@@ -25,14 +26,15 @@ const SOURCES: Record<string, string> = {
 const SRC_DIR = resolve(process.cwd(), "src");
 
 /**
- * Either a card opening (`<ConsoleCard.Root id>` + its `<ConsoleCard.Header
- * title>`) or a `<Field>` opening tag, whichever comes next in the source.
+ * Either a section opening (a `<Panel>` tag, or `<ConsoleCard.Root id>` + its
+ * `<ConsoleCard.Header title>`) or a field opening tag (`<Field>`, or the
+ * `<SettingsAnchor>` that marks one), whichever comes next in the source.
  * Both forms are plain string literals in every page listed above; a prop
  * built from an expression, or a description containing `>`, would need this
  * to become a real TSX parse.
  */
 const TOKEN =
-  /<ConsoleCard\.Root[^>]*?\sid="([^"]+)"[^>]*>\s*<ConsoleCard\.Header\s+title="([^"]+)"|<Field\b([\s\S]*?)>/g;
+  /<ConsoleCard\.Root[^>]*?\sid="([^"]+)"[^>]*>\s*<ConsoleCard\.Header\s+title="([^"]+)"|<Panel\b([\s\S]*?)>|<(?:Field|SettingsAnchor)\b([\s\S]*?)>/g;
 
 function attr(props: string, name: string): string | undefined {
   return new RegExp(`\\b${name}="([^"]*)"`).exec(props)?.[1];
@@ -42,10 +44,19 @@ function parseSections(source: string): PageSection[] {
   const sections: PageSection[] = [];
 
   for (const match of source.matchAll(TOKEN)) {
-    const [, sectionId, sectionLabel, fieldProps] = match;
+    const [, sectionId, sectionLabel, panelProps, fieldProps] = match;
 
     if (sectionId !== undefined && sectionLabel !== undefined) {
       sections.push({ id: sectionId, label: sectionLabel });
+      continue;
+    }
+
+    if (panelProps !== undefined) {
+      const id = attr(panelProps, "id");
+      const title = attr(panelProps, "title");
+      if (id !== undefined && title !== undefined) {
+        sections.push({ id, label: title });
+      }
       continue;
     }
 

@@ -155,13 +155,13 @@ export default function Avatar({
   }, [crop, pendingSrc, router, upload]);
 
   const avatarVisual = (
-    <Root className="inline-flex size-[1em] items-center justify-center overflow-hidden rounded-full border border-mauve-900 bg-linear-to-br from-cyan-400 to-cyan-500 align-middle shadow-xs select-none">
+    <Root className="avatar align-middle select-none">
       <Image
         src={avatarSrc}
         alt={preferredName}
-        className="size-full rounded-[inherit] object-cover"
+        className="size-full object-cover"
       />
-      <Fallback className="text-[0.5em]/none font-bold text-mauve-900">
+      <Fallback className="flex size-full items-center justify-center">
         {initials}
       </Fallback>
     </Root>
@@ -178,8 +178,8 @@ export default function Avatar({
         aria-label="Change profile photo"
       >
         {avatarVisual}
-        <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-          <CameraIcon className="size-[0.35em] text-white" />
+        <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[color-mix(in_srgb,var(--bg)_70%,transparent)] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+          <CameraIcon className="size-7 text-[var(--text)]" />
         </span>
       </button>
 
@@ -197,10 +197,10 @@ export default function Avatar({
         tone="dark"
         header={
           <div className="flex flex-col gap-1 pr-10">
-            <DialogTitle className="font-display text-xl font-extrabold text-white">
+            <DialogTitle className="text-xl text-[var(--text)]">
               Crop Photo
             </DialogTitle>
-            <DialogDescription className="text-mauve-400">
+            <DialogDescription className="text-[var(--text-3)]">
               Drag the circle to frame your photo.
             </DialogDescription>
           </div>
@@ -235,7 +235,7 @@ export default function Avatar({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <button
             type="button"
-            className="text-sm text-mauve-400 hover:text-white hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+            className="textlink text-sm disabled:cursor-not-allowed disabled:opacity-50"
             onClick={openFilePicker}
             disabled={isPending}
           >
@@ -244,15 +244,14 @@ export default function Avatar({
 
           <div className="flex items-center gap-3">
             <DialogClose
-              className="rounded-lg border border-white/20 px-4 py-1.5 text-sm text-white/70 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn ghost disabled:cursor-not-allowed disabled:opacity-50"
               disabled={isPending}
             >
               Cancel
             </DialogClose>
             <FormButton
-              theme="black"
+              theme="cyan"
               type="button"
-              className="text-sm"
               onClick={handleSave}
               disabled={isPending || !crop}
             >

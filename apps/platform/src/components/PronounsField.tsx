@@ -1,6 +1,6 @@
 "use client";
 
-import { ComboboxPopover } from "~/ui/combobox";
+import { ComboboxPopover, LB_ITEM } from "~/ui/combobox";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { XIcon } from "@phosphor-icons/react/ssr";
@@ -98,27 +98,23 @@ export default function PronounsField({ id, profile }: ProfileData) {
       save={() => mutation.mutateAsync(pronouns)}
       reset={() => setPronouns([...saved])}
     >
+      <div className="set-tags empty:hidden">
+        {pronouns.map((p) => (
+          <span key={p} className="tag">
+            {p}
+            <button
+              type="button"
+              onClick={() => setPronouns((prev) => prev.filter((x) => x !== p))}
+              aria-label={`Remove ${p}`}
+            >
+              <XIcon />
+            </button>
+          </span>
+        ))}
+      </div>
       <ComboboxPopover.Root open={showPopover} onOpenChange={setPopoverOpen}>
         <ComboboxPopover.Anchor asChild>
-          <span className="group focus-within:shadow-block-sm relative flex max-w-sm cursor-text flex-wrap items-center gap-0.5 rounded-sm border border-mauve-600 bg-mauve-800 p-2 text-sm transition-shadow focus-within:inset-shadow-sm hover:border-mauve-500 hover:inset-shadow-sm">
-            {pronouns.map((p) => (
-              <span
-                key={p}
-                className="flex shrink-0 items-center gap-1.5 rounded-full border border-mauve-600 bg-mauve-800 py-0.5 pr-1.5 pl-2 text-sm text-white has-[button:hover]:border-rose-500 has-[button:hover]:bg-rose-500/10 has-[button:hover]:text-rose-300"
-              >
-                {p}
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPronouns((prev) => prev.filter((x) => x !== p))
-                  }
-                  className="rounded-sm text-mauve-400 hover:text-rose-400"
-                  aria-label={`Remove ${p}`}
-                >
-                  <XIcon />
-                </button>
-              </span>
-            ))}
+          <span className="input max-w-[360px]">
             {pronouns.length < MAX_PRONOUNS && (
               <input
                 ref={inputRef}
@@ -136,8 +132,7 @@ export default function PronounsField({ id, profile }: ProfileData) {
                 id={inputId}
                 value={input}
                 maxLength={MAX_PRONOUN_CHARS}
-                placeholder={pronouns.length === 0 ? "Add pronouns…" : ""}
-                className="min-w-16 flex-1 border-0 bg-transparent p-0 px-1 text-sm text-white placeholder:text-mauve-500 focus:ring-0 focus:outline-none"
+                placeholder="Add pronouns…"
                 onChange={(e) => {
                   setInput(e.target.value);
                   setActiveIndex(0);
@@ -205,7 +200,7 @@ export default function PronounsField({ id, profile }: ProfileData) {
         </ComboboxPopover.Anchor>
         <ComboboxPopover.Portal>
           <ComboboxPopover.Content
-            className="data-[state=open]:shadow-block-sm z-50 w-(--radix-popover-trigger-width) rounded-sm border border-white/20 bg-mauve-900 transition-shadow data-[state=open]:delay-200"
+            className="z-50 w-(--radix-popover-trigger-width)"
             sideOffset={4}
             align="start"
             onOpenAutoFocus={(e: Event) => e.preventDefault()}
@@ -216,7 +211,7 @@ export default function PronounsField({ id, profile }: ProfileData) {
               role="listbox"
               id={listboxId}
               aria-label="Pronoun suggestions"
-              className="flex flex-col py-1"
+              className="flex flex-col"
             >
               {suggestions.map((s, i) => (
                 <button
@@ -227,7 +222,7 @@ export default function PronounsField({ id, profile }: ProfileData) {
                   aria-selected={i === activeIndex}
                   tabIndex={-1}
                   data-active={i === activeIndex ? true : undefined}
-                  className="px-3 py-1.5 text-left text-sm text-mauve-200 transition-colors hover:bg-mauve-700 hover:text-white data-active:bg-mauve-700 data-active:text-white"
+                  className={`${LB_ITEM} text-left data-[active]:bg-[color-mix(in_srgb,var(--raised)_86%,#fff)] data-[active]:text-[var(--text)]`}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     addPronoun(s);
@@ -246,7 +241,7 @@ export default function PronounsField({ id, profile }: ProfileData) {
                   data-active={
                     suggestions.length === activeIndex ? true : undefined
                   }
-                  className="px-3 py-1.5 text-left text-sm text-mauve-400 transition-colors hover:bg-mauve-700 hover:text-white data-active:bg-mauve-700 data-active:text-white"
+                  className={`${LB_ITEM} text-left data-[active]:bg-[color-mix(in_srgb,var(--raised)_86%,#fff)] data-[active]:text-[var(--text)]`}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     addPronoun(q);

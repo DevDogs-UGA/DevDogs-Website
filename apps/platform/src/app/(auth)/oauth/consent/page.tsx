@@ -108,7 +108,7 @@ export default async function ConsentPage({ searchParams }: Props) {
   // The centring and the full-viewport ground come from `(auth)/layout.tsx`.
   // All that is left here is the card the decision sits on.
   return (
-    <div className="w-full max-w-sm rounded-xl border-2 border-mauve-800 bg-mauve-900 p-8 shadow-lg shadow-black/30">
+    <div className="card w-full max-w-md" style={{ padding: 32 }}>
       <ConsentForm
         authorizationId={authorizationId}
         testAccounts={testAccounts}

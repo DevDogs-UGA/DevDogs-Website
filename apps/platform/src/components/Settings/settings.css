@@ -1,0 +1,302 @@
+/* Settings (G6): layout and the few pieces the kit lacks, taken from
+   settings-profile / -accounts / -oauth / -oauth-new. Every selector carries the
+   .set- prefix; the whole file sits in the cosmic layer (F3). */
+@layer cosmic {
+  .set-photo {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .set-photo .avatar {
+    width: 80px;
+    height: 80px;
+    font-size: 30px;
+  }
+  .set-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    max-width: 720px;
+  }
+  .set-grid > .full {
+    grid-column: 1 / -1;
+  }
+  .set-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    max-width: 720px;
+  }
+  .set-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .set-tags .tag {
+    height: 28px;
+    gap: 8px;
+    padding: 0 4px 0 10px;
+  }
+  .set-tags .tag button {
+    background: none;
+    border: 0;
+    color: var(--text-3);
+    cursor: pointer;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+  }
+  .set-tags .tag button:hover {
+    color: var(--bad);
+  }
+
+  /* switch rows */
+  .set-rows {
+    max-width: 720px;
+  }
+  .set-sw {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .set-sw + .set-sw {
+    margin-top: 16px;
+  }
+  .set-sw button.switch {
+    margin-top: 1px;
+    flex: none;
+  }
+  .set-sw b {
+    display: block;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .set-sw .help {
+    margin-top: 2px;
+  }
+  .set-sub {
+    margin: 28px 0 14px;
+  }
+
+  /* links list */
+  .set-link {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) minmax(0, 1.5fr) 36px;
+    gap: 10px;
+    align-items: end;
+  }
+  .set-link + .set-link {
+    margin-top: 12px;
+  }
+  .set-link .mv {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-self: end;
+  }
+  .set-link .mv .iconbtn {
+    width: 36px;
+    height: 19px;
+  }
+
+  /* handle picker */
+  .set-hpick {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    max-width: 560px;
+  }
+  .set-hpick legend {
+    padding: 0;
+  }
+  .set-hopt {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    cursor: pointer;
+    position: relative;
+  }
+  .set-hopt + .set-hopt {
+    box-shadow: inset 0 1px 0 var(--line);
+  }
+  .set-hopt.sel {
+    background: var(--surface-2);
+    box-shadow: inset 3px 0 0 var(--brand6);
+  }
+  .set-hopt.sel + .set-hopt {
+    box-shadow: inset 0 1px 0 var(--line);
+  }
+  .set-hopt.taken {
+    cursor: not-allowed;
+  }
+  .set-hopt.taken b,
+  .set-hopt.taken .p {
+    color: var(--text-3);
+  }
+  .set-hopt b {
+    display: block;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .set-hopt .p {
+    display: block;
+    font: 400 13px/1.4 var(--font-mono);
+    color: var(--text-2);
+    word-break: break-all;
+  }
+  .set-hopt .av {
+    margin-left: auto;
+    flex: none;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .set-hopt .av.ok {
+    color: var(--ok);
+  }
+  .set-hopt .av.no {
+    color: var(--bad);
+  }
+
+  /* accounts */
+  .set-acc {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    gap: 6px 14px;
+    align-items: start;
+    padding: 18px 0;
+  }
+  .set-acc + .set-acc {
+    box-shadow: inset 0 1px 0 var(--line);
+  }
+  .set-acc .ic {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    font-size: 22px;
+    background: var(--surface-2);
+    color: var(--text);
+  }
+  .set-acc b {
+    display: block;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .set-acc .why {
+    margin: 6px 0 0;
+    font-size: 13.5px;
+    color: var(--text-3);
+    max-width: 60ch;
+  }
+  .set-acc .why strong {
+    color: var(--warn);
+    font-weight: 700;
+  }
+  .set-acc .ctl {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  /* OAuth */
+  .set-secret {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    max-width: 560px;
+  }
+  .set-secret > .input {
+    flex: 1;
+    min-width: 0;
+  }
+  .set-uri {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .set-uri + .set-uri {
+    margin-top: 8px;
+  }
+  .set-uri > .input {
+    flex: 1;
+    min-width: 0;
+  }
+  .set-cid {
+    font: 400 13px/1.3 var(--font-mono);
+    color: var(--text-2);
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .set-name {
+    color: var(--text);
+    font-weight: 600;
+    line-height: 1.25;
+  }
+  .set-table {
+    position: relative;
+  }
+  .set-table th,
+  .set-table td {
+    padding-left: 0;
+  }
+  .set-head-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+  }
+  .set-head-row h2 {
+    margin: 0;
+  }
+  .set-card {
+    padding: 24px;
+    max-width: 640px;
+  }
+  .set-callout-stack {
+    display: grid;
+    gap: 12px;
+  }
+
+  @media (max-width: 720px) {
+    .set-grid {
+      grid-template-columns: 1fr;
+    }
+    .set-link {
+      grid-template-columns: 36px minmax(0, 1fr) 36px;
+    }
+    .set-link .u {
+      grid-column: 2 / 3;
+    }
+    .set-link > .iconbtn {
+      grid-row: 1;
+      grid-column: 3;
+    }
+    .set-acc {
+      grid-template-columns: 40px minmax(0, 1fr);
+    }
+    .set-acc .ctl {
+      grid-column: 1 / -1;
+      justify-content: flex-start;
+    }
+    .set-hopt {
+      flex-wrap: wrap;
+    }
+    .set-hopt .av {
+      margin-left: 30px;
+    }
+  }
+}

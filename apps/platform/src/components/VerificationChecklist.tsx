@@ -1,12 +1,19 @@
 import * as Tooltip from "@radix-ui/react-tooltip";
 import Link from "next/link";
-import type { PropsWithChildren } from "react";
+import type { PropsWithChildren, ReactNode } from "react";
 import {
   ArrowRightIcon,
-  CheckIcon,
+  CheckCircleIcon,
+  DiscordLogoIcon,
+  GithubLogoIcon,
+  GraduationCapIcon,
+  IdentificationCardIcon,
   InfoIcon,
-  XIcon,
+  SealCheckIcon,
+  UserIcon,
+  UsersIcon,
 } from "@phosphor-icons/react/ssr";
+import Badge from "~/ui/badge";
 import PublicProfileStep from "~/components/PublicProfileStep";
 import SyncPreferredNameButton from "~/components/SyncPreferredNameButton";
 import { INVOLVEMENT_NETWORK_URL } from "~/config/nav";
@@ -25,60 +32,58 @@ interface Props {
   isVerified: boolean;
   involvementFullName: string | null;
   onNavigate?: () => void;
+  /** The dialog's closing step; the accounts page leaves it to Profile. */
+  showPublicProfile?: boolean;
 }
 
-function CheckItem({
+/**
+ * One step: an icon, what it is, and either a check (done) or a link to the
+ * place that finishes it (`.vrow`, as in settings-accounts.html).
+ */
+function Step({
   met,
+  icon,
   href,
+  action,
   onNavigate,
   children,
+  detail,
 }: PropsWithChildren<{
   met: boolean;
+  icon: ReactNode;
   href?: string;
+  /** The link's words. */
+  action?: string;
   onNavigate?: () => void;
+  detail?: ReactNode;
 }>) {
-  const content = (
-    <>
-      <span
-        className={`mt-0.5 shrink-0 ${met ? "text-emerald-500/60" : "text-rose-400"}`}
-      >
-        {met ? <CheckIcon className="size-4" /> : <XIcon className="size-4" />}
-      </span>
-      <span
-        className={`flex flex-1 items-start justify-between gap-2 ${met ? "text-mauve-400" : "text-white"}`}
-      >
-        <span>{children}</span>
-        {!met && href && (
-          <ArrowRightIcon className="mt-px size-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
-        )}
-      </span>
-    </>
-  );
-
   return (
-    <li className="text-sm">
-      {!met && href ? (
+    <li className="vrow">
+      <span className="ic" aria-hidden>
+        {icon}
+      </span>
+      <div>
+        <b>{children}</b>
+        {detail}
+      </div>
+      {met ? (
+        <CheckCircleIcon
+          weight="bold"
+          className="st"
+          role="img"
+          aria-label="Done"
+        />
+      ) : href ? (
         <Link
           href={href}
           onClick={onNavigate}
-          className="group hover:bg-accent focus-visible:ring-ring -mx-2 flex items-start gap-2 rounded-md px-2 py-1.5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          className="textlink ml-auto flex items-center gap-1.5 text-[13.5px] whitespace-nowrap"
         >
-          {content}
+          {action}
+          <ArrowRightIcon aria-hidden />
         </Link>
-      ) : (
-        <div className="-mx-2 flex items-start gap-2 px-2 py-1.5">
-          {content}
-        </div>
-      )}
+      ) : null}
     </li>
-  );
-}
-
-function GroupLabel({ children }: PropsWithChildren) {
-  return (
-    <p className="pb-1.5 text-xs font-semibold tracking-wide text-mauve-500 uppercase">
-      {children}
-    </p>
   );
 }
 
@@ -88,38 +93,54 @@ export default function VerificationChecklist({
   isVerified,
   involvementFullName,
   onNavigate,
+  showPublicProfile = true,
 }: Props) {
-  return (
-    <div className="flex flex-col gap-4">
-      {isVerified && (
-        <p className="text-sm font-medium text-emerald-300">
-          Your profile is verified.
-        </p>
-      )}
+  const joined = involvementFullName !== null;
+  const steps = [
+    joined,
+    ...(joined ? [verificationStatus.nameMatchesInvolvement] : []),
+    verificationStatus.hasPronouns,
+    verificationStatus.hasGraduationDate,
+    verificationStatus.hasGithub,
+    verificationStatus.hasDiscord,
+  ];
+  const done = steps.filter(Boolean).length;
 
-      <div className="flex flex-col gap-0">
-        <GroupLabel>Become an official member</GroupLabel>
-        <ul className="flex flex-col gap-0">
-          <CheckItem met={involvementFullName !== null}>
-            <span className="flex items-center gap-[1ch]">
-              <span>
-                Joined DevDogs on the{" "}
-                <Link
-                  className="underline hover:text-white"
-                  href={INVOLVEMENT_NETWORK_URL}
-                  target="_blank"
-                >
-                  Involvement Network
-                </Link>
-              </span>
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="row" style={{ gap: 12 }}>
+        {isVerified ? (
+          <Badge variant="success">
+            <SealCheckIcon aria-hidden />
+            Verified
+          </Badge>
+        ) : (
+          <Badge>Not verified</Badge>
+        )}
+        <span className="small muted">
+          {done} of {steps.length} steps complete
+        </span>
+      </div>
+
+      <ul>
+        <Step
+          met={joined}
+          icon={<UsersIcon />}
+          detail={
+            <span className="small muted inline-flex items-center gap-1.5">
+              Rosters are synced by hand, so a new join can take a while to show
+              up.
               <Tooltip.Provider>
                 <Tooltip.Root delayDuration={200}>
-                  <Tooltip.Trigger className="text-base text-mauve-400 transition-colors hover:text-white">
+                  <Tooltip.Trigger
+                    aria-label="About roster syncing"
+                    className="text-base text-[var(--text-3)] hover:text-[var(--text)]"
+                  >
                     <InfoIcon />
                   </Tooltip.Trigger>
                   <Tooltip.Content
                     sideOffset={4}
-                    className="max-w-64 rounded-sm border border-mauve-800 bg-mauve-700 px-2 py-1 text-center text-xs text-balance"
+                    className="lb max-w-64 px-2.5 py-1.5 text-center text-xs text-balance"
                   >
                     Involvement Network rosters are synced by hand on a
                     semi-regular basis. If you&rsquo;ve just joined DevDogs on
@@ -128,64 +149,73 @@ export default function VerificationChecklist({
                 </Tooltip.Root>
               </Tooltip.Provider>
             </span>
-          </CheckItem>
-          {involvementFullName !== null && (
-            <CheckItem met={verificationStatus.nameMatchesInvolvement}>
-              <span className="flex flex-col items-start gap-2">
-                Involvement Network profile name matches DevDogs profile name.
-                {!verificationStatus.nameMatchesInvolvement && (
+          }
+          href={INVOLVEMENT_NETWORK_URL}
+          action="Join"
+        >
+          Joined DevDogs on the Involvement Network
+        </Step>
+        {joined && (
+          <Step
+            met={verificationStatus.nameMatchesInvolvement}
+            icon={<IdentificationCardIcon />}
+            detail={
+              !verificationStatus.nameMatchesInvolvement ? (
+                <span className="mt-2 flex">
                   <SyncPreferredNameButton
                     userId={userId}
                     involvementFullName={involvementFullName}
                   />
-                )}
-              </span>
-            </CheckItem>
-          )}
-        </ul>
-      </div>
+                </span>
+              ) : (
+                <span className="small muted">{involvementFullName}</span>
+              )
+            }
+          >
+            Name matches the Involvement Network
+          </Step>
+        )}
+        <Step
+          met={verificationStatus.hasPronouns}
+          icon={<UserIcon />}
+          href="/settings/profile#pronouns"
+          action="Add on Profile"
+          onNavigate={onNavigate}
+        >
+          Add your pronouns
+        </Step>
+        <Step
+          met={verificationStatus.hasGraduationDate}
+          icon={<GraduationCapIcon />}
+          href="/settings/profile#graduation"
+          action="Add on Profile"
+          onNavigate={onNavigate}
+        >
+          Add your graduation date
+        </Step>
+        <Step
+          met={verificationStatus.hasGithub}
+          icon={<GithubLogoIcon />}
+          href="/settings/accounts#github"
+          action="Link GitHub"
+          onNavigate={onNavigate}
+        >
+          Link GitHub
+        </Step>
+        <Step
+          met={verificationStatus.hasDiscord}
+          icon={<DiscordLogoIcon />}
+          href="/settings/accounts#discord"
+          action="Link Discord"
+          onNavigate={onNavigate}
+        >
+          Link Discord
+        </Step>
+      </ul>
 
-      <div className="flex flex-col gap-0">
-        <GroupLabel>Complete your profile</GroupLabel>
-        <ul className="flex flex-col gap-0">
-          <CheckItem
-            met={verificationStatus.hasPronouns}
-            href="/account#pronouns"
-            onNavigate={onNavigate}
-          >
-            Pronouns added to your profile
-          </CheckItem>
-          <CheckItem
-            met={verificationStatus.hasGraduationDate}
-            href="/account#graduation"
-            onNavigate={onNavigate}
-          >
-            Graduation date added to your profile
-          </CheckItem>
-        </ul>
-      </div>
-
-      <div className="flex flex-col gap-0">
-        <GroupLabel>Start contributing</GroupLabel>
-        <ul className="flex flex-col gap-0">
-          <CheckItem
-            met={verificationStatus.hasGithub}
-            href="/account#github"
-            onNavigate={onNavigate}
-          >
-            GitHub account linked
-          </CheckItem>
-          <CheckItem
-            met={verificationStatus.hasDiscord}
-            href="/account#discord"
-            onNavigate={onNavigate}
-          >
-            Discord account linked
-          </CheckItem>
-        </ul>
-      </div>
-
-      {isVerified && <PublicProfileStep onNavigate={onNavigate} />}
+      {isVerified && showPublicProfile && (
+        <PublicProfileStep onNavigate={onNavigate} />
+      )}
     </div>
   );
 }

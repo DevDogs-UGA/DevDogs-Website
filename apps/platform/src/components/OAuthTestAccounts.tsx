@@ -4,9 +4,11 @@ import { useMutation } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import {
   PencilSimpleIcon,
-  PlusCircleIcon,
+  PlusIcon,
   TrashIcon,
 } from "@phosphor-icons/react/ssr";
+import { Button } from "~/ui/button";
+import EmptyState from "~/ui/empty-state";
 import {
   deleteTestAccount,
   type TestAccount,
@@ -48,48 +50,26 @@ export default function OAuthTestAccounts({ initialAccounts }: Props) {
 
   return (
     <>
-      {!atLimit && (
-        <button
-          type="button"
-          className="mb-3 flex items-center gap-1.5 text-sm text-mauve-400 hover:text-white"
-          onClick={() => setAddOpen(true)}
-        >
-          <PlusCircleIcon />
-          Add test account
-        </button>
-      )}
-
       {accounts.length === 0 ? (
-        <p className="text-sm text-mauve-400">
-          No test accounts yet.{" "}
-          <button
-            type="button"
-            className="text-white underline hover:text-mauve-300"
-            onClick={() => setAddOpen(true)}
-          >
-            Add one
-          </button>{" "}
-          to use during authorization.
-        </p>
+        <EmptyState
+          image={false}
+          title="No test accounts yet"
+          description="Add one to use during authorization."
+        />
       ) : (
-        <ul className="flex flex-col divide-y divide-white/10">
+        <div className="set-rows" role="list">
           {accounts.map((account) => (
-            <li
-              key={account.userId}
-              className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
-            >
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="truncate text-sm font-medium text-white">
-                  {account.displayName}
-                </span>
-                <span className="truncate font-mono text-xs text-mauve-400">
+            <div role="listitem" key={account.userId} className="arow">
+              <div className="min-w-0">
+                <b className="truncate">{account.displayName}</b>
+                <span className="small muted truncate font-mono">
                   {account.userId}
                 </span>
               </div>
-              <div className="flex shrink-0 items-center gap-1">
+              <div className="end flex shrink-0 items-center gap-1">
                 <button
                   type="button"
-                  className="rounded-sm p-1.5 text-mauve-400 hover:bg-white/10 hover:text-white"
+                  className="iconbtn"
                   onClick={() => setEditAccount(account)}
                   aria-label={`Edit ${account.displayName}`}
                 >
@@ -97,7 +77,7 @@ export default function OAuthTestAccounts({ initialAccounts }: Props) {
                 </button>
                 <button
                   type="button"
-                  className="rounded-sm p-1.5 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="iconbtn"
                   onClick={() => deleteMutation.mutate(account.userId)}
                   disabled={
                     deleteMutation.isPending &&
@@ -108,15 +88,27 @@ export default function OAuthTestAccounts({ initialAccounts }: Props) {
                   <TrashIcon />
                 </button>
               </div>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
 
-      <p className="mt-3 text-xs text-mauve-400">
-        {accounts.length}/{MAX_TEST_ACCOUNTS} test accounts &nbsp;·&nbsp;
-        Selected during authorization
-      </p>
+      <div className="row" style={{ marginTop: 16, gap: 12 }}>
+        {!atLimit && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setAddOpen(true)}
+          >
+            <PlusIcon aria-hidden />
+            Create a test account
+          </Button>
+        )}
+        <span className="small muted">
+          {accounts.length} of {MAX_TEST_ACCOUNTS} test accounts. Selected
+          during authorization.
+        </span>
+      </div>
 
       <TestAccountDialog
         open={addOpen}

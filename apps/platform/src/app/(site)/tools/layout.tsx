@@ -10,11 +10,11 @@ import { expectUserWith } from "~/server/auth";
  * reached an index some other way. It is inherited by every page in the
  * segment, so a tool added later is covered without a second decision.
  *
- * The title is the label `config/nav.ts` gives the one page in here today; a
- * second tool should override it rather than widen this.
+ * The default title is generic; the pages in here (connect, device) set their
+ * own. `/tools/oauth` itself is only a redirect to `/settings/oauth`.
  */
 export const metadata: Metadata = {
-  title: "OAuth Client | DevDogs",
+  title: "Connect | DevDogs",
   robots: { index: false },
 };
 
@@ -36,7 +36,5 @@ export default async function ToolsLayout({
     );
   });
 
-  return (
-    <div className="flex min-w-0 flex-1 flex-col bg-mauve-900">{children}</div>
-  );
+  return <div className="flex min-w-0 flex-1 flex-col">{children}</div>;
 }

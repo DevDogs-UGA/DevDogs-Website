@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useCallback, useEffect, useState } from "react";
-import { SpinnerGapIcon } from "@phosphor-icons/react/ssr";
+import { Button } from "~/ui/button";
 import { toast } from "~/lib/toast";
 import TestAccountDialog from "~/components/TestAccountDialog";
 import {
@@ -52,12 +52,13 @@ export default function ConsentForm({
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <div className="text-center">
-        <h2 className="text-xl font-semibold text-white">
-          Your OAuth client is requesting access
-        </h2>
-        <p className="mt-1 text-sm text-mauve-400">
-          Select a test account to authorize as.
+      <div>
+        <h1 className="display" style={{ fontSize: 28, margin: 0 }}>
+          Authorize your OAuth client
+        </h1>
+        <p className="help" style={{ marginTop: 8 }}>
+          Your OAuth client is requesting access. Select a test account to
+          authorize as.
         </p>
       </div>
 
@@ -67,11 +68,11 @@ export default function ConsentForm({
 
         <div className="flex flex-col gap-2">
           {accounts.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-white/15 px-4 py-6 text-center text-sm text-mauve-400">
+            <p className="help">
               No test accounts yet.{" "}
               <button
                 type="button"
-                className="rounded-sm text-white underline transition-colors outline-none hover:text-mauve-300 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950"
+                className="textlink"
                 onClick={() => setAddOpen(true)}
                 disabled={isPending}
               >
@@ -81,35 +82,42 @@ export default function ConsentForm({
             </p>
           ) : (
             <>
-              {accounts.map((account) => (
-                <button
-                  key={account.userId}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected === account.userId}
-                  className="flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-mauve-400 transition-colors outline-none not-aria-checked:border-white/10 not-aria-checked:bg-white/5 not-aria-checked:hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950 disabled:cursor-not-allowed disabled:opacity-50 aria-checked:border-cyan-400 aria-checked:bg-cyan-400/10 aria-checked:text-cyan-300"
-                  onClick={() => setSelected(account.userId)}
-                  disabled={isPending}
-                >
-                  {/* The dot inherits `currentColor` from the row, so the
-                      aria-checked text colour above is what turns it cyan. */}
-                  <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 border-current">
-                    {selected === account.userId && (
-                      <div className="h-2 w-2 rounded-full bg-current" />
-                    )}
-                  </div>
-                  <div className="flex min-w-0 flex-col">
-                    <span className="truncate text-sm font-medium text-white">
-                      {account.displayName}
-                    </span>
-                  </div>
-                </button>
-              ))}
+              <div
+                role="radiogroup"
+                aria-label="Test account"
+                className="card flat"
+                style={{ padding: 0 }}
+              >
+                {accounts.map((account) => {
+                  const on = selected === account.userId;
+                  return (
+                    <button
+                      key={account.userId}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      className={`set-hopt w-full text-left${on ? "sel" : ""}`}
+                      onClick={() => setSelected(account.userId)}
+                      disabled={isPending}
+                    >
+                      <span
+                        className={`check radio${on ? "on" : ""}`}
+                        aria-hidden
+                      >
+                        <i />
+                      </span>
+                      <span className="min-w-0">
+                        <b className="truncate">{account.displayName}</b>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
 
               {accounts.length < 5 && (
                 <button
                   type="button"
-                  className="rounded-sm text-left text-sm text-mauve-400 underline transition-colors outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950 disabled:cursor-not-allowed"
+                  className="textlink self-start"
                   onClick={() => setAddOpen(true)}
                   disabled={isPending}
                 >
@@ -121,22 +129,25 @@ export default function ConsentForm({
         </div>
 
         <div className="flex flex-col gap-2">
-          <button
+          <Button
             type="submit"
-            className="flex w-full items-center justify-center gap-2 rounded-sm border-2 border-white bg-white px-4 py-2.5 text-sm font-medium text-black transition outline-none hover:bg-transparent hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950 disabled:cursor-not-allowed disabled:opacity-50"
+            size="lg"
+            className="w-full"
+            loading={approving}
             disabled={isPending || !selected}
           >
-            {approving && <SpinnerGapIcon className="animate-spin" />}
             Authorize
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
+            variant="ghost"
             formAction={denyAction}
-            className="flex w-full items-center justify-center rounded-lg border border-mauve-600 bg-mauve-800 px-4 py-2.5 text-sm font-medium text-white transition-colors outline-none hover:border-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full"
+            loading={denying}
             disabled={isPending}
           >
-            {denying ? <SpinnerGapIcon className="animate-spin" /> : "Cancel"}
-          </button>
+            Cancel
+          </Button>
         </div>
       </form>
 

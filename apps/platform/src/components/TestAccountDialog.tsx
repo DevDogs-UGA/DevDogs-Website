@@ -2,7 +2,6 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { XIcon } from "@phosphor-icons/react/ssr";
 import {
   addTestAccount,
   updateTestAccount,
@@ -10,10 +9,14 @@ import {
 } from "~/server/actions/testAccounts";
 import FormButton from "./FormButton";
 import { toast } from "~/lib/toast";
+import Input from "~/components/Input";
+import { Button } from "~/ui/button";
 import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "~/ui/dialog";
@@ -74,33 +77,28 @@ export default function TestAccountDialog({
       onOpenChange={(o) => !mutation.isPending && onOpenChange(o)}
     >
       <DialogContent
-        className="max-w-md border-mauve-700 bg-mauve-900 text-mauve-300 shadow-xl shadow-black/40"
         onInteractOutside={(e) => mutation.isPending && e.preventDefault()}
         onEscapeKeyDown={(e) => mutation.isPending && e.preventDefault()}
         showCloseButton={false}
       >
-        <DialogHeader className="flex-row items-center justify-between">
-          <DialogTitle className="text-lg font-semibold text-white">
-            {isEdit ? "Edit Test Account" : "Add Test Account"}
+        <DialogHeader>
+          <DialogTitle>
+            {isEdit ? "Edit test account" : "Add test account"}
           </DialogTitle>
-          <DialogClose
-            className="rounded-sm p-1 text-mauve-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={mutation.isPending}
-            aria-label="Close"
-          >
-            <XIcon />
-          </DialogClose>
+          <DialogDescription>
+            A sandboxed identity you can sign in as while testing your OAuth
+            client.
+          </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="grid gap-4">
           {isEdit && (
             <input type="hidden" name="authUserId" value={account.userId} />
           )}
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-white">Display Name</span>
-            <input
-              className="rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-2 text-sm text-white transition-colors outline-none focus:border-white"
+          <label className="field">
+            <span className="label">Display name</span>
+            <Input
               name="displayName"
               type="text"
               defaultValue={account?.displayName}
@@ -111,22 +109,24 @@ export default function TestAccountDialog({
             />
           </label>
 
-          <div className="flex justify-end gap-2 pt-1">
-            <DialogClose
-              className="rounded-sm border border-mauve-600 bg-mauve-800 px-4 py-1.5 text-sm text-white transition-colors hover:border-white disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={mutation.isPending}
-            >
-              Cancel
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button
+                variant="ghost"
+                type="button"
+                disabled={mutation.isPending}
+              >
+                Cancel
+              </Button>
             </DialogClose>
             <FormButton
-              theme="black"
+              theme="cyan"
               type="submit"
-              className="text-sm"
               disabled={mutation.isPending}
             >
               {isEdit ? "Save" : "Add"}
             </FormButton>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

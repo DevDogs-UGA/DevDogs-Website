@@ -39,18 +39,16 @@ export default function PublicProfileStep({
   if (data === null) return null;
 
   return (
-    <div className="flex flex-col gap-3 border-t border-mauve-800 pt-4">
-      <p className="pb-0.5 text-xs font-semibold tracking-wide text-mauve-500 uppercase">
-        Your public profile
-      </p>
+    <div className="flex flex-col gap-3 pt-4">
+      <p className="label">Your public profile</p>
       {data ? (
         <StepBody settings={data} onNavigate={onNavigate} />
       ) : isError ? (
-        <p className="text-sm text-rose-300">
+        <p className="err" role="alert">
           Could not load your profile settings. Close this and try again.
         </p>
       ) : (
-        <p className="text-sm text-mauve-400">Loading…</p>
+        <p className="help">Loading…</p>
       )}
     </div>
   );
@@ -70,7 +68,7 @@ function StepBody({
 
   return (
     <>
-      <p className="text-sm text-white">
+      <p className="text-sm text-[var(--text-2)]">
         {switches.publicProfile
           ? handle
             ? `Your profile will be public at ${profilePath(handle)}, and you will appear in the community directory.`
@@ -84,14 +82,14 @@ function StepBody({
         label="Public profile"
       />
       <HandlePicker choices={settings} onSaved={setHandle} />
-      <p className="text-xs text-mauve-400">
+      <p className="help">
         Choose what appears, and change any of this later, under{" "}
         <Link
-          href="/account#publicProfile"
+          href="/settings/profile#publicProfileSettings"
           onClick={onNavigate}
-          className="underline hover:text-white"
+          className="textlink"
         >
-          Account
+          Profile settings
         </Link>
         .
       </p>

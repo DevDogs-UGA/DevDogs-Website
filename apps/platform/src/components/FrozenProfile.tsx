@@ -1,4 +1,5 @@
 import type { PropsWithChildren } from "react";
+import Callout from "~/ui/callout";
 
 /**
  * What the account page looks like while a profile is under moderation.
@@ -39,17 +40,9 @@ export function FrozenFields({ children }: PropsWithChildren) {
  */
 export function FrozenProfileNotice() {
   return (
-    <div
-      role="status"
-      className="flex flex-col gap-1 rounded-md border border-amber-700/60 bg-amber-950/40 px-4 py-3"
-    >
-      <span className="text-sm font-medium text-amber-200">
-        Your profile is under moderation
-      </span>
-      <span className="text-xs text-balance text-amber-100/80">
-        Your display name has been reset and your profile cannot be edited right
-        now. Contact an officer if you think this is a mistake.
-      </span>
-    </div>
+    <Callout tone="warning" title="Your profile is under moderation">
+      Your display name has been reset and your profile cannot be edited right
+      now. Contact an officer if you think this is a mistake.
+    </Callout>
   );
 }

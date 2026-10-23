@@ -1,6 +1,6 @@
 "use client";
 
-import { XIcon } from "@phosphor-icons/react/ssr";
+import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react/ssr";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
@@ -10,7 +10,7 @@ import {
 import { formatAcademicProgram } from "~/lib/academicPrograms";
 import updateAcademicPrograms from "~/server/actions/updateAcademicPrograms";
 import type { getProfilePageData } from "~/server/loaders/console";
-import { ComboboxPopover } from "~/ui/combobox";
+import { ComboboxPopover, LB_ITEM } from "~/ui/combobox";
 import SettingsField from "~/ui/settings-field";
 
 type ProfilePageData = Awaited<ReturnType<typeof getProfilePageData>>;
@@ -139,36 +139,37 @@ export default function AcademicFields({
         setInput("");
       }}
     >
+      <div className="set-tags empty:hidden">
+        {programIds.map((programId) => {
+          const program = allPrograms.get(programId);
+          if (!program) return null;
+          const label = formatAcademicProgram(program);
+          return (
+            <span key={program.id} title={label} className="tag">
+              <span className="min-w-0 truncate">{program.name}</span>
+              <span
+                className={`shrink-0 rounded-full border px-1.5 py-px text-[0.65rem] leading-none font-bold ${CATEGORY_BADGE_STYLES[program.category]}`}
+              >
+                {program.credential}
+              </span>
+              <button
+                type="button"
+                onClick={() => removeProgram(program.id)}
+                aria-label={`Remove ${label}`}
+              >
+                <XIcon />
+              </button>
+            </span>
+          );
+        })}
+      </div>
       <ComboboxPopover.Root open={showPopover} onOpenChange={setPopoverOpen}>
         <ComboboxPopover.Anchor asChild>
-          <span className="group focus-within:shadow-block-sm relative flex max-w-sm cursor-text flex-wrap items-center gap-1 rounded-sm border border-mauve-600 bg-mauve-800 p-2 text-sm transition-shadow focus-within:inset-shadow-sm hover:border-mauve-500 hover:inset-shadow-sm">
-            {programIds.map((programId) => {
-              const program = allPrograms.get(programId);
-              if (!program) return null;
-              const label = formatAcademicProgram(program);
-              return (
-                <span
-                  key={program.id}
-                  title={label}
-                  className="flex max-w-full min-w-0 items-center gap-1.5 rounded-full border border-mauve-600 bg-mauve-800 py-0.5 pr-1.5 pl-2 text-sm text-white has-[button:hover]:border-rose-500 has-[button:hover]:bg-rose-500/10 has-[button:hover]:text-rose-300"
-                >
-                  <span className="min-w-0 truncate">{program.name}</span>
-                  <span
-                    className={`shrink-0 rounded-full border px-1.5 py-px text-[0.65rem] leading-none font-bold ${CATEGORY_BADGE_STYLES[program.category]}`}
-                  >
-                    {program.credential}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeProgram(program.id)}
-                    className="shrink-0 rounded-sm text-mauve-400 hover:text-rose-400"
-                    aria-label={`Remove ${label}`}
-                  >
-                    <XIcon />
-                  </button>
-                </span>
-              );
-            })}
+          <span className="input max-w-[560px]">
+            <MagnifyingGlassIcon
+              aria-hidden
+              className="shrink-0 text-[var(--text-3)]"
+            />
             {programIds.length < MAX_PROGRAMS && (
               <input
                 ref={inputRef}
@@ -185,8 +186,8 @@ export default function AcademicFields({
                     : undefined
                 }
                 value={input}
-                placeholder={programIds.length === 0 ? "Add a program…" : ""}
-                className="min-w-36 flex-1 border-0 bg-transparent p-0 px-1 text-sm text-white placeholder:text-mauve-500 focus:ring-0 focus:outline-none"
+                placeholder="Search programs to add"
+
                 onChange={(event) => {
                   setInput(event.target.value);
                   setActiveIndex(0);
@@ -238,7 +239,7 @@ export default function AcademicFields({
         </ComboboxPopover.Anchor>
         <ComboboxPopover.Portal>
           <ComboboxPopover.Content
-            className="data-[state=open]:shadow-block-sm z-50 max-h-80 w-(--radix-popover-trigger-width) overflow-y-auto rounded-sm border border-white/20 bg-mauve-900 transition-shadow data-[state=open]:delay-200"
+            className="z-50 max-h-80 w-(--radix-popover-trigger-width)"
             sideOffset={4}
             align="start"
             onOpenAutoFocus={(event: Event) => event.preventDefault()}
@@ -249,7 +250,7 @@ export default function AcademicFields({
               role="listbox"
               id={listboxId}
               aria-label="UGA academic programs"
-              className="flex flex-col py-1"
+              className="flex flex-col"
             >
               {options.length > 0 ? (
                 optionGroups.map(({ category, programs }) => (
@@ -260,7 +261,7 @@ export default function AcademicFields({
                   >
                     <div
                       id={`${uid}-group-${category}`}
-                      className="sticky top-0 z-10 border-b border-mauve-700 bg-mauve-950 px-3 py-1.5 text-[0.65rem] font-bold tracking-wide text-mauve-400 uppercase"
+                      className="sticky top-0 z-10 bg-[var(--raised)] px-3 py-1.5 text-[0.65rem] font-bold tracking-wide text-[var(--text-3)] uppercase"
                     >
                       {CATEGORY_LABELS[category]}
                     </div>
@@ -276,7 +277,7 @@ export default function AcademicFields({
                           aria-selected={false}
                           tabIndex={-1}
                           data-active={index === activeIndex ? true : undefined}
-                          className="flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-sm text-mauve-200 transition-colors hover:bg-mauve-700 hover:text-white data-active:bg-mauve-700 data-active:text-white"
+                          className={`${LB_ITEM} w-full min-w-0 text-left data-[active]:bg-[color-mix(in_srgb,var(--raised)_86%,#fff)] data-[active]:text-[var(--text)]`}
                           onMouseDown={(event) => {
                             event.preventDefault();
                             addProgram(program);
@@ -296,7 +297,7 @@ export default function AcademicFields({
                   </div>
                 ))
               ) : (
-                <p className="px-3 py-2 text-sm text-mauve-400">
+                <p className="px-3 py-2 text-sm text-[var(--text-3)]">
                   {availableAcademicPrograms.length === 0
                     ? "The UGA program catalog has not synced yet."
                     : "No matching programs."}

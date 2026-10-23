@@ -3,9 +3,10 @@ import Link from "next/link";
 import { approveConnect, denyConnect } from "~/server/actions/oauthConnect";
 import { authenticate, expectUserWith } from "~/server/auth";
 import { parseConnectParams } from "~/server/oauth/connectParams";
-import PageShell from "~/components/PageShell";
-import { ConsoleCard } from "~/ui/card";
+import ConnectCard from "~/components/Settings/ConnectCard";
 import FormButton from "~/components/FormButton";
+import Callout from "~/ui/callout";
+import { DefinitionList } from "~/ui/definition-list";
 
 /**
  * The one-click half of `devtools oauth`: a browser tab the CLI opens with a
@@ -26,13 +27,11 @@ interface Props {
 
 function ErrorCard({ message }: { message: string }) {
   return (
-    <PageShell accent="rose" title="Can't connect">
-      <ConsoleCard.Root>
-        <ConsoleCard.Content>
-          <p className="text-sm text-mauve-300">{message}</p>
-        </ConsoleCard.Content>
-      </ConsoleCard.Root>
-    </PageShell>
+    <ConnectCard title="Can't connect">
+      <Callout tone="critical" alert>
+        {message}
+      </Callout>
+    </ConnectCard>
   );
 }
 
@@ -72,79 +71,62 @@ export default async function OAuthConnectPage({ searchParams }: Props) {
   })();
 
   return (
-    <PageShell
-      accent="cyan"
+    <ConnectCard
       title="Connect an OAuth client"
       description={`Approve to create a new DevDogs OAuth client labelled "${label}" and hand its credentials to the CLI that opened this page.`}
     >
-      <ConsoleCard.Root>
-        <ConsoleCard.Content>
-          {!user.githubIdentity ? (
-            <div className="flex flex-col items-start gap-4 py-2 text-sm text-mauve-300">
-              <p>
-                Connecting an OAuth client requires a linked GitHub account.
-              </p>
-              <Link
-                href="/account#connectedAccounts"
-                className="rounded-sm border-2 border-cyan-400 bg-cyan-400 px-4 py-1.5 text-sm font-medium text-black transition outline-none hover:bg-mauve-950 hover:text-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2"
-              >
-                Link GitHub Account
-              </Link>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4 py-2 text-sm text-mauve-300">
-              <dl className="flex flex-col gap-1">
-                <div className="flex gap-2">
-                  <dt className="font-medium text-white">Label</dt>
-                  <dd>{label}</dd>
-                </div>
-                <div className="flex gap-2">
-                  <dt className="font-medium text-white">Callback</dt>
-                  <dd>{callbackHost}</dd>
-                </div>
-              </dl>
+      {!user.githubIdentity ? (
+        <div className="flex flex-col items-start gap-4">
+          <Callout tone="warning">
+            Connecting an OAuth client requires a linked GitHub account.
+          </Callout>
+          <Link href="/settings/accounts#github" className="btn primary">
+            Link GitHub account
+          </Link>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-5">
+          <DefinitionList
+            items={[
+              { term: "Label", detail: label },
+              { term: "Callback", detail: callbackHost },
+            ]}
+          />
 
-              <p>
-                This creates a new OAuth client and sends its secret back to the
-                CLI running on your machine. You can revoke it any time from
-                this page under <strong>Credentials</strong>.
-              </p>
+          <p className="help" style={{ margin: 0 }}>
+            This creates a new OAuth client and sends its secret back to the CLI
+            running on your machine. You can revoke it any time from{" "}
+            <Link href="/settings/oauth" className="textlink">
+              OAuth apps
+            </Link>
+            .
+          </p>
 
-              <div className="flex items-center gap-3">
-                <form action={approveConnect}>
-                  <input type="hidden" name="redirectUri" value={redirectUri} />
-                  <input
-                    type="hidden"
-                    name="codeChallenge"
-                    value={codeChallenge}
-                  />
-                  <input type="hidden" name="state" value={state} />
-                  <input type="hidden" name="label" value={label} />
-                  <input type="hidden" name="callbackUri" value={callbackUri} />
-                  <FormButton theme="cyan" type="submit" className="text-sm">
-                    Approve
-                  </FormButton>
-                </form>
+          <div className="flex items-center gap-3">
+            <form action={approveConnect}>
+              <input type="hidden" name="redirectUri" value={redirectUri} />
+              <input type="hidden" name="codeChallenge" value={codeChallenge} />
+              <input type="hidden" name="state" value={state} />
+              <input type="hidden" name="label" value={label} />
+              <input type="hidden" name="callbackUri" value={callbackUri} />
+              <FormButton theme="cyan" type="submit">
+                Approve
+              </FormButton>
+            </form>
 
-                <form action={denyConnect}>
-                  <input type="hidden" name="redirectUri" value={redirectUri} />
-                  <input
-                    type="hidden"
-                    name="codeChallenge"
-                    value={codeChallenge}
-                  />
-                  <input type="hidden" name="state" value={state} />
-                  <input type="hidden" name="label" value={label} />
-                  <input type="hidden" name="callbackUri" value={callbackUri} />
-                  <FormButton theme="black" type="submit" className="text-sm">
-                    Deny
-                  </FormButton>
-                </form>
-              </div>
-            </div>
-          )}
-        </ConsoleCard.Content>
-      </ConsoleCard.Root>
-    </PageShell>
+            <form action={denyConnect}>
+              <input type="hidden" name="redirectUri" value={redirectUri} />
+              <input type="hidden" name="codeChallenge" value={codeChallenge} />
+              <input type="hidden" name="state" value={state} />
+              <input type="hidden" name="label" value={label} />
+              <input type="hidden" name="callbackUri" value={callbackUri} />
+              <FormButton theme="black" variant="ghost" type="submit">
+                Deny
+              </FormButton>
+            </form>
+          </div>
+        </div>
+      )}
+    </ConnectCard>
   );
 }

@@ -1,12 +1,7 @@
 "use client";
 
-import { useState, type RefObject } from "react";
-import {
-  CheckIcon,
-  LinkIcon,
-  PlusIcon,
-  TagIcon,
-} from "@phosphor-icons/react/ssr";
+import { type RefObject } from "react";
+import { PlusIcon } from "@phosphor-icons/react/ssr";
 import { isValidLinkUrl, PROFILE_LIMITS } from "~/lib/validation/profile";
 
 interface AddLinkInputProps {
@@ -17,7 +12,7 @@ interface AddLinkInputProps {
   onTitleChange: (v: string) => void;
   /** Stages the typed link into the draft list. Local; nothing is written. */
   onSubmit: () => void;
-  /** "Add" for a new link, "Apply" when editing an existing one. */
+  /** "Add" for a new link. */
   submitLabel: string;
   canSubmit: boolean;
   disabled: boolean;
@@ -25,6 +20,15 @@ interface AddLinkInputProps {
   urlInputRef?: RefObject<HTMLInputElement | null>;
 }
 
+/**
+ * The add-a-link row: an address and, once the address is usable, an optional
+ * title. Enter in either box stages the link.
+ *
+ * The disabled styling keys on `has-[input:disabled]:`, never a blanket
+ * `has-disabled:`: the Add button is disabled until the address is valid, and
+ * a blanket selector would let it switch off the box you type the address into
+ * (AddLinkInput.test.tsx pins this).
+ */
 export default function AddLinkInput({
   id,
   urlValue,
@@ -39,55 +43,45 @@ export default function AddLinkInput({
   urlInputRef,
 }: AddLinkInputProps) {
   const split = isValidLinkUrl(urlValue);
-  const [focusedField, setFocusedField] = useState<"title" | "url" | null>(
-    null,
-  );
-
-  const iconSlot = `shrink-0 overflow-hidden transition-[width] duration-200 ease-in-out ${
-    split ? "w-[26px]" : "w-0"
-  }`;
-
-  /**
-   * `has-[input:disabled]:`, not the blanket `has-disabled:` this used to
-   * carry.
-   *
-   * The Add button in the bottom row is disabled whenever the URL is not yet
-   * usable, including the empty box you are handed on arrival.
-   * `has-disabled:` matches any disabled descendant, so that button dimmed the
-   * field and took `pointer-events-none` with it: the URL input could not be
-   * clicked into, so no URL could be typed, so the button stayed disabled.
-   * Keying on a disabled *input* means the field is off when its inputs are
-   * off, which is the `disabled` prop.
-   */
-  const rowBase =
-    "flex items-center bg-mauve-800 transition-shadow focus-within:inset-shadow-sm hover:inset-shadow-sm has-[input:disabled]:bg-mauve-900/50 has-[input:disabled]:pointer-events-none";
-
-  const inputBase =
-    "form-input w-full border-0 bg-transparent px-3 py-2.25 text-sm text-white placeholder:text-mauve-500 focus:ring-0 disabled:pointer-events-none disabled:text-mauve-500";
 
   return (
     <div
       role="group"
       aria-label="Add link"
-      className="focus-within:shadow-block-sm max-w-sm overflow-hidden rounded-sm border border-mauve-600 bg-mauve-900 text-sm transition-shadow hover:border-mauve-500 has-[input:disabled]:cursor-not-allowed has-[input:disabled]:border-mauve-700 has-[input:disabled]:bg-mauve-900/50"
+      className="flex max-w-[720px] flex-wrap items-end gap-3 has-[input:disabled]:cursor-not-allowed has-[input:disabled]:opacity-60"
     >
-      <div
-        className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
-          split ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        }`}
-      >
-        <div className="min-h-0 overflow-hidden">
-          <div className={`${rowBase} border-b border-mauve-600`}>
-            <div aria-hidden="true" className={iconSlot}>
-              <div className="flex items-center pl-3">
-                <TagIcon
-                  size={14}
-                  className={`transition-colors ${focusedField === "title" ? "text-white" : "text-mauve-500"}`}
-                />
-              </div>
-            </div>
+      <div className="field min-w-[220px] flex-[1.5]">
+        <label className="label" htmlFor={id}>
+          New link address
+        </label>
+        <span className="input mono">
+          <input
+            ref={urlInputRef}
+            id={id}
+            type="url"
+            value={urlValue}
+            onChange={(e) => onUrlChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && split && !disabled) {
+                e.preventDefault();
+                onSubmit();
+              }
+            }}
+            placeholder="https://example.com"
+            disabled={disabled}
+            aria-label="Link URL"
+          />
+        </span>
+      </div>
+      {split && (
+        <div className="field min-w-[160px] flex-1">
+          <label className="label" htmlFor={id ? `${id}-title` : undefined}>
+            Title (optional)
+          </label>
+          <span className="input">
             <input
               ref={titleInputRef}
+              id={id ? `${id}-title` : undefined}
               type="text"
               value={titleValue}
               onChange={(e) => onTitleChange(e.target.value)}
@@ -97,78 +91,23 @@ export default function AddLinkInput({
                   onSubmit();
                 }
               }}
-              onFocus={() => setFocusedField("title")}
-              onBlur={() => setFocusedField(null)}
-              placeholder="Title (optional)"
-              // Matches `profileLinks.title`, which is varchar(64). It used to
-              // allow 100, which the insert then refused.
+              // Matches `profileLinks.title`, which is varchar(64).
               maxLength={PROFILE_LIMITS.linkTitle}
               disabled={disabled}
-              tabIndex={split ? 0 : -1}
-              aria-hidden={!split}
               aria-label="Link title (optional)"
-              className={inputBase}
             />
-          </div>
-        </div>
-      </div>
-
-      <div className={rowBase}>
-        <div aria-hidden="true" className={iconSlot}>
-          <div className="flex items-center pl-3">
-            <LinkIcon
-              size={14}
-              className={`transition-colors ${focusedField === "url" ? "text-white" : "text-mauve-500"}`}
-            />
-          </div>
-        </div>
-        <input
-          ref={urlInputRef}
-          id={id}
-          type="url"
-          value={urlValue}
-          onChange={(e) => onUrlChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && split && !disabled) {
-              e.preventDefault();
-              onSubmit();
-            }
-          }}
-          onFocus={() => setFocusedField("url")}
-          onBlur={() => setFocusedField(null)}
-          placeholder="https://example.com"
-          required
-          disabled={disabled}
-          aria-label="Link URL"
-          className={`${inputBase} font-mono`}
-        />
-
-        {/* Stages the link into the list. The page's save bar is still the only
-            thing that writes, so this reads "Add". It collapses to nothing
-            until the URL is one we can use. */}
-        <span
-          className={`grid shrink-0 overflow-hidden transition-[grid-template-columns] duration-200 ease-in-out ${
-            canSubmit ? "grid-cols-[1fr]" : "grid-cols-[0fr]"
-          }`}
-        >
-          <span className="overflow-hidden">
-            <button
-              type="button"
-              onClick={onSubmit}
-              disabled={!canSubmit || disabled}
-              tabIndex={canSubmit ? 0 : -1}
-              className="m-1 flex items-center gap-[0.5ch] rounded-sm border border-mauve-600 bg-mauve-700 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-mauve-100 transition-colors outline-none hover:border-mauve-500 hover:bg-mauve-600 hover:text-white focus-visible:ring-2 focus-visible:ring-mauve-400 disabled:pointer-events-none disabled:opacity-50"
-            >
-              {submitLabel === "Apply" ? (
-                <CheckIcon size={12} aria-hidden />
-              ) : (
-                <PlusIcon size={12} aria-hidden />
-              )}
-              {submitLabel}
-            </button>
           </span>
-        </span>
-      </div>
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={onSubmit}
+        disabled={!canSubmit || disabled}
+        className="btn secondary sm"
+      >
+        <PlusIcon aria-hidden />
+        {submitLabel}
+      </button>
     </div>
   );
 }

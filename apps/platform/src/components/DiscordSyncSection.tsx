@@ -24,19 +24,17 @@ export default function DiscordSyncSection({ role, callerCapability }: Props) {
 
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="mb-1 text-xs font-medium text-white/70">
-        Discord Sync
-      </legend>
+      <legend className="label mb-1">Discord Sync</legend>
       {role.discordRoleId === null ? (
         <LinkDiscordRoleDialog
           role={role}
           callerCapability={callerCapability}
         />
       ) : (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80">
+        <div className="flex items-center justify-between gap-3 bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--text-2)]">
           <span className="flex min-w-0 items-center gap-1.5">
             <GameControllerIcon
-              className="h-3.5 w-3.5 shrink-0 text-indigo-300"
+              className="h-3.5 w-3.5 shrink-0 text-[var(--text-2)]"
               aria-hidden
             />
             <span className="truncate">
@@ -56,7 +54,7 @@ export default function DiscordSyncSection({ role, callerCapability }: Props) {
             action={handleUnsync}
             submitLabel="Unsync"
           >
-            <FormButton theme="rose" type="submit" className="text-xs">
+            <FormButton theme="rose" type="submit" size="sm">
               Unsync
             </FormButton>
           </ConfirmDestructiveAction>

@@ -4,9 +4,12 @@ import { approveDevice, denyDevice } from "~/server/actions/oauthDevice";
 import { authenticate, expectUserWith } from "~/server/auth";
 import { formatUserCode, normalizeUserCode } from "~/server/oauth/deviceCodes";
 import { verifyDeviceUserCode } from "~/server/oauth/verifyDeviceCode";
-import PageShell from "~/components/PageShell";
-import { ConsoleCard } from "~/ui/card";
+import ConnectCard from "~/components/Settings/ConnectCard";
 import FormButton from "~/components/FormButton";
+import { Button } from "~/ui/button";
+import Callout from "~/ui/callout";
+import { CodeInput } from "~/ui/code-input";
+import { DefinitionList } from "~/ui/definition-list";
 
 /**
  * The verification half of `devtools oauth`'s device-code fallback (RFC
@@ -33,61 +36,52 @@ interface Props {
 
 function ErrorCard({ message }: { message: string }) {
   return (
-    <PageShell accent="rose" title="Can't connect">
-      <ConsoleCard.Root>
-        <ConsoleCard.Content>
-          <p className="text-sm text-mauve-300">{message}</p>
-        </ConsoleCard.Content>
-      </ConsoleCard.Root>
-    </PageShell>
+    <ConnectCard title="Can't connect">
+      <Callout tone="critical" alert>
+        {message}
+      </Callout>
+    </ConnectCard>
   );
 }
 
 function InfoCard({ title, message }: { title: string; message: string }) {
   return (
-    <PageShell accent="cyan" title={title}>
-      <ConsoleCard.Root>
-        <ConsoleCard.Content>
-          <p className="text-sm text-mauve-300">{message}</p>
-        </ConsoleCard.Content>
-      </ConsoleCard.Root>
-    </PageShell>
+    <ConnectCard title={title}>
+      <Callout tone="info">{message}</Callout>
+    </ConnectCard>
   );
 }
 
+/**
+ * The code entry: the segmented eight-character field (`checkin.html`'s code
+ * input), submitted as a plain GET so the page works without script. The
+ * field's value rides in a hidden `user_code` input as `XXXXXXXX`; the dash
+ * the member sees is cosmetic and `normalizeUserCode` accepts either form.
+ */
 function CodeEntryForm({ error }: { error?: string }) {
   return (
-    <PageShell
-      accent="cyan"
+    <ConnectCard
       title="Connect a CLI"
       description="Enter the code shown in your terminal."
     >
-      <ConsoleCard.Root>
-        <ConsoleCard.Content>
-          <form
-            method="get"
-            className="flex flex-col gap-4 py-2 text-sm text-mauve-300"
-          >
-            {error && <p className="text-rose-400">{error}</p>}
-            <input
-              type="text"
-              name="user_code"
-              placeholder="XXXX-XXXX"
-              autoCapitalize="characters"
-              autoComplete="off"
-              spellCheck={false}
-              className="rounded-sm border-2 border-mauve-700 bg-transparent px-4 py-2 text-center font-mono text-lg tracking-widest text-white uppercase outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
-            />
-            <button
-              type="submit"
-              className="rounded-sm border-2 border-cyan-400 bg-cyan-400 px-4 py-1.5 text-sm font-medium text-black transition outline-none hover:bg-mauve-950 hover:text-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2"
-            >
-              Continue
-            </button>
-          </form>
-        </ConsoleCard.Content>
-      </ConsoleCard.Root>
-    </PageShell>
+      <form method="get" className="flex flex-col gap-5">
+        {error && (
+          <Callout tone="critical" alert>
+            {error}
+          </Callout>
+        )}
+        <CodeInput
+          length={8}
+          name="user_code"
+          aria-label="Device code"
+          className="[&_input]:w-full [&_input]:min-w-0"
+          invalid={Boolean(error)}
+        />
+        <div>
+          <Button type="submit">Continue</Button>
+        </div>
+      </form>
+    </ConnectCard>
   );
 }
 
@@ -160,67 +154,55 @@ export default async function OAuthDevicePage({ searchParams }: Props) {
   })();
 
   return (
-    <PageShell
-      accent="cyan"
+    <ConnectCard
       title="Connect an OAuth client"
       description={`Approve to create a new DevDogs OAuth client labelled "${row.label}" and hand its credentials to the CLI that requested this code.`}
     >
-      <ConsoleCard.Root>
-        <ConsoleCard.Content>
-          {!user.githubIdentity ? (
-            <div className="flex flex-col items-start gap-4 py-2 text-sm text-mauve-300">
-              <p>
-                Connecting an OAuth client requires a linked GitHub account.
-              </p>
-              <Link
-                href="/account#connectedAccounts"
-                className="rounded-sm border-2 border-cyan-400 bg-cyan-400 px-4 py-1.5 text-sm font-medium text-black transition outline-none hover:bg-mauve-950 hover:text-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2"
-              >
-                Link GitHub Account
-              </Link>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4 py-2 text-sm text-mauve-300">
-              <dl className="flex flex-col gap-1">
-                <div className="flex gap-2">
-                  <dt className="font-medium text-white">Code</dt>
-                  <dd>{formatUserCode(normalized)}</dd>
-                </div>
-                <div className="flex gap-2">
-                  <dt className="font-medium text-white">Label</dt>
-                  <dd>{row.label}</dd>
-                </div>
-                <div className="flex gap-2">
-                  <dt className="font-medium text-white">Callback</dt>
-                  <dd>{callbackHost}</dd>
-                </div>
-              </dl>
+      {!user.githubIdentity ? (
+        <div className="flex flex-col items-start gap-4">
+          <Callout tone="warning">
+            Connecting an OAuth client requires a linked GitHub account.
+          </Callout>
+          <Link href="/settings/accounts#github" className="btn primary">
+            Link GitHub account
+          </Link>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-5">
+          <DefinitionList
+            items={[
+              { term: "Code", detail: formatUserCode(normalized) },
+              { term: "Label", detail: row.label },
+              { term: "Callback", detail: callbackHost },
+            ]}
+          />
 
-              <p>
-                This creates a new OAuth client and sends its secret back to the
-                CLI that requested this code. You can revoke it any time from
-                this page under <strong>Credentials</strong>.
-              </p>
+          <p className="help" style={{ margin: 0 }}>
+            This creates a new OAuth client and sends its secret back to the CLI
+            that requested this code. You can revoke it any time from{" "}
+            <Link href="/settings/oauth" className="textlink">
+              OAuth apps
+            </Link>
+            .
+          </p>
 
-              <div className="flex items-center gap-3">
-                <form action={approveDevice}>
-                  <input type="hidden" name="userCode" value={normalized} />
-                  <FormButton theme="cyan" type="submit" className="text-sm">
-                    Approve
-                  </FormButton>
-                </form>
+          <div className="flex items-center gap-3">
+            <form action={approveDevice}>
+              <input type="hidden" name="userCode" value={normalized} />
+              <FormButton theme="cyan" type="submit">
+                Approve
+              </FormButton>
+            </form>
 
-                <form action={denyDevice}>
-                  <input type="hidden" name="userCode" value={normalized} />
-                  <FormButton theme="black" type="submit" className="text-sm">
-                    Deny
-                  </FormButton>
-                </form>
-              </div>
-            </div>
-          )}
-        </ConsoleCard.Content>
-      </ConsoleCard.Root>
-    </PageShell>
+            <form action={denyDevice}>
+              <input type="hidden" name="userCode" value={normalized} />
+              <FormButton theme="black" variant="ghost" type="submit">
+                Deny
+              </FormButton>
+            </form>
+          </div>
+        </div>
+      )}
+    </ConnectCard>
   );
 }
