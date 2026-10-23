@@ -243,7 +243,7 @@ export function SettingsFormProvider({ children }: { children: ReactNode }) {
           kind: "saved",
           message:
             targets.length === 1
-              ? `Saved. ${targets[0]!.summary.label} is up to date.`
+              ? `${targets[0]!.summary.label} updated.`
               : "Saved. Your changes are up to date.",
         });
         return;

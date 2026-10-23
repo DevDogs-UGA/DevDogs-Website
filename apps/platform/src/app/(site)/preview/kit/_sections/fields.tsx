@@ -561,7 +561,7 @@ export default function FieldsSection() {
                 {
                   status: "saved",
                   dirtyCount: 0,
-                  message: "Saved. Your profile is up to date.",
+                  message: "Public profile updated.",
                 },
               ],
               [
