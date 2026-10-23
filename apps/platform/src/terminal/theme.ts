@@ -29,12 +29,13 @@ export const TONE = {
 /**
  * Page accents, one per `PageShell` accent the site uses. Colour means a
  * category on the site, so these borrow the category hues (and the brand pink
- * for rose); cyan has no Cosmic counterpart and keeps its own.
+ * for rose). Cyan has no Cosmic hue of its own; like `PageHeader`'s
+ * `ACCENT_HEAD`, it takes build's sky.
  */
 export const ACCENT = {
   rose: DEVDOGS[3],
   amber: KIND.info[3],
-  cyan: "#22d3ee",
+  cyan: KIND.build[3],
   emerald: KIND.workshop[3],
   violet: KIND.milestone[3],
   sky: KIND.build[3],
