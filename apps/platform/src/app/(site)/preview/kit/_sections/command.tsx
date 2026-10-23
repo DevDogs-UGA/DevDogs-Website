@@ -192,7 +192,7 @@ const MEMBERS = [
     ok: false,
   },
   {
-    name: "Theo Park",
+    name: "Theo Nguyen",
     init: "TP",
     kind: "build",
     major: "Mathematics",
@@ -590,7 +590,7 @@ export default function CommandSection() {
               variant="verified"
               icon={<GraduationCapIcon weight="bold" />}
               title="Name matches the Involvement Network"
-              description="Sam Fields"
+              description="Ava Lin"
             />
             <ListRow
               variant="verified"
@@ -605,7 +605,7 @@ export default function CommandSection() {
               variant="account"
               icon={<GithubLogoIcon weight="bold" />}
               title="GitHub"
-              description="@sloanfinger"
+              description="@sloan"
               end={
                 <Button variant="outline" size="sm">
                   Disconnect

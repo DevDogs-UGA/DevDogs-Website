@@ -48,8 +48,8 @@ function SearchResultItem({
           <div className="cmd-sub inline-flex items-center gap-0.5">
             {entry.breadcrumbs.map((b, i) => (
               <Fragment key={i}>
-                {i > 0 && <CaretRightIcon weight="bold" className="size-3" />}
-                <span>{b}</span>
+                {i > 0 && <CaretRightIcon weight="bold" className="size-3 shrink-0" />}
+                <span className="min-w-0 truncate">{b}</span>
               </Fragment>
             ))}
           </div>

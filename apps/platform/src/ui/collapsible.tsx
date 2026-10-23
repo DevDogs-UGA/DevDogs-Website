@@ -43,10 +43,14 @@ function CollapsibleTrigger({
       data-slot="collapsible-trigger"
       {...props}
     >
-      {disclosure && (
-        <CaretRightIcon weight="bold" className="dt-caret" aria-hidden />
+      {disclosure ? (
+        <>
+          <CaretRightIcon weight="bold" className="dt-caret" aria-hidden />
+          {children}
+        </>
+      ) : (
+        children
       )}
-      {children}
     </CollapsiblePrimitive.CollapsibleTrigger>
   );
 }
