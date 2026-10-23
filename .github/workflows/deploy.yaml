@@ -5,7 +5,7 @@ name: Deploy
 # `production` environment and deploys this commit's prebuilt artifacts.
 #
 # One repository. This commit is the whole deploy: the platform, the catalog,
-# the migrations, seeds, avatars and docs all come from this checkout, and
+# the migrations, seeds and docs all come from this checkout, and
 # `workers.json` lists the Workers. (Until the fold-back this flow lived in
 # Backstage and pinned DevDogsUGA by `devdogsuga.lock`.) What is particular here:
 #
@@ -213,8 +213,9 @@ jobs:
   # reviewers, so nothing waits here. A destructive plan is refused unless the
   # pull request that produced the commit approved it (allow-destructive).
   #
-  # `--include-seed` runs the seed files staging has not recorded yet; they are
-  # insert-only, so a rerun or an edited file changes nothing there.
+  # `--include-seed` runs the seed files staging has not recorded yet (the
+  # role catalogue); they are insert-only, so a rerun or an edited file
+  # changes nothing there.
   staging-database:
     needs: [resolve, staging-preflight]
     if: needs.staging-preflight.outputs.paused != 'true'
@@ -230,24 +231,6 @@ jobs:
       include_seed: true
       apply_config: ${{ needs.resolve.outputs.staging_config != 'false' }}
 
-  # The seed SQL never touches Storage. This uploads only the headshots the
-  # bucket lacks, so a photo an officer replaced is never overwritten.
-  staging-avatars:
-    needs: staging-database
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment: staging
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: ./.github/actions/setup-workspace
-      - uses: ./.github/actions/backstage-cli
-      - name: Upload new seeded headshots
-        env:
-          API_URL: ${{ vars.API_URL }}
-          PROJECT_REF: ${{ vars.PROJECT_REF }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-        run: backstage deploy avatars --no-env --yes
-
   # The two Workers are independent deploy targets, each through the shared
   # deploy-worker.yaml: upload a version, smoke test it (the platform's also
   # runs the OAuth authorize and consent checks), switch traffic, smoke test
@@ -257,14 +240,13 @@ jobs:
   # `!cancelled()` and explicit results: `build` is skipped whenever the merge
   # queue already built, and a skipped need would otherwise skip these too.
   staging-platform:
-    needs: [resolve, build, staging-database, staging-avatars]
+    needs: [resolve, build, staging-database]
     if: >-
       !cancelled()
       && github.event_name == 'push'
       && needs.resolve.result == 'success'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
       && needs.staging-database.result == 'success'
-      && needs.staging-avatars.result == 'success'
     uses: ./.github/workflows/deploy-worker.yaml
     secrets: inherit
     permissions:
@@ -316,14 +298,13 @@ jobs:
   # `full` for that one run, then delete it. (WORKER_DEPLOY_MODE applies to
   # all Workers; this one is separate so the platform keeps its previews.)
   staging-catalog:
-    needs: [resolve, build, staging-database, staging-avatars]
+    needs: [resolve, build, staging-database]
     if: >-
       !cancelled()
       && github.event_name == 'push'
       && needs.resolve.result == 'success'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
       && needs.staging-database.result == 'success'
-      && needs.staging-avatars.result == 'success'
     uses: ./.github/workflows/deploy-worker.yaml
     secrets: inherit
     permissions:
@@ -557,9 +538,7 @@ jobs:
       build_cli: true
       sentry_project: platform
       sourcemaps_dir: apps/platform/dist
-      prepare_command: |
-        backstage deploy write-env --no-env --yes
-        (set -a; . ".env.$TIER"; set +a; backstage deploy avatars --no-env --yes)
+      prepare_command: backstage deploy write-env --no-env --yes
       upload_command: backstage deploy platform --tier production --upload --yes
       full_deploy_command: backstage deploy platform --tier production --yes
       mode: ${{ vars.WORKER_DEPLOY_MODE || 'versions' }}

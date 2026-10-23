@@ -58,9 +58,7 @@ the seed files a tier has not recorded run right after them), then the diff
 between the database and the declarative tree in `supabase/schemas/`. Each part
 is planned first under a read-only credential, approved, then applied against
 the plan's hash, so a database that moved between plan and apply changes
-nothing. `backstage deploy avatars` then uploads any seeded headshot the bucket
-lacks without replacing existing ones (see
-[Migrations](../../platform/guides/migrations.md)'s "Seeds"). A plan that drops
+nothing (see [Migrations](../../platform/guides/migrations.md)'s "Seeds"). A plan that drops
 or rewrites data needs a further approval:
 [Destructive changes](../../operations/deploys/destructive-changes.md).
 

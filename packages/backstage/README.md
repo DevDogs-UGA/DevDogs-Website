@@ -67,7 +67,6 @@ name `devdogs-monorepo` or `backstage`; the layout code is
 | `deploy write-env`                                 | Composes `.env.<DEPLOY_ENV>` from the GitHub environment.                              |
 | `deploy preflight`                                 | Classifies the project: paused (skip) or broken (fail).                                |
 | `deploy plan`, `deploy migrate [--include-seed]`   | Dry-run the migrations (and new seed files) into the job summary; apply them.          |
-| `deploy avatars`                                   | Uploads seeded headshots the bucket lacks; never replaces one (`SECRET_KEY`).          |
 | `deploy smoke --tier <t> [--app]`                  | Public routes answer 200, the auth redirect works, this deploy's Sentry release shows. |
 | `deploy reconcile --tier <t>`                      | The platform's config reconcile, after the deploy (`CRON_SECRET`).                     |
 | `deploy prune-monitors --tier <t> [--app]`         | Deletes the app's Sentry Crons monitors it no longer declares (production only).       |
