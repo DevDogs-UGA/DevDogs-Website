@@ -11,7 +11,7 @@
  *
  * The plugin list is the one the platform ran, in the same order, so a page
  * renders the same; `remarkVariants`, `remarkDiffs`, `rehypeScrollTables`,
- * `rehypeCopyableCells` (tables.ts) and `rehypeRefuseScript` (sanitize.ts) are
+ * `rehypeCopyableCells` (tables.ts) and `rehypeSanitizeHtml` (sanitize.ts) are
  * the only additions.
  */
 import rehypeShiki from "@shikijs/rehype";
@@ -36,7 +36,12 @@ import { VFile } from "vfile";
 import { docsCodeBlocks, remarkKeepMeta } from "./codeblocks.js";
 import { remarkDiffs } from "./diffs.js";
 import { remarkRewriteLinks, type LinkSource } from "./links.js";
-import { rehypeRefuseScript } from "./sanitize.js";
+import {
+  rehypeExternalLinks,
+  rehypeMarkGenerated,
+  rehypeSanitizeHtml,
+  type RenderPolicy,
+} from "./sanitize.js";
 import { rehypeCopyableCells } from "./tables.js";
 import { remarkVariants, type VariantContext } from "./variants.js";
 
@@ -78,8 +83,10 @@ const processor = unified()
   .use(remarkEmoji)
   .use(remarkAlert)
   .use(remarkRehype, { allowDangerousHtml: true })
+  .use(rehypeMarkGenerated)
   .use(rehypeRaw)
-  .use(rehypeRefuseScript)
+  .use(rehypeSanitizeHtml)
+  .use(rehypeExternalLinks)
   .use(rehypeSlug)
   .use(rehypeAutolinkHeadings, { behavior: "wrap" })
   .use(rehypeUnwrapImages)
@@ -110,10 +117,11 @@ export async function renderBody(
   content: string,
   ctx: VariantContext,
   from: LinkSource = { project: ctx.project, source: `${ctx.project}/index` },
+  policy?: RenderPolicy,
 ): Promise<string> {
   const file = new VFile({
     value: content,
-    data: { variants: ctx, link: from },
+    data: { variants: ctx, link: from, ...(policy ? { policy } : {}) },
   });
   return String(await processor.process(file));
 }
