@@ -53,8 +53,15 @@ export default function OAuthProductionClientsField({
   const openClient =
     productionClients.find((c) => c.clientId === openId) ?? null;
   // A just-created client has no row until the refresh lands; open its drawer
-  // as soon as it does, so its secret is shown once, there.
+  // as soon as it does, so its secret is shown once, there. The action's
+  // result outlives the dispatch that produced it, and rolling a secret
+  // returns a client id too, so opening the form marks whatever result is
+  // already there as seen: only a create made from this form opens a drawer.
   const [justMinted, setJustMinted] = useState<string | null>(null);
+  const startCreating = () => {
+    setJustMinted(mintedClientId);
+    setCreating(true);
+  };
   if (creating && mintedClientId && mintedClientId !== justMinted) {
     setJustMinted(mintedClientId);
     setOpenId(mintedClientId);
@@ -77,11 +84,7 @@ export default function OAuthProductionClientsField({
         />
       )}
       <div style={{ marginTop: 16 }}>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setCreating(true)}
-        >
+        <Button type="button" variant="outline" onClick={startCreating}>
           <PlusIcon aria-hidden />
           New production client
         </Button>
