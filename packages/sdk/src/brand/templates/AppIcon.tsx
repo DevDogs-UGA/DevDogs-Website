@@ -39,13 +39,16 @@ export function AppIcon({ app, size, background }: AppIconProps) {
   // Fractions of the canvas, so the shadow keeps its distance at every size.
   // The tile is inset by exactly the shadow's throw plus the outer margin, so
   // the offset shadow is never clipped by the image edge.
-  const margin = size * 0.06;
-  const shadow = size * 0.055;
-  const border = Math.max(1, size * 0.025);
+  // Every length is snapped to whole pixels: a fractional step leaves the
+  // sliver and the middle column meeting mid-pixel, and the rasteriser
+  // anti-aliases the gap so the ink tile beneath shows through as a seam.
+  const margin = Math.round(size * 0.06);
+  const shadow = Math.round(size * 0.055);
+  const border = Math.max(1, Math.round(size * 0.025));
   const tile = size - margin * 2 - shadow;
   // Cosmic corners are stepped cells, not radii: one cell, a fifth of a
   // percent short of a quarter of the tile, never under a pixel.
-  const step = Math.max(1, tile * 0.05);
+  const step = Math.max(1, Math.round(tile * 0.05));
   // The fill is its own stepped tile laid over the ink one, inset by exactly
   // one border on every side, so the outline has the same weight all round.
   // An even border around a stepped tile is that tile eroded by the border,
@@ -111,7 +114,7 @@ export function AppIcon({ app, size, background }: AppIconProps) {
                 justifyContent: "center",
               }}
             >
-              <AppMark app={app} size={tile * 0.62} color={brand.mark} />
+              <AppMark app={app} size={Math.round(tile * 0.62)} color={brand.mark} />
             </div>
           </Stepped>
         </div>
