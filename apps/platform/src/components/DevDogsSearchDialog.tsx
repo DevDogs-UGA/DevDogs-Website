@@ -48,7 +48,9 @@ function SearchResultItem({
           <div className="cmd-sub inline-flex items-center gap-0.5">
             {entry.breadcrumbs.map((b, i) => (
               <Fragment key={i}>
-                {i > 0 && <CaretRightIcon weight="bold" className="size-3 shrink-0" />}
+                {i > 0 && (
+                  <CaretRightIcon weight="bold" className="size-3 shrink-0" />
+                )}
                 <span className="min-w-0 truncate">{b}</span>
               </Fragment>
             ))}
@@ -111,7 +113,7 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
         <DialogDescription>Search pages, docs, and settings</DialogDescription>
       </DialogHeader>
       <DialogContent
-        className="cmd-dialog w-[min(680px,calc(100vw-2rem))] sm:max-w-[680px] top-[72px] translate-y-0 gap-0 overflow-visible"
+        className="cmd-dialog top-[72px] w-[min(680px,calc(100vw-2rem))] translate-y-0 gap-0 overflow-visible sm:max-w-[680px]"
         showCloseButton={false}
       >
         <Command shouldFilter={false}>
