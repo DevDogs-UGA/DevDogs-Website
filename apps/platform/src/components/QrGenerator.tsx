@@ -575,10 +575,10 @@ export default function QrGenerator() {
             htmlFor="qr-text"
             description="A URL, plain text, or any other value a QR scanner can open."
           >
-            <div className="group focus-within:shadow-block-sm relative flex max-w-sm overflow-hidden rounded-sm border border-mauve-600 bg-mauve-900 text-sm transition-shadow hover:border-mauve-500">
+            <div className="input area max-w-sm">
               <textarea
                 id="qr-text"
-                className="form-textarea min-h-24 w-full resize-y border-0 bg-mauve-800 px-3 py-2 text-sm text-white group-hover:inset-shadow-sm placeholder:text-mauve-500 focus:ring-0 focus:inset-shadow-sm"
+                className="min-h-24 w-full resize-y"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 rows={3}
@@ -632,7 +632,7 @@ export default function QrGenerator() {
             </div>
           </Field>
           {theme === "custom" && (
-            <div className="max-w-3xl space-y-6 rounded-sm border border-mauve-700 bg-mauve-900/40 px-4 py-6">
+            <div className="con-qr-custom">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Control label="Margin (modules)">
                   <Input
@@ -695,7 +695,7 @@ export default function QrGenerator() {
                       setVersion(value === "auto" ? undefined : Number(value))
                     }
                   />
-                  <p className="mt-2 text-xs text-mauve-400">
+                  <p className="mt-2 text-xs text-[var(--text-3)]">
                     Disabled versions cannot fit the content or the logo’s
                     covered area exceeds the selected correction level’s nominal
                     recovery budget.
@@ -876,8 +876,8 @@ export default function QrGenerator() {
                 role="status"
                 className={`text-right ${
                   result.error
-                    ? "text-sm text-rose-400"
-                    : "text-sm text-mauve-300"
+                    ? "text-sm text-[var(--bad)]"
+                    : "text-sm text-[var(--text-2)]"
                 }`}
               >
                 {result.error || status}
@@ -906,7 +906,7 @@ export default function QrGenerator() {
                 className="h-full w-full object-contain"
               />
             ) : (
-              <span className="text-center text-sm text-rose-400">
+              <span className="text-center text-sm text-[var(--bad)]">
                 {result.error}
               </span>
             )}
@@ -1027,7 +1027,7 @@ function SingleCombobox({
       }}
     >
       <ComboboxPopover.Anchor asChild>
-        <span className="group focus-within:shadow-block-sm relative flex max-w-sm items-center rounded-sm border border-mauve-600 bg-mauve-800 text-sm transition-shadow focus-within:inset-shadow-sm hover:border-mauve-500 hover:inset-shadow-sm">
+        <span className="input max-w-sm">
           <input
             ref={inputRef}
             type="text"
@@ -1043,7 +1043,7 @@ function SingleCombobox({
                 : undefined
             }
             value={open ? query : (selected?.label ?? value)}
-            className="form-input w-full border-0 bg-transparent px-3 text-sm text-white placeholder:text-mauve-500 focus:ring-0 focus:outline-none"
+            className="w-full"
             onChange={(event) => {
               setQuery(event.target.value);
               setActiveIndex(-1);
@@ -1081,7 +1081,7 @@ function SingleCombobox({
       </ComboboxPopover.Anchor>
       <ComboboxPopover.Portal>
         <ComboboxPopover.Content
-          className="data-[state=open]:shadow-block-sm z-60 max-h-72 w-(--radix-popover-trigger-width) overflow-y-auto rounded-sm border border-white/20 bg-mauve-900 transition-shadow data-[state=open]:delay-200"
+          className="z-60 max-h-72 w-(--radix-popover-trigger-width) overflow-y-auto rounded-sm border border-[var(--line)] bg-[var(--surface)]"
           sideOffset={4}
           align="start"
           onOpenAutoFocus={(event: Event) => event.preventDefault()}
@@ -1100,7 +1100,7 @@ function SingleCombobox({
                   aria-label={group.label}
                 >
                   {group.label && (
-                    <div className="sticky top-0 z-10 border-b border-mauve-700 bg-mauve-950 px-3 py-1.5 text-[0.65rem] font-bold tracking-wide text-mauve-400 uppercase">
+                    <div className="sticky top-0 z-10 border-b border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[0.65rem] font-bold tracking-wide text-[var(--text-3)] uppercase">
                       {group.label}
                     </div>
                   )}
@@ -1116,7 +1116,7 @@ function SingleCombobox({
                         data-active={index === activeIndex ? true : undefined}
                         disabled={option.disabled}
                         title={option.detail}
-                        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-mauve-200 transition-colors hover:bg-mauve-700 hover:text-white disabled:cursor-not-allowed disabled:text-mauve-600 disabled:hover:bg-transparent aria-selected:bg-mauve-800 aria-selected:text-white data-active:bg-mauve-700 data-active:text-white disabled:data-active:bg-transparent"
+                        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-transparent aria-selected:bg-[var(--surface-2)] aria-selected:text-[var(--text)] data-active:bg-[var(--surface-2)] data-active:text-[var(--text)] disabled:data-active:bg-transparent"
                         onMouseMove={() => setActiveIndex(index)}
                         onMouseDown={(event) => {
                           event.preventDefault();
@@ -1125,7 +1125,7 @@ function SingleCombobox({
                       >
                         <span>{option.label}</span>
                         {option.detail && (
-                          <span className="max-w-52 text-right text-xs text-mauve-500">
+                          <span className="max-w-52 text-right text-xs text-[var(--text-3)]">
                             {option.detail}
                           </span>
                         )}
@@ -1135,7 +1135,7 @@ function SingleCombobox({
                 </div>
               ))
             ) : (
-              <p className="px-3 py-2 text-sm text-mauve-500">
+              <p className="px-3 py-2 text-sm text-[var(--text-3)]">
                 No matching options
               </p>
             )}
@@ -1232,9 +1232,9 @@ function ColorCombobox({
         }}
       >
         <ComboboxPopover.Anchor asChild>
-          <span className="group focus-within:shadow-block-sm relative flex max-w-sm items-center rounded-sm border border-mauve-600 bg-mauve-800 text-sm transition-shadow focus-within:inset-shadow-sm hover:border-mauve-500 hover:inset-shadow-sm">
+          <span className="input max-w-sm">
             <span
-              className="ml-3 size-4 shrink-0 rounded-sm border border-white/20"
+              className="ml-3 size-4 shrink-0 rounded-sm border border-[var(--line)]"
               style={{
                 background:
                   value === transparentValue
@@ -1259,7 +1259,7 @@ function ColorCombobox({
               }
               value={value}
               placeholder="Transparent"
-              className="form-input min-w-0 flex-1 border-0 bg-transparent px-3 text-sm text-white placeholder:text-mauve-500 focus:ring-0 focus:outline-none"
+              className="min-w-0 flex-1"
               onChange={(event) => {
                 set(event.target.value);
                 setOpen(true);
@@ -1294,7 +1294,7 @@ function ColorCombobox({
         </ComboboxPopover.Anchor>
         <ComboboxPopover.Portal>
           <ComboboxPopover.Content
-            className="data-[state=open]:shadow-block-sm z-60 max-h-72 w-(--radix-popover-trigger-width) overflow-y-auto rounded-sm border border-white/20 bg-mauve-900 transition-shadow data-[state=open]:delay-200"
+            className="z-60 max-h-72 w-(--radix-popover-trigger-width) overflow-y-auto rounded-sm border border-[var(--line)] bg-[var(--surface)]"
             sideOffset={4}
             align="start"
             onOpenAutoFocus={(event: Event) => event.preventDefault()}
@@ -1307,7 +1307,7 @@ function ColorCombobox({
             >
               {groups.map((group) => (
                 <div key={group.label} role="group" aria-label={group.label}>
-                  <div className="sticky top-0 z-10 border-b border-mauve-700 bg-mauve-950 px-3 py-1.5 text-[0.65rem] font-bold tracking-wide text-mauve-400 uppercase">
+                  <div className="sticky top-0 z-10 border-b border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[0.65rem] font-bold tracking-wide text-[var(--text-3)] uppercase">
                     {group.label}
                   </div>
                   {group.options.map((option) => (
@@ -1322,7 +1322,7 @@ function ColorCombobox({
                           ? true
                           : undefined
                       }
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-mauve-200 transition-colors hover:bg-mauve-700 hover:text-white aria-selected:bg-mauve-800 aria-selected:text-white data-active:bg-mauve-700 data-active:text-white"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] aria-selected:bg-[var(--surface-2)] aria-selected:text-[var(--text)] data-active:bg-[var(--surface-2)] data-active:text-[var(--text)]"
                       onMouseMove={() =>
                         setActiveIndex(presetOptions.indexOf(option))
                       }
@@ -1332,12 +1332,12 @@ function ColorCombobox({
                       }}
                     >
                       <span
-                        className="size-4 rounded-sm border border-white/20"
+                        className="size-4 rounded-sm border border-[var(--line)]"
                         style={{ background: option.value }}
                         aria-hidden
                       />
                       {option.label}
-                      <span className="ml-auto text-xs text-mauve-500">
+                      <span className="ml-auto text-xs text-[var(--text-3)]">
                         {option.value}
                       </span>
                     </button>
@@ -1345,7 +1345,7 @@ function ColorCombobox({
                 </div>
               ))}
               <div role="group" aria-label="Other">
-                <div className="sticky top-0 z-10 border-b border-mauve-700 bg-mauve-950 px-3 py-1.5 text-[0.65rem] font-bold tracking-wide text-mauve-400 uppercase">
+                <div className="sticky top-0 z-10 border-b border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[0.65rem] font-bold tracking-wide text-[var(--text-3)] uppercase">
                   Other
                 </div>
                 <button
@@ -1356,14 +1356,14 @@ function ColorCombobox({
                   data-active={
                     activeIndex === presetOptions.length ? true : undefined
                   }
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-mauve-200 transition-colors hover:bg-mauve-700 hover:text-white aria-selected:bg-mauve-800 aria-selected:text-white data-active:bg-mauve-700 data-active:text-white"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] aria-selected:bg-[var(--surface-2)] aria-selected:text-[var(--text)] data-active:bg-[var(--surface-2)] data-active:text-[var(--text)]"
                   onMouseMove={() => setActiveIndex(presetOptions.length)}
                   onMouseDown={(event) => {
                     event.preventDefault();
                     choose(transparentValue);
                   }}
                 >
-                  <span className="size-4 rounded-sm border border-white/20 bg-[repeating-conic-gradient(#443d49_0_25%,#2e2933_0_50%)_0_0/8px_8px]" />
+                  <span className="size-4 rounded-sm border border-[var(--line)] bg-[repeating-conic-gradient(#443d49_0_25%,#2e2933_0_50%)_0_0/8px_8px]" />
                   Transparent
                 </button>
                 <button
@@ -1374,7 +1374,7 @@ function ColorCombobox({
                   data-active={
                     activeIndex === presetOptions.length + 1 ? true : undefined
                   }
-                  className="flex w-full items-center px-3 py-2 text-left text-sm text-mauve-200 transition-colors hover:bg-mauve-700 hover:text-white data-active:bg-mauve-700 data-active:text-white"
+                  className="flex w-full items-center px-3 py-2 text-left text-sm text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] data-active:bg-[var(--surface-2)] data-active:text-[var(--text)]"
                   onMouseMove={() => setActiveIndex(presetOptions.length + 1)}
                   onMouseDown={(event) => {
                     event.preventDefault();
@@ -1432,8 +1432,7 @@ function ExportDialog({
         </FormButton>
       </DialogTrigger>
       <DialogContent
-        className="flex max-h-[85dvh] w-full flex-col gap-4 overflow-hidden rounded-xl border-2 border-mauve-800 bg-mauve-950 p-5 text-white shadow-2xl ring-0 shadow-black/60 sm:max-w-xl"
-        overlayClassName="bg-black/40"
+        className="flex max-h-[85dvh] w-full flex-col gap-4 overflow-hidden sm:max-w-xl"
         onInteractOutside={(event) => {
           const target = event.target;
           if (
@@ -1444,11 +1443,11 @@ function ExportDialog({
         }}
       >
         <DialogHeader className="contents">
-          <DialogTitle className="font-display flex items-center gap-[1ch] text-2xl leading-tight font-extrabold text-white">
+          <DialogTitle className="flex items-center gap-[1ch]">
             Export QR Code
-            <ImagesSquareIcon className="text-mauve-400" weight="bold" />
+            <ImagesSquareIcon className="text-[var(--text-3)]" weight="bold" />
           </DialogTitle>
-          <DialogDescription className="text-sm text-mauve-300">
+          <DialogDescription>
             Choose the output size and formats. Multiple formats are bundled
             into one ZIP archive.
           </DialogDescription>
@@ -1480,7 +1479,7 @@ function ExportDialog({
               toggleFormat={toggleFormat}
               avifSupported={avifSupported}
             />
-            <p className="text-xs text-mauve-400">
+            <p className="text-xs text-[var(--text-3)]">
               JPEG fills transparent backgrounds for contrast. TIFF is lossless
               RGBA.
             </p>
@@ -1489,7 +1488,7 @@ function ExportDialog({
             <button
               type="button"
               disabled={disabled || exporting || formats.size === 0}
-              className="flex items-center gap-1.5 rounded-lg border border-white bg-white px-4 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-transparent hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn primary"
               onClick={async () => {
                 setExporting(true);
                 const succeeded = await download();
@@ -1555,17 +1554,14 @@ function FormatCombobox({
       }}
     >
       <ComboboxPopover.Anchor asChild>
-        <span className="group focus-within:shadow-block-sm relative flex max-w-sm cursor-text flex-wrap items-center gap-1 rounded-sm border border-mauve-600 bg-mauve-800 p-2 text-sm transition-shadow focus-within:inset-shadow-sm hover:border-mauve-500 hover:inset-shadow-sm">
+        <span className="input h-auto min-h-11 max-w-sm cursor-text flex-wrap gap-1 py-2">
           {[...formats].map((format) => (
-            <span
-              key={format}
-              className="flex items-center gap-1.5 rounded-full border border-mauve-600 bg-mauve-800 py-0.5 pr-1.5 pl-2 text-sm text-white has-[button:hover]:border-rose-500 has-[button:hover]:bg-rose-500/10 has-[button:hover]:text-rose-300"
-            >
+            <span key={format} className="tag">
               {format.toUpperCase()}
               <button
                 type="button"
                 onClick={() => toggleFormat(format)}
-                className="shrink-0 rounded-sm text-mauve-400 hover:text-rose-400"
+                className="shrink-0 rounded-sm text-[var(--text-3)] hover:text-[var(--bad)]"
                 aria-label={`Remove ${format.toUpperCase()}`}
               >
                 <XIcon />
@@ -1586,7 +1582,7 @@ function FormatCombobox({
             }
             value={query}
             placeholder={formats.size ? "Add format…" : "Choose formats…"}
-            className="min-w-28 flex-1 border-0 bg-transparent p-0 px-1 text-sm text-white placeholder:text-mauve-500 focus:ring-0 focus:outline-none"
+            className="min-w-28 flex-1 border-0 bg-transparent p-0 px-1 text-sm text-[var(--text)] placeholder:text-[var(--text-3)] focus:ring-0 focus:outline-none"
             onChange={(event) => {
               setQuery(event.target.value);
               setActiveIndex(-1);
@@ -1628,7 +1624,7 @@ function FormatCombobox({
       <ComboboxPopover.Portal>
         <ComboboxPopover.Content
           data-export-formats-popover
-          className="data-[state=open]:shadow-block-sm pointer-events-auto z-60 w-(--radix-popover-trigger-width) rounded-sm border border-white/20 bg-mauve-900 transition-shadow data-[state=open]:delay-200"
+          className="pointer-events-auto z-60 w-(--radix-popover-trigger-width) rounded-sm border border-[var(--line)] bg-[var(--surface)]"
           sideOffset={4}
           align="start"
           onOpenAutoFocus={(event: Event) => event.preventDefault()}
@@ -1652,7 +1648,7 @@ function FormatCombobox({
                     aria-selected={false}
                     data-active={index === activeIndex ? true : undefined}
                     disabled={disabled}
-                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-mauve-200 transition-colors hover:bg-mauve-700 hover:text-white disabled:cursor-not-allowed disabled:text-mauve-600 disabled:hover:bg-transparent data-active:bg-mauve-700 data-active:text-white disabled:data-active:bg-transparent"
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-[var(--text-2)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text)] disabled:cursor-not-allowed disabled:text-[var(--text-3)] disabled:hover:bg-transparent data-active:bg-[var(--surface-2)] data-active:text-[var(--text)] disabled:data-active:bg-transparent"
                     onMouseMove={() => setActiveIndex(index)}
                     onMouseDown={(event) => {
                       event.preventDefault();
@@ -1665,7 +1661,7 @@ function FormatCombobox({
                 );
               })
             ) : (
-              <p className="px-3 py-2 text-sm text-mauve-500">
+              <p className="px-3 py-2 text-sm text-[var(--text-3)]">
                 No matching formats
               </p>
             )}
@@ -1694,25 +1690,22 @@ function OptionButton({
       type="button"
       role="radio"
       aria-checked={selected}
-      className="flex items-center gap-3 rounded-sm border border-mauve-600 bg-mauve-800 p-3 text-left transition hover:border-mauve-400 hover:inset-shadow-sm aria-checked:border-rose-400 aria-checked:ring-1 aria-checked:ring-rose-400"
+      className="con-option"
       onClick={onClick}
     >
       <span
-        className="flex size-10 shrink-0 items-center justify-center rounded-sm border border-white/20"
+        className="con-option-sw"
         style={{
           background:
             "repeating-conic-gradient(#443d49 0 25%, #2e2933 0 50%) 0 0 / 10px 10px",
         }}
         aria-hidden="true"
       >
-        <span
-          className="size-4 rounded-[3px] border border-black/15"
-          style={{ background: swatch }}
-        />
+        <span className="con-option-dot" style={{ background: swatch }} />
       </span>
       <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-sm font-medium text-white">{name}</span>
-        <span className="text-xs text-mauve-400">{detail}</span>
+        <span className="text-sm font-medium text-[var(--text)]">{name}</span>
+        <span className="text-xs text-[var(--text-3)]">{detail}</span>
       </span>
     </button>
   );

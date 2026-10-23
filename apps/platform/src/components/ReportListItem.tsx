@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { formatEventDate } from "~/lib/eventTime";
+import { CaretRightIcon } from "@phosphor-icons/react/ssr";
 import {
   CorroborationBadge,
   ReportStatusBadge,
@@ -36,31 +38,30 @@ export default function ReportListItem({
   clientName,
   variant = "default",
 }: ReportListItemProps) {
-  const date = new Date(createdAt).toLocaleDateString();
+  const date = formatEventDate(createdAt);
   const isCompact = variant === "compact";
 
   return (
     <Link
       href={`/console/moderation/${id}`}
-      className={`flex items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/5 text-sm transition-colors outline-none hover:border-white/25 hover:bg-white/[0.07] focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950 ${
-        isCompact ? "px-4 py-2.5" : "px-4 py-3"
-      }`}
+      className={`con-report ${isCompact ? "compact" : ""}`}
     >
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate font-mono text-xs text-white/80">
+      <span className="con-report-main">
+        <b>
           {contentTypeLabel ? `${contentTypeLabel}: ` : ""}
           {contentId}
-        </span>
+        </b>
         {!isCompact && (
-          <span className="text-xs text-mauve-400">
+          <small>
             {clientName ? `${clientName} · ` : ""}
             {reasonTitle ?? "Unknown reason"} · {date}
-          </span>
+          </small>
         )}
       </span>
-      <span className="flex shrink-0 items-center gap-2">
+      <span className="con-report-end">
         <CorroborationBadge count={isCompact ? 0 : corroborationCount} />
         <ReportStatusBadge status={status} />
+        <CaretRightIcon weight="bold" aria-hidden className="go" />
       </span>
     </Link>
   );

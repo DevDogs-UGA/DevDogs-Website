@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -13,6 +13,12 @@ import {
 import ConfirmDestructiveAction from "~/ui/confirm-destructive-action";
 import DropTarget from "~/ui/drop-target";
 import FormButton from "~/components/FormButton";
+import Badge from "~/ui/badge";
+import { Button } from "~/ui/button";
+import { Checkbox } from "~/ui/checkbox";
+import Field from "~/ui/field";
+import { Input } from "~/ui/input";
+import { Textarea } from "~/ui/textarea";
 import type { RoleRow } from "~/hooks/useRoles";
 import type {
   CreateRoleInput,
@@ -124,160 +130,128 @@ export default function RoleCard({
   return (
     <div
       ref={setNodeRef}
-      style={{ ...style, borderLeftColor: accentColor }}
-      className="rounded-sm border-2 border-l-4 border-mauve-600 bg-mauve-800 transition-opacity"
+      style={style}
+      className="con-rolecard"
+      data-open={expanded || undefined}
     >
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div className="con-rolerow">
         {editable && !isDragOverlay && (
           <button
+            type="button"
             {...attributes}
             {...listeners}
-            className="-m-2 flex shrink-0 cursor-grab touch-none items-center justify-center rounded-sm p-2 text-mauve-500 transition-colors hover:bg-white/10 hover:text-white active:cursor-grabbing"
-            aria-label="Drag to reorder"
-            tabIndex={0}
+            className="iconbtn con-grip"
+            aria-label={`Reorder ${role.title}`}
           >
-            <DotsSixVerticalIcon
-              className="size-4.5 shrink-0 md:size-4"
-              aria-hidden
-            />
+            <DotsSixVerticalIcon weight="bold" aria-hidden />
           </button>
+        )}
+
+        {!(editable && !isDragOverlay) && (
+          <span className="con-grip" aria-hidden />
         )}
 
         <span
-          className="h-3 w-3 shrink-0 rounded-full"
-          style={{ backgroundColor: accentColor }}
+          className="con-swatch"
+          style={{ "--rc": accentColor } as CSSProperties}
           aria-hidden
         />
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-semibold text-white">
-            {role.title}
-          </span>
-          {role.description && (
-            <span className="truncate text-xs text-white/50">
-              {role.description}
-            </span>
-          )}
+        <div className="con-rolename">
+          <b>{role.title}</b>
+          {role.description && <small>{role.description}</small>}
         </div>
 
-        {role.discordRoleId !== null && (
-          <span
-            className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-xs text-indigo-300"
-            title="Name and color sync with this Discord role; only members with a linked Discord account can be assigned this role."
-          >
-            <GameControllerIcon className="h-3 w-3" aria-hidden />
-            {role.discordSyncedName}
-          </span>
-        )}
-
-        <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/50">
-          #{Math.round(role.rank)}
-        </span>
-
-        {editable && !isDragOverlay && (
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="rounded-sm p-1 text-white/40 transition outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white/50"
-            aria-label={expanded ? "Collapse" : "Edit"}
-          >
-            {expanded ? (
-              <XIcon className="h-4 w-4" aria-hidden />
-            ) : (
-              <PencilSimpleIcon className="h-4 w-4" aria-hidden />
-            )}
-          </button>
-        )}
+        <div className="con-rolemeta">
+          {role.discordRoleId !== null && (
+            <Badge variant="info">
+              <GameControllerIcon weight="bold" aria-hidden />
+              {role.discordSyncedName}
+            </Badge>
+          )}
+          <Badge>Rank {Math.round(role.rank)}</Badge>
+          {editable && !isDragOverlay && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-expanded={expanded}
+              onClick={() => setExpanded((v) => !v)}
+            >
+              {expanded ? (
+                <XIcon weight="bold" aria-hidden />
+              ) : (
+                <PencilSimpleIcon weight="bold" aria-hidden />
+              )}
+              {expanded ? "Close" : "Edit"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {expanded && editable && (
-        <div className="flex flex-col gap-4 border-t border-mauve-600 px-4 py-4">
-          <label className="flex flex-col gap-1 text-xs font-medium text-white/70">
-            Title
-            <input
+        <div className="con-roleedit">
+          <Field label="Title" htmlFor={`role-title-${role.id}`}>
+            <Input
+              id={`role-title-${role.id}`}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/40"
               placeholder="Role title"
             />
-          </label>
+          </Field>
 
-          <label className="flex flex-col gap-1 text-xs font-medium text-white/70">
-            Description
-            <textarea
+          <Field label="Description" htmlFor={`role-desc-${role.id}`}>
+            <Textarea
+              id={`role-desc-${role.id}`}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              className="resize-none rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/40"
               placeholder="Brief description of this role"
             />
-          </label>
+          </Field>
 
-          <label className="flex items-center gap-3 text-xs font-medium text-white/70">
-            Color
+          <label className="con-color">
+            <span className="label">Color</span>
             <input
               type="color"
               value={color}
               onChange={(e) => setColor(e.target.value)}
-              className="h-7 w-10 cursor-pointer rounded border border-white/20 bg-transparent p-0.5"
             />
-            <span className="font-mono text-white/50">{color}</span>
+            <code className="con-code">{color}</code>
           </label>
 
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 text-xs font-medium text-white/70">
-              Display
-            </legend>
-            <label className="flex cursor-pointer items-center gap-2 text-xs text-white/80">
-              <input
-                type="checkbox"
-                checked={showOnProfile}
-                onChange={(e) => setShowOnProfile(e.target.checked)}
-                className="accent-indigo-400"
-              />
-              Show this role on members&apos; profiles
-            </label>
-            <label className="flex cursor-pointer items-center gap-2 text-xs text-white/80">
-              <input
-                type="checkbox"
-                checked={isLeadership}
-                onChange={(e) => setIsLeadership(e.target.checked)}
-                className="accent-indigo-400"
-              />
-              Leadership role (homepage + Role Description field)
-            </label>
+          <fieldset className="con-checks">
+            <legend className="eyebrow">Display</legend>
+            <Checkbox
+              checked={showOnProfile}
+              onChange={(e) => setShowOnProfile(e.target.checked)}
+              label="Show this role on members' profiles"
+            />
+            <Checkbox
+              checked={isLeadership}
+              onChange={(e) => setIsLeadership(e.target.checked)}
+              label="Leadership role (homepage + Role Description field)"
+            />
           </fieldset>
 
-          <fieldset>
-            <legend className="mb-2 text-xs font-medium text-white/70">
-              Permissions
-            </legend>
-            <div className="grid grid-cols-1 gap-y-2 @sm:grid-cols-2">
+          <fieldset className="con-checks">
+            <legend className="eyebrow">Permissions</legend>
+            <div className="con-perm-edit">
               {PERMISSION_KEYS.map((key) => {
                 const callerHas = callerPermissions[key];
                 return (
-                  <label
+                  <Checkbox
                     key={key}
-                    className={[
-                      "flex cursor-pointer items-center gap-2 text-xs",
-                      callerHas
-                        ? "text-white/80"
-                        : "cursor-not-allowed text-white/30",
-                    ].join(" ")}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={permissions[key] === true}
-                      disabled={!callerHas}
-                      onChange={(e) =>
-                        setPermissions((p) => ({
-                          ...p,
-                          [key]: e.target.checked ? true : null,
-                        }))
-                      }
-                      className="accent-indigo-400"
-                    />
-                    {PERMISSION_LABELS[key]}
-                  </label>
+                    checked={permissions[key] === true}
+                    disabled={!callerHas}
+                    onChange={(e) =>
+                      setPermissions((p) => ({
+                        ...p,
+                        [key]: e.target.checked ? true : null,
+                      }))
+                    }
+                    label={PERMISSION_LABELS[key]}
+                  />
                 );
               })}
             </div>
@@ -285,44 +259,44 @@ export default function RoleCard({
 
           <DiscordSyncSection role={role} callerCapability={callerCapability} />
 
-          <div className="flex items-center justify-between gap-3">
+          <div className="con-roleactions">
             <ConfirmDestructiveAction
-              title="Delete role"
+              title={`Delete the ${role.title} role?`}
               description={
                 <>
-                  This will permanently delete the <strong>{role.title}</strong>{" "}
-                  role and remove it from all users. This cannot be undone.
+                  This permanently deletes the <strong>{role.title}</strong>{" "}
+                  role and removes it from everyone who holds it. Type the role
+                  name to confirm.
                 </>
               }
               action={async () => onDelete?.()}
-              submitLabel="Delete"
+              submitLabel="Delete role"
               userConfirmText={role.title}
             >
               <FormButton
                 theme="rose"
+                variant="destructive"
                 type="submit"
                 disabled={isDeleting}
-                className="text-xs"
+                size="sm"
               >
                 Delete role
               </FormButton>
             </ConfirmDestructiveAction>
 
-            <div className="flex gap-2">
-              <button
-                onClick={handleCancel}
-                className="rounded-lg border border-white/20 px-3 py-1.5 text-xs text-white/70 transition hover:bg-white/10"
-              >
+            <div className="acts" style={{ display: "flex", gap: 10 }}>
+              <Button type="button" variant="ghost" onClick={handleCancel}>
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                type="button"
                 onClick={handleSave}
                 disabled={isUpdating || !title.trim()}
-                className="flex items-center gap-1.5 rounded-lg bg-indigo-500 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-indigo-400 disabled:opacity-50"
+                loading={isUpdating}
               >
-                <CheckIcon className="h-3.5 w-3.5" aria-hidden />
-                {isUpdating ? "Saving…" : "Save"}
-              </button>
+                <CheckIcon weight="bold" aria-hidden />
+                Save
+              </Button>
             </div>
           </div>
         </div>

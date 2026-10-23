@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
-import PageShell from "~/components/PageShell";
+import ConsoleShell from "~/components/Console/ConsoleShell";
 import QrGenerator from "~/components/QrGenerator";
 import { canUserManageAttendance } from "~/server/actions/permissions";
 import { requirePermission } from "~/server/auth/require";
+import { PageHeading } from "~/ui/app-shell";
 import Callout from "~/ui/callout";
 
-export const metadata: Metadata = { title: "QR Codes | DevDogs" };
+export const metadata: Metadata = {
+  title: "QR codes | Console | DevDogs",
+  robots: { index: false },
+};
 
 /**
  * Deprecated in favour of `backstage qr`, which takes the same options (both
@@ -15,17 +19,18 @@ export const metadata: Metadata = { title: "QR Codes | DevDogs" };
 export default async function QrPage() {
   await requirePermission(canUserManageAttendance);
   return (
-    <PageShell
-      accent="rose"
-      title="QR Codes"
-      description="Create branded, print-ready QR codes without installing the contributor CLI."
-    >
+    <ConsoleShell current="/console/qr">
+      <PageHeading
+        title="QR codes"
+        description="Create branded, print-ready QR codes without installing the contributor CLI."
+      />
       <Callout tone="warning" title="This page is deprecated">
         Use <code>pnpm backstage qr</code> from a Backstage clone instead. It
         takes the same options and needs no sign-in. New QR features land there
         only.
       </Callout>
+      <div style={{ height: 24 }} />
       <QrGenerator />
-    </PageShell>
+    </ConsoleShell>
   );
 }

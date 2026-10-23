@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { PlusIcon, XIcon } from "@phosphor-icons/react/ssr";
-import FormButton from "~/components/FormButton";
+import { Button } from "~/ui/button";
+import Callout from "~/ui/callout";
+import { Checkbox } from "~/ui/checkbox";
+import Field from "~/ui/field";
+import { Input } from "~/ui/input";
+import { Textarea } from "~/ui/textarea";
 import type {
   CreateRoleInput,
   ResolvedPermissions,
@@ -93,151 +98,116 @@ export default function CreateRoleDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
       <DialogTrigger asChild>
-        <button className="flex items-center gap-2 rounded-lg border-2 border-indigo-400 bg-indigo-500/20 px-4 py-1.5 text-sm font-medium text-white transition outline-none hover:bg-indigo-500/40 focus-visible:ring-2 focus-visible:ring-indigo-400">
-          <PlusIcon aria-hidden />
-          New Role
-        </button>
+        <Button type="button" variant="outline" size="sm">
+          <PlusIcon weight="bold" aria-hidden />
+          Create role
+        </Button>
       </DialogTrigger>
 
-      <DialogContent
-        className="max-w-md border-white/20 bg-mauve-900 p-0 shadow-2xl"
-        showCloseButton={false}
-      >
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-5 py-6">
+      <DialogContent className="max-w-md" showCloseButton={false}>
+        <form onSubmit={handleSubmit} className="con-stack">
           <DialogHeader className="flex-row items-center justify-between">
-            <DialogTitle className="text-base font-semibold text-white">
-              New Role
-            </DialogTitle>
-            <DialogClose className="rounded-sm p-1 text-white/40 transition outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white/50">
-              <XIcon aria-hidden />
+            <DialogTitle>Create role</DialogTitle>
+            <DialogClose className="iconbtn" aria-label="Close">
+              <XIcon weight="bold" aria-hidden />
             </DialogClose>
           </DialogHeader>
+          <p className="small muted" style={{ margin: 0 }}>
+            Starts at rank {nextRank}, with no permissions.
+          </p>
 
-          {/* Title */}
-          <label className="flex flex-col gap-1 text-xs font-medium text-white/70">
-            Title *
-            <input
+          <Field label="Title" htmlFor="new-role-title" required>
+            <Input
+              id="new-role-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
               placeholder="e.g. Social Media Manager"
-              className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/40"
             />
-          </label>
+          </Field>
 
-          {/* Description */}
-          <label className="flex flex-col gap-1 text-xs font-medium text-white/70">
-            Description
-            <textarea
+          <Field label="Description" htmlFor="new-role-desc">
+            <Textarea
+              id="new-role-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              placeholder="Optional — briefly describe this role"
-              className="resize-none rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none placeholder:text-white/30 focus:border-white/40"
+              placeholder="Optional. Briefly describe this role."
             />
-          </label>
+          </Field>
 
-          {/* Color + Rank */}
-          <div className="flex gap-4">
-            <label className="flex items-center gap-3 text-xs font-medium text-white/70">
-              Color
+          <div className="con-fields">
+            <label className="con-color">
+              <span className="label">Color</span>
               <input
                 type="color"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
-                className="h-7 w-10 cursor-pointer rounded border border-white/20 bg-transparent p-0.5"
               />
+              <code className="con-code">{color}</code>
             </label>
-            <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-white/70">
-              Rank *
-              <input
+            <Field label="Rank" htmlFor="new-role-rank" required>
+              <Input
+                id="new-role-rank"
                 type="number"
                 value={rank}
                 onChange={(e) => setRank(Number(e.target.value))}
                 min={1}
                 step={1}
                 required
-                className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none focus:border-white/40"
               />
-            </label>
+            </Field>
           </div>
 
-          {/* Display */}
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 text-xs font-medium text-white/70">
-              Display
-            </legend>
-            <label className="flex cursor-pointer items-center gap-2 text-xs text-white/80">
-              <input
-                type="checkbox"
-                checked={showOnProfile}
-                onChange={(e) => setShowOnProfile(e.target.checked)}
-                className="accent-indigo-400"
-              />
-              Show this role on members&apos; profiles
-            </label>
-            <label className="flex cursor-pointer items-center gap-2 text-xs text-white/80">
-              <input
-                type="checkbox"
-                checked={isLeadership}
-                onChange={(e) => setIsLeadership(e.target.checked)}
-                className="accent-indigo-400"
-              />
-              Leadership role (homepage + Role Description field)
-            </label>
+          <fieldset className="con-checks">
+            <legend className="eyebrow">Display</legend>
+            <Checkbox
+              checked={showOnProfile}
+              onChange={(e) => setShowOnProfile(e.target.checked)}
+              label="Show this role on members' profiles"
+            />
+            <Checkbox
+              checked={isLeadership}
+              onChange={(e) => setIsLeadership(e.target.checked)}
+              label="Leadership role (homepage + Role Description field)"
+            />
           </fieldset>
 
-          {/* Permissions */}
-          <fieldset>
-            <legend className="mb-2 text-xs font-medium text-white/70">
-              Permissions
-            </legend>
-            <div className="grid grid-cols-1 gap-y-2 @sm:grid-cols-2">
-              {PERMISSION_KEYS.map((key) => {
-                const callerHas = callerPermissions[key];
-                return (
-                  <label
-                    key={key}
-                    className={[
-                      "flex cursor-pointer items-center gap-2 text-xs",
-                      callerHas
-                        ? "text-white/80"
-                        : "cursor-not-allowed text-white/30",
-                    ].join(" ")}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={!!permissions[key]}
-                      disabled={!callerHas}
-                      onChange={(e) =>
-                        setPermissions((p) => ({
-                          ...p,
-                          [key]: e.target.checked,
-                        }))
-                      }
-                      className="accent-indigo-400"
-                    />
-                    {PERMISSION_LABELS[key]}
-                  </label>
-                );
-              })}
+          <fieldset className="con-checks">
+            <legend className="eyebrow">Permissions</legend>
+            <div className="con-perm-edit">
+              {PERMISSION_KEYS.map((key) => (
+                <Checkbox
+                  key={key}
+                  checked={!!permissions[key]}
+                  disabled={!callerPermissions[key]}
+                  onChange={(e) =>
+                    setPermissions((p) => ({ ...p, [key]: e.target.checked }))
+                  }
+                  label={PERMISSION_LABELS[key]}
+                />
+              ))}
             </div>
           </fieldset>
 
-          {error && <p className="text-xs text-rose-400">{error}</p>}
+          {error && (
+            <Callout tone="critical" alert>
+              {error}
+            </Callout>
+          )}
 
-          <div className="flex justify-end gap-3">
+          <div
+            className="acts"
+            style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}
+          >
             <DialogClose asChild>
-              <button
-                type="button"
-                className="rounded-lg border border-white/20 px-4 py-1.5 text-sm text-white/70 transition hover:bg-white/10"
-              >
+              <Button type="button" variant="ghost">
                 Cancel
-              </button>
+              </Button>
             </DialogClose>
-            <FormButton theme="black" type="submit" disabled={isPending}>
-              Create
-            </FormButton>
+            <Button type="submit" disabled={isPending} loading={isPending}>
+              Create role
+            </Button>
           </div>
         </form>
       </DialogContent>

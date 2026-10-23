@@ -7,6 +7,11 @@ import {
 } from "~/server/actions/moderationDeliveries";
 import FormButton from "~/components/FormButton";
 import Badge from "~/ui/badge";
+import Callout from "~/ui/callout";
+import { EmptyState } from "~/ui/empty-state";
+import Field from "~/ui/field";
+import { Input } from "~/ui/input";
+import { Textarea } from "~/ui/textarea";
 
 export interface ExternalAppEntry {
   id: string;
@@ -18,9 +23,6 @@ export interface ExternalAppEntry {
 }
 
 const INITIAL: RegisterAppState = { ok: true, message: null };
-
-const fieldClass =
-  "w-full rounded-sm border border-mauve-600 bg-mauve-800 px-2 py-1.5 text-sm text-white outline-none focus:border-white";
 
 /**
  * The apps whose Report & Block runs outside this database, and the form that
@@ -40,29 +42,25 @@ export default function ExternalAppsField({
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="con-stack">
       {apps.length === 0 ? (
-        <p className="text-sm text-mauve-400">No external apps registered.</p>
+        <EmptyState
+          title="No outside apps"
+          description="Reports from apps on this platform need no registration."
+        />
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="con-apps">
           {apps.map((app) => (
-            <li
-              key={app.id}
-              className="flex flex-col gap-1 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium text-white">
-                  {app.displayName}
-                </span>
-                <span className="font-mono text-xs text-mauve-400">
-                  {app.slug}
-                </span>
+            <li key={app.id}>
+              <div className="con-meta">
+                <b style={{ color: "var(--text)" }}>{app.displayName}</b>
+                <code className="con-code">{app.slug}</code>
                 {!app.clientId && <Badge variant="danger">no client</Badge>}
               </div>
-              <p className="truncate font-mono text-xs text-mauve-300">
+              <code className="con-code block">
                 {app.endpointUrl ?? "no endpoint"}
-              </p>
-              <p className="text-xs text-mauve-400">
+              </code>
+              <p className="small muted" style={{ margin: 0 }}>
                 Content types: {app.contentTypes.join(", ") || "none"}
               </p>
             </li>
@@ -70,71 +68,88 @@ export default function ExternalAppsField({
         </ul>
       )}
 
+      {!canRegister && (
+        <Callout
+          tone="info"
+          title="You can see these apps but not register them."
+        >
+          Registering needs Manage OAuth apps. The form is hidden.
+        </Callout>
+      )}
+
       {canRegister && (
-        <form action={dispatch} className="flex flex-col gap-3">
-          <span className="font-medium text-white">Register an app</span>
-          <p className="text-xs text-mauve-400">
+        <form action={dispatch} className="con-stack">
+          <h3 className="h3" style={{ margin: 0 }}>
+            Register an app
+          </h3>
+          <p className="help" style={{ margin: 0 }}>
             Only a production OAuth client can be registered. Re-registering a
             slug updates it, and pointing it at another client moves the
             registration (the old client&apos;s reports are then refused until
             it is registered again).
           </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <input
-              name="slug"
-              required
-              placeholder="slug (dogpack)"
-              className={fieldClass}
-            />
-            <input
-              name="displayName"
-              required
-              placeholder="name (DogPack)"
-              className={fieldClass}
-            />
-            <input
-              name="clientId"
-              required
-              placeholder="OAuth client id"
-              className={`${fieldClass} font-mono`}
-            />
-            <input
-              name="endpointUrl"
-              required
-              type="url"
-              placeholder="https://<ref>.supabase.co/functions/v1/platform-moderation"
-              className={fieldClass}
-            />
+          <div className="con-fields">
+            <Field label="Slug" htmlFor="app-slug">
+              <Input id="app-slug" name="slug" required placeholder="dogpack" />
+            </Field>
+            <Field label="Name" htmlFor="app-name">
+              <Input
+                id="app-name"
+                name="displayName"
+                required
+                placeholder="DogPack"
+              />
+            </Field>
+            <Field label="OAuth client id" htmlFor="app-client">
+              <Input
+                id="app-client"
+                name="clientId"
+                required
+                placeholder="client id"
+                className="mono"
+              />
+            </Field>
+            <Field label="Endpoint" htmlFor="app-endpoint">
+              <Input
+                id="app-endpoint"
+                name="endpointUrl"
+                required
+                type="url"
+                placeholder="https://<ref>.supabase.co/functions/v1/platform-moderation"
+              />
+            </Field>
           </div>
-          <textarea
-            name="contentTypes"
-            required
-            rows={3}
-            placeholder={
-              "session | Study session | https://app.example/s/{ref}\nprofile | Profile"
-            }
-            className={`${fieldClass} font-mono`}
-          />
+          <Field
+            label="Content types"
+            htmlFor="app-types"
+            description="One per line: slug | label | link template (optional)."
+          >
+            <Textarea
+              id="app-types"
+              name="contentTypes"
+              required
+              rows={3}
+              className="mono"
+              placeholder={
+                "session | Study session | https://app.example/s/{ref}\nprofile | Profile"
+              }
+            />
+          </Field>
           <FormButton
             theme="cyan"
             type="submit"
             disabled={isPending}
-            className="w-fit text-sm"
+            className="w-fit"
           >
-            Register
+            Register app
           </FormButton>
           {state.message && (
-            <p
-              role="status"
-              className={`text-sm ${state.ok ? "text-emerald-300" : "text-rose-300"}`}
-            >
+            <Callout tone={state.ok ? "success" : "critical"} alert>
               {state.message}
-            </p>
+            </Callout>
           )}
           {state.secret && (
-            <code className="rounded-sm bg-mauve-800 px-2 py-1.5 font-mono text-xs break-all text-white select-all">
-              {state.secret}
-            </code>
+            <code className="con-code block">{state.secret}</code>
           )}
         </form>
       )}

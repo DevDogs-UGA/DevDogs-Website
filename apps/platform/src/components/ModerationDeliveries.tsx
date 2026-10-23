@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowsClockwiseIcon } from "@phosphor-icons/react/ssr";
 import { resendDelivery } from "~/server/actions/moderationDeliveries";
 import FormButton from "~/components/FormButton";
 import Badge from "~/ui/badge";
@@ -44,47 +45,40 @@ export default function ModerationDeliveries({
   linkReports?: boolean;
 }) {
   return (
-    <ul className="flex flex-col gap-3">
+    <ul className="con-deliveries">
       {deliveries.map((delivery) => (
-        <li
-          key={delivery.id}
-          className="flex flex-col gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div className="flex min-w-0 flex-col gap-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs text-white/80">
-                {delivery.type}
-              </span>
+        <li key={delivery.id}>
+          <div>
+            <div className="con-meta">
+              <code className="con-code">{delivery.type}</code>
               <Badge variant={STATUS_VARIANT[delivery.status]}>
                 {delivery.status}
               </Badge>
-              {delivery.appName && (
-                <span className="text-xs text-mauve-400">
-                  {delivery.appName}
-                </span>
+              {delivery.appName && <span>{delivery.appName}</span>}
+              <span>
+                {delivery.attempts} attempt{delivery.attempts === 1 ? "" : "s"}
+              </span>
+            </div>
+            <p className="small muted" style={{ margin: "6px 0 0" }}>
+              {delivery.lastError && delivery.status !== "delivered" ? (
+                <>{delivery.lastError}. </>
+              ) : (
+                <>{STATUS_HELP[delivery.status]} </>
               )}
               {linkReports && delivery.reportId && (
                 <Link
                   href={`/console/moderation/${delivery.reportId}`}
-                  className="text-xs text-mauve-400 hover:text-white"
+                  className="textlink"
                 >
-                  Report &rarr;
+                  Open report
                 </Link>
               )}
-            </div>
-            <p className="text-xs text-mauve-400">
-              {STATUS_HELP[delivery.status]} {delivery.attempts} attempt
-              {delivery.attempts === 1 ? "" : "s"}.
             </p>
-            {delivery.lastError && delivery.status !== "delivered" && (
-              <p className="truncate font-mono text-xs text-rose-300">
-                {delivery.lastError}
-              </p>
-            )}
           </div>
           {delivery.status !== "delivered" && (
             <form action={resendDelivery.bind(null, delivery.id)}>
-              <FormButton theme="black" type="submit" className="text-sm">
+              <FormButton theme="black" type="submit" size="sm">
+                <ArrowsClockwiseIcon weight="bold" aria-hidden />
                 Resend
               </FormButton>
             </form>

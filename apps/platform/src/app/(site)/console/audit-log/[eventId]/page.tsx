@@ -1,8 +1,16 @@
-import Link from "next/link";
-import PageShell from "~/components/PageShell";
+import type { Metadata } from "next";
+import ConsoleShell from "~/components/Console/ConsoleShell";
+import { formatEventDateTime } from "~/lib/eventTime";
 import type { ReflectionRevisionDetail } from "~/server/loaders/auditLog";
 import { getAuditEventDetailData } from "~/server/loaders/auditLog";
-import { ConsoleCard } from "~/ui/card";
+import { PageHeading, Panel } from "~/ui/app-shell";
+import { DefinitionList } from "~/ui/definition-list";
+import { TerminalBlock } from "~/ui/terminal-block";
+
+export const metadata: Metadata = {
+  title: "Audit event | Console | DevDogs",
+  robots: { index: false },
+};
 
 function Revision({
   label,
@@ -14,34 +22,26 @@ function Revision({
   if (!revision) return null;
 
   return (
-    <section className="rounded-lg border border-white/10 bg-white/5 p-4">
-      <h3 className="font-semibold text-white">{label}</h3>
-      <dl className="mt-2 grid gap-1 text-xs text-mauve-300">
-        <div>
-          <dt className="inline font-medium text-white/80">Activity: </dt>
-          <dd className="inline font-mono">
-            {`meeting:${revision.meetingId}`}
-          </dd>
-        </div>
-        <div>
-          <dt className="inline font-medium text-white/80">Submitted: </dt>
-          <dd className="inline">
-            {revision.submittedAt
-              ? new Date(revision.submittedAt).toLocaleString()
-              : "Draft"}
-          </dd>
-        </div>
-        {revision.changeReason && (
-          <div>
-            <dt className="inline font-medium text-white/80">Reason: </dt>
-            <dd className="inline">{revision.changeReason}</dd>
-          </div>
-        )}
-      </dl>
-      <p className="mt-4 rounded-md bg-black/20 p-3 text-sm whitespace-pre-wrap text-mauve-100">
-        {revision.content}
-      </p>
-    </section>
+    <Panel title={label}>
+      <DefinitionList
+        items={[
+          {
+            term: "Activity",
+            detail: <code>{`meeting:${revision.meetingId}`}</code>,
+          },
+          {
+            term: "Submitted",
+            detail: revision.submittedAt
+              ? formatEventDateTime(revision.submittedAt)
+              : "Draft",
+          },
+          ...(revision.changeReason
+            ? [{ term: "Reason", detail: revision.changeReason }]
+            : []),
+        ]}
+      />
+      <p className="con-revision">{revision.content}</p>
+    </Panel>
   );
 }
 
@@ -55,56 +55,42 @@ export default async function AuditEventPage({
     await getAuditEventDetailData(eventId);
 
   return (
-    <PageShell
-      accent="blue"
-      title="Audit event"
-      description={`${event.action} · ${new Date(event.createdAt).toLocaleString()}`}
-    >
-      <ConsoleCard.Root>
-        <ConsoleCard.Header
-          title={`${event.targetType}: ${event.targetId}`}
-          description={`${event.source} · ${event.actorType} · ${event.actor}`}
+    <ConsoleShell current="/console/audit-log">
+      <PageHeading
+        crumbs={[
+          { label: "Audit log", href: "/console/audit-log" },
+          { label: "Event" },
+        ]}
+        title="Audit event"
+        description={`${event.action} · ${formatEventDateTime(event.createdAt)}`}
+      />
+
+      <Panel title={`${event.targetType}: ${event.targetId}`}>
+        <DefinitionList
+          items={[
+            { term: "Source", detail: event.source },
+            { term: "Actor", detail: `${event.actorType} · ${event.actor}` },
+            { term: "Event ID", detail: <code>{event.id}</code> },
+            {
+              term: "Correlation ID",
+              detail: event.correlationId ? (
+                <code>{event.correlationId}</code>
+              ) : (
+                "None"
+              ),
+            },
+          ]}
         />
-        <ConsoleCard.Content>
-          <div className="grid gap-4">
-            <dl className="grid gap-2 text-sm text-mauve-200 sm:grid-cols-2">
-              <div>
-                <dt className="text-xs text-mauve-400">Event ID</dt>
-                <dd className="font-mono break-all">{event.id}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-mauve-400">Correlation ID</dt>
-                <dd className="font-mono break-all">
-                  {event.correlationId ?? "None"}
-                </dd>
-              </div>
-            </dl>
+      </Panel>
 
-            <section>
-              <h3 className="mb-2 font-semibold text-white">Metadata</h3>
-              <pre className="overflow-x-auto rounded-md bg-black/20 p-3 text-xs text-mauve-200">
-                {JSON.stringify(event.metadata, null, 2)}
-              </pre>
-            </section>
+      <Panel title="Metadata">
+        <TerminalBlock title="metadata.json">
+          {JSON.stringify(event.metadata, null, 2)}
+        </TerminalBlock>
+      </Panel>
 
-            <Revision
-              label="Before reflection revision"
-              revision={beforeRevision}
-            />
-            <Revision
-              label="After reflection revision"
-              revision={afterRevision}
-            />
-
-            <Link
-              className="text-sm text-blue-300 hover:underline"
-              href="/console/audit-log"
-            >
-              Back to audit log
-            </Link>
-          </div>
-        </ConsoleCard.Content>
-      </ConsoleCard.Root>
-    </PageShell>
+      <Revision label="Before reflection revision" revision={beforeRevision} />
+      <Revision label="After reflection revision" revision={afterRevision} />
+    </ConsoleShell>
   );
 }

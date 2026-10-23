@@ -1,7 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CheckIcon, XIcon, SpinnerGapIcon } from "@phosphor-icons/react/ssr";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  CheckCircleIcon,
+  CircleIcon,
+  SpinnerGapIcon,
+} from "@phosphor-icons/react/ssr";
 import { getUserResolvedPermissions } from "~/server/actions/permissions";
 import type {
   RoleSummary,
@@ -44,8 +48,8 @@ export default function UserPermissionsPanel({ userId }: Props) {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 py-4 text-sm text-white/50">
-        <SpinnerGapIcon className="h-4 w-4 animate-spin" aria-hidden />
+      <div className="con-meta" style={{ padding: "16px 0" }}>
+        <SpinnerGapIcon className="animate-spin" aria-hidden />
         Loading permissions…
       </div>
     );
@@ -54,61 +58,63 @@ export default function UserPermissionsPanel({ userId }: Props) {
   if (!data) return null;
 
   return (
-    <div className="mt-2 rounded-lg border border-white/10 bg-white/5 p-4">
-      {/* Assigned roles */}
-      <div className="mb-3">
-        <p className="mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">
-          Assigned roles
-        </p>
-        {data.roles.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {data.roles.map((role) => (
-              <span
-                key={role.id}
-                className="rounded-full px-2.5 py-0.5 text-xs font-medium text-white"
-                style={{
-                  backgroundColor: role.color ?? "#818cf8" + "33",
-                  borderColor: role.color ?? "#818cf8",
-                  borderWidth: 1,
-                }}
-              >
-                {role.title}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-white/40">
-            No roles assigned (defaults to member).
-          </p>
-        )}
-      </div>
-
-      {/* Resolved permissions */}
-      <p className="mb-2 text-xs font-semibold tracking-wider text-white/50 uppercase">
-        Resolved permissions
+    <div className="con-perms">
+      <p className="eyebrow" style={{ margin: "0 0 8px" }}>
+        Assigned roles
       </p>
-      <div className="grid grid-cols-1 gap-y-1.5 @sm:grid-cols-2">
-        {PERMISSION_KEYS.map((key) => (
-          <div key={key} className="flex items-center gap-2 text-xs">
-            {data.resolved[key] ? (
-              <CheckIcon
-                className="h-3.5 w-3.5 shrink-0 text-green-400"
-                aria-hidden
-              />
-            ) : (
-              <XIcon
-                className="h-3.5 w-3.5 shrink-0 text-white/30"
-                aria-hidden
-              />
-            )}
-            <span
-              className={data.resolved[key] ? "text-white/80" : "text-white/40"}
-            >
+      {data.roles.length > 0 ? (
+        <div className="con-roles">
+          {data.roles.map((role) => (
+            <RoleChip key={role.id} color={role.color}>
+              {role.title}
+            </RoleChip>
+          ))}
+        </div>
+      ) : (
+        <p className="small muted" style={{ margin: 0 }}>
+          No roles assigned (defaults to member).
+        </p>
+      )}
+
+      <p className="eyebrow" style={{ margin: "16px 0 8px" }}>
+        What they can do, from all of their roles
+      </p>
+      <ul className="con-perm-grid">
+        {PERMISSION_KEYS.map((key) => {
+          const on = data.resolved[key];
+          return (
+            <li key={key} data-on={on || undefined}>
+              {on ? (
+                <CheckCircleIcon weight="bold" aria-hidden />
+              ) : (
+                <CircleIcon aria-hidden />
+              )}
               {PERMISSION_LABELS[key]}
-            </span>
-          </div>
-        ))}
-      </div>
+              <span className="sr-only">
+                {on ? " (granted)" : " (not granted)"}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
+  );
+}
+
+/** A role's name in its own colour (a data value, so an inline custom property). */
+export function RoleChip({
+  color,
+  children,
+}: {
+  color: string | null;
+  children: ReactNode;
+}) {
+  return (
+    <span
+      className="con-role"
+      style={{ "--rc": color ?? "#818cf8" } as CSSProperties}
+    >
+      {children}
+    </span>
   );
 }

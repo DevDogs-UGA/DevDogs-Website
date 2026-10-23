@@ -19,7 +19,17 @@ import {
   type DiscordSyncCapability,
 } from "~/lib/discordCapability";
 import type { RoleRow } from "~/hooks/useRoles";
-import UserPermissionsPanel from "./UserPermissionsPanel";
+import UserPermissionsPanel, { RoleChip } from "./UserPermissionsPanel";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+} from "~/ui/alert-dialog";
+import { Button } from "~/ui/button";
 
 interface Props {
   roles: RoleRow[];
@@ -122,35 +132,29 @@ export default function UserRoleManager({
     });
   }
 
-  return (
-    <section className="mx-auto w-full max-w-3xl">
-      <h3 className="mb-4 text-lg font-semibold text-white">
-        Assign Roles to Users
-      </h3>
+  const [removing, setRemoving] = useState<{
+    userId: string;
+    roleId: string;
+    userName: string;
+    roleTitle: string;
+  } | null>(null);
 
-      {/* Search */}
-      <div className="relative mb-4">
-        <MagnifyingGlassIcon
-          className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-white/40"
-          aria-hidden
-        />
+  return (
+    <div>
+      <div className="input con-search">
+        <MagnifyingGlassIcon aria-hidden />
         <input
           value={query}
           onChange={(e) => handleQueryChange(e.target.value)}
           placeholder="Search by name…"
-          className="w-full rounded-xl border border-white/20 bg-white/10 py-2.5 pr-4 pl-9 text-sm text-white outline-none placeholder:text-white/40 focus:border-white/40"
+          aria-label="Search for a member by name"
+          type="search"
         />
-        {searching && (
-          <SpinnerGapIcon
-            className="absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 animate-spin text-white/40"
-            aria-hidden
-          />
-        )}
+        {searching && <SpinnerGapIcon className="animate-spin" aria-hidden />}
       </div>
 
-      {/* Results */}
       {results.length > 0 && (
-        <div className="flex flex-col gap-3">
+        <ul className="con-people">
           {results.map((user) => {
             const assignedIds = new Set(user.roles.map((r) => r.id));
             const addableRoles = delegatableRoles.filter(
@@ -172,72 +176,68 @@ export default function UserRoleManager({
             const isInspecting = inspectingId === user.id;
 
             return (
-              <div
-                key={user.id}
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-3"
-              >
-                <div className="flex flex-wrap items-center gap-3">
-                  {/* User info */}
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-sm font-semibold text-white">
-                      {user.preferredName}
-                    </span>
-                    <span className="truncate text-xs text-white/50">
-                      {user.email}
-                    </span>
+              <li key={user.id}>
+                <div className="con-person">
+                  <div>
+                    <b>{user.preferredName}</b>
+                    <span className="small muted">{user.email}</span>
                   </div>
-
-                  {/* Inspect button */}
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-expanded={isInspecting}
                     onClick={() =>
                       setInspectingId(isInspecting ? null : user.id)
                     }
-                    className="flex items-center gap-1 rounded-lg border border-white/20 px-2.5 py-1 text-xs text-white/60 transition hover:bg-white/10"
                   >
                     {isInspecting ? (
-                      <XIcon className="h-3 w-3" aria-hidden />
+                      <XIcon weight="bold" aria-hidden />
                     ) : (
-                      <CaretDownIcon className="h-3 w-3" aria-hidden />
+                      <CaretDownIcon weight="bold" aria-hidden />
                     )}
                     Inspect
-                  </button>
+                  </Button>
                 </div>
 
-                {/* Assigned role badges */}
-                {user.roles.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
+                {user.roles.length > 0 ? (
+                  <div className="con-roles">
                     {user.roles.map((role) => {
                       const canRemove = role.rank > callerMinRank;
                       return (
-                        <span
-                          key={role.id}
-                          className="flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium text-white"
-                          style={{
-                            backgroundColor: (role.color ?? "#818cf8") + "22",
-                            borderColor: role.color ?? "#818cf8",
-                            borderWidth: 1,
-                          }}
-                        >
+                        <RoleChip key={role.id} color={role.color}>
                           {role.title}
                           {canRemove && (
                             <button
-                              onClick={() => handleRemove(user.id, role.id)}
+                              type="button"
+                              onClick={() =>
+                                setRemoving({
+                                  userId: user.id,
+                                  roleId: role.id,
+                                  userName: user.preferredName,
+                                  roleTitle: role.title,
+                                })
+                              }
                               disabled={isPending}
-                              className="ml-0.5 rounded-full text-white/60 hover:text-white disabled:opacity-50"
                               aria-label={`Remove ${role.title}`}
                             >
-                              <XIcon className="h-2.5 w-2.5" aria-hidden />
+                              <XIcon weight="bold" aria-hidden />
                             </button>
                           )}
-                        </span>
+                        </RoleChip>
                       );
                     })}
                   </div>
+                ) : (
+                  <p className="small muted" style={{ margin: "8px 0 0" }}>
+                    No roles.
+                  </p>
                 )}
 
-                {/* Add role dropdown */}
+                {isInspecting && <UserPermissionsPanel userId={user.id} />}
+
                 {addableRoles.length > 0 && (
-                  <div className="mt-3">
+                  <div style={{ marginTop: 12 }}>
                     <RoleDropdown
                       roles={addableRoles}
                       disabledRoleReasons={disabledRoleReasons}
@@ -247,21 +247,47 @@ export default function UserRoleManager({
                     />
                   </div>
                 )}
-
-                {/* Permissions panel */}
-                {isInspecting && <UserPermissionsPanel userId={user.id} />}
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
 
       {!searching && query.trim() && results.length === 0 && (
-        <p className="text-center text-sm text-white/40">
+        <p className="small muted" style={{ textAlign: "center" }}>
           No users found for &ldquo;{query}&rdquo;.
         </p>
       )}
-    </section>
+
+      <AlertDialog
+        open={removing !== null}
+        onOpenChange={(open) => !open && setRemoving(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogTitle>
+            Remove {removing?.roleTitle} from {removing?.userName}?
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            They lose what the role allows straight away. If the role is synced
+            with Discord, it is taken off them there too. The change is written
+            to the audit log.
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="danger-solid"
+              type="button"
+              onClick={() => {
+                if (removing) handleRemove(removing.userId, removing.roleId);
+                setRemoving(null);
+              }}
+            >
+              Remove role
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }
 
@@ -288,24 +314,26 @@ function RoleDropdown({
   }
 
   return (
-    <select
-      value={value}
-      onChange={handleChange}
-      disabled={disabled}
-      className="rounded-lg border border-white/20 bg-white/10 px-3 py-1 text-xs text-white outline-none focus:border-white/40 disabled:opacity-50"
-    >
-      <option value="">+ Add role…</option>
-      {roles.map((r) => (
-        <option
-          key={r.id}
-          value={r.id}
-          disabled={disabledRoleReasons.has(r.id)}
-        >
-          {r.title}
-          {disabledRoleReasons.get(r.id) ??
-            (pendingLinkRoleIds.has(r.id) ? " (pending Discord link)" : "")}
-        </option>
-      ))}
-    </select>
+    <span className="input select con-add-role">
+      <select
+        value={value}
+        onChange={handleChange}
+        disabled={disabled}
+        aria-label="Add a role"
+      >
+        <option value="">+ Add role…</option>
+        {roles.map((r) => (
+          <option
+            key={r.id}
+            value={r.id}
+            disabled={disabledRoleReasons.has(r.id)}
+          >
+            {r.title}
+            {disabledRoleReasons.get(r.id) ??
+              (pendingLinkRoleIds.has(r.id) ? " (pending Discord link)" : "")}
+          </option>
+        ))}
+      </select>
+    </span>
   );
 }

@@ -1,8 +1,12 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import AuditLogContent from "~/components/AuditLogContent";
-import PageShell from "~/components/PageShell";
+import ConsoleShell from "~/components/Console/ConsoleShell";
 import { TableSkeleton } from "~/components/Skeletons";
+import { PageHeading } from "~/ui/app-shell";
 import { parseAuditSource } from "~/lib/audit";
+import { canUserViewAuditLog } from "~/server/actions/permissions";
+import { requirePermission } from "~/server/auth/require";
 import {
   getAuditLogPageData,
   type AuditLogFilters,
@@ -20,6 +24,11 @@ async function AuditLogData({
   return <AuditLogContent {...data} />;
 }
 
+export const metadata: Metadata = {
+  title: "Audit log | Console | DevDogs",
+  robots: { index: false },
+};
+
 export default async function AuditLogPage({
   searchParams,
 }: {
@@ -30,6 +39,7 @@ export default async function AuditLogPage({
     targetType?: string | string[];
   }>;
 }) {
+  await requirePermission(canUserViewAuditLog);
   const params = await searchParams;
   const single = (value: string | string[] | undefined) =>
     typeof value === "string" ? value : undefined;
@@ -47,14 +57,14 @@ export default async function AuditLogPage({
   };
 
   return (
-    <PageShell
-      accent="blue"
-      title="Audit Log"
-      description="The append-only history of attendance, reflections, exports, moderation actions, and production OAuth client changes."
-    >
+    <ConsoleShell current="/console/audit-log">
+      <PageHeading
+        title="Audit log"
+        description="The append-only history of attendance, reflections, exports, moderation actions, and production OAuth client changes. Nothing here can be edited or removed."
+      />
       <Suspense fallback={<TableSkeleton />}>
         <AuditLogData page={page} filters={filters} />
       </Suspense>
-    </PageShell>
+    </ConsoleShell>
   );
 }

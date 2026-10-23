@@ -3,9 +3,16 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AUDIT_SOURCES } from "~/lib/audit";
+import { formatEventDateTime } from "~/lib/eventTime";
 import type { AuditLogPageData } from "~/server/loaders/auditLog";
-import { ConsoleCard } from "~/ui/card";
+import { Panel } from "~/ui/app-shell";
+import Badge from "~/ui/badge";
+import { Button } from "~/ui/button";
+import { EmptyState } from "~/ui/empty-state";
+import Field from "~/ui/field";
+import { Input } from "~/ui/input";
 import Pagination from "~/ui/pagination";
+import { Table, TBody, Td, Th, THead, Tr } from "~/ui/table";
 
 function humanize(value: string): string {
   return value.replaceAll("_", " ").replaceAll(".", " · ");
@@ -28,17 +35,20 @@ export default function AuditLogContent({
   }
 
   return (
-    <ConsoleCard.Root id="audit-events">
-      <ConsoleCard.Header
-        title="Audit events"
-        description={`${totalCount} matching event${totalCount === 1 ? "" : "s"}`}
-      />
-      <ConsoleCard.Content>
-        <form className="mb-5 grid gap-3 sm:grid-cols-4" method="get">
-          <label className="flex flex-col gap-1 text-xs text-mauve-300">
-            Source
+    <Panel
+      id="audit-events"
+      title="Audit events"
+      help={`${totalCount} matching event${totalCount === 1 ? "" : "s"}`}
+    >
+      <form
+        className="con-filters"
+        method="get"
+        aria-label="Filter audit events"
+      >
+        <Field label="Source" htmlFor="audit-source">
+          <span className="input select">
             <select
-              className="rounded-md border border-white/10 bg-mauve-950 px-3 py-2 text-sm text-white"
+              id="audit-source"
               defaultValue={filters.source ?? ""}
               name="source"
             >
@@ -49,66 +59,71 @@ export default function AuditLogContent({
                 </option>
               ))}
             </select>
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-mauve-300">
-            Action
-            <input
-              className="rounded-md border border-white/10 bg-mauve-950 px-3 py-2 text-sm text-white"
-              defaultValue={filters.action}
-              name="action"
-              placeholder="attendance.recorded"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-mauve-300">
-            Target type
-            <input
-              className="rounded-md border border-white/10 bg-mauve-950 px-3 py-2 text-sm text-white"
-              defaultValue={filters.targetType}
-              name="targetType"
-              placeholder="attendance"
-            />
-          </label>
-          <button
-            className="self-end rounded-md bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"
-            type="submit"
-          >
-            Filter
-          </button>
-        </form>
+          </span>
+        </Field>
+        <Field label="Action" htmlFor="audit-action">
+          <Input
+            id="audit-action"
+            defaultValue={filters.action}
+            name="action"
+            placeholder="attendance.recorded"
+          />
+        </Field>
+        <Field label="Target type" htmlFor="audit-target">
+          <Input
+            id="audit-target"
+            defaultValue={filters.targetType}
+            name="targetType"
+            placeholder="attendance"
+          />
+        </Field>
+        <Button type="submit" variant="outline" className="con-filter-go">
+          Filter
+        </Button>
+      </form>
 
-        {entries.length === 0 ? (
-          <p className="text-sm text-mauve-400">No matching audit events.</p>
-        ) : (
-          <ol className="flex flex-col gap-2">
+      {entries.length === 0 ? (
+        <EmptyState
+          title="No matching audit events"
+          description="Try a different source, action or target type."
+        />
+      ) : (
+        <Table caption="Audit events, newest first">
+          <THead>
+            <Tr>
+              <Th>Action</Th>
+              <Th>Target</Th>
+              <Th>Source</Th>
+              <Th>Actor</Th>
+              <Th aria-sort="descending">When</Th>
+            </Tr>
+          </THead>
+          <TBody>
             {entries.map((entry) => (
-              <li
-                key={entry.id}
-                className="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <Link
-                      className="font-medium text-white hover:underline"
-                      href={`/console/audit-log/${entry.id}`}
-                    >
-                      {humanize(entry.action)}
-                    </Link>
-                    <p className="truncate font-mono text-xs text-mauve-300">
-                      {entry.targetType}: {entry.targetId}
-                    </p>
-                  </div>
-                  <span className="rounded-full border border-white/10 px-2 py-1 text-xs text-mauve-200">
-                    {humanize(entry.source)}
-                  </span>
-                </div>
-                <p className="mt-2 text-xs text-mauve-400">
-                  {entry.actor} · {new Date(entry.createdAt).toLocaleString()}
-                </p>
-              </li>
+              <Tr key={entry.id}>
+                <Td strong>
+                  <Link
+                    className="textlink"
+                    href={`/console/audit-log/${entry.id}`}
+                  >
+                    {humanize(entry.action)}
+                  </Link>
+                </Td>
+                <Td wrap className="mono">
+                  {entry.targetType}: {entry.targetId}
+                </Td>
+                <Td>
+                  <Badge>{humanize(entry.source)}</Badge>
+                </Td>
+                <Td wrap>{entry.actor}</Td>
+                <Td>{formatEventDateTime(entry.createdAt)}</Td>
+              </Tr>
             ))}
-          </ol>
-        )}
+          </TBody>
+        </Table>
+      )}
 
+      <div className="con-foot">
         <Pagination
           page={page}
           totalPages={totalPages}
@@ -116,7 +131,7 @@ export default function AuditLogContent({
           label="events"
           totalCount={totalCount}
         />
-      </ConsoleCard.Content>
-    </ConsoleCard.Root>
+      </div>
+    </Panel>
   );
 }

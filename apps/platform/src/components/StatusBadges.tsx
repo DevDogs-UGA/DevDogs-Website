@@ -48,11 +48,11 @@ export function StandingBadge({
         : "default";
 
   return (
-    <span className="flex flex-wrap items-center gap-2">
+    <span className="con-meta">
       <Badge variant={variant} className="capitalize">
         {standing}
       </Badge>
-      {detail && <span className="text-xs text-mauve-400">{detail}</span>}
+      {detail && <span className="small muted">{detail}</span>}
     </span>
   );
 }

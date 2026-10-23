@@ -20,6 +20,8 @@ import { useState } from "react";
 import { useRoles, type RoleRow } from "~/hooks/useRoles";
 import type { ResolvedPermissions } from "~/server/actions/permissions";
 import type { DiscordSyncCapability } from "~/lib/discordCapability";
+import Callout from "~/ui/callout";
+import { EmptyState } from "~/ui/empty-state";
 import RoleCard from "./RoleCard";
 import CreateRoleDialog from "./CreateRoleDialog";
 import ImportDiscordRoleDialog from "./ImportDiscordRoleDialog";
@@ -72,10 +74,13 @@ export default function RolesManager({
     roles.length > 0 ? Math.max(...roles.map((r) => r.rank)) + 1 : 1;
 
   return (
-    <section className="mx-auto w-full max-w-3xl">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h3 className="text-lg font-semibold text-white">Roles</h3>
-        <div className="flex items-center gap-2">
+    <div>
+      <div className="con-toolbar">
+        <p className="help" style={{ margin: 0 }}>
+          Order is rank: the top role outranks the ones below. Drag a row, or
+          focus its handle and use the arrow keys.
+        </p>
+        <div className="con-toolbar-acts">
           <ImportDiscordRoleDialog
             nextRank={nextRank}
             callerPermissions={callerPermissions}
@@ -90,6 +95,13 @@ export default function RolesManager({
         </div>
       </div>
 
+      {roles.length > 0 && !roles.some((r) => canEdit(r)) && (
+        <Callout tone="info" title="You can see roles but not change them.">
+          Editing needs Manage roles &amp; permissions, and you can only touch
+          roles ranked below yours.
+        </Callout>
+      )}
+
       <DndContext
         sensors={sensors}
         onDragStart={onDragStart}
@@ -99,7 +111,7 @@ export default function RolesManager({
           items={roles.map((r) => r.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="flex flex-col gap-3">
+          <div className="con-rolelist">
             {roles.map((role) => (
               <RoleCard
                 key={role.id}
@@ -122,16 +134,17 @@ export default function RolesManager({
               />
             ))}
             {roles.length === 0 && (
-              <p className="rounded-sm border-2 border-dashed border-mauve-700 py-10 text-center text-sm text-mauve-400">
-                No roles yet. Create one to get started.
-              </p>
+              <EmptyState
+                title="No roles yet"
+                description="Create one to get started."
+              />
             )}
           </div>
         </SortableContext>
 
         <DragOverlay>
           {activeRole && (
-            <div className="drop-shadow-xl">
+            <div className="con-dragging">
               <RoleCard
                 role={activeRole}
                 editable={false}
@@ -143,6 +156,6 @@ export default function RolesManager({
           )}
         </DragOverlay>
       </DndContext>
-    </section>
+    </div>
   );
 }

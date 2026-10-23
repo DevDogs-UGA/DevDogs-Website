@@ -3,7 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { GameControllerIcon, XIcon } from "@phosphor-icons/react/ssr";
-import FormButton from "~/components/FormButton";
+import { Button } from "~/ui/button";
+import Callout from "~/ui/callout";
+import { Checkbox } from "~/ui/checkbox";
 import type { RoleRow } from "~/hooks/useRoles";
 import {
   createDiscordRoleFromRole,
@@ -96,112 +98,103 @@ export default function LinkDiscordRoleDialog({
     <Dialog open={open} onOpenChange={handleOpen}>
       <span title={triggerDisabledReason ?? undefined}>
         <DialogTrigger asChild disabled={!canSync}>
-          <button
-            disabled={!canSync}
-            className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-medium text-white transition outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-indigo-400 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white/5"
-          >
-            <GameControllerIcon aria-hidden />
+          <Button type="button" variant="outline" size="sm" disabled={!canSync}>
+            <GameControllerIcon weight="bold" aria-hidden />
             Link to Discord
-          </button>
+          </Button>
         </DialogTrigger>
       </span>
 
-      <DialogContent
-        className="max-w-md border-white/20 bg-mauve-900 p-0 shadow-2xl"
-        showCloseButton={false}
-      >
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5 px-5 py-6">
+      <DialogContent className="max-w-md" showCloseButton={false}>
+        <form onSubmit={handleSubmit} className="con-stack">
           <DialogHeader className="flex-row items-center justify-between">
-            <DialogTitle className="text-base font-semibold text-white">
+            <DialogTitle>
               Link &ldquo;{role.title}&rdquo; to Discord
             </DialogTitle>
-            <DialogClose className="rounded-sm p-1 text-white/40 transition outline-none hover:text-white focus-visible:ring-2 focus-visible:ring-white/50">
-              <XIcon aria-hidden />
+            <DialogClose className="iconbtn" aria-label="Close">
+              <XIcon weight="bold" aria-hidden />
             </DialogClose>
           </DialogHeader>
 
-          <fieldset className="flex flex-col gap-2">
-            <label className="flex cursor-pointer items-center gap-2 text-xs text-white/80">
-              <input
-                type="radio"
-                name="mode"
-                checked={mode === "existing"}
-                onChange={() => setMode("existing")}
-                className="accent-indigo-400"
-              />
-              Link to an existing Discord role
-            </label>
+          <fieldset className="con-checks">
+            <legend className="sr-only">How to link</legend>
+            <Checkbox
+              type="radio"
+              name="mode"
+              checked={mode === "existing"}
+              onChange={() => setMode("existing")}
+              label="Link to an existing Discord role"
+            />
             {mode === "existing" && (
-              <select
-                value={selectedId}
-                onChange={(e) => setSelectedId(e.target.value)}
-                disabled={loading}
-                className="ml-5 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none focus:border-white/40"
-              >
-                <option value="">
-                  {loading ? "Loading…" : "Select a Discord role…"}
-                </option>
-                {discordRoles.map((r) => {
-                  const canManage = canManageDiscordRolePosition(
-                    callerCapability,
-                    r.position,
-                  );
-                  return (
-                    <option key={r.id} value={r.id} disabled={!canManage}>
-                      {r.name}
-                      {canManage ? "" : " (above your Discord roles)"}
-                    </option>
-                  );
-                })}
-              </select>
+              <span className="input select">
+                <select
+                  value={selectedId}
+                  onChange={(e) => setSelectedId(e.target.value)}
+                  disabled={loading}
+                  aria-label="Discord role"
+                >
+                  <option value="">
+                    {loading ? "Loading…" : "Select a Discord role…"}
+                  </option>
+                  {discordRoles.map((r) => {
+                    const canManage = canManageDiscordRolePosition(
+                      callerCapability,
+                      r.position,
+                    );
+                    return (
+                      <option key={r.id} value={r.id} disabled={!canManage}>
+                        {r.name}
+                        {canManage ? "" : " (above your Discord roles)"}
+                      </option>
+                    );
+                  })}
+                </select>
+              </span>
             )}
 
-            <label
-              className={[
-                "flex items-center gap-2 text-xs",
-                canCreateNew
-                  ? "cursor-pointer text-white/80"
-                  : "cursor-not-allowed text-white/30",
-              ].join(" ")}
+            <span
               title={
                 canCreateNew
                   ? undefined
                   : "Your Discord account doesn't have permission to create Discord roles."
               }
             >
-              <input
+              <Checkbox
                 type="radio"
                 name="mode"
                 checked={mode === "new"}
                 onChange={() => setMode("new")}
                 disabled={!canCreateNew}
-                className="accent-indigo-400"
+                label="Create a new Discord role from this role"
               />
-              Create a new Discord role from this role
-            </label>
+            </span>
           </fieldset>
 
-          <p className="text-xs text-white/60">
+          <p className="small muted" style={{ margin: 0 }}>
             Name, color and membership will sync with Discord going forward.
             Current holders keep the role; those with a known Discord account
             are granted it on Discord, and anyone else is granted it once they
             link.
           </p>
 
-          {error && <p className="text-xs text-rose-400">{error}</p>}
+          {error && (
+            <Callout tone="critical" alert>
+              {error}
+            </Callout>
+          )}
 
-          <div className="flex justify-end gap-3">
+          <div
+            className="acts"
+            style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}
+          >
             <DialogClose asChild>
-              <button
-                type="button"
-                className="rounded-lg border border-white/20 px-4 py-1.5 text-sm text-white/70 transition hover:bg-white/10"
-              >
+              <Button type="button" variant="ghost">
                 Cancel
-              </button>
+              </Button>
             </DialogClose>
-            <FormButton
-              theme="black"
+            <Button
               type="submit"
+              loading={submitting}
               disabled={
                 submitting ||
                 loading ||
@@ -210,7 +203,7 @@ export default function LinkDiscordRoleDialog({
               }
             >
               Link
-            </FormButton>
+            </Button>
           </div>
         </form>
       </DialogContent>

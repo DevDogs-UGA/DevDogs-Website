@@ -1,12 +1,16 @@
 "use client";
 
 import { useActionState } from "react";
+import { CheckCircleIcon, WarningCircleIcon } from "@phosphor-icons/react/ssr";
 import {
   updateReflectionSettings,
   type ReflectionSettingsActionState,
 } from "~/server/actions/reflectionSettings";
-import { ConsoleCard } from "~/ui/card";
 import type { ReflectionSettingsValue } from "~/server/reflections/settings";
+import { Panel } from "~/ui/app-shell";
+import { Button } from "~/ui/button";
+import Field from "~/ui/field";
+import { InputGroup, InputGroupInput, InputGroupText } from "~/ui/input-group";
 
 const initialState: ReflectionSettingsActionState = { ok: false, message: "" };
 
@@ -17,6 +21,8 @@ const initialState: ReflectionSettingsActionState = { ok: false, message: "" };
  * the DB by `/attendance` on every load (see `reflections/load.ts`), so this
  * form has no client cache of its own to invalidate beyond the
  * `revalidatePath` calls `updateReflectionSettings` already makes.
+ *
+ * Lives on `/console/reflections`; it used to sit on the meetings page.
  */
 export default function ReflectionSettingsCard({
   settings,
@@ -29,17 +35,21 @@ export default function ReflectionSettingsCard({
   );
 
   return (
-    <ConsoleCard.Root id="reflection-settings">
-      <ConsoleCard.Header
+    <form action={action}>
+      <Panel
+        id="reflection-settings"
         title="Reflection settings"
-        description="Governs every EL reflection member-wide: how many words a submission needs, and how many days after a meeting ends members may still submit one."
-      />
-      <ConsoleCard.Content>
-        <form action={action} className="flex flex-col gap-4 py-6">
-          <div className="flex flex-wrap gap-4">
-            <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-white/70">
-              Minimum word count
-              <input
+        help="How many words a submission needs, and how many days after a meeting ends members may still submit one. Applies to new submissions; reflections already in progress keep the rules they started with."
+      >
+        <div className="con-fields">
+          <Field
+            label="Minimum words"
+            htmlFor="minimumWordCount"
+            description="1 to 1000."
+          >
+            <InputGroup>
+              <InputGroupInput
+                id="minimumWordCount"
                 name="minimumWordCount"
                 type="number"
                 defaultValue={settings.minimumWordCount}
@@ -47,12 +57,18 @@ export default function ReflectionSettingsCard({
                 max={1000}
                 step={1}
                 required
-                className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none focus:border-white/40"
               />
-            </label>
-            <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-white/70">
-              Submission window (days)
-              <input
+              <InputGroupText className="unit">words</InputGroupText>
+            </InputGroup>
+          </Field>
+          <Field
+            label="Submission window"
+            htmlFor="submissionWindowDays"
+            description="1 to 90. Counted from the end of the meeting."
+          >
+            <InputGroup>
+              <InputGroupInput
+                id="submissionWindowDays"
                 name="submissionWindowDays"
                 type="number"
                 defaultValue={settings.submissionWindowDays}
@@ -60,29 +76,34 @@ export default function ReflectionSettingsCard({
                 max={90}
                 step={1}
                 required
-                className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white outline-none focus:border-white/40"
               />
-            </label>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={pending}
-              className="self-start rounded-sm bg-cyan-400 px-3 py-1.5 text-sm font-medium text-black disabled:opacity-50"
+              <InputGroupText className="unit">days</InputGroupText>
+            </InputGroup>
+          </Field>
+        </div>
+        <div className="con-meta" style={{ marginTop: 28 }}>
+          <Button type="submit" loading={pending}>
+            {pending ? "Saving…" : "Save changes"}
+          </Button>
+          {state.message && (
+            <p
+              role="status"
+              className="con-meta"
+              style={{
+                color: state.ok ? "var(--ok)" : "var(--bad)",
+                margin: 0,
+              }}
             >
-              {pending ? "Saving…" : "Save"}
-            </button>
-            {state.message && (
-              <p
-                role="status"
-                className={`text-sm ${state.ok ? "text-cyan-300" : "text-rose-300"}`}
-              >
-                {state.message}
-              </p>
-            )}
-          </div>
-        </form>
-      </ConsoleCard.Content>
-    </ConsoleCard.Root>
+              {state.ok ? (
+                <CheckCircleIcon weight="bold" aria-hidden />
+              ) : (
+                <WarningCircleIcon weight="bold" aria-hidden />
+              )}
+              {state.message}
+            </p>
+          )}
+        </div>
+      </Panel>
+    </form>
   );
 }

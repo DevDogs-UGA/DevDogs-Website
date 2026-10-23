@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { updateUserRole } from "~/server/actions/moderation";
 import FormButton from "~/components/FormButton";
+import Field from "~/ui/field";
+import { Input } from "~/ui/input";
 
 export default function UserRoleForm({
   targetUserId,
@@ -25,48 +27,40 @@ export default function UserRoleForm({
     });
   }
 
-  // Both controls, one string: this form only ever renders on the console's
-  // dark ground, where the light control it used to be was white text on a
-  // white field.
-  const controlClass =
-    "rounded-sm border border-mauve-600 bg-mauve-800 px-2 py-1.5 text-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-mauve-950";
-
   return (
-    <form action={handleSubmit} className="flex flex-col gap-3">
-      <div className="flex gap-3">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-mauve-400">Role</span>
-          <select
-            name="role"
-            className={controlClass}
-            defaultValue={currentRole}
-          >
-            <option value="member">Member</option>
-            <option value="suspended">Suspended</option>
-            <option value="banned">Banned</option>
-          </select>
-        </label>
-
-        <label className="flex flex-1 flex-col gap-1">
-          <span className="text-xs text-mauve-400">
-            Reason (optional, shown to client apps)
+    <form action={handleSubmit} className="con-stack">
+      <div className="con-fields">
+        <Field label="Role" htmlFor="user-role">
+          <span className="input select">
+            <select id="user-role" name="role" defaultValue={currentRole}>
+              <option value="member">Member</option>
+              <option value="suspended">Suspended</option>
+              <option value="banned">Banned</option>
+            </select>
           </span>
-          <input
+        </Field>
+
+        <Field
+          label="Reason (optional)"
+          htmlFor="user-role-reason"
+          description="Shown to client apps."
+        >
+          <Input
+            id="user-role-reason"
             name="reason"
             type="text"
-            className={`${controlClass} placeholder:text-mauve-500`}
             placeholder="e.g. Repeated harassment"
           />
-        </label>
+        </Field>
       </div>
 
       <FormButton
         type="submit"
         disabled={isPending}
         theme="black"
-        className="self-start text-sm"
+        className="w-fit"
       >
-        Update Role
+        Update role
       </FormButton>
     </form>
   );
