@@ -21,6 +21,13 @@ export const SOLE_PRESIDENT_ERROR = "Grant President to someone else first";
 const NOT_ALLOWED = "Not authorized: canDeleteAccounts required";
 const NO_SUCH_MEMBER = "No such member";
 
+/** What the emails call a member: their preferred name, or "there". */
+export function greetingName(name: string | null | undefined): string {
+  const trimmed = name?.trim();
+  if (!trimmed) return "there";
+  return trimmed;
+}
+
 export type ScheduledDeletion = {
   userId: string;
   scheduledFor: Date;
@@ -32,9 +39,7 @@ export type ScheduledDeletion = {
  * What a member's pending deletion looks like to the page that shows it. Null
  * when none is scheduled.
  */
-export async function getPendingDeletion(
-  userId: string,
-): Promise<{
+export async function getPendingDeletion(userId: string): Promise<{
   scheduledFor: Date;
   requestedByOfficer: boolean;
   /** The job has begun: it can no longer be cancelled. */
@@ -72,7 +77,9 @@ export async function isSolePresident(userId: string): Promise<boolean> {
  * page, not the session, is what holds the account closed.
  */
 async function revokeSessions(userId: string): Promise<void> {
-  await db.execute(sql`delete from auth.sessions where user_id = ${userId}::uuid`);
+  await db.execute(
+    sql`delete from auth.sessions where user_id = ${userId}::uuid`,
+  );
 }
 
 /**
@@ -163,7 +170,7 @@ export async function scheduleAccountDeletion(
   revalidateOfficers();
 
   const result = await sendTemplate(member.email, "AccountDeletionScheduled", {
-    name: member.name?.trim() || "there",
+    name: greetingName(member.name),
     requestedLine: byOfficer
       ? "A DevDogs officer scheduled your account for deletion."
       : "You asked to delete your account.",

@@ -9,7 +9,11 @@ import { removeMemberOAuthApps } from "~/server/oauth/ownedClients";
 import { supabaseAdmin } from "~/supabase/admin";
 import { usersInAuth } from "~/supabase/drizzle/schema";
 import { accountDeletionAuditEvent } from "./audit";
-import { isSolePresident, SOLE_PRESIDENT_ERROR } from "./schedule";
+import {
+  greetingName,
+  isSolePresident,
+  SOLE_PRESIDENT_ERROR,
+} from "./schedule";
 
 /** How many due deletions one run takes on; the next run takes the rest. */
 const BATCH = 20;
@@ -154,7 +158,7 @@ async function deleteAccount(deletion: Deletion, now: Date): Promise<boolean> {
   // 8. "Deletion complete". A bounce or a missing sender cannot be fixed by
   //    trying again, so only an unexplained failure keeps the deletion open.
   const sent = await sendTemplate(deletion.email, "AccountDeletionComplete", {
-    name: deletion.name?.trim() || "there",
+    name: greetingName(deletion.name),
   });
   if (!sent.ok) {
     console.error("account_deletion_email_failed", {
@@ -166,9 +170,7 @@ async function deleteAccount(deletion: Deletion, now: Date): Promise<boolean> {
     }
   }
 
-  await db
-    .delete(accountDeletions)
-    .where(eq(accountDeletions.userId, userId));
+  await db.delete(accountDeletions).where(eq(accountDeletions.userId, userId));
   return true;
 }
 

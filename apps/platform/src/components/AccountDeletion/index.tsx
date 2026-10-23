@@ -67,8 +67,7 @@ export default function AccountDeletionPending({
 
         <div className="acctdel-notes">
           <h2 className="card-title">
-            <TrashIcon weight="bold" aria-hidden /> What deleting does not
-            cover
+            <TrashIcon weight="bold" aria-hidden /> What deleting does not cover
           </h2>
           <ul>
             <li>
@@ -85,8 +84,8 @@ export default function AccountDeletionPending({
               own copies on a best-effort basis.
             </li>
             <li>
-              Questions? Ask in{" "}
-              <TextLink href="/help">the help forum</TextLink>.
+              Questions? Ask in <TextLink href="/help">the help forum</TextLink>
+              .
             </li>
           </ul>
         </div>

@@ -34,11 +34,13 @@ import { supabaseAdmin } from "~/supabase/admin";
  * and the `enqueue_user_standing` SQL function, is real.
  */
 
+type EmailResult =
+  { ok: true } | { ok: false; reason: string; message: string };
+
 const fake = vi.hoisted(() => ({
   sent: [] as { to: string; name: string; props: Record<string, string> }[],
-  emailResult: { ok: true } as
-    | { ok: true }
-    | { ok: false; reason: string; message: string },
+  /** Null sends successfully. */
+  emailResult: null as EmailResult | null,
   officers: new Set<string>(),
   queued: [] as string[],
   stripped: [] as string[],
@@ -53,7 +55,7 @@ vi.mock("next/cache", () => ({
 vi.mock("~/server/email/send", () => ({
   sendTemplate: (to: string, name: string, props: Record<string, string>) => {
     fake.sent.push({ to, name, props });
-    return Promise.resolve(fake.emailResult);
+    return Promise.resolve(fake.emailResult ?? { ok: true });
   },
 }));
 vi.mock("~/server/actions/permissions", () => ({
@@ -204,9 +206,7 @@ afterAll(async () => {
   vi.restoreAllMocks();
   await cleanup();
   if (createdKey) {
-    await db.execute(
-      sql`delete from vault.secrets where name = ${KEY_NAME}`,
-    );
+    await db.execute(sql`delete from vault.secrets where name = ${KEY_NAME}`);
   }
 });
 
@@ -215,7 +215,7 @@ beforeEach(async () => {
   fake.sent.length = 0;
   fake.queued.length = 0;
   fake.stripped.length = 0;
-  fake.emailResult = { ok: true };
+  fake.emailResult = null;
   fake.officers.clear();
   failDeleteUser = null;
   deleteUserCalls = 0;
@@ -601,7 +601,9 @@ describe("runDueDeletions", () => {
       await count(sql`select count(*)::int as n from platform."deletedAccountBlocks"
                       where "subjectHash" = platform.deleted_account_hash(${emailOf(PLAIN)})`),
     ).toBe(0);
-    const audit = (await auditRows(PLAIN)).find((a) => a.action === "user.deleted");
+    const audit = (await auditRows(PLAIN)).find(
+      (a) => a.action === "user.deleted",
+    );
     expect(audit?.metadata).toMatchObject({ blocked: false });
   });
 
@@ -653,7 +655,9 @@ describe("runDueDeletions", () => {
     expect(
       (await auditRows(MEMBER)).filter((a) => a.action === "user.deleted"),
     ).toHaveLength(0);
-    expect(fake.sent.filter((s) => s.name === "AccountDeletionComplete")).toHaveLength(0);
+    expect(
+      fake.sent.filter((s) => s.name === "AccountDeletionComplete"),
+    ).toHaveLength(0);
 
     const second = await runDueDeletions(NOW);
 
@@ -678,7 +682,9 @@ describe("runDueDeletions", () => {
     expect(
       (await auditRows(MEMBER)).filter((a) => a.action === "user.deleted"),
     ).toHaveLength(1);
-    expect(fake.sent.filter((s) => s.name === "AccountDeletionComplete")).toHaveLength(1);
+    expect(
+      fake.sent.filter((s) => s.name === "AccountDeletionComplete"),
+    ).toHaveLength(1);
   });
 
   it("finishes the audit entry and email after the auth user is already gone", async () => {
@@ -696,7 +702,7 @@ describe("runDueDeletions", () => {
     ).toBe(0);
     expect(await getPendingDeletion(PLAIN)).not.toBeNull();
 
-    fake.emailResult = { ok: true };
+    fake.emailResult = null;
     const callsBefore = deleteUserCalls;
     const second = await runDueDeletions(NOW);
 
