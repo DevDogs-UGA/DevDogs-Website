@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import {
   GDGC_ISSUES,
   gdgcIssueByVersion,
-  PALETTE,
 } from "@devdogsuga/newsletter";
 
 import EmailStage from "~/components/Content/EmailStage";
@@ -66,7 +65,7 @@ export default async function GdgcIssue({
       <h1 className="sr-only">
         GDGC Newsletter issue {issue.version}: {issue.tagline}
       </h1>
-      <EmailStage issue={issue} background={PALETTE.bar} />
+      <EmailStage issue={issue} />
     </div>
   );
 }

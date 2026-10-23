@@ -19,12 +19,12 @@ export default function EmailStage({
   background,
 }: {
   issue: ChangelogIssue;
-  /** The newsletter's own `PALETTE.bar`, so the seam around the email matches it. */
-  background: string;
+  /** The newsletter's own `PALETTE.bar`, so the seam matches it. Omit to inherit the page (Paper). */
+  background?: string;
 }) {
   const props: EmailProps = { issue, ctx: webRenderContext() };
   return (
-    <div className="content-stage" style={{ backgroundColor: background }}>
+    <div className="content-stage" style={background ? { backgroundColor: background } : undefined}>
       <div className="content-stage-inner">
         <style dangerouslySetInnerHTML={{ __html: paintCss() }} />
         <ChangelogEmail {...props} />

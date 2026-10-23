@@ -79,9 +79,9 @@ export default function Changelog() {
                 The same page, as plain text. Pipe it into <code>less</code>,
                 or run it in a cron job.
               </p>
-              <a className="btn terminal" href={`${SITE}/changelog`}>
+              <Link className="btn terminal" href="/changelog">
                 <b>$</b> curl {host}/changelog
-              </a>
+              </Link>
             </Card>
           </aside>
         </div>
