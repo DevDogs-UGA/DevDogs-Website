@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import {
   GearIcon,
   QrCodeIcon,
@@ -76,6 +76,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "~/ui/tooltip";
+
+/** Pinned triggers sit side by side from 720px; below that each gets its own row, with room for its open overlay. */
+function pin(ml: number, mb: number): CSSProperties {
+  return { "--ml": `${ml}px`, "--mb": `${mb}px` } as CSSProperties;
+}
+
+const PIN_CSS = `
+.ov-pins { display: flex; flex-wrap: wrap; align-items: flex-start; }
+.ov-pin { margin-left: var(--ml, 0); }
+@media (max-width: 719px) {
+  .ov-pins { flex-direction: column; flex-wrap: nowrap; gap: 0 !important; min-height: 0 !important; }
+  .ov-pin { margin-left: 0; margin-bottom: var(--mb, 0); }
+}
+`;
 
 const noop = () => undefined;
 const keep = (e: Event) => e.preventDefault();
@@ -168,18 +182,16 @@ function PinnedMenus() {
   const [checks, setChecks] = useState({ a: true, b: false });
   const [radio, setRadio] = useState("week");
   return (
-    <div
-      className="row"
-      style={{
-        gap: 24,
-        alignItems: "flex-start",
-        minHeight: 340,
-        flexWrap: "wrap",
-      }}
-    >
+    <div className="ov-pins" style={{ gap: 24, minHeight: 340 }}>
+      <style>{PIN_CSS}</style>
       <DropdownMenu open modal={false} onOpenChange={noop}>
         <DropdownMenuTrigger asChild>
-          <Button variant="secondary" size="sm">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="ov-pin"
+            style={pin(0, 270)}
+          >
             Items
           </Button>
         </DropdownMenuTrigger>
@@ -195,7 +207,12 @@ function PinnedMenus() {
 
       <DropdownMenu open modal={false} onOpenChange={noop}>
         <DropdownMenuTrigger asChild>
-          <Button variant="secondary" size="sm" style={{ marginLeft: 200 }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="ov-pin"
+            style={pin(200, 300)}
+          >
             Check and radio
           </Button>
         </DropdownMenuTrigger>
@@ -241,7 +258,12 @@ function PinnedMenus() {
 
       <DropdownMenu open modal={false} onOpenChange={noop}>
         <DropdownMenuTrigger asChild>
-          <Button variant="secondary" size="sm" style={{ marginLeft: 200 }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="ov-pin"
+            style={pin(200, 200)}
+          >
             Submenu
           </Button>
         </DropdownMenuTrigger>
@@ -271,18 +293,16 @@ function PinnedMenus() {
 
 function PinnedFloaters() {
   return (
-    <div
-      className="row"
-      style={{
-        gap: 40,
-        alignItems: "flex-start",
-        minHeight: 160,
-        flexWrap: "wrap",
-      }}
-    >
+    <div className="ov-pins" style={{ gap: 40, minHeight: 160 }}>
+      <style>{PIN_CSS}</style>
       <Popover open onOpenChange={noop}>
         <PopoverTrigger asChild>
-          <Button variant="secondary" size="sm">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="ov-pin"
+            style={pin(0, 150)}
+          >
             Popover
           </Button>
         </PopoverTrigger>
@@ -306,7 +326,12 @@ function PinnedFloaters() {
 
       <HoverCard open>
         <HoverCardTrigger asChild>
-          <Button variant="secondary" size="sm" style={{ marginLeft: 280 }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="ov-pin"
+            style={pin(280, 110)}
+          >
             Hover card
           </Button>
         </HoverCardTrigger>
@@ -325,7 +350,8 @@ function PinnedFloaters() {
               variant="secondary"
               size="icon-sm"
               aria-label="Copy"
-              style={{ marginLeft: 300 }}
+              className="ov-pin"
+              style={pin(300, 70)}
             >
               <GearIcon weight="bold" />
             </Button>
@@ -384,13 +410,21 @@ function PinnedDialog() {
   );
 }
 
-function PinnedDrawer({ side }: { side: "right" | "left" | "top" | "bottom" }) {
+function PinnedDrawer({
+  side,
+  variant,
+}: {
+  side: "right" | "left" | "top" | "bottom";
+  variant?: "drawer" | "panel";
+}) {
+  const isDrawer = variant ? variant === "drawer" : side === "right";
   return (
-    <Stage height={side === "right" ? 560 : 300}>
+    <Stage height={isDrawer ? 560 : 300}>
       {(container) => (
         <Sheet open modal={false} onOpenChange={noop}>
           <SheetContent
             side={side}
+            variant={variant}
             container={container}
             onOpenAutoFocus={keep}
             onInteractOutside={keep}
@@ -398,17 +432,15 @@ function PinnedDrawer({ side }: { side: "right" | "left" | "top" | "bottom" }) {
           >
             <SheetHeader>
               <div>
-                <SheetTitle>
-                  {side === "right" ? "Edit OAuth app" : "Menu"}
-                </SheetTitle>
+                <SheetTitle>{isDrawer ? "Edit OAuth app" : "Menu"}</SheetTitle>
                 <SheetDescription>
-                  {side === "right"
+                  {isDrawer
                     ? "Changes apply after you save."
-                    : `side="${side}" is a plain panel.`}
+                    : `side="${side}"${variant ? ` variant="${variant}"` : ""} is a plain panel.`}
                 </SheetDescription>
               </div>
             </SheetHeader>
-            {side === "right" ? (
+            {isDrawer ? (
               <>
                 <SheetBody>
                   <SheetSection>Basics</SheetSection>
@@ -688,6 +720,9 @@ export default function OverlaysSection() {
           </Block>
           <Block title="Sheet, side=left, plain panel (pinned)">
             <PinnedDrawer side="left" />
+          </Block>
+          <Block title='Sheet, side=right variant="panel" (the mobile nav)'>
+            <PinnedDrawer side="right" variant="panel" />
           </Block>
           <Block title="Sheet, side=top (pinned)">
             <PinnedDrawer side="top" />

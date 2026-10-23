@@ -32,6 +32,17 @@
     flex: none;
     pointer-events: none;
   }
+  @media (pointer: coarse) {
+    .cosmic
+      .menu
+      :is(
+        [role="menuitem"],
+        [role="menuitemcheckbox"],
+        [role="menuitemradio"]
+      ) {
+      min-height: 44px;
+    }
+  }
   /* hover = Radix highlight (pointer or arrow keys): the whole row tints, no side stripe */
   .cosmic .menu [data-highlighted] {
     --row: color-mix(in srgb, var(--raised) 86%, #fff);
