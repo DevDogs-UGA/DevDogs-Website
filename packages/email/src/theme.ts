@@ -15,7 +15,8 @@ import { PALETTE } from "@devdogsuga/sdk/brand";
  * The neutrals are `@devdogsuga/sdk/brand`'s flat-hex palette (`PALETTE`, the same
  * values the OG cards and the site's `--brand-*` variables carry) rather than
  * a second set of greys: ink is mauve-900, the lightest steps do the borders
- * and canvas. Only the accent is the email's own, the club's UGA red, which
+ * and canvas, and `cosmic-ink-line` draws the outlines the redesigned site uses
+ * on cards and buttons. Only the accent is the email's own, the club's UGA red, which
  * the brand palette does not carry.
  */
 export const theme = {
@@ -23,6 +24,8 @@ export const theme = {
     ink: PALETTE["mauve-900"],
     muted: PALETTE["mauve-600"],
     line: PALETTE["mauve-200"],
+    /** The Cosmic outline: the near-black every card and button edge is drawn in. */
+    outline: PALETTE["cosmic-ink-line"],
     surface: PALETTE.white,
     canvas: PALETTE["mauve-100"],
     /** UGA arch black on red. The club's marks, not the university's. */
@@ -41,6 +44,9 @@ export const theme = {
     gutter: "24px",
     block: "16px",
   },
-  radius: "8px",
+  /** Cosmic corners are stepped pixels on the site; email gets a small square radius, the nearest thing every client draws. */
+  radius: "4px",
+  /** The outline weight, the site's two-pixel cell. */
+  border: "2px",
   maxWidth: "560px",
 } as const;

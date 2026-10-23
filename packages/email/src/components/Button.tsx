@@ -18,10 +18,11 @@ export function Button({ href, children }: { href: string; children: string }) {
         backgroundColor: theme.color.accent,
         color: theme.color.accentInk,
         fontSize: theme.size.body,
-        fontWeight: 600,
+        fontWeight: 700,
+        border: `${theme.border} solid ${theme.color.outline}`,
         textDecoration: "none",
         borderRadius: theme.radius,
-        padding: "12px 20px",
+        padding: "10px 20px",
       }}
     >
       {children}
