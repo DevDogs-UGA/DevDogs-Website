@@ -46,8 +46,8 @@ export function AppIcon({ app, size, background }: AppIconProps) {
   const shadow = Math.round(size * 0.055);
   const border = Math.max(1, Math.round(size * 0.025));
   const tile = size - margin * 2 - shadow;
-  // Cosmic corners are stepped cells, not radii: one cell, a fifth of a
-  // percent short of a quarter of the tile, never under a pixel.
+  // Cosmic corners are stepped cells, not radii: one cell, 5% of the tile,
+  // never under a pixel.
   const step = Math.max(1, Math.round(tile * 0.05));
   // The fill is its own stepped tile laid over the ink one, inset by exactly
   // one border on every side, so the outline has the same weight all round.
@@ -114,7 +114,11 @@ export function AppIcon({ app, size, background }: AppIconProps) {
                 justifyContent: "center",
               }}
             >
-              <AppMark app={app} size={Math.round(tile * 0.62)} color={brand.mark} />
+              <AppMark
+                app={app}
+                size={Math.round(tile * 0.62)}
+                color={brand.mark}
+              />
             </div>
           </Stepped>
         </div>
