@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -54,16 +54,18 @@ const { default: Page } = await import("./page");
 const { default: ScheduleDeletionPanel } =
   await import("~/components/AccountDeletion/ScheduleDeletionPanel");
 
-function find(node: ReactNode, type: unknown): ReactElement | null {
+type Node = { type?: unknown; props?: { children?: unknown } };
+
+function find(node: unknown, type: unknown): Node | null {
   if (!node || typeof node !== "object") return null;
   if (Array.isArray(node)) {
-    for (const child of node) {
+    for (const child of node as unknown[]) {
       const hit = find(child, type);
       if (hit) return hit;
     }
     return null;
   }
-  const element = node as ReactElement<{ children?: ReactNode }>;
+  const element = node as Node;
   if (element.type === type) return element;
   return find(element.props?.children, type);
 }
@@ -87,9 +89,12 @@ describe("console member page: schedule deletion", () => {
     const tree = await render();
     const panel = find(tree, ScheduleDeletionPanel);
     expect(panel).not.toBeNull();
-    expect(panel!.props).toMatchObject({
-      targetUserId: "member-1",
-      pending: { date: expect.stringContaining("2026"), started: false },
-    });
+    const props = panel?.props as unknown as {
+      targetUserId: string;
+      pending: { date: string; started: boolean } | null;
+    };
+    expect(props.targetUserId).toBe("member-1");
+    expect(props.pending?.date).toContain("2026");
+    expect(props.pending?.started).toBe(false);
   });
 });

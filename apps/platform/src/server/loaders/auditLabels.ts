@@ -76,5 +76,13 @@ export async function resolveMembers(
     .from(usersInAuth)
     .leftJoin(profiles, eq(profiles.userId, usersInAuth.id))
     .where(inArray(usersInAuth.id, ids));
-  return new Map(rows.map((row) => [row.id, row.name?.trim() || row.id]));
+  return new Map(
+    rows.map((row) => {
+      const name = row.name?.trim();
+      return [
+        row.id,
+        name !== undefined && name !== "" ? name : row.id,
+      ] as const;
+    }),
+  );
 }

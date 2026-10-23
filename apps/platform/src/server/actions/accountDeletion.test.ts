@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const fake = vi.hoisted(() => ({
-  session: "officer-1" as string | null,
-  schedule: vi.fn(),
-  cancel: vi.fn(),
-}));
+const fake = vi.hoisted(
+  (): {
+    session: string | null;
+    schedule: ReturnType<typeof vi.fn>;
+    cancel: ReturnType<typeof vi.fn>;
+  } => ({ session: "officer-1", schedule: vi.fn(), cancel: vi.fn() }),
+);
 
 vi.mock("next/cache", () => ({ revalidatePath: () => undefined }));
 vi.mock("next/navigation", () => ({

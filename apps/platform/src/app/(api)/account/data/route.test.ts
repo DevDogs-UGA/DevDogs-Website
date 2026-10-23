@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const fake = vi.hoisted(() => ({
-  session: "member-1" as string | null,
-  build: vi.fn(),
-  inserted: [] as unknown[],
-}));
+const fake = vi.hoisted(
+  (): {
+    session: string | null;
+    build: ReturnType<typeof vi.fn>;
+    inserted: unknown[];
+  } => ({ session: "member-1", build: vi.fn(), inserted: [] }),
+);
 
 vi.mock("~/server/auth", () => ({
   expectSession: () =>
