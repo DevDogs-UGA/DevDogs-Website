@@ -516,13 +516,13 @@ describe("reconcileFromConfig", () => {
       db,
       (await liveConfig([meeting("legacy", { agenda: [] })])).config,
     );
-    const [{ id: meetingId }] = await db.execute<{ id: string }>(
-      sql`select id from platform.meetings where slug = ${`${PREFIX}legacy`}`,
-    );
-    const [{ id: legacyId }] = await db.execute<{ id: string }>(sql`
-      insert into platform.workshops ("meetingId", title)
-      values (${meetingId}, 'Supabase') returning id
-    `);
+    const meetingId = (await meetingRow("legacy"))!.id;
+    const legacyId = (
+      await db.execute<{ id: string }>(sql`
+        insert into platform.workshops ("meetingId", title)
+        values (${meetingId}, 'Supabase') returning id
+      `)
+    )[0]!.id;
 
     await reconcileFromConfig(
       db,
