@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* Support widget (docs to Discord bridge), Cosmic. No mockup: restyled by analogy with .menu, .dialog and .input.
    Inside @layer cosmic; step-cornered fills over a ring colour instead of borders. */
 @layer cosmic {

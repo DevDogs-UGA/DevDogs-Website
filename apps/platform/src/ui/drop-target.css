@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* Drop target and sort handles (P7). The marching dashes are the one place the
    kit animates a rule; reduced motion stops them (globals.css). */
 @layer cosmic {

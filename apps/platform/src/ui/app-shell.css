@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* AppShell (P6): the mockups' wide shell column (settings and console).
    Wrapped in the cosmic layer (F3). */
 @layer cosmic {

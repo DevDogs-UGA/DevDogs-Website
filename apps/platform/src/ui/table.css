@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* Table (P7): the `.table` rules are in cosmic.css; this covers what the kit
    draws on markup React renders differently (sort buttons, the selection bar's
    row). Wrapped in the cosmic layer (F3). */

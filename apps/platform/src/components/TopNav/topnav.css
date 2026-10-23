@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* TopNav (P6). The kit's `.topnav` is a flat row of anchors inside one `nav`;
    the live bar is a Radix NavigationMenu list whose triggers are buttons and
    whose panels hang off a shared viewport. The bar itself, search, buttons,

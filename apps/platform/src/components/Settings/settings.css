@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* Settings (G6): layout and the few pieces the kit lacks, taken from
    settings-profile / -accounts / -oauth / -oauth-new. Every selector carries the
    .set- prefix; the whole file sits in the cosmic layer (F3). */

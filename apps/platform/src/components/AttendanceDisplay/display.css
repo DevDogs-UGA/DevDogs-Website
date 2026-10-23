@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* The projector slide (console-display.html). A 16:9 stage laid out in cqw so
    it reads the same in the console card and on a projector. Static: nothing
    animates but the drain bar, which is one compositor-only transform. */

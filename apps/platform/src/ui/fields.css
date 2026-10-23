@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* Fields unit (P4): the checked / focus states the kit draws with a script-set
    `.on` class, driven here by the real input's own state so uncontrolled
    checkboxes and radio groups stay right with no JS. Mirrors kit.css `.check.on`

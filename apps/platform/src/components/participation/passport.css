@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* Attendance page layout and the passport (attendance.html, checkin.html).
    Page-local: layout and the star rows only; every control is a kit primitive. */
 @layer cosmic {

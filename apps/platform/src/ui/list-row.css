@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* ListRow (P7): `.vrow`, `.arow` and `.mrow` are in cosmic.css. The meeting
    row's stretched title link and its off/past variants are console-attendance's
    page rules, shared here because every meeting list needs them. */

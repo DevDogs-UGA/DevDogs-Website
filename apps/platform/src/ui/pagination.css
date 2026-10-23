@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* Pagination (P6): the `.pager` cells are spans in the kit; here each cell holds
    a real link, so it fills the cell and inherits the cell's colour. Wrapped in
    the cosmic layer (F3). */

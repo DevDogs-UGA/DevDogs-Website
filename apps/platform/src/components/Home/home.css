@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* The homepage's own layout and art (home.html). Everything the kit has (cards, chips, buttons, bands, the event row)
    comes from cosmic.css; this file adds only the hero, the Weekly Programming set and the leadership cluster.
    Every selector hangs off a `home-` class so none can collide with the kit. */

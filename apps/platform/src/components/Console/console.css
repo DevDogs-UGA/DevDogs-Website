@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* Console (G7): layout and the few pieces the kit lacks, from the console-*
    mockups. Every selector carries the .con prefix; the whole file sits in the
    cosmic layer (F3). */

@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* The events pages' own layout (events.html, events-month.html, event-detail.html). Everything the kit has (cards,
    chips, date tiles, buttons, the segmented control, the timeline, the drawer) comes from cosmic.css; this file adds
    only the toolbar, the schedule list, the month grid and the detail page's two-column layout.

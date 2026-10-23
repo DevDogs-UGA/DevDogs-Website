@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* /community and /community/@handle (community.html, profile.html). Cards, avatars, chips and the page head come from
    cosmic.css; this file adds only the directory grid and the profile layout. Every selector hangs off a `cm-` class. */
 @layer cosmic {

@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* The docs, Cosmic. Port of the draft-26 docs.css (site-v26-final/docs.css) onto the class contract the docs compiler
    (@devdogsuga/docs-kit: docs-code, docs-tabs, markdown-alert, plain tables, details) and the platform's Docs* components
    emit. D11: this stays in the platform; packages/docs-kit is untouched.

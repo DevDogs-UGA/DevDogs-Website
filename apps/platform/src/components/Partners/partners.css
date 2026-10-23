@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* /partners layout (partners.html). The kit supplies cards, buttons, bands, tags and badges; this file adds the
    page's own grids, the tiers table and the "Your Logo Here" listing. Every selector hangs off a `partners-` class. */
 @layer cosmic {

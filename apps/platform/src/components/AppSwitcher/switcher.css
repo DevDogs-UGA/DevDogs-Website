@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* AppSwitcher (P6): the fullscreen "More from DevDogs" layer. It is not in the
    mockups, so it is built from the kit by analogy: the page ground, framed
    rows (`.card`), the kit's buttons and chips. This covers the ground and the

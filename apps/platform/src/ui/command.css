@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* Command palette (P7): search.html's `.pal`, ported with the `cmd` prefix. The
    frame is the Dialog's `.dialog` card; everything inside is drawn here. */
 @layer cosmic {

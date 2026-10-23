@@ -1,3 +1,5 @@
+/* Same order as globals.css: whichever sheet loads first fixes the layer order. */
+@layer theme, base, cosmic, components, utilities;
 /* Disclosure (P7): docs.css `.dt` on a Radix Collapsible. Only applies when the
    root asks for `disclosure`; the sidebar and TOC callers style their own. */
 @layer cosmic {
