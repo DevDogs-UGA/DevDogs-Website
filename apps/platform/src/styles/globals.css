@@ -24,12 +24,11 @@
 }
 
 @theme {
-  /* The mauve palette itself lives in the `.dark` block near the bottom of this
-     file, not here. It used to be declared here as `--color-*: var(--color-mauve-*)`
-     pairs, but the `@theme inline` block further down re-maps every one of those
+  /* The palette lives in the `:root, .dark` block near the bottom of this
+     file, not here. Declaring `--color-*` pairs here does nothing, because the `@theme inline` block further down re-maps every one of those
      same names to `var(--background)`, `var(--primary)`, … — and a later @theme
      wins, so every declaration up here was silently dead and the whole UI was
-     rendering shadcn's stock zero-chroma grays instead of mauve.
+     rendering shadcn's stock zero-chroma grays.
      Two consumers have to agree on these colors: the utilities (`bg-card`) go
      through the @theme inline indirection, and a handful of call sites read the
      raw token directly (button.tsx does `color-mix(in oklch, var(--secondary),
@@ -42,18 +41,7 @@
   /* The club palette. The values live in `@devdogsuga/sdk/brand` (imported above as
      `--brand-*`), the one place the OG cards, the email signatures and this
      stylesheet all read them from; these re-point Tailwind's own ramp names at
-     them so `bg-mauve-950` and the generated images cannot disagree. */
-  --color-mauve-50: var(--brand-mauve-50);
-  --color-mauve-100: var(--brand-mauve-100);
-  --color-mauve-200: var(--brand-mauve-200);
-  --color-mauve-300: var(--brand-mauve-300);
-  --color-mauve-400: var(--brand-mauve-400);
-  --color-mauve-500: var(--brand-mauve-500);
-  --color-mauve-600: var(--brand-mauve-600);
-  --color-mauve-700: var(--brand-mauve-700);
-  --color-mauve-800: var(--brand-mauve-800);
-  --color-mauve-900: var(--brand-mauve-900);
-  --color-mauve-950: var(--brand-mauve-950);
+     them so `bg-red-400` and the generated images cannot disagree. */
   --color-red-400: var(--brand-red-400);
   --color-red-700: var(--brand-red-700);
   --color-purple-400: var(--brand-purple-400);
@@ -61,11 +49,6 @@
   --color-cyan-400: var(--brand-cyan-400);
   --color-amber-400: var(--brand-amber-400);
   --color-emerald-400: var(--brand-emerald-400);
-
-  --block-shadow-sm: 2px;
-  --block-shadow-md: 4px;
-  --block-shadow-lg: 5px;
-  --block-shadow-xl: 8px;
 
   --font-sans:
     var(--font-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
@@ -78,10 +61,6 @@
   --animate-dialog-slide-in: dialog-slide-in 200ms ease-in;
   --animate-dialog-slide-out: dialog-slide-out 200ms ease-out;
   --animate-march-dashes: march-dashes 1.4s linear infinite;
-  /* Duration through a variable so a hovered card can hurry the stripes
-     without a second keyframe set: see CompetitionTimeline. */
-  --animate-slants: slants var(--slants-duration, 0.8s) linear infinite;
-  --animate-tv-lamp-flicker: tv-lamp-flicker 900ms steps(1, end) infinite;
   /* A paired dialog's aside being dealt out from behind its primary, and
      back; the primary's tilt as it slides over. See ui/dialog-shell. */
   --animate-pair-aside-in: pair-aside-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1)
@@ -117,62 +96,7 @@
   --animate-nav-arrow-out: nav-fade-out 140ms ease-in;
 }
 
-@property --sidebar-width {
-  syntax: "<length>";
-  inherits: true;
-  initial-value: 256px;
-}
-
-/* ── Marquee skew system ─────────────────────────────────────────────────── */
-/*                                                                            */
-/* HOW IT WORKS                                                               */
-/*                                                                            */
-/* Tilted marquee strips sit between page sections. Each marquee is a full-  */
-/* width div with transform: skewY(±var(--skew-angle)) applied via inline    */
-/* style. The section above/below has a matching diagonal clip-path so its   */
-/* colored background meets the marquee edge exactly.                         */
-/*                                                                            */
-/* --skew-angle  The skew angle applied to marquees. Used directly in        */
-/*               transform: skewY(var(--skew-angle)) via inline style.       */
-/*                                                                            */
-/* --skew-slope  The vertical offset at the right edge of a skewed element   */
-/*               (= element_width × tan(angle) ≈ 100cqw × tan(angle)). Uses  */
-/*               container query units so the slope tracks the width of the  */
-/*               nearest containing block (e.g. <main> when a sidebar is     */
-/*               open) instead of the full page width.                       */
-/*               Used for:                                                    */
-/*                 • clip-path polygon vertex offsets on sections             */
-/*                 • negative margin (marginTop or marginBottom) on marquees  */
-/*                 • paddingTop / paddingBottom on adjacent sections so the   */
-/*                   section background fills behind the marquee              */
-/*                                                                            */
-/* Both variables share the same numeric angle, so they are always in sync.  */
-/* transform-origin is always "top left" so the left edge stays fixed and    */
-/* only the right edge shifts — matching the clip-path polygon math.         */
-/*                                                                            */
-/* SLOPE DIRECTION RULES (with transform-origin: top left)                   */
-/*                                                                            */
-/*   skewY(+angle)  →  "\" slope: left edge fixed, right edge goes DOWN      */
-/*   skewY(-angle)  →  "/" slope: left edge fixed, right edge goes UP        */
-/*                                                                            */
-/* MARGIN RULE                                                                */
-/*                                                                            */
-/*   "\" marquee: marginTop = -slope (pull up into section above)            */
-/*   "/" marquee: marginBottom = -slope (pull section below up into strip)   */
-/*                                                                            */
-/* CLIP-PATH RULE (polygon vertex at the diagonal edge)                      */
-/*                                                                            */
-/*   "\" bottom of section above:  (0, 100%-slope) → (100%, 100%)           */
-/*   "\" top of section below:     (0, 0)           → (100%, slope)          */
-/*   "/" bottom of section above:  (0, 100%)        → (100%, 100%-slope)     */
-/*   "/" top of section below:     (0, slope)        → (100%, 0)             */
-/*                                                                            */
 :root {
-  --skew-angle: 2deg;
-  --skew-slope: calc(tan(2deg) * 100cqw);
-  /* Section width = 100cqw - 2×mx-4 (2×1rem). Slope scaled to section width so
-     section diagonals are parallel to the full-width marquee strips. */
-  --section-skew-slope: calc(tan(2deg) * (100cqw - 2rem));
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -207,102 +131,11 @@
   --foreground: oklch(0.145 0 0);
 }
 
-@media (min-width: 768px) {
-  :root {
-    --skew-angle: 4deg;
-    --skew-slope: calc(tan(4deg) * 100cqw);
-    /* Section width = 100cqw - 2×md:mx-6 (2×1.5rem = 3rem). */
-    --section-skew-slope: calc(tan(4deg) * (100cqw - 3rem));
-  }
-}
-
-/* Block shadows — flat offset shadow. Size via sm/md/lg; color via shadow-{color}. */
-@utility shadow-block-* {
-  --tw-shadow-block: --value(--block-shadow-*) --value(--block-shadow-*) 0 0
-    var(--tw-shadow-color, black);
-  --tw-shadow-block: --value([length]) --value([length]) 0 0
-    var(--tw-shadow-color, black);
-  @apply shadow-(--tw-shadow-block);
-}
-
-/* Outlined block shadow — the offset block gets its own black edge, so it
-   reads as a second sheet of paper behind the element rather than a coloured
-   smear. Needed on dark backgrounds, where a plain black block shadow is
-   invisible and a coloured one has no edge to define it.
-
-   Two shadows at the same offset: a full-size black one, and the coloured
-   block painted over it inset 2px, so the black survives only as a 2px edge
-   around the colour. The edge is inset rather than spread outward so the whole
-   thing still measures exactly --block-shadow-*, and shadow-block-lg and
-   shadow-block-outlined-lg cast the same size of shadow. Size via
-   sm/md/lg/xl; block color via shadow-{color}. */
-@utility shadow-block-outlined-* {
-  --tw-shadow-block:
-    --value(--block-shadow-*) --value(--block-shadow-*) 0 -2px
-      var(--tw-shadow-color, black),
-    --value(--block-shadow-*) --value(--block-shadow-*) 0 0 black;
-  --tw-shadow-block:
-    --value([length]) --value([length]) 0 -2px var(--tw-shadow-color, black),
-    --value([length]) --value([length]) 0 0 black;
-  @apply shadow-(--tw-shadow-block);
-}
-
-/* Block-style drop shadow — composes with other filter utilities via --tw-drop-shadow.
-
-   The custom property holds a bare shadow VALUE, not a drop-shadow() call, the
-   same as its shadow-block-* and text-shadow-block-* siblings above. It used to
-   wrap the value itself, and `drop-shadow-(--var)` wraps whatever it is handed —
-   so the filter came out as drop-shadow(drop-shadow(4px 4px 0 black)), which is
-   not a valid filter, and the whole `filter` declaration was dropped. Every
-   drop-shadow-block-* on the site computed to `filter: none`. */
-@utility drop-shadow-block-* {
-  --tw-drop-shadow-block: --value(--block-shadow-*) --value(--block-shadow-*) 0
-    var(--tw-shadow-color, black);
-  --tw-drop-shadow-block: --value([length]) --value([length]) 0
-    var(--tw-shadow-color, black);
-  @apply drop-shadow-(--tw-drop-shadow-block);
-}
-
-/* Marquee strip skew — skews full-width strips along the site's diagonal system */
-@utility skew-section {
-  margin-top: calc(-1 * var(--section-skew-slope));
-  transform: skewY(var(--skew-angle));
-  transform-origin: top left;
-}
-
-@utility skew-section-neg {
-  margin-bottom: calc(-1 * var(--section-skew-slope));
-  transform: skewY(calc(-1 * var(--skew-angle)));
-  transform-origin: top left;
-}
-
 /* Button/card lift transition — translate + box-shadow */
 @utility transition-lift {
   transition-property: translate, box-shadow;
   transition-timing-function: var(--default-transition-timing-function);
   transition-duration: var(--default-transition-duration);
-}
-
-/* Block-style text shadow — text-shadow-block-{color} e.g. text-shadow-block-rose-900 */
-@utility text-shadow-block-* {
-  --tw-text-shadow-block: --value(--block-shadow-*) --value(--block-shadow-*) 0
-    var(--tw-shadow-color, black);
-  @apply text-shadow-(--tw-text-shadow-block);
-}
-
-/* Dense dot-grid for nav/footer corners */
-@utility bg-dot-grid {
-  background-image: radial-gradient(
-    circle,
-    theme(--color-mauve-300) 1px,
-    transparent 1px
-  );
-  background-size: 24px 24px;
-}
-
-@utility bg-dot-grid-dense {
-  background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
-  background-size: 14px 14px;
 }
 
 /* ── Announcement notice ────────────────────────────────────── */
@@ -529,40 +362,6 @@
 
   to {
     clip-path: circle(0% at var(--menu-origin, calc(100% - 46px) 36px));
-  }
-}
-
-/* Marching-ants SVG stroke — dasharray sum must match offset for seamless loop */
-/* The competition timeline's track: a striped bar whose slants crawl along
-   it, so a diagram of a week in progress looks like one. The tile is square
-   and the stripes are at 45°, which is what makes a one-tile shift seamless.
-   Paired with `.slants` below, which paints the stripes. */
-@keyframes slants {
-  from {
-    background-position-x: 0;
-  }
-
-  to {
-    background-position-x: 1rem;
-  }
-}
-
-/* A tuned CRT channel briefly drops its coloured lamp back to neutral gray. */
-@keyframes tv-lamp-flicker {
-  0%,
-  18%,
-  24%,
-  56%,
-  63%,
-  100% {
-    opacity: 1;
-  }
-
-  20%,
-  22%,
-  58%,
-  61% {
-    opacity: 0;
   }
 }
 
@@ -816,7 +615,7 @@
       opacity 0.2s ease-out,
       transform 0.2s ease-out,
       box-shadow 0.2s ease-out;
-    @apply shadow-block-lg;
+    box-shadow: 5px 5px 0 0 black;
   }
 
   &[data-state="closed"] {
@@ -827,51 +626,6 @@
       transform 0.2s ease-in,
       box-shadow 0.2s ease-in;
   }
-}
-
-/* ── Section diagonal cut overlays ───────────────────────────────────────── */
-/* Approach: sections are plain rounded rectangles (border-radius on the      */
-/* outer wrapper + overflow:clip). Inside each section, absolutely-            */
-/* positioned black triangle divs cut the diagonal edges. The outer wrapper's */
-/* clipping rounds the triangle corners automatically — no clip-path rounding */
-/* needed, while sticky descendants still use the viewport scroll container.  */
-/*                                                                             */
-/* Naming: t = top, b = bottom, bs = `\` slope, fs = `/` slope.               */
-/* Each class sets only the clip-path; position/size/colour are set via       */
-/* Tailwind on the element itself.                                             */
-.tri-t-bs {
-  clip-path: polygon(0 0, 100% 0, 100% 100%);
-}
-
-/* top-right  `\` */
-.tri-t-fs {
-  clip-path: polygon(0 0, 100% 0, 0 100%);
-}
-
-/* top-left   `/` */
-.tri-b-bs {
-  clip-path: polygon(0 0, 0 100%, 100% 100%);
-}
-
-/* bot-left   `\` */
-.tri-b-fs {
-  clip-path: polygon(100% 0, 0 100%, 100% 100%);
-}
-
-/* bot-right  `/` */
-
-/* Scroll shadow for sidebar nav list — fades edges when content overflows */
-@utility sidebar-scroll-shadow {
-  background:
-    linear-gradient(var(--color-mauve-950), transparent) top / 100% 20px
-      no-repeat scroll,
-    linear-gradient(transparent, var(--color-mauve-950)) bottom / 100% 20px
-      no-repeat scroll,
-    radial-gradient(farthest-side at 50% 0%, rgb(0 0 0 / 0.15), transparent)
-      top / 100% 10px no-repeat local,
-    radial-gradient(farthest-side at 50% 100%, rgb(0 0 0 / 0.15), transparent)
-      bottom / 100% 10px no-repeat local,
-    var(--color-mauve-950);
 }
 
 /* Custom toasts: hide content of background stack items so only the front    */
@@ -946,8 +700,7 @@
      Radix pieces nobody has migrated yet stay legible on the dark ground. They
      read the `--brand-cosmic-*` palette directly, not `--surface` and friends:
      those are declared on `.cosmic` (the body), and a var() here resolves on
-     <html>, where they do not exist. The mauve scale above is untouched; the
-     sweep deletes it with the last caller. */
+     <html>, where they do not exist. */
   --background: var(--brand-cosmic-bg);
   --foreground: var(--brand-cosmic-text);
   --card: var(--brand-cosmic-surface);
@@ -1203,19 +956,3 @@
     animation-name: nav-fade-in;
   }
 }
-
-/* Diagonal stripes over whatever background colour the element already has —
-   the competition timeline's bars. Animate with `motion-safe:animate-slants`. */
-@utility slants {
-  background-image: linear-gradient(
-    45deg,
-    rgb(255 255 255 / var(--slants-alpha, 0.28)) 25%,
-    transparent 25%,
-    transparent 50%,
-    rgb(255 255 255 / var(--slants-alpha, 0.28)) 50%,
-    rgb(255 255 255 / var(--slants-alpha, 0.28)) 75%,
-    transparent 75%
-  );
-  background-size: 1rem 1rem;
-}
-

@@ -10,7 +10,6 @@ const XIcon = "x-icon" as unknown as React.ElementType;
 /**
  * `.sidenav` (kit-spec sections 7 and 10): a column of links under small-caps
  * group captions. The current link is the whole row tinted, with no side stripe.
- * It replaces the unused `ui/sidebar.tsx`.
  */
 function SideNav({
   className,

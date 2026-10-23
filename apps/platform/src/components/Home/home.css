@@ -177,9 +177,13 @@
     padding: 32px;
   }
   .cosmic .home-proj .home-mark {
+    color: var(--brand6);
     height: 44px;
     width: auto;
     display: block;
+  }
+  .cosmic .home-proj .home-mark[data-kind] {
+    color: var(--k6);
   }
   .cosmic .home-rows .event {
     padding: 18px 0;

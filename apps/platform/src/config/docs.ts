@@ -70,8 +70,8 @@ export const DOCS_PROJECT_MARKS: Record<string, DocsProjectMarkSpec> = {
 export const DOCS_FALLBACK_MARK: DocsProjectMarkSpec = {
   kind: "glyph",
   icon: "BookOpenIcon",
-  color: "text-mauve-300",
-  iconBg: "bg-mauve-300",
+  color: "text-muted-foreground",
+  iconBg: "bg-secondary",
 };
 
 export function docsProjectMark(slug: string): DocsProjectMarkSpec {

@@ -1,9 +1,5 @@
 /* Content pages (changelog, GDGC newsletter, legal, help, 404). The kit supplies cards, badges, tags, the timeline and the
    paper finish; this file adds only layout the kit lacks. Every selector hangs off a `content-` class. */
-/* Same statement as globals.css line 2. A static page can load this sheet before the global one, and the first
-   `@layer` seen fixes the order, which would otherwise put `cosmic` below Tailwind's base. */
-@layer theme, base, cosmic, components, utilities;
-
 @layer cosmic {
   /* ── changelog list (changelog.html) ─────────────────────────────────────── */
   .cosmic .content-sec {
@@ -42,8 +38,10 @@
     font: 700 15px/1 var(--font-mono);
     color: var(--k3);
     background:
-      linear-gradient(var(--surface-2), var(--surface-2)) 0 2px / 100% calc(100% - 4px) no-repeat,
-      linear-gradient(var(--surface-2), var(--surface-2)) 2px 0 / calc(100% - 4px) 100% no-repeat;
+      linear-gradient(var(--surface-2), var(--surface-2)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 2px 0 /
+        calc(100% - 4px) 100% no-repeat;
     padding: 6px 10px;
   }
   .cosmic .content-date {

@@ -108,11 +108,11 @@
     margin: 10px 0 0;
     max-width: 54ch;
   }
-  .cosmic .event .title a {
+  .cosmic :is(.ev-rows, .ev-feature, .ev-agenda) .event .title a {
     color: inherit;
     text-decoration: none;
   }
-  .cosmic .event .title a:hover {
+  .cosmic :is(.ev-rows, .ev-feature, .ev-agenda) .event .title a:hover {
     text-decoration: underline;
     text-underline-offset: 4px;
   }
@@ -143,15 +143,19 @@
     padding: 18px 0;
     box-shadow: inset 0 -1px 0 var(--line);
   }
-  .cosmic .event.canceled {
+  .cosmic :is(.ev-rows, .ev-feature, .ev-agenda) .event.canceled {
     opacity: 0.8;
   }
-  .cosmic .event.canceled .title,
-  .cosmic .event.canceled .meta span:nth-child(-n + 2) {
+  .cosmic :is(.ev-rows, .ev-feature, .ev-agenda) .event.canceled .title,
+  .cosmic
+    :is(.ev-rows, .ev-feature, .ev-agenda)
+    .event.canceled
+    .meta
+    span:nth-child(-n + 2) {
     text-decoration: line-through;
     text-decoration-thickness: 2px;
   }
-  .cosmic .event.canceled .date {
+  .cosmic :is(.ev-rows, .ev-feature, .ev-agenda) .event.canceled .date {
     background:
       linear-gradient(var(--surface-2), var(--surface-2)) 0 2px / 100%
         calc(100% - 4px) no-repeat,
@@ -160,7 +164,7 @@
     color: var(--text-3);
     box-shadow: none;
   }
-  .cosmic .event.canceled .date .day {
+  .cosmic :is(.ev-rows, .ev-feature, .ev-agenda) .event.canceled .date .day {
     text-shadow: none;
   }
 

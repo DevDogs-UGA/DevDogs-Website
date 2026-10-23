@@ -109,8 +109,8 @@ const MAINTENANCE: Badge = {
 const PAUSED: Badge = {
   label: "Paused",
   icon: PauseIcon,
-  bg: "bg-mauve-300",
-  text: "text-mauve-800",
+  bg: "bg-secondary",
+  text: "text-foreground",
 };
 
 /**
@@ -131,7 +131,7 @@ export const PROJECTS: Project[] = [
     year: "2026 – present",
     title: "DevDogs Platform",
     tagline: "Member Portal and Dev Tools",
-    titleColor: "text-mauve-950",
+    titleColor: "text-foreground",
     description:
       "The site you're on. A member portal and developer platform for the club: community profiles, documentation, and all the tooling that runs DevDogs.",
     switcher: {
@@ -211,7 +211,7 @@ export const PROJECTS: Project[] = [
     year: "2025 – 2026",
     title: "Wuphf",
     tagline: "Community Resource Forum",
-    titleColor: "text-mauve-950",
+    titleColor: "text-foreground",
     description:
       "A searchable hub connecting UGA students to resources for academic support, campus involvement, and career development. Contributions were paused to due greater interest in other projects.",
     switcher: {
@@ -219,7 +219,7 @@ export const PROJECTS: Project[] = [
       color: "text-emerald-400",
       blurb: "Community Directory",
       // No `url`: paused before it ever launched.
-      badge: { label: "Paused", bg: "bg-mauve-300", text: "text-mauve-800" },
+      badge: { label: "Paused", bg: "bg-secondary", text: "text-foreground" },
     },
     contributions: "closed",
     techStack: ["next", "typescript", "drizzle", "supabase", "postgres"],
@@ -229,7 +229,7 @@ export const PROJECTS: Project[] = [
     year: "2023 – 2024",
     title: "Better Bus Tracker",
     tagline: "Campus Transit, Live",
-    titleColor: "text-mauve-950",
+    titleColor: "text-foreground",
     description:
       "A native Android app for riding UGA transit: buses moving on the map in real time, and arrival times for the stop you are actually standing at. Contributions were paused to due greater interest in other projects.",
     // No `switcher`: nothing of this one shipped and nothing is being built,

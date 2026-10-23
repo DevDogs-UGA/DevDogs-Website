@@ -58,14 +58,10 @@ export default function ProjectsSection() {
                   {mark ? (
                     <span
                       className="home-mark"
-                      style={{
-                        fontSize: 44,
-                        lineHeight: 0,
-                        color:
-                          project.icon === "dogpack"
-                            ? "#a855f7"
-                            : "var(--brand6)",
-                      }}
+                      data-kind={
+                        project.icon === "dogpack" ? "workshop" : undefined
+                      }
+                      style={{ fontSize: 44, lineHeight: 0 }}
                     >
                       <mark.Icon />
                     </span>
