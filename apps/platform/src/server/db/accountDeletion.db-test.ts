@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { sql } from "drizzle-orm";
+import postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { env } from "~/env";
 import { db } from "~/server/db";
 
 /**
@@ -67,17 +69,20 @@ async function cleanup() {
   }
 }
 
-// As GoTrue calls it: supabase_auth_admin, so the hook's grants are exercised.
+// As GoTrue calls it: its own login (supabase_auth_admin), so the hook's
+// grants are exercised.
+const goTrueUrl = new URL(env.DB_URL);
+goTrueUrl.username = "supabase_auth_admin";
+const goTrueClient = postgres(goTrueUrl.toString(), { max: 1 });
+
 async function runHook(email: string) {
-  return db.transaction(async (tx) => {
-    await tx.execute(sql`set local role supabase_auth_admin`);
-    const [row] = await tx.execute<{ result: { error?: { message: string } } }>(
-      sql`select platform.require_uga_signup_email(
-            jsonb_build_object('user', jsonb_build_object('email', ${email}::text))
-          ) as result`,
-    );
-    return row!.result;
-  });
+  const [row] = await goTrueClient<
+    { result: { error?: { message: string } } }[]
+  >`
+    select platform.require_uga_signup_email(
+      jsonb_build_object('user', jsonb_build_object('email', ${email}::text))
+    ) as result`;
+  return row!.result;
 }
 
 beforeAll(async () => {
@@ -147,6 +152,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await goTrueClient.end();
   await cleanup();
   if (createdKey) {
     await db.execute(sql`delete from vault.secrets where name = ${KEY_NAME}`);

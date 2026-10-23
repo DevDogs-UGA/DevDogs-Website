@@ -65,6 +65,7 @@ describe("the tree", () => {
       "preflight",
       "plan",
       "migrate",
+      "avatars",
       "smoke",
       "reconcile",
       "prune-monitors",

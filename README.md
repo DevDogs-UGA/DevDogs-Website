@@ -91,7 +91,7 @@ being deployed (`.github/actions/backstage-cli`), not fetched with `pnpm dlx`.
 merge_group CI run:  validate -> build (staging, production)  ->  artifacts <tier>-<sha>
 push to main:        supersede
                      resolve (finds the merge_group run) -> build (only if none)
-                     staging-preflight -> staging-database
+                     staging-preflight -> staging-database -> staging-avatars
                                        -> staging-platform | staging-catalog
                      production-database (plan, approval, apply)
                                        -> production-catalog
@@ -127,7 +127,7 @@ The database and each Worker deploy through two shared, reusable workflows
   Builds run in the credential-free `staging-build` / `production-build`
   environments.
 - **Staging** runs on every deploy: preflight, the database (migrations, the
-  schema diff, new seeds, the config push), then both Workers (write-env,
+  schema diff, new seeds, the config push), avatars, then both Workers (write-env,
   Sentry release, version upload and smoke test, docs index and config reconcile
   for the platform, the live smoke test).
 - **Production** is the `production` environment (devops reviewers). Each

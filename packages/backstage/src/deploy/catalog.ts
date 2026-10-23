@@ -87,6 +87,12 @@ export const deployCommand: CommandNode = {
       options: [INCLUDE_SEED, DRY_RUN],
     },
     {
+      name: "avatars",
+      summary: "Upload seeded headshots the avatars bucket does not have yet.",
+      hint: "never replaces an existing photo",
+      options: [DRY_RUN],
+    },
+    {
       name: "smoke",
       dryRun: "read-only",
       summary: "Check a deployed app: public routes, auth redirect, Sentry.",
