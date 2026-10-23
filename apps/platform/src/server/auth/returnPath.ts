@@ -29,5 +29,9 @@ export function safeReturnPath(
   if (url.pathname === "/auth" || url.pathname.startsWith("/auth/")) {
     return fallback;
   }
-  return url.pathname + url.search + url.hash;
+  // Dot segments can normalise into a protocol-relative path
+  // (`/.//evil.example` becomes `//evil.example`), so check the result too.
+  const safe = url.pathname + url.search + url.hash;
+  if (safe.startsWith("//") || safe.includes("\\")) return fallback;
+  return safe;
 }

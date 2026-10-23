@@ -61,6 +61,9 @@ export async function GET(request: NextRequest) {
     if (failure === "cancelled") {
       redirect(signInFailureUrl("cancelled", callbackPath));
     }
+    // A request that never began a sign-in here is just a wrong URL; it must
+    // not mint incidents or alerts.
+    if (!startedHere) notFound();
     failUnexpectedly(callbackPath, "provider_error", { code: errorCode });
   }
 

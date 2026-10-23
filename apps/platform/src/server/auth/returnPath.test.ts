@@ -21,8 +21,17 @@ describe("safeReturnPath", () => {
     ["the recovery page", "/auth/failed"],
     ["an oversized value", `/${"a".repeat(3000)}`],
     ["an empty string", ""],
+    ["dot segments that collapse to //", "/.//evil.example"],
+    ["a parent segment that collapses to //", "/a/..//evil.example"],
+    ["an encoded dot segment", "/%2e//evil.example"],
+    ["an encoded parent segment", "/%2e%2e//evil.example"],
   ])("falls back for %s", (_label, raw) => {
     expect(safeReturnPath(raw)).toBe("/");
+  });
+
+  it("is idempotent", () => {
+    const once = safeReturnPath("/a/./b?x=1#h");
+    expect(safeReturnPath(once)).toBe(once);
   });
 
   it("falls back for null and undefined, and honours a custom fallback", () => {

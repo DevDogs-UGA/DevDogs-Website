@@ -1,4 +1,4 @@
-import { postAlert } from "~/server/alerts";
+import { alert } from "@devdogsuga/sdk/telemetry";
 
 /**
  * The internal record behind an incident reference: one structured log line
@@ -21,9 +21,15 @@ export function reportSignInIncident(incident: {
       status: incident.status ?? null,
     }),
   );
-  void postAlert("Sign-in failed unexpectedly", [
-    `Reference: ${incident.ref}`,
-    `Stage: ${incident.stage}`,
-    `Code: ${incident.code ?? "none"}`,
-  ]);
+  // Tagged so a quoted reference resolves through a tag search; the alert
+  // itself never throws.
+  alert(
+    "Sign-in failed unexpectedly",
+    [
+      `Reference: ${incident.ref}`,
+      `Stage: ${incident.stage}`,
+      `Code: ${incident.code ?? "none"}`,
+    ],
+    { tags: { incidentRef: incident.ref, stage: incident.stage } },
+  );
 }
