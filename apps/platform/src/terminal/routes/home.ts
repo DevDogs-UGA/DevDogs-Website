@@ -1,4 +1,5 @@
 import { ISSUES } from "@devdogsuga/newsletter";
+import { KIND } from "@devdogsuga/sdk/brand";
 import {
   EVENTS_BLURB,
   HERO_BLURB,
@@ -22,10 +23,11 @@ import { ACCENT, TONE } from "../theme";
  * It ends with the index of everything else a terminal can reach.
  */
 
-/** The badge fills `config/projects.ts` uses, as terminal colours. */
+/** The badge fills `config/projects.ts` uses, as Cosmic category hues. */
 const BADGE_COLOR: Record<string, string> = {
-  "bg-cyan-400": ACCENT.cyan,
-  "bg-amber-400": ACCENT.amber,
+  "bg-cyan-400": KIND.build[3],
+  "bg-amber-400": KIND.info[3],
+  "bg-emerald-400": KIND.workshop[3],
 };
 
 function projectEntry(project: Project): Entry {

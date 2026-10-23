@@ -1,4 +1,5 @@
 import { SITE } from "@devdogsuga/newsletter";
+import { KIND } from "@devdogsuga/sdk/brand";
 import { EVENT_SEGMENT_VISUALS } from "@devdogsuga/sdk/brand/event";
 import {
   BUILDING_ADDRESS,
@@ -10,6 +11,7 @@ import {
 } from "~/components/EventsSection/FindUs/buildings";
 import { findUsBlurb } from "~/components/EventsSection/FindUs/copy";
 import { cancellationNotice } from "~/components/EventsSection/meetingView";
+import { categoryOf } from "~/lib/eventKind";
 import { formatEventDate, formatRelative } from "~/lib/eventTime";
 import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
 import {
@@ -105,7 +107,7 @@ function segmentChips(
   const { segments } = resolveMeetingSegments({ kind, workshops });
   const chips: Chip[] = segments.map((segment) => ({
     label: EVENT_SEGMENT_VISUALS[segment].label,
-    color: EVENT_SEGMENT_VISUALS[segment].accent,
+    color: KIND[categoryOf({ kind: null, segments: [segment] })][3],
   }));
   if (kind !== null) chips.push(meetingChip(kind, false));
   return chips;
