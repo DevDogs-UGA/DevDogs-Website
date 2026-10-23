@@ -16,7 +16,8 @@ type CheckboxProps = Omit<
   label?: React.ReactNode;
   /**
    * The mixed state of a "select all" over a partly picked list: draws the
-   * filled box with a dash and sets `aria-checked="mixed"`. Checkbox only. The
+   * filled box with a dash and sets the native `indeterminate` flag, which is
+   * what assistive tech reads as mixed. Checkbox only. The
    * caller owns what a click does next (the native `checked` is unchanged).
    */
   indeterminate?: boolean;
@@ -30,7 +31,7 @@ type CheckboxProps = Omit<
  * Checked and focus states come from the input via CSS (`fields.css`), so it
  * works controlled or uncontrolled with no state of its own. `aria-invalid`
  * outlines the unchecked box in the invalid colour. `indeterminate` is the
- * mixed state (a dash, `aria-checked="mixed"`).
+ * mixed state (a dash, and the native `indeterminate` flag).
  */
 function Checkbox({
   type = "checkbox",
@@ -59,13 +60,10 @@ function Checkbox({
       className={cn("check", type === "radio" && "radio", wrapperClassName)}
       data-invalid={ariaInvalid === true || ariaInvalid === "true" || undefined}
     >
-      {/* The role is checkbox (or radio); the lint rule only sees a dynamic `type`. */}
-      {/* eslint-disable-next-line jsx-a11y/role-supports-aria-props */}
       <input
         type={type}
         data-slot={type}
         aria-invalid={ariaInvalid}
-        aria-checked={mixed ? "mixed" : undefined}
         className={className}
         ref={setRef}
         {...props}

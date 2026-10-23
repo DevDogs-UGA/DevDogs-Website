@@ -63,11 +63,11 @@ describe("Field", () => {
 });
 
 describe("Checkbox indeterminate", () => {
-  it("is mixed natively and in aria-checked, and clears when not set", () => {
+  it("is mixed through the native indeterminate flag, and clears when not set", () => {
     const { rerender } = render(<Checkbox indeterminate label="All" />);
     const box = screen.getByLabelText<HTMLInputElement>("All");
     expect(box.indeterminate).toBe(true);
-    expect(box.getAttribute("aria-checked")).toBe("mixed");
+    expect(box.hasAttribute("aria-checked")).toBe(false);
     rerender(<Checkbox label="All" />);
     expect(box.indeterminate).toBe(false);
     expect(box.hasAttribute("aria-checked")).toBe(false);
