@@ -3620,10 +3620,11 @@
 
 /* Reduced motion: overlays appear and leave without the zoom/slide. */
 @media (prefers-reduced-motion: reduce) {
-  .cosmic .animate-in,
-  .cosmic .animate-out,
-  .animate-in[data-slot],
-  .animate-out[data-slot] {
+  /* The overlays animate through variant utilities (data-open:animate-in and
+     friends), so match what they render rather than a bare .animate-in. */
+  [data-slot][data-state],
+  [data-slot][data-open],
+  [data-slot][data-closed] {
     animation: none !important;
   }
 }

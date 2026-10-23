@@ -111,7 +111,7 @@ export default function DevDogsSearchDialog({ open, onOpenChange }: Props) {
         <DialogDescription>Search pages, docs, and settings</DialogDescription>
       </DialogHeader>
       <DialogContent
-        className="cmd-dialog top-[72px] translate-y-0 gap-0 overflow-visible"
+        className="cmd-dialog w-[min(680px,calc(100vw-2rem))] sm:max-w-[680px] top-[72px] translate-y-0 gap-0 overflow-visible"
         showCloseButton={false}
       >
         <Command shouldFilter={false}>

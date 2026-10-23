@@ -55,7 +55,7 @@ function CommandDialog({
       </DialogHeader>
       <DialogContent
         className={cn(
-          "cmd-dialog top-[72px] translate-y-0 gap-0 overflow-visible",
+          "cmd-dialog w-[min(680px,calc(100vw-2rem))] sm:max-w-[680px] top-[72px] translate-y-0 gap-0 overflow-visible",
           className,
         )}
         showCloseButton={showCloseButton}

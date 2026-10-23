@@ -14,6 +14,12 @@
   .sidenav a {
     text-align: left;
   }
+  /* 44px rows on touch: the mobile panel's sections and the shell scroller. */
+  @media (pointer: coarse) {
+    .sidenav a {
+      min-height: 44px;
+    }
+  }
   .sidenav a[aria-disabled="true"] {
     opacity: 0.5;
     pointer-events: none;
