@@ -1,8 +1,30 @@
 import * as React from "react";
-import { ACCENT, MAUVE, THEME } from "../tokens.js";
-import { eventKindVisual, type EventDetail } from "../event.js";
+import { COSMIC, DEVDOGS } from "../brand.js";
+import { type EventDetail } from "../event.js";
 import { Icon } from "../primitives.js";
-import { CardShell, cardContext, type CardContext } from "./CardShell.js";
+import {
+  CardShell,
+  cardContext,
+  hueSteps,
+  Stepped,
+  titleShadow,
+  type CardContext,
+  type CardHue,
+} from "./CardShell.js";
+
+/**
+ * The category an authored kind falls in when the caller has not resolved one
+ * (the CLI passes a bare `kind`). The platform's `categoryOf` is the source of
+ * truth and passes `category`; this mirrors its kind table for callers that
+ * cannot import the app.
+ */
+const CATEGORY_OF_KIND: Readonly<Record<string, CardHue>> = {
+  "Build Session": "build",
+  "Study Session": "study",
+  "Interest Meeting": "info",
+  Social: "social",
+  "Demo Night": "milestone",
+};
 
 /**
  * One meeting, as everything a person needs to decide whether to come.
@@ -17,6 +39,8 @@ import { CardShell, cardContext, type CardContext } from "./CardShell.js";
  * no date maths and holds no timezone.
  */
 export interface EventCardProps extends EventDetail {
+  /** The meeting's category (the platform's `categoryOf`); drives the hue. */
+  category?: CardHue;
   width: number;
   height: number;
   cobrand?: boolean;
@@ -56,11 +80,19 @@ export function EventCard({
   agenda,
   cancelled,
   path,
+  category,
   cobrand,
 }: EventCardProps) {
-  const accent = cancelled
-    ? ACCENT.red400
-    : (badge?.accent ?? eventKindVisual(kind)?.accent ?? ACCENT.cyan400);
+  // A workshop item's badge wins, then the resolved category, then the kind's
+  // own; a cancelled night is DevDogs red, the one colour that is not a hue.
+  const hue: CardHue = cancelled
+    ? "devdogs"
+    : badge?.label === "Workshop"
+      ? "workshop"
+      : (category ??
+        (kind !== undefined ? CATEGORY_OF_KIND[kind] : undefined) ??
+        "build");
+  const { light: accent, deep } = hueSteps(hue);
   const context = cardContext(width, height);
   const { u } = context;
 
@@ -97,22 +129,25 @@ export function EventCard({
         }}
       >
         {cancelled ? (
-          <div
-            style={{
-              display: "flex",
-              alignSelf: square ? "center" : "flex-start",
-              fontFamily: "Hanken Grotesk",
-              fontWeight: 700,
-              fontSize: 26 * u,
-              letterSpacing: 1.4 * u,
-              color: THEME.ink,
-              background: ACCENT.red400,
-              padding: `${8 * u}px ${20 * u}px`,
-              borderRadius: 8 * u,
-            }}
+          <Stepped
+            color={DEVDOGS[7]}
+            step={Math.max(2, 4 * u)}
+            style={{ alignSelf: square ? "center" : "flex-start" }}
           >
-            CANCELLED
-          </div>
+            <div
+              style={{
+                display: "flex",
+                fontFamily: "Hanken Grotesk",
+                fontWeight: 700,
+                fontSize: 26 * u,
+                letterSpacing: 1.4 * u,
+                color: COSMIC.text,
+                padding: `${8 * u}px ${20 * u}px`,
+              }}
+            >
+              CANCELLED
+            </div>
+          </Stepped>
         ) : null}
 
         <div
@@ -121,7 +156,8 @@ export function EventCard({
             fontWeight: 800,
             fontSize: titleSize(title, context) * (denseWide ? 0.62 : 1) * u,
             lineHeight: 1.05,
-            color: THEME.heading,
+            color: COSMIC.text,
+            textShadow: titleShadow(deep, u),
             width: "100%",
             textAlign: square ? "center" : "left",
             overflowWrap: "anywhere",
@@ -142,6 +178,7 @@ export function EventCard({
           }}
         >
           <Detail
+            color={accent}
             icon="CalendarDot"
             text={date}
             u={u}
@@ -153,8 +190,9 @@ export function EventCard({
               keeps its URL — the link is already in Discord and people walk
               over anyway — so the card keeps its date and drops the
               instructions. */}
-          {cancelled ? null : (
+          {cancelled || !time ? null : (
             <Detail
+              color={accent}
               icon="Clock"
               text={time}
               u={u}
@@ -165,6 +203,7 @@ export function EventCard({
           )}
           {cancelled || !location ? null : (
             <Detail
+              color={accent}
               icon="MapPin"
               text={location}
               u={u}
@@ -180,7 +219,7 @@ export function EventCard({
             style={{
               fontFamily: "Hanken Grotesk",
               fontSize: 30 * u,
-              color: MAUVE[300],
+              color: COSMIC["text-2"],
               textWrap: "balance",
             }}
           >
@@ -204,7 +243,7 @@ export function EventCard({
                   display: "flex",
                   fontFamily: "Hanken Grotesk",
                   fontSize: (denseWide ? 21 : wide ? 32 : 26) * u,
-                  color: MAUVE[400],
+                  color: COSMIC["text-3"],
                   textAlign: square ? "center" : "left",
                   textWrap: "balance",
                 }}
@@ -222,6 +261,7 @@ export function EventCard({
 }
 
 function Detail({
+  color,
   icon,
   text,
   u,
@@ -229,6 +269,7 @@ function Detail({
   centered,
   dense,
 }: {
+  color: string;
   icon: "CalendarDot" | "Clock" | "MapPin";
   text: string;
   u: number;
@@ -248,14 +289,14 @@ function Detail({
       <Icon
         name={icon}
         size={(dense ? 28 : wide ? 42 : 34) * u}
-        color={MAUVE[400]}
+        color={color}
       />
       <div
         style={{
           fontFamily: "Hanken Grotesk",
           fontWeight: 700,
           fontSize: (dense ? 26 : wide ? 38 : 30) * u,
-          color: MAUVE[200],
+          color: COSMIC.text,
         }}
       >
         {text}

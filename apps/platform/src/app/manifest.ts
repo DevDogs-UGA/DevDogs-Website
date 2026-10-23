@@ -24,15 +24,14 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     display: "standalone",
     /**
-     * Both black, matching `<body className="bg-black">` in the root layout.
-     * `background_color` is what a browser paints during launch, before any CSS
+     * Both the Cosmic ground (`--bg`, #0a0718). `background_color` is what a browser paints during launch, before any CSS
      * has parsed, so a light default there is a white flash in front of a site
      * that is dark everywhere. `theme_color` is the Android address bar. The
      * rose/cyan/amber accents are per-section and would be arbitrary as a
      * single site-wide colour, so the one colour the whole app agrees on wins.
      */
-    background_color: "#000000",
-    theme_color: "#000000",
+    background_color: "#0a0718",
+    theme_color: "#0a0718",
     /**
      * `app/icon.png` is served at `/icon.png`, the URL Next derives for a
      * STATIC metadata icon file. (The `?<generated>` hash in the docs is on the

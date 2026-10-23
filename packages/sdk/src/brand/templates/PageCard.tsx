@@ -1,6 +1,12 @@
 import * as React from "react";
-import { MAUVE, THEME } from "../tokens.js";
-import { CardShell, cardContext, type CardContext } from "./CardShell.js";
+import { COSMIC, DEVDOGS } from "../brand.js";
+import {
+  CardShell,
+  cardContext,
+  deepOf,
+  titleShadow,
+  type CardContext,
+} from "./CardShell.js";
 
 /**
  * The card an ordinary page unfurls as: what it is, and one line on why.
@@ -49,13 +55,14 @@ export function PageCard({
   cobrand,
 }: PageCardProps) {
   const context = cardContext(width, height);
+  const light = accent ?? DEVDOGS[3];
 
   return (
     <CardShell
       width={width}
       height={height}
       eyebrow={eyebrow}
-      accent={accent}
+      accent={light}
       footer={footer}
       cobrand={cobrand}
     >
@@ -73,7 +80,8 @@ export function PageCard({
             fontWeight: 800,
             fontSize: titleSize(title, context) * context.u,
             lineHeight: 1.05,
-            color: THEME.heading,
+            color: COSMIC.text,
+            textShadow: titleShadow(deepOf(light), context.u),
           }}
         >
           {title}
@@ -84,7 +92,7 @@ export function PageCard({
               fontFamily: "Hanken Grotesk",
               fontSize: 32 * context.u,
               lineHeight: 1.4,
-              color: MAUVE[300],
+              color: COSMIC["text-2"],
             }}
           >
             {description}

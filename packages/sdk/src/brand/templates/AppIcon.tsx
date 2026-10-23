@@ -1,8 +1,10 @@
 import * as React from "react";
 import { APPS, type AppKey } from "../apps.js";
-import { MARK, THEME } from "../tokens.js";
+import { MARK } from "../tokens.js";
+import { COSMIC } from "../brand.js";
+import { Stepped } from "./CardShell.js";
 import { DogDaysMark, DogPackMark } from "../marks.js";
-import { Mark, Tile } from "../primitives.js";
+import { Mark } from "../primitives.js";
 
 /**
  * One app's icon: its mark, on its colour, with the border and block shadow
@@ -35,14 +37,20 @@ export function AppIcon({ app, size, background }: AppIconProps) {
   const brand = APPS[app];
 
   // Fractions of the canvas, so the shadow keeps its distance at every size.
-  // The tile is inset by exactly the shadow's throw plus the outer margin: a
-  // box-shadow is drawn outside the border box, and anything that does not
-  // leave room for it gets it clipped by the image edge.
+  // The tile is inset by exactly the shadow's throw plus the outer margin, so
+  // the offset shadow is never clipped by the image edge.
   const margin = size * 0.06;
   const shadow = size * 0.055;
-  const border = Math.max(1, size * 0.035);
+  const border = Math.max(1, size * 0.025);
   const tile = size - margin * 2 - shadow;
-  const radius = tile * 0.22;
+  // Cosmic corners are stepped cells, not radii: one cell, a fifth of a
+  // percent short of a quarter of the tile, never under a pixel.
+  const step = Math.max(1, tile * 0.05);
+  // The fill sits inside the ink middle, one border in from every edge; its
+  // own corners step by half a cell so the outline keeps an even weight.
+  const fillStep = Math.max(1, step / 2);
+  const fillWidth = tile - step * 2 - border * 2;
+  const fillHeight = tile - border * 2;
 
   return (
     <div
@@ -56,17 +64,52 @@ export function AppIcon({ app, size, background }: AppIconProps) {
       }}
     >
       <div
-        style={{ display: "flex", marginRight: shadow, marginBottom: shadow }}
+        style={{
+          display: "flex",
+          position: "relative",
+          width: tile + shadow,
+          height: tile + shadow,
+        }}
       >
-        <Tile
-          size={tile}
-          fill={brand.ground}
-          radius={radius}
-          border={border}
-          shadow={shadow}
+        <div
+          style={{
+            display: "flex",
+            position: "absolute",
+            left: shadow,
+            top: shadow,
+          }}
         >
-          <AppMark app={app} size={tile * 0.62} color={brand.mark} />
-        </Tile>
+          <Stepped color={COSMIC["ink-line"]} step={step}>
+            <div
+              style={{ display: "flex", width: tile - step * 2, height: tile }}
+            />
+          </Stepped>
+        </div>
+        <Stepped color={COSMIC["ink-line"]} step={step}>
+          <div
+            style={{
+              display: "flex",
+              width: tile - step * 2,
+              height: tile,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Stepped color={brand.ground} step={fillStep}>
+              <div
+                style={{
+                  display: "flex",
+                  width: fillWidth - fillStep * 2,
+                  height: fillHeight,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <AppMark app={app} size={tile * 0.62} color={brand.mark} />
+              </div>
+            </Stepped>
+          </div>
+        </Stepped>
       </div>
     </div>
   );
@@ -91,4 +134,4 @@ function AppMark({
 }
 
 /** Kept beside the icon so a caller tinting a mark has the ink to hand. */
-export const ICON_INK = THEME.ink;
+export const ICON_INK = COSMIC["ink-line"];

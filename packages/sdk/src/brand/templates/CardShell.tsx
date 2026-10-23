@@ -1,18 +1,135 @@
 import * as React from "react";
 import type { ReactNode } from "react";
 import { CARD_REFERENCE_WIDTH, cardLayout, OG_SIZE } from "../formats.js";
-import {
-  ACCENT,
-  CONTACT,
-  MARK,
-  MAUVE,
-  THEME,
-  WORDMARK_ON_DARK,
-} from "../tokens.js";
+import { CONTACT, MARK, WORDMARK_ON_DARK } from "../tokens.js";
+import { COSMIC, DEVDOGS, KIND } from "../brand.js";
 import { GdgcCobrand, Icon, Mark, Wordmark } from "../primitives.js";
 import { rgba } from "./wash.js";
 
 export { OG_SIZE };
+
+/** The hue a card is drawn in: a category, or DevDogs red (the brand pair, never a category). */
+export type CardHue = keyof typeof KIND | "devdogs";
+
+/** A hue's light (3) and shadow (6) steps, as `data-kind` sets `--k3` and `--k6`. */
+export function hueSteps(hue: CardHue): { light: string; deep: string } {
+  const steps = hue === "devdogs" ? DEVDOGS : KIND[hue];
+  return { light: steps[3], deep: steps[6] };
+}
+
+/**
+ * Finds the shadow step for a light step, so a caller that only has the hex
+ * (the CLI hands in an app's ground colour) still gets a matching title
+ * shadow. An unknown colour is its own shadow.
+ */
+export function deepOf(light: string): string {
+  for (const steps of [DEVDOGS, ...Object.values(KIND)]) {
+    if (steps[3] === light) return steps[6];
+  }
+  return light;
+}
+
+/** The title treatment: white with a hard offset shadow in the hue's 600. */
+export function titleShadow(deep: string, u: number): string {
+  return `${5 * u}px ${5 * u}px 0 ${deep}`;
+}
+
+/**
+ * A rectangle with the kit's one-cell stepped corners: a full-height middle
+ * with two slivers inset by one cell either side. Needs no known width, so a
+ * chip fits its label. Satori has no `clip-path` to cut corners with.
+ */
+export function Stepped({
+  color,
+  step,
+  children,
+  style,
+}: {
+  color: string;
+  step: number;
+  children?: ReactNode;
+  style?: React.CSSProperties;
+}) {
+  const sliver = {
+    display: "flex",
+    width: step,
+    alignSelf: "stretch",
+    background: color,
+    marginTop: step,
+    marginBottom: step,
+  } as const;
+
+  return (
+    <div style={{ display: "flex", ...style }}>
+      <div style={sliver} />
+      <div style={{ display: "flex", background: color }}>{children}</div>
+      <div style={sliver} />
+    </div>
+  );
+}
+
+/**
+ * The starfield behind every card: a few ink-pixel stars as stacked
+ * single-colour gradients, which Satori paints as crisp squares.
+ */
+const STARS: readonly [number, number, number, string][] = [
+  [0.04, 0.12, 4, "#ffffff"],
+  [0.13, 0.93, 3, COSMIC["text-3"]],
+  [0.19, 0.3, 3, COSMIC["text-3"]],
+  [0.27, 0.9, 4, "#ffffff"],
+  [0.36, 0.08, 3, COSMIC["text-3"]],
+  [0.48, 0.2, 4, "#ffffff"],
+  [0.55, 0.92, 3, COSMIC["text-3"]],
+  [0.63, 0.1, 3, COSMIC["text-3"]],
+  [0.72, 0.84, 4, "#ffffff"],
+  [0.81, 0.26, 3, COSMIC["text-3"]],
+  [0.9, 0.7, 4, "#ffffff"],
+  [0.96, 0.4, 3, COSMIC["text-3"]],
+];
+
+function Starfield({
+  width,
+  height,
+  u,
+  inset,
+}: {
+  width: number;
+  height: number;
+  u: number;
+  /** The root's padding: Satori places absolute children inside it. */
+  inset: { x: number; y: number };
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        position: "absolute",
+        left: -inset.x,
+        top: -inset.y,
+        width,
+        height,
+      }}
+    >
+      {STARS.map(([x, y, size, color]) => {
+        const px = Math.max(2, Math.round(size * u));
+        return (
+          <div
+            key={`${x}-${y}`}
+            style={{
+              display: "flex",
+              position: "absolute",
+              left: Math.round(x * width),
+              top: Math.round(y * height),
+              width: px,
+              height: px,
+              background: color,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 /**
  * The frame every card shares: club lockup, a section chip, the page's own
@@ -41,7 +158,7 @@ export interface CardShellProps {
   height: number;
   /** The section this belongs to, in the chip. Absent leaves it off. */
   eyebrow?: string;
-  /** Tints the chip and the rule above the footer. */
+  /** Tints the chip and the rule above the footer (a hue's light step). */
   accent?: string;
   /** Replaces `devdogsuga.org` in the footer for a page worth deep-linking. */
   footer?: string;
@@ -105,7 +222,7 @@ export function CardShell({
   width,
   height,
   eyebrow,
-  accent = ACCENT.cyan400,
+  accent = DEVDOGS[3],
   footer,
   cobrand = true,
   children,
@@ -137,25 +254,25 @@ export function CardShell({
   ) : null;
 
   const chip = eyebrow ? (
-    <div
-      style={{
-        display: "flex",
-        fontFamily: "Hanken Grotesk",
-        fontWeight: 700,
-        fontSize: 24 * u,
-        letterSpacing: 1.6 * u,
-        color: THEME.ink,
-        background: accent,
-        padding: `${10 * u}px ${22 * u}px`,
-        borderRadius: 999,
-        // The wide layout puts this in a fixed-width column, where a flex
-        // child stretches to the full 620px by default and the chip becomes a
-        // bar. It is a pill in every layout or it is not the same card.
-        alignSelf: square ? "center" : "flex-start",
-      }}
+    <Stepped
+      color={accent}
+      step={Math.max(2, 4 * u)}
+      style={{ alignSelf: square ? "center" : "flex-start" }}
     >
-      {eyebrow.toUpperCase()}
-    </div>
+      <div
+        style={{
+          display: "flex",
+          fontFamily: "Hanken Grotesk",
+          fontWeight: 700,
+          fontSize: 24 * u,
+          letterSpacing: 1.6 * u,
+          color: COSMIC["on-accent"],
+          padding: `${9 * u}px ${20 * u}px`,
+        }}
+      >
+        {eyebrow.toUpperCase()}
+      </div>
+    </Stepped>
   ) : null;
 
   const footerText = footer ?? CONTACT.site;
@@ -179,11 +296,10 @@ export function CardShell({
           width: 120 * u,
           height: 6 * u,
           background: accent,
-          borderRadius: 3 * u,
         }}
       />
       <div style={{ display: "flex", alignItems: "center", gap: 10 * u }}>
-        <Icon name="Globe" size={26 * u} color={MAUVE[400]} />
+        <Icon name="Globe" size={26 * u} color={COSMIC["text-3"]} />
         <div
           style={{
             fontFamily: "Hanken Grotesk",
@@ -192,7 +308,7 @@ export function CardShell({
             // (Hanken Grotesk averages about 0.52em a character).
             fontSize: Math.min(26 * u, footerRoom / (footerText.length * 0.52)),
             whiteSpace: "nowrap",
-            color: MAUVE[400],
+            color: COSMIC["text-3"],
             textAlign: square ? "center" : "left",
           }}
         >
@@ -202,24 +318,34 @@ export function CardShell({
     </div>
   );
 
+  const stars = (
+    <Starfield
+      width={width}
+      height={height}
+      u={u}
+      inset={{ x: horizontalPad, y: verticalPad }}
+    />
+  );
+
   const frame = {
     display: "flex",
     width,
     height,
-    background: THEME.background,
+    background: COSMIC.bg,
     // The section's own colour behind the chip, so a wall of these is
     // distinguishable before any of the words resolve. On the root's own
     // `backgroundImage` rather than a stacked layer: Satori resolves
     // `position: absolute` against the flex content box, so a full-bleed layer
     // written as `left: 0, top: 0` lands at the top-left of the CONTENT and
     // paints a hard-edged rectangle across the image.
-    backgroundImage: `radial-gradient(circle at ${wide ? "94%" : "88%"} 6%, ${rgba(accent, 0.16)}, ${rgba(accent, 0)} 45%)`,
+    backgroundImage: `radial-gradient(circle at ${wide ? "94%" : "88%"} 6%, ${rgba(accent, 0.18)}, ${rgba(accent, 0)} 45%)`,
     padding: `${verticalPad}px ${horizontalPad}px`,
   } as const;
 
   if (wide) {
     return (
       <div style={{ ...frame, alignItems: "center", gap: 72 * u }}>
+        {stars}
         <div
           style={{
             display: "flex",
@@ -278,6 +404,7 @@ export function CardShell({
           justifyContent: "space-between",
         }}
       >
+        {stars}
         <div
           style={{
             display: "flex",
@@ -327,6 +454,7 @@ export function CardShell({
         justifyContent: "space-between",
       }}
     >
+      {stars}
       <div
         style={{
           display: "flex",

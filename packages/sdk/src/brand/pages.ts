@@ -1,4 +1,4 @@
-import { ACCENT } from "./tokens.js";
+import { DEVDOGS } from "./brand.js";
 
 /**
  * The Open Graph copy for every page that has a fixed one.
@@ -29,43 +29,43 @@ export const PAGE_CARDS: Record<string, PageCardCopy> = {
     title: "Learn by doing.",
     description:
       "DevDogs is a club at the University of Georgia devoted to bettering our community through open-source software.",
-    accent: ACCENT.cyan400,
+    accent: DEVDOGS[3],
   },
   "/events": {
     title: "Events",
     description: "Upcoming meetings, workshops, and events hosted by DevDogs.",
     eyebrow: "Events",
-    accent: ACCENT.amber400,
+    accent: DEVDOGS[3],
   },
   "/events/directions": {
     title: "Finding us",
     description:
       "Where DevDogs meets on campus, how to get in, and what to do when you arrive.",
     eyebrow: "Events",
-    accent: ACCENT.amber400,
+    accent: DEVDOGS[3],
   },
   "/docs": {
     title: "Docs",
     description: "Documentation for DevDogs projects.",
     eyebrow: "Docs",
-    accent: ACCENT.emerald400,
+    accent: DEVDOGS[3],
   },
   "/partners": {
     title: "Partners",
     description: "Organizations and sponsors that partner with DevDogs.",
     eyebrow: "Partners",
-    accent: ACCENT.cyan400,
+    accent: DEVDOGS[3],
   },
   "/legal/privacy": {
     title: "Privacy Policy",
     description: "How DevDogs collects, uses, and protects your data.",
     eyebrow: "Legal",
-    accent: ACCENT.red400,
+    accent: DEVDOGS[3],
   },
   "/legal/terms": {
     title: "Terms of Service",
     description: "The rules for using DevDogs, its platform, and its apps.",
     eyebrow: "Legal",
-    accent: ACCENT.red400,
+    accent: DEVDOGS[3],
   },
 };

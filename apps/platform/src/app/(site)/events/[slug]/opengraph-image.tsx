@@ -3,6 +3,7 @@ import {
   meetingCardDetail,
   meetingLocation,
 } from "@devdogsuga/sdk/brand/event";
+import { categoryOf } from "~/lib/eventKind";
 import { isCancelled } from "~/components/EventsSection/meetingView";
 import { meetingTitle, workshopLabel } from "~/lib/meetingTitle";
 import { contentType, ogResponse, size } from "@devdogsuga/sdk/brand/next";
@@ -65,6 +66,10 @@ export default async function Image({
   return ogResponse(
     EventCard({
       ...size,
+      category: categoryOf({
+        kind: meeting.kind,
+        workshops,
+      }),
       ...meetingCardDetail({
         meeting,
         title: meetingTitle(meeting, workshops),

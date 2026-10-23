@@ -1,4 +1,4 @@
-import { AppIcon, THEME } from "@devdogsuga/sdk/brand";
+import { AppIcon, COSMIC } from "@devdogsuga/sdk/brand";
 import { imageResponse } from "@devdogsuga/sdk/brand/next";
 
 /**
@@ -17,7 +17,7 @@ export default function AppleIcon() {
     AppIcon({
       app: "platform",
       size: size.width,
-      background: THEME.background,
+      background: COSMIC.bg,
     }),
     size,
   );
