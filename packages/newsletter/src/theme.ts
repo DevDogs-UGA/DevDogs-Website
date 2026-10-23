@@ -8,9 +8,7 @@
  * `mix()` instead of asking a mail client to composite them.
  */
 import type { CSSProperties } from "react";
-import {
-  EVENT_CATEGORY_VISUALS,
-} from "@devdogsuga/sdk/brand/event";
+import { EVENT_CATEGORY_VISUALS } from "@devdogsuga/sdk/brand/event";
 
 /** The club accent — UGA arch black on red. */
 export const UGA = "#ba0c2f";
