@@ -95,7 +95,7 @@ const MORE: readonly {
     kind: "milestone",
     label: "Demo Days",
     title: "Show what we’ve built",
-    body: "Two a semester: a mid-semester Demo Day and a final one. Spring Demo Days are tentative.",
+    body: "One this fall. In spring, a mid-semester Demo Day and a final one, both tentative.",
   },
   {
     kind: "social",
