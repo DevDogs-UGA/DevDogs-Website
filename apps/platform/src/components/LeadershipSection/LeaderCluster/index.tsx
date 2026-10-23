@@ -203,7 +203,9 @@ export default function LeaderCluster({ profiles }: Props) {
           return (
             <div key={profile.slug} style={{ display: "contents" }}>
               <div
-                className={`home-lnode${isOpen ? "open" : ""}${was.has(i) ? "was" : ""}`}
+                className={["home-lnode", isOpen && "open", was.has(i) && "was"]
+                  .filter(Boolean)
+                  .join(" ")}
                 style={nodeStyle}
                 onTransitionEnd={(e) => {
                   if (e.target !== e.currentTarget || isOpen) return;
@@ -236,7 +238,9 @@ export default function LeaderCluster({ profiles }: Props) {
                   popupRefs.current[i] = el;
                 }}
                 id={`leader-pop-${i}`}
-                className={`home-lpop${isOpen ? "on" : ""}`}
+                className={["home-lpop", isOpen && "on"]
+                  .filter(Boolean)
+                  .join(" ")}
                 data-side={side}
                 role="group"
                 aria-label={[profile.name, ...profile.titles].join(", ")}
