@@ -9,17 +9,21 @@ import type { ReflectionSettingsValue } from "~/server/reflections/settings";
 import { Panel } from "~/ui/app-shell";
 import Field from "~/ui/field";
 import { InputGroup, InputGroupInput, InputGroupText } from "~/ui/input-group";
-import { SettingsFormProvider, useSettingsField } from "~/ui/settings-form";
+import {
+  SettingsFormProvider,
+  useBlurredError,
+  useSettingsField,
+} from "~/ui/settings-form";
 import SettingsSaveBar from "~/ui/settings-save-bar";
 
 const noState: ReflectionSettingsActionState = { ok: false, message: "" };
 
 /** Whole numbers inside the action's own bounds, or the sentence that says so. */
-function check(value: string, min: number, max: number, name: string) {
+function check(value: string, min: number, max: number) {
   const n = Number(value);
   return value.trim() !== "" && Number.isInteger(n) && n >= min && n <= max
     ? null
-    : `${name} must be a whole number from ${min} to ${max}.`;
+    : `Enter a number from ${min} to ${max}.`;
 }
 
 /**
@@ -53,10 +57,10 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
   const [words, setWords] = useState(saved.words);
   const [days, setDays] = useState(saved.days);
 
-  const wordsError = check(words, 1, 1000, "Minimum words");
-  const daysError = check(days, 1, 90, "Submission window");
+  const wordsError = check(words, 1, 1000);
+  const daysError = check(days, 1, 90);
 
-  useSettingsField({
+  const { isSaving } = useSettingsField({
     id: "reflectionSettings",
     label: "Reflection settings",
     isDirty: words !== saved.words || days !== saved.days,
@@ -67,6 +71,9 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
     },
     save: () => persist(words, days),
   });
+
+  const shownWords = useBlurredError(wordsError);
+  const shownDays = useBlurredError(daysError);
 
   async function persist(nextWords: string, nextDays: string) {
     if (nextWords === saved.words && nextDays === saved.days) return;
@@ -89,6 +96,7 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
           label="Minimum words"
           htmlFor="minimumWordCount"
           description="1 to 1000."
+          error={shownWords.error}
         >
           <InputGroup>
             <InputGroupInput
@@ -97,6 +105,9 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
               type="number"
               value={words}
               onChange={(e) => setWords(e.target.value)}
+              onBlur={shownWords.onBlur}
+              disabled={isSaving}
+              aria-invalid={shownWords.error ? true : undefined}
               min={1}
               max={1000}
               step={1}
@@ -109,6 +120,7 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
           label="Submission window"
           htmlFor="submissionWindowDays"
           description="1 to 90. Counted from the end of the meeting."
+          error={shownDays.error}
         >
           <InputGroup>
             <InputGroupInput
@@ -117,6 +129,9 @@ function ReflectionFields({ settings }: { settings: ReflectionSettingsValue }) {
               type="number"
               value={days}
               onChange={(e) => setDays(e.target.value)}
+              onBlur={shownDays.onBlur}
+              disabled={isSaving}
+              aria-invalid={shownDays.error ? true : undefined}
               min={1}
               max={90}
               step={1}
