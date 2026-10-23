@@ -46,11 +46,13 @@ export function AppIcon({ app, size, background }: AppIconProps) {
   // Cosmic corners are stepped cells, not radii: one cell, a fifth of a
   // percent short of a quarter of the tile, never under a pixel.
   const step = Math.max(1, tile * 0.05);
-  // The fill sits inside the ink middle, one border in from every edge; its
-  // own corners step by half a cell so the outline keeps an even weight.
-  const fillStep = Math.max(1, step / 2);
-  const fillWidth = tile - step * 2 - border * 2;
-  const fillHeight = tile - border * 2;
+  // The fill is its own stepped tile laid over the ink one, inset by exactly
+  // one border on every side, so the outline has the same weight all round.
+  // Its corner step is the ink's less that border, which lines the two
+  // notches up.
+  const inner = tile - border * 2;
+  const fillStep = Math.max(1, step - border);
+  const fillMiddle = inner - fillStep * 2;
 
   return (
     <div
@@ -87,29 +89,31 @@ export function AppIcon({ app, size, background }: AppIconProps) {
         </div>
         <Stepped color={COSMIC["ink-line"]} step={step}>
           <div
-            style={{
-              display: "flex",
-              width: tile - step * 2,
-              height: tile,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Stepped color={brand.ground} step={fillStep}>
-              <div
-                style={{
-                  display: "flex",
-                  width: fillWidth - fillStep * 2,
-                  height: fillHeight,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <AppMark app={app} size={tile * 0.62} color={brand.mark} />
-              </div>
-            </Stepped>
-          </div>
+            style={{ display: "flex", width: tile - step * 2, height: tile }}
+          />
         </Stepped>
+        <div
+          style={{
+            display: "flex",
+            position: "absolute",
+            left: border,
+            top: border,
+          }}
+        >
+          <Stepped color={brand.ground} step={fillStep}>
+            <div
+              style={{
+                display: "flex",
+                width: fillMiddle,
+                height: inner,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <AppMark app={app} size={tile * 0.62} color={brand.mark} />
+            </div>
+          </Stepped>
+        </div>
       </div>
     </div>
   );

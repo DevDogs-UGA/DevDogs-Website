@@ -16,7 +16,8 @@ import {
  * The category an authored kind falls in when the caller has not resolved one
  * (the CLI passes a bare `kind`). The platform's `categoryOf` is the source of
  * truth and passes `category`; this mirrors its kind table for callers that
- * cannot import the app.
+ * cannot import the app. Keep it in step with lib/eventKind.ts BY_KIND in the
+ * platform; the Backstage graphics registry should pass `category` itself.
  */
 const CATEGORY_OF_KIND: Readonly<Record<string, CardHue>> = {
   "Build Session": "build",
@@ -113,7 +114,7 @@ export function EventCard({
     <CardShell
       width={width}
       height={height}
-      eyebrow={badge?.label ?? kind ?? "Events"}
+      eyebrow={cancelled ? undefined : (badge?.label ?? kind ?? "Events")}
       accent={accent}
       footer={`devdogsuga.org${path ?? "/events"}`}
       cobrand={cobrand}
