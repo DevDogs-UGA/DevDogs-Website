@@ -123,7 +123,7 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
           align="end"
           // Above the band below, or the band would cover the avatar itself
           // and swallow the click that opens the menu.
-          className="z-10 flex shrink-0 items-center bg-transparent p-0 transition-opacity hover:opacity-85"
+          className="tn-avatar-trigger z-10 flex shrink-0 items-center bg-transparent p-0 transition-opacity hover:opacity-85"
         >
           {/* The button's accessible name, since its only visible content is
               a picture. Radix puts `aria-expanded` alongside it, so a screen

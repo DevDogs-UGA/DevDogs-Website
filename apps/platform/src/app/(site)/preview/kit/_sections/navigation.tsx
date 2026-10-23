@@ -378,7 +378,7 @@ export default function NavigationSection() {
           <div className="spec" style={{ alignItems: "flex-start", gap: 36 }}>
             <SideNav aria-label="Settings" style={{ width: 232 }}>
               <SideNavGroup>Account</SideNavGroup>
-              <SideNavLink href="#" icon={<UserIcon />} active>
+              <SideNavLink href="#" icon={<UserIcon />}>
                 Profile
               </SideNavLink>
               <SideNavLink href="#" icon={<LinkSimpleIcon />}>
@@ -421,14 +421,14 @@ export default function NavigationSection() {
                   />
                   <SideNav aria-label="Settings">
                     <SideNavGroup>Account</SideNavGroup>
-                    <SideNavLink href="#" icon={<UserIcon />} active>
+                    <SideNavLink href="#" icon={<UserIcon />}>
                       Profile
                     </SideNavLink>
                     <SideNavLink href="#" icon={<LinkSimpleIcon />}>
                       Connected accounts
                     </SideNavLink>
                     <SideNavGroup>Developer</SideNavGroup>
-                    <SideNavLink href="#" icon={<KeyIcon />}>
+                    <SideNavLink href="#" icon={<KeyIcon />} active>
                       OAuth apps
                     </SideNavLink>
                   </SideNav>

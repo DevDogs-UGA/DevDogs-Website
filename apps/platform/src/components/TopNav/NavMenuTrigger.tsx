@@ -39,8 +39,8 @@ function allowClickToggle(event: MouseEvent<HTMLButtonElement>) {
  * retained only for touch-only devices, where hover is unavailable, and the
  * destinations live in the panel like every other destination does.
  *
- * While it is open the trigger grows an invisible skirt (a ::before, since the current-link bar is the ::after) below itself, to the
- * bottom of the bar. Triggers are shorter than the bar they are centred in, so
+ * While it is open the trigger grows an invisible skirt below itself, to the
+ * bottom of the bar (a ::before; the current-link bar is the ::after). Triggers are shorter than the bar they are centred in, so
  * a pointer heading straight down from one leaves it well before it reaches
  * the panel, and a close timer that runs out in that dead strip takes the menu
  * with it. The skirt covers the half of the gap inside the bar; the viewport's

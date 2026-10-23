@@ -174,7 +174,25 @@
     background: var(--line);
     margin: 6px 0;
   }
+  /* 44px touch targets: the avatar trigger holds a 36px Avatar, the folded
+     search is the kit's 38px/40px, and touch pads the panel rows */
+  ul.topnav .tn-avatar-trigger {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
+  @media (max-width: 900px) {
+    ul.topnav .search {
+      width: 44px;
+      min-width: 44px;
+      height: 44px;
+    }
+  }
   @media (pointer: coarse) {
+    ul.topnav .search {
+      height: 44px;
+      min-width: 44px;
+    }
     .menu .tn-row {
       min-height: 44px;
     }
@@ -216,6 +234,9 @@
     padding: 0;
   }
   .tn-mobile .mnav a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
     padding: 12px 8px;
     font: 600 16px/1 var(--font-ui);
     color: var(--text-2);

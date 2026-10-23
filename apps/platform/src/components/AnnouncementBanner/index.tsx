@@ -185,7 +185,7 @@ export function AnnouncementNotice({
        eyebrow from the accessible name entirely. */
         aria-label={`${eyebrow} — dismiss announcement`}
         data-kind={kind}
-        className="chip absolute bottom-full left-4 mb-1.5 cursor-pointer"
+        className="chip absolute bottom-full left-4 mb-1.5 cursor-pointer pointer-coarse:min-h-11"
       >
         <DismissCross className="size-3" />
         {eyebrow}
