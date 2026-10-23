@@ -23,6 +23,7 @@ describe("showsAnnouncement", () => {
 
   const appPaths = [
     "/account",
+    "/settings/profile",
     "/console",
     "/console/permissions",
     "/tools/oauth",
@@ -68,7 +69,7 @@ describe("showsAnnouncement", () => {
  * Add the route below when you add a `<SettingsSaveBar />` to a page.
  */
 describe("the announcement stays off pages with a settings save bar", () => {
-  const saveBarPaths = ["/account"];
+  const saveBarPaths = ["/account", "/settings/profile"];
 
   it.each(saveBarPaths)("stays off %s", (pathname) => {
     expect(

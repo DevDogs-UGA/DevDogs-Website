@@ -14,6 +14,7 @@ import { dismiss, isDismissed, subscribeToDismissal } from "./dismissal";
 
 const HIDDEN_PREFIXES = [
   "/account",
+  "/settings",
   "/attendance",
   "/console",
   "/oauth",

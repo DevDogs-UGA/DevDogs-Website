@@ -18,7 +18,7 @@ export default async function updateGraduation(
   year: number | null,
 ): Promise<{ error?: string }> {
   const userId = await expectSession().catch(() =>
-    authenticate("google", "/account"),
+    authenticate("google", "/settings/profile"),
   );
 
   const error = validateGraduation(semester, year);

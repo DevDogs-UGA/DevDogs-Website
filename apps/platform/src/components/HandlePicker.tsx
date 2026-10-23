@@ -13,6 +13,7 @@ import { getMyHandleChoices } from "~/server/actions/publicProfile";
 import setHandle from "~/server/actions/profileHandle";
 import type { HandleChoices } from "~/server/loaders/publicProfiles";
 import Callout from "~/ui/callout";
+import { cn } from "~/lib/cn";
 import { profilePath } from "~/lib/profilePath";
 import { CheckCircleIcon, XCircleIcon } from "@phosphor-icons/react/ssr";
 
@@ -113,7 +114,11 @@ export default function HandlePicker({
             return (
               <label
                 key={option.handle}
-                className={`set-hopt${isSelected ? "sel" : ""}${taken ? "taken" : ""}`}
+                className={cn(
+                  "set-hopt",
+                  isSelected && "sel",
+                  taken && "taken",
+                )}
               >
                 <input
                   type="radio"
@@ -129,7 +134,7 @@ export default function HandlePicker({
                   className="sr-only"
                 />
                 <span
-                  className={`check radio${isSelected ? "on" : ""}`}
+                  className={cn("check radio", isSelected && "on")}
                   aria-hidden
                 >
                   <i />

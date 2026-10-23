@@ -18,7 +18,7 @@ export default async function updateAccountVisibility(
   formData: FormData,
 ): Promise<AccountVisibilityState> {
   const userId = await expectSession().catch(() =>
-    authenticate("google", "/account"),
+    authenticate("google", "/settings/accounts"),
   );
 
   const { provider, show } = await zfd
@@ -33,7 +33,7 @@ export default async function updateAccountVisibility(
     .set(provider === "github" ? { showGithub: show } : { showDiscord: show })
     .where(eq(profiles.userId, userId));
 
-  revalidatePath("/account");
+  revalidatePath("/settings/accounts");
 
   return provider === "github"
     ? { ...prevState, showGithub: show }

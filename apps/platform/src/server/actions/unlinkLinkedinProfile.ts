@@ -5,7 +5,7 @@ import { authenticate, expectSession } from "../auth";
 import { unlinkProfile } from "../auth/providers/linkedin";
 
 export default async function unlinkLinkedinProfile() {
-  await expectSession().catch(() => authenticate("google", "/account"));
+  await expectSession().catch(() => authenticate("google", "/settings/accounts"));
   await unlinkProfile();
   refresh();
 }

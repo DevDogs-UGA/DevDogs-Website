@@ -27,6 +27,7 @@ export default function robots(): MetadataRoute.Robots {
         // (site): signed-in or permission-gated pages.
         "/console", // officer tools; every page checks a permission flag
         "/account", // the viewer's own profile
+        "/settings", // the viewer's own settings
         "/oauth", // /oauth/consent, mid-authorization-flow only
         "/tools", // /tools/oauth, a member's own test client
         "/preview", // /preview/docs: scheduled docs, 404 without canPreviewDocs

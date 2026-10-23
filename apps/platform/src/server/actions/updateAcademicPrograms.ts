@@ -20,7 +20,7 @@ export default async function updateAcademicPrograms(
   programIds: number[],
 ): Promise<UpdateAcademicProgramsResult> {
   const userId = await expectSession().catch(() =>
-    authenticate("google", "/account"),
+    authenticate("google", "/settings/profile"),
   );
 
   const validationError = validateAcademicProgramIds(programIds);

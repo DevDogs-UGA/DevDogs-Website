@@ -22,7 +22,7 @@ export default async function unlinkGithubProfile() {
         },
       },
     },
-  }).catch(() => authenticate("google", "/account"));
+  }).catch(() => authenticate("google", "/settings/accounts"));
 
   // A GitHub identity gates every DEVELOPMENT OAuth client a member holds
   // (see OAuthGateDialog), so unlinking takes all of those, not just one.

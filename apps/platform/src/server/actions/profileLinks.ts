@@ -32,7 +32,7 @@ export default async function addProfileLink(
   formData: FormData,
 ): Promise<AddLinkResult> {
   const userId = await expectSession().catch(() =>
-    authenticate("google", "/account"),
+    authenticate("google", "/settings/profile"),
   );
 
   const parsed = await schema.safeParseAsync(formData);

@@ -125,7 +125,7 @@ export default async function oauthModerationAction(
         .insert(moderationClients)
         .values({ clientId, endpointUrl: endpointUrl || null })
         .onConflictDoNothing();
-      revalidatePath("/tools/oauth");
+      revalidatePath("/settings/oauth");
       return {
         ...EMPTY,
         clientId,
@@ -158,7 +158,7 @@ export default async function oauthModerationAction(
           .set({ endpointUrl: endpointUrl || null, updatedAt: sql`now()` })
           .where(eq(moderationClients.clientId, clientId));
       });
-      revalidatePath("/tools/oauth");
+      revalidatePath("/settings/oauth");
       return { ...EMPTY, message: "Endpoint saved" };
     }
 
@@ -189,7 +189,7 @@ export default async function oauthModerationAction(
           .where(eq(moderationClients.clientId, clientId))
           .returning({ secretVersion: moderationClients.secretVersion });
       });
-      revalidatePath("/tools/oauth");
+      revalidatePath("/settings/oauth");
       return {
         ...EMPTY,
         clientId,
@@ -249,7 +249,7 @@ export default async function oauthModerationAction(
         store: databaseDeliveryStore,
         signingKey,
       });
-      revalidatePath("/tools/oauth");
+      revalidatePath("/settings/oauth");
       if (outcome.ack && outcome.result === "delivered") {
         return {
           ...EMPTY,

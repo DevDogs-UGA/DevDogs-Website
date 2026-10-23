@@ -167,7 +167,7 @@ export default async function oauthAction(
 
   const user = await expectUserWith({
     githubIdentity: { columns: { id: true } },
-  }).catch(() => authenticate("google", "/tools/oauth"));
+  }).catch(() => authenticate("google", "/settings/oauth"));
 
   switch (intent) {
     case "create-client": {

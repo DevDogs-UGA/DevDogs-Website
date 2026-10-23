@@ -35,7 +35,7 @@ const VISIBILITY_LIMIT = 30;
 const VISIBILITY_WINDOW_SECONDS = 10 * 60;
 
 async function sessionUserId(): Promise<string> {
-  return expectSession().catch(() => authenticate("google", "/account"));
+  return expectSession().catch(() => authenticate("google", "/settings/profile"));
 }
 
 /**
@@ -46,7 +46,7 @@ async function sessionUserId(): Promise<string> {
 function revalidatePublicPages(handle: string | null | undefined) {
   revalidatePath(COMMUNITY_PATH);
   if (handle) revalidatePath(profilePath(handle));
-  revalidatePath("/account");
+  revalidatePath("/settings/profile");
 }
 
 /**

@@ -58,11 +58,11 @@ function Step({
   detail?: ReactNode;
 }>) {
   return (
-    <li className="vrow">
+    <li className="vrow flex-wrap">
       <span className="ic" aria-hidden>
         {icon}
       </span>
-      <div>
+      <div className="min-w-0 flex-1">
         <b>{children}</b>
         {detail}
       </div>
@@ -77,7 +77,7 @@ function Step({
         <Link
           href={href}
           onClick={onNavigate}
-          className="textlink ml-auto flex items-center gap-1.5 text-[13.5px] whitespace-nowrap"
+          className="textlink ml-auto flex items-center gap-1.5 text-[13.5px]"
         >
           {action}
           <ArrowRightIcon aria-hidden />

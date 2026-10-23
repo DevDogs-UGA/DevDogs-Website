@@ -49,7 +49,7 @@ export async function addTestAccount(formData: FormData) {
   const { displayName } = await testAccountSchema.parseAsync(formData);
   const user = await expectUserWith({
     testAccounts: true,
-  }).catch(() => authenticate("google", "/tools/oauth"));
+  }).catch(() => authenticate("google", "/settings/oauth"));
 
   if (user.testAccounts.length >= MAX_TEST_ACCOUNTS) {
     throw new Error(

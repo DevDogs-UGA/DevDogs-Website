@@ -39,7 +39,7 @@ export default async function setHandle(
 ): Promise<SetHandleOutcome> {
   if (!publicProfilesEnabled()) throw new Error("Public profiles are off");
   const userId = await expectSession().catch(() =>
-    authenticate("google", "/account"),
+    authenticate("google", "/settings/profile"),
   );
 
   const allowed = await consumeRateLimit({
@@ -63,7 +63,7 @@ export default async function setHandle(
     revalidatePath(COMMUNITY_PATH);
     revalidatePath(profilePath(stored));
     if (before?.handle) revalidatePath(profilePath(before.handle));
-    revalidatePath("/account");
+    revalidatePath("/settings/profile");
     return { status: "set", handle: stored };
   }
   if (

@@ -3,6 +3,7 @@
 import { useActionState, useCallback, useEffect, useState } from "react";
 import { Button } from "~/ui/button";
 import { toast } from "~/lib/toast";
+import { cn } from "~/lib/cn";
 import TestAccountDialog from "~/components/TestAccountDialog";
 import {
   approveTestAccountAuthorization,
@@ -96,12 +97,12 @@ export default function ConsentForm({
                       type="button"
                       role="radio"
                       aria-checked={on}
-                      className={`set-hopt w-full text-left${on ? "sel" : ""}`}
+                      className={cn("set-hopt w-full text-left", on && "sel")}
                       onClick={() => setSelected(account.userId)}
                       disabled={isPending}
                     >
                       <span
-                        className={`check radio${on ? "on" : ""}`}
+                        className={cn("check radio", on && "on")}
                         aria-hidden
                       >
                         <i />

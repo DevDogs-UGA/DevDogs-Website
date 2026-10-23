@@ -60,7 +60,7 @@ describe("setPublicProfileField", () => {
     });
     expect(await listed("ppact-a")).toBe(false);
     expect(revalidated).toEqual(
-      expect.arrayContaining(["/community", "/community/@ppact-a", "/account"]),
+      expect.arrayContaining(["/community", "/community/@ppact-a", "/settings/profile"]),
     );
 
     await setPublicProfileField("publicProfile", true);
@@ -81,7 +81,7 @@ describe("setPublicProfileField", () => {
     expect(await setPublicProfileField("showStars", false)).toEqual({
       status: "set",
     });
-    expect(revalidated).toEqual(["/community", "/account"]);
+    expect(revalidated).toEqual(["/community", "/settings/profile"]);
   });
 
   it("only touches the session's own profile", async () => {
