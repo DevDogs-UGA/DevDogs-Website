@@ -215,3 +215,14 @@ GRANT DELETE, INSERT, MAINTAIN, REFERENCES, SELECT, TRIGGER, TRUNCATE, UPDATE ON
 -- Server-only objects: the shadow database's default privileges grant anon and authenticated on new relations.
 REVOKE ALL ON TABLE "platform"."accountDeletions" FROM "anon", "authenticated";
 REVOKE ALL ON TABLE "platform"."publicProfiles" FROM "anon", "authenticated";
+
+-- Data step: President and DevOps Director get canDeleteAccounts, by their
+-- fixed ids (as migration 57 did for canManageOAuthApps). Seeds are
+-- insert-only, so a database that already has the roles needs the grant here.
+-- The update fires the roles trigger, which refreshes the permissions snapshot.
+update "platform"."roles"
+set "canDeleteAccounts" = true
+where "id" in (
+  '00000000-0000-0000-0000-000000000002',
+  '00000000-0000-4000-8000-000000000003'
+);
