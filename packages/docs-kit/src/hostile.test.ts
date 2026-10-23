@@ -119,6 +119,11 @@ const hostileEverywhere: [string, string, RegExp][] = [
     /set|`a`|<a>/,
   ],
   [
+    "an id on the root svg",
+    '<svg id="location"><circle r="1"/></svg>',
+    /root `<svg>`/,
+  ],
+  [
     "an SVG animate",
     '<svg><animate attributeName="href" values="javascript:1"/></svg>',
     /animate/,

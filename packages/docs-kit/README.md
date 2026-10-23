@@ -80,8 +80,9 @@ documentation fetched from a project's repository. The contract:
   signature. SVG assets and inline SVG use the same allowlist (no script,
   `foreignObject`, animation, `style`, `image`, external `use`/`href`).
 - Links: only `http`, `https` and `mailto`, plus links to the project's own
-  pages. External links get `rel="noopener noreferrer nofollow"`. Images,
-  `class`, `id`, `style`, forms, iframes, objects and `data:` URLs are refused.
+  pages. External links get `rel="noopener noreferrer nofollow"`. External and
+  `data:` images, `class`, `id` (except on elements inside an inline SVG, never
+  its root), `style`, forms, iframes, objects and `data:` URLs are refused.
 - It does not run the link check or the `pnpm` command check (the latter
   shells out) and writes nothing outside a temporary directory it removes.
 
@@ -140,3 +141,12 @@ pastes somewhere else.
 
 [API reference](https://devdogsuga.org/docs/toolkit/reference/api/docs-kit) ·
 [Docs system](https://devdogsuga.org/docs/toolkit/guides/docs-kit)
+
+## Requirement for the publishing stage (H2)
+
+Approved relative asset references (`![x](a.png)`, `<img src="sub/x.png">`) are
+validated against the page's folder in the docs tree but are emitted still
+relative; the browser would resolve them against the page route, which differs
+for a folder's `index.md`. H2 must rewrite approved asset references to
+absolute content-addressed URLs (the sha256 is already computed) when it
+serves them.

@@ -153,7 +153,8 @@ export function rehypeExternalLinks() {
       const href = node.properties.href;
       if (typeof href !== "string") return;
       const scheme = schemeOf(href);
-      if (scheme !== "http" && scheme !== "https" && scheme !== "mailto") return;
+      if (scheme !== "http" && scheme !== "https" && scheme !== "mailto")
+        return;
       // Browsers drop tabs and newlines inside a URL; write what they read.
       node.properties.href = normalizeUrl(href);
       node.properties.rel = ["noopener", "noreferrer", "nofollow"];
@@ -221,12 +222,14 @@ export function remarkCheckFenceLinks() {
     const url = { trust: policy.trust, untrusted: policy.untrusted };
     visit(tree, "code", (node) => {
       if (!node.meta) return;
-      const where = whereOf(file, node.position as Position | undefined);
+      const where = whereOf(file, node.position);
       const href = metaAttribute(node.meta, "href");
       if (href !== undefined) {
         const scheme = schemeOf(href);
         const why =
-          policy.trust === "untrusted" && scheme !== "http" && scheme !== "https"
+          policy.trust === "untrusted" &&
+          scheme !== "http" &&
+          scheme !== "https"
             ? `code block href= must be an http(s) URL (found "${href.slice(0, 60)}")`
             : checkUrl(href, "link", url);
         if (why !== null) {

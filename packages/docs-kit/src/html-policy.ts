@@ -18,7 +18,9 @@
  *   presentation hooks the site's stylesheet gives them (`class`, `id`).
  * - `untrusted`: documentation fetched from a project repository. No `class`,
  *   `id` or `style` (they can borrow the site's own styling to spoof its UI or
- *   clobber its DOM), no external images, and external links are forced to
+ *   clobber its DOM; the one exception is `id` on elements inside an inline
+ *   `<svg>`, which gradients, clip paths and `<use>` need, but never on the
+ *   `<svg>` root), no external images, and external links are forced to
  *   `rel="noopener noreferrer nofollow"` by `rehypeExternalLinks`.
  *
  * Property names below are hast's, not HTML's (`strokeWidth`, `ariaLabel`,
@@ -520,6 +522,10 @@ export function elementProblem(
     }
     if (name === "style") {
       return `\`style\` attributes aren't allowed (on \`<${tagName}>\`); use the site's own styling, or an SVG presentation attribute`;
+    }
+
+    if (name === "id" && isSvgRoot && url.trust === "untrusted") {
+      return "`id` isn't allowed on the root `<svg>` (docs fetched from a project can't set ids that could clobber the site's DOM); put ids on inner gradient or clipPath elements only";
     }
 
     const allowed =
