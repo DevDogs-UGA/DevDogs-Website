@@ -1,0 +1,654 @@
+/* The events pages' own layout (events.html, events-month.html, event-detail.html). Everything the kit has (cards,
+   chips, date tiles, buttons, the segmented control, the timeline, the drawer) comes from cosmic.css; this file adds
+   only the toolbar, the schedule list, the month grid and the detail page's two-column layout.
+   Every selector hangs off an `ev-` class (or a kit class scoped under one) so none can collide with the kit. */
+@layer cosmic {
+  .cosmic .ev-wrap {
+    padding-bottom: var(--space-9);
+  }
+
+  /* ── toolbar ───────────────────────────────────────────────────────────── */
+  .cosmic .ev-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    padding: var(--space-5) 0;
+  }
+  .cosmic .ev-toolbar .grow {
+    flex: 1;
+  }
+  .cosmic .ev-filters {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .cosmic .ev-filters .btn.ghost {
+    box-shadow: none;
+  }
+  .cosmic .ev-filters .btn.ghost.on {
+    background:
+      linear-gradient(
+          color-mix(in srgb, var(--k3) 16%, var(--surface)),
+          color-mix(in srgb, var(--k3) 16%, var(--surface))
+        )
+        0 2px / 100% calc(100% - 4px) no-repeat,
+      linear-gradient(
+          color-mix(in srgb, var(--k3) 16%, var(--surface)),
+          color-mix(in srgb, var(--k3) 16%, var(--surface))
+        )
+        2px 0 / calc(100% - 4px) 100% no-repeat;
+  }
+  .cosmic .ev-filters .btn .dot {
+    width: 8px;
+    height: 8px;
+    background: var(--k3);
+    flex: none;
+  }
+  .cosmic .ev-toolbar .seg label {
+    display: inline-flex;
+    gap: 7px;
+    align-items: center;
+  }
+
+  /* ── list view ─────────────────────────────────────────────────────────── */
+  .cosmic .ev-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: var(--space-7);
+    align-items: start;
+  }
+  .cosmic .ev-layout > aside,
+  .cosmic .ev-aside {
+    min-width: 0;
+  }
+  .cosmic .ev-stack {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  .cosmic .ev-list {
+    min-width: 0;
+  }
+  .cosmic .ev-lead-eyebrow {
+    margin-bottom: 16px;
+  }
+  .cosmic .ev-chips {
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .cosmic .ev-rows .ev-chips,
+  .cosmic .ev-list > section .ev-chips {
+    margin-bottom: 8px;
+  }
+  .cosmic .ev-feature {
+    padding: 28px;
+  }
+  .cosmic .ev-feature .event {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+  .cosmic .ev-feature .actions {
+    grid-column: 2;
+    display: flex;
+    gap: var(--space-4);
+    align-items: center;
+    flex-wrap: wrap;
+    padding-top: var(--space-2);
+  }
+  .cosmic .ev-feature .event .title {
+    font-size: 30px;
+  }
+  .cosmic .ev-feature .lede {
+    margin: 10px 0 0;
+    max-width: 54ch;
+  }
+  .cosmic .event .title a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .cosmic .event .title a:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .cosmic .ev-month {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin: var(--space-7) 0 var(--space-3);
+  }
+  .cosmic .ev-month h2 {
+    font-size: 30px;
+  }
+  .cosmic .ev-month .rule,
+  .cosmic .selhead .rule {
+    flex: 1;
+    height: 2px;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--line-strong) 0 6px,
+      transparent 6px 10px
+    );
+  }
+  .cosmic .ev-month .count {
+    font-size: 13px;
+    color: var(--text-3);
+  }
+  .cosmic .ev-rows .event {
+    padding: 18px 0;
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+  .cosmic .event.canceled {
+    opacity: 0.8;
+  }
+  .cosmic .event.canceled .title,
+  .cosmic .event.canceled .meta span:nth-child(-n + 2) {
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+  }
+  .cosmic .event.canceled .date {
+    background:
+      linear-gradient(var(--surface-2), var(--surface-2)) 0 2px / 100%
+        calc(100% - 4px) no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 2px 0 /
+        calc(100% - 4px) 100% no-repeat;
+    color: var(--text-3);
+    box-shadow: none;
+  }
+  .cosmic .event.canceled .date .day {
+    text-shadow: none;
+  }
+
+  /* aside: calendar feed, past meetings */
+  .cosmic .ev-feed {
+    padding: 24px;
+  }
+  .cosmic .ev-feed .card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .cosmic .ev-feed-icon {
+    font-size: 22px;
+    color: var(--brand3);
+  }
+  .cosmic .ev-feed > p {
+    margin: 0 0 14px;
+  }
+  .cosmic .ev-feed .btn {
+    justify-content: flex-start;
+  }
+  .cosmic .ev-feed-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .cosmic .ev-curl {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 16px;
+    justify-content: flex-start;
+  }
+  .cosmic #past {
+    scroll-margin-top: 24px;
+  }
+  .cosmic .past {
+    display: flex;
+    flex-direction: column;
+  }
+  .cosmic .past a {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 12px;
+    padding: 12px 0;
+    text-decoration: none;
+    align-items: center;
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+  .cosmic .past a:last-child {
+    box-shadow: none;
+  }
+  .cosmic .past .d {
+    font: 700 11.5px/1.15 var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+    color: var(--text-3);
+  }
+  .cosmic .past .d b {
+    display: block;
+    font: 800 20px/1.1 var(--font-display);
+    color: var(--k3);
+    letter-spacing: 0;
+  }
+  .cosmic .past .t {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.3;
+  }
+  .cosmic .past .s {
+    font-size: 13px;
+    color: var(--text-3);
+  }
+  .cosmic .ev-more {
+    margin: var(--space-3) 0 0;
+  }
+  .cosmic .ev-unavailable {
+    padding-top: var(--space-8);
+  }
+  .cosmic .ev-digest {
+    text-align: center;
+    margin-top: var(--space-4);
+  }
+
+  /* ── month view ────────────────────────────────────────────────────────── */
+  .cosmic .ev-calbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin: 0 0 var(--space-4);
+    flex-wrap: wrap;
+  }
+  .cosmic .ev-calbar h2 {
+    font-size: 34px;
+    margin: 0 var(--space-2) 0 var(--space-3);
+  }
+  .cosmic .ev-calbar .grow {
+    flex: 1;
+  }
+  .cosmic .ev-calbar .legend {
+    display: flex;
+    gap: 14px;
+    font-size: 13px;
+    color: var(--text-3);
+    flex-wrap: wrap;
+  }
+  .cosmic .ev-calbar .legend i {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-right: 6px;
+    background:
+      linear-gradient(var(--k3), var(--k3)) 0 2px / 100% calc(100% - 4px)
+        no-repeat,
+      linear-gradient(var(--k3), var(--k3)) 2px 0 / calc(100% - 4px) 100%
+        no-repeat;
+  }
+  .cosmic .ev-cal {
+    padding: 12px;
+  }
+  .cosmic .ev-cal .wk,
+  .cosmic .ev-cal .grid7 {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+  .cosmic .ev-cal .wkrow {
+    display: contents;
+  }
+  .cosmic .ev-cal .wk > div {
+    padding: 10px 12px 12px;
+    font: 700 12px/1 var(--font-ui);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .cosmic .ev-cal .grid7 {
+    gap: 2px;
+    background: var(--line);
+    box-shadow: 0 0 0 2px var(--line);
+  }
+  .cosmic .ev-cal .cell {
+    position: relative;
+    min-height: 112px;
+    background: var(--surface);
+    padding: 10px 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: stretch;
+    cursor: pointer;
+  }
+  .cosmic .ev-cal .cell:focus-visible {
+    outline: 2px dashed var(--brand3);
+    outline-offset: -4px;
+    z-index: 2;
+  }
+  .cosmic .ev-cal .cell .n {
+    font: 800 17px/1 var(--font-display);
+    min-width: 26px;
+    text-align: center;
+    color: var(--text);
+    margin-bottom: 2px;
+    align-self: flex-start;
+    padding: 4px;
+  }
+  .cosmic .ev-cal .cell.out {
+    background: var(--bg);
+  }
+  .cosmic .ev-cal .cell.out .n {
+    color: var(--text-3);
+    opacity: 0.7;
+  }
+  .cosmic .ev-cal .cell.out .pill {
+    opacity: 0.55;
+  }
+  .cosmic .ev-cal .cell.past .n {
+    color: var(--text-3);
+  }
+  .cosmic .ev-cal .cell.past .pill {
+    opacity: 0.6;
+  }
+  .cosmic .ev-cal .today-b {
+    align-self: flex-start;
+    height: 20px;
+    font-size: 11px;
+  }
+  .cosmic .ev-cal .cell.sel {
+    background:
+      linear-gradient(var(--surface-2), var(--surface-2)) 2px 4px /
+        calc(100% - 4px) calc(100% - 8px) no-repeat,
+      linear-gradient(var(--surface-2), var(--surface-2)) 4px 2px /
+        calc(100% - 8px) calc(100% - 4px) no-repeat,
+      linear-gradient(var(--k3), var(--k3)) 0 2px / 100% calc(100% - 4px)
+        no-repeat,
+      linear-gradient(var(--k3), var(--k3)) 2px 0 / calc(100% - 4px) 100%
+        no-repeat;
+    z-index: 1;
+  }
+  .cosmic .pill {
+    display: flex;
+    gap: 7px;
+    align-items: center;
+    min-height: 36px;
+    padding: 5px 8px;
+    font: 700 12.5px/1.2 var(--font-ui);
+    text-decoration: none;
+    background:
+      linear-gradient(var(--k3), var(--k3)) 0 2px / 100% calc(100% - 4px)
+        no-repeat,
+      linear-gradient(var(--k3), var(--k3)) 2px 0 / calc(100% - 4px) 100%
+        no-repeat;
+    color: var(--on-accent);
+    box-shadow:
+      inset -4px 0 0 var(--k6),
+      2px 2px 0 var(--k6);
+    min-width: 0;
+  }
+  .cosmic .pill .t {
+    font-weight: 600;
+    opacity: 0.8;
+    flex: none;
+    font-size: 11.5px;
+  }
+  .cosmic .pill .nm {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 4px;
+  }
+  .cosmic .pill.canceled {
+    background: transparent;
+    color: var(--text-3);
+    box-shadow: none;
+  }
+  .cosmic .pill.canceled .nm,
+  .cosmic .pill.canceled .t {
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+    opacity: 1;
+  }
+  .cosmic .ev-agenda {
+    display: none;
+  }
+  .cosmic .ev-agenda .event {
+    padding: 14px 0;
+    box-shadow: inset 0 -1px 0 var(--line);
+    text-decoration: none;
+    min-height: 64px;
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+  .cosmic .ev-agenda .event.past {
+    opacity: 0.6;
+  }
+  .cosmic .ev-below {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: var(--space-7);
+    margin-top: var(--space-7);
+    align-items: start;
+  }
+  .cosmic .selhead {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+  .cosmic .selhead h3 {
+    font-size: 22px;
+  }
+
+  /* ── event detail ──────────────────────────────────────────────────────── */
+  .cosmic .ev-head {
+    min-height: 300px;
+  }
+  .cosmic .ev-head h1 {
+    font-size: 80px;
+    margin: 14px 0 18px;
+  }
+  .cosmic .ev-head-chips {
+    margin: 26px 0 0;
+    align-items: center;
+  }
+  .cosmic .ev-notice {
+    margin: 0 0 12px;
+    font: 700 18px/1.4 var(--font-ui);
+    color: var(--bad);
+  }
+  .cosmic .facts {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    font-size: 16px;
+    color: var(--text-2);
+  }
+  .cosmic .facts span {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .cosmic .facts svg {
+    font-size: 20px;
+    color: var(--k3);
+  }
+  .cosmic .facts.struck span {
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+  }
+  .cosmic .ev-detail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 392px;
+    gap: var(--space-8);
+    align-items: start;
+    padding: var(--space-6) 0 var(--space-9);
+  }
+  .cosmic .ev-detail > .rail {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .cosmic .ev-detail > .main-col {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+  .cosmic .ev-detail h2 {
+    font-size: 30px;
+    margin-bottom: var(--space-4);
+  }
+  .cosmic .ev-detail .card-title {
+    font-size: 18px;
+    margin: 0;
+  }
+  .cosmic .ev-detail .card h2.card-title {
+    text-shadow: none;
+  }
+  .cosmic .ev-detail section + section {
+    margin-top: var(--space-7);
+  }
+  .cosmic .ev-detail .main-col p {
+    margin: 0 0 var(--space-4);
+    max-width: 64ch;
+  }
+  .cosmic .ev-detail .timeline h4 {
+    margin: 0 0 2px;
+    font: 700 17px/1.3 var(--font-ui);
+    color: var(--text);
+  }
+  .cosmic .ev-detail .timeline p {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text-3);
+  }
+  .cosmic .rail {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+  .cosmic .ev-action {
+    padding: 28px;
+  }
+  .cosmic .ev-action .eyebrow {
+    margin-bottom: 10px;
+  }
+  .cosmic .ev-action .h2 {
+    margin-bottom: 20px;
+  }
+  .cosmic .ev-action > p {
+    margin: 0 0 18px;
+  }
+  .cosmic .ev-bad {
+    color: var(--bad);
+  }
+  .cosmic .ev-struck {
+    text-decoration: line-through;
+    text-decoration-thickness: 3px;
+  }
+  .cosmic .ev-addcal .btn-shadow {
+    display: flex;
+  }
+  .cosmic .acts-row {
+    display: flex;
+    gap: 4px;
+    margin-top: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .cosmic .rail .ev-curl {
+    margin-top: 14px;
+    font-size: 12.5px;
+    padding: 0 10px;
+  }
+  .cosmic .ev-loc-icon {
+    font-size: 22px;
+    color: var(--k3);
+  }
+  .cosmic .rail .card-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .cosmic .ev-kv {
+    grid-template-columns: 90px 1fr;
+  }
+  .cosmic .ev-loc-actions {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 18px;
+    align-items: center;
+  }
+  .cosmic .ev-coming {
+    gap: 8px;
+    max-width: 64ch;
+  }
+
+  /* ── responsive ────────────────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .cosmic .ev-layout,
+    .cosmic .ev-below {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .cosmic .ev-stack {
+      position: static;
+    }
+    .cosmic .ev-detail {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-7);
+    }
+    .cosmic .ev-detail > .rail,
+    .cosmic .ev-detail > .main-col {
+      grid-column: 1;
+      grid-row: auto;
+    }
+    .cosmic .rail {
+      position: static;
+    }
+    .cosmic .ev-head h1 {
+      font-size: 44px;
+    }
+  }
+  @media (max-width: 720px) {
+    .cosmic .ev-feature .event {
+      grid-template-columns: 56px minmax(0, 1fr);
+    }
+    .cosmic .ev-feature .event .title {
+      font-size: 24px;
+    }
+    .cosmic .ev-feature .actions {
+      grid-column: 1 / -1;
+    }
+    .cosmic .ev-feature {
+      padding: 20px;
+    }
+    .cosmic .ev-rows .event > a.btn {
+      min-height: 44px;
+    }
+    .cosmic .ev-toolbar .grow {
+      display: none;
+    }
+    .cosmic .ev-cal,
+    .cosmic .ev-calbar .legend,
+    .cosmic .ev-below .selwrap {
+      display: none;
+    }
+    .cosmic .ev-agenda {
+      display: block;
+    }
+    .cosmic .ev-calbar h2 {
+      font-size: 26px;
+    }
+    .cosmic .ev-below {
+      margin-top: var(--space-6);
+    }
+    .cosmic .ev-head h1 {
+      font-size: 36px;
+    }
+    .cosmic .facts {
+      gap: 12px 20px;
+      font-size: 15px;
+    }
+    .cosmic .ev-month h2 {
+      font-size: 24px;
+    }
+    .cosmic .ev-month .count {
+      display: none;
+    }
+  }
+}

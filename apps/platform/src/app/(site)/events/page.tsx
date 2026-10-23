@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import EventsBody from "~/components/EventsSection/EventsBody";
 
 /**
- * The schedule's own `cacheLife` (`./layout.tsx`) revalidates every five
- * minutes, so the page's HTML does too.
+ * The schedule's own `cacheLife` (`EventsBody`) revalidates every five minutes,
+ * so the page's HTML does too.
  */
 export const revalidate = 300;
 
@@ -12,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function EventsPage() {
-  return null;
+  return <EventsBody />;
 }

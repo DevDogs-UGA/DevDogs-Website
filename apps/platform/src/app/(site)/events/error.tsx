@@ -6,13 +6,9 @@ import { reloadForChunkError } from "~/lib/chunkReload";
 import EventsUnavailable from "~/components/EventsSection/EventsUnavailable";
 
 /**
- * The events segment's boundary, for `page.tsx` and the routes below it,
- * mainly a meeting's dialog.
- *
- * It deliberately does NOT cover the schedule. `error.js` does not wrap the
- * `layout.js` above it in the same segment, and the schedule is rendered by
- * that layout so it stays mounted behind the dialogs. The layout catches its
- * own read and renders the same fallback; see {@link EventsUnavailable}.
+ * The events segment's boundary. The schedule is read in `page.tsx` now (it
+ * used to live in a layout, which an error boundary cannot wrap), so a failed
+ * read lands here as well as in `EventsBody`'s own catch.
  */
 export default function EventsError({
   error,

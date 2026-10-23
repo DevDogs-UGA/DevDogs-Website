@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import EventsBody from "~/components/EventsSection/EventsBody";
+import { DirectionsRoute } from "~/components/EventsSection/FindUs";
 import FindUsContent from "~/components/EventsSection/FindUs/FindUsContent";
 import { findUsBlurb } from "~/components/EventsSection/FindUs/copy";
 import { directionsTarget } from "~/components/EventsSection/FindUs/buildings";
@@ -20,7 +22,9 @@ export const metadata: Metadata = {
 };
 
 /**
- * The dialog's body; the segment's layout supplies the dialog around it.
+ * Directions are a drawer, not a page (D1): this URL renders the events page
+ * with the drawer open over it. The schedule is the same cached read `/events`
+ * uses; only the drawer depends on the request.
  *
  * The building rides in the query string rather than a route segment, so one
  * page serves all ten and the link a meeting hands out stays pasteable. See
@@ -32,5 +36,12 @@ export default async function DirectionsPage({
   const { b, r } = await searchParams;
   const { building, room } = directionsTarget(b, r);
 
-  return <FindUsContent building={building} room={room} tone="dark" />;
+  return (
+    <>
+      <EventsBody />
+      <DirectionsRoute building={building} room={room}>
+        <FindUsContent building={building} room={room} />
+      </DirectionsRoute>
+    </>
+  );
 }
