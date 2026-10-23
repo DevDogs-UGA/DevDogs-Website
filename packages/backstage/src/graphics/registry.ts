@@ -5,9 +5,7 @@ import {
   EmailSignature,
   EventCard,
   FORMATS,
-  OPAQUE_FORMATS,
   PageCard,
-  THEME,
   type EventDetail,
   type Format,
 } from "@devdogsuga/sdk/brand";
@@ -105,13 +103,7 @@ function appGraphics(): Graphic[] {
       why: `${brand.name}: its mark as an icon, and its card as a link.`,
       render: (format) =>
         format.family === "icon"
-          ? AppIcon({
-              app,
-              size: format.width,
-              background: OPAQUE_FORMATS.has(format.name)
-                ? THEME.background
-                : undefined,
-            })
+          ? AppIcon({ app, size: format.width })
           : PageCard({
               width: format.width,
               height: format.height,
