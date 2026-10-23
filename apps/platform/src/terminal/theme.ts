@@ -1,44 +1,43 @@
-import {
-  EVENT_KIND_VISUALS,
-  EVENT_SEGMENT_VISUALS,
-} from "@devdogsuga/sdk/brand/event";
-import { KIND, PALETTE, UGA } from "@devdogsuga/newsletter";
+import { EVENT_SEGMENT_VISUALS } from "@devdogsuga/sdk/brand/event";
+import { COSMIC, DEVDOGS, KIND } from "@devdogsuga/sdk/brand";
+import { categoryOf } from "../lib/eventKind";
 
 /**
  * The terminal's colours, every one borrowed rather than chosen.
  *
- * Text tones come from the Changelog's palette, because the Changelog is
- * already the club's terminal voice and these pages are its siblings. Event
- * colours come from `@devdogsuga/sdk/brand/event`, the same source the site's
- * calendar chips and the email's chips read, so a build session is sky here
- * too. Nothing paints a background except a chip: a terminal's own ground is
- * whatever the reader chose, and these all read on dark and light alike.
+ * Text tones are the Cosmic ink steps and event colours are the Cosmic
+ * category hues (`KIND`, step 3, the light one that reads on a dark ground),
+ * the same source `data-kind` paints on the site, so a build night is sky
+ * here too. Nothing paints a background except a chip: a terminal's own
+ * ground is whatever the reader chose, and these all read on dark and light
+ * alike.
  */
 export const TONE = {
-  ink: PALETTE.ink,
-  mute: PALETTE.mute,
-  dim: PALETTE.dim,
-  rule: PALETTE.border,
+  ink: COSMIC.text,
+  mute: COSMIC["text-3"],
+  /** The neutral card ring (FACTS), the dimmest text that still reads. */
+  dim: "#6a6082",
+  rule: COSMIC["line-strong"],
   /** The club red: the cursor underscore, the `$`, the "you are here" marks. */
-  brand: UGA,
-  /** Anything a reader might copy: URLs and curl commands. */
-  link: KIND.workshop,
+  brand: DEVDOGS[6],
+  /** Anything a reader might copy: URLs and curl commands. Brand pink, never a category. */
+  link: DEVDOGS[3],
   /** Chip label text, drawn on a chip's colour. */
-  onChip: PALETTE.bar,
+  onChip: COSMIC["on-accent"],
 } as const;
 
 /**
- * Page accents, one per `PageShell` accent the site uses, so a section keeps
- * its hue between the browser and the terminal. Tailwind's 400 step, the one
- * the site's blobs and headings are drawn from.
+ * Page accents, one per `PageShell` accent the site uses. Colour means a
+ * category on the site, so these borrow the category hues (and the brand pink
+ * for rose); cyan has no Cosmic counterpart and keeps its own.
  */
 export const ACCENT = {
-  rose: "#fb7185",
-  amber: "#fbbf24",
+  rose: DEVDOGS[3],
+  amber: KIND.info[3],
   cyan: "#22d3ee",
-  emerald: "#34d399",
-  violet: "#a78bfa",
-  sky: "#38bdf8",
+  emerald: KIND.workshop[3],
+  violet: KIND.milestone[3],
+  sky: KIND.build[3],
 } as const;
 
 export type Accent = keyof typeof ACCENT;
@@ -55,16 +54,13 @@ export interface Chip {
  * precedence `primaryBadge` applies on the site.
  */
 export function meetingChip(kind: string | null, hasWorkshops: boolean): Chip {
-  if (kind !== null) {
-    const visual = (
-      EVENT_KIND_VISUALS as Record<string, { accent: string } | undefined>
-    )[kind];
-    return { label: kind, color: visual?.accent ?? TONE.mute };
-  }
+  const color =
+    KIND[categoryOf({ kind, segments: hasWorkshops ? ["workshop"] : [] })][3];
+  if (kind !== null) return { label: kind, color };
   const segment = hasWorkshops
     ? EVENT_SEGMENT_VISUALS.workshop
     : EVENT_SEGMENT_VISUALS.open;
-  return { label: segment.label, color: segment.accent };
+  return { label: segment.label, color };
 }
 
 /** The struck-through state a cancelled night wears everywhere. */
