@@ -57,7 +57,7 @@ const KIND_VARIANTS: ReadonlySet<ButtonVariant> = new Set([
 ]);
 
 const ICON_CLASS =
-  "[&_svg]:pointer-events-none [&_svg]:size-[1.1em] [&_svg]:shrink-0";
+  "[&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-[1.1em] [&_svg]:shrink-0";
 
 interface ButtonVariantOptions {
   variant?: ButtonVariant | null;
