@@ -204,7 +204,7 @@ export default function OAuthClientSheet({
                 <span className="help">
                   {production
                     ? "Only the app's own Supabase callback: https://<project>.supabase.co/auth/v1/callback. At least one."
-                    : "Development clients only accept localhost addresses."}
+                    : "Any http or https address."}
                 </span>
               </div>
 

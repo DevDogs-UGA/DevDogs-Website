@@ -65,7 +65,7 @@ async function OAuthData({ searchParams }: Props) {
       <Panel
         id="dev-clients"
         title="Development clients"
-        help="For testing on your own machine. Redirect URIs must be localhost addresses (http://localhost:<port>/…); the course uses http://localhost:3000/auth/callback. Needs a linked GitHub account."
+        help="For testing on your own machine. Redirect URIs can be any http or https address, such as a local Supabase project's callback. Needs a linked GitHub account."
       >
         <OAuthCredentialsField
           {...data}
