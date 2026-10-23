@@ -182,8 +182,8 @@
     width: auto;
     display: block;
   }
-  .cosmic .home-proj .home-mark[data-kind] {
-    color: var(--k6);
+  .cosmic .home-proj .home-mark.dogpack {
+    color: var(--brand-purple-700);
   }
   .cosmic .home-rows .event {
     padding: 18px 0;

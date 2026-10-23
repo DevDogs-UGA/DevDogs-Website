@@ -4,7 +4,7 @@ import Scene from "~/components/Scene";
 import { cn } from "~/lib/cn";
 import type { EventCategory } from "~/lib/eventKind";
 
-/** The legacy hue names pages still pass; declared here so accent-blobs can be deleted. */
+/** The legacy hue names pages still pass; declared here. */
 export type AccentColor =
   "amber" | "blue" | "cyan" | "emerald" | "rose" | "violet";
 

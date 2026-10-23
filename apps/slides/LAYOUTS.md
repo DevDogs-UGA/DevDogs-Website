@@ -44,7 +44,7 @@ them off:
     accents, all blurred. `theme/components/CornerWash.vue` holds the
     accent → companions map and the blob positions.
   - `site` — a static (no parallax, no JS) port of the
-    website's section blob wash (`apps/platform/src/ui/section-background.tsx`
+    website's section blob wash (`ui/section-background.tsx`, since deleted),
     and its callers like `HeroSection`/`EventsSection`): five radial
     gradients, tinted with `color-mix(in srgb, var(--accent) N%,
 transparent)` so it always matches the slide's own accent, plus a

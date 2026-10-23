@@ -2823,6 +2823,7 @@
     margin-bottom: 32px;
   }
   :where(.cosmic, .paper) .pgh h1 {
+    overflow-wrap: anywhere; /* a title can be an email address or an id */
     font-size: 34px;
     line-height: 1.1;
   }

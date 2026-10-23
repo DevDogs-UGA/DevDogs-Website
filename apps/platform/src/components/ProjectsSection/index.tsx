@@ -5,6 +5,7 @@ import Badge from "~/ui/badge";
 import { Tag } from "~/ui/tag";
 import { TextLink } from "~/ui/text-link";
 import Link from "next/link";
+import { cn } from "~/lib/cn";
 import { PROJECTS } from "~/config/projects";
 import { PROJECT_ICONS } from "./project-icons";
 
@@ -57,10 +58,10 @@ export default function ProjectsSection() {
                 >
                   {mark ? (
                     <span
-                      className="home-mark"
-                      data-kind={
-                        project.icon === "dogpack" ? "workshop" : undefined
-                      }
+                      className={cn(
+                        "home-mark",
+                        project.icon === "dogpack" && "dogpack",
+                      )}
                       style={{ fontSize: 44, lineHeight: 0 }}
                     >
                       <mark.Icon />

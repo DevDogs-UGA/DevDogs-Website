@@ -60,7 +60,7 @@ function Content({
         "combobox-popover",
         LB_FRAME,
         "flex flex-col",
-        // Older callers still pass the mauve border / fill / block shadow; the
+        // Older callers still pass a border / fill / block shadow; the
         // frame is the list box's now, so those lose.
         "rounded-none! border-0! bg-transparent! shadow-none!",
         className,
