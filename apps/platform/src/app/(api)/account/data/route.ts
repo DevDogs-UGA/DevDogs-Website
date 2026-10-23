@@ -3,6 +3,7 @@ import { auditEvents } from "~/server/db/schema";
 import { accountDeletionAuditEvent } from "~/server/accountDeletion/audit";
 import { buildMemberDataExport } from "~/server/accountData/build";
 import { expectSession } from "~/server/auth";
+import { consumeRateLimit } from "~/server/rateLimit";
 
 /**
  * GET /account/data: "Download my data" (account-deletion Q6). A JSON file of
@@ -27,6 +28,24 @@ export async function GET() {
     return Response.json(
       { error: "Sign in to download your data." },
       { status: 401, headers: NO_STORE },
+    );
+  }
+
+  // A few exports an hour is plenty; each one reads about twenty tables and
+  // writes an audit row.
+  const allowed = await consumeRateLimit({
+    scope: "account:data-export",
+    subjectId: userId,
+    limit: 5,
+    windowSeconds: 3600,
+  });
+  if (!allowed) {
+    return Response.json(
+      {
+        error:
+          "You've downloaded your data a few times already. Try again in an hour.",
+      },
+      { status: 429, headers: { ...NO_STORE, "Retry-After": "3600" } },
     );
   }
 

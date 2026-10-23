@@ -44,6 +44,7 @@ const NOTES = [
   "Linked accounts show only what the provider told us about the account. We never put sign-in tokens or secrets in this file.",
   "Reports you filed keep your description and the reason you gave. They leave out the person you reported and what they wrote.",
   "Audit events show actions you took. Where the action concerned another member, their id and the details are left out.",
+  "The permissions you granted to OAuth apps are not in this file; they hold only sign-in grants, and you can review them in Settings.",
   "Posts and files you made on Discord or GitHub are not stored here.",
 ];
 
@@ -282,6 +283,22 @@ export async function buildMemberDataExport(userId: string) {
     ].map((r) => r.row);
   }
 
+  const teamMembershipRequests = [
+    ...(await db.execute<Record<string, unknown>>(
+      sql`select "id", "teamId", "direction", "status", "message", "createdAt", "respondedAt"
+          from "platform"."teamMembershipRequests"
+          where "userId" = ${userId}::uuid order by "createdAt"`,
+    )),
+  ];
+  // Reports filed from OAuth apps: the author, the reference and the snapshot describe someone else.
+  const sandboxReportsFiled = [
+    ...(await db.execute<Record<string, unknown>>(
+      sql`select "id", "clientId", "contentType", "reason", "description", "createdAt"
+          from "platform"."sandboxReports"
+          where "reporterUserId" = ${userId}::uuid order by "createdAt"`,
+    )),
+  ];
+
   const teamMemberships = [
     ...(await db.execute<Record<string, unknown>>(
       sql`select "teamId", "role", "joinedAt", "leftAt" from "platform"."teamMembers"
@@ -305,6 +322,7 @@ export async function buildMemberDataExport(userId: string) {
     discordRoleMemberships: discordRoles,
     suspensions,
     teamMemberships,
+    teamMembershipRequests,
     attendance: attendanceRows,
     reflections: reflectionRows,
     reflectionRevisions: reflectionRevisionRows.map((r) =>
@@ -318,6 +336,7 @@ export async function buildMemberDataExport(userId: string) {
     oauthTestAccounts: testAccounts,
     scheduleBuilder,
     reportsFiled: filedReports.map(shapeFiledReport),
+    sandboxReportsFiled,
     reportCorroborations: corroborations,
     auditEvents: auditRows.map((r) => shapeAuditEvent(r, userId)),
   };

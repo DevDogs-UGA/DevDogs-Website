@@ -19,6 +19,8 @@ import { Input } from "~/ui/input";
 import { confirmationMatches, DELETE_PHRASE } from "./confirm";
 import LeaveLinks from "./LeaveLinks";
 
+import "./account-deletion.css";
+
 /**
  * Settings → Profile → Delete account. Opens the confirmation (account-deletion
  * Q4, Q5, Q43): what the deletion removes and keeps, the 14-day window, links

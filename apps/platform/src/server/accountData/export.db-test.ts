@@ -21,6 +21,7 @@ const ME = id(1);
 const OTHER = id(2);
 const MEETING = id(10);
 const REPORT = id(11);
+const APP = id(14);
 const ME_REFLECTION = id(12);
 const OTHER_REFLECTION = id(13);
 const LIST = [ME, OTHER] as const;
@@ -40,6 +41,7 @@ async function cleanup() {
   await db.execute(
     sql`delete from platform.reports where id = ${REPORT}::uuid`,
   );
+  await db.execute(sql`delete from platform.apps where id = ${APP}::uuid`);
   await db.execute(
     sql`delete from platform.reflections where "meetingId" = ${MEETING}::uuid`,
   );
@@ -87,17 +89,15 @@ beforeAll(async () => {
     values (${ME_REFLECTION}::uuid, ${ME}::uuid, ${MEETING}::uuid,
             'revision by an officer', ${OTHER}::uuid)`);
 
-  const [app] = await db.execute<{ id: string }>(
-    sql`select id from platform.apps order by "createdAt" limit 1`,
-  );
-  if (app) {
-    await db.execute(sql`
-      insert into platform.reports
-        (id, "appId", "reporterUserId", "reportedUserId", "contentType", "contentRef",
-         "contentSnapshot", reason, description)
-      values (${REPORT}::uuid, ${app.id}::uuid, ${ME}::uuid, ${OTHER}::uuid,
-              'post', 'post-1', ${SNAPSHOT}, 'spam', 'what I reported')`);
-  }
+  await db.execute(sql`
+    insert into platform.apps (id, slug, "displayName")
+    values (${APP}::uuid, 'export-db-test-app', 'Export test app')`);
+  await db.execute(sql`
+    insert into platform.reports
+      (id, "appId", "reporterUserId", "reportedUserId", "contentType", "contentRef",
+       "contentSnapshot", reason, description)
+    values (${REPORT}::uuid, ${APP}::uuid, ${ME}::uuid, ${OTHER}::uuid,
+            'post', 'post-1', ${SNAPSHOT}, 'spam', 'what I reported')`);
   // An action of mine on another member, with details that name them.
   await db.execute(sql`
     insert into platform."auditEvents"
@@ -141,7 +141,7 @@ describe("buildMemberDataExport", () => {
 
   it("keeps a report the member filed, without who it was about", async () => {
     const data = await buildMemberDataExport(ME);
-    if (data.reportsFiled.length === 0) return; // no app row to file against
+    expect(data.reportsFiled).toHaveLength(1);
     expect(data.reportsFiled[0]).toMatchObject({
       description: "what I reported",
     });

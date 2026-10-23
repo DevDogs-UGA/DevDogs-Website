@@ -5,7 +5,12 @@ const fake = vi.hoisted(
     session: string | null;
     build: ReturnType<typeof vi.fn>;
     inserted: unknown[];
-  } => ({ session: "member-1", build: vi.fn(), inserted: [] }),
+  } & { limit: { allowed: boolean } } => ({
+    session: "member-1",
+    build: vi.fn(),
+    inserted: [],
+    limit: { allowed: true },
+  }),
 );
 
 vi.mock("~/server/auth", () => ({
@@ -16,6 +21,9 @@ vi.mock("~/server/auth", () => ({
 }));
 vi.mock("~/server/accountData/build", () => ({
   buildMemberDataExport: fake.build,
+}));
+vi.mock("~/server/rateLimit", () => ({
+  consumeRateLimit: () => Promise.resolve(fake.limit.allowed),
 }));
 vi.mock("~/server/db", () => ({
   db: {
@@ -33,6 +41,7 @@ const { GET } = await import("./route");
 beforeEach(() => {
   fake.session = "member-1";
   fake.inserted = [];
+  fake.limit.allowed = true;
   fake.build.mockReset();
   fake.build.mockResolvedValue({
     exportedAt: "2026-10-23T12:00:00.000Z",
@@ -74,5 +83,15 @@ describe("GET /account/data", () => {
       targetType: "user",
       targetId: "member-1",
     });
+  });
+});
+
+describe("GET /account/data rate limit", () => {
+  it("answers 429 and builds nothing when the budget is spent", async () => {
+    fake.limit.allowed = false;
+    const res = await GET();
+    expect(res.status).toBe(429);
+    expect(fake.build).not.toHaveBeenCalled();
+    expect(fake.inserted).toEqual([]);
   });
 });

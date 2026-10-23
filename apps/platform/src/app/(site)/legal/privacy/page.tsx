@@ -481,8 +481,9 @@ export default async function Privacy() {
             <a href="mailto:devdogs@uga.edu">devdogs@uga.edu</a>
           </strong>{" "}
           with the subject &quot;Data Removal Request&quot; and your name, and
-          we&apos;ll do it for you. Officers can also schedule a deletion at a
-          member&apos;s request.
+          we&apos;ll do it for you. Some officers can also schedule a
+          member&apos;s account for deletion; you&apos;re emailed and can keep
+          your account during the 14 days.
           <ul>
             <li>
               <strong>What is erased:</strong> your account, profile, connected
