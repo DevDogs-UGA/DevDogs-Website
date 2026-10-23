@@ -4,17 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NavigationMenu } from "radix-ui";
 import { PUBLIC_LINKS } from "~/config/nav";
+import "./topnav.css";
 import DocsMenu, { type DocsProjectLink } from "./DocsMenu";
 
 /**
- * `inline-flex` is what makes Docs line up with the rest. A plain inline
- * anchor's padding does not grow its line box, so these sat 30px tall inside
- * 24px items, while Docs sat 32px tall inside 32px because its caret makes it
- * a flex row. That is two pixels of height and one of offset on the hover fill,
- * on the one link in the row that opens something.
+ * The kit's `.topnav nav a` look (600 15, `--text-2`, a 4px bar on the current
+ * link), for links that are items of the Radix list rather than anchors in a
+ * `nav`. See topnav.css.
  */
-const LINK_CLASS =
-  "inline-flex items-center rounded-sm px-2.5 py-1.5 text-sm font-medium text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white data-active:bg-mauve-800/60 data-active:text-white";
+const LINK_CLASS = "topnav-link";
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/");
@@ -64,12 +62,13 @@ function Nav({
           <NavigationMenu.Item
             key={link.href}
             value={link.href}
-            className="hidden md:block"
+            className="flex self-stretch max-[900px]:hidden"
           >
             <NavigationMenu.Link asChild active={active}>
               <Link
                 href={link.href}
                 data-active={active || undefined}
+                aria-current={active ? "page" : undefined}
                 className={LINK_CLASS}
               >
                 {link.label}

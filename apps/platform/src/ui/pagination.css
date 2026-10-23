@@ -1,0 +1,20 @@
+/* Pagination (P6): the `.pager` cells are spans in the kit; here each cell holds
+   a real link, so it fills the cell and inherits the cell's colour. Wrapped in
+   the cosmic layer (F3). */
+@layer cosmic {
+  .pagination-nav .pager span > a {
+    width: 100%;
+    height: 100%;
+    min-width: inherit;
+    display: grid;
+    place-items: center;
+    color: inherit;
+    text-decoration: none;
+  }
+  .pagination-nav .pager span[aria-disabled="true"] {
+    opacity: 0.4;
+  }
+  .pagination-nav .pager span.on {
+    color: var(--on-accent);
+  }
+}

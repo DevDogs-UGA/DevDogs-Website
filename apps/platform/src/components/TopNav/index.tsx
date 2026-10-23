@@ -1,13 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
-import devdog from "~/assets/devdog.svg";
 import { getVisibleDocsProjects } from "~/server/docs/queries";
 import AppSwitcherButton from "./AppSwitcherButton";
 import NavLinks, { NavLinksFallback } from "./NavLinks";
 import NavShell from "./NavShell";
 import { NavUserRefresh } from "./NavUserProvider";
 import SearchButton from "./SearchButton";
+import "./topnav.css";
 import { TopNavMobile, TopNavProfile } from "./TopNavUser";
 
 export default async function TopNav() {
@@ -19,27 +19,39 @@ export default async function TopNav() {
   );
 
   return (
-    <header className="sticky top-0 z-50 border-b-2 border-mauve-800 bg-mauve-950/90 backdrop-blur">
+    <header className="sticky top-0 z-50">
+      {/* Off-screen until focused (kit `.skip`); the target is the layout's
+          <main id="main-content">. */}
+      <a href="#main-content" className="btn secondary sm skip">
+        Skip to content
+      </a>
       {/* One list across the whole bar, not one on each side. Docs and the
           avatar have to sit in the same Radix collection for their panels to
-          share a viewport, and a collection is a list. The brand, search, the
-          app switcher and the mobile trigger are plain <li>s, which Radix's
-          collection ignores. */}
+          share a viewport, and a collection is a list. The toggle, brand,
+          search and the app switcher are plain <li>s, which Radix's collection
+          ignores. The list is the kit's `.topnav`. */}
       <NavShell>
-        {/* Spaced like the row of links it mostly is, with the two ends
-            keeping the wider gaps they had before there was a list: the brand
-            sits a full 1rem off the first link, and the right-hand cluster
-            keeps its tighter rhythm inside one item. Spacing every child off
-            the list would set one number for three groups that never shared
-            one. */}
-        <li className="mr-3 shrink-0">
-          <Link href="/" className="flex items-center gap-2 lg:gap-2.5">
-            <figure className="size-7 shrink-0">
-              <Image alt="" src={devdog} />
-            </figure>
-            <span className="font-display text-lg font-semibold text-white">
-              DevDogs
-            </span>
+        {/* The mobile menu toggle leads the bar at 900px and below (kit
+            `.navtoggle`); wider, the button is not displayed. */}
+        <li className="contents">
+          <TopNavMobile />
+        </li>
+
+        <li className="topnav-brand shrink-0">
+          <Link
+            href="/"
+            className="flex items-center"
+            aria-label="DevDogs home"
+          >
+            <Image
+              className="logo"
+              alt=""
+              src="/cosmic/a/devdogs-logo-dark.png"
+              width={104}
+              height={28}
+              unoptimized
+              priority
+            />
           </Link>
         </li>
 
@@ -47,16 +59,15 @@ export default async function TopNav() {
           <NavLinks docsProjects={docsProjects} />
         </Suspense>
 
-        {/* One item, four controls. The avatar is a menu and so has to be a
+        {/* One item, several controls. The avatar is a menu and so has to be a
             NavigationMenu.Item, but an <li> inside an <li> is not markup, so
             that item renders as a div here. Radix's collection is context, not
             DOM shape, and does not mind. */}
-        <li className="ml-auto flex items-center gap-1.5">
+        <li className="topnav-end">
           <SearchButton />
           <AppSwitcherButton />
 
           <TopNavProfile />
-          <TopNavMobile />
         </li>
       </NavShell>
       {/* A fresh object on every server render of this layout; see

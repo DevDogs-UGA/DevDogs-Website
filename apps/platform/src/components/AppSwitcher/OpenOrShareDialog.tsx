@@ -6,13 +6,13 @@ import {
   ArrowSquareOutIcon,
   ShareNetworkIcon,
 } from "@phosphor-icons/react/ssr";
-import { Dialog as DialogPrimitive } from "radix-ui";
 import { useShare } from "~/lib/useShare";
+import { Button, buttonVariants } from "~/ui/button";
 import {
   Dialog,
+  DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogPortal,
   DialogTitle,
 } from "~/ui/dialog";
 
@@ -62,75 +62,59 @@ export default function OpenOrShareDialog({
 }: Props) {
   const share = useShare({ title, url });
 
-  // The Sign In button's amber lift, on buttons the same size: 2px of travel
-  // with the shadow a step ahead of it at 3px.
-  const lift =
-    "transition-[translate,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_0px_var(--color-amber-400)]";
-  const openStyle = `flex items-center justify-center gap-2 rounded-sm border border-black bg-cyan-400 px-3 py-2.5 text-sm font-bold text-black ${lift}`;
-  const shareStyle = `flex items-center justify-center gap-2 rounded-sm border border-mauve-600 bg-mauve-800 px-3 py-2.5 text-sm font-bold text-white ${lift}`;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* The overlay and card are composed from the primitives rather than
-          taken from ~/ui/dialog: its DialogContent bakes in a hundred-
-          millisecond fade, and tailwind-merge cannot tell one animation
-          utility from another, so the site's modal keyframes would only win
-          by stylesheet order. Both sit above the switcher's z-100. */}
-      <DialogPortal>
-        <DialogPrimitive.Overlay className="data-open:animate-modal-overlay-in data-closed:animate-modal-overlay-out fixed inset-0 z-110 bg-black/50" />
-        {/* Centered with the `translate` property, which the keyframes'
-            `transform` leaves alone. The card rises the last 12px into place
-            without losing its centering on the way. */}
-        <DialogPrimitive.Content className="data-open:animate-modal-content-in data-closed:animate-modal-content-out fixed top-1/2 left-1/2 z-110 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-md border border-mauve-600 bg-mauve-900 p-5 text-sm text-white outline-none sm:max-w-xs">
-          <DialogHeader>
-            <DialogTitle className="font-display font-bold text-white">
-              {title}
-            </DialogTitle>
-            <DialogDescription className="text-xs text-mauve-400">
-              {external
-                ? describeExternalDestination(url)
-                : "This link stays on this site."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-2">
-            {/* Share on the left, so the primary action ends the row. */}
-            <button
-              type="button"
-              onClick={() => {
-                // The share first, while the click's user activation is fresh.
-                // Closing is cleanup and can happen behind it.
-                share();
-                onOpenChange(false);
-              }}
-              className={shareStyle}
+      {/* Above the switcher's z-100 overlay. */}
+      <DialogContent
+        showCloseButton={false}
+        overlayClassName="z-110"
+        className="z-110 sm:max-w-xs"
+      >
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            {external
+              ? describeExternalDestination(url)
+              : "This link stays on this site."}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid grid-cols-2 gap-2">
+          {/* Share on the left, so the primary action ends the row. */}
+          <Button
+            variant="secondary"
+            onClick={() => {
+              // The share first, while the click's user activation is fresh.
+              // Closing is cleanup and can happen behind it.
+              share();
+              onOpenChange(false);
+            }}
+          >
+            Share <ShareNetworkIcon weight="bold" />
+          </Button>
+          {external ? (
+            <a
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => onOpenChange(false)}
+              className={buttonVariants({ variant: "default" })}
             >
-              Share <ShareNetworkIcon weight="bold" />
-            </button>
-            {external ? (
-              <a
-                href={url}
-                target="_blank"
-                rel="noreferrer"
-                onClick={() => onOpenChange(false)}
-                className={openStyle}
-              >
-                Open <ArrowSquareOutIcon weight="bold" />
-              </a>
-            ) : (
-              <Link
-                href={url}
-                onClick={() => {
-                  onOpenChange(false);
-                  onNavigate?.();
-                }}
-                className={openStyle}
-              >
-                Open <ArrowRightIcon weight="bold" />
-              </Link>
-            )}
-          </div>
-        </DialogPrimitive.Content>
-      </DialogPortal>
+              Open <ArrowSquareOutIcon weight="bold" />
+            </a>
+          ) : (
+            <Link
+              href={url}
+              onClick={() => {
+                onOpenChange(false);
+                onNavigate?.();
+              }}
+              className={buttonVariants({ variant: "default" })}
+            >
+              Open <ArrowRightIcon weight="bold" />
+            </Link>
+          )}
+        </div>
+      </DialogContent>
     </Dialog>
   );
 }

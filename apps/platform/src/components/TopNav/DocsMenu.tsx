@@ -7,6 +7,8 @@ import DocsProjectMark from "~/components/DocsProjectMark";
 import NavMenuTrigger from "./NavMenuTrigger";
 import { DOCS_MENU, useNavPanelRef } from "./NavShell";
 import { NAV_CONTENT } from "./navPanel";
+import { POPOVER_ROW } from "./popoverRow";
+import "./topnav.css";
 
 /** One docs project, as listed in the navbar menu. */
 export interface DocsProjectLink {
@@ -45,10 +47,13 @@ export default function DocsMenu({
   const panelRef = useNavPanelRef();
 
   return (
-    <NavigationMenu.Item value={DOCS_MENU} className="hidden md:block">
-      <NavMenuTrigger active={active} className={`${className} gap-2`}>
+    <NavigationMenu.Item
+      value={DOCS_MENU}
+      className="flex self-stretch max-[900px]:hidden"
+    >
+      <NavMenuTrigger active={active} className={className}>
         {label}
-        <CaretDownIcon aria-hidden weight="bold" className="size-3.5" />
+        <CaretDownIcon aria-hidden weight="bold" className="size-3" />
       </NavMenuTrigger>
 
       <NavigationMenu.Content
@@ -83,18 +88,12 @@ export default function DocsMenu({
                   aria-current={
                     project.slug === activeSlug ? "page" : undefined
                   }
-                  className="flex h-full items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors outline-none hover:bg-mauve-800 focus-visible:bg-mauve-800 aria-[current=page]:bg-mauve-800/60"
+                  className={`${POPOVER_ROW} h-full items-start`}
                 >
                   <DocsProjectMark slug={project.slug} />
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-sm font-medium text-white">
-                      {project.name}
-                    </span>
-                    {project.description && (
-                      <span className="text-xs/relaxed text-mauve-400">
-                        {project.description}
-                      </span>
-                    )}
+                  <span className="tn-row-copy">
+                    <span>{project.name}</span>
+                    {project.description && <span>{project.description}</span>}
                   </span>
                 </Link>
               </NavigationMenu.Link>

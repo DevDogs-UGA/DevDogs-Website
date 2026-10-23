@@ -10,15 +10,11 @@ import {
   useState,
   type PointerEvent,
 } from "react";
-import {
-  SealCheckIcon,
-  SignOutIcon,
-  WarningCircleIcon,
-} from "@phosphor-icons/react/ssr";
-import Avatar from "~/components/AvatarField/Avatar";
+import { SealCheckIcon, SignOutIcon } from "@phosphor-icons/react/ssr";
 import * as icons from "~/config/icons";
 import { CONSOLE_GROUP, type ConsoleItem, type NavItem } from "~/config/nav";
 import signOut from "~/server/actions/signOut";
+import NavAvatar from "./NavAvatar";
 import NavMenuTrigger from "./NavMenuTrigger";
 import NavSubMenu from "./NavSubMenu";
 import { PROFILE_MENU, useNavPanelRef, useNavShell } from "./NavShell";
@@ -34,6 +30,7 @@ import {
   type NavUserClientData,
 } from "./NavUserProvider";
 import { POPOVER_DIVIDER, POPOVER_ROW } from "./popoverRow";
+import "./topnav.css";
 import { useMenuBox } from "./useMenuBox";
 import VerificationAlert from "./VerificationAlert";
 
@@ -44,6 +41,9 @@ interface Props {
   /** Console pages this viewer may see. Already filtered server-side. */
   consoleItems: ConsoleItem[];
 }
+
+/** The clear space between the card and its sub-panel. */
+const SUB_LIP = 8;
 
 /** How long a sub-menu waits, after the pointer leaves, before closing. */
 const CLOSE_DELAY = 150;
@@ -123,21 +123,20 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
           align="end"
           // Above the band below, or the band would cover the avatar itself
           // and swallow the click that opens the menu.
-          className="z-10 flex shrink-0 items-center rounded-full text-3xl/0 transition-opacity hover:opacity-85"
+          className="z-10 flex shrink-0 items-center bg-transparent p-0 transition-opacity hover:opacity-85"
         >
           {/* The button's accessible name, since its only visible content is
               a picture. Radix puts `aria-expanded` alongside it, so a screen
               reader gets both whose menu it is and that it opens one. */}
-          <span className="sr-only">{user.profile.preferredName}</span>
-          <Avatar
+          <span className="sr-only">
+            {user.profile.preferredName}
+            {verification?.isVerified === false && ". Account setup incomplete"}
+          </span>
+          <NavAvatar
             userId={user.profile.userId}
             preferredName={user.profile.preferredName}
+            warning={verification?.isVerified === false}
           />
-          {verification?.isVerified === false && (
-            <span className="absolute -right-0.5 -bottom-0.5 flex size-3 items-center justify-center rounded-full bg-mauve-950">
-              <WarningCircleIcon className="size-2.5 text-rose-400" />
-            </span>
-          )}
         </NavMenuTrigger>
 
         <NavigationMenu.Content
@@ -189,21 +188,13 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
                 the card's contents alone so that everything the sub-menu needs
                 to hang outside the card stays outside it. */}
             <div className={NAV_CLIP}>
-              <div
-                data-nav-sizer
-                className="w-3xs py-1.5 text-sm font-medium text-white"
-              >
-                <div className="flex flex-col px-3 pt-1 pb-2">
-                  <span className="truncate text-sm text-white">
-                    {user.profile.preferredName}
-                  </span>
-                  <span className="flex items-center gap-1 text-xs text-mauve-400">
+              <div data-nav-sizer className="w-3xs py-1.5 text-sm font-medium">
+                <div className="tn-who">
+                  <b>{user.profile.preferredName}</b>
+                  <span>
                     {user.highestRole.title}
                     {verification?.isVerified && (
-                      <SealCheckIcon
-                        weight="bold"
-                        className="size-3 text-emerald-400"
-                      />
+                      <SealCheckIcon weight="bold" className="ok size-3" />
                     )}
                   </span>
                 </div>
@@ -225,7 +216,7 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
                   />
                 </NavigationMenu.List>
 
-                <div className={POPOVER_DIVIDER} />
+                <hr className={POPOVER_DIVIDER} />
 
                 {items.map((item) => {
                   const Icon = icons[item.icon];
@@ -239,7 +230,7 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
                   );
                 })}
 
-                <div className={POPOVER_DIVIDER} />
+                <hr className={POPOVER_DIVIDER} />
 
                 {/* Marks the viewer signed out as soon as the request is on
                     its way. The action ends in a redirect, whose promise
@@ -253,10 +244,7 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
                   }}
                 >
                   <input name="callbackPath" value="/" type="hidden" />
-                  <button
-                    className={`${POPOVER_ROW} text-rose-300 hover:bg-rose-950 hover:text-rose-50`}
-                    type="submit"
-                  >
+                  <button className={`${POPOVER_ROW} danger`} type="submit">
                     <SignOutIcon weight="bold" />
                     Sign Out
                   </button>
@@ -314,11 +302,14 @@ export default function ProfilePopover({ user, items, consoleItems }: Props) {
                   ? { visibility: "hidden" }
                   : {
                       top: `${box.top}px`,
-                      width: `${box.width}px`,
+                      // The gap off the card's edge is a transparent border
+                      // (the kit's frame takes both pseudo-elements).
+                      borderRight: `${SUB_LIP}px solid transparent`,
+                      width: `${box.width + SUB_LIP}px`,
                       height: `${box.height}px`,
                     }
               }
-              className={`data-[state=closed]:animate-nav-sub-fold-out data-[state=open]:animate-nav-sub-fold-in absolute right-[calc(100%+0.5rem)] origin-right transition-none after:absolute after:inset-y-0 after:-right-2 after:w-2 after:content-[''] data-[travelling]:transition-[top,width,height] data-[travelling]:duration-200 data-[travelling]:ease-out ${NAV_SURFACE}`}
+              className={`data-[state=closed]:animate-nav-sub-fold-out data-[state=open]:animate-nav-sub-fold-in absolute right-full origin-right transition-none data-[travelling]:transition-[top,width,height] data-[travelling]:duration-200 data-[travelling]:ease-out ${NAV_SURFACE}`}
             />
           </NavigationMenu.Sub>
         </NavigationMenu.Content>

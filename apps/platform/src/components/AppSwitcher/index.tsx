@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRightIcon, XIcon } from "@phosphor-icons/react/ssr";
-import devdog from "~/assets/devdog.svg";
 import { useNavUser } from "~/components/TopNav/NavUserProvider";
 import SignInButton from "~/components/TopNav/SignInButton";
 import * as icons from "~/config/icons";
@@ -12,6 +11,7 @@ import { SWITCHER_PROJECTS } from "~/config/projects";
 import LinkButton from "~/ui/link-button";
 import EntryButton from "./EntryButton";
 import ProjectTile from "./ProjectTile";
+import "./switcher.css";
 import { useAppSwitcher } from "./provider";
 
 /**
@@ -30,7 +30,7 @@ export default function AppSwitcher() {
       role="dialog"
       aria-modal="true"
       aria-label="More from DevDogs"
-      className="fixed inset-0 z-100 flex flex-col overflow-y-auto bg-black"
+      className="switcher fixed inset-0 z-100 flex flex-col overflow-y-auto"
       style={
         {
           "--menu-origin": origin,
@@ -40,45 +40,38 @@ export default function AppSwitcher() {
         } as React.CSSProperties
       }
     >
-      <div className="flex h-16 shrink-0 items-center justify-between gap-4 px-4 md:px-6">
-        <Link
-          href="/"
-          onClick={close}
-          className="flex items-center gap-2 lg:gap-2.5"
-        >
-          <figure className="size-7 shrink-0">
-            {/* Same `size-7` box as the navbar's, which this header mirrors. */}
-            <Image alt="" src={devdog} sizes="28px" />
-          </figure>
-          <span className="font-display text-lg font-semibold text-white">
-            DevDogs
-          </span>
+      <div className="topnav shrink-0 justify-between">
+        <Link href="/" onClick={close} aria-label="DevDogs home">
+          <Image
+            className="logo"
+            alt=""
+            src="/cosmic/a/devdogs-logo-dark.png"
+            width={104}
+            height={28}
+            unoptimized
+          />
         </Link>
         {/* Mirrors the navbar's trailing cluster so the close button lands
-            exactly where the grid trigger was: same gap, same size-9 box, same
-            size-4.5 bold icon. Its right-hand neighbour matches too, either the
-            Sign In button or a spacer the width of the avatar. */}
-        <div className="flex items-center gap-1.5">
+            exactly where the grid trigger was. */}
+        <div className="flex items-center gap-3">
+          {/* The overlay only mounts on a click, well after the streamed user
+              cluster has hydrated the context, so a signed-in visitor never
+              sees this flash before `navUser` arrives. Hidden at 900px and
+              below, where the navbar has already folded into the drawer and
+              the overlay's Join CTA is the pitch instead of signing in. */}
+          {!navUser && (
+            <div className="max-[900px]:hidden">
+              <SignInButton />
+            </div>
+          )}
           <button
             type="button"
             onClick={close}
             aria-label="Close app switcher"
-            className="flex size-9 items-center justify-center rounded-sm text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white"
+            className="btn ghost icon sm"
           >
-            <XIcon weight="bold" className="size-4.5" />
+            <XIcon weight="bold" />
           </button>
-          {/* The overlay only mounts on a click, well after the streamed user
-              cluster has hydrated the context, so a signed-in visitor never
-              sees this flash before `navUser` arrives. Hidden below md, where
-              the navbar has already folded into the drawer and the overlay's
-              Join CTA is the pitch instead of signing in. */}
-          {navUser ? (
-            <span aria-hidden className="hidden w-7.5 md:block" />
-          ) : (
-            <div className="hidden md:block">
-              <SignInButton />
-            </div>
-          )}
         </div>
       </div>
 
@@ -87,7 +80,7 @@ export default function AppSwitcher() {
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-6 px-4 py-3 sm:gap-10 lg:max-w-5xl lg:gap-12">
         <div className="mx-auto flex w-full max-w-md flex-col items-center gap-4">
           <p className="animate-wave cursor-default text-4xl">👋</p>
-          <p className="text-center text-sm text-white sm:text-base">
+          <p className="text-center">
             <span className="inline-block">
               Hey, we&rsquo;re DevDogs, a club at UGA building
             </span>{" "}
@@ -100,10 +93,9 @@ export default function AppSwitcher() {
             href={SWITCHER_PRIMARY.href}
             // /join redirects off-site, not a page, so never prefetch.
             prefetch={false}
-            // The amber lift the Sign In button in the header uses, a size up:
-            // this one moves twice as far, so the shadow grows with it to stay
-            // a step ahead of the travel rather than hiding behind the button.
-            className="hover:shadow-block-lg flex w-full items-center justify-center gap-5 rounded-sm border border-black bg-cyan-400 px-12 py-3 text-xl font-extrabold tracking-wide text-black shadow-none transition-[translate,box-shadow] hover:-translate-x-1 hover:-translate-y-1 hover:shadow-amber-400"
+            variant="default"
+            size="lg"
+            className="w-full"
           >
             {SWITCHER_PRIMARY.label} <ArrowRightIcon />
           </LinkButton>
@@ -113,9 +105,7 @@ export default function AppSwitcher() {
           {/* Links lead because their featured rows are time-sensitive. Move
             them back below Apps once no row is featured. */}
           <div className="mx-auto flex w-full max-w-md flex-col gap-3 lg:max-w-none">
-            <p className="mb-2 text-center text-xs font-semibold tracking-wide text-mauve-500 uppercase">
-              Links
-            </p>
+            <p className="switcher-cap mb-2">Links</p>
             {SWITCHER_LINKS.map((entry) => (
               <EntryButton key={entry.href} entry={entry} />
             ))}
@@ -124,9 +114,7 @@ export default function AppSwitcher() {
           {/* Apps take the left column on desktop; on phones the links
               still lead, for their time-sensitive rows. */}
           <div className="flex w-full flex-col gap-3 lg:order-first">
-            <p className="mb-2 text-center text-xs font-semibold tracking-wide text-mauve-500 uppercase">
-              Apps
-            </p>
+            <p className="switcher-cap mb-2">Apps</p>
             {/* No recessed treatment here, unlike the homepage grid: every tile
               is the same size, and the ones with nowhere to send you render
               disabled, which says more than a size difference would. */}
@@ -146,7 +134,7 @@ export default function AppSwitcher() {
           </div>
         </div>
 
-        <div className="flex justify-center gap-8 text-2xl text-mauve-500">
+        <div className="flex justify-center gap-2 text-2xl">
           {SOCIAL_LINKS.map((social) => {
             const Icon = social.icon ? icons[social.icon] : null;
             return (
@@ -155,7 +143,7 @@ export default function AppSwitcher() {
                 href={social.href}
                 target="_blank"
                 aria-label={social.label}
-                className="transition-[scale,color] hover:scale-120 hover:text-white"
+                className="iconbtn"
               >
                 {Icon && <Icon />}
               </Link>

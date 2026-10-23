@@ -1,0 +1,234 @@
+/* TopNav (P6). The kit's `.topnav` is a flat row of anchors inside one `nav`;
+   the live bar is a Radix NavigationMenu list whose triggers are buttons and
+   whose panels hang off a shared viewport. The bar itself, search, buttons,
+   avatar and `.menu` frame are the kit's; this adds the link look and the
+   panel rows for markup the kit does not have. Wrapped in the cosmic layer (F3). */
+@layer cosmic {
+  .topnav {
+    margin: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    gap: 4px;
+    list-style: none;
+    width: 100%;
+  }
+  .topnav > li.topnav-brand {
+    display: flex;
+    align-items: center;
+    margin-right: var(--space-4);
+  }
+  .topnav > li.topnav-end {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .topnav > li.topnav-end .topnav-who-menu {
+    display: flex;
+    align-items: center;
+  }
+  .topnav-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    align-self: stretch;
+    padding: 8px 12px;
+    font: 600 15px/1 var(--font-ui);
+    color: var(--text-2);
+    text-decoration: none;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+  .topnav-link:hover,
+  .topnav-link[data-state="open"],
+  .topnav-link.on,
+  .topnav-link[data-active] {
+    color: var(--text);
+  }
+  /* the current link: a 4px stepped bar on the nav's bottom line, covering it */
+  .topnav-link.on::after,
+  .topnav-link[data-active]::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    background: var(--brand6);
+    clip-path: polygon(
+      2px 0,
+      calc(100% - 2px) 0,
+      calc(100% - 2px) 2px,
+      100% 2px,
+      100% 100%,
+      0 100%,
+      0 2px,
+      2px 2px
+    );
+  }
+  .topnav .logo {
+    height: 28px;
+    width: auto;
+  }
+  .topnav .search {
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+  }
+  .topnav .search .lbl {
+    flex: 1;
+  }
+  .topnav .search svg {
+    flex: none;
+    font-size: 16px;
+  }
+
+  /* panels: the card is the kit's `.menu`; the viewport and sub-viewport size
+     themselves, so the menu's own padding and minimum width must not apply */
+  .menu.topnav-card {
+    padding: 0;
+    min-width: 0;
+  }
+  .menu .tn-row {
+    display: flex;
+    width: 100%;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 10px;
+    text-align: left;
+    text-decoration: none;
+    color: var(--text-2);
+    background: none;
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+  }
+  .menu .tn-row:hover,
+  .menu .tn-row:focus-visible,
+  .menu .tn-row[data-state="open"],
+  .menu .tn-row[aria-current="page"] {
+    color: var(--text);
+    background:
+      linear-gradient(
+          color-mix(in srgb, var(--raised) 86%, #fff),
+          color-mix(in srgb, var(--raised) 86%, #fff)
+        )
+        0 2px / 100% calc(100% - 4px) no-repeat,
+      linear-gradient(
+          color-mix(in srgb, var(--raised) 86%, #fff),
+          color-mix(in srgb, var(--raised) 86%, #fff)
+        )
+        2px 0 / calc(100% - 4px) 100% no-repeat;
+  }
+  .menu .tn-row.danger {
+    color: var(--bad);
+  }
+  .menu .tn-row .tn-caret {
+    flex: none;
+    color: var(--text-3);
+  }
+  .menu .tn-row-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .menu .tn-row-copy > :first-child {
+    font-weight: 600;
+    color: var(--text);
+  }
+  .menu .tn-row-copy > :nth-child(2) {
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--text-3);
+    font-weight: 400;
+  }
+  .tn-who {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px 4px;
+    font-size: 14px;
+  }
+  .tn-who b {
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tn-who span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12.5px;
+    color: var(--text-3);
+  }
+  .tn-who .ok {
+    color: var(--ok);
+  }
+  .tn-rule {
+    border: 0;
+    height: 1px;
+    background: var(--line);
+    margin: 6px 0;
+  }
+  @media (pointer: coarse) {
+    .menu .tn-row {
+      min-height: 44px;
+    }
+  }
+
+  /* verification alert: the kit's warn callout, as a button */
+  .tn-verify {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+    text-align: left;
+    cursor: pointer;
+    color: var(--text-2);
+    font-size: 12.5px;
+  }
+  .tn-verify > :first-child {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    color: var(--warn);
+  }
+
+  /* the mobile panel's sections */
+  .tn-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: 0 var(--space-4) var(--space-4);
+    overflow-y: auto;
+  }
+  .tn-mobile .mnav.open {
+    display: flex;
+    flex-direction: column;
+    background: none;
+    box-shadow: none;
+    padding: 0;
+  }
+  .tn-mobile .mnav a {
+    padding: 12px 8px;
+    font: 600 16px/1 var(--font-ui);
+    color: var(--text-2);
+    text-decoration: none;
+  }
+  .tn-mobile .mnav a.on {
+    color: var(--text);
+  }
+  .tn-mobile-foot {
+    margin-top: auto;
+    display: flex;
+    gap: 4px;
+    padding-top: var(--space-4);
+    box-shadow: inset 0 1px 0 var(--line);
+  }
+}

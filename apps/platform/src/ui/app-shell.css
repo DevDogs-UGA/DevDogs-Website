@@ -1,0 +1,7 @@
+/* AppShell (P6): the mockups' wide shell column (settings and console).
+   Wrapped in the cosmic layer (F3). */
+@layer cosmic {
+  .app-shell {
+    max-width: 1320px;
+  }
+}

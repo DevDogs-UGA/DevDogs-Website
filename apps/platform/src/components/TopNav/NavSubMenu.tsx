@@ -55,18 +55,11 @@ export default function NavSubMenu({
     const Icon = icons[item.icon];
     return (
       <NavigationMenu.Link key={item.href} asChild>
-        <Link
-          href={item.href}
-          className="flex items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors outline-none hover:bg-mauve-800 focus-visible:bg-mauve-800"
-        >
+        <Link href={item.href} className={`${POPOVER_ROW} items-start`}>
           <Mark icon={Icon} iconBg={iconBg} />
-          <span className="flex min-w-0 flex-col gap-0.5">
-            <span className="text-sm font-medium text-white">{item.label}</span>
-            {item.description && (
-              <span className="text-xs/relaxed text-mauve-400">
-                {item.description}
-              </span>
-            )}
+          <span className="tn-row-copy">
+            <span>{item.label}</span>
+            {item.description && <span>{item.description}</span>}
           </span>
         </Link>
       </NavigationMenu.Link>
@@ -77,7 +70,7 @@ export default function NavSubMenu({
     <NavigationMenu.Item value={label}>
       <NavigationMenu.Trigger
         data-nav-sub-trigger=""
-        className={`${POPOVER_ROW} cursor-default select-none data-[state=open]:bg-mauve-800`}
+        className={`${POPOVER_ROW} cursor-default select-none`}
       >
         <CaretLeftIcon weight="bold" className={POPOVER_ROW_CARET} />
         {label}

@@ -6,7 +6,9 @@ import devdog from "~/assets/devdog.svg";
 import * as icons from "~/config/icons";
 import type { SwitcherProject } from "~/config/projects";
 import OpenOrShareDialog from "./OpenOrShareDialog";
-import { LIFT, PLAIN, PLAIN_HOVER, ROW } from "./rowStyles";
+import { Card } from "~/ui/card";
+import { Chip } from "~/ui/chip";
+import { LIFT, ROW } from "./rowStyles";
 
 interface Props {
   project: SwitcherProject;
@@ -15,10 +17,9 @@ interface Props {
 }
 
 /**
- * Tighter than a listing row on phones, where the tiles sit two up, and
- * deeper at the top, where the badge overlaps the rim.
+ * Tighter than a listing row on phones, where the tiles sit two up.
  */
-const TILE_SPACING = "gap-2 px-2 pt-4 pb-3.5 sm:gap-3 sm:px-4 sm:pt-5 sm:pb-4";
+const TILE_SPACING = "gap-2 px-3 py-3.5 sm:gap-3 sm:px-4 sm:py-4";
 
 /**
  * One project, as the switcher's button rather than a card: the mark, its
@@ -58,15 +59,13 @@ export default function ProjectTile({ project, onNavigate }: Props) {
           tab, so the name and its label have the inside to themselves. The
           switcher's grid leaves the extra row gap this needs. */}
       {badge && (
-        <span
-          className={`absolute -top-px left-2 -translate-y-1/2 rounded-sm ${badge.bg} ${badge.text} px-1.5 py-0.5 text-[0.625rem] leading-none font-bold tracking-wide whitespace-nowrap uppercase sm:left-4`}
-        >
+        <Chip outline className="switcher-badge">
           {badge.label}
-        </span>
+        </Chip>
       )}
 
       <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
-        <h3 className="font-display text-[0.8125rem] leading-none font-bold text-white sm:text-base">
+        <h3 className="switcher-tile-name">
           {/* The button wraps the name and stretches over the whole tile with
               its own ::after, so the tile acts as one control without nesting
               block content inside a button element. */}
@@ -74,7 +73,7 @@ export default function ProjectTile({ project, onNavigate }: Props) {
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="rounded-sm text-left outline-none after:absolute after:inset-0 focus-visible:ring-2 focus-visible:ring-white"
+              className="switcher-hit text-[length:inherit]"
             >
               {project.title}
             </button>
@@ -82,29 +81,22 @@ export default function ProjectTile({ project, onNavigate }: Props) {
             project.title
           )}
         </h3>
-        <p className="text-[0.6875rem] leading-tight text-mauve-400 sm:text-xs">
-          {blurb}
-        </p>
+        <p className="small muted">{blurb}</p>
       </div>
     </>
   );
 
   if (!url) {
     return (
-      <div
-        aria-disabled="true"
-        className={`${ROW} ${PLAIN} ${TILE_SPACING} cursor-not-allowed opacity-60`}
-      >
+      <Card aria-disabled="true" className={`${ROW} ${TILE_SPACING}`}>
         {body}
-      </div>
+      </Card>
     );
   }
 
   return (
     <>
-      <div className={`${ROW} ${PLAIN} ${PLAIN_HOVER} ${LIFT} ${TILE_SPACING}`}>
-        {body}
-      </div>
+      <Card className={`${ROW} ${LIFT} ${TILE_SPACING}`}>{body}</Card>
       <OpenOrShareDialog
         title={project.title}
         url={url}

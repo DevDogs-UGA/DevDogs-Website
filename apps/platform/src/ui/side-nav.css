@@ -1,0 +1,21 @@
+/* SideNav (P6): the `.sidenav` rules are in cosmic.css; this adds what the kit
+   leaves to its `<x-icon>` element (the shell rules target it) when React
+   renders the icon. Wrapped in the cosmic layer (F3). */
+@layer cosmic {
+  .sidenav a x-icon {
+    display: inline-flex;
+    flex: none;
+    font-size: 18px;
+    color: var(--text-3);
+  }
+  .sidenav a.on x-icon {
+    color: var(--brand3);
+  }
+  .sidenav a {
+    text-align: left;
+  }
+  .sidenav a[aria-disabled="true"] {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}

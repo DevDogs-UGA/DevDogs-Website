@@ -14,6 +14,16 @@ import {
 import { NAV_ARROW, NAV_SURFACE } from "./navPanel";
 import { useMenuBox } from "./useMenuBox";
 
+/**
+ * The clear space between the bar and the card, as a transparent top border on
+ * the viewport. It was a `::before` strip, but the kit's `.menu` frame is drawn
+ * with both pseudo-elements. A border is part of the box for hit-testing, so
+ * the pointer still crosses the gap inside the viewport, and the frame and the
+ * panels, which are placed against the padding box, start below it. The height
+ * the shell measures is the card's, so the lip is added on top.
+ */
+const LIP = 8;
+
 /** The item values the navbar's top tier can hold. */
 export const DOCS_MENU = "docs";
 export const PROFILE_MENU = "profile";
@@ -106,9 +116,7 @@ export default function NavShell({ children }: { children: ReactNode }) {
         aria-label="Main"
         className="relative"
       >
-        <NavigationMenu.List className="flex h-16 items-center gap-1 px-4 md:px-6">
-          {children}
-        </NavigationMenu.List>
+        <NavigationMenu.List className="topnav">{children}</NavigationMenu.List>
 
         {/* Spans the bar so the anchor offset is measured in the same
             coordinate space it is applied in, and lets nothing through. An
@@ -141,7 +149,7 @@ export default function NavShell({ children }: { children: ReactNode }) {
                   ? "0px"
                   : `${Math.max(0, box.rowLeft - box.left)}px`,
             }}
-            className="absolute top-2 transition-none data-[travelling]:transition-[left] data-[travelling]:duration-200 data-[travelling]:ease-out"
+            className="absolute top-0 transition-none data-[travelling]:transition-[left] data-[travelling]:duration-200 data-[travelling]:ease-out"
           >
             <NavigationMenu.Viewport
               data-slot="nav-viewport"
@@ -150,15 +158,16 @@ export default function NavShell({ children }: { children: ReactNode }) {
               style={
                 box === null
                   ? undefined
-                  : { width: `${box.width}px`, height: `${box.height}px` }
+                  : {
+                      // The lip: a transparent top border. See LIP.
+                      borderTop: `${LIP}px solid transparent`,
+                      width: `${box.width}px`,
+                      height: `${box.height + LIP}px`,
+                    }
               }
-              // The bridge is a pseudo-element rather than padding. Padding
-              // would have been tidier, but a panel positioned against `top-0`
-              // resolves that against the padding box, whose top edge is inside
-              // the border and above the padding. The padding widens the box
-              // without moving the panel down off the bar, so the gap it was
-              // meant to fill stays exactly where it was.
-              className={`data-[state=closed]:animate-nav-fold-out data-[state=open]:animate-nav-fold-in pointer-events-auto relative origin-top transition-none before:absolute before:inset-x-0 before:-top-2 before:h-2 before:content-[''] data-[travelling]:transition-[width,height] data-[travelling]:duration-200 data-[travelling]:ease-out ${NAV_SURFACE}`}
+              // The gap above the card is the transparent top border set in
+              // `style`; see LIP.
+              className={`data-[state=closed]:animate-nav-fold-out data-[state=open]:animate-nav-fold-in pointer-events-auto relative origin-top transition-none data-[travelling]:transition-[width,height] data-[travelling]:duration-200 data-[travelling]:ease-out ${NAV_SURFACE}`}
             />
           </div>
 

@@ -8,9 +8,9 @@ export default function AppSwitcherButton() {
     <AppSwitcherTrigger>
       <button
         type="button"
-        className="relative z-10 hidden size-9 items-center justify-center rounded-sm text-mauve-300 transition-colors hover:bg-mauve-800 hover:text-white md:flex"
+        className="btn ghost icon sm relative z-10 max-[900px]:hidden"
       >
-        <DotsNineIcon weight="bold" className="size-4.5" />
+        <DotsNineIcon weight="bold" />
       </button>
     </AppSwitcherTrigger>
   );

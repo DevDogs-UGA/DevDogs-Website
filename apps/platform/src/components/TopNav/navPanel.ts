@@ -28,8 +28,7 @@
  * was already at 95% to keep the home page's hero from reading through a menu.
  * The last 5% buys a continuous outline.
  */
-export const NAV_SURFACE =
-  "rounded-lg bg-mauve-950 shadow-lg ring-1 ring-mauve-800 ring-inset";
+export const NAV_SURFACE = "menu topnav-card";
 
 /**
  * A panel fills the viewport that hoisted it, and clips.
@@ -53,7 +52,7 @@ export const NAV_SURFACE =
  * read that way, top to bottom for one read down.
  */
 const PANEL = "absolute inset-0";
-const CLIP = "overflow-hidden rounded-lg";
+const CLIP = "overflow-hidden";
 
 const ACROSS =
   "data-[motion=from-start]:animate-nav-content-in-left data-[motion=from-end]:animate-nav-content-in-right data-[motion=to-start]:animate-nav-content-out-left data-[motion=to-end]:animate-nav-content-out-right";
@@ -111,8 +110,7 @@ export const NAV_SUB_CONTENT = `${PANEL} ${CLIP} ${DOWN}`;
  * between triggers is gated on `data-travelling` exactly as the viewport's is,
  * so a menu opening cold never animates in from wherever the arrow last was.
  */
-export const NAV_ARROW =
-  "absolute top-2 z-10 size-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45 border-t border-l border-mauve-800 bg-mauve-950 transition-none data-[travelling]:transition-[left] data-[travelling]:duration-200 data-[travelling]:ease-out data-[state=visible]:animate-nav-arrow-in data-[state=hidden]:animate-nav-arrow-out data-[state=hidden]:opacity-0";
+export const NAV_ARROW = "hidden";
 
 /**
  * The tier-2 arrow, placed by hand rather than by Radix.
@@ -138,5 +136,4 @@ export const NAV_ARROW =
  * panels, so an opening sub-menu gets an arrow at its row rather than one
  * sliding down from wherever the last open left it.
  */
-export const NAV_SUB_ARROW =
-  "absolute right-[calc(100%+0.5rem)] z-10 size-2.5 translate-x-1/2 -translate-y-1/2 rotate-45 border-t border-r border-mauve-800 bg-mauve-950 [transition:opacity_180ms_ease-out] data-[state=hidden]:[transition:opacity_140ms_ease-in] data-[state=hidden]:opacity-0 data-[travelling]:[transition:top_200ms_ease-out,opacity_180ms_ease-out]";
+export const NAV_SUB_ARROW = "hidden";

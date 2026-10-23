@@ -9,6 +9,7 @@ import {
   CheckCircleIcon,
   XIcon,
 } from "@phosphor-icons/react/ssr";
+import { buttonVariants } from "~/ui/button";
 import { dismiss, isDismissed, subscribeToDismissal } from "./dismissal";
 
 const HIDDEN_PREFIXES = [
@@ -67,32 +68,57 @@ export default function AttendanceBanner() {
   const { title } = meeting;
 
   return (
+    <AttendanceBannerView
+      meetingId={meetingId}
+      title={title}
+      onDismiss={() => dismiss(meetingId)}
+    />
+  );
+}
+
+/** The strip itself, apart from the fetch and the dismissal store, for the kit gallery. */
+export function AttendanceBannerView({
+  meetingId,
+  title,
+  onDismiss,
+}: {
+  meetingId: string;
+  title: string;
+  onDismiss: () => void;
+}) {
+  return (
     <aside
       aria-label="Meeting attendance"
       data-slot="attendance-banner"
-      className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b-2 border-black bg-cyan-300 px-4 py-2 text-black md:px-6"
+      className="wrap py-3"
     >
-      <CheckCircleIcon weight="fill" className="size-6 shrink-0" />
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-bold tracking-wider uppercase">
-          Check in now
-        </p>
-        <p className="truncate text-sm font-semibold">{title}</p>
+      {/* The kit's `.alert.ok`: a framed strip, centred in the page column. */}
+      <div className="alert ok items-center">
+        <CheckCircleIcon
+          weight="fill"
+          className="size-6 shrink-0 text-[var(--ok)]"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="eyebrow">Check in now</p>
+          <p className="truncate">
+            <b>{title}</b>
+          </p>
+        </div>
+        <Link
+          href={`/attendance?meeting=${meetingId}`}
+          className={buttonVariants({ variant: "default", size: "sm" })}
+        >
+          Attendance <ArrowRightIcon />
+        </Link>
+        <button
+          type="button"
+          aria-label="Dismiss attendance reminder"
+          onClick={onDismiss}
+          className="iconbtn"
+        >
+          <XIcon weight="bold" />
+        </button>
       </div>
-      <Link
-        href={`/attendance?meeting=${meetingId}`}
-        className="flex shrink-0 items-center gap-1 rounded-sm border-2 border-black bg-black px-3 py-1.5 text-sm font-semibold text-white"
-      >
-        Attendance <ArrowRightIcon className="size-4" />
-      </Link>
-      <button
-        type="button"
-        aria-label="Dismiss attendance reminder"
-        onClick={() => dismiss(meetingId)}
-        className="rounded p-1 hover:bg-black/10 focus-visible:outline-2"
-      >
-        <XIcon className="size-4" />
-      </button>
     </aside>
   );
 }

@@ -7,6 +7,22 @@ import { wasNavigationBlocked } from "~/lib/navigationGuard";
 
 type Phase = "idle" | "loading" | "done";
 
+/** The kit's 4px stepped bar (`--step1` corners) in the brand red. */
+const BAR_CLASS = "h-1 [clip-path:var(--step1)]";
+const FILL_CLASS = "h-full bg-[var(--brand6)]";
+
+/** A still of the bar at `value` (0 to 1), in flow, for the kit gallery. */
+export function NavigationProgressSample({ value }: { value: number }) {
+  return (
+    <div className={BAR_CLASS} aria-hidden="true">
+      <div
+        className={FILL_CLASS}
+        style={{ transform: `scaleX(${value})`, transformOrigin: "0% 50%" }}
+      />
+    </div>
+  );
+}
+
 export default function NavigationProgress() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -79,12 +95,12 @@ export default function NavigationProgress() {
     <div
       data-slot="navigation-progress"
       data-phase={phase}
-      className="pointer-events-none fixed top-0 right-0 left-0 z-[9999] h-[2px]"
+      className={`pointer-events-none fixed top-0 right-0 left-0 z-[9999] ${BAR_CLASS}`}
       aria-hidden="true"
     >
       <motion.div
         key={animKey}
-        className="h-full bg-gradient-to-r from-amber-400 to-rose-500"
+        className={FILL_CLASS}
         style={{ transformOrigin: "0% 50%" }}
         initial={{ scaleX: 0, opacity: 1 }}
         animate={

@@ -1,15 +1,26 @@
-import { ArrowRightIcon } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
+import { cn } from "~/lib/cn";
 
-export default function SignInButton() {
+/** Signed out: the kit's ghost `Sign in`. */
+export default function SignInButton({ className }: { className?: string }) {
   return (
     <Link
       href="/auth"
       prefetch={false}
-      className="flex items-center gap-1.5 rounded-sm border border-black bg-cyan-400 px-3 py-1 text-sm font-semibold text-black transition-[translate,box-shadow] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_0px_var(--color-amber-400)] md:px-4 md:py-1.5"
+      className={cn("btn ghost sm", className)}
     >
-      Sign In
-      <ArrowRightIcon weight="bold" />
+      Sign in
     </Link>
+  );
+}
+
+/** Signed out: the primary call to action, in the kit's `.btn-shadow` wrapper. */
+export function JoinButton() {
+  return (
+    <span className="btn-shadow">
+      <a href="https://devdogsuga.org/join" className="btn primary sm">
+        Join DevDogs
+      </a>
+    </span>
   );
 }

@@ -39,7 +39,7 @@ function allowClickToggle(event: MouseEvent<HTMLButtonElement>) {
  * retained only for touch-only devices, where hover is unavailable, and the
  * destinations live in the panel like every other destination does.
  *
- * While it is open the trigger grows an invisible skirt below itself, to the
+ * While it is open the trigger grows an invisible skirt (a ::before, since the current-link bar is the ::after) below itself, to the
  * bottom of the bar. Triggers are shorter than the bar they are centred in, so
  * a pointer heading straight down from one leaves it well before it reaches
  * the panel, and a close timer that runs out in that dead strip takes the menu
@@ -57,9 +57,10 @@ export default function NavMenuTrigger({
     <NavigationMenu.Trigger
       data-nav-trigger=""
       data-active={active === true ? "" : undefined}
+      aria-current={active === true ? "page" : undefined}
       data-nav-align={align}
       onClick={allowClickToggle}
-      className={`${className} relative cursor-default after:absolute after:inset-x-0 after:top-full after:hidden after:h-6 after:content-[''] data-[state=open]:after:block`}
+      className={`${className} relative cursor-default before:absolute before:inset-x-0 before:top-full before:hidden before:h-6 before:content-[''] data-[state=open]:before:block`}
     >
       {children}
     </NavigationMenu.Trigger>
