@@ -1,0 +1,181 @@
+/* /community and /community/@handle (community.html, profile.html). Cards, avatars, chips and the page head come from
+   cosmic.css; this file adds only the directory grid and the profile layout. Every selector hangs off a `cm-` class. */
+@layer cosmic {
+  .cosmic .cm-wrap {
+    width: 100%;
+    padding-top: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+    padding-bottom: var(--space-9);
+  }
+  .cosmic .cm-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin-bottom: var(--space-5);
+  }
+  .cosmic .cm-head h2 {
+    margin: 0;
+    font-size: 32px;
+  }
+  .cosmic .cm-count {
+    font-size: 14px;
+    color: var(--text-3);
+  }
+  .cosmic .cm-count b {
+    color: var(--text);
+  }
+  .cosmic .cm-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
+  }
+  .cosmic .cm-grid > li {
+    display: flex;
+    min-width: 0;
+  }
+  .cosmic .cm-person {
+    display: flex;
+    flex: 1;
+    gap: 14px;
+    align-items: center;
+    min-width: 0;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .cosmic .cm-person .cm-mid {
+    min-width: 0;
+  }
+  .cosmic .cm-person .cm-name {
+    margin: 0;
+    font: 700 18px/1.25 var(--font-ui);
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cosmic .cm-person .cm-detail {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--text-2);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .cosmic a.cm-person:hover .cm-name {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: var(--brand3);
+  }
+  .cosmic .cm-empty {
+    margin: 0;
+    padding: var(--space-6);
+    text-align: center;
+    color: var(--text-2);
+  }
+
+  /* ── profile ───────────────────────────────────────────────────────────── */
+  .cosmic .cm-profile-wrap {
+    width: 100%;
+  }
+  .cosmic .cm-profile {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 48px 0 128px;
+  }
+  .cosmic .cm-profile .crumbs {
+    margin-bottom: var(--space-6);
+  }
+  .cosmic .cm-id {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+  }
+  .cosmic .cm-id .avatar {
+    width: 112px;
+    height: 112px;
+    font-size: 40px;
+  }
+  .cosmic .cm-id h1 {
+    margin: 0;
+    font-size: 40px;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+  .cosmic .cm-handle {
+    margin: 8px 0 0;
+    font-size: 14px;
+    color: var(--text-3);
+  }
+  .cosmic .cm-role {
+    margin: 12px 0 0;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .cosmic .cm-bio {
+    margin: 12px 0 0;
+    max-width: 60ch;
+    white-space: pre-line;
+    color: var(--text-2);
+  }
+  .cosmic .cm-links {
+    list-style: none;
+    margin: 20px 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    font-size: 14.5px;
+    color: var(--text-2);
+  }
+  .cosmic .cm-links a {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .cosmic .cm-stars {
+    margin-top: 48px;
+    max-width: 320px;
+  }
+  .cosmic .cm-stars h2 {
+    font-size: 20px;
+    margin: 0 0 16px;
+    text-shadow: none;
+  }
+  @media (max-width: 1024px) {
+    .cosmic .cm-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 720px) {
+    .cosmic .cm-grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 20px;
+    }
+    .cosmic .cm-head h2 {
+      font-size: 22px;
+    }
+    .cosmic .cm-profile {
+      padding: 32px 0 96px;
+    }
+    .cosmic .cm-id {
+      flex-direction: column;
+      gap: 18px;
+    }
+    .cosmic .cm-id h1 {
+      font-size: 30px;
+    }
+    .cosmic .cm-id .avatar {
+      width: 88px;
+      height: 88px;
+      font-size: 32px;
+    }
+  }
+}

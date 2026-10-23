@@ -1,5 +1,8 @@
+import "./community.css";
+
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "~/ui/avatar";
+import { Card } from "~/ui/card";
 import { profilePath } from "~/lib/profilePath";
 import type { PublicProfileSummary } from "~/server/loaders/publicProfiles";
 import type { LeaderProfile } from "~/components/LeadershipSection/LeaderCluster/profile";
@@ -17,11 +20,6 @@ function initials(name: string) {
   );
 }
 
-const CARD =
-  "flex items-center gap-3 rounded-xl border bg-card p-4 text-card-foreground";
-const LINKED_CARD =
-  "transition-lift hover:shadow-block-md hover:-translate-x-0.5 hover:-translate-y-0.5";
-
 interface PersonProps {
   /** Shown name: a display name, or `@handle` when the member hides theirs. */
   name: string;
@@ -35,28 +33,29 @@ interface PersonProps {
 function PersonCard({ name, avatarSrc, detail, href }: PersonProps) {
   const body = (
     <>
-      <Avatar className="size-12">
+      <Avatar size="md">
         {/* A missing object 404s and Radix falls back to the monogram, the
             same way the leadership headshots do. */}
         {avatarSrc && <AvatarImage src={avatarSrc} alt="" />}
-        <AvatarFallback className="font-display font-extrabold">
-          {initials(name)}
-        </AvatarFallback>
+        <AvatarFallback>{initials(name)}</AvatarFallback>
       </Avatar>
-      <div className="min-w-0">
-        <p className="truncate font-semibold">{name}</p>
-        {detail && (
-          <p className="text-muted-foreground line-clamp-2 text-sm">{detail}</p>
-        )}
+      <div className="cm-mid">
+        <p className="cm-name">{name}</p>
+        {detail && <p className="cm-detail">{detail}</p>}
       </div>
     </>
   );
 
-  if (!href) return <div className={CARD}>{body}</div>;
+  if (!href)
+    return (
+      <Card className="cm-person" flat>
+        {body}
+      </Card>
+    );
   return (
-    <Link href={href} className={`${CARD} ${LINKED_CARD}`}>
+    <Card as={Link} href={href} className="cm-person">
       {body}
-    </Link>
+    </Card>
   );
 }
 
@@ -84,16 +83,13 @@ export default function CommunityDirectory({
   const others = members.filter((m) => !officerHandleSet.has(m.handle));
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="wrap cm-wrap">
       {officers.length > 0 && (
         <section aria-labelledby="community-leadership">
-          <h2
-            id="community-leadership"
-            className="font-display mb-4 px-1 text-2xl font-extrabold text-white"
-          >
-            Leadership
-          </h2>
-          <ul className="grid gap-3 @sm:grid-cols-2 @3xl:grid-cols-3">
+          <div className="cm-head">
+            <h2 id="community-leadership">Leadership</h2>
+          </div>
+          <ul className="cm-grid">
             {officers.map((officer) => {
               const handle = officerHandles.get(officer.slug);
               return (
@@ -112,21 +108,25 @@ export default function CommunityDirectory({
       )}
 
       <section aria-labelledby="community-members">
-        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 px-1">
-          <h2
-            id="community-members"
-            className="font-display text-2xl font-extrabold text-white"
-          >
-            Members
-          </h2>
+        <div className="cm-head">
+          <h2 id="community-members">Members</h2>
+          {others.length > 0 && (
+            <div className="cm-count">
+              <b>{others.length}</b> community{" "}
+              {others.length === 1 ? "profile" : "profiles"}
+            </div>
+          )}
         </div>
         {others.length === 0 ? (
-          <p className="text-muted-foreground rounded-xl border border-dashed p-6 text-center text-sm">
-            No members have made their profile public yet. Verify your account
-            and turn on a public profile from your account page to be the first.
-          </p>
+          <Card flat>
+            <p className="cm-empty">
+              No members have made their profile public yet. Verify your account
+              and turn on a public profile from your account page to be the
+              first.
+            </p>
+          </Card>
         ) : (
-          <ul className="grid gap-3 @sm:grid-cols-2 @3xl:grid-cols-3">
+          <ul className="cm-grid">
             {others.map((member) => (
               <li key={member.handle}>
                 <PersonCard

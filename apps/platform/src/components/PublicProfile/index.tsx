@@ -1,16 +1,15 @@
+import "~/components/CommunityDirectory/community.css";
+
 import { ArrowSquareOutIcon, UserIcon } from "@phosphor-icons/react/ssr";
 import { Avatar, AvatarFallback, AvatarImage } from "~/ui/avatar";
-import { ConsoleCard } from "~/ui/card";
-import PageShell from "~/components/PageShell";
+import { Breadcrumbs } from "~/ui/breadcrumbs";
+import { Card } from "~/ui/card";
 import { StarTotalsRow } from "~/components/participation/StarBadges";
 import type {
   PublicProfile as Profile,
   PublicProfileActivity,
 } from "~/server/loaders/publicProfiles";
 import { headingFor, linkItemsFor } from "./view";
-
-const linkCls =
-  "inline-flex items-center gap-1.5 rounded-sm underline underline-offset-2 outline-none hover:text-mauve-200 focus-visible:ring-2 focus-visible:ring-white";
 
 /**
  * A member's public profile. Every section renders only when the loaders
@@ -29,73 +28,65 @@ export default function PublicProfile({
   const { stars } = activity;
 
   return (
-    <PageShell
-      accent="amber"
-      title={heading}
-      description={
-        profile.displayName ? (
-          <span>@{profile.handle}</span>
-        ) : (
-          profile.roleDescription
-        )
-      }
-    >
-      <ConsoleCard.Root>
-        <ConsoleCard.Content>
-          <div className="flex flex-col gap-4 @sm:flex-row @sm:items-start">
-            <Avatar className="size-24">
-              {profile.avatarUrl && (
-                <AvatarImage src={profile.avatarUrl} alt="" />
-              )}
-              <AvatarFallback>
-                <UserIcon size={40} aria-hidden />
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex min-w-0 flex-col gap-3">
-              {profile.displayName && profile.roleDescription && (
-                <p className="text-sm font-semibold text-mauve-200">
-                  {profile.roleDescription}
-                </p>
-              )}
-              {profile.bio && (
-                <p className="max-w-prose text-sm whitespace-pre-line text-mauve-300">
-                  {profile.bio}
-                </p>
-              )}
-              {links.length > 0 && (
-                <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-mauve-300">
-                  {links.map((link) => (
-                    <li key={`${link.label}-${link.href}`}>
-                      {link.href ? (
-                        <a
-                          href={link.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={linkCls}
-                        >
-                          <ArrowSquareOutIcon size={12} weight="bold" />
-                          {link.label}
-                        </a>
-                      ) : (
-                        link.label
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+    <div className="wrap cm-profile-wrap">
+      <div className="cm-profile">
+        <Breadcrumbs
+          items={[
+            { label: "Community", href: "/community" },
+            { label: `@${profile.handle}` },
+          ]}
+        />
+        <div className="cm-id">
+          <Avatar size="lg" aria-label={heading}>
+            {profile.avatarUrl && <AvatarImage src={profile.avatarUrl} alt="" />}
+            <AvatarFallback>
+              <UserIcon size={40} aria-hidden />
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <h1>{heading}</h1>
+            {profile.displayName && (
+              <p className="cm-handle mono">@{profile.handle}</p>
+            )}
+            {profile.roleDescription && (
+              <p className="cm-role">{profile.roleDescription}</p>
+            )}
+            {profile.bio && <p className="cm-bio">{profile.bio}</p>}
+            {links.length > 0 && (
+              <ul className="cm-links">
+                {links.map((link) => (
+                  <li key={`${link.label}-${link.href}`}>
+                    {link.href ? (
+                      <a
+                        className="textlink"
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ArrowSquareOutIcon size={14} weight="bold" />
+                        {link.label}
+                      </a>
+                    ) : (
+                      link.label
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-        </ConsoleCard.Content>
-      </ConsoleCard.Root>
+        </div>
 
-      {stars && (
-        <ConsoleCard.Root id="stars">
-          <ConsoleCard.Header title="Stars" />
-          <ConsoleCard.Content>
-            <StarTotalsRow totals={stars} />
-          </ConsoleCard.Content>
-        </ConsoleCard.Root>
-      )}
-    </PageShell>
+        {stars && (
+          <section id="stars" className="cm-stars" aria-labelledby="h-stars">
+            <Card>
+              <h2 id="h-stars" className="card-title">
+                Stars
+              </h2>
+              <StarTotalsRow totals={stars} />
+            </Card>
+          </section>
+        )}
+      </div>
+    </div>
   );
 }

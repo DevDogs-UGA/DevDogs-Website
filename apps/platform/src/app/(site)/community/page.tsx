@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import CommunityDirectory from "~/components/CommunityDirectory";
-import PageShell from "~/components/PageShell";
+import PageHeader from "~/components/PageHeader";
 import { INVOLVEMENT_NETWORK_ROSTER_URL } from "~/config/nav";
 import { publicProfilesEnabled } from "~/server/features";
 import { getCurrentOfficers } from "~/server/loaders/officers";
@@ -45,16 +45,17 @@ export default async function Community() {
   );
 
   return (
-    <PageShell
-      accent="emerald"
-      title="Community"
-      description="Meet the members and leadership of DevDogs."
-    >
+    <>
+      <PageHeader
+        head="brand"
+        title="Community"
+        description="Meet the members and leadership of DevDogs."
+      />
       <CommunityDirectory
         officers={officers}
         officerHandles={officerHandles}
         members={members}
       />
-    </PageShell>
+    </>
   );
 }
