@@ -68,7 +68,7 @@ function signInAs(id: string, github = true) {
 
 async function registration(clientId: string) {
   const rows = await db.execute<{
-    userId: string;
+    userId: string | null;
     tier: string;
     label: string;
   }>(
@@ -210,8 +210,9 @@ describe("creating a client", () => {
       callbackUri: DOGDAYS,
     });
 
+    // A production client is a DevDogs app: no owner.
     expect(await registration(result.clientId!)).toEqual({
-      userId: IDS.officer,
+      userId: null,
       tier: "production",
       label: `${PREFIX}-dogdays`,
     });
