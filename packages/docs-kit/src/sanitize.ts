@@ -21,6 +21,7 @@
  */
 import { randomBytes } from "node:crypto";
 import type { Element, Root as HastRoot } from "hast";
+import type { Root as MdastRoot } from "mdast";
 
 type HastParent = HastRoot | Element;
 type Position = Element["position"];
@@ -28,8 +29,12 @@ import { visit } from "unist-util-visit";
 import rehypeRaw from "rehype-raw";
 import { VFile } from "vfile";
 import { DocsBuildError } from "./errors.js";
+import { metaAttribute } from "./codeblocks.js";
 import {
+  checkUrl,
   elementProblem,
+  normalizeUrl,
+  schemeOf,
   generatedElementProblem,
   type ContentTrust,
   type UntrustedAssets,
@@ -147,7 +152,10 @@ export function rehypeExternalLinks() {
       if (node.tagName !== "a") return;
       const href = node.properties.href;
       if (typeof href !== "string") return;
-      if (!/^\s*(https?:|mailto:)/i.test(href)) return;
+      const scheme = schemeOf(href);
+      if (scheme !== "http" && scheme !== "https" && scheme !== "mailto") return;
+      // Browsers drop tabs and newlines inside a URL; write what they read.
+      node.properties.href = normalizeUrl(href);
       node.properties.rel = ["noopener", "noreferrer", "nofollow"];
       delete node.properties.target;
     });
@@ -200,4 +208,37 @@ export function checkSvgAsset(text: string, label: string): void {
       `${label}: an SVG file must contain a single <svg> element and nothing else`,
     );
   }
+}
+
+/**
+ * Checks the URLs a code fence's info string carries (`href=`, `vscode=`),
+ * which become links after the HTML pass has run (codeblocks.ts, diffs.ts).
+ * Untrusted docs may link out over http(s) only and get no VS Code links.
+ */
+export function remarkCheckFenceLinks() {
+  return (tree: MdastRoot, file: VFile) => {
+    const policy = policyOf(file);
+    const url = { trust: policy.trust, untrusted: policy.untrusted };
+    visit(tree, "code", (node) => {
+      if (!node.meta) return;
+      const where = whereOf(file, node.position as Position | undefined);
+      const href = metaAttribute(node.meta, "href");
+      if (href !== undefined) {
+        const scheme = schemeOf(href);
+        const why =
+          policy.trust === "untrusted" && scheme !== "http" && scheme !== "https"
+            ? `code block href= must be an http(s) URL (found "${href.slice(0, 60)}")`
+            : checkUrl(href, "link", url);
+        if (why !== null) {
+          throw new DocsBuildError(`${where}: code block href=: ${why}`);
+        }
+      }
+      const vscode = metaAttribute(node.meta, "vscode");
+      if (vscode !== undefined && policy.trust === "untrusted") {
+        throw new DocsBuildError(
+          `${where}: code block vscode= links aren't allowed in untrusted docs`,
+        );
+      }
+    });
+  };
 }

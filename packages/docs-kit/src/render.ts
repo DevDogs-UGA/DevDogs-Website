@@ -40,6 +40,7 @@ import {
   rehypeExternalLinks,
   rehypeMarkGenerated,
   rehypeSanitizeHtml,
+  remarkCheckFenceLinks,
   type RenderPolicy,
 } from "./sanitize.js";
 import { rehypeCopyableCells } from "./tables.js";
@@ -77,6 +78,7 @@ const processor = unified()
   .use(remarkRewriteLinks)
   // After the variants, so a diff inside a resolved variant is still nested
   // (and left alone), and before Shiki could ever see the block.
+  .use(remarkCheckFenceLinks)
   .use(remarkDiffs)
   .use(remarkKeepMeta)
   .use(remarkSmartypants)
@@ -104,6 +106,9 @@ const processor = unified()
     transformers: [docsCodeBlocks()],
   })
   .use(rehypeKatex)
+  // Shiki's frame adds the fence's GitHub link; it gets the same rel.
+  // A distinct function: unified folds a repeated plugin into its first use.
+  .use(() => rehypeExternalLinks())
   .use(rehypeCopyableCells)
   .use(rehypeScrollTables)
   .use(rehypeStringify);

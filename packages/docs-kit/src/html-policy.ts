@@ -392,6 +392,16 @@ export function checkUrl(
   // Untrusted from here: a relative path inside the docs directory, or a
   // site docs route (what the link rewriter turns a page link into).
   if (url.startsWith("/")) {
+    // Dot segments and encoded dots would walk out of /docs/<project>/.
+    let path = url.replace(/[?#].*$/, "");
+    try {
+      path = decodeURIComponent(path);
+    } catch {
+      return `"${clip(value)}" isn't a valid path`;
+    }
+    if (path.split(/[/\\]/).some((s) => s === ".." || s === ".")) {
+      return `links must stay inside this project's docs; "." and ".." segments aren't allowed (found "${clip(value)}")`;
+    }
     const home = ctx.untrusted ? `/docs/${ctx.untrusted.project}` : null;
     if (
       kind === "link" &&
@@ -427,7 +437,7 @@ export function checkUrl(
   if (!context.assets.has(resolved)) {
     return kind === "image"
       ? `image "${clip(value)}" isn't an approved asset in the docs directory (png, jpg, gif, webp, avif or svg files only)`
-      : `"${clip(value)}" doesn't name a page or approved asset in the docs directory`;
+      : `"${clip(value)}" isn't an approved asset in the docs directory; in raw HTML, link pages with a Markdown link instead`;
   }
   return null;
 }

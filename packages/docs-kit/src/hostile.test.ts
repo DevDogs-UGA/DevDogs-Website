@@ -240,6 +240,54 @@ describe("comments", () => {
   });
 });
 
+describe("fence-meta links", () => {
+  const fence = (meta: string) => `\`\`\`${meta}\nx\n\`\`\`\n`;
+  const diff = (meta: string) =>
+    `\`\`\`diff ${meta}\n--- a/f.ts\n+++ b/f.ts\n@@ -1 +1 @@\n-a\n+b\n\`\`\`\n`;
+  const both = [
+    ["untrusted", untrusted],
+    ["trusted", { trust: "trusted" } satisfies RenderPolicy],
+  ] as const;
+  describe.each(both)("%s", (_n, policy) => {
+    it("rejects a javascript: href", async () => {
+      await expect(
+        render(fence("js href=javascript:alert(1)"), policy),
+      ).rejects.toThrow(/href=/);
+    });
+    it("rejects a javascript: href on a diff", async () => {
+      await expect(
+        render(diff("file=f.ts href=javascript:alert(1)"), policy),
+      ).rejects.toThrow(/href=/);
+    });
+  });
+  it("untrusted refuses vscode= and non-http hrefs, and adds nofollow", async () => {
+    await expect(
+      render(fence("js vscode=vscode://devdogsuga.workshops/open?x=1")),
+    ).rejects.toThrow(/vscode=/);
+    await expect(render(fence("js href=mailto:a@b.example"))).rejects.toThrow(
+      /http\(s\)/,
+    );
+    const html = await render(fence("js href=https://github.com/a/b"));
+    expect(html).toContain("nofollow");
+  });
+});
+
+describe("link normalization and site routes", () => {
+  it("normalizes tab-split schemes and still adds rel", async () => {
+    const html = await render('<a href="ht&#9;tps://evil.example">x</a>');
+    expect(html).toContain('href="https://evil.example"');
+    expect(html).toContain("nofollow");
+  });
+  it.each([
+    ["dot segments", "/docs/proj/../../account/delete"],
+    ["encoded dots", "/docs/proj/%2e%2e/%2e%2e/account"],
+  ])("rejects %s out of the project's docs", async (_l, href) => {
+    await expect(render(`<a href="${href}">x</a>`)).rejects.toThrow(
+      DocsBuildError,
+    );
+  });
+});
+
 describe("untrusted links and assets", () => {
   it("adds rel to external links and keeps https and mailto", async () => {
     const html = await render(
