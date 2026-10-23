@@ -67,13 +67,17 @@ async function cleanup() {
   }
 }
 
+// As GoTrue calls it: supabase_auth_admin, so the hook's grants are exercised.
 async function runHook(email: string) {
-  const [row] = await db.execute<{ result: { error?: { message: string } } }>(
-    sql`select platform.require_uga_signup_email(
-          jsonb_build_object('user', jsonb_build_object('email', ${email}::text))
-        ) as result`,
-  );
-  return row!.result;
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`set local role supabase_auth_admin`);
+    const [row] = await tx.execute<{ result: { error?: { message: string } } }>(
+      sql`select platform.require_uga_signup_email(
+            jsonb_build_object('user', jsonb_build_object('email', ${email}::text))
+          ) as result`,
+    );
+    return row!.result;
+  });
 }
 
 beforeAll(async () => {

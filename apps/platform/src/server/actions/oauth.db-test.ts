@@ -210,9 +210,8 @@ describe("creating a client", () => {
       callbackUri: DOGDAYS,
     });
 
-    // A production client is a DevDogs app: no owner.
     expect(await registration(result.clientId!)).toEqual({
-      userId: null,
+      userId: IDS.officer,
       tier: "production",
       label: `${PREFIX}-dogdays`,
     });

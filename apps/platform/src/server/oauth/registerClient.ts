@@ -76,14 +76,7 @@ export async function createOauthClientAndRegister(options: {
     await db.transaction(async (tx) => {
       await tx
         .insert(oauthRegistrations)
-        // A production client is a DevDogs app: ownerless, so deleting
-        // whoever registered it cannot delete it.
-        .values({
-          userId: tier === "production" ? null : userId,
-          clientId: data.client_id,
-          label,
-          tier,
-        });
+        .values({ userId, clientId: data.client_id, label, tier });
       if (tier === "production") {
         await tx.insert(auditEvents).values(
           oauthAuditEvent({
