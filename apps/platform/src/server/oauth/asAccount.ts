@@ -66,6 +66,21 @@ export function approveAs(
   );
 }
 
+/** The same redirect with the code dropped and `error=access_denied` set. */
+function deniedRedirect(redirectUrl: string): string {
+  const url = new URL(redirectUrl);
+  const state = url.searchParams.get("state");
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("error", "access_denied");
+  url.searchParams.set(
+    "error_description",
+    "The user denied the authorization request",
+  );
+  if (state !== null) url.searchParams.set("state", state);
+  return url.toString();
+}
+
 /** Cancels: Supabase Auth answers with the app's redirect and `error=access_denied`. */
 export function denyAs(
   actor: ConsentActor,
@@ -81,9 +96,11 @@ export function denyAs(
       console.error({ detailsError });
       throw new Error("Failed to deny authorization");
     }
-    // Already approved earlier: Supabase Auth hands back the redirect with a
-    // code, and there is nothing left to cancel.
-    if ("redirect_url" in details) return details.redirect_url;
+    // An earlier approval makes Supabase Auth answer the details call with the
+    // success redirect, code included. Cancel must never hand that code on:
+    // rebuild the redirect (already validated by GoTrue) as a denial, keeping
+    // only its origin, path and `state`.
+    if ("redirect_url" in details) return deniedRedirect(details.redirect_url);
 
     const { data, error } = await client.auth.oauth.denyAuthorization(
       authorizationId,

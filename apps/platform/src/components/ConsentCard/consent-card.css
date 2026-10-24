@@ -75,6 +75,7 @@
   .cc-fields {
     margin: 0 0 16px;
     padding: 0 0 0 20px;
+    list-style: disc;
     color: var(--text-2);
     line-height: 1.6;
   }

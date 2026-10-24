@@ -8,7 +8,7 @@ import {
 } from "./consentScreen";
 
 const ACCOUNT_RECORD =
-  "Your account record: linked sign-in accounts, phone number and sign-in times";
+  "Your whole account record: email, name and profile details, linked sign-in accounts, phone number and sign-in times";
 const STORAGE = { baseUrl: "https://api.example.org", bucket: "avatars" };
 
 describe("sharedFields", () => {

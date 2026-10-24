@@ -27,7 +27,7 @@ const SCOPE_FIELDS: Record<string, readonly string[]> = {
  * scopes: phone, linked sign-in accounts, sign-in times and metadata.
  */
 const ACCOUNT_RECORD =
-  "Your account record: linked sign-in accounts, phone number and sign-in times";
+  "Your whole account record: email, name and profile details, linked sign-in accounts, phone number and sign-in times";
 
 /** The scopes an authorization asked for, in order, without duplicates. */
 export function parseScopes(scope: string): string[] {

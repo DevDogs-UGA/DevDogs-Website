@@ -118,3 +118,18 @@ describe("cancelConsent", () => {
     expect(approveAs).not.toHaveBeenCalled();
   });
 });
+
+describe("cancelConsent with an existing approval", () => {
+  it("never hands the app a code from the picker's Cancel", async () => {
+    loadConsentRequest.mockResolvedValue({
+      decision: "pick-account",
+      userId: "user-1",
+      target: {},
+    });
+    denyAs.mockResolvedValue("https://app.example/cb?error=access_denied");
+    await expect(
+      cancelConsent(null, form({ authorization_id: "auth-1" })),
+    ).rejects.toThrow("access_denied");
+    expect(approveAs).not.toHaveBeenCalled();
+  });
+});

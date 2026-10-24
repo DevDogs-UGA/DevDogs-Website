@@ -155,6 +155,16 @@ describe("/oauth/consent", () => {
     expect(approveAuthorization).not.toHaveBeenCalled();
   });
 
+  it.each([
+    "next-router-segment-prefetch",
+    "x-middleware-prefetch",
+    "sec-purpose",
+  ])("starts nothing on a prefetch signalled by %s", async (name) => {
+    headerValues.set(name, name === "sec-purpose" ? "prefetch" : "1");
+    expect(await run()).toBeNull();
+    expect(loadConsentRequest).not.toHaveBeenCalled();
+  });
+
   it("sends a signed-out visitor to sign in, then back here", async () => {
     expectSession.mockRejectedValue(new Error("no"));
     expect(await run()).toEqual({

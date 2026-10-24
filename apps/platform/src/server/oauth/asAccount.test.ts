@@ -77,14 +77,16 @@ describe("denyAs (self)", () => {
     expect(order).toEqual(["details", "deny"]);
   });
 
-  it("returns the existing redirect when it was already approved", async () => {
+  it("answers access_denied, never a code, when it was already approved", async () => {
     auth.oauth.getAuthorizationDetails.mockResolvedValue({
-      data: { redirect_url: "https://app.example/cb?code=3" },
+      data: { redirect_url: "https://app.example/cb?code=3&state=xyz" },
       error: null,
     });
-    await expect(denyAs({ kind: "self" }, "auth-1")).resolves.toBe(
-      "https://app.example/cb?code=3",
-    );
+    const url = new URL(await denyAs({ kind: "self" }, "auth-1"));
+    expect(url.origin + url.pathname).toBe("https://app.example/cb");
+    expect(url.searchParams.get("code")).toBeNull();
+    expect(url.searchParams.get("error")).toBe("access_denied");
+    expect(url.searchParams.get("state")).toBe("xyz");
     expect(auth.oauth.denyAuthorization).not.toHaveBeenCalled();
   });
 

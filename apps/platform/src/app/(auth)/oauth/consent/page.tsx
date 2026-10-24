@@ -45,13 +45,20 @@ interface Props {
 
 /**
  * Whether the browser is only prefetching this URL (a `<Link>` in view, a
- * speculation rule). A prefetch must never start or finish a flow: approving
+ * speculation rule). Covers the browser's own `Sec-Purpose`/`Purpose` headers
+ * and the router's prefetch headers where the runtime passes them through to
+ * `headers()`; vinext reads `Next-Router-Prefetch` itself and may not, so
+ * this is best effort. Nothing links to this route, and the real protection is
+ * that every approval needs a POST (a Server Action) except the remembered
+ * case. A prefetch must never start or finish a flow: approving
  * on a GET the member did not make would hand a code to the app unseen.
  */
 async function isPrefetch(): Promise<boolean> {
   const h = await headers();
   return (
     h.get("next-router-prefetch") !== null ||
+    h.get("next-router-segment-prefetch") !== null ||
+    h.get("x-middleware-prefetch") !== null ||
     /prefetch/i.test(h.get("purpose") ?? "") ||
     /prefetch/i.test(h.get("sec-purpose") ?? "")
   );
