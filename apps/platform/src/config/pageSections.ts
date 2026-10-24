@@ -133,12 +133,13 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
         },
       ],
     },
+    { id: "connected-apps", label: "Connected apps" },
     { id: "verification", label: "Verification" },
   ],
 
   "/settings/oauth": [
     { id: "issuer", label: "Issuer URL" },
-    { id: "dev-clients", label: "Development clients" },
+    { id: "apps", label: "Your apps" },
     { id: "test-accounts", label: "Test accounts" },
     {
       id: "moderation",
@@ -152,7 +153,6 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
         },
       ],
     },
-    { id: "production-clients", label: "Production clients" },
   ],
 
   "/console/permissions": [
