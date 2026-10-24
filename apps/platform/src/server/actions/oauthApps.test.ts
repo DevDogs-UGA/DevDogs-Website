@@ -23,7 +23,6 @@ const mocks = vi.hoisted(() => ({
   updates: [] as Record<string, unknown>[],
   audits: [] as Record<string, unknown>[],
   signedPaths: [] as string[],
-  forgetApproval: vi.fn(),
 }));
 
 vi.mock("~/env", () => ({ env: { NEXT_PUBLIC_AVATARS_BUCKET: "avatars" } }));
@@ -80,15 +79,10 @@ vi.mock("../db", () => {
 });
 vi.mock("../oauth/appStatus", () => ({
   APP_NOT_FOUND: "OAuth client not found",
-  forgetApproval: mocks.forgetApproval,
 }));
 
-const {
-  saveAppDetails,
-  saveAppLogo,
-  createAppLogoUploadToken,
-  removeAppAccess,
-} = await import("./oauthApps");
+const { saveAppDetails, saveAppLogo, createAppLogoUploadToken } =
+  await import("./oauthApps");
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -215,29 +209,5 @@ describe("logo upload", () => {
     mocks.objectExists = true;
     await expect(saveAppLogo(APP)).resolves.toEqual({ ok: true });
     expect(mocks.updates).toEqual([{ logoPath: `apps/${APP}.webp` }]);
-  });
-});
-
-describe("removeAppAccess", () => {
-  it("runs the kill switch for the signed-in member alone", async () => {
-    mocks.forgetApproval.mockResolvedValue({
-      consents: 1,
-      sessions: 2,
-      authorizations: 0,
-    });
-    mocks.session = OTHER;
-    await removeAppAccess(APP);
-    expect(mocks.forgetApproval).toHaveBeenCalledWith({
-      actorUserId: OTHER,
-      clientId: APP,
-      userId: OTHER,
-    });
-  });
-
-  it("rejects a malformed id before touching anything", async () => {
-    await expect(removeAppAccess("x")).rejects.toThrow(
-      "OAuth client not found",
-    );
-    expect(mocks.forgetApproval).not.toHaveBeenCalled();
   });
 });

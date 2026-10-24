@@ -19,7 +19,7 @@ async function AppsData() {
     <Panel
       id="oauth-apps"
       title="OAuth apps"
-      help="DevDogs apps and the apps members have published. A member keeps managing their own app; publishing, returning to Testing and transferring are yours. Every change is recorded in the audit log."
+      help="DevDogs apps, then members' apps In production, then their apps still in Testing. A member keeps managing their own app; publishing, returning to Testing and transferring are yours, and you edit a DevDogs app here. Every change is recorded in the audit log."
     >
       <ConsoleAppsField apps={apps} />
     </Panel>

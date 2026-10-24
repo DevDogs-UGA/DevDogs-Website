@@ -11,11 +11,7 @@ import {
   parseDetailUrl,
   APP_LOGO_MAX_BYTES,
 } from "../oauth/appDetails";
-import {
-  APP_NOT_FOUND,
-  forgetApproval as forgetApprovalStep,
-  type RevokeCounts,
-} from "../oauth/appStatus";
+import { APP_NOT_FOUND } from "../oauth/appStatus";
 import { oauthAuditEvent } from "../oauth/audit";
 import { z } from "zod";
 import { canUserManageOAuthApps } from "./permissions";
@@ -158,16 +154,4 @@ export async function saveAppLogo(clientId: string): Promise<DetailsResult> {
     }
   });
   return { ok: true };
-}
-
-/**
- * Remove access (Connected apps): the signed-in member forgets their own
- * approval of an app and is signed out of it. This is the kill switch scoped to
- * that one member, audited with its counts; nobody else is touched, and the
- * member can approve the app again from its consent screen.
- */
-export async function removeAppAccess(clientId: string): Promise<RevokeCounts> {
-  const userId = await expectSession();
-  if (!uuid.safeParse(clientId).success) throw new Error(APP_NOT_FOUND);
-  return forgetApprovalStep({ actorUserId: userId, clientId, userId });
 }

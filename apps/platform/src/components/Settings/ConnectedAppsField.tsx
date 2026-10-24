@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { toast } from "~/lib/toast";
-import { removeAppAccess } from "~/server/actions/oauthApps";
+import { forgetApproval } from "~/server/actions/oauthStatus";
 import type { ConnectedApp } from "~/server/loaders/oauthApps";
 import { logoLetter } from "~/server/oauth/consentScreen";
 import ConfirmDestructiveAction from "~/ui/confirm-destructive-action";
@@ -19,7 +19,14 @@ const APPROVED = new Intl.DateTimeFormat("en-US", {
  * Remove access forgets the approval and signs the member out of that one app;
  * nobody else is affected.
  */
-export default function ConnectedAppsField({ apps }: { apps: ConnectedApp[] }) {
+export default function ConnectedAppsField({
+  apps,
+  userId,
+}: {
+  apps: ConnectedApp[];
+  /** The signed-in member: Remove access forgets only their own approval. */
+  userId: string;
+}) {
   const router = useRouter();
 
   if (apps.length === 0) {
@@ -34,7 +41,7 @@ export default function ConnectedAppsField({ apps }: { apps: ConnectedApp[] }) {
 
   async function remove(app: ConnectedApp) {
     try {
-      await removeAppAccess(app.clientId);
+      await forgetApproval(app.clientId, userId);
       toast.success(`${app.label} can no longer sign you in`);
       router.refresh();
     } catch {

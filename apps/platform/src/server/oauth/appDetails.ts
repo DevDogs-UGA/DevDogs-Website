@@ -12,14 +12,6 @@ export function appLogoPath(clientId: string): string {
   return `${APP_LOGO_PREFIX}${clientId}.webp`;
 }
 
-/**
- * Whether `path` is the logo path of `clientId`. A member may write only here:
- * the avatars bucket also holds every member's own photo at a bare user id.
- */
-export function isAppLogoPath(clientId: string, path: unknown): boolean {
-  return typeof path === "string" && path === appLogoPath(clientId);
-}
-
 /** The same shape the database check accepts: https, a host, no credentials. */
 const HTTPS_URL = /^https:\/\/[^/?#@\s]+([/?#]\S*)?$/;
 const MAX_URL_LENGTH = 2048;

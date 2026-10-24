@@ -149,7 +149,7 @@ export const PAGE_SECTIONS: Record<string, PageSection[]> = {
           id: "moderation-clients",
           label: "Report and Block",
           description:
-            "Sign reports from your app's backend, and receive the decisions moderators make. Reports from a development client land in the sandbox below, never in the moderators' queue.",
+            "Sign reports from your app's backend, and receive the decisions moderators make. Reports from an app in Testing land in the sandbox below, never in the moderators' queue.",
         },
       ],
     },

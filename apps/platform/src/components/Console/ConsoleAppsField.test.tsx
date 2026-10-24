@@ -20,6 +20,12 @@ vi.mock("~/server/actions/oauthStatus", () => ({
   transferToDevDogs: mocks.transferToDevDogs,
 }));
 
+vi.mock("~/server/actions/oauth", () => ({ default: vi.fn() }));
+vi.mock("~/server/actions/oauthApps", () => ({ saveAppDetails: vi.fn() }));
+vi.mock("~/components/Settings/AppLogoField", () => ({
+  default: () => <div>logo field</div>,
+}));
+
 const { default: ConsoleAppsField } = await import("./ConsoleAppsField");
 
 function app(overrides: Partial<ConsoleApp>): ConsoleApp {
@@ -33,6 +39,7 @@ function app(overrides: Partial<ConsoleApp>): ConsoleApp {
     logoUrl: null,
     homepageUrl: "https://lab.example",
     privacyPolicyUrl: "https://lab.example/p",
+    redirectUris: [],
     missing: [],
     approvedMembers: 12,
     ...overrides,
@@ -170,5 +177,52 @@ describe("ConsoleAppsField", () => {
         name: "Skip the consent screen for DogDays",
       }),
     ).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("lets a holder edit a DevDogs app's redirects and details, but not a member's", async () => {
+    const user = userEvent.setup();
+    render(
+      <ConsoleAppsField
+        apps={[
+          app({ clientId: "m", label: "Member app" }),
+          app({
+            clientId: "d",
+            label: "DogDays",
+            isDevDogs: true,
+            ownerName: null,
+            redirectUris: ["https://dogdays.example/auth"],
+          }),
+        ]}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Edit Member app" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Edit DogDays" }));
+    expect(
+      await screen.findByRole("textbox", {
+        name: "https://dogdays.example/auth",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("App details")).toBeInTheDocument();
+    expect(screen.getByText("logo field")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Regenerate secret…" }),
+    ).toBeInTheDocument();
+    // A DevDogs app has no owner, hence no test accounts.
+    expect(screen.queryByText("Test accounts")).not.toBeInTheDocument();
+  });
+
+  it("lists a member's Testing app so a holder can publish or transfer it", () => {
+    render(
+      <ConsoleAppsField
+        apps={[app({ label: "Fresh", status: "testing", missing: [] })]}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Publish Fresh" })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "Transfer Fresh to DevDogs" }),
+    ).toBeInTheDocument();
   });
 });

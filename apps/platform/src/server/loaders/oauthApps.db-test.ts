@@ -5,7 +5,7 @@ import { db } from "~/server/db";
 
 /**
  * Connected apps lists a member's unrevoked approvals; Console → Apps lists
- * DevDogs apps and published ones with the number of members holding an
+ * DevDogs apps, published ones and members' Testing apps with the number of members holding an
  * approval. Run against the real schema, with the session replaced.
  */
 
@@ -113,13 +113,21 @@ describe("getConnectedApps", () => {
 });
 
 describe("getConsoleApps", () => {
-  it("lists DevDogs and published apps, never a member's Testing app", async () => {
+  it("lists DevDogs apps first, then published ones, then members' Testing apps", async () => {
     const mine = (await getConsoleApps()).filter((a) =>
       [APP_LIVE, APP_TESTING, APP_DEVDOGS].includes(a.clientId),
     );
-    expect(mine.map((a) => a.clientId).sort()).toEqual(
-      [APP_LIVE, APP_DEVDOGS].sort(),
-    );
+    expect(mine.map((a) => a.clientId)).toEqual([
+      APP_DEVDOGS,
+      APP_LIVE,
+      APP_TESTING,
+    ]);
+    // A member's Testing app is listed with what publishing still needs.
+    expect(mine.find((a) => a.clientId === APP_TESTING)?.missing).toEqual([
+      "a logo",
+      "a homepage",
+      "a privacy policy",
+    ]);
   });
 
   it("counts the members holding an approval, ignoring revoked ones", async () => {

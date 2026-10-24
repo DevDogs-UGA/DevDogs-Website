@@ -86,11 +86,11 @@ async function OAuthData({ searchParams }: Props) {
         <SettingsAnchor
           id="moderation-clients"
           label="Report and Block"
-          description="Sign reports from your app's backend, and receive the decisions moderators make. Reports from a development client land in the sandbox below, never in the moderators' queue."
+          description="Sign reports from your app's backend, and receive the decisions moderators make. Reports from an app in Testing land in the sandbox below, never in the moderators' queue."
         >
           <p className="help" style={{ marginBottom: 16, maxWidth: "62ch" }}>
             Sign reports from your app&rsquo;s backend, and receive the
-            decisions moderators make. Reports from a development client land in
+            decisions moderators make. Reports from an app in Testing land in
             the sandbox below, never in the moderators&rsquo; queue.
           </p>
           <OAuthModerationField clients={moderation} />

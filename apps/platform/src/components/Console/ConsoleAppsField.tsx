@@ -1,8 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import FormButton from "~/components/FormButton";
+import OAuthClientSheet from "~/components/Settings/OAuthClientSheet";
+import oauthAction from "~/server/actions/oauth";
 import { toast } from "~/lib/toast";
 import {
   setAsksForConsent,
@@ -34,6 +36,18 @@ export function countsMessage(counts: {
 export default function ConsoleAppsField({ apps }: { apps: ConsoleApp[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
+  // DevDogs apps have no owner, so their redirects, secret, details and
+  // deletion are edited here, in the same drawer a member uses for their own.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [{ clientId: mintedClientId, clientSecret }, dispatch, isPending] =
+    useActionState(oauthAction, { clientId: null, clientSecret: null });
+  const prevPending = useRef(false);
+  useEffect(() => {
+    if (prevPending.current && !isPending) router.refresh();
+    prevPending.current = isPending;
+  }, [isPending, router]);
+  const openApp = apps.find((a) => a.clientId === openId && a.isDevDogs);
+  const revealed = mintedClientId === openApp?.clientId ? clientSecret : null;
   // What the last action on each app did, kept on screen after the toast goes.
   const [notes, setNotes] = useState<Record<string, string>>({});
 
@@ -56,178 +70,200 @@ export default function ConsoleAppsField({ apps }: { apps: ConsoleApp[] }) {
       <EmptyState
         image={false}
         title="No apps to manage"
-        description="DevDogs apps and members' published apps appear here."
+        description="DevDogs apps and members' apps appear here."
       />
     );
   }
 
   return (
-    <div className="set-rows" role="list">
-      {apps.map((app) => {
-        const published = app.status === "in_production";
-        const working = busy === app.clientId;
-        return (
-          <div
-            role="listitem"
-            key={app.clientId}
-            className="arow"
-            style={{ flexWrap: "wrap", gap: 12 }}
-          >
-            <div className="flex min-w-0 items-center gap-3">
-              {app.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={app.logoUrl}
-                  alt=""
-                  width={40}
-                  height={40}
-                  className="size-10 shrink-0 rounded-md object-cover"
-                />
-              ) : (
-                <span
-                  aria-hidden
-                  className="grid size-10 shrink-0 place-items-center rounded-md bg-[var(--surface-2,var(--bg))] font-semibold"
-                >
-                  {logoLetter(app.label)}
-                </span>
-              )}
-              <div className="min-w-0">
-                <b className="truncate">{app.label}</b>
-                <span className="small muted">
-                  {app.isDevDogs
-                    ? "DevDogs app"
-                    : `By ${app.ownerName ?? "a member"}`}
-                  {" · "}
-                  {app.approvedMembers} approved
-                </span>
+    <>
+      <div className="set-rows" role="list">
+        {apps.map((app) => {
+          const published = app.status === "in_production";
+          const working = busy === app.clientId;
+          return (
+            <div
+              role="listitem"
+              key={app.clientId}
+              className="arow"
+              style={{ flexWrap: "wrap", gap: 12 }}
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                {app.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={app.logoUrl}
+                    alt=""
+                    width={40}
+                    height={40}
+                    className="size-10 shrink-0 rounded-md object-cover"
+                  />
+                ) : (
+                  <span
+                    aria-hidden
+                    className="grid size-10 shrink-0 place-items-center rounded-md bg-[var(--surface-2,var(--bg))] font-semibold"
+                  >
+                    {logoLetter(app.label)}
+                  </span>
+                )}
+                <div className="min-w-0">
+                  <b className="truncate">{app.label}</b>
+                  <span className="small muted">
+                    {app.isDevDogs
+                      ? "DevDogs app"
+                      : `By ${app.ownerName ?? "a member"}`}
+                    {" · "}
+                    {app.approvedMembers} approved
+                  </span>
+                </div>
+                <Badge variant={published ? "warning" : "info"}>
+                  {published ? "In production" : "Testing"}
+                </Badge>
               </div>
-              <Badge variant={published ? "warning" : "info"}>
-                {published ? "In production" : "Testing"}
-              </Badge>
-            </div>
 
-            <div className="end flex flex-wrap items-center gap-2">
-              {app.isDevDogs && (
-                <div className="row small" style={{ gap: 8 }}>
-                  Skips consent
+              <div className="end flex flex-wrap items-center gap-2">
+                {app.isDevDogs && (
+                  <FormButton
+                    theme="black"
+                    size="sm"
+                    type="button"
+                    onClick={() => setOpenId(app.clientId)}
+                    aria-label={`Edit ${app.label}`}
+                  >
+                    Edit
+                  </FormButton>
+                )}
+                {app.isDevDogs && (
+                  <div className="row small" style={{ gap: 8 }}>
+                    Skips consent
+                    <form
+                      action={() =>
+                        run(app, async () => {
+                          await setAsksForConsent(
+                            app.clientId,
+                            !app.asksForConsent,
+                          );
+                          return app.asksForConsent
+                            ? `${app.label} no longer asks for consent`
+                            : `${app.label} asks for consent again`;
+                        })
+                      }
+                    >
+                      <Toggle
+                        checked={!app.asksForConsent}
+                        pending={working}
+                        disabled={!published || working}
+                        aria-label={`Skip the consent screen for ${app.label}`}
+                      />
+                    </form>
+                  </div>
+                )}
+
+                {!published && (
                   <form
                     action={() =>
                       run(app, async () => {
-                        await setAsksForConsent(
-                          app.clientId,
-                          !app.asksForConsent,
-                        );
-                        return app.asksForConsent
-                          ? `${app.label} no longer asks for consent`
-                          : `${app.label} asks for consent again`;
+                        await setStatus(app.clientId, "in_production");
+                        return `${app.label} is in production`;
                       })
                     }
+                    title={
+                      app.missing.length > 0
+                        ? `Before publishing, add ${app.missing.join(", ")}`
+                        : undefined
+                    }
                   >
-                    <Toggle
-                      checked={!app.asksForConsent}
-                      pending={working}
-                      disabled={!published || working}
-                      aria-label={`Skip the consent screen for ${app.label}`}
-                    />
+                    <FormButton
+                      theme="cyan"
+                      size="sm"
+                      type="submit"
+                      disabled={app.missing.length > 0 || working}
+                      aria-label={`Publish ${app.label}`}
+                    >
+                      Publish
+                    </FormButton>
                   </form>
-                </div>
-              )}
+                )}
+                {!published && app.missing.length > 0 && (
+                  <span className="small muted">
+                    Needs {app.missing.join(", ")}
+                  </span>
+                )}
 
-              {!published && (
-                <form
-                  action={() =>
-                    run(app, async () => {
-                      await setStatus(app.clientId, "in_production");
-                      return `${app.label} is in production`;
-                    })
-                  }
-                  title={
-                    app.missing.length > 0
-                      ? `Before publishing, add ${app.missing.join(", ")}`
-                      : undefined
-                  }
-                >
-                  <FormButton
-                    theme="cyan"
-                    size="sm"
-                    type="submit"
-                    disabled={app.missing.length > 0 || working}
-                    aria-label={`Publish ${app.label}`}
+                {published && (
+                  <ConfirmDestructiveAction
+                    action={() =>
+                      run(app, async () => {
+                        const result = await setStatus(app.clientId, "testing");
+                        return result.counts
+                          ? `${app.label} is back in Testing. ${countsMessage(result.counts)}`
+                          : `${app.label} is back in Testing`;
+                      })
+                    }
+                    title={`Return ${app.label} to Testing?`}
+                    description={`This signs everyone else out of ${app.label}: ${app.approvedMembers} ${app.approvedMembers === 1 ? "member holds" : "members hold"} an approval now, and their sessions end. ${app.isDevDogs ? "It is a DevDogs app, so nobody can sign in until it is published again." : "Only the owner and their test accounts can sign in until it is published again."} The counts are shown when it is done.`}
+                    submitLabel="Return to Testing"
                   >
-                    Publish
-                  </FormButton>
-                </form>
-              )}
-              {!published && app.missing.length > 0 && (
-                <span className="small muted">
-                  Needs {app.missing.join(", ")}
-                </span>
-              )}
+                    <FormButton
+                      theme="rose"
+                      variant="destructive"
+                      size="sm"
+                      type="submit"
+                      disabled={working}
+                      aria-label={`Return ${app.label} to Testing`}
+                    >
+                      Back to Testing…
+                    </FormButton>
+                  </ConfirmDestructiveAction>
+                )}
 
-              {published && (
-                <ConfirmDestructiveAction
-                  action={() =>
-                    run(app, async () => {
-                      const result = await setStatus(app.clientId, "testing");
-                      return result.counts
-                        ? `${app.label} is back in Testing. ${countsMessage(result.counts)}`
-                        : `${app.label} is back in Testing`;
-                    })
-                  }
-                  title={`Return ${app.label} to Testing?`}
-                  description={`This signs everyone else out of ${app.label}: ${app.approvedMembers} ${app.approvedMembers === 1 ? "member holds" : "members hold"} an approval now, and their sessions end. ${app.isDevDogs ? "It is a DevDogs app, so nobody can sign in until it is published again." : "Only the owner and their test accounts can sign in until it is published again."} The counts are shown when it is done.`}
-                  submitLabel="Return to Testing"
-                >
-                  <FormButton
-                    theme="rose"
-                    variant="destructive"
-                    size="sm"
-                    type="submit"
-                    disabled={working}
-                    aria-label={`Return ${app.label} to Testing`}
+                {!app.isDevDogs && (
+                  <ConfirmDestructiveAction
+                    action={() =>
+                      run(app, async () => {
+                        await transferToDevDogs(app.clientId);
+                        return `${app.label} is now a DevDogs app`;
+                      })
+                    }
+                    title={`Transfer ${app.label} to DevDogs?`}
+                    description={`${app.ownerName ?? "The owner"} stops owning ${app.label} and loses the ability to manage it; officers manage it from then on. It no longer counts towards their three apps. This cannot be undone.`}
+                    submitLabel="Transfer to DevDogs"
                   >
-                    Back to Testing…
-                  </FormButton>
-                </ConfirmDestructiveAction>
-              )}
-
-              {!app.isDevDogs && (
-                <ConfirmDestructiveAction
-                  action={() =>
-                    run(app, async () => {
-                      await transferToDevDogs(app.clientId);
-                      return `${app.label} is now a DevDogs app`;
-                    })
-                  }
-                  title={`Transfer ${app.label} to DevDogs?`}
-                  description={`${app.ownerName ?? "The owner"} stops owning ${app.label} and loses the ability to manage it; officers manage it from then on. It no longer counts towards their three apps. This cannot be undone.`}
-                  submitLabel="Transfer to DevDogs"
+                    <FormButton
+                      theme="rose"
+                      variant="destructive"
+                      size="sm"
+                      type="submit"
+                      disabled={working}
+                      aria-label={`Transfer ${app.label} to DevDogs`}
+                    >
+                      Transfer to DevDogs…
+                    </FormButton>
+                  </ConfirmDestructiveAction>
+                )}
+              </div>
+              {notes[app.clientId] && (
+                <p
+                  role="status"
+                  className="small muted"
+                  style={{ width: "100%" }}
                 >
-                  <FormButton
-                    theme="rose"
-                    variant="destructive"
-                    size="sm"
-                    type="submit"
-                    disabled={working}
-                    aria-label={`Transfer ${app.label} to DevDogs`}
-                  >
-                    Transfer to DevDogs…
-                  </FormButton>
-                </ConfirmDestructiveAction>
+                  {notes[app.clientId]}
+                </p>
               )}
             </div>
-            {notes[app.clientId] && (
-              <p
-                role="status"
-                className="small muted"
-                style={{ width: "100%" }}
-              >
-                {notes[app.clientId]}
-              </p>
-            )}
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+      <OAuthClientSheet
+        client={openApp ? { ...openApp, approvedTestAccountIds: [] } : null}
+        testAccounts={[]}
+        dispatch={dispatch}
+        isPending={isPending}
+        secret={revealed}
+        onClose={() => setOpenId(null)}
+        devDogsApp
+      />
+    </>
   );
 }

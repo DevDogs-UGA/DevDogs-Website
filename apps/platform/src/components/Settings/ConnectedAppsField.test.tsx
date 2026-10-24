@@ -2,8 +2,10 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const ME = "22222222-2222-4222-8222-222222222222";
+
 const mocks = vi.hoisted(() => ({
-  removeAppAccess: vi.fn(),
+  forgetApproval: vi.fn(),
   refresh: vi.fn(),
 }));
 
@@ -11,8 +13,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: mocks.refresh }),
 }));
 vi.mock("~/lib/toast", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock("~/server/actions/oauthApps", () => ({
-  removeAppAccess: mocks.removeAppAccess,
+vi.mock("~/server/actions/oauthStatus", () => ({
+  forgetApproval: mocks.forgetApproval,
 }));
 
 const { default: ConnectedAppsField } = await import("./ConnectedAppsField");
@@ -41,7 +43,7 @@ afterEach(() => {
 
 describe("ConnectedAppsField", () => {
   it("lists each approved app with its logo (or a letter) and approval date", () => {
-    render(<ConnectedAppsField apps={APPS} />);
+    render(<ConnectedAppsField apps={APPS} userId={ME} />);
     expect(screen.getByText("DogDays")).toBeInTheDocument();
     expect(screen.getByText("Lab")).toBeInTheDocument();
     expect(screen.getByText("L")).toBeInTheDocument();
@@ -52,26 +54,27 @@ describe("ConnectedAppsField", () => {
   });
 
   it("says so when no app is connected", () => {
-    render(<ConnectedAppsField apps={[]} />);
+    render(<ConnectedAppsField apps={[]} userId={ME} />);
     expect(screen.getByText("No connected apps")).toBeInTheDocument();
   });
 
   it("removes access for that one app after a confirm", async () => {
     const user = userEvent.setup();
-    mocks.removeAppAccess.mockResolvedValue({});
-    render(<ConnectedAppsField apps={APPS} />);
+    mocks.forgetApproval.mockResolvedValue({});
+    render(<ConnectedAppsField apps={APPS} userId={ME} />);
 
     await user.click(
       screen.getByRole("button", { name: "Remove access for Lab" }),
     );
-    expect(mocks.removeAppAccess).not.toHaveBeenCalled();
+    expect(mocks.forgetApproval).not.toHaveBeenCalled();
     await user.click(
       await screen.findByRole("button", { name: "Remove access" }),
     );
 
     await waitFor(() =>
-      expect(mocks.removeAppAccess).toHaveBeenCalledExactlyOnceWith(
+      expect(mocks.forgetApproval).toHaveBeenCalledExactlyOnceWith(
         APPS[1]!.clientId,
+        ME,
       ),
     );
     expect(mocks.refresh).toHaveBeenCalled();

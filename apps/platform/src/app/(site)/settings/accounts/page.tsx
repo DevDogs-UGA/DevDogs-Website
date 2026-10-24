@@ -98,7 +98,7 @@ async function AccountsContent() {
         title="Connected apps"
         help="Apps you have approved to sign you in with DevDogs. Remove access to sign out of one app and make it ask again."
       >
-        <ConnectedAppsField apps={connectedApps} />
+        <ConnectedAppsField apps={connectedApps} userId={data.id} />
       </Panel>
 
       <Panel

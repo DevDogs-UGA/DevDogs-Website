@@ -1,26 +1,11 @@
 import { describe, expect, it } from "vitest";
-import {
-  appLogoPath,
-  isAppLogoPath,
-  isHttpsUrl,
-  parseDetailUrl,
-} from "./appDetails";
+import { appLogoPath, isHttpsUrl, parseDetailUrl } from "./appDetails";
 
 const APP = "11111111-1111-4111-8111-111111111111";
 
 describe("app logo path", () => {
   it("is one fixed path under apps/ in the bucket", () => {
     expect(appLogoPath(APP)).toBe(`apps/${APP}.webp`);
-  });
-
-  it("accepts only the app's own path", () => {
-    expect(isAppLogoPath(APP, appLogoPath(APP))).toBe(true);
-    expect(isAppLogoPath(APP, "apps/other.webp")).toBe(false);
-    expect(isAppLogoPath(APP, `apps/../${APP}`)).toBe(false);
-    // A member's own photo sits at a bare user id.
-    expect(isAppLogoPath(APP, APP)).toBe(false);
-    expect(isAppLogoPath(APP, `apps/${APP}.webp/extra`)).toBe(false);
-    expect(isAppLogoPath(APP, null)).toBe(false);
   });
 });
 

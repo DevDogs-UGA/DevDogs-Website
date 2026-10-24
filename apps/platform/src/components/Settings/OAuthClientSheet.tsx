@@ -43,6 +43,11 @@ interface Props {
   /** The secret just minted or rolled for this client, or null. Shown once. */
   secret: string | null;
   onClose: () => void;
+  /**
+   * An officer editing a DevDogs app from Console → Apps: no owner, so no test
+   * accounts, and the details help speaks of the app rather than "your app".
+   */
+  devDogsApp?: boolean;
 }
 
 /**
@@ -58,6 +63,7 @@ export default function OAuthClientSheet({
   isPending,
   secret,
   onClose,
+  devDogsApp = false,
 }: Props) {
   // The secret the member has already acknowledged, so Done hides it for good.
   const [acknowledged, setAcknowledged] = useState<string | null>(null);
@@ -199,9 +205,9 @@ export default function OAuthClientSheet({
 
               <SheetSection>App details</SheetSection>
               <p className="help" style={{ margin: "0 0 12px" }}>
-                Shown on the consent screen. All three are optional while your
-                app is in Testing, but an officer can publish it only once it
-                has a logo, a homepage and a privacy policy.
+                {devDogsApp
+                  ? "Shown on the consent screen. The app can be published only once it has a logo, a homepage and a privacy policy."
+                  : "Shown on the consent screen. All three are optional while your app is in Testing, but an officer can publish it only once it has a logo, a homepage and a privacy policy."}
               </p>
               <AppLogoField
                 clientId={client.clientId}
@@ -210,11 +216,15 @@ export default function OAuthClientSheet({
               />
               <AppLinksForm client={client} />
 
-              <SheetSection>Test accounts</SheetSection>
-              <TestAccountApprovals
-                client={client}
-                testAccounts={testAccounts}
-              />
+              {!devDogsApp && (
+                <>
+                  <SheetSection>Test accounts</SheetSection>
+                  <TestAccountApprovals
+                    client={client}
+                    testAccounts={testAccounts}
+                  />
+                </>
+              )}
 
               <SheetSection>
                 <span style={{ color: "var(--bad)" }}>Danger zone</span>
