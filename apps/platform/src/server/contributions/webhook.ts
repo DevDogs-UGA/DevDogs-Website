@@ -5,6 +5,9 @@ import { verifyGithubSignature } from "./signature";
 import { recordContribution } from "./store";
 
 /** What the handler needs from outside; tests replace both. */
+/** GitHub's own cap on a webhook payload, 25 MB; nothing larger is genuine. */
+export const MAX_WEBHOOK_BYTES = 25 * 1024 * 1024;
+
 export interface WebhookDeps {
   secret?: string | undefined;
   org?: string;
@@ -32,7 +35,16 @@ export async function handleGithubWebhook(
     return NextResponse.json({ error: "not_configured" }, { status: 503 });
   }
 
+  // Refuse an oversized body before buffering and hashing it.
+  const declared = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > MAX_WEBHOOK_BYTES) {
+    return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
+  }
+
   const rawBody = await request.text();
+  if (rawBody.length > MAX_WEBHOOK_BYTES) {
+    return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
+  }
   const signature = request.headers.get("x-hub-signature-256");
   if (!verifyGithubSignature(secret, rawBody, signature)) {
     return NextResponse.json({ error: "invalid_signature" }, { status: 401 });

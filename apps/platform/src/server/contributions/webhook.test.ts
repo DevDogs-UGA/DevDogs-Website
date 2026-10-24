@@ -206,4 +206,13 @@ describe("parsePullRequestEvent", () => {
     body.pull_request.html_url = "https://evil.example/pull/7";
     expect(parsePullRequestEvent(body, "DevDogsUGA").kind).toBe("ignored");
   });
+
+  it("refuses a body declared larger than GitHub's cap before reading it", async () => {
+    const { call } = setup();
+    const request = delivery(payload(), {
+      "content-length": String(26 * 1024 * 1024),
+    });
+    const response = await call(request);
+    expect(response.status).toBe(413);
+  });
 });

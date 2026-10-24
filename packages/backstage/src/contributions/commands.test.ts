@@ -135,6 +135,7 @@ describe("the GitHub App", () => {
           title: "merged",
           html_url: "https://github.com/DevDogsUGA/site/pull/1",
           merged_at: "2026-10-02T00:00:00Z",
+          updated_at: "2026-10-03T00:00:00Z",
           user: { id: 5, login: "a", type: "User" },
         },
         {
@@ -142,6 +143,7 @@ describe("the GitHub App", () => {
           title: "closed unmerged",
           html_url: "u",
           merged_at: null,
+          updated_at: "2026-10-03T00:00:00Z",
           user: { id: 5, login: "a", type: "User" },
         },
         {
@@ -149,6 +151,7 @@ describe("the GitHub App", () => {
           title: "bot",
           html_url: "u",
           merged_at: "2026-10-02T00:00:00Z",
+          updated_at: "2026-10-03T00:00:00Z",
           user: { id: 6, login: "renovate[bot]", type: "Bot" },
         },
         {
@@ -156,6 +159,7 @@ describe("the GitHub App", () => {
           title: "too old",
           html_url: "u",
           merged_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-10-03T00:00:00Z",
           user: { id: 5, login: "a", type: "User" },
         },
       ],

@@ -76,12 +76,16 @@ async function call<T>(
   return (await response.json()) as T;
 }
 
-async function pages<T>(load: (page: number) => Promise<T[]>): Promise<T[]> {
+async function pages<T>(
+  load: (page: number) => Promise<T[]>,
+  /** True when nothing on later pages can matter, so paging stops. */
+  done: (batch: T[]) => boolean = () => false,
+): Promise<T[]> {
   const all: T[] = [];
   for (let page = 1; ; page += 1) {
     const batch = await load(page);
     all.push(...batch);
-    if (batch.length < 100) return all;
+    if (batch.length < 100 || done(batch)) return all;
   }
 }
 
@@ -90,6 +94,7 @@ interface ApiPull {
   title: string;
   html_url: string;
   merged_at: string | null;
+  updated_at: string;
   user: { id: number; login: string; type?: string } | null;
 }
 
@@ -152,12 +157,21 @@ export async function fetchMergedPullRequests(
 
   const out: MergedPullRequest[] = [];
   for (const repository of repositories) {
-    const pulls = await pages(async (page) =>
-      call<ApiPull[]>(
-        doFetch,
-        token,
-        `/repos/${repository.full_name}/pulls?state=closed&sort=updated&direction=desc&per_page=100&page=${page}`,
-      ),
+    // Newest-updated first, and a PR is never merged after its last update,
+    // so once a page ends before `since` nothing later can qualify.
+    const pulls = await pages(
+      async (page) =>
+        call<ApiPull[]>(
+          doFetch,
+          token,
+          `/repos/${repository.full_name}/pulls?state=closed&sort=updated&direction=desc&per_page=100&page=${page}`,
+        ),
+      (batch) => {
+        const last = batch[batch.length - 1];
+        return (
+          !!options.since && !!last && new Date(last.updated_at) < options.since
+        );
+      },
     );
     let merged = 0;
     for (const pull of pulls) {

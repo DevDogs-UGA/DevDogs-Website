@@ -565,6 +565,7 @@ export const profileInPlatform = platform.table.withRLS("profile", {
 	showBio: boolean().default(true).notNull(),
 	showLinks: boolean().default(true).notNull(),
 	showStars: boolean().default(true).notNull(),
+	showContributions: boolean().default(true).notNull(),
 	handle: text(),
 }, (table) => [
 	uniqueIndex("profile_handle_key").using("btree", table.handle.asc().nullsLast()),

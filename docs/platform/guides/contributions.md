@@ -30,6 +30,13 @@ When that person later signs up with GitHub or links it under Settings,
 Accounts, a database trigger (`platform.claim_contributions`) claims every row
 already recorded for their GitHub id.
 
+Two limits to know. Rows are keyed on the repository's full name and PR number,
+so renaming or transferring a repository makes a backfill record its PRs again
+under the new name. And unlinking GitHub does not release a member's rows;
+someone who later links that GitHub id gets only pull requests merged after.
+The Contributions switch on Settings, Profile hides the section on the public
+profile.
+
 ## Where it shows
 
 - A public profile (`/community/@handle`, behind `publicProfilesEnabled`) shows
