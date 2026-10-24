@@ -61,9 +61,10 @@ export const getOAuthModerationData = cache(
     const userId = await expectSession();
     // A holder also sees the DevDogs apps and other members' published apps,
     // the ones real members sign in with (the same rule Console → Apps lists).
-    const published = (await canUserManageOAuthApps(userId))
-      ? await getConsoleApps()
-      : [];
+    // getConsoleApps also returns members' Testing apps; those stay private.
+    const published = (
+      (await canUserManageOAuthApps(userId)) ? await getConsoleApps() : []
+    ).filter((app) => app.isDevDogs || app.status === "in_production");
     const productionIds = new Set([
       ...own.filter((c) => c.status === "in_production").map((c) => c.clientId),
       ...published.map((client) => client.clientId),

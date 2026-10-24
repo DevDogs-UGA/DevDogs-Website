@@ -265,7 +265,7 @@ export default function OAuthClientSheet({
                 <ConfirmDestructiveAction
                   action={dispatch}
                   title="Delete OAuth app"
-                  description={`Deleting "${client.label}" removes its client ID and secret and signs out everyone who uses it. Any project using them loses access immediately.`}
+                  description={`Deleting "${client.label}" removes its client ID and secret and signs out every other member who approved it. Your own sessions and test accounts are not signed out by this. Any project using the credentials loses access immediately.`}
                   submitLabel="Delete app"
                 >
                   <input type="hidden" name="intent" value="revoke-client" />

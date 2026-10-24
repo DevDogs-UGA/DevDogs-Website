@@ -168,7 +168,7 @@ export const CONSOLE_ITEMS: ConsoleItem[] = [
   {
     label: "Apps",
     href: "/console/apps",
-    icon: "KeyIcon",
+    icon: "AppWindowIcon",
     permission: "canManageOAuthApps",
     description:
       "Publish OAuth apps, return them to Testing, transfer them to DevDogs and choose which skip the consent screen.",
