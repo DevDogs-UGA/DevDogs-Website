@@ -10,8 +10,10 @@ import {
   timeRange,
 } from "~/components/EventsSection/meetingView";
 import { formatEventShortDate } from "~/lib/eventTime";
+import { formatAttendanceCount } from "~/lib/attendanceCount";
 import { meetingTitle } from "~/lib/meetingTitle";
 import { canUserManageAttendance } from "~/server/actions/permissions";
+import { getAttendanceCounts } from "~/server/attendance/counts";
 import { getOfficerAttendanceMeetings } from "~/server/attendance/getOfficerMeeting";
 import { requirePermission } from "~/server/auth/require";
 import { PageHeading } from "~/ui/app-shell";
@@ -34,7 +36,18 @@ const PAST_PAGE_SIZE = 12;
 
 type Meeting = Awaited<ReturnType<typeof getOfficerAttendanceMeetings>>[number];
 
-function Row({ meeting, past }: { meeting: Meeting; past?: boolean }) {
+type Counts = Awaited<ReturnType<typeof getAttendanceCounts>>;
+
+function Row({
+  meeting,
+  counts,
+  past,
+}: {
+  meeting: Meeting;
+  /** Absent for a meeting that has not started: nobody can have attended. */
+  counts?: Counts;
+  past?: boolean;
+}) {
   const kind = meetingCategory(meeting);
   const off = meeting.cancelledAt !== null;
   return (
@@ -50,7 +63,9 @@ function Row({ meeting, past }: { meeting: Meeting; past?: boolean }) {
       meta={
         off
           ? "Canceled in the schedule · no check-in"
-          : timeRange(meeting.startsAt, meeting.endsAt)
+          : counts
+            ? `${timeRange(meeting.startsAt, meeting.endsAt)} · ${formatAttendanceCount(counts.get(meeting.id) ?? { total: 0, officers: 0 })}`
+            : timeRange(meeting.startsAt, meeting.endsAt)
       }
       end={
         off ? undefined : (
@@ -85,9 +100,10 @@ export default async function AttendanceDisplaysPage({
   searchParams: Promise<{ page?: string | string[] }>;
 }) {
   await requirePermission(canUserManageAttendance);
-  const [meetings, params] = await Promise.all([
+  const [meetings, params, counts] = await Promise.all([
     getOfficerAttendanceMeetings(),
     searchParams,
+    getAttendanceCounts(),
   ]);
   const now = new Date();
 
@@ -117,7 +133,7 @@ export default async function AttendanceDisplaysPage({
     <ConsoleShell current={PATH}>
       <PageHeading
         title="Meetings"
-        description="Open a meeting's display to put the live QR and rotating code on the projector. Displays stay available for past and future meetings."
+        description="Open a meeting to see who attended, add or remove people, and put the live QR and rotating code on the projector."
       />
 
       {live.map((meeting) => {
@@ -141,7 +157,10 @@ export default async function AttendanceDisplaysPage({
               </div>
               <h2 id={`live-${meeting.id}`}>{title}</h2>
               <div className="small muted" style={{ marginTop: 8 }}>
-                {timeRange(meeting.startsAt, meeting.endsAt)}
+                {timeRange(meeting.startsAt, meeting.endsAt)} ·{" "}
+                {formatAttendanceCount(
+                  counts.get(meeting.id) ?? { total: 0, officers: 0 },
+                )}
               </div>
             </div>
             <div className="acts">
@@ -202,7 +221,7 @@ export default async function AttendanceDisplaysPage({
         <>
           <div>
             {pastShown.map((meeting) => (
-              <Row key={meeting.id} meeting={meeting} past />
+              <Row key={meeting.id} meeting={meeting} counts={counts} past />
             ))}
           </div>
           <div className="con-foot">
