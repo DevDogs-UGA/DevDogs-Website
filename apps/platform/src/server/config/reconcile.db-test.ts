@@ -59,6 +59,7 @@ function meeting(name: string, overrides: Partial<Meeting> = {}): Meeting {
     cancelledAt: null,
     cancellationReason: null,
     surveyUrl: null,
+    hasWorkshop: false,
     agenda: [],
     ...overrides,
   };
@@ -201,6 +202,7 @@ async function liveConfig(meetingsToKeepAlive: Meeting[]): Promise<{
             : null,
           cancellationReason: row.cancellationReason,
           surveyUrl: row.surveyUrl,
+          hasWorkshop: otherWorkshops.some((w) => w.meetingId === row.id),
           ...(row.surveyQuestionIds.length > 0
             ? { questions: row.surveyQuestionIds }
             : {}),
