@@ -40,6 +40,9 @@ export const workshopDefinitionSchema = z.strictObject({
   elHours: z
     .number()
     .positive()
+    // Quarter hours: the column is numeric(4,2), and a value it would round
+    // to 0 would fail its check and abort the whole reconcile.
+    .multipleOf(0.25)
     .max(WORKSHOP_EL_HOURS_MAX)
     .default(WORKSHOP_EL_HOURS_DEFAULT)
     .meta({

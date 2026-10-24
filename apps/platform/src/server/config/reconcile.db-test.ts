@@ -422,7 +422,10 @@ describe("reconcileFromConfig", () => {
       (
         await liveConfig([
           meeting("defs", {
-            agenda: [workshop("Next.js"), workshop("Flutter")],
+            agenda: [
+              workshop("Next.js", null, { id: "nextjs" }),
+              workshop("Flutter"),
+            ],
           }),
         ])
       ).config,

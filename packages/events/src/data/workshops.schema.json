@@ -50,7 +50,8 @@
             "description": "EL hours attending earns, independent of the meeting's start and end. Defaults to one hour.",
             "type": "number",
             "exclusiveMinimum": 0,
-            "maximum": 8
+            "maximum": 8,
+            "multipleOf": 0.25
           },
           "topics": {
             "description": "Optional topic tags (\"web\", \"mobile\", \"databases\").",
