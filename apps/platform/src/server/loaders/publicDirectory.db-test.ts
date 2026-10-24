@@ -48,8 +48,16 @@ beforeEach(async () => {
 });
 afterAll(cleanup);
 
+// Verification needs the preferred name to equal the roster name, so a test
+// that sets only `preferredName` gets a roster name to match ("Alice Dir" →
+// first "Alice", last "Dir"); otherwise nobody is listed at all.
 async function member(o: Partial<MemberFixture> & { id: string }) {
-  await insertMember({ handle: `dir-${o.id.slice(-2)}`, ...o });
+  const [first, ...rest] = (o.preferredName ?? "").split(" ");
+  const roster =
+    o.preferredName && rest.length > 0 && o.first === undefined
+      ? { first, last: rest.join(" ") }
+      : {};
+  await insertMember({ handle: `dir-${o.id.slice(-2)}`, ...roster, ...o });
 }
 
 async function setYear(userId: string, year: number) {
@@ -97,7 +105,7 @@ describe("directory search", () => {
       preferredName: "Someone Else",
       handle: "dir-quincy",
     });
-    await member({ id: id(3), preferredName: "Unrelated" });
+    await member({ id: id(3), preferredName: "Unrelated Person" });
     expect(await handles({ q: "QUINCY" })).toEqual(["dir-01", "dir-quincy"]);
     expect(await handles({ q: "dirtest" })).toEqual(["dir-01"]);
   });
@@ -105,8 +113,8 @@ describe("directory search", () => {
   it("treats % _ and backslash literally", async () => {
     await member({ id: id(1), preferredName: "Fifty% Off" });
     await member({ id: id(2), preferredName: "Fiftyx Off" });
-    await member({ id: id(3), preferredName: "Under_score" });
-    await member({ id: id(4), preferredName: "Underxscore" });
+    await member({ id: id(3), preferredName: "Under_score Dir" });
+    await member({ id: id(4), preferredName: "Underxscore Dir" });
     expect(await handles({ q: "fifty%" })).toEqual(["dir-01"]);
     expect(await handles({ q: "under_s" })).toEqual(["dir-03"]);
     expect(await handles({ q: "%" })).toEqual(["dir-01"]);
