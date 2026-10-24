@@ -1,8 +1,9 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { compileDocs, renderPages } from "./compile.js";
+import { renderBody } from "./render.js";
 import { DocsBuildError } from "./errors.js";
 import { compileUntrustedDocs, MANIFEST_FILE } from "./untrusted.js";
 
@@ -14,6 +15,17 @@ const PNG = Buffer.from(
 
 let root: string;
 let docs: string;
+
+// The first render loads Shiki's highlighter, which alone can outlast
+// vitest's 5s per-test timeout on a cold CI runner (as in codeblocks.test.ts).
+beforeAll(async () => {
+  await renderBody("", {
+    project: "demo",
+    projects: ["demo"],
+    os: ["macos", "linux", "wsl"],
+    file: "warmup.md",
+  });
+}, 60_000);
 
 beforeEach(() => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), "docs-kit-untrusted-"));
