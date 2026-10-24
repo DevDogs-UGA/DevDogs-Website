@@ -21,6 +21,7 @@ import {
   sharedFields,
 } from "~/server/oauth/consentScreen";
 import {
+  findConsentTarget,
   findDisplayName,
   hasActiveConsent,
 } from "~/server/oauth/consentTarget";
@@ -72,6 +73,12 @@ export default async function ConsentPage({ searchParams }: Props) {
     return null;
   }
 
+  // An unknown id, a stale id and an unregistered client are a 404 before
+  // anyone is asked to sign in, so they look the same from outside.
+  if (!(await findConsentTarget(authorizationId))) {
+    notFound();
+  }
+
   const userId = await expectSession().catch(() => {
     const callbackPath = `/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`;
     redirect(`/auth?callbackPath=${encodeURIComponent(callbackPath)}`);
@@ -88,7 +95,7 @@ export default async function ConsentPage({ searchParams }: Props) {
   const { target, decision } = request;
 
   if (decision === "test-identity") {
-    return <ConsentRefusedCard />;
+    return <ConsentRefusedCard authorizationId={authorizationId} />;
   }
 
   if (decision === "auto-approve") {

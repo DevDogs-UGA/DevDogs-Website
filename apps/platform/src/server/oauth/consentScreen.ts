@@ -22,6 +22,13 @@ const SCOPE_FIELDS: Record<string, readonly string[]> = {
   phone: ["Your phone number"],
 };
 
+/**
+ * `/auth/v1/user` returns the whole account record to any token, whatever the
+ * scopes: phone, linked sign-in accounts, sign-in times and metadata.
+ */
+const ACCOUNT_RECORD =
+  "Your account record: linked sign-in accounts, phone number and sign-in times";
+
 /** The scopes an authorization asked for, in order, without duplicates. */
 export function parseScopes(scope: string): string[] {
   return [...new Set(scope.split(/[\s,]+/).filter(Boolean))];
@@ -36,6 +43,9 @@ export function sharedFields(scope: string): string[] {
   for (const name of parseScopes(scope)) {
     for (const field of SCOPE_FIELDS[name] ?? []) fields.add(field);
   }
+  // Whatever the scopes, the token can also read the account record from
+  // Supabase Auth's `/user` endpoint, which is not scope-filtered.
+  fields.add(ACCOUNT_RECORD);
   return [...fields];
 }
 

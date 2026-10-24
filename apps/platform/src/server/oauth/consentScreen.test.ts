@@ -7,11 +7,16 @@ import {
   sharedFields,
 } from "./consentScreen";
 
+const ACCOUNT_RECORD =
+  "Your account record: linked sign-in accounts, phone number and sign-in times";
 const STORAGE = { baseUrl: "https://api.example.org", bucket: "avatars" };
 
 describe("sharedFields", () => {
   it("always shares the member ID and nothing else for a bare openid scope", () => {
-    expect(sharedFields("openid")).toEqual(["Your DevDogs member ID"]);
+    expect(sharedFields("openid")).toEqual([
+      "Your DevDogs member ID",
+      ACCOUNT_RECORD,
+    ]);
   });
 
   it("lists plain-language fields for openid email profile", () => {
@@ -21,6 +26,7 @@ describe("sharedFields", () => {
       "Your name and profile picture",
       "Your username, if you have one",
       "Other profile details saved on your account",
+      ACCOUNT_RECORD,
     ]);
   });
 
@@ -33,6 +39,7 @@ describe("sharedFields", () => {
     expect(sharedFields("email email unknown")).toEqual([
       "Your DevDogs member ID",
       "Your email address",
+      ACCOUNT_RECORD,
     ]);
   });
 });

@@ -53,6 +53,41 @@ describe("approveAs (self)", () => {
 });
 
 describe("denyAs (self)", () => {
+  beforeEach(() => {
+    auth.oauth.getAuthorizationDetails.mockResolvedValue({
+      data: { client: {} },
+      error: null,
+    });
+  });
+
+  it("binds the authorization to the account before denying", async () => {
+    const order: string[] = [];
+    auth.oauth.getAuthorizationDetails.mockImplementation(async () => {
+      order.push("details");
+      return { data: { client: {} }, error: null };
+    });
+    auth.oauth.denyAuthorization.mockImplementation(async () => {
+      order.push("deny");
+      return {
+        data: { redirect_url: "https://app.example/cb?error=x" },
+        error: null,
+      };
+    });
+    await denyAs({ kind: "self" }, "auth-1");
+    expect(order).toEqual(["details", "deny"]);
+  });
+
+  it("returns the existing redirect when it was already approved", async () => {
+    auth.oauth.getAuthorizationDetails.mockResolvedValue({
+      data: { redirect_url: "https://app.example/cb?code=3" },
+      error: null,
+    });
+    await expect(denyAs({ kind: "self" }, "auth-1")).resolves.toBe(
+      "https://app.example/cb?code=3",
+    );
+    expect(auth.oauth.denyAuthorization).not.toHaveBeenCalled();
+  });
+
   it("returns the redirect GoTrue builds with error=access_denied", async () => {
     auth.oauth.denyAuthorization.mockResolvedValue({
       data: { redirect_url: "https://app.example/cb?error=access_denied" },

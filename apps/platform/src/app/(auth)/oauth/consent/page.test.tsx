@@ -52,8 +52,10 @@ vi.mock("~/server/oauth/consentRequest", () => ({
   resolveConsentAccount,
 }));
 const hasActiveConsent = vi.hoisted(() => vi.fn());
+const findConsentTarget = vi.hoisted(() => vi.fn());
 const findDisplayName = vi.hoisted(() => vi.fn());
 vi.mock("~/server/oauth/consentTarget", () => ({
+  findConsentTarget,
   hasActiveConsent,
   findDisplayName,
 }));
@@ -127,6 +129,7 @@ beforeEach(() => {
   expectSession.mockResolvedValue("member-1");
   expectUserWith.mockResolvedValue({ email: "ada@uga.edu", testAccounts: [] });
   hasActiveConsent.mockResolvedValue(false);
+  findConsentTarget.mockResolvedValue({});
   findDisplayName.mockResolvedValue("Grace");
   resolveConsentAccount.mockResolvedValue(SELF);
   loadConsentRequest.mockResolvedValue({
@@ -222,6 +225,12 @@ describe("/oauth/consent", () => {
     approveAs.mockResolvedValue("https://app.example/cb?code=9");
     expect(await run()).toEqual({ redirect: "https://app.example/cb?code=9" });
     expect(approveAs).toHaveBeenCalledWith(SELF.actor, AUTH);
+  });
+
+  it("404s an unknown id before asking a signed-out visitor to sign in", async () => {
+    findConsentTarget.mockResolvedValue(null);
+    expectSession.mockRejectedValue(new Error("no session"));
+    expect(await run()).toEqual({ notFound: true });
   });
 
   it("refuses a test identity on a production app with a message", async () => {

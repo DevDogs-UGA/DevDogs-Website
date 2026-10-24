@@ -135,7 +135,11 @@ export default function ConsentCard({
 }
 
 /** The card shown when a test account is signed in to an app in production. */
-export function ConsentRefusedCard() {
+export function ConsentRefusedCard({
+  authorizationId,
+}: {
+  authorizationId: string;
+}) {
   return (
     <Card className="cc-card">
       <h1 className="display" style={{ fontSize: 24, margin: "0 0 12px" }}>
@@ -146,6 +150,16 @@ export function ConsentRefusedCard() {
         Apps in production only sign in real members. Sign out, then sign in as
         yourself.
       </Callout>
+      <form action={signOut} style={{ marginTop: 16 }}>
+        <input
+          type="hidden"
+          name="callbackPath"
+          value={`/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`}
+        />
+        <button type="submit" className="textlink">
+          Sign out
+        </button>
+      </form>
     </Card>
   );
 }

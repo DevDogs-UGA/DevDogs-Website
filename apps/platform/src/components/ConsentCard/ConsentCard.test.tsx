@@ -120,8 +120,12 @@ describe("ConsentCard", () => {
 
 describe("ConsentRefusedCard", () => {
   it("says why a test account can't sign in to a production app", () => {
-    const html = renderToStaticMarkup(<ConsentRefusedCard />);
+    const html = renderToStaticMarkup(
+      <ConsentRefusedCard authorizationId="a b" />,
+    );
     expect(html).toContain("test account");
     expect(html).toContain("production");
+    expect(html).toContain("Sign out");
+    expect(html).toContain("authorization_id=a%20b");
   });
 });

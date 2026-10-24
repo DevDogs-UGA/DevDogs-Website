@@ -72,6 +72,19 @@ export function denyAs(
   authorizationId: string,
 ): Promise<string> {
   return withActorClient(actor, async (client) => {
+    // GoTrue only lets an account deny an authorization once it is bound to
+    // that account, and fetching the details is what binds it. Done here, not
+    // when the page renders, so "Not you?" can still switch accounts first.
+    const { data: details, error: detailsError } =
+      await client.auth.oauth.getAuthorizationDetails(authorizationId);
+    if (detailsError ?? !details) {
+      console.error({ detailsError });
+      throw new Error("Failed to deny authorization");
+    }
+    // Already approved earlier: Supabase Auth hands back the redirect with a
+    // code, and there is nothing left to cancel.
+    if ("redirect_url" in details) return details.redirect_url;
+
     const { data, error } = await client.auth.oauth.denyAuthorization(
       authorizationId,
       { skipBrowserRedirect: true },
