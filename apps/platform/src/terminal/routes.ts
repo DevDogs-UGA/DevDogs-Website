@@ -1,5 +1,6 @@
 import type { TerminalRoute } from "./define";
 import type { TerminalPattern } from "./paths";
+import { signInProblem } from "./routes/auth";
 import { changelogArchive, changelogIssue } from "./routes/changelog";
 import { gdgcArchive, gdgcIssue } from "./routes/gdgc";
 import { communityDirectory, communityProfile } from "./routes/community";
@@ -15,6 +16,7 @@ import { docs, help, helpThread, kitGallery } from "./routes/misc";
  */
 export const TERMINAL_ROUTES = {
   "/": home,
+  "/auth/failed": signInProblem,
   "/changelog": changelogArchive,
   "/changelog/:version": changelogIssue,
   "/newsletters/gdgc": gdgcArchive,

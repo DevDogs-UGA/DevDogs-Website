@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { forbidden } from "next/navigation";
+import { visibleConsoleItems } from "~/config/nav";
+import { getCallerContext } from "~/server/actions/permissions";
 import { requireSession } from "~/server/auth/require";
 
 /**
@@ -22,12 +25,13 @@ export const metadata: Metadata = {
 };
 
 /**
- * Wraps every `/console` page and holds their one shared gate, a session check.
+ * Wraps every `/console` page and holds their one shared gate: a session, and
+ * at least one console permission.
  *
- * Being signed in is the only thing every page under `/console` needs, so it is
- * checked once here rather than at the top of each of them: a page added under
- * this route later cannot forget it. What each page needs *beyond* a session
- * differs (moderation, audit-log and permissions want three different flags),
+ * A signed-out visitor gets the 404 and a member with no console permission
+ * gets the access-denied card, checked once here rather than at the top of each
+ * page: a page added under this route later cannot forget it. What each page
+ * needs *beyond* that differs (moderation, audit-log and permissions want three different flags),
  * so the specific check stays with the page that knows which one it is. See
  * `~/server/auth/require`.
  */
@@ -36,7 +40,9 @@ export default async function ConsoleLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireSession();
+  const userId = await requireSession();
+  const { resolvedPermissions } = await getCallerContext(userId);
+  if (visibleConsoleItems(resolvedPermissions).length === 0) forbidden();
 
   return (
     <div className="flex min-w-0 flex-1 flex-col *:w-full">{children}</div>
