@@ -154,11 +154,12 @@ export default function FindUsContent({ place }: Props) {
 }
 
 function formatVerifiedOn(day: string): string {
-  const [year, month, date] = day.split("-").map(Number);
-  return new Date(Date.UTC(year!, month! - 1, date!)).toLocaleDateString(
-    "en-US",
-    { timeZone: "UTC", year: "numeric", month: "long", day: "numeric" },
-  );
+  return new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", {
+    timeZone: "UTC",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 /**

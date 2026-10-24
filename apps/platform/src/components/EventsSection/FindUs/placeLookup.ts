@@ -16,7 +16,6 @@ import { UNKNOWN_PLACE, USUAL_VENUE_ID, type Place } from "./place";
 export const USUAL_ROOM = "124";
 
 const ROOM_MAX_LENGTH = 40;
-// eslint-disable-next-line no-control-regex -- the point is to refuse them
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/;
 
 export function venueById(id: string): Venue | undefined {
@@ -82,13 +81,15 @@ type Param = string | string[] | null | undefined;
 const present = (value: Param): boolean =>
   value !== undefined && value !== null;
 
-function cleanRoom(value: Param): string | null | "invalid" {
+const INVALID = Symbol("invalid room");
+
+function cleanRoom(value: Param): string | null | typeof INVALID {
   if (!present(value)) return null;
-  if (typeof value !== "string") return "invalid";
+  if (typeof value !== "string") return INVALID;
   const room = value.trim();
   if (room === "") return null;
   if (room.length > ROOM_MAX_LENGTH || CONTROL_CHARACTERS.test(room)) {
-    return "invalid";
+    return INVALID;
   }
   return room;
 }
@@ -107,7 +108,7 @@ function cleanRoom(value: Param): string | null | "invalid" {
  */
 export function directionsTarget(v: Param, b: Param, r: Param): Place {
   const room = cleanRoom(r);
-  if (room === "invalid") return UNKNOWN_PLACE;
+  if (room === INVALID) return UNKNOWN_PLACE;
 
   if (!present(v) && !present(b)) {
     if (room !== null) return UNKNOWN_PLACE;

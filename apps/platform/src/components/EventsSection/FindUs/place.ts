@@ -252,7 +252,8 @@ export function placeBlurb(place: Place): string {
       return "The location is pending.";
     case "virtual":
       return "This one is online.";
-    default:
+    case "campus":
+    case "offCampus":
       return `This one is at ${where}.`;
   }
 }
