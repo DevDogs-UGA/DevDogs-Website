@@ -25,8 +25,8 @@ describe("reflection policy", () => {
     expect(reflectionWindowStart(end, early)).toBe(end);
     expect(reflectionWindowStart(end, late)).toBe(late);
     // A member added three days after the meeting still gets a full week.
-    expect(reflectionDeadline(reflectionWindowStart(end, late), 7).toISOString()).toBe(
-      "2026-09-19T10:00:00.000Z",
-    );
+    expect(
+      reflectionDeadline(reflectionWindowStart(end, late), 7).toISOString(),
+    ).toBe("2026-09-19T10:00:00.000Z");
   });
 });

@@ -11,10 +11,7 @@ import {
 import "~/components/Console/meeting-detail.css";
 import { formatAttendanceCount } from "~/lib/attendanceCount";
 import { isMeetingEditable } from "~/lib/attendanceInvite";
-import {
-  formatEventDateTime,
-  formatEventSpan,
-} from "~/lib/eventTime";
+import { formatEventDateTime, formatEventSpan } from "~/lib/eventTime";
 import { meetingTitle } from "~/lib/meetingTitle";
 import { canUserManageAttendance } from "~/server/actions/permissions";
 import { getOfficerAttendanceMeeting } from "~/server/attendance/getOfficerMeeting";
@@ -42,11 +39,11 @@ const METHOD_LABEL: Record<DetailAttendee["method"], string> = {
 };
 
 function Method({ attendee }: { attendee: DetailAttendee }) {
-  if (attendee.method !== "officer") return <>{METHOD_LABEL[attendee.method]}</>;
+  if (attendee.method !== "officer")
+    return <>{METHOD_LABEL[attendee.method]}</>;
   return (
     <>
-      Added by{" "}
-      <b>{attendee.addedBy?.name ?? "Deleted member"}</b>
+      Added by <b>{attendee.addedBy?.name ?? "Deleted member"}</b>
     </>
   );
 }
@@ -59,9 +56,16 @@ function Survey({ attendee }: { attendee: DetailAttendee }) {
     <details className="md-survey">
       <summary>
         <Badge variant={done ? "success" : "default"}>
-          {done ? "Done" : answered === 0 ? "Not done" : `${answered} of ${asked}`}
+          {done
+            ? "Done"
+            : answered === 0
+              ? "Not done"
+              : `${answered} of ${asked}`}
         </Badge>
-        <span className="sr-only"> {attendee.name ?? "attendee"} survey answers</span>
+        <span className="sr-only">
+          {" "}
+          {attendee.name ?? "attendee"} survey answers
+        </span>
       </summary>
       {answers.length === 0 ? (
         <p className="small muted">No answers yet.</p>
@@ -160,9 +164,11 @@ export default async function MeetingDetailPage({
               <Th>How</Th>
               <Th>Checked in</Th>
               <Th>Survey</Th>
-              {editable && <Th>
-                <span className="sr-only">Actions</span>
-              </Th>}
+              {editable && (
+                <Th>
+                  <span className="sr-only">Actions</span>
+                </Th>
+              )}
             </Tr>
           </THead>
           <TBody>

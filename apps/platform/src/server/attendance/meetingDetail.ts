@@ -127,7 +127,7 @@ export async function getMeetingDetail(
   const answersByUser = new Map<string, Map<string, Answer>>();
   const answersByQuestion = new Map<string, Answer[]>();
   for (const row of answerRows) {
-    const forUser = answersByUser.get(row.userId) ?? new Map();
+    const forUser = answersByUser.get(row.userId) ?? new Map<string, Answer>();
     forUser.set(row.questionId, row.answer);
     answersByUser.set(row.userId, forUser);
     const forQuestion = answersByQuestion.get(row.questionId) ?? [];
@@ -140,7 +140,12 @@ export async function getMeetingDetail(
     const answers = asked.flatMap((question) => {
       const answer = mine?.get(question.id);
       return answer
-        ? [{ prompt: question.prompt, answer: describeAnswer(question, answer) }]
+        ? [
+            {
+              prompt: question.prompt,
+              answer: describeAnswer(question, answer),
+            },
+          ]
         : [];
     });
     return {

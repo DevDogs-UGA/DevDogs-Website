@@ -49,7 +49,8 @@ async function editableMeeting(
 }
 
 export type Attendee =
-  { status: "account"; userId: string; name: string; email: string } | { status: "none"; email: string };
+  | { status: "account"; userId: string; name: string; email: string }
+  | { status: "none"; email: string };
 
 /** The account behind a UGA address, if one exists. */
 export async function findAccountByEmail(email: string): Promise<Attendee> {
@@ -159,7 +160,9 @@ export function addOfficerAttendance(
 }
 
 export type RemoveResult =
-  { status: "removed" } | { status: "not_found" } | { status: "invalid_meeting" };
+  | { status: "removed" }
+  | { status: "not_found" }
+  | { status: "invalid_meeting" };
 
 /**
  * Removes one attendance row (Q9): a hard delete plus an `attendance.removed`
@@ -181,7 +184,10 @@ export function removeAttendance(
     const [removed] = await tx
       .delete(attendance)
       .where(
-        and(eq(attendance.id, attendanceId), eq(attendance.meetingId, meetingId)),
+        and(
+          eq(attendance.id, attendanceId),
+          eq(attendance.meetingId, meetingId),
+        ),
       )
       .returning({
         userId: attendance.userId,
@@ -327,7 +333,8 @@ export async function cancelAttendanceInvite(
 export type ClaimResult =
   | { status: "recorded" | "duplicate"; meetingId: string; recordedAt: Date }
   | {
-      status: "invalid" | "used" | "expired" | "address_mismatch" | "invalid_meeting";
+      status:
+        "invalid" | "used" | "expired" | "address_mismatch" | "invalid_meeting";
     };
 
 /** Whether the token names an invite that could still be claimed. */

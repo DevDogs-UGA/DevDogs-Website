@@ -134,11 +134,7 @@ function AddAttendee({
       {found.status === "error" && <Result state={found} />}
 
       {showQuestion && question.status === "confirm" && (
-        <form
-          onSubmit={submit(add)}
-          className="md-confirm"
-          aria-live="polite"
-        >
+        <form onSubmit={submit(add)} className="md-confirm" aria-live="polite">
           <input type="hidden" name="meetingId" value={meetingId} />
           <input type="hidden" name="myId" value={question.myId} />
           <p>
@@ -294,7 +290,12 @@ export function RemoveAttendee({
           Their reflections and survey answers stay. Bevy and Engage need fixing
           by hand afterward.
         </span>
-        <Button type="submit" size="sm" variant="danger-solid" loading={pending}>
+        <Button
+          type="submit"
+          size="sm"
+          variant="danger-solid"
+          loading={pending}
+        >
           Remove {who}
         </Button>
         {state.status === "error" && (

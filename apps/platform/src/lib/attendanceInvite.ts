@@ -14,8 +14,7 @@ export const INVITE_LIFETIME_DAYS = 14;
 const MYID_PATTERN = /^[a-z0-9]{2,32}$/;
 
 export type MyIdResult =
-  | { ok: true; myId: string; email: string }
-  | { ok: false; error: string };
+  { ok: true; myId: string; email: string } | { ok: false; error: string };
 
 /**
  * Turns what an officer typed into the address to look up. Officers type only
@@ -98,7 +97,11 @@ export function looksLikeInviteToken(value: string): boolean {
  * neither cancelled nor deleted. There is no time lock after it ends.
  */
 export function isMeetingEditable(
-  meeting: { startsAt: Date; cancelledAt: Date | null; deletedAt?: Date | null },
+  meeting: {
+    startsAt: Date;
+    cancelledAt: Date | null;
+    deletedAt?: Date | null;
+  },
   now: Date,
 ): boolean {
   return (

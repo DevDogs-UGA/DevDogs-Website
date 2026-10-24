@@ -88,7 +88,8 @@ export async function addAttendee(
   if (found.status !== "account") {
     return {
       status: "error",
-      message: "That address has no account yet; look it up again to invite it.",
+      message:
+        "That address has no account yet; look it up again to invite it.",
     };
   }
   const result = await addOfficerAttendance(
@@ -232,7 +233,10 @@ export async function removeAttendee(
   const officerId = await officer();
   if (!officerId) return NOT_AUTHORIZED;
   const meeting = meetingId.safeParse(field(formData, "meetingId"));
-  const attendance = z.string().uuid().safeParse(field(formData, "attendanceId"));
+  const attendance = z
+    .string()
+    .uuid()
+    .safeParse(field(formData, "attendanceId"));
   const reason = z
     .string()
     .max(MAX_REMOVAL_REASON)

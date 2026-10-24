@@ -16,7 +16,10 @@ describe("syncTodos", () => {
 
   it("ignores changes made before or at the export", () => {
     expect(
-      syncTodos([change("added", "a", -5), change("removed", "b", 0)], exportAt),
+      syncTodos(
+        [change("added", "a", -5), change("removed", "b", 0)],
+        exportAt,
+      ),
     ).toEqual([]);
   });
 

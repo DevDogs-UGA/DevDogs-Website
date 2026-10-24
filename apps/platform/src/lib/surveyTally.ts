@@ -62,7 +62,8 @@ export function tallyQuestion(
         label: question.options.find((o) => o.id === id)?.label ?? id,
         count,
       }));
-      if (question.other || other > 0) buckets.push({ label: "Other", count: other });
+      if (question.other || other > 0)
+        buckets.push({ label: "Other", count: other });
       return { ...base, buckets };
     }
   }

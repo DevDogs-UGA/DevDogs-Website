@@ -83,7 +83,9 @@ async function completeInvite(
     );
   }
   const status =
-    result.status === "invalid_meeting" ? "invalid_meeting" : `invite_${result.status}`;
+    result.status === "invalid_meeting"
+      ? "invalid_meeting"
+      : `invite_${result.status}`;
   redirect(attendanceUrl(request, status).toString());
 }
 
