@@ -200,6 +200,33 @@ export const accountDeletionsInPlatform = platform.table.withRLS("accountDeletio
 	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
 ]);
 
+export const contributionsInPlatform = platform.table.withRLS("contributions", {
+	id: uuid().defaultRandom().primaryKey(),
+	repo: text().notNull(),
+	repoPrivate: boolean().default(false).notNull(),
+	prNumber: integer().notNull(),
+	title: text().notNull(),
+	url: text().notNull(),
+	mergedAt: timestamp({ withTimezone: true }).notNull(),
+	authorGithubId: text().notNull(),
+	authorLogin: text().notNull(),
+	userId: uuid().references(() => users.id, { onDelete: "cascade", onUpdate: "cascade" } ),
+	deliveryId: text(),
+	createdAt: timestamp({ withTimezone: true }).default(sql`now()`).notNull(),
+}, (table) => [
+	index("contributions_unmatched_authorGithubId_idx").using("btree", table.authorGithubId.asc().nullsLast()).where(sql`("userId" IS NULL)`),
+	index("contributions_userId_mergedAt_idx").using("btree", table.userId.asc().nullsLast(), table.mergedAt.desc().nullsFirst()),
+	unique("contributions_deliveryId_key").on(table.deliveryId),
+	unique("contributions_repo_prNumber_key").on(table.repo, table.prNumber),
+	pgPolicy("crud_public_policy_delete", { as: "restrictive", for: "delete", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_insert", { as: "restrictive", for: "insert", withCheck: sql`false` }),
+
+	pgPolicy("crud_public_policy_select", { as: "restrictive", for: "select", using: sql`false` }),
+
+	pgPolicy("crud_public_policy_update", { as: "restrictive", for: "update", using: sql`false`, withCheck: sql`false` }),
+]);
+
 export const deletedAccountBlocksInPlatform = platform.table.withRLS("deletedAccountBlocks", {
 	subjectHash: bytea().primaryKey(),
 	expiresAt: timestamp({ withTimezone: true }),
@@ -1073,6 +1100,7 @@ export { configReconcileStateInPlatform as configReconcileState };
 export { contentActionInPlatform as contentAction };
 export { contentTypesInPlatform as contentTypes };
 export { contentVisibilityInPlatform as contentVisibility };
+export { contributionsInPlatform as contributions };
 export { deletedAccountBlocksInPlatform as deletedAccountBlocks };
 export { deliveryStatusInPlatform as deliveryStatus };
 export { discordRoleMembershipsInPlatform as discordRoleMemberships };
