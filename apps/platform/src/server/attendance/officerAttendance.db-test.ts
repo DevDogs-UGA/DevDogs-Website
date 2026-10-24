@@ -634,7 +634,7 @@ describe("external sync to-dos (Q12)", () => {
   it("lists adds and removals newer than the meeting's last attendance export, netted", async () => {
     const startsAt = new Date(now.getTime() - 3 * 3600_000);
     const [exp] = await rows<{ id: string; createdAt: string }>(sql`
-      insert into platform."exportAudit" ("userId", kind, filters, "createdAt")
+      insert into platform."exportAudit" ("userId", kind, filters)
       values (${IDS.officer}::uuid, 'attendance', ${JSON.stringify({ meetingId: IDS.meeting })}::jsonb)
       returning id, "createdAt"
     `);
