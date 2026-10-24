@@ -73,11 +73,8 @@ request is answered `200` with the reason, so GitHub never retries it.
 ## Backfill
 
 Run once after the webhook is on, from a checkout with production credentials:
-
-```bash
-pnpm backstage import contributions --dry-run
-pnpm backstage import contributions --since 2026-09-01
-```
-
-See `import contributions` in the Backstage README. It is idempotent, so it is
-safe to rerun after an outage.
+preview with `--dry-run`, then run it for real, optionally from a start day with
+`--since 2026-09-01`. The command is Backstage's `import contributions`
+(documented in the Backstage README, and available once the Backstage release
+that adds it is published and pinned here). It is idempotent, so it is safe to
+rerun after an outage.
