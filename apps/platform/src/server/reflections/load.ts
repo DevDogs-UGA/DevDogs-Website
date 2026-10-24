@@ -88,14 +88,14 @@ export async function getReflectionActivities(
           title: string | null;
           project: string | null;
         }>(sql`
-          select "meetingId", "definitionId", title, project
+          select distinct on ("meetingId", "definitionId") "meetingId", "definitionId", title, project
           from platform.workshops
           where "meetingId" in (${sql.join(
             meetingIds.map((id) => sql`${id}::uuid`),
             sql`, `,
           )})
             and "definitionId" is not null and "deletedAt" is null
-          order by "definitionId"
+          order by "meetingId", "definitionId"
         `);
   const definitions = new Map(
     getWorkshops().workshops.map((workshop) => [workshop.id, workshop.title]),

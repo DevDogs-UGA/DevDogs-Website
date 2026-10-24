@@ -4,7 +4,7 @@ import {
   getBadges,
 } from "@devdogsuga/events";
 import { and, eq, isNull } from "drizzle-orm";
-import { getCallerContext } from "~/server/actions/permissions";
+import { isOfficer } from "~/server/actions/permissions";
 import { db } from "~/server/db";
 import { auditEvents, badgeAwards } from "~/server/db/schema";
 import { usersInAuth } from "~/supabase/drizzle/schema";
@@ -33,10 +33,6 @@ export type AwardResult =
         | "unknown_member"
         | "self_award";
     };
-
-async function isOfficer(userId: string): Promise<boolean> {
-  return (await getCallerContext(userId)).isLeader;
-}
 
 export async function awardManualBadge(
   officerId: string,

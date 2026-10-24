@@ -179,8 +179,12 @@ export const communityProfile = terminal(
               ? `${badge.name} ${multiplierLabel(badge)}`
               : badge.name,
             meta: badge.awards
-              .map((award) => formatEventDate(award.awardedAt))
-              .join(", "),
+              .map((award) =>
+                award.awardedByLabel
+                  ? `${formatEventDate(award.awardedAt)}, awarded by ${award.awardedByLabel}`
+                  : formatEventDate(award.awardedAt),
+              )
+              .join("; "),
             headline: badge.description || undefined,
             text:
               badge.awards

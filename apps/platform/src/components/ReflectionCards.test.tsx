@@ -38,9 +38,9 @@ describe("the workshop picker (Q95, Q98)", () => {
     render(
       <ReflectionCards activities={[activity()]} minimumWordCount={100} />,
     );
-    const select = screen.getByLabelText(
+    const select = screen.getByLabelText<HTMLSelectElement>(
       /Which workshop did you attend/,
-    ) as HTMLSelectElement;
+    );
     expect(select.name).toBe("workshopDefinitionId");
     expect([...select.options].map((o) => o.textContent)).toEqual([
       "Choose a workshop",
@@ -57,9 +57,9 @@ describe("the workshop picker (Q95, Q98)", () => {
         minimumWordCount={100}
       />,
     );
-    const select = screen.getByLabelText(
+    const select = screen.getByLabelText<HTMLSelectElement>(
       /Which workshop did you attend/,
-    ) as HTMLSelectElement;
+    );
     expect(select.value).toBe("flutter");
   });
 
@@ -73,10 +73,10 @@ describe("the workshop picker (Q95, Q98)", () => {
       />,
     );
     expect(screen.queryByLabelText(/Which workshop/)).toBeNull();
-    const hidden = container.querySelector(
+    const hidden = container.querySelector<HTMLInputElement>(
       'input[name="workshopDefinitionId"]',
-    ) as HTMLInputElement;
-    expect(hidden.value).toBe("nextjs");
+    );
+    expect(hidden?.value).toBe("nextjs");
   });
 
   it("locks the pick once the window has closed", () => {
@@ -87,7 +87,7 @@ describe("the workshop picker (Q95, Q98)", () => {
       />,
     );
     expect(
-      (screen.getByLabelText(/Which workshop/) as HTMLSelectElement).disabled,
+      screen.getByLabelText<HTMLSelectElement>(/Which workshop/).disabled,
     ).toBe(true);
   });
 });
