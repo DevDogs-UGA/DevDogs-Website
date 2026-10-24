@@ -61,25 +61,31 @@ function isLive(app: { userId: string | null; status: string }) {
   return app.userId === null || app.status === "in_production";
 }
 
-/** Saves the homepage and privacy policy; blank clears one (not while published). */
+/** Why an owner cannot touch a published app's logo, homepage or privacy policy. */
+const BRANDING_LOCKED =
+  "The logo, homepage and privacy policy are locked while an app is in production. Ask an officer to return it to Testing first";
+
+/**
+ * Q178: a member's published app keeps the branding its members approved.
+ * Enforced here, on the server. A DevDogs app has no owner to lock out; the
+ * officers who edit it can already return it to Testing themselves.
+ */
+function brandingLocked(app: { userId: string | null; status: string }) {
+  return app.userId !== null && app.status === "in_production";
+}
+
+/** Saves the homepage and privacy policy. Refused while the app is published. */
 export async function saveAppDetails(
   clientId: string,
   input: { homepageUrl: string; privacyPolicyUrl: string },
 ): Promise<DetailsResult> {
   const { userId, app } = await requireEditableApp(clientId);
+  if (brandingLocked(app)) return { ok: false, error: BRANDING_LOCKED };
 
   const homepage = parseDetailUrl("Homepage", input.homepageUrl);
   if (homepage.error) return { ok: false, error: homepage.error };
   const privacy = parseDetailUrl("Privacy policy", input.privacyPolicyUrl);
   if (privacy.error) return { ok: false, error: privacy.error };
-
-  if (app.status === "in_production" && (!homepage.value || !privacy.value)) {
-    return {
-      ok: false,
-      error:
-        "A published app needs a homepage and a privacy policy. Ask an officer to return it to Testing first",
-    };
-  }
 
   await db.transaction(async (tx) => {
     await tx
@@ -116,7 +122,8 @@ export async function saveAppDetails(
 export async function createAppLogoUploadToken(
   clientId: string,
 ): Promise<{ path: string; token: string; maxBytes: number }> {
-  await requireEditableApp(clientId);
+  const { app } = await requireEditableApp(clientId);
+  if (brandingLocked(app)) throw new Error(BRANDING_LOCKED);
   const path = appLogoPath(clientId);
   const { data, error } = await supabaseAdmin.storage
     .from(env.NEXT_PUBLIC_AVATARS_BUCKET)
@@ -128,6 +135,7 @@ export async function createAppLogoUploadToken(
 /** Records the uploaded logo on the app, once the object is really there. */
 export async function saveAppLogo(clientId: string): Promise<DetailsResult> {
   const { userId, app } = await requireEditableApp(clientId);
+  if (brandingLocked(app)) return { ok: false, error: BRANDING_LOCKED };
   const path = appLogoPath(clientId);
 
   const { data: exists, error } = await supabaseAdmin.storage
