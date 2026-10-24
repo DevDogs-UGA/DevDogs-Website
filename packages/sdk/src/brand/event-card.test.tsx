@@ -46,10 +46,9 @@ describe("Instagram formats", () => {
       family: "card",
     });
     expect(INSTAGRAM_POST_SIZE.width / INSTAGRAM_POST_SIZE.height).toBe(0.8);
-    expect(INSTAGRAM_STORY_SIZE.width / INSTAGRAM_STORY_SIZE.height).toBeCloseTo(
-      9 / 16,
-      3,
-    );
+    expect(
+      INSTAGRAM_STORY_SIZE.width / INSTAGRAM_STORY_SIZE.height,
+    ).toBeCloseTo(9 / 16, 3);
   });
 
   it("lay out as the tall card, which no other size does", () => {
