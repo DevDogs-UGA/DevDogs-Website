@@ -17,9 +17,13 @@ beforeAll(async () => {
   await cleanup();
   await db.execute(sql`
     insert into platform.meetings
-      (id, slug, "startsAt", "endsAt", "countsForCredit") values
+      (id, slug, "startsAt", "endsAt") values
       (${MEETING_ID}::uuid, 'streak-loader-counting',
-       '2026-09-10T22:00:00Z', '2026-09-10T23:30:00Z', true)
+       '2026-09-10T22:00:00Z', '2026-09-10T23:30:00Z')
+  `);
+  await db.execute(sql`
+    insert into platform.workshops ("meetingId", "definitionId")
+    values (${MEETING_ID}::uuid, 'streak-loader-workshop')
   `);
 });
 
