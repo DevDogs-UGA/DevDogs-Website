@@ -128,22 +128,36 @@ describe("saveAppDetails", () => {
     expect(mocks.updates).toEqual([]);
   });
 
-  it("will not blank a link on a published app, and audits its changes", async () => {
+  it("refuses every change to a member's published app, blank or not", async () => {
     mocks.app = { userId: OWNER, status: "in_production", label: "Lab" };
-    const blank = await saveAppDetails(APP, {
-      homepageUrl: "https://lab.example.com",
-      privacyPolicyUrl: "",
-    });
-    expect(blank.ok).toBe(false);
+    for (const input of [
+      { homepageUrl: "https://lab.example.com", privacyPolicyUrl: "" },
+      {
+        homepageUrl: "https://new.example.com",
+        privacyPolicyUrl: "https://lab.example.com/p",
+      },
+    ]) {
+      const result = await saveAppDetails(APP, input);
+      expect(result).toMatchObject({ ok: false });
+      expect(result.ok === false && result.error).toMatch(
+        /locked while an app is in production.*return it to Testing/,
+      );
+    }
+    expect(mocks.updates).toEqual([]);
+    expect(mocks.audits).toEqual([]);
+  });
 
+  it("audits a holder's change to a published DevDogs app", async () => {
+    mocks.app = { userId: null, status: "in_production", label: "DogDays" };
+    mocks.session = HOLDER;
     await saveAppDetails(APP, {
-      homepageUrl: "https://lab.example.com",
-      privacyPolicyUrl: "https://lab.example.com/p",
+      homepageUrl: "https://dogdays.dev",
+      privacyPolicyUrl: "https://dogdays.dev/p",
     });
     expect(mocks.audits).toHaveLength(1);
     expect(mocks.audits[0]).toMatchObject({
       action: "oauth_app.details_changed",
-      actorUserId: OWNER,
+      actorUserId: HOLDER,
       targetId: APP,
     });
   });
@@ -209,5 +223,24 @@ describe("logo upload", () => {
     mocks.objectExists = true;
     await expect(saveAppLogo(APP)).resolves.toEqual({ ok: true });
     expect(mocks.updates).toEqual([{ logoPath: `apps/${APP}.webp` }]);
+  });
+
+  it("refuses a logo token and a logo save while the owner's app is published", async () => {
+    mocks.app = { userId: OWNER, status: "in_production", label: "Lab" };
+    await expect(createAppLogoUploadToken(APP)).rejects.toThrow(
+      /locked while an app is in production/,
+    );
+    expect(mocks.signedPaths).toEqual([]);
+    const saved = await saveAppLogo(APP);
+    expect(saved).toMatchObject({ ok: false });
+    expect(mocks.updates).toEqual([]);
+  });
+
+  it("allows both again in Testing", async () => {
+    mocks.app = { userId: OWNER, status: "testing", label: "Lab" };
+    await expect(createAppLogoUploadToken(APP)).resolves.toMatchObject({
+      path: `apps/${APP}.webp`,
+    });
+    await expect(saveAppLogo(APP)).resolves.toEqual({ ok: true });
   });
 });
