@@ -136,6 +136,7 @@ export const communityProfile = terminal(
             headline: formatEventDate(pr.mergedAt),
             text: pr.url,
           })),
+          empty: "",
         });
       }
     }

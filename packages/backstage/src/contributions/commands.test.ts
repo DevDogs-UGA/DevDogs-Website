@@ -103,7 +103,11 @@ describe("the GitHub App", () => {
       alg: "RS256",
       typ: "JWT",
     });
-    const claims = JSON.parse(Buffer.from(body, "base64url").toString());
+    const claims = JSON.parse(Buffer.from(body, "base64url").toString()) as {
+      iss: string;
+      iat: number;
+      exp: number;
+    };
     expect(claims.iss).toBe("12345");
     expect(claims.exp - claims.iat).toBeLessThanOrEqual(600);
     expect(
@@ -156,7 +160,7 @@ describe("the GitHub App", () => {
         },
       ],
     };
-    const doFetch = vi.fn(async (input: RequestInfo | URL) => {
+    const doFetch = vi.fn(async (input: string | URL) => {
       const path = new URL(String(input)).pathname;
       return new Response(JSON.stringify(answers[path]), { status: 200 });
     }) as unknown as typeof fetch;

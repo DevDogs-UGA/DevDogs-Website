@@ -42,7 +42,7 @@ const event = z.object({
 });
 
 /** Only pull requests that live on github.com are linked to from a profile. */
-const GITHUB_URL = /^https:\/\/github\.com\//;
+const GITHUB_PREFIX = "https://github.com/";
 
 /** The result of reading a `pull_request` delivery. */
 export type ParsedEvent =
@@ -75,7 +75,10 @@ export function parsePullRequestEvent(
     return { kind: "ignored", reason: "no human author" };
   }
   const mergedAt = new Date(pr.merged_at);
-  if (Number.isNaN(mergedAt.getTime()) || !GITHUB_URL.test(pr.html_url)) {
+  if (
+    Number.isNaN(mergedAt.getTime()) ||
+    !pr.html_url.startsWith(GITHUB_PREFIX)
+  ) {
     return { kind: "ignored", reason: "unrecognised payload" };
   }
   return {

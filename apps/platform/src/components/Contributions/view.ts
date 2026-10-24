@@ -15,7 +15,7 @@ export interface ContributionRow {
   mergedAt: Date;
 }
 
-const GITHUB_URL = /^https:\/\/github\.com\//;
+const GITHUB_PREFIX = "https://github.com/";
 
 /**
  * Rows in the order given (the loader sorts newest first). The URL comes from
@@ -30,7 +30,7 @@ export function contributionRows(
     repo: item.repo,
     number: item.number,
     label: item.title.trim() || `Pull request #${item.number}`,
-    href: GITHUB_URL.test(item.url) ? item.url : null,
+    href: item.url.startsWith(GITHUB_PREFIX) ? item.url : null,
     mergedAt: item.mergedAt,
   }));
 }
