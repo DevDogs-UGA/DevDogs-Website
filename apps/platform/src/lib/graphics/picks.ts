@@ -3,8 +3,14 @@
  * graphic wanted. Plain strings so the picker is an HTML form with no script.
  */
 
-/** Enough for every format of a night with a dozen workshops, and no more. */
-export const MAX_PICKS = 80;
+/**
+ * One ZIP's ceiling, set by the Worker's CPU rather than by taste. Each PNG is
+ * drawn on request at roughly 0.4 to 1s of CPU (measured on workerd: 18 images
+ * in about 12s), and a Worker's default budget is 30s per request. 30 images
+ * is a night and three workshops at every size, with headroom; more is a
+ * second ZIP.
+ */
+export const MAX_PICKS = 30;
 
 export interface Pick {
   subject: string;
