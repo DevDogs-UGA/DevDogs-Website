@@ -5,7 +5,7 @@ import ConsoleShell from "~/components/Console/ConsoleShell";
 import GraphicTile from "~/components/Graphics/GraphicTile";
 import ZipForm from "~/components/Graphics/ZipForm";
 import { formatEventSpan } from "~/lib/eventTime";
-import { pickValue } from "~/lib/graphics/picks";
+import { MAX_PICKS, pickValue } from "~/lib/graphics/picks";
 import { canUserUseGraphics } from "~/server/graphics/access";
 import { getGraphicsMeeting } from "~/server/graphics/meeting";
 import {
@@ -68,7 +68,7 @@ export default async function MeetingGraphicsPage({
         </Callout>
       ) : null}
 
-      <ZipForm action={`${base}/zip`}>
+      <ZipForm action={`${base}/zip`} max={MAX_PICKS}>
         {meeting.subjects.map((subject) => (
           <section
             key={subject.id}

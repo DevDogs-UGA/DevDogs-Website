@@ -15,9 +15,12 @@ import { buttonVariants } from "~/ui/button";
  */
 export default function ZipForm({
   action,
+  max,
   children,
 }: {
   action: string;
+  /** The most images one ZIP may hold (`MAX_PICKS`). */
+  max: number;
   children: ReactNode;
 }) {
   const form = useRef<HTMLFormElement>(null);
@@ -44,7 +47,7 @@ export default function ZipForm({
         <button
           type="submit"
           className={buttonVariants({ variant: "default" })}
-          disabled={count === 0}
+          disabled={count === 0 || count > max}
         >
           Download ZIP
         </button>
@@ -63,7 +66,11 @@ export default function ZipForm({
           Clear
         </button>
         <span className="gfx-count" aria-live="polite">
-          {count === 0 ? "Nothing selected" : `${count} selected`}
+          {count === 0
+            ? "Nothing selected"
+            : count > max
+              ? `${count} selected: a ZIP holds at most ${max}`
+              : `${count} selected`}
         </span>
       </div>
       {children}
